@@ -77,6 +77,7 @@ class DevCompilerTarget extends Target {
         'dart:collection',
         'dart:convert',
         'dart:developer',
+        'dart:fiber',
         'dart:io',
         'dart:isolate',
         'dart:js',

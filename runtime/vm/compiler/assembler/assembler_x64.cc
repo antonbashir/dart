@@ -31,6 +31,7 @@ Assembler::Assembler(ObjectPoolBuilder* object_pool_builder,
     call(Address(THR,
                  target::Thread::write_barrier_wrappers_thread_offset(reg)));
   };
+  
   generate_invoke_array_write_barrier_ = [&]() {
     call(
         Address(THR, target::Thread::array_write_barrier_entry_point_offset()));

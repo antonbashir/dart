@@ -55,6 +55,7 @@ class ObjectPointerVisitor;
   V(DartCollection, "dart:collection")                                         \
   V(DartCore, "dart:core")                                                     \
   V(DartDeveloper, "dart:developer")                                           \
+  V(DartFiber, "dart:fiber")                                                   \
   V(DartDeveloperTimeline, "dart.developer.timeline")                          \
   V(DartFfi, "dart:ffi")                                                       \
   V(DartInternal, "dart:_internal")                                            \

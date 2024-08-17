@@ -29,6 +29,11 @@ vm_common:
       patches:
         - "_internal/vm/lib/async_patch.dart"
 
+    fiber:
+      uri: "fiber/fiber.dart"
+      patches:
+        - "_internal/vm/lib/fiber_patch.dart"
+
     collection:
       uri: "collection/collection.dart"
       patches:
@@ -137,7 +142,7 @@ wasm:
     convert:
       uri: convert/convert.dart
       patches:
-      - _internal/wasm/lib/convert_patch.dart
+        - _internal/wasm/lib/convert_patch.dart
     typed_data:
       uri: typed_data/typed_data.dart
       patches:
@@ -145,8 +150,7 @@ wasm:
         - _internal/wasm/lib/typed_data_patch.dart
     _string:
       uri: _internal/wasm/lib/js_string.dart
-      patches:
-        _internal/wasm/lib/string.dart
+      patches: _internal/wasm/lib/string.dart
     _typed_data:
       uri: _internal/wasm/lib/typed_data.dart
     _js_helper:
@@ -161,7 +165,7 @@ wasm_js_compatibility:
     convert:
       uri: convert/convert.dart
       patches:
-      - _internal/wasm_js_compatibility/lib/convert_patch.dart
+        - _internal/wasm_js_compatibility/lib/convert_patch.dart
     core:
       uri: core/core.dart
       patches:
@@ -209,7 +213,7 @@ wasm_common:
     _internal:
       uri: internal/internal.dart
       patches:
-      - _internal/wasm/lib/internal_patch.dart
+        - _internal/wasm/lib/internal_patch.dart
     _js_annotations:
       uri: js/_js_annotations.dart
     _js_string_convert:
@@ -230,17 +234,21 @@ wasm_common:
     async:
       uri: async/async.dart
       patches:
-      - _internal/wasm/lib/async_patch.dart
+        - _internal/wasm/lib/async_patch.dart
+    fiber:
+      uri: "fiber/fiber.dart"
+      patches:
+        - "_internal/wasm/lib/fiber_patch.dart"
     collection:
       uri: collection/collection.dart
       patches:
-      - _internal/vm_shared/lib/collection_patch.dart
-      - _internal/wasm/lib/compact_hash.dart
-      - _internal/wasm/lib/hash_factories.dart
+        - _internal/vm_shared/lib/collection_patch.dart
+        - _internal/wasm/lib/compact_hash.dart
+        - _internal/wasm/lib/hash_factories.dart
     developer:
       uri: developer/developer.dart
       patches:
-      - _internal/js_runtime/lib/developer_patch.dart
+        - _internal/js_runtime/lib/developer_patch.dart
     ffi:
       uri: "ffi/ffi.dart"
       patches:
@@ -317,6 +325,11 @@ _dart2js_common:
     async:
       uri: "async/async.dart"
       patches: "_internal/js_runtime/lib/async_patch.dart"
+
+    fiber:
+      uri: "fiber/fiber.dart"
+      patches:
+        - "_internal/js_runtime/lib/fiber_patch.dart"
 
     collection:
       uri: "collection/collection.dart"
@@ -495,6 +508,11 @@ dartdevc:
     async:
       uri: "async/async.dart"
       patches: "_internal/js_dev_runtime/patch/async_patch.dart"
+
+    fiber:
+      uri: "fiber/fiber.dart"
+      patches:
+        - "_internal/js_dev_runtime/patch/fiber_patch.dart"
 
     collection:
       uri: "collection/collection.dart"
