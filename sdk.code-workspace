@@ -45,6 +45,10 @@
     ]
   },
   "settings": {
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.arguments": [
+      "--compile-commands-dir=out/DebugX64"
+    ],
     "dart.analysisExcludedFolders": [
       // These "tests" folders include invalid Dart code which
       // will show as analyzer warnings/errors we don't intend to fix.
