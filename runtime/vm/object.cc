@@ -2055,6 +2055,17 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     RegisterPrivateClass(cls, Symbols::_ConstSet(), lib);
     pending_classes.Add(cls);
 
+
+    lib = Library::LookupLibrary(thread, Symbols::DartFiber());
+    if (lib.IsNull()) {
+      lib = Library::NewLibraryHelper(Symbols::DartFiber(), true);
+      lib.SetLoadRequested();
+      lib.Register(thread);
+    }
+    object_store->set_bootstrap_library(ObjectStore::kFiber, lib);
+    ASSERT(!lib.IsNull());
+    ASSERT(lib.ptr() == Library::FiberLibrary());
+
     // Pre-register the async library so we can place the vm class
     // FutureOr there rather than the core library.
     lib = Library::LookupLibrary(thread, Symbols::DartAsync());
@@ -14781,6 +14792,10 @@ LibraryPtr Library::AsyncLibrary() {
   return IsolateGroup::Current()->object_store()->async_library();
 }
 
+LibraryPtr Library::FiberLibrary() {
+  return IsolateGroup::Current()->object_store()->fiber_library();
+}
+
 LibraryPtr Library::ConvertLibrary() {
   return IsolateGroup::Current()->object_store()->convert_library();
 }
@@ -15394,6 +15409,7 @@ void Library::CheckFunctionFingerprints() {
   GRAPH_CORE_INTRINSICS_LIST(CHECK_FINGERPRINTS_GRAPH_INTRINSIC);
 
   all_libs.Add(&Library::ZoneHandle(Library::AsyncLibrary()));
+  all_libs.Add(&Library::ZoneHandle(Library::FiberLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::MathLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::TypedDataLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::CollectionLibrary()));

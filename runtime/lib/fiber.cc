@@ -11,7 +11,7 @@
 #include "vm/runtime_entry.h"
 
 namespace dart {
-DEFINE_NATIVE_ENTRY(DartFiber_suspend, 0, 0) {
+DEFINE_NATIVE_ENTRY(Fiber_suspend, 0, 0) {
   OS::Print("Suspend\n");
   return Object::null();
 }

@@ -552,6 +552,10 @@ Dart_Handle DartUtils::PrepareCLILibrary(Dart_Handle cli_lib) {
   return Dart_Null();
 }
 
+Dart_Handle DartUtils::PrepareFiberLibrary(Dart_Handle fiber_lib) {
+  return Dart_Null();
+}
+
 Dart_Handle DartUtils::SetupPackageConfig(const char* packages_config) {
   Dart_Handle result = Dart_Null();
 
@@ -578,6 +582,10 @@ Dart_Handle DartUtils::PrepareForScriptLoading(bool is_service_isolate,
   RETURN_IF_ERROR(url);
   Dart_Handle async_lib = Dart_LookupLibrary(url);
   RETURN_IF_ERROR(async_lib);
+  url = NewString(kFiberLibURL);
+  RETURN_IF_ERROR(url);
+  Dart_Handle fiber_lib = Dart_LookupLibrary(url);
+  RETURN_IF_ERROR(fiber_lib);
   url = NewString(kIsolateLibURL);
   RETURN_IF_ERROR(url);
   Dart_Handle isolate_lib = Dart_LookupLibrary(url);
@@ -611,6 +619,7 @@ Dart_Handle DartUtils::PrepareForScriptLoading(bool is_service_isolate,
   RETURN_IF_ERROR(PrepareIsolateLibrary(isolate_lib));
   RETURN_IF_ERROR(PrepareIOLibrary(io_lib));
   RETURN_IF_ERROR(PrepareCLILibrary(cli_lib));
+  RETURN_IF_ERROR(PrepareFiberLibrary(fiber_lib));
   return result;
 }
 

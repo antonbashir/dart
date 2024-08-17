@@ -5348,6 +5348,7 @@ class Library : public Object {
   static LibraryPtr NativeWrappersLibrary();
   static LibraryPtr TypedDataLibrary();
   static LibraryPtr VMServiceLibrary();
+  static LibraryPtr FiberLibrary();
 
   // Eagerly compile all classes and functions in the library.
   static ErrorPtr CompileAll(bool ignore_error = false);
