@@ -104,6 +104,7 @@ class Options {
   static bool ParseArguments(int argc,
                              char** argv,
                              bool vm_run_app_snapshot,
+                             bool parsing_dart_vm_options,
                              CommandLineOptions* vm_options,
                              char** script_name,
                              CommandLineOptions* dart_options,
@@ -146,6 +147,14 @@ class Options {
   static bool enable_vm_service() { return enable_vm_service_; }
   static const char* vm_service_server_ip() { return vm_service_server_ip_; }
   static int vm_service_server_port() { return vm_service_server_port_; }
+
+  // TODO(bkonyi): remove once DartDev moves to AOT and this flag can be
+  // provided directly to the process spawned by `dart run` and `dart test`.
+  //
+  // See https://github.com/dart-lang/sdk/issues/53576
+  static void set_mark_main_isolate_as_system_isolate(bool state) {
+    mark_main_isolate_as_system_isolate_ = state;
+  }
 
   static Dart_KernelCompilationVerbosityLevel verbosity_level() {
     return VerbosityLevelToDartAPI(verbosity_);
