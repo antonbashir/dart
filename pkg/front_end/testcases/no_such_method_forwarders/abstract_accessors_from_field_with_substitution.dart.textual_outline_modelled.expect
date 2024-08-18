@@ -7,5 +7,4 @@ class B implements A<int> {
 }
 
 main() {}
-
 void expectTypeError(callback()) {}

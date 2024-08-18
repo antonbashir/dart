@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/error/error.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/pubspec/pubspec_validator.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:yaml/yaml.dart';
@@ -15,7 +14,7 @@ class PubspecDiagnosticTest with ResourceProviderMixin {
   /// [expectedErrorCodes] are produced.
   void assertErrors(String content, List<ErrorCode> expectedErrorCodes) {
     var pubspecFile = newFile('/sample/pubspec.yaml', content);
-    var source = FileSource(pubspecFile);
+    var source = pubspecFile.createSource();
     YamlNode node = loadYamlNode(content);
     GatheringErrorListener listener = GatheringErrorListener();
     listener.addAll(validatePubspec(

@@ -12,17 +12,17 @@ extension StringExtension on String {
   /// It is assumed that this String is a valid identifier and does not contain
   /// characters that are invalid in file names.
   String get toFileName {
-    var fileName = replaceAllMapped(RegExp('[A-Z]'),
+    final fileName = replaceAllMapped(RegExp('[A-Z]'),
         (match) => match.start == 0 ? match[0]! : '_${match[0]}').toLowerCase();
     return '$fileName.dart';
   }
 
-  /// Returns a lowerCamelCase version of the receiver.
+  /// Assuming that the receiver is a valid identifier, return a lowerCamelCase
+  /// version of the identifier.
   ///
-  /// No checks are made that the receiver is a valid identifier, other than
-  /// the requirement that the receiver must contain at least one underscore
-  /// (but neither at the beginning nor the end), and must not have two adjacent
-  /// underscores.
+  /// No checks are made that the receiver is a valid identifier, but the
+  /// receiver must contain at least one underscore (but neither at the
+  /// beginning nor the end), and must not have two adjacent underscores.
   ///
   /// The resulting identifier is one in which only the letters following the
   /// underscores are capitalized.
@@ -45,47 +45,6 @@ extension StringExtension on String {
       buffer.write(word._capitalized);
     }
     return buffer.toString();
-  }
-
-  /// Returns an UpperCamelCase version of the receiver.
-  ///
-  /// No checks are made that the receiver is a valid identifier, other than
-  /// the requirement that the receiver must contain at least one underscore
-  /// (but neither at the beginning nor the end), and must not have two adjacent
-  /// underscores.
-  ///
-  /// The resulting identifier is one in which only the first letter and the
-  /// letters following the underscores are capitalized.
-  String? get toUpperCamelCase {
-    var words = split('_');
-    if (words.length < 2) {
-      var first = words.firstOrNull;
-      if (first != null && first.isNotEmpty) {
-        return first._capitalized;
-      }
-      return null;
-    }
-    var buffer = StringBuffer();
-    for (var i = 0; i < words.length; i++) {
-      var word = words[i];
-      if (word.isEmpty) {
-        return null;
-      }
-      buffer.write(word._capitalized);
-    }
-    return buffer.toString();
-  }
-
-  /// Returns the string after removing the '^' in the string, if present,
-  /// along with the index of the caret, or null if not present.
-  (String, int?) get withoutCaret {
-    var caretIndex = indexOf('^');
-    if (caretIndex < 0) {
-      return (this, null);
-    } else {
-      var rawText = substring(0, caretIndex) + substring(caretIndex + 1);
-      return (rawText, caretIndex);
-    }
   }
 
   /// Return a version of this string in which the first character is upper case

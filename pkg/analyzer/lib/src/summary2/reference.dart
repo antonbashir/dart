@@ -48,7 +48,7 @@ class Reference {
   Reference._(this.parent, this.name);
 
   Iterable<Reference> get children {
-    var childrenUnion = _childrenUnion;
+    final childrenUnion = _childrenUnion;
     if (childrenUnion == null) return const [];
     if (childrenUnion is Reference) return [childrenUnion];
     return (childrenUnion as Map<String, Reference>).values;
@@ -99,7 +99,9 @@ class Reference {
 
   /// Return the child with the given name, or `null` if does not exist.
   Reference? operator [](String name) {
-    var childrenUnion = _childrenUnion;
+    name = _rewriteDartUi(name);
+
+    final childrenUnion = _childrenUnion;
     if (childrenUnion == null) return null;
     if (childrenUnion is Reference) {
       if (childrenUnion.name == name) return childrenUnion;
@@ -117,7 +119,7 @@ class Reference {
   /// existing child is transferred to it and renamed to `0`, then a new child
   /// is added with name `1`. Additional duplicate children get names `2`, etc.
   Reference addChild(String name) {
-    var child = Reference._(null, name);
+    final child = Reference._(null, name);
     addChildReference(name, child);
     return child;
   }
@@ -126,7 +128,7 @@ class Reference {
   void addChildReference(String name, Reference child) {
     child.parent = this;
 
-    var existing = this[name];
+    final existing = this[name];
 
     // If not a duplicate.
     if (existing == null) {
@@ -153,7 +155,9 @@ class Reference {
 
   /// Return the child with the given name, create if does not exist yet.
   Reference getChild(String name) {
-    var childrenUnion = _childrenUnion;
+    name = _rewriteDartUi(name);
+
+    final childrenUnion = _childrenUnion;
     if (childrenUnion == null) {
       // 0 -> 1 children.
       return _childrenUnion = Reference._(this, name);
@@ -162,7 +166,7 @@ class Reference {
       if (childrenUnion.name == name) return childrenUnion;
 
       // 1 -> 2 children.
-      var childrenUnionAsMap = _childrenUnion = <String, Reference>{};
+      final childrenUnionAsMap = _childrenUnion = <String, Reference>{};
       childrenUnionAsMap[childrenUnion.name] = childrenUnion;
       return childrenUnionAsMap[name] = Reference._(this, name);
     }
@@ -171,7 +175,9 @@ class Reference {
   }
 
   Reference? removeChild(String name) {
-    var childrenUnion = _childrenUnion;
+    name = _rewriteDartUi(name);
+
+    final childrenUnion = _childrenUnion;
     if (childrenUnion == null) return null;
     if (childrenUnion is Reference) {
       if (childrenUnion.name == name) {
@@ -181,8 +187,8 @@ class Reference {
       }
       return null;
     }
-    var childrenUnionAsMap = childrenUnion as Map<String, Reference>;
-    var result = childrenUnionAsMap.remove(name);
+    final childrenUnionAsMap = childrenUnion as Map<String, Reference>;
+    final result = childrenUnionAsMap.remove(name);
     if (childrenUnionAsMap.length == 1) {
       // 2 -> 1 children.
       _childrenUnion = childrenUnionAsMap.values.single;
@@ -194,7 +200,7 @@ class Reference {
   String toString() => parent == null ? 'root' : '$parent::$name';
 
   void _addChild(String name, Reference child) {
-    var childrenUnion = _childrenUnion;
+    final childrenUnion = _childrenUnion;
     if (childrenUnion == null) {
       // 0 -> 1 children.
       _childrenUnion = child;
@@ -202,11 +208,21 @@ class Reference {
     }
     if (childrenUnion is Reference) {
       // 1 -> 2 children.
-      var childrenUnionAsMap = _childrenUnion = <String, Reference>{};
+      final childrenUnionAsMap = _childrenUnion = <String, Reference>{};
       childrenUnionAsMap[childrenUnion.name] = childrenUnion;
       childrenUnionAsMap[name] = child;
       return;
     }
     (childrenUnion as Map<String, Reference>)[name] ??= child;
+  }
+
+  // TODO(scheglov): Remove it, once when the actual issue is fixed.
+  // https://buganizer.corp.google.com/issues/203423390
+  static String _rewriteDartUi(String name) {
+    const srcPrefix = 'dart:ui/src/ui/';
+    if (name.startsWith(srcPrefix)) {
+      return 'dart:ui/${name.substring(srcPrefix.length)}';
+    }
+    return name;
   }
 }

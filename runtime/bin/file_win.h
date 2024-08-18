@@ -5,8 +5,6 @@
 #ifndef RUNTIME_BIN_FILE_WIN_H_
 #define RUNTIME_BIN_FILE_WIN_H_
 
-#include <memory>
-
 #include "bin/file.h"
 
 // The limit for a regular directory is 248.
@@ -16,12 +14,7 @@
 namespace dart {
 namespace bin {
 
-// Converts the given UTF8 path to wide char '\\?\'-prefix absolute path.
-//
-// Note that some WinAPI functions (like SetCurrentDirectoryW) are always
-// limited to MAX_PATH long paths and converting to `\\?\`-prefixed form does
-// not remove this limitation. Always check Win API documentation.
-std::unique_ptr<wchar_t[]> ToWinAPIPath(const char* path);
+const char* PrefixLongDirectoryPath(const char* path);
 
 }  // namespace bin
 }  // namespace dart

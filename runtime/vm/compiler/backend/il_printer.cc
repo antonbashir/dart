@@ -45,6 +45,42 @@ static bool ShouldPrintInstruction(Instruction* instr) {
   return FLAG_print_redundant_il || !IsRedundant(instr);
 }
 
+const char* RepresentationToCString(Representation rep) {
+  switch (rep) {
+    case kTagged:
+      return "tagged";
+    case kUntagged:
+      return "untagged";
+    case kUnboxedDouble:
+      return "double";
+    case kUnboxedFloat:
+      return "float";
+    case kUnboxedUint8:
+      return "uint8";
+    case kUnboxedUint16:
+      return "uint16";
+    case kUnboxedInt32:
+      return "int32";
+    case kUnboxedUint32:
+      return "uint32";
+    case kUnboxedInt64:
+      return "int64";
+    case kUnboxedFloat32x4:
+      return "float32x4";
+    case kUnboxedInt32x4:
+      return "int32x4";
+    case kUnboxedFloat64x2:
+      return "float64x2";
+    case kPairOfTagged:
+      return "tagged-pair";
+    case kNoRepresentation:
+      return "none";
+    case kNumRepresentations:
+      UNREACHABLE();
+  }
+  return "?";
+}
+
 class IlTestPrinter : public AllStatic {
  public:
   static void PrintGraph(const char* phase, FlowGraph* flow_graph) {
@@ -57,21 +93,11 @@ class IlTestPrinter : public AllStatic {
       PrintBlock(&writer, block);
     }
     writer.CloseArray();
-    const auto& codegen_order = *flow_graph->CodegenBlockOrder();
-    if (!codegen_order.is_empty() &&
-        (&codegen_order != &flow_graph->reverse_postorder())) {
-      writer.OpenArray("cbo");
-      const auto block_count = flow_graph->reverse_postorder().length();
-      for (auto block : codegen_order) {
-        writer.PrintValue64((block_count - 1) - block->postorder_number());
-      }
-      writer.CloseArray();
-    }
     writer.OpenObject("desc");
     AttributesSerializer(&writer).WriteDescriptors();
     writer.CloseObject();
     writer.OpenObject("flags");
-    writer.PrintPropertyBool("nnbd", true);
+    writer.PrintPropertyBool("nnbd", IsolateGroup::Current()->null_safety());
     writer.CloseObject();
     writer.CloseObject();
     THR_Print("%s\n", writer.ToCString());
@@ -102,12 +128,7 @@ class IlTestPrinter : public AllStatic {
       }
     }
     for (auto instr : block->instructions()) {
-      if (instr->ArgumentCount() != 0 && instr->GetMoveArguments() != nullptr) {
-        for (auto move_arg : *(instr->GetMoveArguments())) {
-          PrintInstruction(writer, move_arg);
-        }
-      }
-      if (ShouldPrintInstruction(instr) && !instr->IsMoveArgument()) {
+      if (ShouldPrintInstruction(instr)) {
         PrintInstruction(writer, instr);
       }
     }
@@ -205,39 +226,7 @@ class IlTestPrinter : public AllStatic {
     }
 
     void WriteAttribute(Representation rep) {
-      writer_->PrintValue(RepresentationUtils::ToCString(rep));
-    }
-
-    static const char* LocationKindAsString(const Location& loc) {
-      if (loc.IsConstant()) {
-        return "C";
-      } else if (loc.IsPairLocation()) {
-        auto pair = loc.AsPairLocation();
-        return Thread::Current()->zone()->PrintToString(
-            "(%s, %s)", LocationKindAsString(pair->At(0)),
-            LocationKindAsString(pair->At(0)));
-      } else {
-        switch (loc.kind()) {
-          case Location::kUnallocated:
-            return ".";
-          case Location::kStackSlot:
-            return "stack(word)";
-          case Location::kDoubleStackSlot:
-            return "stack(f64)";
-          case Location::kQuadStackSlot:
-            return "stack(f128)";
-          case Location::kRegister:
-            return "reg(cpu)";
-          case Location::kFpuRegister:
-            return "reg(fpu)";
-          default:
-            return "?";
-        }
-      }
-    }
-
-    void WriteAttribute(const Location& loc) {
-      writer_->PrintValue(LocationKindAsString(loc));
+      writer_->PrintValue(RepresentationToCString(rep));
     }
 
     void WriteAttribute(const Slot* slot) { writer_->PrintValue(slot->Name()); }
@@ -403,34 +392,21 @@ void FlowGraphPrinter::PrintOneInstruction(Instruction* instr,
                                            bool print_locations) {
   char str[4000];
   BufferFormatter f(str, sizeof(str));
-  if (FlowGraphAllocator::HasLifetimePosition(instr)) {
-    f.Printf("%3" Pd ": ", FlowGraphAllocator::GetLifetimePosition(instr));
-  }
-  if (!instr->IsBlockEntry()) {
-    f.Printf("    ");
-  }
-  if (auto* const block = instr->AsBlockEntryWithInitialDefs()) {
-    block->PrintBlockHeaderTo(&f);
-    // Output and clear the buffer after each internal definition, as otherwise
-    // too many internal definitions could cause truncation in the output.
-    auto callback = [](BaseTextBuffer* f) {
-      THR_Print("%s", f->buffer());
-      f->Clear();
-    };
-    block->PrintInitialDefinitionsTo(&f, callback);
-  } else {
-    instr->PrintTo(&f);
-  }
+  instr->PrintTo(&f);
   if (FLAG_print_environments && (instr->env() != nullptr)) {
     instr->env()->PrintTo(&f);
   }
   if (print_locations && (instr->HasLocs())) {
     instr->locs()->PrintTo(&f);
   }
-  if (FLAG_trace_inlining_intervals) {
-    f.Printf(" iid: %" Pd "", instr->inlining_id());
+  if (FlowGraphAllocator::HasLifetimePosition(instr)) {
+    THR_Print("%3" Pd ": ", FlowGraphAllocator::GetLifetimePosition(instr));
   }
-  THR_Print("%s", f.buffer());
+  if (!instr->IsBlockEntry()) THR_Print("    ");
+  THR_Print("%s", str);
+  if (FLAG_trace_inlining_intervals) {
+    THR_Print(" iid: %" Pd "", instr->inlining_id());
+  }
 }
 
 void FlowGraphPrinter::PrintTypeCheck(const ParsedFunction& parsed_function,
@@ -447,8 +423,8 @@ void FlowGraphPrinter::PrintTypeCheck(const ParsedFunction& parsed_function,
       "%s type check: compile type %s is %s specific than "
       "type '%s' of '%s'.\n",
       eliminated ? "Eliminated" : "Generated", compile_type_name,
-      eliminated ? "more" : "not more", dst_type.NameCString(),
-      dst_name.ToCString());
+      eliminated ? "more" : "not more",
+      String::Handle(dst_type.Name()).ToCString(), dst_name.ToCString());
 }
 
 static void PrintTargetsHelper(BaseTextBuffer* f,
@@ -644,7 +620,7 @@ void Definition::PrintTo(BaseTextBuffer* f) const {
   }
 
   if (representation() != kNoRepresentation && representation() != kTagged) {
-    f->Printf(" %s", RepresentationUtils::ToCString(representation()));
+    f->Printf(" %s", RepresentationToCString(representation()));
   } else if (type_ != nullptr) {
     f->AddString(" ");
     type_->PrintTo(f);
@@ -745,6 +721,12 @@ void RangeBoundary::PrintTo(BaseTextBuffer* f) const {
       f->Printf("v%" Pd "",
                 reinterpret_cast<Definition*>(value_)->ssa_temp_index());
       if (offset_ != 0) f->Printf("%+" Pd64 "", offset_);
+      break;
+    case kNegativeInfinity:
+      f->AddString("-inf");
+      break;
+    case kPositiveInfinity:
+      f->AddString("+inf");
       break;
     case kConstant:
       f->Printf("%" Pd64 "", value_);
@@ -955,7 +937,7 @@ void StoreFieldInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->Printf(" . %s = ", slot().Name());
   value()->PrintTo(f);
   if (slot().representation() != kTagged) {
-    f->Printf(" <%s>", RepresentationUtils::ToCString(slot().representation()));
+    f->Printf(" <%s>", RepresentationToCString(slot().representation()));
   }
 
   // Here, we just print the value of the enum field. We would prefer to get
@@ -988,7 +970,7 @@ void StoreStaticFieldInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 
 void InstanceOfInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   value()->PrintTo(f);
-  f->Printf(" IS %s,", type().NameCString());
+  f->Printf(" IS %s,", String::Handle(type().Name()).ToCString());
   f->AddString(" instantiator_type_args(");
   instantiator_type_arguments()->PrintTo(f);
   f->AddString("), function_type_args(");
@@ -1014,7 +996,7 @@ void AllocationInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 }
 
 void AllocateObjectInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->Printf("cls=%s", cls().ScrubbedNameCString());
+  f->Printf("cls=%s", String::Handle(cls().ScrubbedName()).ToCString());
   if (InputCount() > 0 || Identity().IsNotAliased()) {
     f->AddString(", ");
   }
@@ -1022,7 +1004,7 @@ void AllocateObjectInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 }
 
 void MaterializeObjectInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->Printf("%s", cls_.ScrubbedNameCString());
+  f->Printf("%s", String::Handle(cls_.ScrubbedName()).ToCString());
   for (intptr_t i = 0; i < InputCount(); i++) {
     f->AddString(", ");
     f->Printf("%s: ", slots_[i]->Name());
@@ -1044,11 +1026,6 @@ void LoadFieldInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 void LoadUntaggedInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   object()->PrintTo(f);
   f->Printf(", %" Pd, offset());
-}
-
-void CalculateElementAddressInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  Definition::PrintOperandsTo(f);
-  f->Printf(", index_scale=%" Pd "", index_scale());
 }
 
 void InstantiateTypeInstr::PrintOperandsTo(BaseTextBuffer* f) const {
@@ -1141,9 +1118,6 @@ void DoubleTestOpInstr::PrintOperandsTo(BaseTextBuffer* f) const {
     case MethodRecognizer::kDouble_getIsInfinite:
       f->AddString("IsInfinite ");
       break;
-    case MethodRecognizer::kDouble_getIsNegative:
-      f->AddString("IsNegative ");
-      break;
     default:
       UNREACHABLE();
   }
@@ -1221,8 +1195,27 @@ void InvokeMathCFunctionInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   Definition::PrintOperandsTo(f);
 }
 
-void GraphEntryInstr::PrintBlockHeaderTo(BaseTextBuffer* f) const {
+void BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(
+    BaseTextBuffer* f) const {
+  const GrowableArray<Definition*>& defns = initial_definitions_;
+  if (defns.length() > 0) {
+    f->AddString(" {");
+    for (intptr_t i = 0; i < defns.length(); ++i) {
+      Definition* def = defns[i];
+      // Skip constants which are not used in the graph.
+      if (!ShouldPrintInstruction(def)) {
+        continue;
+      }
+      f->AddString("\n      ");
+      def->PrintTo(f);
+    }
+    f->AddString("\n}");
+  }
+}
+
+void GraphEntryInstr::PrintTo(BaseTextBuffer* f) const {
   f->Printf("B%" Pd "[graph]:%" Pd, block_id(), GetDeoptId());
+  BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(f);
 }
 
 void JoinEntryInstr::PrintTo(BaseTextBuffer* f) const {
@@ -1292,7 +1285,7 @@ void PhiInstr::PrintTo(BaseTextBuffer* f) const {
   }
 
   if (representation() != kNoRepresentation && representation() != kTagged) {
-    f->Printf(" %s", RepresentationUtils::ToCString(representation()));
+    f->Printf(" %s", RepresentationToCString(representation()));
   }
 
   if (HasType()) {
@@ -1313,20 +1306,30 @@ void UnboxIntegerInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 }
 
 void IntConverterInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->Printf("%s->%s%s, ", RepresentationUtils::ToCString(from()),
-            RepresentationUtils::ToCString(to()),
-            is_truncating() ? "[tr]" : "");
+  f->Printf("%s->%s%s, ", RepresentationToCString(from()),
+            RepresentationToCString(to()), is_truncating() ? "[tr]" : "");
   Definition::PrintOperandsTo(f);
 }
 
 void BitCastInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   Definition::PrintOperandsTo(f);
-  f->Printf(" (%s -> %s)", RepresentationUtils::ToCString(from()),
-            RepresentationUtils::ToCString(to()));
+  f->Printf(" (%s -> %s)", RepresentationToCString(from()),
+            RepresentationToCString(to()));
 }
 
 void ParameterInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->Printf("%" Pd " @%s", env_index(), location().ToCString());
+  f->Printf("%" Pd, env_index());
+}
+
+void SpecialParameterInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  f->Printf("%s", KindToCString(kind()));
+}
+
+const char* SpecialParameterInstr::ToCString() const {
+  char buffer[1024];
+  BufferFormatter bf(buffer, 1024);
+  PrintTo(&bf);
+  return Thread::Current()->zone()->MakeCopyOfString(buffer);
 }
 
 void CheckStackOverflowInstr::PrintOperandsTo(BaseTextBuffer* f) const {
@@ -1346,54 +1349,32 @@ void TargetEntryInstr::PrintTo(BaseTextBuffer* f) const {
   }
 }
 
-void BlockEntryWithInitialDefs::PrintTo(BaseTextBuffer* f) const {
-  PrintBlockHeaderTo(f);
-  PrintInitialDefinitionsTo(f, [](BaseTextBuffer* f) {});
-}
-
-void BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(
-    BaseTextBuffer* f,
-    std::function<void(BaseTextBuffer* f)> callback) const {
-  const GrowableArray<Definition*>& defns = initial_definitions_;
-  if (defns.length() > 0) {
-    f->AddString(" {");
-    for (intptr_t i = 0; i < defns.length(); ++i) {
-      Definition* const def = defns[i];
-      // Skip constants which are not used in the graph.
-      if (!ShouldPrintInstruction(def)) {
-        continue;
-      }
-      f->AddString("\n      ");
-      def->PrintTo(f);
-      callback(f);
-    }
-    f->AddString("\n}");
-  }
-}
-
-void OsrEntryInstr::PrintBlockHeaderTo(BaseTextBuffer* f) const {
+void OsrEntryInstr::PrintTo(BaseTextBuffer* f) const {
   f->Printf("B%" Pd "[osr entry]:%" Pd " stack_depth=%" Pd, block_id(),
             GetDeoptId(), stack_depth());
   if (HasParallelMove()) {
     f->AddString("\n");
     parallel_move()->PrintTo(f);
   }
+  BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(f);
 }
 
-void FunctionEntryInstr::PrintBlockHeaderTo(BaseTextBuffer* f) const {
+void FunctionEntryInstr::PrintTo(BaseTextBuffer* f) const {
   f->Printf("B%" Pd "[function entry]:%" Pd, block_id(), GetDeoptId());
   if (HasParallelMove()) {
     f->AddString("\n");
     parallel_move()->PrintTo(f);
   }
+  BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(f);
 }
 
-void NativeEntryInstr::PrintBlockHeaderTo(BaseTextBuffer* f) const {
+void NativeEntryInstr::PrintTo(BaseTextBuffer* f) const {
   f->Printf("B%" Pd "[native function entry]:%" Pd, block_id(), GetDeoptId());
   if (HasParallelMove()) {
     f->AddString("\n");
     parallel_move()->PrintTo(f);
   }
+  BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(f);
 }
 
 void FfiCallInstr::PrintOperandsTo(BaseTextBuffer* f) const {
@@ -1423,27 +1404,24 @@ void FfiCallInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   }
 }
 
-void LeafRuntimeCallInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->AddString("target_address=");
+void CCallInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  f->AddString(" target_address=");
   InputAt(TargetAddressIndex())->PrintTo(f);
-  for (intptr_t i = 0, n = argument_representations_.length(); i < n; ++i) {
+
+  const auto& argument_locations =
+      native_calling_convention_.argument_locations();
+  for (intptr_t i = 0; i < argument_locations.length(); i++) {
+    const auto& arg_location = *argument_locations.At(i);
     f->AddString(", ");
     InputAt(i)->PrintTo(f);
+    f->AddString(" (@");
+    arg_location.PrintTo(f);
+    f->AddString(")");
   }
 }
 
 void NativeReturnInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  if (marshaller_.NumReturnDefinitions() == 1) {
-    InputAt(0)->PrintTo(f);
-  } else {
-    ASSERT_EQUAL(marshaller_.NumReturnDefinitions(), 2);
-    f->AddString("(");
-    InputAt(0)->PrintTo(f);
-    f->AddString(", ");
-    InputAt(1)->PrintTo(f);
-    f->AddString(")");
-  }
-
+  value()->PrintTo(f);
   f->AddString(" (@");
   marshaller_.Location(compiler::ffi::kResultIndex).PrintTo(f);
   f->AddString(")");
@@ -1457,13 +1435,15 @@ void NativeParameterInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   marshaller_.NativeLocationOfNativeParameter(def_index_).PrintTo(f);
 }
 
-void CatchBlockEntryInstr::PrintBlockHeaderTo(BaseTextBuffer* f) const {
+void CatchBlockEntryInstr::PrintTo(BaseTextBuffer* f) const {
   f->Printf("B%" Pd "[target catch try_idx %" Pd " catch_try_idx %" Pd "]",
             block_id(), try_index(), catch_try_index());
   if (HasParallelMove()) {
     f->AddString("\n");
     parallel_move()->PrintTo(f);
   }
+
+  BlockEntryWithInitialDefs::PrintInitialDefinitionsTo(f);
 }
 
 void LoadIndexedUnsafeInstr::PrintOperandsTo(BaseTextBuffer* f) const {
@@ -1479,25 +1459,7 @@ void StoreIndexedUnsafeInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   value()->PrintTo(f);
 }
 
-void LoadIndexedInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  auto& cls =
-      Class::Handle(IsolateGroup::Current()->class_table()->At(class_id()));
-  if (!cls.IsNull()) {
-    f->Printf("[%s] ", cls.ScrubbedNameCString());
-  } else {
-    f->Printf("[cid %" Pd "] ", class_id());
-  }
-  Instruction::PrintOperandsTo(f);
-}
-
 void StoreIndexedInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  auto& cls =
-      Class::Handle(IsolateGroup::Current()->class_table()->At(class_id()));
-  if (!cls.IsNull()) {
-    f->Printf("[%s] ", cls.ScrubbedNameCString());
-  } else {
-    f->Printf("[cid %" Pd "] ", class_id());
-  }
   Instruction::PrintOperandsTo(f);
   if (!ShouldEmitStoreBarrier()) {
     f->AddString(", NoStoreBarrier");
@@ -1506,24 +1468,46 @@ void StoreIndexedInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 
 void MemoryCopyInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   Instruction::PrintOperandsTo(f);
-  auto& cls =
-      Class::Handle(IsolateGroup::Current()->class_table()->At(dest_cid_));
-  if (!cls.IsNull()) {
-    f->Printf(", dest_cid=%s (%d)", cls.ScrubbedNameCString(), dest_cid_);
-  } else {
-    f->Printf(", dest_cid=%d", dest_cid_);
+  // kTypedDataUint8ArrayCid is used as the default cid for cases where
+  // the destination object is a subclass of PointerBase and the arguments
+  // are given in terms of bytes, so only print if the cid differs.
+  switch (dest_representation_) {
+    case kUntagged:
+      f->Printf(", dest untagged");
+      break;
+    case kTagged:
+      if (dest_cid_ != kTypedDataUint8ArrayCid) {
+        const Class& cls = Class::Handle(
+            IsolateGroup::Current()->class_table()->At(dest_cid_));
+        if (!cls.IsNull()) {
+          f->Printf(", dest_cid=%s (%d)", cls.ScrubbedNameCString(), dest_cid_);
+        } else {
+          f->Printf(", dest_cid=%d", dest_cid_);
+        }
+      }
+      break;
+    default:
+      UNREACHABLE();
   }
-  if (dest()->definition()->representation() == kUntagged) {
-    f->Printf(" [untagged]");
-  }
-  cls = IsolateGroup::Current()->class_table()->At(src_cid_);
-  if (!cls.IsNull()) {
-    f->Printf(", src_cid=%s (%d)", cls.ScrubbedNameCString(), src_cid_);
-  } else {
-    f->Printf(", src_cid=%d", src_cid_);
-  }
-  if (src()->definition()->representation() == kUntagged) {
-    f->Printf(" [untagged]");
+  switch (src_representation_) {
+    case kUntagged:
+      f->Printf(", src untagged");
+      break;
+    case kTagged:
+      if ((dest_representation_ == kTagged && dest_cid_ != src_cid_) ||
+          (dest_representation_ != kTagged &&
+           src_cid_ != kTypedDataUint8ArrayCid)) {
+        const Class& cls =
+            Class::Handle(IsolateGroup::Current()->class_table()->At(src_cid_));
+        if (!cls.IsNull()) {
+          f->Printf(", src_cid=%s (%d)", cls.ScrubbedNameCString(), src_cid_);
+        } else {
+          f->Printf(", src_cid=%d", src_cid_);
+        }
+      }
+      break;
+    default:
+      UNREACHABLE();
   }
   if (element_size() != 1) {
     f->Printf(", element_size=%" Pd "", element_size());
@@ -1601,8 +1585,8 @@ void SuspendInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 }
 
 void MoveArgumentInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  f->Printf("%s <- ", location().ToCString());
   value()->PrintTo(f);
+  f->Printf(", SP+%" Pd "", sp_relative_index());
 }
 
 void GotoInstr::PrintTo(BaseTextBuffer* f) const {

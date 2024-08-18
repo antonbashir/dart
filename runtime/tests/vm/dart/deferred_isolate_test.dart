@@ -4,6 +4,7 @@
 
 // Verify deferred library status is per-isolate, not per-isolate-group.
 
+import 'dart:async';
 import 'dart:isolate';
 import 'package:expect/expect.dart';
 

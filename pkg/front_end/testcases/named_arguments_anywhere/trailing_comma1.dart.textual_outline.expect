@@ -1,5 +1,4 @@
 var c = new C();
-
 var z = 42;
 
 class C {

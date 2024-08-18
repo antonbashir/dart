@@ -1,11 +1,7 @@
 bar(E<int> ei, E<String> es) {}
-
 baz(E<Object> ei, E<Object> es) {}
-
 boz(E<Never> ei, E<Never> es) {}
-
 checkIsNotType<T>(x) {}
-
 checkIsType<T>(x) {}
 
 enum E<X> {
@@ -17,7 +13,5 @@ enum E<X> {
 }
 
 foo(E<int> ei, E<String> es) {}
-
 main() {}
-
 test() {}

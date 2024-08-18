@@ -304,7 +304,8 @@ class _IOSinkImpl extends _StreamSinkImpl<List<int>> implements IOSink {
   }
 
   void writeln([Object? object = ""]) {
-    add(_encoding.encode('$object\n'));
+    write(object);
+    write("\n");
   }
 
   void writeCharCode(int charCode) {

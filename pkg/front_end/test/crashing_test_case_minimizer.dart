@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:convert' show jsonDecode;
+
 import 'dart:io' show File;
 
 import 'crashing_test_case_minimizer_impl.dart';

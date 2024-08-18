@@ -17,7 +17,7 @@ main() {
 class UndefinedClassTest extends PubPackageResolutionTest {
   test_augmentation_exists_uriGenerated_nameIgnorable() async {
     newFile('$testPackageLibPath/a.g.dart', r'''
-augment library 'test.dart';
+library augment 'test.dart';
 ''');
 
     await assertErrorsInCode(r'''
@@ -240,7 +240,7 @@ void f(Record r) {}
 f() { C c; }
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_CLASS, 6, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 8, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 8, 1),
     ]);
   }
 }

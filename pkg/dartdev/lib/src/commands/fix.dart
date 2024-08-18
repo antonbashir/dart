@@ -79,17 +79,16 @@ To use the tool, run either ['dart fix --dry-run'] for a preview of the proposed
     final args = argResults!;
     final globalArgs = globalResults!;
     final suppressAnalytics =
-        !globalArgs.flag('analytics') || globalArgs.flag('suppress-analytics');
+        !globalArgs['analytics'] || globalArgs['suppress-analytics'];
 
-    var dryRun = args.flag('dry-run');
-    var inTestMode = args.flag('compare-to-golden');
-    var apply = args.flag('apply');
-    if ((!apply && !dryRun && !inTestMode) ||
-        (apply && dryRun && !inTestMode)) {
+    var dryRun = args['dry-run'];
+    var inTestMode = args['compare-to-golden'];
+    var apply = args['apply'];
+    if (!apply && !dryRun && !inTestMode) {
       printUsage();
       return 0;
     }
-    var codes = args.multiOption('code');
+    var codes = args['code'];
 
     var rest = args.rest;
     var target = _getTarget(rest);

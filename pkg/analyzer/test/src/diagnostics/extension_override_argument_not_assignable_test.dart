@@ -10,6 +10,9 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ExtensionOverrideArgumentNotAssignableTest);
+    defineReflectiveTests(
+      ExtensionOverrideArgumentNotAssignableWithoutNullSafetyTest,
+    );
   });
 }
 
@@ -40,7 +43,11 @@ f() {
 }
 ''');
   }
+}
 
+@reflectiveTest
+class ExtensionOverrideArgumentNotAssignableWithoutNullSafetyTest
+    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
   test_subtype() async {
     await assertNoErrorsInCode('''
 class A {}
@@ -55,7 +62,8 @@ void f(B b) {
   }
 
   test_supertype() async {
-    await assertErrorsInCode('''
+    // This will be an error under NNBD.
+    await assertNoErrorsInCode('''
 class A {}
 class B extends A {}
 extension E on B {
@@ -64,10 +72,7 @@ extension E on B {
 void f(A a) {
   E(a).m();
 }
-''', [
-      error(CompileTimeErrorCode.EXTENSION_OVERRIDE_ARGUMENT_NOT_ASSIGNABLE, 85,
-          1),
-    ]);
+''');
   }
 
   test_unrelated() async {

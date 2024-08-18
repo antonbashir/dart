@@ -28,12 +28,12 @@ class WhileStatementTest extends DartSnippetProducerTest {
   String get prefix => WhileStatement.prefix;
 
   Future<void> test_while() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   while^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

@@ -2,19 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/executable_parameters.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class AddMissingParameter extends MultiCorrectionProducer {
-  AddMissingParameter({required super.context});
-
   @override
   Future<List<ResolvedCorrectionProducer>> get producers async {
-    // `node` is the unmatched argument.
+    // node is the unmatched argument.
     var argumentList = node.parent;
     if (argumentList is! ArgumentList) {
       return const [];
@@ -25,20 +23,16 @@ class AddMissingParameter extends MultiCorrectionProducer {
       return const [];
     }
 
-    var executableParameters =
-        ExecutableParameters.forInvocation(sessionHelper, invocation);
-    if (executableParameters == null) {
+    var context = ExecutableParameters.forInvocation(sessionHelper, invocation);
+    if (context == null) {
       return const [];
     }
 
-    var includeOptional = executableParameters.optionalPositional.isEmpty &&
-        executableParameters.named.isEmpty;
+    var includeOptional =
+        context.optionalPositional.isEmpty && context.named.isEmpty;
     return <ResolvedCorrectionProducer>[
-      _AddMissingRequiredPositionalParameter(executableParameters,
-          context: context),
-      if (includeOptional)
-        _AddMissingOptionalPositionalParameter(executableParameters,
-            context: context),
+      _AddMissingRequiredPositionalParameter(context),
+      if (includeOptional) _AddMissingOptionalPositionalParameter(context),
     ];
   }
 }
@@ -46,23 +40,19 @@ class AddMissingParameter extends MultiCorrectionProducer {
 /// A correction processor that can make one of the possible changes computed by
 /// the [AddMissingParameter] producer.
 class _AddMissingOptionalPositionalParameter extends _AddMissingParameter {
-  _AddMissingOptionalPositionalParameter(
-    super.executableParameters, {
-    required super.context,
-  });
+  _AddMissingOptionalPositionalParameter(super.context);
 
   @override
   FixKind get fixKind => DartFixKind.ADD_MISSING_PARAMETER_POSITIONAL;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var prefix = _executableParameters.required.isNotEmpty ? ', [' : '[';
-    if (_executableParameters.required.isNotEmpty) {
-      var prevNode = await _executableParameters
-          .getParameterNode(_executableParameters.required.last);
+    var prefix = context.required.isNotEmpty ? ', [' : '[';
+    if (context.required.isNotEmpty) {
+      var prevNode = await context.getParameterNode(context.required.last);
       await _addParameter(builder, prevNode?.end, prefix, ']');
     } else {
-      var parameterList = await _executableParameters.getParameterList();
+      var parameterList = await context.getParameterList();
       var offset = parameterList?.leftParenthesis.end;
       await _addParameter(builder, offset, prefix, ']');
     }
@@ -72,14 +62,9 @@ class _AddMissingOptionalPositionalParameter extends _AddMissingParameter {
 /// A correction processor that can make one of the possible changes computed by
 /// the [AddMissingParameter] producer.
 abstract class _AddMissingParameter extends ResolvedCorrectionProducer {
-  final ExecutableParameters _executableParameters;
+  ExecutableParameters context;
 
-  _AddMissingParameter(this._executableParameters, {required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
+  _AddMissingParameter(this.context);
 
   Future<void> _addParameter(
       ChangeBuilder builder, int? offset, String prefix, String suffix) async {
@@ -89,13 +74,13 @@ abstract class _AddMissingParameter extends ResolvedCorrectionProducer {
       return;
     }
     List<Expression> arguments = argumentList.arguments;
-    var numRequired = _executableParameters.required.length;
+    var numRequired = context.required.length;
     if (numRequired >= arguments.length) {
       return;
     }
     var argument = arguments[numRequired];
     if (offset != null) {
-      await builder.addDartFileEdit(_executableParameters.file, (builder) {
+      await builder.addDartFileEdit(context.file, (builder) {
         builder.addInsertion(offset, (builder) {
           builder.write(prefix);
           builder.writeParameterMatchingArgument(
@@ -110,23 +95,20 @@ abstract class _AddMissingParameter extends ResolvedCorrectionProducer {
 /// A correction processor that can make one of the possible changes computed by
 /// the [AddMissingParameter] producer.
 class _AddMissingRequiredPositionalParameter extends _AddMissingParameter {
-  _AddMissingRequiredPositionalParameter(super._executableParameters,
-      {required super.context});
+  _AddMissingRequiredPositionalParameter(super.context);
 
   @override
   FixKind get fixKind => DartFixKind.ADD_MISSING_PARAMETER_REQUIRED;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    if (_executableParameters.required.isNotEmpty) {
-      var prevNode = await _executableParameters
-          .getParameterNode(_executableParameters.required.last);
+    if (context.required.isNotEmpty) {
+      var prevNode = await context.getParameterNode(context.required.last);
       await _addParameter(builder, prevNode?.end, ', ', '');
     } else {
-      var parameterList = await _executableParameters.getParameterList();
+      var parameterList = await context.getParameterList();
       var offset = parameterList?.leftParenthesis.end;
-      var suffix =
-          _executableParameters.executable.parameters.isNotEmpty ? ', ' : '';
+      var suffix = context.executable.parameters.isNotEmpty ? ', ' : '';
       await _addParameter(builder, offset, '', suffix);
     }
   }

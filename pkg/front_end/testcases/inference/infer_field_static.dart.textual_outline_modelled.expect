@@ -13,5 +13,4 @@ class C extends A {
 }
 
 dynamic f() => null;
-
 main() {}

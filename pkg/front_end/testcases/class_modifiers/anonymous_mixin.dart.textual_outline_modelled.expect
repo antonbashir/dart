@@ -1,7 +1,6 @@
 base class S {}
 
 base mixin M1 {}
-
 base mixin M2 {}
 
 final class C extends S with M1, M2 {}

@@ -19,6 +19,7 @@ void main() {
     testStructFromAddress();
     testStructFromAddressWithOperator();
     testStructWithNulls();
+    testTypeTest();
     testUtf8();
   }
 }
@@ -121,6 +122,13 @@ void testStructWithNulls() {
   coordinate.ref.next = nullptr;
   Expect.equals(coordinate.ref.next, nullptr);
   calloc.free(coordinate);
+}
+
+void testTypeTest() {
+  final pointer = calloc<Coordinate>();
+  Coordinate c = pointer.ref;
+  Expect.isTrue(c is Struct);
+  calloc.free(pointer);
 }
 
 void testUtf8() {

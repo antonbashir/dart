@@ -104,23 +104,6 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
     return _activeFileUri == null ? TreeNode.noOffset : fileOffset;
   }
 
-  bool _assertFileUriTarget(TreeNode node, TreeNode clone) {
-    if (node is FileUriNode && clone is FileUriNode) {
-      if (node.fileUri != clone.fileUri) {
-        assert(
-            false,
-            "Original and clone disagrees on file uri: "
-            "${node.fileUri} vs ${clone.fileUri}");
-        return false;
-      }
-      return true;
-    } else if (node is! FileUriNode && clone is! FileUriNode) {
-      return true;
-    }
-    assert(false, "Original and clone disagrees on being a file uri node.");
-    return false;
-  }
-
   T clone<T extends TreeNode>(T node) {
     final Uri? activeFileUriSaved = _activeFileUri;
     if (node is FileUriNode) {
@@ -128,9 +111,6 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
     }
     final TreeNode result = node.accept(this)
       ..fileOffset = _cloneFileOffset(node.fileOffset);
-
-    assert(_assertFileUriTarget(node, result));
-
     _activeFileUri = activeFileUriSaved;
     return result as T;
   }
@@ -142,10 +122,7 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
       _activeFileUri = node.fileUri;
     }
     TreeNode? result = node.accept(this);
-    if (result != null) {
-      result.fileOffset = _cloneFileOffset(node.fileOffset);
-      assert(_assertFileUriTarget(node, result));
-    }
+    if (result != null) result.fileOffset = _cloneFileOffset(node.fileOffset);
     _activeFileUri = activeFileUriSaved;
     return result as T?;
   }
@@ -326,7 +303,8 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
 
   @override
   TreeNode visitIsExpression(IsExpression node) {
-    return new IsExpression(clone(node.operand), visitType(node.type));
+    return new IsExpression(clone(node.operand), visitType(node.type))
+      ..flags = node.flags;
   }
 
   @override
@@ -357,7 +335,7 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
 
   @override
   TreeNode visitThrow(Throw node) {
-    return new Throw(clone(node.expression))..flags = node.flags;
+    return new Throw(clone(node.expression));
   }
 
   @override
@@ -409,10 +387,6 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
 
   @override
   TreeNode visitConstantExpression(ConstantExpression node) {
-    if (node is FileUriConstantExpression) {
-      return new FileUriConstantExpression(visitConstant(node.constant),
-          type: visitType(node.type), fileUri: node.fileUri);
-    }
     return new ConstantExpression(
         visitConstant(node.constant), visitType(node.type));
   }
@@ -663,9 +637,8 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
     List<VariableDeclaration> positional =
         node.positionalParameters.map(clone).toList();
     List<VariableDeclaration> named = node.namedParameters.map(clone).toList();
-    final DartType? futureValueType = node.emittedValueType != null
-        ? visitType(node.emittedValueType!)
-        : null;
+    final DartType? futureValueType =
+        node.futureValueType != null ? visitType(node.futureValueType!) : null;
     return new FunctionNode(cloneFunctionNodeBody(node),
         typeParameters: typeParameters,
         positionalParameters: positional,
@@ -674,7 +647,7 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
         returnType: visitType(node.returnType),
         asyncMarker: node.asyncMarker,
         dartAsyncMarker: node.dartAsyncMarker,
-        emittedValueType: futureValueType)
+        futureValueType: futureValueType)
       ..fileEndOffset = _cloneFileOffset(node.fileEndOffset);
   }
 
@@ -777,8 +750,7 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
   @override
   TreeNode visitDynamicInvocation(DynamicInvocation node) {
     return new DynamicInvocation(
-        node.kind, clone(node.receiver), node.name, clone(node.arguments))
-      ..flags = node.flags;
+        node.kind, clone(node.receiver), node.name, clone(node.arguments));
   }
 
   @override
@@ -875,7 +847,10 @@ class CloneVisitorNotMembers implements TreeVisitor<TreeNode> {
 
   @override
   TreeNode visitTypedefTearOff(TypedefTearOff node) {
-    return new TypedefTearOff(node.structuralParameters, clone(node.expression),
+    prepareTypeParameters(node.typeParameters);
+    return new TypedefTearOff(
+        node.typeParameters.map(visitTypeParameter).toList(),
+        clone(node.expression),
         node.typeArguments.map(visitType).toList());
   }
 
@@ -1105,8 +1080,6 @@ class CloneVisitorWithMembers extends CloneVisitorNotMembers {
       ..fileEndOffset = _cloneFileOffset(node.fileEndOffset);
     setParents(result.annotations, result);
 
-    assert(_assertFileUriTarget(node, result));
-
     _activeFileUri = activeFileUriSaved;
     return result;
   }
@@ -1129,8 +1102,6 @@ class CloneVisitorWithMembers extends CloneVisitorNotMembers {
       ..fileEndOffset = _cloneFileOffset(node.fileEndOffset)
       ..flags = node.flags;
     setParents(result.annotations, result);
-
-    assert(_assertFileUriTarget(node, result));
 
     _activeFileUri = activeFileUriSaved;
     return result;
@@ -1172,8 +1143,6 @@ class CloneVisitorWithMembers extends CloneVisitorNotMembers {
       ..fileEndOffset = _cloneFileOffset(node.fileEndOffset)
       ..flags = node.flags;
     setParents(result.annotations, result);
-
-    assert(_assertFileUriTarget(node, result));
 
     _activeFileUri = activeFileUriSaved;
     return result;
@@ -1283,31 +1252,6 @@ class CloneProcedureWithoutBody extends CloneVisitorWithMembers {
       : super(
             typeSubstitution: typeSubstitution,
             cloneAnnotations: cloneAnnotations);
-
-  /// Clones procedure and replaces its parts with those passed as arguments
-  ///
-  /// [cloneProcedureWith] is a shortcut that can be helpful, for example, for
-  /// transforming external procedures.
-  ///
-  /// Since this cloner clones procedures without the body, it's safe to replace
-  /// the parameters of the cloned procedure, since they aren't referenced
-  /// anywhere. If either [positionalParameters] or [namedParameters] are
-  /// passed in, they are used in place of the freshly cloned
-  /// [FunctionNode.positionalParameters] and [FunctionNode.namedParameters].
-  Procedure cloneProcedureWith(Procedure node, Reference? reference,
-      {List<VariableDeclaration>? positionalParameters,
-      List<VariableDeclaration>? namedParameters}) {
-    Procedure cloned = cloneProcedure(node, reference);
-    if (positionalParameters != null) {
-      cloned.function.positionalParameters = positionalParameters;
-      setParents(positionalParameters, cloned.function);
-    }
-    if (namedParameters != null) {
-      cloned.function.namedParameters = namedParameters;
-      setParents(namedParameters, cloned.function);
-    }
-    return cloned;
-  }
 
   @override
   Statement? cloneFunctionNodeBody(FunctionNode node) => null;

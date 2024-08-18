@@ -94,8 +94,6 @@ class CodegenInttestMethodsVisitor extends DartCodegenVisitor
     writeln("import 'package:$packageName/protocol/protocol_generated.dart';");
     writeln(
         "import 'package:$packageName/src/protocol/protocol_internal.dart';");
-    writeln(
-        "import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';");
     for (var uri in api.types.importUris) {
       write("import '");
       write(uri);
@@ -110,10 +108,6 @@ class CodegenInttestMethodsVisitor extends DartCodegenVisitor
     writeln('abstract class IntegrationTest {');
     indent(() {
       writeln('Server get server;');
-      writeln();
-      writeln(
-          '/// The converter used to convert between URI/Paths in server communication.');
-      writeln('ClientUriConverter? uriConverter;');
       super.visitApi();
       writeln();
       docComment(toHtmlVisitor.collectHtml(() {
@@ -168,8 +162,7 @@ class CodegenInttestMethodsVisitor extends DartCodegenVisitor
         if (notification.params == null) {
           constructorCall = '$className()';
         } else {
-          constructorCall =
-              "$className.fromJson(decoder, 'params', params, clientUriConverter: uriConverter)";
+          constructorCall = "$className.fromJson(decoder, 'params', params)";
         }
         writeln('_$streamName.add($constructorCall);');
       });
@@ -235,8 +228,7 @@ class CodegenInttestMethodsVisitor extends DartCodegenVisitor
           }
         }
         args.addAll(optionalArgs);
-        writeln(
-            'var params = $requestClass(${args.join(', ')}).toJson(clientUriConverter: uriConverter);');
+        writeln('var params = $requestClass(${args.join(', ')}).toJson();');
       }
       var methodJson = "'${request.longMethod}'";
       writeln('var result = await server.send($methodJson, $paramsVar);');
@@ -246,8 +238,7 @@ class CodegenInttestMethodsVisitor extends DartCodegenVisitor
           kind = 'kind';
         }
         writeln('var decoder = ResponseDecoder($kind);');
-        writeln(
-            "return $resultClass.fromJson(decoder, 'result', result, clientUriConverter: uriConverter);");
+        writeln("return $resultClass.fromJson(decoder, 'result', result);");
       } else {
         writeln('outOfTestExpect(result, isNull);');
       }

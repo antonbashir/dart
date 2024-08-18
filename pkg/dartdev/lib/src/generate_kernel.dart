@@ -5,7 +5,7 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:kernel/binary/tag.dart' show isValidSdkHash;
+import 'package:package_config/package_config.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub/pub.dart';
 
@@ -51,12 +51,12 @@ Future<DartExecutableWithPackageConfig> generateKernel(
   final packageRoot = _packageRootFor(executable);
   if (packageRoot == null) {
     throw FrontendCompilerException._(
-        'Unable to locate .dart_tool/package_config.json in any parent folder.'
-        'Did you run `pub get`?',
+        'resident mode is only supported for Dart packages.',
         CompilationIssue.standaloneProgramError);
   }
   await ensureCompilationServerIsRunning(serverInfoFile);
-  final packageConfig = p.join(packageRoot, packageConfigName);
+  // TODO: allow custom package paths with a --packages flag
+  final packageConfig = await _resolvePackageConfig(executable, packageRoot);
   final cachedKernel = _cachedKernelPath(executable.executable, packageRoot);
   Map<String, dynamic> result;
   try {
@@ -124,39 +124,24 @@ String _cachedKernelPath(String executable, String packageRoot) {
   );
 }
 
-/// Ensures that a Resident Frontend Compiler associated with [serverInfoFile]
-/// will be running at the point when the future returned by this function
-/// completes. Throws a [FrontendCompilerException] if starting the server
+/// Ensures that the Resident Frontend Compiler is running, starting it if
+/// necessary. Throws a [FrontendCompilerException] if starting the server
 /// fails.
 Future<void> ensureCompilationServerIsRunning(
   File serverInfoFile,
 ) async {
   if (serverInfoFile.existsSync()) {
-    final residentCompilerInfo = ResidentCompilerInfo.fromFile(serverInfoFile);
-    if (residentCompilerInfo.sdkHash != null &&
-        isValidSdkHash(residentCompilerInfo.sdkHash!)) {
-      // There is already a Resident Frontend Compiler associated with
-      // [serverInfoFile] that is running and compatible with the Dart SDK that
-      // the user is currently using.
-      return;
-    } else {
-      log.stderr(
-        'The Dart SDK has been upgraded or downgraded since the Resident '
-        'Frontend Compiler was started, so the Resident Frontend Compiler will '
-        'now be restarted for compatibility reasons.',
-      );
-      await shutDownOrForgetResidentFrontendCompiler(serverInfoFile);
-    }
+    return;
   }
   try {
     Directory(p.dirname(serverInfoFile.path)).createSync(recursive: true);
-    final Process frontendServerProcess;
+    late final Process frontendServerProcess;
     if (File(sdk.frontendServerAotSnapshot).existsSync()) {
       frontendServerProcess = await Process.start(
         sdk.dartAotRuntime,
         [
           sdk.frontendServerAotSnapshot,
-          '--resident-info-file-name=${serverInfoFile.absolute.path}'
+          '--resident-info-file-name=${serverInfoFile.path}'
         ],
         workingDirectory: homeDir?.path,
         mode: ProcessStartMode.detachedWithStdio,
@@ -168,7 +153,7 @@ Future<void> ensureCompilationServerIsRunning(
         sdk.dart,
         [
           sdk.frontendServerSnapshot,
-          '--resident-info-file-name=${serverInfoFile.absolute.path}'
+          '--resident-info-file-name=${serverInfoFile.path}'
         ],
         workingDirectory: homeDir?.path,
         mode: ProcessStartMode.detachedWithStdio,
@@ -200,10 +185,31 @@ String? _packageRootFor(DartExecutableWithPackageConfig executable) {
       Directory(p.dirname(p.canonicalize(executable.executable)));
 
   while (currentDirectory.parent.path != currentDirectory.path) {
-    if (File(p.join(currentDirectory.path, packageConfigName)).existsSync()) {
+    if (File(p.join(currentDirectory.path, 'pubspec.yaml')).existsSync() ||
+        File(p.join(currentDirectory.path, packageConfigName)).existsSync()) {
       return currentDirectory.path;
     }
     currentDirectory = currentDirectory.parent;
+  }
+  return null;
+}
+
+/// Resolves the absolute path to [packageRoot]'s package_config.json file,
+/// returning null if the package does not contain one, or if the source
+/// being compiled is a standalone dart script not inside a package.
+Future<String?> _resolvePackageConfig(
+    DartExecutableWithPackageConfig executable, String packageRoot) async {
+  final packageConfig = await findPackageConfigUri(
+    Uri.file(p.canonicalize(executable.executable)),
+    recurse: true,
+    onError: (_) {},
+  );
+  if (packageConfig != null) {
+    final dotPackageFile = File(p.join(packageRoot, '.packages'));
+    final packageConfigFile = File(p.join(packageRoot, packageConfigName));
+    return packageConfigFile.existsSync()
+        ? packageConfigFile.path
+        : dotPackageFile.path;
   }
   return null;
 }

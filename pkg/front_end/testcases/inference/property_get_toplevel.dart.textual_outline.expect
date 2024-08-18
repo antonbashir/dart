@@ -7,9 +7,6 @@ class C {
 }
 
 C c = new C();
-
 var function_ref = c.function;
-
 var function_ref_list = [c.function];
-
 main() {}

@@ -10,52 +10,12 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(InvalidUseOfNeverTest);
+    defineReflectiveTests(InvalidUseOfNeverTest_Legacy);
   });
 }
 
 @reflectiveTest
 class InvalidUseOfNeverTest extends PubPackageResolutionTest {
-  test_binaryExpression_eqEq() async {
-    await assertErrorsInCode(r'''
-void f() {
-  (throw '') == 1 + 2;
-}
-''', [
-      error(WarningCode.RECEIVER_OF_TYPE_NEVER, 13, 10),
-      error(WarningCode.DEAD_CODE, 27, 6),
-    ]);
-
-    assertResolvedNodeText(findNode.binary('=='), r'''
-BinaryExpression
-  leftOperand: ParenthesizedExpression
-    leftParenthesis: (
-    expression: ThrowExpression
-      throwKeyword: throw
-      expression: SimpleStringLiteral
-        literal: ''
-      staticType: Never
-    rightParenthesis: )
-    staticType: Never
-  operator: ==
-  rightOperand: BinaryExpression
-    leftOperand: IntegerLiteral
-      literal: 1
-      staticType: int
-    operator: +
-    rightOperand: IntegerLiteral
-      literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
-      staticType: int
-    parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
-    staticInvokeType: num Function(num)
-    staticType: int
-  staticElement: <null>
-  staticInvokeType: null
-  staticType: Never
-''');
-  }
-
   test_binaryExpression_never_eqEq() async {
     await assertErrorsInCode(r'''
 void f(Never x) {
@@ -70,7 +30,7 @@ void f(Never x) {
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   operator: ==
   rightOperand: BinaryExpression
@@ -80,10 +40,10 @@ BinaryExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
     parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   staticElement: <null>
@@ -106,7 +66,7 @@ void f(Never x) {
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   operator: +
   rightOperand: ParenthesizedExpression
@@ -118,9 +78,9 @@ BinaryExpression
       operator: +
       rightOperand: IntegerLiteral
         literal: 2
-        parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+        parameter: dart:core::@class::num::@method::+::@parameter::other
         staticType: int
-      staticElement: dart:core::<fragment>::@class::num::@method::+
+      staticElement: dart:core::@class::num::@method::+
       staticInvokeType: num Function(num)
       staticType: int
     rightParenthesis: )
@@ -143,7 +103,7 @@ void f(Never? x) {
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   operator: ==
   rightOperand: BinaryExpression
@@ -153,13 +113,13 @@ BinaryExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
-    parameter: dart:core::<fragment>::@class::Object::@method::==::@parameter::other
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    parameter: dart:core::@class::Object::@method::==::@parameter::other
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
-  staticElement: dart:core::<fragment>::@class::Object::@method::==
+  staticElement: dart:core::@class::Object::@method::==
   staticInvokeType: bool Function(Object)
   staticType: bool
 ''');
@@ -181,7 +141,7 @@ void f(Never? x) {
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   operator: +
   rightOperand: ParenthesizedExpression
@@ -193,9 +153,9 @@ BinaryExpression
       operator: +
       rightOperand: IntegerLiteral
         literal: 2
-        parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+        parameter: dart:core::@class::num::@method::+::@parameter::other
         staticType: int
-      staticElement: dart:core::<fragment>::@class::num::@method::+
+      staticElement: dart:core::@class::num::@method::+
       staticInvokeType: num Function(num)
       staticType: int
     rightParenthesis: )
@@ -205,53 +165,6 @@ BinaryExpression
   staticInvokeType: null
   staticType: InvalidType
 ''');
-  }
-
-  test_binaryExpression_plus() async {
-    await assertErrorsInCode(r'''
-void f() {
-  (throw '') + (1 + 2);
-}
-''', [
-      error(WarningCode.RECEIVER_OF_TYPE_NEVER, 13, 10),
-      error(WarningCode.DEAD_CODE, 26, 8),
-    ]);
-
-    assertResolvedNodeText(findNode.binary('+ ('), r'''
-BinaryExpression
-  leftOperand: ParenthesizedExpression
-    leftParenthesis: (
-    expression: ThrowExpression
-      throwKeyword: throw
-      expression: SimpleStringLiteral
-        literal: ''
-      staticType: Never
-    rightParenthesis: )
-    staticType: Never
-  operator: +
-  rightOperand: ParenthesizedExpression
-    leftParenthesis: (
-    expression: BinaryExpression
-      leftOperand: IntegerLiteral
-        literal: 1
-        staticType: int
-      operator: +
-      rightOperand: IntegerLiteral
-        literal: 2
-        parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
-        staticType: int
-      staticElement: dart:core::<fragment>::@class::num::@method::+
-      staticInvokeType: num Function(num)
-      staticType: int
-    rightParenthesis: )
-    parameter: <null>
-    staticType: int
-  staticElement: <null>
-  staticInvokeType: null
-  staticType: Never
-''');
-
-    assertType(findNode.binary('1 + 2'), 'int');
   }
 
   test_conditionalExpression_falseBranch() async {
@@ -305,7 +218,7 @@ void f(Never x) {
 IndexExpression
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   leftBracket: [
   index: IntegerLiteral
@@ -334,7 +247,7 @@ AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never
     leftBracket: [
     index: IntegerLiteral
@@ -352,10 +265,10 @@ AssignmentExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
     parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
@@ -382,7 +295,7 @@ AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never
     leftBracket: [
     index: IntegerLiteral
@@ -400,10 +313,10 @@ AssignmentExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
     parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
@@ -429,7 +342,7 @@ void f(Never? x) {
 IndexExpression
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   leftBracket: [
   index: IntegerLiteral
@@ -458,7 +371,7 @@ AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never?
     leftBracket: [
     index: IntegerLiteral
@@ -476,10 +389,10 @@ AssignmentExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
     parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
@@ -506,7 +419,7 @@ AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never?
     leftBracket: [
     index: IntegerLiteral
@@ -524,10 +437,10 @@ AssignmentExpression
     operator: +
     rightOperand: IntegerLiteral
       literal: 2
-      parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+      parameter: dart:core::@class::num::@method::+::@parameter::other
       staticType: int
     parameter: <null>
-    staticElement: dart:core::<fragment>::@class::num::@method::+
+    staticElement: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
@@ -562,7 +475,7 @@ void f(Never x) {
 MethodInvocation
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   operator: .
   methodName: SimpleIdentifier
@@ -579,10 +492,10 @@ MethodInvocation
         operator: +
         rightOperand: IntegerLiteral
           literal: 2
-          parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+          parameter: dart:core::@class::num::@method::+::@parameter::other
           staticType: int
         parameter: <null>
-        staticElement: dart:core::<fragment>::@class::num::@method::+
+        staticElement: dart:core::@class::num::@method::+
         staticInvokeType: num Function(num)
         staticType: int
     rightParenthesis: )
@@ -606,7 +519,7 @@ void f(Never x) {
 MethodInvocation
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   operator: .
   methodName: SimpleIdentifier
@@ -623,10 +536,10 @@ MethodInvocation
         operator: +
         rightOperand: IntegerLiteral
           literal: 2
-          parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+          parameter: dart:core::@class::num::@method::+::@parameter::other
           staticType: int
         parameter: <null>
-        staticElement: dart:core::<fragment>::@class::num::@method::+
+        staticElement: dart:core::@class::num::@method::+
         staticInvokeType: num Function(num)
         staticType: int
     rightParenthesis: )
@@ -649,12 +562,12 @@ void f(Never? x) {
 MethodInvocation
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   operator: .
   methodName: SimpleIdentifier
     token: toString
-    staticElement: dart:core::<fragment>::@class::Object::@method::toString
+    staticElement: dart:core::@class::Object::@method::toString
     staticType: String Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -666,50 +579,15 @@ MethodInvocation
         operator: +
         rightOperand: IntegerLiteral
           literal: 2
-          parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+          parameter: dart:core::@class::num::@method::+::@parameter::other
           staticType: int
         parameter: <null>
-        staticElement: dart:core::<fragment>::@class::num::@method::+
+        staticElement: dart:core::@class::num::@method::+
         staticInvokeType: num Function(num)
         staticType: int
     rightParenthesis: )
   staticInvokeType: String Function()
   staticType: String
-''');
-  }
-
-  test_methodInvocation_toString() async {
-    await assertErrorsInCode(r'''
-void f() {
-  (throw '').toString();
-}
-''', [
-      error(WarningCode.RECEIVER_OF_TYPE_NEVER, 13, 10),
-      error(WarningCode.DEAD_CODE, 32, 3),
-    ]);
-
-    var node = findNode.methodInvocation('toString()');
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: ThrowExpression
-      throwKeyword: throw
-      expression: SimpleStringLiteral
-        literal: ''
-      staticType: Never
-    rightParenthesis: )
-    staticType: Never
-  operator: .
-  methodName: SimpleIdentifier
-    token: toString
-    staticElement: <null>
-    staticType: dynamic
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: dynamic
-  staticType: Never
 ''');
   }
 
@@ -726,12 +604,12 @@ void f(Never x) {
 PostfixExpression
   operand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::f::@parameter::x
+  readElement: self::@function::f::@parameter::x
   readType: Never
-  writeElement: <testLibraryFragment>::@function::f::@parameter::x
+  writeElement: self::@function::f::@parameter::x
   writeType: Never
   staticElement: <null>
   staticType: Never
@@ -752,12 +630,12 @@ void f(Never? x) {
 PostfixExpression
   operand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::f::@parameter::x
+  readElement: self::@function::f::@parameter::x
   readType: Never?
-  writeElement: <testLibraryFragment>::@function::f::@parameter::x
+  writeElement: self::@function::f::@parameter::x
   writeType: Never?
   staticElement: <null>
   staticType: Never?
@@ -779,11 +657,11 @@ PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: null
-  readElement: <testLibraryFragment>::@function::f::@parameter::x
+  readElement: self::@function::f::@parameter::x
   readType: Never
-  writeElement: <testLibraryFragment>::@function::f::@parameter::x
+  writeElement: self::@function::f::@parameter::x
   writeType: Never
   staticElement: <null>
   staticType: Never
@@ -805,11 +683,11 @@ PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: null
-  readElement: <testLibraryFragment>::@function::f::@parameter::x
+  readElement: self::@function::f::@parameter::x
   readType: Never?
-  writeElement: <testLibraryFragment>::@function::f::@parameter::x
+  writeElement: self::@function::f::@parameter::x
   writeType: Never?
   staticElement: <null>
   staticType: InvalidType
@@ -823,12 +701,12 @@ void f(Never x) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   period: .
   identifier: SimpleIdentifier
@@ -847,19 +725,19 @@ void f(Never x) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   period: .
   identifier: SimpleIdentifier
     token: hashCode
-    staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
+    staticElement: dart:core::@class::Object::@getter::hashCode
     staticType: Never
-  staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
+  staticElement: dart:core::@class::Object::@getter::hashCode
   staticType: Never
 ''');
   }
@@ -879,7 +757,7 @@ AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never
     period: .
     identifier: SimpleIdentifier
@@ -909,19 +787,19 @@ void f(Never x) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   period: .
   identifier: SimpleIdentifier
     token: toString
-    staticElement: dart:core::<fragment>::@class::Object::@method::toString
+    staticElement: dart:core::@class::Object::@method::toString
     staticType: Never
-  staticElement: dart:core::<fragment>::@class::Object::@method::toString
+  staticElement: dart:core::@class::Object::@method::toString
   staticType: Never
 ''');
   }
@@ -941,7 +819,7 @@ AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Never
     period: .
     identifier: SimpleIdentifier
@@ -974,12 +852,12 @@ void f(Never? x) {
           23, 3),
     ]);
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   period: .
   identifier: SimpleIdentifier
@@ -998,19 +876,19 @@ void f(Never? x) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   period: .
   identifier: SimpleIdentifier
     token: hashCode
-    staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
+    staticElement: dart:core::@class::Object::@getter::hashCode
     staticType: int
-  staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
+  staticElement: dart:core::@class::Object::@getter::hashCode
   staticType: int
 ''');
   }
@@ -1022,20 +900,144 @@ void f(Never? x) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    final node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   period: .
   identifier: SimpleIdentifier
     token: toString
-    staticElement: dart:core::<fragment>::@class::Object::@method::toString
+    staticElement: dart:core::@class::Object::@method::toString
     staticType: String Function()
-  staticElement: dart:core::<fragment>::@class::Object::@method::toString
+  staticElement: dart:core::@class::Object::@method::toString
   staticType: String Function()
+''');
+  }
+}
+
+@reflectiveTest
+class InvalidUseOfNeverTest_Legacy extends PubPackageResolutionTest
+    with WithoutNullSafetyMixin {
+  test_binaryExpression_eqEq() async {
+    await assertNoErrorsInCode(r'''
+void f() {
+  (throw '') == 1 + 2;
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('=='), r'''
+BinaryExpression
+  leftOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression: ThrowExpression
+      throwKeyword: throw
+      expression: SimpleStringLiteral
+        literal: ''
+      staticType: Never*
+    rightParenthesis: )
+    staticType: Never*
+  operator: ==
+  rightOperand: BinaryExpression
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int*
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      parameter: root::@parameter::other
+      staticType: int*
+    parameter: root::@parameter::other
+    staticElement: MethodMember
+      base: dart:core::@class::num::@method::+
+      isLegacy: true
+    staticInvokeType: num* Function(num*)*
+    staticType: int*
+  staticElement: MethodMember
+    base: dart:core::@class::Object::@method::==
+    isLegacy: true
+  staticInvokeType: bool* Function(Object*)*
+  staticType: bool*
+''');
+  }
+
+  test_binaryExpression_plus() async {
+    await assertNoErrorsInCode(r'''
+void f() {
+  (throw '') + (1 + 2);
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('+ ('), r'''
+BinaryExpression
+  leftOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression: ThrowExpression
+      throwKeyword: throw
+      expression: SimpleStringLiteral
+        literal: ''
+      staticType: Never*
+    rightParenthesis: )
+    staticType: Never*
+  operator: +
+  rightOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression: BinaryExpression
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int*
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        parameter: root::@parameter::other
+        staticType: int*
+      staticElement: MethodMember
+        base: dart:core::@class::num::@method::+
+        isLegacy: true
+      staticInvokeType: num* Function(num*)*
+      staticType: int*
+    rightParenthesis: )
+    parameter: <null>
+    staticType: int*
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: InvalidType
+''');
+
+    assertType(findNode.binary('1 + 2'), 'int');
+  }
+
+  test_methodInvocation_toString() async {
+    await assertNoErrorsInCode(r'''
+void f() {
+  (throw '').toString();
+}
+''');
+
+    var node = findNode.methodInvocation('toString()');
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: ThrowExpression
+      throwKeyword: throw
+      expression: SimpleStringLiteral
+        literal: ''
+      staticType: Never*
+    rightParenthesis: )
+    staticType: Never*
+  operator: .
+  methodName: SimpleIdentifier
+    token: toString
+    staticElement: <null>
+    staticType: dynamic
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: dynamic
+  staticType: dynamic
 ''');
   }
 
@@ -1046,7 +1048,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -1055,15 +1057,17 @@ PropertyAccess
       throwKeyword: throw
       expression: SimpleStringLiteral
         literal: ''
-      staticType: Never
+      staticType: Never*
     rightParenthesis: )
-    staticType: Never
+    staticType: Never*
   operator: .
   propertyName: SimpleIdentifier
     token: toString
-    staticElement: dart:core::<fragment>::@class::Object::@method::toString
-    staticType: String Function()
-  staticType: String Function()
+    staticElement: MethodMember
+      base: dart:core::@class::Object::@method::toString
+      isLegacy: true
+    staticType: String* Function()*
+  staticType: String* Function()*
 ''');
   }
 
@@ -1074,7 +1078,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -1083,15 +1087,17 @@ PropertyAccess
       throwKeyword: throw
       expression: SimpleStringLiteral
         literal: ''
-      staticType: Never
+      staticType: Never*
     rightParenthesis: )
-    staticType: Never
+    staticType: Never*
   operator: .
   propertyName: SimpleIdentifier
     token: hashCode
-    staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
-    staticType: int
-  staticType: int
+    staticElement: PropertyAccessorMember
+      base: dart:core::@class::Object::@getter::hashCode
+      isLegacy: true
+    staticType: int*
+  staticType: int*
 ''');
   }
 }

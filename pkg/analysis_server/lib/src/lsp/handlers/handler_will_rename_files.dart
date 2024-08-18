@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -30,27 +29,23 @@ class WillRenameFilesHandler
       RenameFilesParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<WorkspaceEdit?>> handle(RenameFilesParams params,
       MessageInfo message, CancellationToken token) async {
-    var pathMapping = <String, String>{};
+    final pathMapping = <String, String>{};
 
-    for (var file in params.files) {
-      var oldPath = pathOfUri(Uri.tryParse(file.oldUri));
+    for (final file in params.files) {
+      final oldPath = pathOfUri(Uri.tryParse(file.oldUri));
+
       if (oldPath.isError) {
         return failure(oldPath);
       }
 
-      var newPath = pathOfUri(Uri.tryParse(file.newUri));
+      final newPath = pathOfUri(Uri.tryParse(file.newUri));
       if (newPath.isError) {
         return failure(newPath);
       }
 
-      (oldPath, newPath).ifResults((oldPath, newPath) {
-        pathMapping[oldPath] = newPath;
-      });
+      pathMapping[oldPath.result] = newPath.result;
     }
     return _renameFiles(pathMapping, token);
   }
@@ -61,15 +56,15 @@ class WillRenameFilesHandler
     // know about at the start (or in the case of LSP-over-Legacy that we even
     // have version numbers for). To ensure we never produce inconsistent edits,
     // capture all sessions at the start and ensure they are all consistent at the end.
-    var sessions = await server.currentSessions;
+    final sessions = await server.currentSessions;
 
-    var refactoring = MoveFileRefactoringImpl.multi(
+    final refactoring = MoveFileRefactoringImpl.multi(
         server.resourceProvider, server.refactoringWorkspace, renames)
       ..cancellationToken = token;
 
     // If we're unable to update imports for a rename, we should silently do
     // nothing rather than interrupt the users file rename with an error.
-    var results = await refactoring.checkAllConditions();
+    final results = await refactoring.checkAllConditions();
     if (token.isCancellationRequested) {
       return cancelled();
     }
@@ -78,7 +73,7 @@ class WillRenameFilesHandler
       return success(null);
     }
 
-    var change = await refactoring.createChange();
+    final change = await refactoring.createChange();
     if (delayDuringComputeForTests != null) {
       await delayDuringComputeForTests;
     }
@@ -89,7 +84,7 @@ class WillRenameFilesHandler
 
     server.checkConsistency(sessions);
 
-    var edit = createWorkspaceEdit(server, change);
+    final edit = createWorkspaceEdit(server, change);
     return success(edit);
   }
 }

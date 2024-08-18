@@ -5,8 +5,8 @@
 import 'dart:core' as core;
 import 'dart:core';
 
+import 'package:_fe_analyzer_shared/src/field_promotability.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis.dart';
-import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis_operations.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_link.dart';
 import 'package:_fe_analyzer_shared/src/type_inference/assigned_variables.dart';
 import 'package:test/test.dart';
@@ -7143,7 +7143,7 @@ main() {
           var x = Var('x');
           h.run([
             declare(x, type: 'int?'),
-            x.pattern().assign(expr('int').checkSchema('int?')),
+            x.pattern().assign(expr('int').checkContext('int?')),
           ]);
         });
 
@@ -7153,7 +7153,7 @@ main() {
             declare(x, type: 'int?'),
             x.nonNullAssert,
             checkPromoted(x, 'int'),
-            x.pattern().assign(expr('int').checkSchema('int')),
+            x.pattern().assign(expr('int').checkContext('int')),
           ]);
         });
       });
@@ -8299,34 +8299,15 @@ main() {
 
     group('List pattern:', () {
       group('Not guaranteed to match:', () {
-        group('Empty list:', () {
-          test('matched value type is non-nullable list', () {
-            h.run([
-              switch_(expr('List<Object>'), [
-                listPattern([]).then([break_()]),
-                default_.then([
-                  checkReachable(true),
-                ]),
+        test('Empty list', () {
+          h.run([
+            switch_(expr('List<Object>'), [
+              listPattern([]).then([break_()]),
+              default_.then([
+                checkReachable(true),
               ]),
-            ]);
-          });
-
-          test('matched value type is nullable list', () {
-            var x = Var('x');
-            h.run([
-              declare(x, initializer: expr('List<Object?>?')),
-              switch_(x, [
-                listPattern([]).then([
-                  checkReachable(true),
-                  checkPromoted(x, 'List<Object?>'),
-                ]),
-                default_.then([
-                  checkReachable(true),
-                  checkNotPromoted(x),
-                ]),
-              ]),
-            ]);
-          });
+            ]),
+          ]);
         });
 
         test('Single non-rest element', () {
@@ -10475,32 +10456,6 @@ main() {
             ], [
               checkReachable(false),
               checkNotPromoted(x),
-            ]),
-          ]);
-        });
-
-        test('matched type is extension type', () {
-          h.addSuperInterfaces('E', (_) => [Type('Object?')]);
-          h.addExtensionTypeErasure('E', 'int');
-          var x = Var('x');
-          h.run([
-            ifCase(expr('E'), x.pattern(type: 'int'), [
-              checkReachable(true),
-            ], [
-              checkReachable(false),
-            ]),
-          ]);
-        });
-
-        test('known type is extension type', () {
-          h.addSuperInterfaces('E', (_) => [Type('Object?')]);
-          h.addExtensionTypeErasure('E', 'int');
-          var x = Var('x');
-          h.run([
-            ifCase(expr('int'), x.pattern(type: 'E'), [
-              checkReachable(true),
-            ], [
-              checkReachable(false),
             ]),
           ]);
         });

@@ -149,7 +149,7 @@ class HInstructionStringifier implements HVisitor<String> {
   AbstractValueDomain get _abstractValueDomain =>
       closedWorld.abstractValueDomain;
 
-  String visit(HInstruction node) => node is HControlFlow
+  visit(HInstruction node) => node is HControlFlow
       ? '${node.accept(this)}'
       : '${node.accept(this)} ${node.instructionType}';
 
@@ -312,14 +312,13 @@ class HInstructionStringifier implements HVisitor<String> {
     String? fieldName = node.element.name;
     String receiverId = temporaryId(node.receiver);
     String op = node.jsOp;
-    switch (node.opKind) {
-      case ReadModifyWriteKind.assign:
-        String valueId = temporaryId(node.value);
-        return 'ReadModifyWrite: $receiverId.$fieldName $op= $valueId';
-      case ReadModifyWriteKind.prefix:
-        return 'ReadModifyWrite: $op$receiverId.$fieldName';
-      case ReadModifyWriteKind.postfix:
-        return 'ReadModifyWrite: $receiverId.$fieldName$op';
+    if (node.isAssignOp) {
+      String valueId = temporaryId(node.value);
+      return 'ReadModifyWrite: $receiverId.$fieldName $op= $valueId';
+    } else if (node.isPreOp) {
+      return 'ReadModifyWrite: $op$receiverId.$fieldName';
+    } else {
+      return 'ReadModifyWrite: $receiverId.$fieldName$op';
     }
   }
 
@@ -655,10 +654,11 @@ class HInstructionStringifier implements HVisitor<String> {
     return "PrimitiveCheck: $kind $checkedInput to ${node.instructionType}";
   }
 
-  String _primitiveCheckKind(HPrimitiveCheck node) => switch (node.kind) {
-        PrimitiveCheckKind.receiverType => 'RECEIVER',
-        PrimitiveCheckKind.argumentType => 'ARGUMENT',
-      };
+  String _primitiveCheckKind(HPrimitiveCheck node) {
+    if (node.isReceiverTypeCheck) return 'RECEIVER';
+    if (node.isArgumentTypeCheck) return 'ARGUMENT';
+    return '?';
+  }
 
   @override
   String visitBoolConversion(HBoolConversion node) {
@@ -780,23 +780,5 @@ class HInstructionStringifier implements HVisitor<String> {
   String visitTypeBind(HTypeBind node) {
     var inputs = node.inputs.map(temporaryId).join(', ');
     return "TypeBind: $inputs";
-  }
-
-  @override
-  String visitArrayFlagsCheck(HArrayFlagsCheck node) {
-    var inputs = node.inputs.map(temporaryId).join(', ');
-    return "ArrayFlagsCheck: $inputs";
-  }
-
-  @override
-  String visitArrayFlagsGet(HArrayFlagsGet node) {
-    var inputs = node.inputs.map(temporaryId).join(', ');
-    return "ArrayFlagsGet: $inputs";
-  }
-
-  @override
-  String visitArrayFlagsSet(HArrayFlagsSet node) {
-    var inputs = node.inputs.map(temporaryId).join(', ');
-    return "ArrayFlagsSet: $inputs";
   }
 }

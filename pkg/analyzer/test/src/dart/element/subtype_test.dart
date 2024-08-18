@@ -2,11 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
-    show Variance;
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/src/dart/resolver/variance.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -77,12 +76,12 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_extensionType_implementsNotNullable() {
-    var element = extensionType(
+    final element = extensionType(
       'A',
       representationType: intNone,
       interfaces: [intNone],
     );
-    var type = interfaceTypeNone(element);
+    final type = interfaceTypeNone(element);
 
     isSubtype(type, objectQuestion);
     isSubtype(type, objectNone);
@@ -92,8 +91,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_extensionType_noImplementedInterfaces() {
-    var element = extensionType('A', representationType: intNone);
-    var type = interfaceTypeNone(element);
+    final element = extensionType('A', representationType: intNone);
+    final type = interfaceTypeNone(element);
 
     isSubtype(type, objectQuestion);
     isNotSubtype(type, objectNone);
@@ -101,24 +100,24 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_extensionType_superinterfaces() {
-    var A = class_(name: 'A');
-    var B = class_(name: 'B');
+    final A = class_(name: 'A');
+    final B = class_(name: 'B');
 
-    var element = extensionType(
+    final element = extensionType(
       'X',
       representationType: intNone,
       interfaces: [
         interfaceTypeNone(A),
       ],
     );
-    var type = interfaceTypeNone(element);
+    final type = interfaceTypeNone(element);
 
     isSubtype(type, interfaceTypeNone(A));
     isNotSubtype(type, interfaceTypeNone(B));
   }
 
   test_extensionType_typeArguments() {
-    var A = extensionType(
+    final A = extensionType(
       'A',
       representationType: intNone,
       typeParameters: [
@@ -126,17 +125,17 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
       ],
     );
 
-    var A_object = interfaceTypeNone(
+    final A_object = interfaceTypeNone(
       A,
       typeArguments: [objectNone],
     );
 
-    var A_int = interfaceTypeNone(
+    final A_int = interfaceTypeNone(
       A,
       typeArguments: [intNone],
     );
 
-    var A_num = interfaceTypeNone(
+    final A_num = interfaceTypeNone(
       A,
       typeArguments: [numNone],
     );
@@ -148,171 +147,171 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
   test_functionType_01() {
     var E0 = typeParameter('E0');
-    var E1 = typeParameter('E1', bound: numNone);
+    var E1 = typeParameter('E1', bound: numStar);
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0>(E0, num)',
-      strT1: 'E1 Function<E1 extends num>(E1, E1)',
+      strT0: 'E0 Function<E0>(E0, num*)*',
+      strT1: 'E1* Function<E1 extends num*>(E1*, E1*)*',
     );
   }
 
   test_functionType_02() {
-    var E0 = typeParameter('E0', bound: numNone);
-    var E1 = typeParameter('E1', bound: intNone);
+    var E0 = typeParameter('E0', bound: numStar);
+    var E1 = typeParameter('E1', bound: intStar);
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function<E0 extends num>(E0)',
-      strT1: 'int Function<E1 extends int>(E1)',
+      strT0: 'int* Function<E0 extends num*>(E0*)*',
+      strT1: 'int* Function<E1 extends int*>(E1*)*',
     );
   }
 
   test_functionType_03() {
-    var E0 = typeParameter('E0', bound: numNone);
-    var E1 = typeParameter('E1', bound: intNone);
+    var E0 = typeParameter('E0', bound: numStar);
+    var E1 = typeParameter('E1', bound: intStar);
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0 extends num>(E0)',
-      strT1: 'E1 Function<E1 extends int>(E1)',
+      strT0: 'E0* Function<E0 extends num*>(E0*)*',
+      strT1: 'E1* Function<E1 extends int*>(E1*)*',
     );
   }
 
   test_functionType_04() {
-    var E0 = typeParameter('E0', bound: numNone);
-    var E1 = typeParameter('E1', bound: intNone);
+    var E0 = typeParameter('E0', bound: numStar);
+    var E1 = typeParameter('E1', bound: intStar);
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0 extends num>(int)',
-      strT1: 'E1 Function<E1 extends int>(int)',
+      strT0: 'E0* Function<E0 extends num*>(int*)*',
+      strT1: 'E1* Function<E1 extends int*>(int*)*',
     );
   }
 
   test_functionType_05() {
-    var E0 = typeParameter('E0', bound: numNone);
-    var E1 = typeParameter('E1', bound: numNone);
+    var E0 = typeParameter('E0', bound: numStar);
+    var E1 = typeParameter('E1', bound: numStar);
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'E0 Function<E0 extends num>(E0)',
-      strT1: 'num Function<E1 extends num>(E1)',
+      strT0: 'E0* Function<E0 extends num*>(E0*)*',
+      strT1: 'num* Function<E1 extends num*>(E1*)*',
     );
   }
 
   test_functionType_06() {
-    var E0 = typeParameter('E0', bound: intNone);
-    var E1 = typeParameter('E1', bound: intNone);
+    var E0 = typeParameter('E0', bound: intStar);
+    var E1 = typeParameter('E1', bound: intStar);
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'E0 Function<E0 extends int>(E0)',
-      strT1: 'num Function<E1 extends int>(E1)',
+      strT0: 'E0* Function<E0 extends int*>(E0*)*',
+      strT1: 'num* Function<E1 extends int*>(E1*)*',
     );
   }
 
   test_functionType_07() {
-    var E0 = typeParameter('E0', bound: intNone);
-    var E1 = typeParameter('E1', bound: intNone);
+    var E0 = typeParameter('E0', bound: intStar);
+    var E1 = typeParameter('E1', bound: intStar);
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'E0 Function<E0 extends int>(E0)',
-      strT1: 'int Function<E1 extends int>(E1)',
+      strT0: 'E0* Function<E0 extends int*>(E0*)*',
+      strT1: 'int* Function<E1 extends int*>(E1*)*',
     );
   }
 
@@ -320,21 +319,21 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E0 = typeParameter('E0');
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function<E0>(int)',
-      strT1: 'int Function(int)',
+      strT0: 'int* Function<E0>(int*)*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
@@ -344,84 +343,84 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E1 = typeParameter('E1');
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0, F0],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function<E0, F0>(int)',
-      strT1: 'int Function<E1>(int)',
+      strT0: 'int* Function<E0, F0>(int*)*',
+      strT1: 'int* Function<E1>(int*)*',
     );
   }
 
   test_functionType_10() {
     var E0 = typeParameter('E0');
-    E0.bound = listNone(
-      typeParameterTypeNone(E0),
+    E0.bound = listStar(
+      typeParameterTypeStar(E0),
     );
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0 extends List<E0>>(E0)',
-      strT1: 'E1 Function<E1 extends List<E1>>(E1)',
+      strT0: 'E0* Function<E0 extends List<E0*>*>(E0*)*',
+      strT1: 'E1* Function<E1 extends List<E1*>*>(E1*)*',
     );
   }
 
   test_functionType_11() {
     var E0 = typeParameter('E0');
-    E0.bound = iterableNone(
-      typeParameterTypeNone(E0),
+    E0.bound = iterableStar(
+      typeParameterTypeStar(E0),
     );
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E0)),
+          requiredParameter(type: typeParameterTypeStar(E0)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0 extends Iterable<E0>>(E0)',
-      strT1: 'E1 Function<E1 extends List<E1>>(E1)',
+      strT0: 'E0* Function<E0 extends Iterable<E0*>*>(E0*)*',
+      strT1: 'E1* Function<E1 extends List<E1*>*>(E1*)*',
     );
   }
 
@@ -429,29 +428,29 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E0 = typeParameter('E0');
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: listNone(objectNone)),
+          requiredParameter(type: listStar(objectStar)),
         ],
-        returnType: typeParameterTypeNone(E0),
+        returnType: typeParameterTypeStar(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'E0 Function<E0>(E0, List<Object>)',
-      strT1: 'E1 Function<E1 extends List<E1>>(E1, E1)',
+      strT0: 'E0* Function<E0>(E0, List<Object*>*)*',
+      strT1: 'E1* Function<E1 extends List<E1*>*>(E1*, E1*)*',
     );
   }
 
@@ -459,31 +458,31 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E0 = typeParameter('E0');
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: listNone(objectNone)),
+          requiredParameter(type: listStar(objectStar)),
         ],
-        returnType: listNone(
+        returnType: listStar(
           typeParameterTypeNone(E0),
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'List<E0> Function<E0>(E0, List<Object>)',
-      strT1: 'E1 Function<E1 extends List<E1>>(E1, E1)',
+      strT0: 'List<E0>* Function<E0>(E0, List<Object*>*)*',
+      strT1: 'E1* Function<E1 extends List<E1*>*>(E1*, E1*)*',
     );
   }
 
@@ -491,29 +490,29 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E0 = typeParameter('E0');
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: listNone(objectNone)),
+          requiredParameter(type: listStar(objectStar)),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
-        returnType: typeParameterTypeNone(E1),
+        returnType: typeParameterTypeStar(E1),
       ),
-      strT0: 'int Function<E0>(E0, List<Object>)',
-      strT1: 'E1 Function<E1 extends List<E1>>(E1, E1)',
+      strT0: 'int* Function<E0>(E0, List<Object*>*)*',
+      strT1: 'E1* Function<E1 extends List<E1*>*>(E1*, E1*)*',
     );
   }
 
@@ -521,349 +520,349 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E0 = typeParameter('E0');
 
     var E1 = typeParameter('E1');
-    E1.bound = listNone(
-      typeParameterTypeNone(E1),
+    E1.bound = listStar(
+      typeParameterTypeStar(E1),
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: listNone(objectNone)),
+          requiredParameter(type: listStar(objectStar)),
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: typeParameterTypeNone(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
+          requiredParameter(type: typeParameterTypeStar(E1)),
         ],
         returnType: voidNone,
       ),
-      strT0: 'E0 Function<E0>(E0, List<Object>)',
-      strT1: 'void Function<E1 extends List<E1>>(E1, E1)',
+      strT0: 'E0 Function<E0>(E0, List<Object*>*)*',
+      strT1: 'void Function<E1 extends List<E1*>*>(E1*, E1*)*',
     );
   }
 
   test_functionType_16() {
     isSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionNone,
-      strT0: 'int Function()',
-      strT1: 'Function',
+      functionStar,
+      strT0: 'int* Function()*',
+      strT1: 'Function*',
     );
   }
 
   test_functionType_17() {
     isNotSubtype(
-      functionNone,
-      functionTypeNone(
-        returnType: intNone,
+      functionStar,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      strT0: 'Function',
-      strT1: 'int Function()',
+      strT0: 'Function*',
+      strT1: 'int* Function()*',
     );
   }
 
   test_functionType_18() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
-      strT0: 'dynamic Function()',
-      strT1: 'dynamic Function()',
+      strT0: 'dynamic Function()*',
+      strT1: 'dynamic Function()*',
     );
   }
 
   test_functionType_19() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'dynamic Function()',
-      strT1: 'void Function()',
+      strT0: 'dynamic Function()*',
+      strT1: 'void Function()*',
     );
   }
 
   test_functionType_20() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
-      strT0: 'void Function()',
-      strT1: 'dynamic Function()',
+      strT0: 'void Function()*',
+      strT1: 'dynamic Function()*',
     );
   }
 
   test_functionType_21() {
     isSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'int Function()',
-      strT1: 'void Function()',
+      strT0: 'int* Function()*',
+      strT1: 'void Function()*',
     );
   }
 
   test_functionType_22() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      strT0: 'void Function()',
-      strT1: 'int Function()',
+      strT0: 'void Function()*',
+      strT1: 'int* Function()*',
     );
   }
 
   test_functionType_23() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'void Function()',
-      strT1: 'void Function()',
+      strT0: 'void Function()*',
+      strT1: 'void Function()*',
     );
   }
 
   test_functionType_24() {
     isSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      strT0: 'int Function()',
-      strT1: 'int Function()',
+      strT0: 'int* Function()*',
+      strT1: 'int* Function()*',
     );
   }
 
   test_functionType_25() {
     isSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
-        returnType: objectNone,
+      functionTypeStar(
+        returnType: objectStar,
       ),
-      strT0: 'int Function()',
-      strT1: 'Object Function()',
+      strT0: 'int* Function()*',
+      strT1: 'Object* Function()*',
     );
   }
 
   test_functionType_26() {
     isNotSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
-        returnType: doubleNone,
+      functionTypeStar(
+        returnType: doubleStar,
       ),
-      strT0: 'int Function()',
-      strT1: 'double Function()',
+      strT0: 'int* Function()*',
+      strT1: 'double* Function()*',
     );
   }
 
   test_functionType_27() {
     isNotSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'int Function()',
-      strT1: 'void Function(int)',
+      strT0: 'int* Function()*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_28() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'void Function()',
-      strT1: 'int Function(int)',
+      strT0: 'void Function()*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
   test_functionType_29() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function()',
-      strT1: 'void Function(int)',
+      strT0: 'void Function()*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_30() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function(int)',
-      strT1: 'int Function(int)',
+      strT0: 'int* Function(int*)*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
   test_functionType_31() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: objectNone),
+          requiredParameter(type: objectStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: objectNone,
+        returnType: objectStar,
       ),
-      strT0: 'int Function(Object)',
-      strT1: 'Object Function(int)',
+      strT0: 'int* Function(Object*)*',
+      strT1: 'Object* Function(int*)*',
     );
   }
 
   test_functionType_32() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: doubleNone),
+          requiredParameter(type: doubleStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function(int)',
-      strT1: 'int Function(double)',
+      strT0: 'int* Function(int*)*',
+      strT1: 'int* Function(double*)*',
     );
   }
 
   test_functionType_33() {
     isNotSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function()',
-      strT1: 'int Function(int)',
+      strT0: 'int* Function()*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
   test_functionType_34() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function(int)',
-      strT1: 'int Function(int, int)',
+      strT0: 'int* Function(int*)*',
+      strT1: 'int* Function(int*, int*)*',
     );
   }
 
   test_functionType_35() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'int Function(int, int)',
-      strT1: 'int Function(int)',
+      strT0: 'int* Function(int*, int*)*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
   test_functionType_36() {
-    var f = functionTypeNone(
+    var f = functionTypeStar(
       parameters: [
         requiredParameter(
-          type: functionTypeNone(
+          type: functionTypeStar(
             returnType: voidNone,
           ),
         ),
       ],
       returnType: voidNone,
     );
-    var g = functionTypeNone(
+    var g = functionTypeStar(
       parameters: [
         requiredParameter(
-          type: functionTypeNone(
+          type: functionTypeStar(
             parameters: [
-              requiredParameter(type: intNone),
+              requiredParameter(type: intStar),
             ],
             returnType: voidNone,
           ),
@@ -875,634 +874,634 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isNotSubtype(
       f,
       g,
-      strT0: 'void Function(void Function())',
-      strT1: 'void Function(void Function(int))',
+      strT0: 'void Function(void Function()*)*',
+      strT1: 'void Function(void Function(int*)*)*',
     );
 
     isNotSubtype(
       g,
       f,
-      strT0: 'void Function(void Function(int))',
-      strT1: 'void Function(void Function())',
+      strT0: 'void Function(void Function(int*)*)*',
+      strT1: 'void Function(void Function()*)*',
     );
   }
 
   test_functionType_37() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function()',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function()*',
     );
   }
 
   test_functionType_38() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function(int)',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_39() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function(int)',
-      strT1: 'void Function([int])',
+      strT0: 'void Function(int*)*',
+      strT1: 'void Function([int*])*',
     );
   }
 
   test_functionType_40() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function([int])',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function([int*])*',
     );
   }
 
   test_functionType_41() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: objectNone),
+          positionalParameter(type: objectStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([Object])',
-      strT1: 'void Function([int])',
+      strT0: 'void Function([Object*])*',
+      strT1: 'void Function([int*])*',
     );
   }
 
   test_functionType_42() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: objectNone),
+          positionalParameter(type: objectStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function([Object])',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function([Object*])*',
     );
   }
 
   test_functionType_43() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function(int, [int])',
-      strT1: 'void Function(int)',
+      strT0: 'void Function(int*, [int*])*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_44() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function(int, [int])',
-      strT1: 'void Function(int, [int])',
+      strT0: 'void Function(int*, [int*])*',
+      strT1: 'void Function(int*, [int*])*',
     );
   }
 
   test_functionType_45() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int, int])',
-      strT1: 'void Function(int)',
+      strT0: 'void Function([int*, int*])*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_46() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int, int])',
-      strT1: 'void Function(int, [int])',
+      strT0: 'void Function([int*, int*])*',
+      strT1: 'void Function(int*, [int*])*',
     );
   }
 
   test_functionType_47() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int, int])',
-      strT1: 'void Function(int, [int, int])',
+      strT0: 'void Function([int*, int*])*',
+      strT1: 'void Function(int*, [int*, int*])*',
     );
   }
 
   test_functionType_48() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          requiredParameter(type: intStar),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int, int, int])',
-      strT1: 'void Function(int, [int, int])',
+      strT0: 'void Function([int*, int*, int*])*',
+      strT1: 'void Function(int*, [int*, int*])*',
     );
   }
 
   test_functionType_49() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: doubleNone),
+          requiredParameter(type: doubleStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function(double)',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function(double*)*',
     );
   }
 
   test_functionType_50() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int])',
-      strT1: 'void Function([int, int])',
+      strT0: 'void Function([int*])*',
+      strT1: 'void Function([int*, int*])*',
     );
   }
 
   test_functionType_51() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([int, int])',
-      strT1: 'void Function([int])',
+      strT0: 'void Function([int*, int*])*',
+      strT1: 'void Function([int*])*',
     );
   }
 
   test_functionType_52() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: objectNone),
-          positionalParameter(type: intNone),
+          positionalParameter(type: objectStar),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          positionalParameter(type: intNone),
+          positionalParameter(type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function([Object, int])',
-      strT1: 'void Function([int])',
+      strT0: 'void Function([Object*, int*])*',
+      strT1: 'void Function([int*])*',
     );
   }
 
   test_functionType_53() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function()',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function()*',
     );
   }
 
   test_functionType_54() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(name: 'a', type: intNone),
+          requiredParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function(int)',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function(int*)*',
     );
   }
 
   test_functionType_55() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(name: 'a', type: intNone),
+          requiredParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function(int)',
-      strT1: 'void Function({int a})',
+      strT0: 'void Function(int*)*',
+      strT1: 'void Function({int* a})*',
     );
   }
 
   test_functionType_56() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function({int a})',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function({int* a})*',
     );
   }
 
   test_functionType_57() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'b', type: intNone),
+          namedParameter(name: 'b', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function({int b})',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function({int* b})*',
     );
   }
 
   test_functionType_58() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: objectNone),
+          namedParameter(name: 'a', type: objectStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({Object a})',
-      strT1: 'void Function({int a})',
+      strT0: 'void Function({Object* a})*',
+      strT1: 'void Function({int* a})*',
     );
   }
 
   test_functionType_59() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: objectNone),
+          namedParameter(name: 'a', type: objectStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function({Object a})',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function({Object* a})*',
     );
   }
 
   test_functionType_60() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          namedParameter(name: 'a', type: intNone),
+          requiredParameter(type: intStar),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          namedParameter(name: 'a', type: intNone),
+          requiredParameter(type: intStar),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function(int, {int a})',
-      strT1: 'void Function(int, {int a})',
+      strT0: 'void Function(int*, {int* a})*',
+      strT1: 'void Function(int*, {int* a})*',
     );
   }
 
   test_functionType_61() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: doubleNone),
+          namedParameter(name: 'a', type: doubleStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function({double a})',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function({double* a})*',
     );
   }
 
   test_functionType_62() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'b', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'b', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a})',
-      strT1: 'void Function({int a, int b})',
+      strT0: 'void Function({int* a})*',
+      strT1: 'void Function({int* a, int* b})*',
     );
   }
 
   test_functionType_63() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'b', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'b', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
+          namedParameter(name: 'a', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a, int b})',
-      strT1: 'void Function({int a})',
+      strT0: 'void Function({int* a, int* b})*',
+      strT1: 'void Function({int* a})*',
     );
   }
 
   test_functionType_64() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'b', type: intNone),
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'b', type: intStar),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a, int b, int c})',
-      strT1: 'void Function({int a, int c})',
+      strT0: 'void Function({int* a, int* b, int* c})*',
+      strT1: 'void Function({int* a, int* c})*',
     );
   }
 
   test_functionType_66() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'b', type: intNone),
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'b', type: intStar),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'b', type: intNone),
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'b', type: intStar),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a, int b, int c})',
-      strT1: 'void Function({int b, int c})',
+      strT0: 'void Function({int* a, int* b, int* c})*',
+      strT1: 'void Function({int* b, int* c})*',
     );
   }
 
   test_functionType_68() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'a', type: intNone),
-          namedParameter(name: 'b', type: intNone),
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'a', type: intStar),
+          namedParameter(name: 'b', type: intStar),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'c', type: intNone),
+          namedParameter(name: 'c', type: intStar),
         ],
         returnType: voidNone,
       ),
-      strT0: 'void Function({int a, int b, int c})',
-      strT1: 'void Function({int c})',
+      strT0: 'void Function({int* a, int* b, int* c})*',
+      strT1: 'void Function({int* c})*',
     );
   }
 
   test_functionType_70() {
     isSubtype(
       functionTypeNone(
-        returnType: numNone,
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       objectNone,
-      strT0: 'num Function(int)',
+      strT0: 'num* Function(int*)',
       strT1: 'Object',
     );
   }
 
   test_functionType_71() {
     isSubtype(
-      functionTypeNone(
-        returnType: numNone,
+      functionTypeStar(
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       objectNone,
-      strT0: 'num Function(int)',
+      strT0: 'num* Function(int*)*',
       strT1: 'Object',
     );
   }
@@ -1510,13 +1509,13 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_functionType_72() {
     isNotSubtype(
       functionTypeQuestion(
-        returnType: numNone,
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       objectNone,
-      strT0: 'num Function(int)?',
+      strT0: 'num* Function(int*)?',
       strT1: 'Object',
     );
   }
@@ -1581,43 +1580,43 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var F1 = typeParameter('F1');
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
             requiredParameter(type: typeParameterTypeNone(E0)),
           ],
           returnType: typeParameterTypeNone(E0),
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [F1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(F1)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
             requiredParameter(type: typeParameterTypeNone(F1)),
           ],
           returnType: typeParameterTypeNone(F1),
         ),
       ),
-      strT0: 'E0 Function(E0) Function<E0>(E0)',
-      strT1: 'F1 Function(F1) Function<F1>(F1)',
+      strT0: 'E0 Function(E0)* Function<E0>(E0)*',
+      strT1: 'F1 Function(F1)* Function<F1>(F1)*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
           requiredParameter(
-            type: functionTypeNone(
+            type: functionTypeStar(
               parameters: [
-                requiredParameter(type: intNone),
+                requiredParameter(type: intStar),
                 requiredParameter(type: typeParameterTypeNone(E0)),
               ],
               returnType: typeParameterTypeNone(E0),
@@ -1626,14 +1625,14 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
           requiredParameter(
-            type: functionTypeNone(
+            type: functionTypeStar(
               parameters: [
-                requiredParameter(type: numNone),
+                requiredParameter(type: numStar),
                 requiredParameter(type: typeParameterTypeNone(E1)),
               ],
               returnType: typeParameterTypeNone(E1),
@@ -1642,29 +1641,29 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
         ],
         returnType: typeParameterTypeNone(E1),
       ),
-      strT0: 'E0 Function<E0>(E0, E0 Function(int, E0))',
-      strT1: 'E1 Function<E1>(E1, E1 Function(num, E1))',
+      strT0: 'E0 Function<E0>(E0, E0 Function(int*, E0)*)*',
+      strT1: 'E1 Function<E1>(E1, E1 Function(num*, E1)*)*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0, F0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
             requiredParameter(type: typeParameterTypeNone(F0)),
           ],
           returnType: typeParameterTypeNone(E0),
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           typeFormals: [F1],
           parameters: [
             requiredParameter(type: typeParameterTypeNone(F1)),
@@ -1672,37 +1671,37 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
           returnType: typeParameterTypeNone(E1),
         ),
       ),
-      strT0: 'E0 Function(F0) Function<E0, F0>(E0)',
-      strT1: 'E1 Function<F1>(F1) Function<E1>(E1)',
+      strT0: 'E0 Function(F0)* Function<E0, F0>(E0)*',
+      strT1: 'E1 Function<F1>(F1)* Function<E1>(E1)*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0, F0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
             requiredParameter(type: typeParameterTypeNone(F0)),
           ],
           returnType: typeParameterTypeNone(E0),
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [F1, E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
             requiredParameter(type: typeParameterTypeNone(F1)),
           ],
           returnType: typeParameterTypeNone(E1),
         ),
       ),
-      strT0: 'E0 Function(F0) Function<E0, F0>(E0)',
-      strT1: 'E1 Function(F1) Function<F1, E1>(E1)',
+      strT0: 'E0 Function(F0)* Function<E0, F0>(E0)*',
+      strT1: 'E1 Function(F1)* Function<F1, E1>(E1)*',
     );
   }
 
@@ -1711,74 +1710,74 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var E1 = typeParameter('E');
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function<E>(E)',
-      strT1: 'num Function<E>(E)',
+      strT0: 'int* Function<E>(E)*',
+      strT1: 'num* Function<E>(E)*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: typeParameterTypeNone(E1),
       ),
-      strT0: 'E Function<E>(num)',
-      strT1: 'E Function<E>(int)',
+      strT0: 'E Function<E>(num*)*',
+      strT1: 'E Function<E>(int*)*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
         returnType: typeParameterTypeNone(E1),
       ),
-      strT0: 'E Function<E>(E, num)',
-      strT1: 'E Function<E>(E, int)',
+      strT0: 'E Function<E>(E, num*)*',
+      strT1: 'E Function<E>(E, int*)*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E0],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E0)),
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
         returnType: typeParameterTypeNone(E0),
       ),
-      functionTypeNone(
+      functionTypeStar(
         typeFormals: [E1],
         parameters: [
           requiredParameter(type: typeParameterTypeNone(E1)),
@@ -1786,218 +1785,218 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
         ],
         returnType: typeParameterTypeNone(E1),
       ),
-      strT0: 'E Function<E>(E, num)',
-      strT1: 'E Function<E>(E, E)',
+      strT0: 'E Function<E>(E, num*)*',
+      strT1: 'E Function<E>(E, E)*',
     );
   }
 
   test_functionType_notGeneric_functionReturnType() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
-            requiredParameter(type: numNone),
+            requiredParameter(type: numStar),
           ],
-          returnType: numNone,
+          returnType: numStar,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
-            requiredParameter(type: intNone),
+            requiredParameter(type: intStar),
           ],
-          returnType: numNone,
+          returnType: numStar,
         ),
       ),
-      strT0: 'num Function(num) Function(num)',
-      strT1: 'num Function(int) Function(num)',
+      strT0: 'num* Function(num*)* Function(num*)*',
+      strT1: 'num* Function(int*)* Function(num*)*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
-            requiredParameter(type: intNone),
+            requiredParameter(type: intStar),
           ],
-          returnType: intNone,
+          returnType: intStar,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: functionTypeNone(
+        returnType: functionTypeStar(
           parameters: [
-            requiredParameter(type: numNone),
+            requiredParameter(type: numStar),
           ],
-          returnType: numNone,
+          returnType: numStar,
         ),
       ),
-      strT0: 'int Function(int) Function(int)',
-      strT1: 'num Function(num) Function(num)',
+      strT0: 'int* Function(int*)* Function(int*)*',
+      strT1: 'num* Function(num*)* Function(num*)*',
     );
   }
 
   test_functionType_notGeneric_named() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: numNone),
+          namedParameter(name: 'x', type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: intNone),
+          namedParameter(name: 'x', type: intStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'num Function({num x})',
-      strT1: 'num Function({int x})',
+      strT0: 'num* Function({num* x})*',
+      strT1: 'num* Function({int* x})*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
-          namedParameter(name: 'x', type: numNone),
+          requiredParameter(type: numStar),
+          namedParameter(name: 'x', type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
-          namedParameter(name: 'x', type: intNone),
+          requiredParameter(type: intStar),
+          namedParameter(name: 'x', type: intStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'num Function(num, {num x})',
-      strT1: 'num Function(int, {int x})',
+      strT0: 'num* Function(num*, {num* x})*',
+      strT1: 'num* Function(int*, {int* x})*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: numNone),
+          namedParameter(name: 'x', type: numStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: numNone),
+          namedParameter(name: 'x', type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function({num x})',
-      strT1: 'num Function({num x})',
+      strT0: 'int* Function({num* x})*',
+      strT1: 'num* Function({num* x})*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: intNone),
+          namedParameter(name: 'x', type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          namedParameter(name: 'x', type: numNone),
+          namedParameter(name: 'x', type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function({int x})',
-      strT1: 'num Function({num x})',
+      strT0: 'int* Function({int* x})*',
+      strT1: 'num* Function({num* x})*',
     );
   }
 
   test_functionType_notGeneric_required() {
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'num Function(num)',
-      strT1: 'num Function(int)',
+      strT0: 'num* Function(num*)*',
+      strT1: 'num* Function(int*)*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function(num)',
-      strT1: 'num Function(num)',
+      strT0: 'int* Function(num*)*',
+      strT1: 'num* Function(num*)*',
     );
 
     isSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function(num)',
-      strT1: 'num Function(int)',
+      strT0: 'int* Function(num*)*',
+      strT1: 'num* Function(int*)*',
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: numNone),
+          requiredParameter(type: numStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
-      strT0: 'int Function(int)',
-      strT1: 'num Function(num)',
+      strT0: 'int* Function(int*)*',
+      strT1: 'num* Function(num*)*',
     );
 
     isSubtype(
       nullQuestion,
-      functionTypeQuestion(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: numNone,
+        returnType: numStar,
       ),
       strT0: 'Null?',
-      strT1: 'num Function(int)?',
+      strT1: 'num* Function(int*)*',
     );
   }
 
@@ -2066,10 +2065,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_functionType_requiredNamedParameter_03() {
-    var F0 = functionTypeNone(
+    var F0 = functionTypeStar(
       returnType: voidNone,
       parameters: [
-        namedParameter(name: 'a', type: intQuestion),
+        namedParameter(name: 'a', type: intStar),
       ],
     );
 
@@ -2083,177 +2082,177 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       F0,
       F1,
-      strT0: 'void Function({int? a})',
+      strT0: 'void Function({int* a})*',
       strT1: 'void Function({required int a})',
     );
 
-    isNotSubtype(
+    isSubtype(
       F1,
       F0,
       strT0: 'void Function({required int a})',
-      strT1: 'void Function({int? a})',
+      strT1: 'void Function({int* a})*',
     );
   }
 
   test_futureOr_01() {
     isSubtype(
-      intNone,
-      futureOrNone(intNone),
-      strT0: 'int',
-      strT1: 'FutureOr<int>',
+      intStar,
+      futureOrStar(intStar),
+      strT0: 'int*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
   test_futureOr_02() {
     isSubtype(
-      intNone,
-      futureOrNone(numNone),
-      strT0: 'int',
-      strT1: 'FutureOr<num>',
+      intStar,
+      futureOrStar(numStar),
+      strT0: 'int*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
   test_futureOr_03() {
     isSubtype(
-      futureNone(intNone),
-      futureOrNone(intNone),
-      strT0: 'Future<int>',
-      strT1: 'FutureOr<int>',
+      futureStar(intStar),
+      futureOrStar(intStar),
+      strT0: 'Future<int*>*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
   test_futureOr_04() {
     isSubtype(
-      futureNone(intNone),
-      futureOrNone(numNone),
-      strT0: 'Future<int>',
-      strT1: 'FutureOr<num>',
+      futureStar(intStar),
+      futureOrStar(numStar),
+      strT0: 'Future<int*>*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
   test_futureOr_05() {
     isSubtype(
-      futureNone(intNone),
-      futureOrNone(objectNone),
-      strT0: 'Future<int>',
-      strT1: 'FutureOr<Object>',
+      futureStar(intStar),
+      futureOrStar(objectStar),
+      strT0: 'Future<int*>*',
+      strT1: 'FutureOr<Object*>*',
     );
   }
 
   test_futureOr_06() {
     isSubtype(
-      futureOrNone(intNone),
-      futureOrNone(intNone),
-      strT0: 'FutureOr<int>',
-      strT1: 'FutureOr<int>',
+      futureOrStar(intStar),
+      futureOrStar(intStar),
+      strT0: 'FutureOr<int*>*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
   test_futureOr_07() {
     isSubtype(
-      futureOrNone(intNone),
-      futureOrNone(numNone),
-      strT0: 'FutureOr<int>',
-      strT1: 'FutureOr<num>',
+      futureOrStar(intStar),
+      futureOrStar(numStar),
+      strT0: 'FutureOr<int*>*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
   test_futureOr_08() {
     isSubtype(
-      futureOrNone(intNone),
-      objectNone,
-      strT0: 'FutureOr<int>',
-      strT1: 'Object',
+      futureOrStar(intStar),
+      objectStar,
+      strT0: 'FutureOr<int*>*',
+      strT1: 'Object*',
     );
   }
 
   test_futureOr_09() {
     isNotSubtype(
-      intNone,
-      futureOrNone(doubleNone),
-      strT0: 'int',
-      strT1: 'FutureOr<double>',
+      intStar,
+      futureOrStar(doubleStar),
+      strT0: 'int*',
+      strT1: 'FutureOr<double*>*',
     );
   }
 
   test_futureOr_10() {
     isNotSubtype(
-      futureOrNone(doubleNone),
-      intNone,
-      strT0: 'FutureOr<double>',
-      strT1: 'int',
+      futureOrStar(doubleStar),
+      intStar,
+      strT0: 'FutureOr<double*>*',
+      strT1: 'int*',
     );
   }
 
   test_futureOr_11() {
     isNotSubtype(
-      futureOrNone(intNone),
-      futureNone(numNone),
-      strT0: 'FutureOr<int>',
-      strT1: 'Future<num>',
+      futureOrStar(intStar),
+      futureStar(numStar),
+      strT0: 'FutureOr<int*>*',
+      strT1: 'Future<num*>*',
     );
   }
 
   test_futureOr_12() {
     isNotSubtype(
-      futureOrNone(intNone),
-      numNone,
-      strT0: 'FutureOr<int>',
-      strT1: 'num',
+      futureOrStar(intStar),
+      numStar,
+      strT0: 'FutureOr<int*>*',
+      strT1: 'num*',
     );
   }
 
   test_futureOr_13() {
-    isNotSubtype(
+    isSubtype(
       nullQuestion,
-      futureOrNone(intNone),
+      futureOrStar(intStar),
       strT0: 'Null?',
-      strT1: 'FutureOr<int>',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
   test_futureOr_14() {
     isSubtype(
       nullQuestion,
-      futureQuestion(intNone),
+      futureStar(intStar),
       strT0: 'Null?',
-      strT1: 'Future<int>?',
+      strT1: 'Future<int*>*',
     );
   }
 
   test_futureOr_15() {
     isSubtype(
       dynamicType,
-      futureOrNone(dynamicType),
+      futureOrStar(dynamicType),
       strT0: 'dynamic',
-      strT1: 'FutureOr<dynamic>',
+      strT1: 'FutureOr<dynamic>*',
     );
   }
 
   test_futureOr_16() {
     isNotSubtype(
       dynamicType,
-      futureOrNone(stringNone),
+      futureOrStar(stringStar),
       strT0: 'dynamic',
-      strT1: 'FutureOr<String>',
+      strT1: 'FutureOr<String*>*',
     );
   }
 
   test_futureOr_17() {
     isSubtype(
       voidNone,
-      futureOrNone(voidNone),
+      futureOrStar(voidNone),
       strT0: 'void',
-      strT1: 'FutureOr<void>',
+      strT1: 'FutureOr<void>*',
     );
   }
 
   test_futureOr_18() {
     isNotSubtype(
       voidNone,
-      futureOrNone(stringNone),
+      futureOrStar(stringStar),
       strT0: 'void',
-      strT1: 'FutureOr<String>',
+      strT1: 'FutureOr<String*>*',
     );
   }
 
@@ -2262,11 +2261,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
     isSubtype(
       typeParameterTypeNone(E),
-      futureOrNone(
+      futureOrStar(
         typeParameterTypeNone(E),
       ),
       strT0: 'E',
-      strT1: 'FutureOr<E>',
+      strT1: 'FutureOr<E>*',
     );
   }
 
@@ -2275,48 +2274,52 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
     isNotSubtype(
       typeParameterTypeNone(E),
-      futureOrNone(stringNone),
+      futureOrStar(stringStar),
       strT0: 'E',
-      strT1: 'FutureOr<String>',
+      strT1: 'FutureOr<String*>*',
     );
   }
 
   test_futureOr_21() {
     isSubtype(
-      functionTypeNone(
-        returnType: stringNone,
+      functionTypeStar(
+        parameters: const [],
+        returnType: stringStar,
       ),
-      futureOrNone(
-        functionTypeNone(
+      futureOrStar(
+        functionTypeStar(
+          parameters: const [],
           returnType: voidNone,
         ),
       ),
-      strT0: 'String Function()',
-      strT1: 'FutureOr<void Function()>',
+      strT0: 'String* Function()*',
+      strT1: 'FutureOr<void Function()*>*',
     );
   }
 
   test_futureOr_22() {
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
+        parameters: const [],
         returnType: voidNone,
       ),
-      futureOrNone(
-        functionTypeNone(
-          returnType: stringNone,
+      futureOrStar(
+        functionTypeStar(
+          parameters: const [],
+          returnType: stringStar,
         ),
       ),
-      strT0: 'void Function()',
-      strT1: 'FutureOr<String Function()>',
+      strT0: 'void Function()*',
+      strT1: 'FutureOr<String* Function()*>*',
     );
   }
 
   test_futureOr_23() {
     isNotSubtype(
-      futureOrNone(numNone),
-      futureOrNone(intNone),
-      strT0: 'FutureOr<num>',
-      strT1: 'FutureOr<int>',
+      futureOrStar(numStar),
+      futureOrStar(intStar),
+      strT0: 'FutureOr<num*>*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
@@ -2324,10 +2327,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      futureOrNone(numNone),
-      strT0: 'T & int',
-      strT1: 'FutureOr<num>',
+      promotedTypeParameterTypeNone(T, intStar),
+      futureOrStar(numStar),
+      strT0: 'T & int*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
@@ -2335,10 +2338,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, futureNone(numNone)),
-      futureOrNone(numNone),
-      strT0: 'T & Future<num>',
-      strT1: 'FutureOr<num>',
+      promotedTypeParameterTypeNone(T, futureStar(numStar)),
+      futureOrStar(numStar),
+      strT0: 'T & Future<num*>*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
@@ -2346,10 +2349,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, futureNone(intNone)),
-      futureOrNone(numNone),
-      strT0: 'T & Future<int>',
-      strT1: 'FutureOr<num>',
+      promotedTypeParameterTypeNone(T, futureStar(intStar)),
+      futureOrStar(numStar),
+      strT0: 'T & Future<int*>*',
+      strT1: 'FutureOr<num*>*',
     );
   }
 
@@ -2357,10 +2360,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      futureOrNone(intNone),
-      strT0: 'T & num',
-      strT1: 'FutureOr<int>',
+      promotedTypeParameterTypeNone(T, numStar),
+      futureOrStar(intStar),
+      strT0: 'T & num*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
@@ -2368,10 +2371,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, futureNone(numNone)),
-      futureOrNone(intNone),
-      strT0: 'T & Future<num>',
-      strT1: 'FutureOr<int>',
+      promotedTypeParameterTypeNone(T, futureStar(numStar)),
+      futureOrStar(intStar),
+      strT0: 'T & Future<num*>*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
@@ -2379,226 +2382,226 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, futureOrNone(numNone)),
-      futureOrNone(intNone),
-      strT0: 'T & FutureOr<num>',
-      strT1: 'FutureOr<int>',
+      promotedTypeParameterTypeNone(T, futureOrStar(numStar)),
+      futureOrStar(intStar),
+      strT0: 'T & FutureOr<num*>*',
+      strT1: 'FutureOr<int*>*',
     );
   }
 
   test_futureOr_30() {
     isSubtype(
-      futureOrNone(objectNone),
-      futureOrNone(
-        futureOrNone(objectNone),
+      futureOrStar(objectStar),
+      futureOrStar(
+        futureOrStar(objectStar),
       ),
-      strT0: 'FutureOr<Object>',
-      strT1: 'FutureOr<FutureOr<Object>>',
+      strT0: 'FutureOr<Object*>*',
+      strT1: 'FutureOr<FutureOr<Object*>*>*',
     );
   }
 
   test_interfaceType_01() {
-    isSubtype(intNone, intNone, strT0: 'int', strT1: 'int');
+    isSubtype(intStar, intStar, strT0: 'int*', strT1: 'int*');
   }
 
   test_interfaceType_02() {
-    isSubtype(intNone, numNone, strT0: 'int', strT1: 'num');
+    isSubtype(intStar, numStar, strT0: 'int*', strT1: 'num*');
   }
 
   test_interfaceType_03() {
     isSubtype(
-      intNone,
-      comparableNone(numNone),
-      strT0: 'int',
-      strT1: 'Comparable<num>',
+      intStar,
+      comparableStar(numStar),
+      strT0: 'int*',
+      strT1: 'Comparable<num*>*',
     );
   }
 
   test_interfaceType_04() {
-    isSubtype(intNone, objectNone, strT0: 'int', strT1: 'Object');
+    isSubtype(intStar, objectStar, strT0: 'int*', strT1: 'Object*');
   }
 
   test_interfaceType_05() {
-    isSubtype(doubleNone, numNone, strT0: 'double', strT1: 'num');
+    isSubtype(doubleStar, numStar, strT0: 'double*', strT1: 'num*');
   }
 
   test_interfaceType_06() {
-    isNotSubtype(intNone, doubleNone, strT0: 'int', strT1: 'double');
+    isNotSubtype(intStar, doubleStar, strT0: 'int*', strT1: 'double*');
   }
 
   test_interfaceType_07() {
     isNotSubtype(
-      intNone,
-      comparableNone(intNone),
-      strT0: 'int',
-      strT1: 'Comparable<int>',
+      intStar,
+      comparableStar(intStar),
+      strT0: 'int*',
+      strT1: 'Comparable<int*>*',
     );
   }
 
   test_interfaceType_08() {
     isNotSubtype(
-      intNone,
-      iterableNone(intNone),
-      strT0: 'int',
-      strT1: 'Iterable<int>',
+      intStar,
+      iterableStar(intStar),
+      strT0: 'int*',
+      strT1: 'Iterable<int*>*',
     );
   }
 
   test_interfaceType_09() {
     isNotSubtype(
-      comparableNone(intNone),
-      iterableNone(intNone),
-      strT0: 'Comparable<int>',
-      strT1: 'Iterable<int>',
+      comparableStar(intStar),
+      iterableStar(intStar),
+      strT0: 'Comparable<int*>*',
+      strT1: 'Iterable<int*>*',
     );
   }
 
   test_interfaceType_10() {
     isSubtype(
-      listNone(intNone),
-      listNone(intNone),
-      strT0: 'List<int>',
-      strT1: 'List<int>',
+      listStar(intStar),
+      listStar(intStar),
+      strT0: 'List<int*>*',
+      strT1: 'List<int*>*',
     );
   }
 
   test_interfaceType_11() {
     isSubtype(
-      listNone(intNone),
-      iterableNone(intNone),
-      strT0: 'List<int>',
-      strT1: 'Iterable<int>',
+      listStar(intStar),
+      iterableStar(intStar),
+      strT0: 'List<int*>*',
+      strT1: 'Iterable<int*>*',
     );
   }
 
   test_interfaceType_12() {
     isSubtype(
-      listNone(intNone),
-      listNone(numNone),
-      strT0: 'List<int>',
-      strT1: 'List<num>',
+      listStar(intStar),
+      listStar(numStar),
+      strT0: 'List<int*>*',
+      strT1: 'List<num*>*',
     );
   }
 
   test_interfaceType_13() {
     isSubtype(
-      listNone(intNone),
-      iterableNone(numNone),
-      strT0: 'List<int>',
-      strT1: 'Iterable<num>',
+      listStar(intStar),
+      iterableStar(numStar),
+      strT0: 'List<int*>*',
+      strT1: 'Iterable<num*>*',
     );
   }
 
   test_interfaceType_14() {
     isSubtype(
-      listNone(intNone),
-      listNone(objectNone),
-      strT0: 'List<int>',
-      strT1: 'List<Object>',
+      listStar(intStar),
+      listStar(objectStar),
+      strT0: 'List<int*>*',
+      strT1: 'List<Object*>*',
     );
   }
 
   test_interfaceType_15() {
     isSubtype(
-      listNone(intNone),
-      iterableNone(objectNone),
-      strT0: 'List<int>',
-      strT1: 'Iterable<Object>',
+      listStar(intStar),
+      iterableStar(objectStar),
+      strT0: 'List<int*>*',
+      strT1: 'Iterable<Object*>*',
     );
   }
 
   test_interfaceType_16() {
     isSubtype(
-      listNone(intNone),
-      objectNone,
-      strT0: 'List<int>',
-      strT1: 'Object',
+      listStar(intStar),
+      objectStar,
+      strT0: 'List<int*>*',
+      strT1: 'Object*',
     );
   }
 
   test_interfaceType_17() {
     isSubtype(
-      listNone(intNone),
-      listNone(
-        comparableNone(objectNone),
+      listStar(intStar),
+      listStar(
+        comparableStar(objectStar),
       ),
-      strT0: 'List<int>',
-      strT1: 'List<Comparable<Object>>',
+      strT0: 'List<int*>*',
+      strT1: 'List<Comparable<Object*>*>*',
     );
   }
 
   test_interfaceType_18() {
     isSubtype(
-      listNone(intNone),
-      listNone(
-        comparableNone(numNone),
+      listStar(intStar),
+      listStar(
+        comparableStar(numStar),
       ),
-      strT0: 'List<int>',
-      strT1: 'List<Comparable<num>>',
+      strT0: 'List<int*>*',
+      strT1: 'List<Comparable<num*>*>*',
     );
   }
 
   test_interfaceType_19() {
     isSubtype(
-      listNone(intNone),
-      listNone(
-        comparableNone(
-          comparableNone(numNone),
+      listStar(intStar),
+      listStar(
+        comparableStar(
+          comparableStar(numStar),
         ),
       ),
-      strT0: 'List<int>',
-      strT1: 'List<Comparable<Comparable<num>>>',
+      strT0: 'List<int*>*',
+      strT1: 'List<Comparable<Comparable<num*>*>*>*',
     );
   }
 
   test_interfaceType_20() {
     isNotSubtype(
-      listNone(intNone),
-      listNone(doubleNone),
-      strT0: 'List<int>',
-      strT1: 'List<double>',
+      listStar(intStar),
+      listStar(doubleStar),
+      strT0: 'List<int*>*',
+      strT1: 'List<double*>*',
     );
   }
 
   test_interfaceType_21() {
     isNotSubtype(
-      listNone(intNone),
-      iterableNone(doubleNone),
-      strT0: 'List<int>',
-      strT1: 'Iterable<double>',
+      listStar(intStar),
+      iterableStar(doubleStar),
+      strT0: 'List<int*>*',
+      strT1: 'Iterable<double*>*',
     );
   }
 
   test_interfaceType_22() {
     isNotSubtype(
-      listNone(intNone),
-      comparableNone(intNone),
-      strT0: 'List<int>',
-      strT1: 'Comparable<int>',
+      listStar(intStar),
+      comparableStar(intStar),
+      strT0: 'List<int*>*',
+      strT1: 'Comparable<int*>*',
     );
   }
 
   test_interfaceType_23() {
     isNotSubtype(
-      listNone(intNone),
-      listNone(
-        comparableNone(intNone),
+      listStar(intStar),
+      listStar(
+        comparableStar(intStar),
       ),
-      strT0: 'List<int>',
-      strT1: 'List<Comparable<int>>',
+      strT0: 'List<int*>*',
+      strT1: 'List<Comparable<int*>*>*',
     );
   }
 
   test_interfaceType_24() {
     isNotSubtype(
-      listNone(intNone),
-      listNone(
-        comparableNone(
-          comparableNone(intNone),
+      listStar(intStar),
+      listStar(
+        comparableStar(
+          comparableStar(intStar),
         ),
       ),
-      strT0: 'List<int>',
-      strT1: 'List<Comparable<Comparable<int>>>',
+      strT0: 'List<int*>*',
+      strT1: 'List<Comparable<Comparable<int*>*>*>*',
     );
   }
 
@@ -2655,7 +2658,7 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_interfaceType_28() {
-    isSubtype(numNone, objectNone, strT0: 'num', strT1: 'Object');
+    isSubtype(numStar, objectNone, strT0: 'num*', strT1: 'Object');
   }
 
   test_interfaceType_39() {
@@ -2689,10 +2692,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_interfaceType_class_augmented_interfaces() {
-    var A = class_(name: 'A');
-    var I = class_(name: 'I');
+    final A = class_(name: 'A');
+    final I = class_(name: 'I');
 
-    var A1 = class_(
+    final A1 = class_(
       name: 'A',
       isAugmentation: true,
       interfaces: [
@@ -2701,18 +2704,18 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
     A.addAugmentations([A1]);
 
-    var A_none = interfaceTypeNone(A);
-    var I_none = interfaceTypeNone(I);
+    final A_none = interfaceTypeNone(A);
+    final I_none = interfaceTypeNone(I);
 
     isSubtype(A_none, I_none, strT0: 'A', strT1: 'I');
     isNotSubtype(I_none, A_none, strT0: 'I', strT1: 'A');
   }
 
   test_interfaceType_class_augmented_mixins() {
-    var A = class_(name: 'A');
-    var M = mixin_(name: 'M');
+    final A = class_(name: 'A');
+    final M = mixin_(name: 'M');
 
-    var A1 = class_(
+    final A1 = class_(
       name: 'A',
       isAugmentation: true,
       mixins: [
@@ -2721,8 +2724,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
     A.addAugmentations([A1]);
 
-    var A_none = interfaceTypeNone(A);
-    var M_none = interfaceTypeNone(M);
+    final A_none = interfaceTypeNone(A);
+    final M_none = interfaceTypeNone(M);
 
     isSubtype(A_none, M_none, strT0: 'A', strT1: 'M');
     isNotSubtype(M_none, A_none, strT0: 'M', strT1: 'A');
@@ -2786,10 +2789,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_interfaceType_mixin_augmented_interfaces() {
-    var M = mixin_(name: 'M');
-    var I = class_(name: 'I');
+    final M = mixin_(name: 'M');
+    final I = class_(name: 'I');
 
-    var M1 = mixin_(
+    final M1 = mixin_(
       name: 'M1',
       isAugmentation: true,
       interfaces: [
@@ -2798,18 +2801,18 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
     M.addAugmentations([M1]);
 
-    var M_none = interfaceTypeNone(M);
-    var I_none = interfaceTypeNone(I);
+    final M_none = interfaceTypeNone(M);
+    final I_none = interfaceTypeNone(I);
 
     isSubtype(M_none, I_none, strT0: 'M', strT1: 'I');
     isNotSubtype(I_none, M_none, strT0: 'I', strT1: 'M');
   }
 
   test_interfaceType_mixin_augmented_superclassConstraints() {
-    var M = mixin_(name: 'M');
-    var C = class_(name: 'C');
+    final M = mixin_(name: 'M');
+    final C = class_(name: 'C');
 
-    var M1 = mixin_(
+    final M1 = mixin_(
       name: 'M1',
       isAugmentation: true,
       constraints: [
@@ -2818,8 +2821,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
     M.addAugmentations([M1]);
 
-    var M_none = interfaceTypeNone(M);
-    var C_none = interfaceTypeNone(C);
+    final M_none = interfaceTypeNone(M);
+    final C_none = interfaceTypeNone(C);
 
     isSubtype(M_none, C_none, strT0: 'M', strT1: 'C');
     isNotSubtype(C_none, M_none, strT0: 'C', strT1: 'M');
@@ -2831,27 +2834,31 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_multi_function_nonGeneric_oneArgument() {
-    isSubtype2('num Function(num)', 'num Function(int)');
-    isSubtype2('int Function(num)', 'num Function(num)');
-    isSubtype2('int Function(num)', 'num Function(int)');
-
-    isNotSubtype2('int Function(int)', 'num Function(num)');
-
-    isNotSubtype2('Null?', 'num Function(int)');
-    isSubtype2('Null?', 'num Function(int)?');
-
-    isSubtype2('Never', 'num Function(int)');
-    isSubtype2('Never', 'num Function(int)?');
-    isNotSubtype2('num Function(int)', 'Never');
-
-    isSubtype2('num Function(num)', 'Object');
-    isNotSubtype2('num Function(num)?', 'Object');
+    isSubtype2('num* Function(num*)*', 'num* Function(int*)*');
+    isSubtype2('int* Function(num*)*', 'num* Function(num*)*');
+    isSubtype2('int* Function(num*)*', 'num* Function(int*)*');
+    isNotSubtype2('int* Function(int*)*', 'num* Function(num*)*');
+    isSubtype2('Null?', 'num* Function(int*)*');
+    isSubtype2('Null?', 'num* Function(int*)?');
+    isSubtype2('Never', 'num* Function(int*)');
+    isSubtype2('Never', 'num* Function(int*)*');
+    isSubtype2('Never', 'num* Function(int*)?');
+    isSubtype2('num* Function(num*)*', 'Object');
+    isSubtype2('num* Function(num*)', 'Object');
+    isNotSubtype2('num* Function(num*)?', 'Object');
+    isNotSubtype2('Null?', 'num* Function(int*)');
+    isNotSubtype2('num* Function(int*)', 'Never');
 
     isNotSubtype2('num', 'num Function(num)');
     isNotSubtype2('Object', 'num Function(num)');
+    isNotSubtype2('Object*', 'num Function(num)');
     isNotSubtype2('Object?', 'num Function(num)');
     isNotSubtype2('dynamic', 'num Function(num)');
 
+    isSubtype2('num Function(num)', 'num Function(num)*');
+    isSubtype2('num Function(num)*', 'num Function(num)');
+    isSubtype2('num Function(num)?', 'num Function(num)*');
+    isSubtype2('num Function(num)*', 'num Function(num)?');
     isSubtype2('num Function(num)', 'num Function(num)?');
     isNotSubtype2('num Function(num)?', 'num Function(num)');
 
@@ -2872,28 +2879,40 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_multi_function_nonGeneric_zeroArguments() {
-    isSubtype2('int Function()', 'Function');
-    isSubtype2('int Function()', 'Function?');
+    isSubtype2('int* Function()', 'Function');
+    isSubtype2('int* Function()', 'Function*');
+    isSubtype2('int* Function()', 'Function?');
 
-    isNotSubtype2('int Function()?', 'Function');
-    isSubtype2('int Function()?', 'Function?');
+    isSubtype2('int* Function()*', 'Function');
+    isSubtype2('int* Function()*', 'Function*');
+    isSubtype2('int* Function()*', 'Function?');
 
-    isSubtype2('int Function()', 'Object');
-    isSubtype2('int Function()', 'Object?');
+    isNotSubtype2('int* Function()?', 'Function');
+    isSubtype2('int* Function()?', 'Function*');
+    isSubtype2('int* Function()?', 'Function?');
 
-    isNotSubtype2('int Function()?', 'Object');
-    isSubtype2('int Function()?', 'Object?');
+    isSubtype2('int* Function()', 'Object');
+    isSubtype2('int* Function()', 'Object*');
+    isSubtype2('int* Function()', 'Object?');
+
+    isSubtype2('int* Function()*', 'Object');
+    isSubtype2('int* Function()*', 'Object*');
+    isSubtype2('int* Function()*', 'Object?');
+
+    isNotSubtype2('int* Function()?', 'Object');
+    isSubtype2('int* Function()?', 'Object*');
+    isSubtype2('int* Function()?', 'Object?');
   }
 
   test_multi_futureOr() {
-    isSubtype2('int', 'FutureOr<int>');
-    isSubtype2('int', 'FutureOr<num>');
-    isSubtype2('Future<int>', 'FutureOr<int>');
-    isSubtype2('Future<int>', 'FutureOr<num>');
-    isSubtype2('Future<int>', 'FutureOr<Object>');
-    isSubtype2('FutureOr<int>', 'FutureOr<int>');
-    isSubtype2('FutureOr<int>', 'FutureOr<num>');
-    isSubtype2('FutureOr<int>', 'Object');
+    isSubtype2('int*', 'FutureOr<int*>*');
+    isSubtype2('int*', 'FutureOr<num*>*');
+    isSubtype2('Future<int*>*', 'FutureOr<int*>*');
+    isSubtype2('Future<int*>*', 'FutureOr<num*>*');
+    isSubtype2('Future<int*>*', 'FutureOr<Object*>*');
+    isSubtype2('FutureOr<int*>*', 'FutureOr<int*>*');
+    isSubtype2('FutureOr<int*>*', 'FutureOr<num*>*');
+    isSubtype2('FutureOr<int*>*', 'Object*');
     isSubtype2('Null?', 'FutureOr<num?>');
     isSubtype2('Null?', 'FutureOr<num>?');
     isSubtype2('num?', 'FutureOr<num?>');
@@ -2932,6 +2951,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype2('dynamic', 'FutureOr<Object>?');
     isSubtype2('void', 'FutureOr<Object?>');
     isSubtype2('void', 'FutureOr<Object>?');
+    isSubtype2('Object*', 'FutureOr<Object?>');
+    isSubtype2('Object*', 'FutureOr<Object>?');
     isSubtype2('Object?', 'FutureOr<Object?>');
     isSubtype2('Object?', 'FutureOr<Object>?');
     isSubtype2('Object', 'FutureOr<Object?>');
@@ -2942,18 +2963,23 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype2('Object', 'FutureOr<Object>');
 
     isSubtype2('FutureOr<int>', 'Object');
+    isSubtype2('FutureOr<int>', 'Object*');
     isSubtype2('FutureOr<int>', 'Object?');
 
-    isSubtype2('FutureOr<int>', 'Object');
-    isSubtype2('FutureOr<int>', 'Object?');
+    isSubtype2('FutureOr<int>*', 'Object');
+    isSubtype2('FutureOr<int>*', 'Object*');
+    isSubtype2('FutureOr<int>*', 'Object?');
 
     isNotSubtype2('FutureOr<int>?', 'Object');
+    isSubtype2('FutureOr<int>?', 'Object*');
     isSubtype2('FutureOr<int>?', 'Object?');
 
-    isSubtype2('FutureOr<int>', 'Object');
-    isSubtype2('FutureOr<int>', 'Object?');
+    isSubtype2('FutureOr<int*>', 'Object');
+    isSubtype2('FutureOr<int*>', 'Object*');
+    isSubtype2('FutureOr<int*>', 'Object?');
 
     isNotSubtype2('FutureOr<int?>', 'Object');
+    isSubtype2('FutureOr<int?>', 'Object*');
     isSubtype2('FutureOr<int?>', 'Object?');
 
     isSubtype2('FutureOr<Future<Object>>', 'Future<Object>');
@@ -2962,21 +2988,22 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isNotSubtype2('FutureOr<Future<Object>?>?', 'Future<Object>');
 
     isSubtype2('FutureOr<num>', 'Object');
+    isSubtype2('FutureOr<num>*', 'Object');
     isNotSubtype2('FutureOr<num>?', 'Object');
   }
 
   test_multi_futureOr_functionType() {
     isSubtype(
-      functionTypeNone(
-        returnType: stringNone,
+      functionTypeStar(
+        returnType: stringStar,
       ),
-      futureOrNone(
-        functionTypeNone(
+      futureOrStar(
+        functionTypeStar(
           returnType: voidNone,
         ),
       ),
-      strT0: 'String Function()',
-      strT1: 'FutureOr<void Function()>',
+      strT0: 'String* Function()*',
+      strT1: 'FutureOr<void Function()*>*',
     );
 
     isSubtype(
@@ -3058,30 +3085,30 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      futureOrNone(
-        functionTypeNone(
+      futureOrStar(
+        functionTypeStar(
           returnType: stringNone,
         ),
       ),
-      strT0: 'void Function()',
-      strT1: 'FutureOr<String Function()>',
+      strT0: 'void Function()*',
+      strT1: 'FutureOr<String Function()*>*',
     );
   }
 
   test_multi_futureOr_typeParameter() {
     TypeParameterElement E;
 
-    E = typeParameter('E', bound: objectNone);
+    E = typeParameter('E', bound: objectStar);
     isSubtype(
-      typeParameterTypeNone(E),
-      futureOrNone(
-        typeParameterTypeNone(E),
+      typeParameterTypeStar(E),
+      futureOrStar(
+        typeParameterTypeStar(E),
       ),
-      strT0: 'E, E extends Object',
-      strT1: 'FutureOr<E>, E extends Object',
+      strT0: 'E*, E extends Object*',
+      strT1: 'FutureOr<E*>*, E extends Object*',
     );
 
     E = typeParameter('E', bound: objectNone);
@@ -3136,12 +3163,12 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
       strT1: 'FutureOr<E>, E extends Object?',
     );
 
-    E = typeParameter('E', bound: objectNone);
+    E = typeParameter('E', bound: objectStar);
     isNotSubtype(
-      typeParameterTypeNone(E),
-      futureOrNone(stringNone),
-      strT0: 'E, E extends Object',
-      strT1: 'FutureOr<String>',
+      typeParameterTypeStar(E),
+      futureOrStar(stringStar),
+      strT0: 'E*, E extends Object*',
+      strT1: 'FutureOr<String*>*',
     );
 
     E = typeParameter('E', bound: stringNone);
@@ -3188,6 +3215,14 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_multi_futureOr_typeParameter_promotion() {
     TypeParameterElement S;
     TypeParameterElement T;
+
+    T = typeParameter('T', bound: objectStar);
+    isSubtype(
+      promotedTypeParameterTypeStar(T, intStar),
+      futureOrStar(numStar),
+      strT0: '(T & int*)*, T extends Object*',
+      strT1: 'FutureOr<num*>*',
+    );
 
     T = typeParameter('T', bound: objectNone);
     isSubtype(
@@ -3270,18 +3305,18 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
       strT1: 'FutureOr<Object>?',
     );
 
-    T = typeParameter('T', bound: objectNone);
+    T = typeParameter('T', bound: objectStar);
     isSubtype(
-      promotedTypeParameterTypeNone(T, futureNone(numNone)),
-      futureOrNone(numNone),
-      strT0: 'T & Future<num>, T extends Object',
-      strT1: 'FutureOr<num>',
+      promotedTypeParameterTypeNone(T, futureStar(numStar)),
+      futureOrStar(numStar),
+      strT0: 'T & Future<num*>*, T extends Object*',
+      strT1: 'FutureOr<num*>*',
     );
     isSubtype(
-      promotedTypeParameterTypeNone(T, futureNone(intNone)),
-      futureOrNone(numNone),
-      strT0: 'T & Future<int>, T extends Object',
-      strT1: 'FutureOr<num>',
+      promotedTypeParameterTypeNone(T, futureStar(intStar)),
+      futureOrStar(numStar),
+      strT0: 'T & Future<int*>*, T extends Object*',
+      strT1: 'FutureOr<num*>*',
     );
 
     T = typeParameter('T', bound: objectNone);
@@ -3365,53 +3400,71 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_multi_list_subTypes_superTypes() {
-    isSubtype2('List<int>', 'List<int>');
-    isSubtype2('List<int>', 'Iterable<int>');
-    isSubtype2('List<int>', 'List<num>');
-    isSubtype2('List<int>', 'Iterable<num>');
-    isSubtype2('List<int>', 'List<Object>');
-    isSubtype2('List<int>', 'Iterable<Object>');
-    isSubtype2('List<int>', 'Object');
-    isSubtype2('List<int>', 'List<Comparable<Object>>');
-    isSubtype2('List<int>', 'List<Comparable<num>>');
-    isSubtype2('List<int>', 'List<Comparable<Comparable<num>>>');
-    isSubtype2('List<int>', 'Object');
-    isNotSubtype2('Null?', 'List<int>');
-    isSubtype2('Null?', 'List<int>?');
-    isSubtype2('Never', 'List<int>');
-    isSubtype2('Never', 'List<int>?');
+    isSubtype2('List<int*>*', 'List<int*>*');
+    isSubtype2('List<int*>*', 'Iterable<int*>*');
+    isSubtype2('List<int*>*', 'List<num*>*');
+    isSubtype2('List<int*>*', 'Iterable<num*>*');
+    isSubtype2('List<int*>*', 'List<Object*>*');
+    isSubtype2('List<int*>*', 'Iterable<Object*>*');
+    isSubtype2('List<int*>*', 'Object*');
+    isSubtype2('List<int*>*', 'List<Comparable<Object*>*>*');
+    isSubtype2('List<int*>*', 'List<Comparable<num*>*>*');
+    isSubtype2('List<int*>*', 'List<Comparable<Comparable<num*>*>*>*');
+    isSubtype2('List<int*>', 'Object');
+    isSubtype2('List<int*>*', 'Object');
+    isSubtype2('Null?', 'List<int*>*');
+    isSubtype2('Null?', 'List<int*>?');
+    isSubtype2('Never', 'List<int*>');
+    isSubtype2('Never', 'List<int*>*');
+    isSubtype2('Never', 'List<int*>?');
 
     isSubtype2('List<int>', 'List<int>');
+    isSubtype2('List<int>', 'List<int>*');
     isSubtype2('List<int>', 'List<int>?');
+    isSubtype2('List<int>*', 'List<int>');
+    isSubtype2('List<int>*', 'List<int>*');
+    isSubtype2('List<int>*', 'List<int>?');
     isNotSubtype2('List<int>?', 'List<int>');
+    isSubtype2('List<int>?', 'List<int>*');
     isSubtype2('List<int>?', 'List<int>?');
 
+    isSubtype2('List<int>', 'List<int*>');
     isSubtype2('List<int>', 'List<int?>');
+    isSubtype2('List<int*>', 'List<int>');
+    isSubtype2('List<int*>', 'List<int*>');
+    isSubtype2('List<int*>', 'List<int?>');
     isNotSubtype2('List<int?>', 'List<int>');
+    isSubtype2('List<int?>', 'List<int*>');
     isSubtype2('List<int?>', 'List<int?>');
   }
 
   test_multi_never() {
     isSubtype2('Never', 'FutureOr<num>');
+    isSubtype2('Never', 'FutureOr<num*>');
+    isSubtype2('Never', 'FutureOr<num>*');
     isSubtype2('Never', 'FutureOr<num?>');
     isSubtype2('Never', 'FutureOr<num>?');
     isNotSubtype2('FutureOr<num>', 'Never');
   }
 
   test_multi_num_subTypes_superTypes() {
-    isSubtype2('int', 'num');
-    isSubtype2('int', 'Comparable<num>');
-    isSubtype2('int', 'Comparable<Object>');
-    isSubtype2('double', 'num');
+    isSubtype2('int*', 'num*');
+    isSubtype2('int*', 'Comparable<num*>*');
+    isSubtype2('int*', 'Comparable<Object*>*');
+    isSubtype2('int*', 'Object*');
+    isSubtype2('double*', 'num*');
     isSubtype2('num', 'Object');
+    isSubtype2('num*', 'Object');
+    isSubtype2('Null?', 'num*');
     isSubtype2('Null?', 'num?');
     isSubtype2('Never', 'num');
+    isSubtype2('Never', 'num*');
     isSubtype2('Never', 'num?');
 
-    isNotSubtype2('int', 'double');
-    isNotSubtype2('int', 'Comparable<int>');
-    isNotSubtype2('int', 'Iterable<int>');
-    isNotSubtype2('Comparable<int>', 'Iterable<int>');
+    isNotSubtype2('int*', 'double*');
+    isNotSubtype2('int*', 'Comparable<int*>*');
+    isNotSubtype2('int*', 'Iterable<int*>*');
+    isNotSubtype2('Comparable<int*>*', 'Iterable<int*>*');
     isNotSubtype2('num?', 'Object');
     isNotSubtype2('Null?', 'num');
     isNotSubtype2('num', 'Never');
@@ -3422,6 +3475,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype2('Object', 'dynamic');
     isSubtype2('Object', 'void');
     isSubtype2('Object', 'Object?');
+    isSubtype2('Object', 'Object*');
+    isSubtype2('Object*', 'Object');
 
     isNotSubtype2('Object', 'Never');
     isNotSubtype2('Object', 'Null?');
@@ -3432,18 +3487,26 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
   test_multi_special() {
     isNotSubtype2('dynamic', 'int');
+    isNotSubtype2('dynamic', 'int*');
     isNotSubtype2('dynamic', 'int?');
 
     isNotSubtype2('void', 'int');
+    isNotSubtype2('void', 'int*');
     isNotSubtype2('void', 'int?');
 
     isNotSubtype2('Object', 'int');
+    isNotSubtype2('Object', 'int*');
     isNotSubtype2('Object', 'int?');
 
+    isNotSubtype2('Object*', 'int');
+    isNotSubtype2('Object*', 'int*');
+    isNotSubtype2('Object*', 'int?');
+
     isNotSubtype2('Object?', 'int');
+    isNotSubtype2('Object?', 'int*');
     isNotSubtype2('Object?', 'int?');
 
-    isNotSubtype2('int Function()', 'int');
+    isNotSubtype2('int* Function()*', 'int*');
   }
 
   test_multi_topAndBottom() {
@@ -3457,25 +3520,36 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype2('Never', 'Never?');
     isNotSubtype2('Never?', 'Never');
 
+    isSubtype2('Object*', 'Object*');
+    isSubtype2('Object*', 'dynamic');
+    isSubtype2('Object*', 'void');
+    isSubtype2('Object*', 'Object?');
+    isSubtype2('dynamic', 'Object*');
     isSubtype2('dynamic', 'dynamic');
     isSubtype2('dynamic', 'void');
     isSubtype2('dynamic', 'Object?');
+    isSubtype2('void', 'Object*');
     isSubtype2('void', 'dynamic');
     isSubtype2('void', 'void');
     isSubtype2('void', 'Object?');
+    isSubtype2('Object?', 'Object*');
     isSubtype2('Object?', 'dynamic');
     isSubtype2('Object?', 'void');
     isSubtype2('Object?', 'Object?');
 
     isSubtype2('Never', 'Object?');
+    isSubtype2('Never', 'Object*');
     isSubtype2('Never', 'dynamic');
     isSubtype2('Never', 'void');
     isSubtype2('Null?', 'Object?');
+    isSubtype2('Null?', 'Object*');
     isSubtype2('Null?', 'dynamic');
     isSubtype2('Null?', 'void');
 
     isNotSubtype2('Object?', 'Never');
     isNotSubtype2('Object?', 'Null?');
+    isNotSubtype2('Object*', 'Never');
+    isNotSubtype2('Object*', 'Null?');
     isNotSubtype2('dynamic', 'Never');
     isNotSubtype2('dynamic', 'Null?');
     isNotSubtype2('void', 'Never');
@@ -3484,6 +3558,14 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
   test_multi_typeParameter_promotion() {
     TypeParameterElement T;
+
+    T = typeParameter('T', bound: intStar);
+    isSubtype(
+      typeParameterTypeStar(T),
+      promotedTypeParameterTypeStar(T, intStar),
+      strT0: 'T*, T extends int*',
+      strT1: '(T & int*)*, T extends int*',
+    );
 
     T = typeParameter('T', bound: intNone);
     isSubtype(
@@ -3517,6 +3599,14 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
       promotedTypeParameterTypeNone(T, intQuestion),
       strT0: 'T?, T extends int?',
       strT1: 'T & int?, T extends int?',
+    );
+
+    T = typeParameter('T', bound: numStar);
+    isSubtype(
+      typeParameterTypeStar(T),
+      typeParameterTypeStar(T),
+      strT0: 'T*, T extends num*',
+      strT1: 'T*, T extends num*',
     );
 
     T = typeParameter('T', bound: numNone);
@@ -3561,6 +3651,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(neverNone, numNone, strT0: 'Never', strT1: 'num');
   }
 
+  test_never_03() {
+    isSubtype(neverNone, numStar, strT0: 'Never', strT1: 'num*');
+  }
+
   test_never_04() {
     isSubtype(neverNone, numQuestion, strT0: 'Never', strT1: 'num?');
   }
@@ -3572,9 +3666,9 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_never_06() {
     isSubtype(
       neverNone,
-      listNone(intNone),
+      listNone(intStar),
       strT0: 'Never',
-      strT1: 'List<int>',
+      strT1: 'List<int*>',
     );
   }
 
@@ -3588,23 +3682,23 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_never_15() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
 
     isSubtype(
       neverNone,
-      promotedTypeParameterTypeNone(T, numNone),
+      promotedTypeParameterTypeStar(T, numStar),
       strT0: 'Never',
-      strT1: 'T & num, T extends Object',
+      strT1: '(T & num*)*, T extends Object*',
     );
   }
 
   test_never_16() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
+      promotedTypeParameterTypeStar(T, numStar),
       neverNone,
-      strT0: 'T & num, T extends Object',
+      strT0: '(T & num*)*, T extends Object*',
       strT1: 'Never',
     );
   }
@@ -3755,11 +3849,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_null_02() {
-    isNotSubtype(
+    isSubtype(
       nullQuestion,
-      objectNone,
+      objectStar,
       strT0: 'Null?',
-      strT1: 'Object',
+      strT1: 'Object*',
     );
   }
 
@@ -3782,11 +3876,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_null_05() {
-    isNotSubtype(
+    isSubtype(
       nullQuestion,
-      doubleNone,
+      doubleStar,
       strT0: 'Null?',
-      strT1: 'double',
+      strT1: 'double*',
     );
   }
 
@@ -3800,22 +3894,22 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_null_07() {
-    isNotSubtype(
+    isSubtype(
       nullQuestion,
-      comparableNone(objectNone),
+      comparableStar(objectStar),
       strT0: 'Null?',
-      strT1: 'Comparable<Object>',
+      strT1: 'Comparable<Object*>*',
     );
   }
 
   test_null_08() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
 
     isNotSubtype(
       nullQuestion,
       typeParameterTypeNone(T),
       strT0: 'Null?',
-      strT1: 'T, T extends Object',
+      strT1: 'T, T extends Object*',
     );
   }
 
@@ -3831,9 +3925,9 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_null_10() {
     isNotSubtype(
       nullQuestion,
-      listNone(intNone),
+      listNone(intStar),
       strT0: 'Null?',
-      strT1: 'List<int>',
+      strT1: 'List<int*>',
     );
   }
 
@@ -3841,27 +3935,27 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isNotSubtype(
       nullQuestion,
       functionTypeNone(
-        returnType: numNone,
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       strT0: 'Null?',
-      strT1: 'num Function(int)',
+      strT1: 'num* Function(int*)',
     );
   }
 
   test_null_14() {
-    isNotSubtype(
+    isSubtype(
       nullQuestion,
-      functionTypeNone(
-        returnType: numNone,
+      functionTypeStar(
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       strT0: 'Null?',
-      strT1: 'num Function(int)',
+      strT1: 'num* Function(int*)*',
     );
   }
 
@@ -3869,24 +3963,24 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       nullQuestion,
       functionTypeQuestion(
-        returnType: numNone,
+        returnType: numStar,
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
       ),
       strT0: 'Null?',
-      strT1: 'num Function(int)?',
+      strT1: 'num* Function(int*)?',
     );
   }
 
   test_null_16() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
 
     isSubtype(
       nullQuestion,
-      promotedTypeParameterTypeQuestion(T, numNone),
+      promotedTypeParameterTypeStar(T, numStar),
       strT0: 'Null?',
-      strT1: '(T & num)?, T extends Object',
+      strT1: '(T & num*)*, T extends Object*',
     );
   }
 
@@ -4026,9 +4120,9 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_null_29() {
     isSubtype(
       nullQuestion,
-      comparableQuestion(objectNone),
+      comparableQuestion(objectStar),
       strT0: 'Null?',
-      strT1: 'Comparable<Object>?',
+      strT1: 'Comparable<Object*>?',
     );
   }
 
@@ -4039,12 +4133,15 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_nullabilitySuffix_01() {
     isSubtype(intNone, intNone, strT0: 'int', strT1: 'int');
     isSubtype(intNone, intQuestion, strT0: 'int', strT1: 'int?');
+    isSubtype(intNone, intStar, strT0: 'int', strT1: 'int*');
 
     isNotSubtype(intQuestion, intNone, strT0: 'int?', strT1: 'int');
     isSubtype(intQuestion, intQuestion, strT0: 'int?', strT1: 'int?');
+    isSubtype(intQuestion, intStar, strT0: 'int?', strT1: 'int*');
 
-    isSubtype(intNone, intNone, strT0: 'int', strT1: 'int');
-    isSubtype(intNone, intQuestion, strT0: 'int', strT1: 'int?');
+    isSubtype(intStar, intNone, strT0: 'int*', strT1: 'int');
+    isSubtype(intStar, intQuestion, strT0: 'int*', strT1: 'int?');
+    isSubtype(intStar, intStar, strT0: 'int*', strT1: 'int*');
   }
 
   test_nullabilitySuffix_05() {
@@ -4072,10 +4169,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
   test_nullabilitySuffix_12() {
     isSubtype(
-      intNone,
-      intNone,
-      strT0: 'int',
-      strT1: 'int',
+      intStar,
+      intStar,
+      strT0: 'int*',
+      strT1: 'int*',
     );
   }
 
@@ -4095,7 +4192,7 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_nullabilitySuffix_14() {
-    var f = functionTypeNone(
+    var f = functionTypeStar(
       parameters: [
         requiredParameter(type: intNone),
       ],
@@ -4104,8 +4201,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       f,
       f,
-      strT0: 'int Function(int)',
-      strT1: 'int Function(int)',
+      strT0: 'int Function(int)*',
+      strT1: 'int Function(int)*',
     );
   }
 
@@ -4113,7 +4210,7 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var f = functionTypeNone(
       parameters: [
         requiredParameter(type: intNone),
-        requiredParameter(type: intNone),
+        requiredParameter(type: intStar),
         requiredParameter(type: intQuestion),
       ],
       returnType: intQuestion,
@@ -4121,8 +4218,8 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       f,
       f,
-      strT0: 'int? Function(int, int, int?)',
-      strT1: 'int? Function(int, int, int?)',
+      strT0: 'int? Function(int, int*, int?)',
+      strT1: 'int? Function(int, int*, int?)',
     );
   }
 
@@ -4147,13 +4244,13 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_nullabilitySuffix_18() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
     var type = promotedTypeParameterTypeNone(T, intQuestion);
     isSubtype(
       type,
       type,
-      strT0: 'T & int?, T extends Object',
-      strT1: 'T & int?, T extends Object',
+      strT0: 'T & int?, T extends Object*',
+      strT1: 'T & int?, T extends Object*',
     );
   }
 
@@ -4292,87 +4389,87 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   test_special_01() {
     isNotSubtype(
       dynamicType,
-      intNone,
+      intStar,
       strT0: 'dynamic',
-      strT1: 'int',
+      strT1: 'int*',
     );
   }
 
   test_special_02() {
     isNotSubtype(
       voidNone,
-      intNone,
+      intStar,
       strT0: 'void',
-      strT1: 'int',
+      strT1: 'int*',
     );
   }
 
   test_special_03() {
     isNotSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      intNone,
-      strT0: 'int Function()',
-      strT1: 'int',
+      intStar,
+      strT0: 'int* Function()*',
+      strT1: 'int*',
     );
   }
 
   test_special_04() {
     isNotSubtype(
-      intNone,
-      functionTypeNone(
-        returnType: intNone,
+      intStar,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      strT0: 'int',
-      strT1: 'int Function()',
+      strT0: 'int*',
+      strT1: 'int* Function()*',
     );
   }
 
   test_special_06() {
     isSubtype(
-      functionTypeNone(
-        returnType: intNone,
+      functionTypeStar(
+        returnType: intStar,
       ),
-      objectNone,
-      strT0: 'int Function()',
-      strT1: 'Object',
+      objectStar,
+      strT0: 'int* Function()*',
+      strT1: 'Object*',
     );
   }
 
   test_special_07() {
     isSubtype(
-      objectNone,
-      objectNone,
-      strT0: 'Object',
-      strT1: 'Object',
+      objectStar,
+      objectStar,
+      strT0: 'Object*',
+      strT1: 'Object*',
     );
   }
 
   test_special_08() {
     isSubtype(
-      objectNone,
+      objectStar,
       dynamicType,
-      strT0: 'Object',
+      strT0: 'Object*',
       strT1: 'dynamic',
     );
   }
 
   test_special_09() {
     isSubtype(
-      objectNone,
+      objectStar,
       voidNone,
-      strT0: 'Object',
+      strT0: 'Object*',
       strT1: 'void',
     );
   }
 
   test_special_10() {
-    isNotSubtype(
+    isSubtype(
       dynamicType,
-      objectNone,
+      objectStar,
       strT0: 'dynamic',
-      strT1: 'Object',
+      strT1: 'Object*',
     );
   }
 
@@ -4395,11 +4492,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_special_13() {
-    isNotSubtype(
+    isSubtype(
       voidNone,
-      objectNone,
+      objectStar,
       strT0: 'void',
-      strT1: 'Object',
+      strT1: 'Object*',
     );
   }
 
@@ -4421,47 +4518,114 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     );
   }
 
-  test_top_03() {
-    var T0 = typeParameter('T0', bound: dynamicType);
-    var T1 = typeParameter('T2', bound: voidNone);
+  test_top_01() {
+    var S = typeParameter('S', bound: objectStar);
+    var T = typeParameter('T', bound: voidNone);
+    var U = typeParameter('U', bound: dynamicType);
+    var V = typeParameter('V', bound: objectStar);
 
-    var f0 = functionTypeNone(
+    isSubtype(
+      functionTypeStar(
+        typeFormals: [S, T],
+        parameters: [
+          requiredParameter(type: typeParameterTypeNone(S)),
+          requiredParameter(type: typeParameterTypeNone(T)),
+        ],
+        returnType: voidNone,
+      ),
+      functionTypeStar(
+        typeFormals: [U, V],
+        parameters: [
+          requiredParameter(type: typeParameterTypeNone(U)),
+          requiredParameter(type: typeParameterTypeNone(V)),
+        ],
+        returnType: voidNone,
+      ),
+      strT0: 'void Function<S extends Object*, T extends void>(S, T)*',
+      strT1: 'void Function<U extends dynamic, V extends Object*>(U, V)*',
+    );
+  }
+
+  test_top_02() {
+    var T0 = typeParameter('T0', bound: dynamicType);
+    var T1 = typeParameter('T1', bound: objectStar);
+
+    var f = functionTypeStar(
       typeFormals: [T0],
       returnType: typeParameterTypeNone(T0),
     );
 
-    var f1 = functionTypeNone(
+    var g = functionTypeStar(
       typeFormals: [T1],
-      returnType: typeParameterTypeNone(T1),
+      returnType: typeParameterTypeStar(T1),
     );
 
-    isSubtype(f0, f1);
-    isSubtype(f1, f0);
+    isSubtype(
+      f,
+      g,
+      strT0: 'T0 Function<T0 extends dynamic>()*',
+      strT1: 'T1* Function<T1 extends Object*>()*',
+    );
+
+    isSubtype(
+      g,
+      f,
+      strT0: 'T1* Function<T1 extends Object*>()*',
+      strT1: 'T0 Function<T0 extends dynamic>()*',
+    );
+  }
+
+  test_top_03() {
+    var T0 = typeParameter('T0', bound: dynamicType);
+    var T1 = typeParameter('T1', bound: objectStar);
+    var T2 = typeParameter('T2', bound: voidNone);
+
+    var h = functionTypeStar(
+      typeFormals: [T0],
+      returnType: typeParameterTypeStar(T0),
+    );
+
+    var i = functionTypeStar(
+      typeFormals: [T1],
+      returnType: typeParameterTypeStar(T1),
+    );
+
+    var j = functionTypeStar(
+      typeFormals: [T2],
+      returnType: typeParameterTypeStar(T2),
+    );
+
+    isSubtype(h, i);
+    isSubtype(h, j);
+    isSubtype(i, h);
+    isSubtype(i, j);
+    isSubtype(j, h);
+    isSubtype(h, i);
   }
 
   test_top_04() {
     isNotSubtype(
       dynamicType,
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
       strT0: 'dynamic',
-      strT1: 'dynamic Function()',
+      strT1: 'dynamic Function()*',
     );
   }
 
   test_top_05() {
     isNotSubtype(
-      futureOrNone(
-        functionTypeNone(
+      futureOrStar(
+        functionTypeStar(
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'FutureOr<void Function()>',
-      strT1: 'void Function()',
+      strT0: 'FutureOr<void Function()*>*',
+      strT1: 'void Function()*',
     );
   }
 
@@ -4471,15 +4635,15 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'T & void Function()',
-      strT1: 'void Function()',
+      strT0: 'T & void Function()*',
+      strT1: 'void Function()*',
     );
   }
 
@@ -4489,33 +4653,33 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         returnType: dynamicType,
       ),
-      strT0: 'T & void Function()',
-      strT1: 'dynamic Function()',
+      strT0: 'T & void Function()*',
+      strT1: 'dynamic Function()*',
     );
   }
 
   test_top_08() {
     var T = typeParameter('T');
 
-    isNotSubtype(
+    isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
-        returnType: objectNone,
+      functionTypeStar(
+        returnType: objectStar,
       ),
-      strT0: 'T & void Function()',
-      strT1: 'Object Function()',
+      strT0: 'T & void Function()*',
+      strT1: 'Object* Function()*',
     );
   }
 
@@ -4525,21 +4689,21 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
           requiredParameter(type: voidNone),
         ],
         returnType: voidNone,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'void Function(void)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'void Function(void)*',
     );
   }
 
@@ -4549,45 +4713,45 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
           requiredParameter(type: dynamicType),
         ],
         returnType: dynamicType,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'dynamic Function(dynamic)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'dynamic Function(dynamic)*',
     );
   }
 
   test_top_11() {
     var T = typeParameter('T');
 
-    isNotSubtype(
+    isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: objectNone),
+          requiredParameter(type: objectStar),
         ],
-        returnType: objectNone,
+        returnType: objectStar,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'Object Function(Object)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'Object* Function(Object*)*',
     );
   }
 
@@ -4597,45 +4761,45 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: iterableNone(intNone)),
+          requiredParameter(type: iterableStar(intStar)),
         ],
         returnType: dynamicType,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'dynamic Function(Iterable<int>)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'dynamic Function(Iterable<int*>*)*',
     );
   }
 
   test_top_13() {
     var T = typeParameter('T');
 
-    isNotSubtype(
+    isSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: objectNone,
+        returnType: objectStar,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'Object Function(int)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'Object* Function(int*)*',
     );
   }
 
@@ -4645,39 +4809,39 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     isNotSubtype(
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           parameters: [
             requiredParameter(type: voidNone),
           ],
           returnType: voidNone,
         ),
       ),
-      functionTypeNone(
+      functionTypeStar(
         parameters: [
-          requiredParameter(type: intNone),
+          requiredParameter(type: intStar),
         ],
-        returnType: intNone,
+        returnType: intStar,
       ),
-      strT0: 'T & void Function(void)',
-      strT1: 'int Function(int)',
+      strT0: 'T & void Function(void)*',
+      strT1: 'int* Function(int*)*',
     );
   }
 
   test_top_15() {
     var T = typeParameter(
       'T',
-      bound: functionTypeNone(
+      bound: functionTypeStar(
         returnType: voidNone,
       ),
     );
 
     isSubtype(
-      typeParameterTypeNone(T),
-      functionTypeNone(
+      typeParameterTypeStar(T),
+      functionTypeStar(
         returnType: voidNone,
       ),
-      strT0: 'T, T extends void Function()',
-      strT1: 'void Function()',
+      strT0: 'T*, T extends void Function()*',
+      strT1: 'void Function()*',
     );
   }
 
@@ -4686,22 +4850,22 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
     isNotSubtype(
       typeParameterTypeNone(T),
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
       strT0: 'T',
-      strT1: 'void Function()',
+      strT1: 'void Function()*',
     );
   }
 
   test_top_17() {
     isNotSubtype(
       voidNone,
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
       strT0: 'void',
-      strT1: 'void Function()',
+      strT1: 'void Function()*',
     );
   }
 
@@ -4720,11 +4884,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      iterableNone(
+      iterableStar(
         typeParameterTypeNone(T),
       ),
       typeParameterTypeNone(T),
-      strT0: 'Iterable<T>',
+      strT0: 'Iterable<T>*',
       strT1: 'T',
     );
   }
@@ -4733,11 +4897,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: voidNone,
       ),
       typeParameterTypeNone(T),
-      strT0: 'void Function()',
+      strT0: 'void Function()*',
       strT1: 'T',
     );
   }
@@ -4746,11 +4910,11 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      futureOrNone(
+      futureOrStar(
         typeParameterTypeNone(T),
       ),
       typeParameterTypeNone(T),
-      strT0: 'FutureOr<T>',
+      strT0: 'FutureOr<T>*',
       strT1: 'T',
     );
   }
@@ -4792,10 +4956,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      promotedTypeParameterTypeNone(T, intNone),
-      strT0: 'T & int',
-      strT1: 'T & int',
+      promotedTypeParameterTypeNone(T, intStar),
+      promotedTypeParameterTypeNone(T, intStar),
+      strT0: 'T & int*',
+      strT1: 'T & int*',
     );
   }
 
@@ -4803,10 +4967,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      promotedTypeParameterTypeNone(T, numNone),
-      strT0: 'T & int',
-      strT1: 'T & num',
+      promotedTypeParameterTypeNone(T, intStar),
+      promotedTypeParameterTypeNone(T, numStar),
+      strT0: 'T & int*',
+      strT1: 'T & num*',
     );
   }
 
@@ -4814,10 +4978,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      promotedTypeParameterTypeNone(T, numNone),
-      strT0: 'T & num',
-      strT1: 'T & num',
+      promotedTypeParameterTypeNone(T, numStar),
+      promotedTypeParameterTypeNone(T, numStar),
+      strT0: 'T & num*',
+      strT1: 'T & num*',
     );
   }
 
@@ -4825,10 +4989,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      promotedTypeParameterTypeNone(T, intNone),
-      strT0: 'T & num',
-      strT1: 'T & int',
+      promotedTypeParameterTypeNone(T, numStar),
+      promotedTypeParameterTypeNone(T, intStar),
+      strT0: 'T & num*',
+      strT1: 'T & int*',
     );
   }
 
@@ -4837,86 +5001,86 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
     isNotSubtype(
       nullQuestion,
-      promotedTypeParameterTypeNone(T, numNone),
+      promotedTypeParameterTypeNone(T, numStar),
       strT0: 'Null?',
-      strT1: 'T & num',
+      strT1: 'T & num*',
     );
   }
 
   test_typeParameter_06() {
-    var T = typeParameter('T', bound: intNone);
+    var T = typeParameter('T', bound: intStar);
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      typeParameterTypeNone(T),
-      strT0: 'T & int, T extends int',
-      strT1: 'T, T extends int',
+      promotedTypeParameterTypeStar(T, intStar),
+      typeParameterTypeStar(T),
+      strT0: '(T & int*)*, T extends int*',
+      strT1: 'T*, T extends int*',
     );
   }
 
   test_typeParameter_07() {
-    var T = typeParameter('T', bound: numNone);
+    var T = typeParameter('T', bound: numStar);
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      typeParameterTypeNone(T),
-      strT0: 'T & int, T extends num',
-      strT1: 'T, T extends num',
+      promotedTypeParameterTypeStar(T, intStar),
+      typeParameterTypeStar(T),
+      strT0: '(T & int*)*, T extends num*',
+      strT1: 'T*, T extends num*',
     );
   }
 
   test_typeParameter_08() {
-    var T = typeParameter('T', bound: numNone);
+    var T = typeParameter('T', bound: numStar);
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      typeParameterTypeNone(T),
-      strT0: 'T & num, T extends num',
-      strT1: 'T, T extends num',
+      promotedTypeParameterTypeStar(T, numStar),
+      typeParameterTypeStar(T),
+      strT0: '(T & num*)*, T extends num*',
+      strT1: 'T*, T extends num*',
     );
   }
 
   test_typeParameter_09() {
-    var T = typeParameter('T', bound: intNone);
+    var T = typeParameter('T', bound: intStar);
 
     isSubtype(
-      typeParameterTypeNone(T),
-      promotedTypeParameterTypeNone(T, intNone),
-      strT0: 'T, T extends int',
-      strT1: 'T & int, T extends int',
+      typeParameterTypeStar(T),
+      promotedTypeParameterTypeStar(T, intStar),
+      strT0: 'T*, T extends int*',
+      strT1: '(T & int*)*, T extends int*',
     );
   }
 
   test_typeParameter_10() {
-    var T = typeParameter('T', bound: intNone);
+    var T = typeParameter('T', bound: intStar);
 
     isSubtype(
-      typeParameterTypeNone(T),
-      promotedTypeParameterTypeNone(T, numNone),
-      strT0: 'T, T extends int',
-      strT1: 'T & num, T extends int',
+      typeParameterTypeStar(T),
+      promotedTypeParameterTypeStar(T, numStar),
+      strT0: 'T*, T extends int*',
+      strT1: '(T & num*)*, T extends int*',
     );
   }
 
   test_typeParameter_11() {
-    var T = typeParameter('T', bound: numNone);
+    var T = typeParameter('T', bound: numStar);
 
     isNotSubtype(
-      typeParameterTypeNone(T),
-      promotedTypeParameterTypeNone(T, intNone),
-      strT0: 'T, T extends num',
-      strT1: 'T & int, T extends num',
+      typeParameterTypeStar(T),
+      promotedTypeParameterTypeStar(T, intStar),
+      strT0: 'T*, T extends num*',
+      strT1: '(T & int*)*, T extends num*',
     );
   }
 
   test_typeParameter_12() {
-    var T = typeParameter('T', bound: numNone);
+    var T = typeParameter('T', bound: numStar);
 
     isSubtype(
-      typeParameterTypeNone(T),
-      typeParameterTypeNone(T),
-      strT0: 'T, T extends num',
-      strT1: 'T, T extends num',
+      typeParameterTypeStar(T),
+      typeParameterTypeStar(T),
+      strT0: 'T*, T extends num*',
+      strT1: 'T*, T extends num*',
     );
   }
 
@@ -4944,25 +5108,25 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
   }
 
   test_typeParameter_15() {
-    var T = typeParameter('T', bound: objectNone);
+    var T = typeParameter('T', bound: objectStar);
 
     isSubtype(
-      typeParameterTypeNone(T),
-      typeParameterTypeNone(T),
-      strT0: 'T, T extends Object',
-      strT1: 'T, T extends Object',
+      typeParameterTypeStar(T),
+      typeParameterTypeStar(T),
+      strT0: 'T*, T extends Object*',
+      strT1: 'T*, T extends Object*',
     );
   }
 
   test_typeParameter_16() {
-    var S = typeParameter('S', bound: objectNone);
-    var T = typeParameter('T', bound: objectNone);
+    var S = typeParameter('S', bound: objectStar);
+    var T = typeParameter('T', bound: objectStar);
 
     isNotSubtype(
       typeParameterTypeNone(S),
       typeParameterTypeNone(T),
-      strT0: 'S, S extends Object',
-      strT1: 'T, T extends Object',
+      strT0: 'S, S extends Object*',
+      strT1: 'T, T extends Object*',
     );
   }
 
@@ -4970,10 +5134,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T', bound: dynamicType);
 
     isSubtype(
-      typeParameterTypeNone(T),
-      typeParameterTypeNone(T),
-      strT0: 'T, T extends dynamic',
-      strT1: 'T, T extends dynamic',
+      typeParameterTypeStar(T),
+      typeParameterTypeStar(T),
+      strT0: 'T*, T extends dynamic',
+      strT1: 'T*, T extends dynamic',
     );
   }
 
@@ -5012,10 +5176,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      intNone,
-      strT0: 'T & int',
-      strT1: 'int',
+      promotedTypeParameterTypeNone(T, intStar),
+      intStar,
+      strT0: 'T & int*',
+      strT1: 'int*',
     );
   }
 
@@ -5023,10 +5187,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, intNone),
-      numNone,
-      strT0: 'T & int',
-      strT1: 'num',
+      promotedTypeParameterTypeNone(T, intStar),
+      numStar,
+      strT0: 'T & int*',
+      strT1: 'num*',
     );
   }
 
@@ -5034,10 +5198,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      numNone,
-      strT0: 'T & num',
-      strT1: 'num',
+      promotedTypeParameterTypeNone(T, numStar),
+      numStar,
+      strT0: 'T & num*',
+      strT1: 'num*',
     );
   }
 
@@ -5045,10 +5209,10 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(T, numNone),
-      intNone,
-      strT0: 'T & num',
-      strT1: 'int',
+      promotedTypeParameterTypeNone(T, numStar),
+      intStar,
+      strT0: 'T & num*',
+      strT1: 'int*',
     );
   }
 
@@ -5057,9 +5221,9 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(S, numNone),
+      promotedTypeParameterTypeNone(S, numStar),
       typeParameterTypeNone(T),
-      strT0: 'S & num',
+      strT0: 'S & num*',
       strT1: 'T',
     );
   }
@@ -5069,78 +5233,78 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      promotedTypeParameterTypeNone(S, numNone),
-      promotedTypeParameterTypeNone(T, numNone),
-      strT0: 'S & num',
-      strT1: 'T & num',
+      promotedTypeParameterTypeNone(S, numStar),
+      promotedTypeParameterTypeNone(T, numStar),
+      strT0: 'S & num*',
+      strT1: 'T & num*',
     );
   }
 
   test_typeParameter_26() {
-    var S = typeParameter('S', bound: intNone);
+    var S = typeParameter('S', bound: intStar);
 
     isSubtype(
-      typeParameterTypeNone(S),
-      intNone,
-      strT0: 'S, S extends int',
-      strT1: 'int',
+      typeParameterTypeStar(S),
+      intStar,
+      strT0: 'S*, S extends int*',
+      strT1: 'int*',
     );
   }
 
   test_typeParameter_27() {
-    var S = typeParameter('S', bound: intNone);
+    var S = typeParameter('S', bound: intStar);
 
     isSubtype(
-      typeParameterTypeNone(S),
-      numNone,
-      strT0: 'S, S extends int',
-      strT1: 'num',
+      typeParameterTypeStar(S),
+      numStar,
+      strT0: 'S*, S extends int*',
+      strT1: 'num*',
     );
   }
 
   test_typeParameter_28() {
-    var S = typeParameter('S', bound: numNone);
+    var S = typeParameter('S', bound: numStar);
 
     isSubtype(
-      typeParameterTypeNone(S),
-      numNone,
-      strT0: 'S, S extends num',
-      strT1: 'num',
+      typeParameterTypeStar(S),
+      numStar,
+      strT0: 'S*, S extends num*',
+      strT1: 'num*',
     );
   }
 
   test_typeParameter_29() {
-    var S = typeParameter('S', bound: numNone);
+    var S = typeParameter('S', bound: numStar);
 
     isNotSubtype(
-      typeParameterTypeNone(S),
-      intNone,
-      strT0: 'S, S extends num',
-      strT1: 'int',
+      typeParameterTypeStar(S),
+      intStar,
+      strT0: 'S*, S extends num*',
+      strT1: 'int*',
     );
   }
 
   test_typeParameter_30() {
-    var S = typeParameter('S', bound: numNone);
+    var S = typeParameter('S', bound: numStar);
     var T = typeParameter('T');
 
     isNotSubtype(
-      typeParameterTypeNone(S),
+      typeParameterTypeStar(S),
       typeParameterTypeNone(T),
-      strT0: 'S, S extends num',
+      strT0: 'S*, S extends num*',
       strT1: 'T',
     );
   }
 
   test_typeParameter_31() {
-    var S = typeParameter('S', bound: numNone);
+    var S = typeParameter('S', bound: numStar);
     var T = typeParameter('T');
 
     isNotSubtype(
-      typeParameterTypeNone(S),
-      promotedTypeParameterTypeNone(T, numNone),
-      strT0: 'S, S extends num',
-      strT1: 'T & num',
+      typeParameterTypeStar(S),
+      promotedTypeParameterTypeNone(T, numStar),
+      strT0: 'S*, S extends num*',
+      strT1: 'T & num*',
     );
   }
 
@@ -5159,17 +5323,17 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      functionTypeNone(
+      functionTypeStar(
         returnType: typeParameterTypeNone(T),
       ),
       promotedTypeParameterTypeNone(
         T,
-        functionTypeNone(
+        functionTypeStar(
           returnType: typeParameterTypeNone(T),
         ),
       ),
-      strT0: 'T Function()',
-      strT1: 'T & T Function()',
+      strT0: 'T Function()*',
+      strT1: 'T & T Function()*',
     );
   }
 
@@ -5177,23 +5341,23 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
     var T = typeParameter('T');
 
     isNotSubtype(
-      futureOrNone(
-        promotedTypeParameterTypeNone(T, stringNone),
+      futureOrStar(
+        promotedTypeParameterTypeNone(T, stringStar),
       ),
-      promotedTypeParameterTypeNone(T, stringNone),
-      strT0: 'FutureOr<T & String>',
-      strT1: 'T & String',
+      promotedTypeParameterTypeNone(T, stringStar),
+      strT0: 'FutureOr<T & String*>*',
+      strT1: 'T & String*',
     );
   }
 
   test_typeParameter_35() {
     var T = typeParameter('T');
 
-    isNotSubtype(
-      nullQuestion,
-      typeParameterTypeNone(T),
-      strT0: 'Null?',
-      strT1: 'T',
+    isSubtype(
+      nullStar,
+      typeParameterTypeStar(T),
+      strT0: 'Null*',
+      strT1: 'T*',
     );
   }
 
@@ -5225,15 +5389,21 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
       strT0: 'T & num?, T extends Object?',
       strT1: 'num?',
     );
+    isSubtype(
+      type,
+      numStar,
+      strT0: 'T & num?, T extends Object?',
+      strT1: 'num*',
+    );
   }
 
   test_typeParameter_38() {
-    var T = typeParameter('T', bound: numNone);
+    var T = typeParameter('T', bound: numStar);
 
     isSubtype(
-      typeParameterTypeNone(T),
+      typeParameterTypeStar(T),
       objectNone,
-      strT0: 'T, T extends num',
+      strT0: 'T*, T extends num*',
       strT1: 'Object',
     );
   }
@@ -5311,12 +5481,32 @@ class SubtypeTest extends _SubtypingTestBase with StringTypes {
 
 @reflectiveTest
 class SubtypingCompoundTest extends _SubtypingTestBase {
-  test_double() {
-    var equivalents = <DartType>[doubleNone];
-    var supertypes = <DartType>[numNone];
-    var unrelated = <DartType>[intNone];
+  test_bottom_isBottom() {
+    var equivalents = <DartType>[neverStar];
+
+    var supertypes = <DartType>[
+      dynamicType,
+      objectStar,
+      intStar,
+      doubleStar,
+      numStar,
+      stringStar,
+      functionStar,
+    ];
+
     _checkGroups(
-      doubleNone,
+      neverStar,
+      equivalents: equivalents,
+      supertypes: supertypes,
+    );
+  }
+
+  test_double() {
+    var equivalents = <DartType>[doubleStar];
+    var supertypes = <DartType>[numStar];
+    var unrelated = <DartType>[intStar];
+    _checkGroups(
+      doubleStar,
       equivalents: equivalents,
       supertypes: supertypes,
       unrelated: unrelated,
@@ -5327,6 +5517,7 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
     var equivalents = <DartType>[
       voidNone,
       objectQuestion,
+      objectStar,
     ];
 
     var subtypes = <DartType>[
@@ -5345,16 +5536,17 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
   test_dynamic_isTop() {
     var equivalents = <DartType>[
       dynamicType,
-      objectQuestion,
+      objectStar,
       voidNone,
     ];
 
     var subtypes = <DartType>[
-      intNone,
-      doubleNone,
-      numNone,
-      stringNone,
-      functionNone,
+      intStar,
+      doubleStar,
+      numStar,
+      stringStar,
+      functionStar,
+      neverStar,
     ];
 
     _checkGroups(
@@ -5366,15 +5558,25 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
 
   test_futureOr_topTypes() {
     var futureOrObject = futureOrNone(objectNone);
+    var futureOrObjectStar = futureOrNone(objectStar);
     var futureOrObjectQuestion = futureOrNone(objectQuestion);
 
+    var futureOrStarObject = futureOrStar(objectNone);
+    var futureOrStarObjectStar = futureOrStar(objectStar);
+    var futureOrStarObjectQuestion = futureOrStar(objectQuestion);
+
     var futureOrQuestionObject = futureOrQuestion(objectNone);
+    var futureOrQuestionObjectStar = futureOrQuestion(objectStar);
     var futureOrQuestionObjectQuestion = futureOrQuestion(objectQuestion);
 
     //FutureOr<Object> <: FutureOr*<Object?>
     _checkGroups(
       futureOrObject,
       equivalents: [
+        objectStar,
+        futureOrObjectStar,
+        futureOrStarObject,
+        futureOrStarObjectStar,
         objectNone,
       ],
       subtypes: [],
@@ -5383,14 +5585,29 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
         futureOrQuestionObject,
         futureOrObjectQuestion,
         futureOrQuestionObject,
+        futureOrQuestionObjectStar,
+        futureOrStarObjectQuestion,
         futureOrQuestionObjectQuestion,
       ],
+    );
+  }
+
+  test_int() {
+    var equivalents = <DartType>[intStar];
+    var supertypes = <DartType>[numStar];
+    var unrelated = <DartType>[doubleStar];
+    _checkGroups(
+      intStar,
+      equivalents: equivalents,
+      supertypes: supertypes,
+      unrelated: unrelated,
     );
   }
 
   test_intNone() {
     var equivalents = <DartType>[
       intNone,
+      intStar,
     ];
 
     var subtypes = <DartType>[
@@ -5406,6 +5623,7 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
     var unrelated = <DartType>[
       doubleNone,
       nullNone,
+      nullStar,
       nullQuestion,
       neverQuestion,
     ];
@@ -5422,19 +5640,24 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
   test_intQuestion() {
     var equivalents = <DartType>[
       intQuestion,
+      intStar,
     ];
 
     var subtypes = <DartType>[
       intNone,
       nullNone,
       nullQuestion,
+      nullStar,
       neverNone,
       neverQuestion,
+      neverStar,
     ];
 
     var supertypes = <DartType>[
       numQuestion,
+      numStar,
       objectQuestion,
+      objectStar,
     ];
 
     var unrelated = <DartType>[
@@ -5452,16 +5675,56 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
     );
   }
 
+  test_intStar() {
+    var equivalents = <DartType>[
+      intNone,
+      intQuestion,
+      intStar,
+    ];
+
+    var subtypes = <DartType>[
+      nullNone,
+      nullStar,
+      nullQuestion,
+      neverNone,
+      neverStar,
+      neverQuestion,
+    ];
+
+    var supertypes = <DartType>[
+      numNone,
+      numQuestion,
+      numStar,
+      objectNone,
+      objectQuestion,
+    ];
+
+    var unrelated = <DartType>[
+      doubleStar,
+    ];
+
+    _checkGroups(
+      intStar,
+      equivalents: equivalents,
+      supertypes: supertypes,
+      unrelated: unrelated,
+      subtypes: subtypes,
+    );
+  }
+
   test_null() {
     var equivalents = <DartType>[
       nullNone,
       nullQuestion,
+      nullStar,
       neverQuestion,
     ];
 
     var supertypes = <DartType>[
       intQuestion,
+      intStar,
       objectQuestion,
+      objectStar,
       dynamicType,
       voidNone,
     ];
@@ -5477,7 +5740,7 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
       objectNone,
     ];
 
-    for (var formOfNull in equivalents) {
+    for (final formOfNull in equivalents) {
       _checkGroups(
         formOfNull,
         equivalents: equivalents,
@@ -5488,13 +5751,13 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
     }
   }
 
-  test_numNone() {
-    var equivalents = <DartType>[numNone];
-    var supertypes = <DartType>[objectNone];
-    var unrelated = <DartType>[stringNone];
-    var subtypes = <DartType>[intNone, doubleNone];
+  test_num() {
+    var equivalents = <DartType>[numStar];
+    var supertypes = <DartType>[objectStar];
+    var unrelated = <DartType>[stringStar];
+    var subtypes = <DartType>[intStar, doubleStar];
     _checkGroups(
-      numNone,
+      numStar,
       equivalents: equivalents,
       supertypes: supertypes,
       unrelated: unrelated,
@@ -5503,7 +5766,9 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
   }
 
   test_object() {
-    var equivalents = <DartType>[];
+    var equivalents = <DartType>[
+      objectStar,
+    ];
 
     var supertypes = <DartType>[
       objectQuestion,
@@ -5527,6 +5792,29 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
       equivalents: equivalents,
       supertypes: supertypes,
       unrelated: unrelated,
+      subtypes: subtypes,
+    );
+  }
+
+  test_void_isTop() {
+    var equivalents = <DartType>[
+      dynamicType,
+      objectStar,
+      voidNone,
+    ];
+
+    var subtypes = <DartType>[
+      intStar,
+      doubleStar,
+      numStar,
+      stringStar,
+      functionStar,
+      neverStar,
+    ];
+
+    _checkGroups(
+      voidNone,
+      equivalents: equivalents,
       subtypes: subtypes,
     );
   }
@@ -5588,7 +5876,7 @@ class SubtypingCompoundTest extends _SubtypingTestBase {
   }
 
   static String _typeStr(DartType type) {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: true);
   }
 }
 

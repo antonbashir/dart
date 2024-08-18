@@ -7,22 +7,17 @@ import 'package:async_helper/async_helper.dart';
 import 'package:expect/expect.dart';
 import '../helpers/compiler_helper.dart';
 
-enum _Result {
-  removed,
-  aboveZero,
-  belowLength,
-  kept,
-  oneCheck,
-  oneZeroCheck,
-  belowZeroCheck,
-}
+const int REMOVED = 0;
+const int ABOVE_ZERO = 1;
+const int BELOW_LENGTH = 2;
+const int KEPT = 3;
+const int ONE_CHECK = 4;
+const int ONE_ZERO_CHECK = 5;
+const int BELOW_ZERO_CHECK = 6;
 
-final List<(String, _Result)> tests = [
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(check) {
-  check as bool;
+final List TESTS = [
+  """
+main(bool check) {
   var a = check ? [1] : [1, 2];
   var sum = 0;
   for (int i = 0; i < a.length; i++) {
@@ -31,13 +26,9 @@ test(check) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = [1, 2];
   var sum = 0;
   for (int i = 0; i < value; i++) {
@@ -46,13 +37,9 @@ test(value) {
   return sum;
 }
 """,
-    _Result.aboveZero
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(check) {
-  check as bool;
+  ABOVE_ZERO,
+  """
+main(bool check) {
   // Make sure value is an int.
   var value = check ? 42 : 54;
   var a = List.filled(value, 1);
@@ -63,114 +50,79 @@ test(check) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-test() {
+  REMOVED,
+  """
+main() {
   var a = [];
   return a[0];
 }
 """,
-    _Result.kept
-  ),
-  (
-    """
-test() {
+  KEPT,
+  """
+main() {
   var a = [];
   return a.removeLast();
 }
 """,
-    _Result.kept
-  ),
-  (
-    """
-test() {
+  KEPT,
+  """
+main() {
   var a = List.filled(4, null);
   return a[0];
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-test() {
+  REMOVED,
+  """
+main() {
   var a = List.filled(4, null);
   return a.removeLast();
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = List.filled(value, null);
   return a[value];
 }
 """,
-    _Result.kept
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  KEPT,
+  """
+main(int value) {
   var a = List.filled(1024, null);
   return a[1023 & value];
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = List.filled(1024, null);
   return a[1024 & value];
 }
 """,
-    _Result.aboveZero
-  ),
-  (
-    """
-test() {
+  ABOVE_ZERO,
+  """
+main() {
   var a = [];
   return a[1];
 }
 """,
-    _Result.aboveZero
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value, call) {
-  value as int;
-  call as int Function();
+  ABOVE_ZERO,
+  """
+main(int value, int Function() call) {
   var a = [];
   return a[value] + call() + a[value];
 }
 """,
-    _Result.oneZeroCheck
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as bool;
+  ONE_ZERO_CHECK,
+  """
+main(bool value) {
   var a = value ? [1, 2, 3] : [];
   return a[1] + a[0];
 }
 """,
-    _Result.oneCheck
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(n) {
-  n as int;
+  ONE_CHECK,
+  """
+main(int n) {
   var a = List.filled(n, 1);
   var sum = 0;
   for (int i = 0; i <= a.length - 1; i++) {
@@ -179,13 +131,9 @@ test(n) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(n) {
-  n as int;
+  REMOVED,
+  """
+main(int n) {
   var a = List.filled(n, 1);
   var sum = 0;
   for (int i = a.length - 1; i >= 0; i--) {
@@ -194,12 +142,9 @@ test(n) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(dynamic value) {
+  REMOVED,
+  """
+main(dynamic value) {
   value = value is int ? value as int : 42;
   int sum = ~value;
   for (int i = 0; i < 42; i++) sum += (value & 4);
@@ -209,12 +154,9 @@ test(dynamic value) {
   return a[value];
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
+  REMOVED,
+  """
+main(value) {
   value = value is int ? value as int : 42;
   int sum = ~value;
   for (int i = 0; i < 42; i++) sum += (value & 4);
@@ -226,12 +168,9 @@ test(value) {
   }
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
+  REMOVED,
+  """
+main(value) {
   value = value is int ? value as int : 42;
   int sum = ~value;
   for (int i = 0; i < 42; i++) sum += (value & 4);
@@ -241,13 +180,9 @@ test(value) {
   return a[value];
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = List.filled(value, 1);
   var sum = 0;
   for (int i = 0; i < a.length; i++) {
@@ -257,15 +192,11 @@ test(value) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
-  var a = List<dynamic>.filled(value, null);
-  num sum = 0;
+  REMOVED,
+  """
+main(int value) {
+  var a = List.filled(value, null);
+  var sum = 0;
   for (int i = a.length - 1; i >= 0; i--) {
     sum += a[i];
     if (sum == 0) i--;
@@ -273,13 +204,9 @@ test(value) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = List.filled(6, value);
   var sum = 0;
   for (int i = 0; i < a.length; i++) {
@@ -289,13 +216,9 @@ test(value) {
   return sum;
 }
 """,
-    _Result.removed
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  REMOVED,
+  """
+main(int value) {
   var a = List.filled(7, value);
   var sum = 0;
   for (int i = 0; i < a.length;) {
@@ -305,13 +228,9 @@ test(value) {
   return sum;
 }
 """,
-    _Result.belowZeroCheck
-  ),
-  (
-    """
-@pragma('dart2js:assumeDynamic')
-test(value) {
-  value as int;
+  BELOW_ZERO_CHECK,
+  """
+main(int value) {
   var a = List.filled(7, value);
   var sum = 0;
   for (int i = -2; i < a.length; i = 0) {
@@ -320,46 +239,44 @@ test(value) {
   return sum;
 }
 """,
-    _Result.belowZeroCheck
-  ),
+  BELOW_ZERO_CHECK,
 ];
 
-Future expect(String code, _Result kind) {
-  return compile(code, entry: 'test', disableTypeInference: false,
-      check: (String generated) {
+Future expect(String code, int kind) {
+  return compile(code, disableTypeInference: false, check: (String generated) {
     switch (kind) {
-      case _Result.removed:
+      case REMOVED:
         Expect.isFalse(generated.contains('ioore'));
         break;
 
-      case _Result.aboveZero:
+      case ABOVE_ZERO:
         Expect.isFalse(generated.contains('< 0') || generated.contains('>= 0'));
         Expect.isTrue(generated.contains('ioore'));
         break;
 
-      case _Result.belowZeroCheck:
+      case BELOW_ZERO_CHECK:
         // May generate `!(ix < 0)` or `ix >= 0` depending if `ix` can be NaN
         Expect.isTrue(generated.contains('< 0') || generated.contains('>= 0'));
         Expect.isFalse(generated.contains('||') || generated.contains('&&'));
         Expect.isTrue(generated.contains('ioore'));
         break;
 
-      case _Result.belowLength:
+      case BELOW_LENGTH:
         Expect.isFalse(generated.contains('||') || generated.contains('&&'));
         Expect.isTrue(generated.contains('ioore'));
         break;
 
-      case _Result.kept:
+      case KEPT:
         Expect.isTrue(generated.contains('ioore'));
         break;
 
-      case _Result.oneCheck:
+      case ONE_CHECK:
         RegExp regexp = RegExp('ioore');
         Iterator matches = regexp.allMatches(generated).iterator;
         checkNumberOfMatches(matches, 1);
         break;
 
-      case _Result.oneZeroCheck:
+      case ONE_ZERO_CHECK:
         RegExp regexp = RegExp('< 0|>>> 0 !==');
         Iterator matches = regexp.allMatches(generated).iterator;
         checkNumberOfMatches(matches, 1);
@@ -369,8 +286,8 @@ Future expect(String code, _Result kind) {
 }
 
 runTests() async {
-  for (final (input, expected) in tests) {
-    await expect(input, expected);
+  for (int i = 0; i < TESTS.length; i += 2) {
+    await expect(TESTS[i], TESTS[i + 1]);
   }
 }
 

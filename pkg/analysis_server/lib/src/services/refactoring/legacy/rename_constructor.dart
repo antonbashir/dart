@@ -10,9 +10,8 @@ import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring_internal.dart';
 import 'package:analysis_server/src/services/refactoring/legacy/rename.dart';
 import 'package:analysis_server/src/services/search/hierarchy.dart';
-import 'package:analysis_server/src/utilities/change_builder.dart';
+import 'package:analysis_server/src/utilities/selection.dart';
 import 'package:analysis_server/src/utilities/strings.dart';
-import 'package:analysis_server_plugin/src/utilities/selection.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source_range.dart';
@@ -102,7 +101,7 @@ class RenameConstructorRefactoringImpl extends RenameRefactoringImpl {
     required SourceReference reference,
     required ClassDeclaration classDeclaration,
   }) {
-    var className = classDeclaration.name.lexeme;
+    final className = classDeclaration.name.lexeme;
     _replaceInReferenceFile(
       reference: reference,
       range: range.endLength(classDeclaration.leftBracket, 0),
@@ -114,8 +113,8 @@ class RenameConstructorRefactoringImpl extends RenameRefactoringImpl {
     required SourceReference reference,
     required ConstructorDeclaration constructor,
   }) {
-    var initializers = constructor.initializers;
-    if (initializers.lastOrNull case var last?) {
+    final initializers = constructor.initializers;
+    if (initializers.lastOrNull case final last?) {
       _replaceInReferenceFile(
         reference: reference,
         range: range.endLength(last, 0),
@@ -194,26 +193,37 @@ class RenameConstructorRefactoringImpl extends RenameRefactoringImpl {
     }
 
     var node = result.node;
-    if (node is! NamedCompilationUnitMember) {
-      return;
-    }
-    if (node is! ClassDeclaration && node is! EnumDeclaration) {
-      return;
-    }
+    if (node is ClassDeclaration) {
+      var utils = CorrectionUtils(resolvedUnit);
+      var location = utils.prepareNewConstructorLocation(
+          sessionHelper.session, node, resolvedUnit.file);
+      if (location == null) {
+        return;
+      }
 
-    var edit = await buildEditForInsertedConstructor(
-      node,
-      resolvedUnit: resolvedUnit,
-      session: sessionHelper.session,
-      (builder) => builder.writeConstructorDeclaration(
-        classElement.name,
-        constructorName: newName,
-        isConst: node is EnumDeclaration,
-      ),
-    );
-    if (edit == null) {
-      return;
+      var header = '${classElement.name}.$newName();';
+      doSourceChange_addElementEdit(
+        change,
+        classElement,
+        SourceEdit(
+          location.offset,
+          0,
+          location.prefix + header + location.suffix,
+        ),
+      );
+    } else if (node is EnumDeclaration) {
+      var utils = CorrectionUtils(resolvedUnit);
+      var location = utils.prepareEnumNewConstructorLocation(node);
+      var header = 'const ${classElement.name}.$newName();';
+      doSourceChange_addElementEdit(
+        change,
+        classElement,
+        SourceEdit(
+          location.offset,
+          0,
+          location.prefix + header + location.suffix,
+        ),
+      );
     }
-    doSourceChange_addElementEdit(change, classElement, edit);
   }
 }

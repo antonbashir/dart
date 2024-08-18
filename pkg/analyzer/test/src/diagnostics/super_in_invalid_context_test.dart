@@ -299,7 +299,7 @@ class B extends A {
       error(CompileTimeErrorCode.SUPER_IN_INVALID_CONTEXT, 69, 5),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -346,8 +346,8 @@ class B extends A {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 57, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 92, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 57, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 92, 1),
     ]);
   }
 }

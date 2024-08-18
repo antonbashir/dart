@@ -1,5 +1,4 @@
 typedef ListList<T> = List<List<T>>;
-
 T top<T>(T value) => value;
 
 class C {

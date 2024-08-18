@@ -33,7 +33,7 @@ class C {}
 class X = A with B implements C;
 ''');
 
-    var node = findNode.classTypeAlias('X =');
+    final node = findNode.classTypeAlias('X =');
     assertResolvedNodeText(node, r'''
 ClassTypeAlias
   typedefKeyword: class
@@ -41,24 +41,24 @@ ClassTypeAlias
   equals: =
   superclass: NamedType
     name: A
-    element: <testLibraryFragment>::@class::A
+    element: self::@class::A
     type: A
   withClause: WithClause
     withKeyword: with
     mixinTypes
       NamedType
         name: B
-        element: <testLibraryFragment>::@class::B
+        element: self::@class::B
         type: B
   implementsClause: ImplementsClause
     implementsKeyword: implements
     interfaces
       NamedType
         name: C
-        element: <testLibraryFragment>::@class::C
+        element: self::@class::C
         type: C
   semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::X
+  declaredElement: self::@class::X
 ''');
   }
 

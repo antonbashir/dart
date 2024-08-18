@@ -125,6 +125,7 @@ class C {
     finalOne ??= null;
 //  ^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.ASSIGNMENT_TO_FINAL
+// [cfe] Operand of null-aware operation '??=' has type 'int' which excludes null.
 // [cfe] The setter 'finalOne' isn't defined for the class 'C'.
 //               ^^^^
 // [analyzer] STATIC_WARNING.DEAD_NULL_AWARE_EXPRESSION
@@ -172,6 +173,8 @@ main() {
   {
     var l = 1;
     check(1, () => l ??= bad(), []);
+    //             ^
+    // [cfe] Operand of null-aware operation '??=' has type 'int' which excludes null.
     //                   ^^^^^
     // [analyzer] STATIC_WARNING.DEAD_NULL_AWARE_EXPRESSION
   }
@@ -187,6 +190,7 @@ main() {
 //  ^
 // [analyzer] COMPILE_TIME_ERROR.ASSIGNMENT_TO_FINAL_LOCAL
 // [cfe] Can't assign to the final variable 'l'.
+// [cfe] Operand of null-aware operation '??=' has type 'int' which excludes null.
 //        ^^^^
 // [analyzer] COMPILE_TIME_ERROR.INVALID_ASSIGNMENT
 // [analyzer] STATIC_WARNING.DEAD_NULL_AWARE_EXPRESSION
@@ -195,6 +199,7 @@ main() {
 //^
 // [analyzer] COMPILE_TIME_ERROR.ASSIGNMENT_TO_TYPE
 // [cfe] Can't assign to a type literal.
+// [cfe] Operand of null-aware operation '??=' has type 'Type' which excludes null.
   h ??= null;
 //^
 // [analyzer] COMPILE_TIME_ERROR.PREFIX_IDENTIFIER_NOT_FOLLOWED_BY_DOT
@@ -254,6 +259,8 @@ main() {
   check(1, () => C?.x ??= bad(), ['C.x']);
   //              ^^
   // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+  //             ^
+  // [cfe] The class 'C' cannot be null.
   h.C.xgetValue = 1;
   //  ^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.UNDEFINED_SETTER
@@ -266,8 +273,12 @@ main() {
   check(1, () => C?.x ??= y, ['C.x', 'y', 'C.x=1']);
   //              ^^
   // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+  //             ^
+  // [cfe] The class 'C' cannot be null.
   yGetValue = 1;
   check(1, () => h.C?.x ??= y, ['h.C.x', 'y', 'h.C.x=1']);
   //                ^^
   // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+  //               ^
+  // [cfe] The class 'C' cannot be null.
 }

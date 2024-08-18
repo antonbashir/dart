@@ -92,7 +92,7 @@ class NativeBehavior {
 
   final SideEffects sideEffects;
 
-  NativeThrowBehavior throwBehavior = NativeThrowBehavior.may;
+  NativeThrowBehavior throwBehavior = NativeThrowBehavior.MAY;
 
   bool isAllocation = false;
   bool useGvn = false;
@@ -128,8 +128,7 @@ class NativeBehavior {
     List<Object> typesInstantiated = readTypes();
     String? codeTemplateText = source.readStringOrNull();
     SideEffects sideEffects = SideEffects.readFromDataSource(source);
-    NativeThrowBehavior throwBehavior =
-        source.readEnum(NativeThrowBehavior.values);
+    int throwBehavior = source.readInt();
     bool isAllocation = source.readBool();
     bool useGvn = source.readBool();
     source.end(tag);
@@ -141,7 +140,8 @@ class NativeBehavior {
       behavior.codeTemplateText = codeTemplateText;
       behavior.codeTemplate = js.js.parseForeignJS(codeTemplateText);
     }
-    behavior.throwBehavior = throwBehavior;
+    behavior.throwBehavior = NativeThrowBehavior.bitsToValue(throwBehavior);
+    assert(behavior.throwBehavior.valueToBits() == throwBehavior);
     behavior.isAllocation = isAllocation;
     behavior.useGvn = useGvn;
     return behavior;
@@ -172,7 +172,7 @@ class NativeBehavior {
     writeTypes(typesInstantiated);
     sink.writeStringOrNull(codeTemplateText);
     sideEffects.writeToDataSink(sink);
-    sink.writeEnum(throwBehavior);
+    sink.writeInt(throwBehavior.valueToBits());
     sink.writeBool(isAllocation);
     sink.writeBool(useGvn);
     sink.end(tag);
@@ -194,7 +194,7 @@ class NativeBehavior {
     NativeBehavior behavior = NativeBehavior();
     behavior.sideEffects.clearAllDependencies();
     behavior.sideEffects.clearAllSideEffects();
-    behavior.throwBehavior = NativeThrowBehavior.never;
+    behavior.throwBehavior = NativeThrowBehavior.NEVER;
     behavior.isAllocation = isAllocation;
     return behavior;
   }
@@ -290,8 +290,8 @@ class NativeBehavior {
       required TypeLookup lookupType,
       required List<Object> typesReturned,
       required List<Object> typesInstantiated,
-      required Object objectType,
-      required Object nullType}) {
+      objectType,
+      nullType}) {
     bool seenError = false;
 
     void reportError(String message) {
@@ -416,10 +416,10 @@ class NativeBehavior {
     }
 
     const throwsOption = <String, NativeThrowBehavior>{
-      'never': NativeThrowBehavior.never,
-      'may': NativeThrowBehavior.may,
-      'null(1)': NativeThrowBehavior.nullNsm,
-      'null(1)+may': NativeThrowBehavior.nullNsmThenMay,
+      'never': NativeThrowBehavior.NEVER,
+      'may': NativeThrowBehavior.MAY,
+      'null(1)': NativeThrowBehavior.NULL_NSM,
+      'null(1)+may': NativeThrowBehavior.NULL_NSM_THEN_MAY,
     };
 
     const boolOptions = <String, bool>{'true': true, 'false': false};
@@ -637,7 +637,7 @@ class NativeBehavior {
     // Embedded globals are usually pre-computed data structures or JavaScript
     // functions that never change.
     behavior.sideEffects.setTo(SideEffects.empty());
-    behavior.throwBehavior = NativeThrowBehavior.never;
+    behavior.throwBehavior = NativeThrowBehavior.NEVER;
     _fillNativeBehaviorOfBuiltinOrEmbeddedGlobal(
         behavior, spannable, specString, lookupType, reporter, commonElements,
         validTags: ['returns', 'creates']);

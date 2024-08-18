@@ -5,7 +5,6 @@
 #ifndef RUNTIME_BIN_UTILS_WIN_H_
 #define RUNTIME_BIN_UTILS_WIN_H_
 
-#include <memory>
 #include <utility>
 
 #include "platform/utils.h"
@@ -53,30 +52,53 @@ class StringUtilsWin {
 class WideToUtf8Scope {
  public:
   explicit WideToUtf8Scope(const wchar_t* wide)
-      : utf8_(CStringUniquePtr(nullptr)) {
+      : utf8_(Utils::CreateCStringUniquePtr(nullptr)) {
     intptr_t utf8_len =
         WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
     char* utf8 = reinterpret_cast<char*>(malloc(utf8_len));
     WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, utf8_len, nullptr, nullptr);
     length_ = utf8_len;
-    utf8_.reset(utf8);
+    utf8_ = Utils::CreateCStringUniquePtr(utf8);
   }
 
   char* utf8() const { return utf8_.get(); }
   intptr_t length() const { return length_; }
 
   // Release the ownership of the converted string and return it.
-  CStringUniquePtr release() { return std::move(utf8_); }
+  Utils::CStringUniquePtr release() { return std::move(utf8_); }
 
  private:
   intptr_t length_;
-  CStringUniquePtr utf8_;
+  Utils::CStringUniquePtr utf8_;
 
   DISALLOW_ALLOCATION();
   DISALLOW_IMPLICIT_CONSTRUCTORS(WideToUtf8Scope);
 };
 
-std::unique_ptr<wchar_t[]> Utf8ToWideChar(const char* path);
+class Utf8ToWideScope {
+ public:
+  explicit Utf8ToWideScope(const char* utf8, intptr_t length = -1) {
+    int wide_len = MultiByteToWideChar(CP_UTF8, 0, utf8, length, nullptr, 0);
+    wchar_t* wide =
+        reinterpret_cast<wchar_t*>(malloc(sizeof(wchar_t) * wide_len));
+    MultiByteToWideChar(CP_UTF8, 0, utf8, length, wide, wide_len);
+    length_ = wide_len;
+    wide_ = wide;
+  }
+
+  ~Utf8ToWideScope() { free(wide_); }
+
+  wchar_t* wide() const { return wide_; }
+  intptr_t length() const { return length_; }
+  intptr_t size_in_bytes() const { return length_ * sizeof(*wide_); }
+
+ private:
+  intptr_t length_;
+  wchar_t* wide_;
+
+  DISALLOW_ALLOCATION();
+  DISALLOW_IMPLICIT_CONSTRUCTORS(Utf8ToWideScope);
+};
 
 }  // namespace bin
 }  // namespace dart

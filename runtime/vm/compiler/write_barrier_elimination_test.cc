@@ -14,28 +14,31 @@ DEBUG_ONLY(DECLARE_FLAG(bool, trace_write_barrier_elimination);)
 ISOLATE_UNIT_TEST_CASE(IRTest_WriteBarrierElimination_JoinSuccessors) {
   DEBUG_ONLY(
       SetFlagScope<bool> sfs(&FLAG_trace_write_barrier_elimination, true));
+  const char* nullable_tag = TestCase::NullableTag();
+  const char* null_assert_tag = TestCase::NullAssertTag();
 
   // This is a regression test for a bug where we were using
   // JoinEntry::SuccessorCount() to determine the number of outgoing blocks
   // from the join block. JoinEntry::SuccessorCount() is in fact always 0;
   // JoinEntry::last_instruction()->SuccessorCount() should be used instead.
   // clang-format off
-  const char* kScript = R"(
+  auto kScript = Utils::CStringUniquePtr(
+      OS::SCreate(nullptr, R"(
       class C {
-        int? value;
-        C? next;
-        C? prev;
+        int%s value;
+        C%s next;
+        C%s prev;
       }
 
       @pragma("vm:never-inline")
       fn() {}
 
       foo(int x) {
-        C? prev = C();
-        C? next;
+        C%s prev = C();
+        C%s next;
         while (x --> 0) {
           next = C();
-          next!.prev = prev;
+          next%s.prev = prev;
           prev?.next = next;
           prev = next;
           fn();
@@ -44,10 +47,12 @@ ISOLATE_UNIT_TEST_CASE(IRTest_WriteBarrierElimination_JoinSuccessors) {
       }
 
       main() { foo(10); }
-      )";
+      )",
+      nullable_tag, nullable_tag, nullable_tag, nullable_tag,
+      nullable_tag, null_assert_tag), std::free);
   // clang-format on
 
-  const auto& root_library = Library::Handle(LoadTestScript(kScript));
+  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
 
   Invoke(root_library, "main");
 
@@ -85,9 +90,10 @@ ISOLATE_UNIT_TEST_CASE(IRTest_WriteBarrierElimination_AtLeastOnce) {
   // each block at least once, the store "c.next = n" will be marked
   // NoWriteBarrier.
   // clang-format off
-  const char* kScript = R"(
+  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr,
+                                                     R"(
       class C {
-        late C next;
+        %s C next;
       }
 
       @pragma("vm:never-inline")
@@ -104,9 +110,9 @@ ISOLATE_UNIT_TEST_CASE(IRTest_WriteBarrierElimination_AtLeastOnce) {
       }
 
       main() { foo(0); foo(10); }
-      )";
+      )", TestCase::LateTag()), std::free);
   // clang-format on
-  const auto& root_library = Library::Handle(LoadTestScript(kScript));
+  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
 
   Invoke(root_library, "main");
 
@@ -135,14 +141,16 @@ ISOLATE_UNIT_TEST_CASE(IRTest_WriteBarrierElimination_AtLeastOnce) {
 static void TestWBEForArrays(int length) {
   DEBUG_ONLY(
       SetFlagScope<bool> sfs(&FLAG_trace_write_barrier_elimination, true));
+  const char* nullable_tag = TestCase::NullableTag();
 
   // Test that array allocations are considered usable after a
   // may-trigger-GC instruction (in this case CheckStackOverflow) iff they
   // are small.
   // clang-format off
-  CStringUniquePtr kScript(OS::SCreate(nullptr, R"(
+  auto kScript =
+      Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
       class C {
-        late C next;
+        %s C next;
       }
 
       @pragma("vm:never-inline")
@@ -151,7 +159,7 @@ static void TestWBEForArrays(int length) {
       foo(int x) {
         C c = C();
         C n = C();
-        List<C?> array = List<C?>.filled(%d, null);
+        List<C%s> array = List<C%s>.filled(%d, null);
         array[0] = c;
         while (x --> 0) {
           c.next = n;
@@ -163,7 +171,7 @@ static void TestWBEForArrays(int length) {
       }
 
       main() { foo(10); }
-      )", length));
+      )", TestCase::LateTag(), nullable_tag, nullable_tag, length), std::free);
   // clang-format on
 
   // Generate a length dependent test library uri.

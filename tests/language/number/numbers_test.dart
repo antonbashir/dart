@@ -6,7 +6,6 @@
 library NumbersTest.dart;
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 class NumbersTest {
   static double testMain() {
@@ -14,18 +13,18 @@ class NumbersTest {
     Expect.equals(true, one is Object);
     Expect.equals(true, one is num);
     Expect.equals(true, one is int);
-    Expect.equals(v.jsNumbers, one is double);
+    Expect.equals(webNumbers, one is double);
 
     var two = 2.0;
     Expect.equals(true, two is Object);
     Expect.equals(true, two is num);
-    Expect.equals(v.jsNumbers, two is int);
+    Expect.equals(webNumbers, two is int);
     Expect.equals(true, two is double);
 
     var result = one + two;
     Expect.equals(true, result is Object);
     Expect.equals(true, result is num);
-    Expect.equals(v.jsNumbers, result is int);
+    Expect.equals(webNumbers, result is int);
     Expect.equals(true, result is double);
 
     Expect.equals(3.0, result);

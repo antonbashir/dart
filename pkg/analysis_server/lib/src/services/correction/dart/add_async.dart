@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -11,21 +11,24 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class AddAsync extends ResolvedCorrectionProducer {
-  // TODO(pq): consider adding a variation that adds an `await` as well.
+  // TODO(pq): consider adding a variation that adds an `await` as well
 
   /// A flag indicating whether this producer is producing a fix in the case
   /// where a function is missing a return at the end.
   final bool isForMissingReturn;
 
   /// Initialize a newly created producer.
-  AddAsync({required super.context}) : isForMissingReturn = false;
+  AddAsync() : isForMissingReturn = false;
 
-  AddAsync.missingReturn({required super.context}) : isForMissingReturn = true;
+  AddAsync.missingReturn() : isForMissingReturn = true;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
+
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_ASYNC;
@@ -33,7 +36,7 @@ class AddAsync extends ResolvedCorrectionProducer {
   @override
   Future<void> compute(ChangeBuilder builder) async {
     if (isForMissingReturn) {
-      var node = this.node;
+      final node = this.node;
       FunctionBody? body;
       DartType? returnType;
       if (node is FunctionDeclaration) {
@@ -55,12 +58,9 @@ class AddAsync extends ResolvedCorrectionProducer {
     } else {
       var body = node.thisOrAncestorOfType<FunctionBody>();
       if (body != null && body.keyword == null) {
+        final typeProvider = this.typeProvider;
         await builder.addDartFileEdit(file, (builder) {
-          builder.convertFunctionFromSyncToAsync(
-            body: body,
-            typeSystem: typeSystem,
-            typeProvider: typeProvider,
-          );
+          builder.convertFunctionFromSyncToAsync(body, typeProvider);
         });
       }
     }

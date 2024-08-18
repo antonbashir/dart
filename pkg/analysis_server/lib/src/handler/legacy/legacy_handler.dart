@@ -86,13 +86,11 @@ abstract class LegacyHandler {
   /// Send a response to the client that is associated with the given [request]
   /// and whose body if the given [result].
   void sendResult(ResponseResult result) {
-    sendResponse(
-        result.toResponse(request.id, clientUriConverter: server.uriConverter));
+    sendResponse(result.toResponse(request.id));
   }
 
   /// Send a notification built from the given [params].
   void sendSearchResults(SearchResultsParams params) {
-    server.sendNotification(
-        params.toNotification(clientUriConverter: server.uriConverter));
+    server.sendNotification(params.toNotification());
   }
 }

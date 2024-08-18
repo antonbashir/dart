@@ -65,7 +65,7 @@ static const char* GetFileNameFromPath(const char* path) {
   return path;
 }
 
-CStringUniquePtr EXEUtils::GetDirectoryPrefixFromResolvedExeName() {
+Utils::CStringUniquePtr EXEUtils::GetDirectoryPrefixFromExeName() {
   const char* name = nullptr;
   const int kTargetSize = PATH_MAX;
   char target[kTargetSize];
@@ -87,7 +87,8 @@ CStringUniquePtr EXEUtils::GetDirectoryPrefixFromResolvedExeName() {
     // cwd is currently wherever we launched from, so set the cwd to the
     // directory of the symlink while we try and resolve it. If we don't
     // do this, we won't be able to properly resolve relative paths.
-    CStringUniquePtr initial_dir_path(Directory::CurrentNoScope());
+    auto initial_dir_path =
+        Utils::CreateCStringUniquePtr(Directory::CurrentNoScope());
     // We might run into symlinks of symlinks, so make sure we follow the
     // links all the way. See https://github.com/dart-lang/sdk/issues/41057 for
     // an example where this happens with brew on MacOS.
@@ -97,7 +98,7 @@ CStringUniquePtr EXEUtils::GetDirectoryPrefixFromResolvedExeName() {
       name = File::LinkTarget(namespc, GetFileNameFromPath(name), target,
                               kTargetSize);
       if (name == nullptr) {
-        return CStringUniquePtr(Utils::StrDup(""));
+        return Utils::CreateCStringUniquePtr(Utils::StrDup(""));
       }
     } while (File::GetType(namespc, name, false) == File::kIsLink);
     target_size = strlen(name);
@@ -116,13 +117,8 @@ CStringUniquePtr EXEUtils::GetDirectoryPrefixFromResolvedExeName() {
     result = GetDirectoryFromPath(target, nullptr);
   }
   namespc->Release();
-  return CStringUniquePtr(result == nullptr ? Utils::StrDup("") : result);
-}
-
-CStringUniquePtr EXEUtils::GetDirectoryPrefixFromUnresolvedExeName() {
-  const char* exe = Platform::GetExecutableName();
-  return CStringUniquePtr(exe == nullptr ? nullptr
-                                         : GetDirectoryFromPath(exe, nullptr));
+  return Utils::CreateCStringUniquePtr(result == nullptr ? Utils::StrDup("")
+                                                         : result);
 }
 
 #if !defined(DART_HOST_OS_WINDOWS)

@@ -10,7 +10,7 @@ library javascriptobject_extensions_test;
 import 'package:js/js.dart';
 import 'package:js/js_util.dart';
 import 'package:expect/expect.dart' show hasUnsoundNullSafety;
-import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
+import 'package:expect/minitest.dart';
 
 import 'dart:html' show Window;
 import 'dart:_interceptors'
@@ -19,9 +19,6 @@ import 'dart:_interceptors'
         JavaScriptObject,
         UnknownJavaScriptObject,
         JSObject;
-
-const isDDC = const bool.fromEnvironment('dart.library._ddc_only');
-const isDart2JS = const bool.fromEnvironment('dart.library._dart2js_only');
 
 @JS()
 external void eval(String code);
@@ -37,15 +34,6 @@ class JSClass implements InterfaceClass {
 class ImplementationClass implements JSClass {
   String get name => 'ImplementationClass';
 }
-
-class GenericInterfaceClass<T> {}
-
-@JS('JSClass')
-class GenericJSClass<T> implements GenericInterfaceClass<T> {
-  external GenericJSClass();
-}
-
-class GenericImplementationClass<T> implements GenericJSClass<T> {}
 
 @JS()
 @anonymous
@@ -157,44 +145,20 @@ main() {
   expect(null is JavaScriptObject, false);
   runtimeIsAndAs<JavaScriptObject>(null, hasUnsoundNullSafety);
 
-  // Most of the following tests don't work in DDC and dart2js. In order to test
-  // the current status on both compilers, we place the current status in the
-  // expectation, and the real expected value in a comment next to it. If at any
-  // point we fix the compilers so we get the real expected value, the
-  // corresponding expectations should be amended.
-
   // Transitive is and as.
   // JS type <: JavaScriptObject <: JSObject
   expect(jsObj is JSObject, true);
   runtimeIsAndAs<JSObject>(jsObj);
   // JavaScriptObject <: JS type <: Dart interface
-  expect(jsObj is InterfaceClass, isDart2JS /* true */);
-  runtimeIsAndAs<InterfaceClass>(jsObj, isDart2JS /* true */);
-  // Generics should be effectively ignored when a JS interop class implements
-  // a Dart class or vice versa.
-  var jsObjInt = GenericJSClass<int>();
-  expect(jsObjInt is GenericInterfaceClass<int>, isDart2JS /* true */);
-  runtimeIsAndAs<GenericInterfaceClass<int>>(jsObjInt, isDart2JS /* true */);
-  var jsObjString = GenericJSClass<String>();
-  expect(jsObjString is GenericInterfaceClass<int>, isDart2JS /* true */);
-  runtimeIsAndAs<GenericInterfaceClass<int>>(jsObjString, isDart2JS /* true */);
-  expect(javaScriptObject is InterfaceClass, isDart2JS /* true */);
-  runtimeIsAndAs<InterfaceClass>(javaScriptObject, isDart2JS /* true */);
+  expect(javaScriptObject is InterfaceClass, true);
+  runtimeIsAndAs<InterfaceClass>(javaScriptObject);
   // Dart implementation <: JS type <: JavaScriptObject
   var impl = ImplementationClass();
-  expect(impl is JSClass, true);
-  runtimeIsAndAs<JSClass>(impl);
-  var implInt = GenericImplementationClass<int>();
-  expect(implInt is GenericJSClass<int>, true);
-  runtimeIsAndAs<GenericJSClass<int>>(implInt);
-  var implString = GenericImplementationClass<String>();
-  expect(implString is GenericJSClass<int>, true);
-  runtimeIsAndAs<GenericJSClass<int>>(implString);
-  expect(impl is JavaScriptObject, false /* true */);
-  runtimeIsAndAs<JavaScriptObject>(impl, false /* true */);
+  expect(impl is JavaScriptObject, true);
+  runtimeIsAndAs<JavaScriptObject>(impl);
   // Dart implementation <: JS type <: JavaScriptObject <: JSObject
-  expect(impl is JSObject, false /* true */);
-  runtimeIsAndAs<JSObject>(impl, false /* true */);
+  expect(impl is JSObject, true);
+  runtimeIsAndAs<JSObject>(impl);
 
   // Test that subtyping with nullability works as expected.
   expect(returnJavaScriptObject is JavaScriptObject? Function(), true);
@@ -203,49 +167,40 @@ main() {
 
   // Test that JavaScriptObject can be used in place of package:js types in
   // function types, and vice versa.
-  // TODO(srujzs): We should add tests for subtyping involving generics in each
-  // of these cases. However, it's very unlikely we'll fix the non-generic cases
-  // to begin with, and such tests would be filtered today anyways, so we can
-  // add those tests later if we do fix these.
-  expect(returnJavaScriptObject is JSClass Function(), false /* true */);
-  expect(returnJS is JavaScriptObject Function(), isDDC /* true */);
-  expect(returnJavaScriptObject is AnonymousClass Function(), false /* true */);
-  expect(returnAnon is JavaScriptObject Function(), isDDC /* true */);
+  expect(returnJavaScriptObject is JSClass Function(), true);
+  expect(returnJS is JavaScriptObject Function(), true);
+  expect(returnJavaScriptObject is AnonymousClass Function(), true);
+  expect(returnAnon is JavaScriptObject Function(), true);
 
   // Transitive subtyping.
   // UnknownJavaScriptObject <: JavaScriptObject <: JS type
-  expect(returnUnknownJavaScriptObject is JSClass Function(), false /* true */);
+  expect(returnUnknownJavaScriptObject is JSClass Function(), true);
   // JS type <: JavaScriptObject <: JSObject
-  expect(returnJS is JSObject Function(), isDDC /* true */);
+  expect(returnJS is JSObject Function(), true);
   // JavaScriptObject <: JS type <: Dart interface
-  expect(returnJavaScriptObject is InterfaceClass Function(), false /* true */);
+  expect(returnJavaScriptObject is InterfaceClass Function(), true);
   // Dart implementation <: JS type <: JavaScriptObject
-  expect(returnImpl is JavaScriptObject Function(), false /* true */);
+  expect(returnImpl is JavaScriptObject Function(), true);
   // UnknownJavaScriptObject <: JavaScriptObject <: JS type <: Dart interface
-  expect(returnUnknownJavaScriptObject is InterfaceClass Function(),
-      false /* true */);
+  expect(returnUnknownJavaScriptObject is InterfaceClass Function(), true);
   // Dart implementation <: JS type <: JavaScriptObject <: JSObject
-  expect(returnImpl is JSObject Function(), false /* true */);
+  expect(returnImpl is JSObject Function(), true);
 
   // Run above subtype checks but at runtime.
   expect(confuse(returnJavaScriptObject) is JavaScriptObject? Function(), true);
   expect(confuse(returnNullableJavaScriptObject) is JavaScriptObject Function(),
       hasUnsoundNullSafety);
 
-  expect(
-      confuse(returnJavaScriptObject) is JSClass Function(), false /* true */);
+  expect(confuse(returnJavaScriptObject) is JSClass Function(), true);
   expect(confuse(returnJS) is JavaScriptObject Function(), true);
-  expect(confuse(returnJavaScriptObject) is AnonymousClass Function(),
-      false /* true */);
+  expect(confuse(returnJavaScriptObject) is AnonymousClass Function(), true);
   expect(confuse(returnAnon) is JavaScriptObject Function(), true);
 
-  expect(confuse(returnUnknownJavaScriptObject) is JSClass Function(),
-      isDart2JS /* true */);
+  expect(confuse(returnUnknownJavaScriptObject) is JSClass Function(), true);
   expect(confuse(returnJS) is JSObject Function(), true);
-  expect(confuse(returnJavaScriptObject) is InterfaceClass Function(),
-      false /* true */);
-  expect(confuse(returnImpl) is JavaScriptObject Function(), false /* true */);
+  expect(confuse(returnJavaScriptObject) is InterfaceClass Function(), true);
+  expect(confuse(returnImpl) is JavaScriptObject Function(), true);
   expect(confuse(returnUnknownJavaScriptObject) is InterfaceClass Function(),
-      isDart2JS /* true */);
-  expect(confuse(returnImpl) is JSObject Function(), false /* true */);
+      true);
+  expect(confuse(returnImpl) is JSObject Function(), true);
 }

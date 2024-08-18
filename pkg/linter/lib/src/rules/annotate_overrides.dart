@@ -9,7 +9,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Annotate overridden members.';
 
@@ -48,15 +47,21 @@ class Husky extends Dog {
 ''';
 
 class AnnotateOverrides extends LintRule {
+  static const LintCode code = LintCode(
+      'annotate_overrides',
+      "The member '{0}' overrides an inherited member but isn't annotated "
+          "with '@override'.",
+      correctionMessage: "Try adding the '@override' annotation.");
+
   AnnotateOverrides()
       : super(
             name: 'annotate_overrides',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.annotate_overrides;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -84,7 +89,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
-    if (node.isAugmentation) return;
     if (node.isStatic) return;
     if (node.parent is ExtensionTypeDeclaration) return;
 
@@ -95,7 +99,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    if (node.isAugmentation) return;
     if (node.isStatic) return;
     if (node.parent is ExtensionTypeDeclaration) return;
 

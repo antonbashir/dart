@@ -4,6 +4,9 @@
 
 library front_end.compiler_options;
 
+import 'package:_fe_analyzer_shared/src/macros/executor/multi_executor.dart';
+import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart'
+    as macros show SerializationMode;
 import 'package:_fe_analyzer_shared/src/messages/diagnostic_message.dart'
     show DiagnosticMessage, DiagnosticMessageHandler;
 import 'package:_fe_analyzer_shared/src/messages/severity.dart' show Severity;
@@ -11,13 +14,10 @@ import 'package:kernel/ast.dart' show Component, Version;
 import 'package:kernel/default_language_version.dart' as kernel
     show defaultLanguageVersion;
 import 'package:kernel/target/targets.dart' show Target;
-import 'package:macros/src/executor/multi_executor.dart';
-import 'package:macros/src/executor/serialization.dart' as macros
-    show SerializationMode;
 
 import '../api_unstable/util.dart';
 import '../base/nnbd_mode.dart';
-import '../macros/macro_serializer.dart';
+import '../macro_serializer.dart';
 import 'experimental_flags.dart'
     show
         AllowedExperimentalFlags,
@@ -105,24 +105,18 @@ class CompilerOptions {
   /// This is part of the experimental macro feature.
   MultiMacroExecutor? macroExecutor;
 
-  /// If true, all macro applications must have a corresponding prebuilt macro
-  /// supplied via `precompiledMacros`.
+  /// The [Target] used for compiling macros.
   ///
-  /// Otherwise, that's an error.
-  ///
+  /// If `null`, macro declarations will not be precompiled, even when other
+  /// libraries depend on them.
   /// This is part of the experimental macro feature.
-  bool requirePrebuiltMacros = false;
+  Target? macroTarget;
 
   /// Function that can create a [Uri] for the serialized result of a
   /// [Component].
   ///
   /// This is used to turn a precompiled macro into a [Uri] that can be loaded
   /// by the [macroExecutor].
-  ///
-  /// If `null` then an appropriate macro serializer will be created.
-  ///
-  /// [MacroSerializer.close] will be called when `Uri`s created are no longer
-  /// needed.
   ///
   /// This is part of the experimental macro feature.
   MacroSerializer? macroSerializer;
@@ -247,17 +241,16 @@ class CompilerOptions {
   /// order to ensure a stable output for testing.
   bool omitOsMessageForTesting = false;
 
-  /// If `true`, macro generated libraries will be printed during compilation.
-  bool showGeneratedMacroSourcesForTesting = false;
-
-  /// Object used for hooking into the compilation pipeline during testing.
-  HooksForTesting? hooksForTesting;
-
   /// Whether to write a file (e.g. a dill file) when reporting a crash.
   bool writeFileOnCrashReport = true;
 
-  /// Whether nnbd weak or strong mode is used.
-  NnbdMode nnbdMode = NnbdMode.Strong;
+  /// Whether nnbd weak, strong or agnostic mode is used if experiment
+  /// 'non-nullable' is enabled.
+  NnbdMode nnbdMode = NnbdMode.Weak;
+
+  /// Whether to emit a warning when a ReachabilityError is thrown to ensure
+  /// soundness in mixed mode.
+  bool warnOnReachabilityCheck = false;
 
   /// The current sdk version string, e.g. "2.6.0-edge.sha1hash".
   /// For instance used for language versioning (specifying the maximum
@@ -289,17 +282,6 @@ class CompilerOptions {
       experimentReleasedVersionForTesting: experimentReleasedVersionForTesting,
       allowedExperimentalFlags: allowedExperimentalFlagsForTesting);
 
-  /// The precompilations already in progress in an outer compile or that will
-  /// be built in the current compile.
-  ///
-  /// When a compile discovers macros that are not prebuilt it launches a new
-  /// nested compile to build them, a precompilation. That precompilation must
-  /// itself launch more compilations if it encounters more macros. This set
-  /// tracks what is running so that already-running precompilations are not
-  /// launched again.
-  Set<Uri> runningPrecompilations = {};
-
-  // Coverage-ignore(suite): Not run.
   /// Returns the minimum language version needed for a library with the given
   /// [importUri] to opt into the experiment with the given [flag].
   ///
@@ -329,7 +311,6 @@ class CompilerOptions {
             experimentReleasedVersionForTesting);
   }
 
-  // Coverage-ignore(suite): Not run.
   bool equivalent(CompilerOptions other,
       {bool ignoreOnDiagnostic = true,
       bool ignoreVerbose = true,
@@ -408,7 +389,6 @@ Map<String, bool> parseExperimentalArguments(Iterable<String>? arguments) {
     for (String argument in arguments) {
       for (String feature in argument.split(',')) {
         if (feature.startsWith('no-')) {
-          // Coverage-ignore-block(suite): Not run.
           result[feature.substring(3)] = false;
         } else {
           result[feature] = true;
@@ -440,17 +420,14 @@ Map<ExperimentalFlag, bool> parseExperimentalFlags(
       bool value = experiments[experiment]!;
       ExperimentalFlag? flag = parseExperimentalFlag(experiment);
       if (flag == null) {
-        // Coverage-ignore-block(suite): Not run.
         onError("Unknown experiment: " + experiment);
       } else if (flags.containsKey(flag)) {
-        // Coverage-ignore-block(suite): Not run.
         if (flags[flag] != value) {
           onError(
               "Experiment specified with conflicting values: " + experiment);
         }
       } else {
         if (flag.isExpired) {
-          // Coverage-ignore-block(suite): Not run.
           if (value != flag.isEnabledByDefault) {
             /// Produce an error when the value is not the default value.
             if (value) {
@@ -511,7 +488,6 @@ class InvocationMode {
     Set<InvocationMode> result = {};
     for (String name in arg.split(',')) {
       if (name.isNotEmpty) {
-        // Coverage-ignore-block(suite): Not run.
         InvocationMode? mode = fromName(name);
         if (mode == null) {
           String message = "Unknown invocation mode '$name'.";
@@ -528,7 +504,6 @@ class InvocationMode {
     return result;
   }
 
-  // Coverage-ignore(suite): Not run.
   /// Returns the [InvocationMode] with the given [name].
   static InvocationMode? fromName(String name) {
     for (InvocationMode invocationMode in values) {
@@ -561,12 +536,10 @@ class Verbosity {
 
   static const List<Verbosity> values = const [error, warning, info, all];
 
-  // Coverage-ignore(suite): Not run.
   /// Returns the names of all options.
   static List<String> get allowedValues =>
       [for (Verbosity value in values) value.name];
 
-  // Coverage-ignore(suite): Not run.
   /// Returns a map from option name to option help messages.
   static Map<String, String> get allowedValuesHelp =>
       {for (Verbosity value in values) value.name: value.help};
@@ -586,7 +559,6 @@ class Verbosity {
         return verbosity;
       }
     }
-    // Coverage-ignore-block(suite): Not run.
     String message = "Unknown verbosity '$name'.";
     if (onError != null) {
       onError(message);
@@ -595,7 +567,6 @@ class Verbosity {
     throw new UnsupportedError(message);
   }
 
-  // Coverage-ignore(suite): Not run.
   static bool shouldPrint(Verbosity verbosity, DiagnosticMessage message) {
     Severity severity = message.severity;
     switch (verbosity) {
@@ -648,31 +619,4 @@ class Verbosity {
 
   @override
   String toString() => 'Verbosity($name)';
-}
-
-// Coverage-ignore(suite): Not run.
-/// Interface for hooking into the compilation pipeline for testing.
-class HooksForTesting {
-  /// Called before the intermediate macro augmentation libraries have been
-  /// replaced by the merged macro augmentation libraries.
-  ///
-  /// [Component] is the fully built component at this stage of the compilation.
-  ///
-  /// If macros are not applied, this is not called.
-  void beforeMergingMacroAugmentations(Component component) {}
-
-  /// Called after the intermediate macro augmentation libraries have been
-  /// replaced by the merged macro augmentation libraries.
-  ///
-  /// [Component] is the fully built component at this stage of the compilation.
-  ///
-  /// If macros are not applied, this is not called.
-  void afterMergingMacroAugmentations(Component component) {}
-
-  /// Called at the end of full compilation in the `KernelTarget.buildComponent`
-  /// method.
-  ///
-  /// [Component] is the fully built component as returned from
-  /// `KernelTarget.buildComponent`.
-  void onBuildComponentComplete(Component component) {}
 }

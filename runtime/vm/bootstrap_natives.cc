@@ -16,15 +16,15 @@ namespace dart {
 
 // Helper macros for declaring and defining native entries.
 #define REGISTER_NATIVE_ENTRY(name, count)                                     \
-  {"" #name, reinterpret_cast<void*>(BootstrapNatives::DN_##name), count},
+  {"" #name, BootstrapNatives::DN_##name, count},
 
 // List all native functions implemented in the vm or core bootstrap dart
 // libraries so that we can resolve the native function to it's entry
 // point.
 static const struct NativeEntries {
-  const char* const name_;
-  void* const function_;
-  const int argument_count_;
+  const char* name_;
+  BootstrapNativeFunction function_;
+  int argument_count_;
 } BootStrapEntries[] = {BOOTSTRAP_NATIVE_LIST(REGISTER_NATIVE_ENTRY)
 #if !defined(DART_PRECOMPILED_RUNTIME)
                             MIRRORS_BOOTSTRAP_NATIVE_LIST(REGISTER_NATIVE_ENTRY)
@@ -35,8 +35,8 @@ static const struct NativeEntries {
   {"" #name, reinterpret_cast<void*>(BootstrapNatives::FN_##name)},
 
 static const struct FfiNativeEntries {
-  const char* const name_;
-  void* const function_;
+  const char* name_;
+  void* function_;
 } BootStrapFfiEntries[] = {
     BOOTSTRAP_FFI_NATIVE_LIST(REGISTER_FFI_NATIVE_ENTRY)};
 
@@ -112,12 +112,6 @@ void Bootstrap::SetupNativeResolver() {
   ASSERT(!library.IsNull());
   library.set_native_entry_resolver(resolver);
   library.set_native_entry_symbol_resolver(symbol_resolver);
-
-  library = Library::ConcurrentLibrary();
-  ASSERT(!library.IsNull());
-  library.set_native_entry_resolver(resolver);
-  library.set_native_entry_symbol_resolver(symbol_resolver);
-  library.set_ffi_native_resolver(ffi_native_resolver);
 
   library = Library::CoreLibrary();
   ASSERT(!library.IsNull());

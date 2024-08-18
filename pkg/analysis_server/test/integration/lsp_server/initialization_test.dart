@@ -17,14 +17,14 @@ void main() {
 @reflectiveTest
 class InitializationTest extends AbstractLspAnalysisServerIntegrationTest {
   Future<void> test_initialize_invalidParams() async {
-    var params = {'processId': 'invalid'};
-    var request = RequestMessage(
+    final params = {'processId': 'invalid'};
+    final request = RequestMessage(
       id: Either2<int, String>.t1(1),
       method: Method.initialize,
       params: params,
       jsonrpc: jsonRpcVersion,
     );
-    var response = await sendRequestToServer(request);
+    final response = await sendRequestToServer(request);
     expect(response.id, equals(request.id));
     expect(response.error!.code, equals(ErrorCodes.InvalidParams));
     expect(response.result, isNull);

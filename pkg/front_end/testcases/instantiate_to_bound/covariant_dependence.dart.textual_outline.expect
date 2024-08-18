@@ -15,5 +15,4 @@ E e = throw '';
 class F<X extends num, Y extends X Function()> {}
 
 F f = throw '';
-
 main() {}

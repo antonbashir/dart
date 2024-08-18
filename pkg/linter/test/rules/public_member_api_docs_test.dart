@@ -11,7 +11,6 @@ main() {
     defineReflectiveTests(PublicMemberApiDocsTest);
     defineReflectiveTests(PublicMemberApiDocsTestDirTest);
     defineReflectiveTests(PublicMemberApiDocsExtensionTypesTest);
-    defineReflectiveTests(PublicMemberApiDocsTestPackageTest);
   });
 }
 
@@ -235,7 +234,7 @@ class C {
 }
 ''', [
       // Technically not in the private API but we can ignore that for testing.
-      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 35, 8),
+      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 34, 9),
     ]);
   }
 
@@ -254,7 +253,7 @@ enum E {
 }
 ''', [
       // Technically not in the private API but we can ignore that for testing.
-      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 35, 8),
+      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 34, 9),
     ]);
   }
 
@@ -271,20 +270,7 @@ extension X on Object {
 }
 ''', [
       // Technically not in the private API but we can ignore that for testing.
-      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 35, 8),
-    ]);
-  }
-
-  /// https://github.com/dart-lang/linter/issues/5030
-  test_internalFunction() async {
-    await assertDiagnostics(r'''
-import 'package:meta/meta.dart';
-
-@internal
-void f() {}
-''', [
-      // Technically not in the private API but we can ignore that for testing.
-      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 35, 8),
+      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 34, 9),
     ]);
   }
 
@@ -301,7 +287,7 @@ mixin M {
 }
 ''', [
       // Technically not in the private API but we can ignore that for testing.
-      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 35, 8),
+      error(WarningCode.INVALID_INTERNAL_ANNOTATION, 34, 9),
     ]);
   }
 
@@ -378,48 +364,5 @@ class PublicMemberApiDocsTestDirTest extends LintRuleTest {
 String? b;
 typedef T = void Function();
 ''');
-  }
-}
-
-@reflectiveTest
-class PublicMemberApiDocsTestPackageTest extends LintRuleTest {
-  String get filePath => '$fixturePackageLibPath/a.dart';
-
-  String get fixturePackageLibPath => '$myPackageRootPath/test/fixture/lib';
-
-  @override
-  String get lintRule => 'public_member_api_docs';
-
-  String get myPackageRootPath => '$workspaceRootPath/myPackage';
-
-  @override
-  void setUp() {
-    super.setUp();
-    writePackageConfig(
-      '$myPackageRootPath/.dart_tool/package_config.json',
-      PackageConfigFileBuilder(),
-    );
-    newPubspecYamlFile(myPackageRootPath,
-        PubspecYamlFileConfig(name: 'myPackage').toContent());
-    newAnalysisOptionsYamlFile(
-      myPackageRootPath,
-      AnalysisOptionsFileConfig(
-        experiments: experiments,
-        lints: lintRules,
-        propagateLinterExceptions: true,
-      ).toContent(),
-    );
-    newFolder(fixturePackageLibPath);
-    writePackageConfig(
-        '$myPackageRootPath/test/fixture/.dart_tool/package_config.json',
-        PackageConfigFileBuilder()..add(name: 'fixture', rootPath: '../lib'));
-  }
-
-  test_inTestLibDir() async {
-    newFile(filePath, '''
-String? b;
-typedef T = void Function();
-''');
-    await assertNoDiagnosticsInFile(filePath);
   }
 }

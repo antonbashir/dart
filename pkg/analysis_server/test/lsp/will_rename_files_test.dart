@@ -28,27 +28,27 @@ class WillRenameFilesTest extends AbstractLspAnalysisServerTest {
   /// produce conflicting edits if not handled correctly.
   Future<void> test_part_partOf() async {
     // mainFileUri = lib/main.dart
-    var mainFileNewUri =
+    final mainFileNewUri =
         toUri(join(projectFolderPath, 'lib', 'dest1', 'main.dart'));
-    var otherFileUri =
+    final otherFileUri =
         toUri(join(projectFolderPath, 'lib', 'other', 'other.dart'));
-    var otherFileNewUri =
+    final otherFileNewUri =
         toUri(join(projectFolderPath, 'lib', 'dest2', 'other.dart'));
 
-    var mainContent = "part 'other/other.dart';";
-    var otherContent = "part of '../main.dart';";
+    final mainContent = "part 'other/other.dart';";
+    final otherContent = "part of '../main.dart';";
 
-    var expectedContent = '''
+    final expectedContent = '''
 >>>>>>>>>> lib/main.dart
 part '../dest2/other.dart';<<<<<<<<<<
 >>>>>>>>>> lib/other/other.dart
 part of '../dest1/main.dart';<<<<<<<<<<
 ''';
 
-    newFile(mainFilePath, mainContent);
-    newFile(fromUri(otherFileUri), otherContent);
     await initialize();
-    var edit = await onWillRename([
+    await openFile(mainFileUri, mainContent);
+    await openFile(otherFileUri, otherContent);
+    final edit = await onWillRename([
       FileRename(
         oldUri: mainFileUri.toString(),
         newUri: mainFileNewUri.toString(),
@@ -65,7 +65,7 @@ part of '../dest1/main.dart';<<<<<<<<<<
   Future<void> test_registration_defaultsEnabled() async {
     setAllSupportedWorkspaceDynamicRegistrations();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     await monitorDynamicRegistrations(registrations, initialize);
 
     expect(
@@ -78,7 +78,7 @@ part of '../dest1/main.dart';<<<<<<<<<<
     setAllSupportedTextDocumentDynamicRegistrations();
     setAllSupportedWorkspaceDynamicRegistrations();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     await provideConfig(
       () => monitorDynamicRegistrations(
         registrations,
@@ -103,7 +103,7 @@ part of '../dest1/main.dart';<<<<<<<<<<
     );
 
     // Collect any new registrations when enabled.
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     await monitorDynamicRegistrations(
       registrations,
       () => updateConfig({'updateImportsOnRename': true}),
@@ -117,32 +117,32 @@ part of '../dest1/main.dart';<<<<<<<<<<
   }
 
   Future<void> test_renameFile_updatesImports() async {
-    var otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
-    var otherFileUri = toUri(otherFilePath);
-    var otherFileNewPath = join(projectFolderPath, 'lib', 'other_new.dart');
-    var otherFileNewUri = toUri(otherFileNewPath);
+    final otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
+    final otherFileUri = toUri(otherFilePath);
+    final otherFileNewPath = join(projectFolderPath, 'lib', 'other_new.dart');
+    final otherFileNewUri = toUri(otherFileNewPath);
 
-    var mainContent = '''
+    final mainContent = '''
 import 'other.dart';
 
 final a = A();
 ''';
 
-    var otherContent = '''
+    final otherContent = '''
 class A {}
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 >>>>>>>>>> lib/main.dart
 import 'other_new.dart';
 
 final a = A();
 ''';
 
-    newFile(mainFilePath, mainContent);
-    newFile(otherFilePath, otherContent);
     await initialize();
-    var edit = await onWillRename([
+    await openFile(mainFileUri, mainContent);
+    await openFile(otherFileUri, otherContent);
+    final edit = await onWillRename([
       FileRename(
         oldUri: otherFileUri.toString(),
         newUri: otherFileNewUri.toString(),
@@ -153,31 +153,32 @@ final a = A();
   }
 
   Future<void> test_renameFolder_updatesImports() async {
-    var oldFolderPath = join(projectFolderPath, 'lib', 'folder');
-    var newFolderPath = join(projectFolderPath, 'lib', 'folder_new');
-    var otherFilePath = join(oldFolderPath, 'other.dart');
+    final oldFolderPath = join(projectFolderPath, 'lib', 'folder');
+    final newFolderPath = join(projectFolderPath, 'lib', 'folder_new');
+    final otherFilePath = join(oldFolderPath, 'other.dart');
+    final otherFileUri = toUri(otherFilePath);
 
-    var mainContent = '''
+    final mainContent = '''
 import 'folder/other.dart';
 
 final a = A();
 ''';
 
-    var otherContent = '''
+    final otherContent = '''
 class A {}
 ''';
 
-    var expectedMainContent = '''
+    final expectedMainContent = '''
 >>>>>>>>>> lib/main.dart
 import 'folder_new/other.dart';
 
 final a = A();
 ''';
 
-    newFile(mainFilePath, mainContent);
-    newFile(otherFilePath, otherContent);
     await initialize();
-    var edit = await onWillRename([
+    await openFile(mainFileUri, mainContent);
+    await openFile(otherFileUri, otherContent);
+    final edit = await onWillRename([
       FileRename(
         oldUri: toUri(oldFolderPath).toString(),
         newUri: toUri(newFolderPath).toString(),
@@ -198,14 +199,14 @@ final a = A();
     /// paths (so that this method can also be used to build expected content).
     Map<String, String> buildFiles(List<String> relativePaths,
         [Map<String, String>? fileMapping]) {
-      var contentMap = <String, String>{};
+      final contentMap = <String, String>{};
 
-      for (var relativePath in relativePaths) {
-        var absolutePath = join(projectFolderPath, 'lib',
+      for (final relativePath in relativePaths) {
+        final absolutePath = join(projectFolderPath, 'lib',
             fileMapping?[relativePath] ?? relativePath);
 
         // Add imports for every other file.
-        var content = relativePaths
+        final content = relativePaths
             .where((other) => other != relativePath) // Exclude self.
             .map((other) => fileMapping?[other] ?? other)
             .expand((other) => [
@@ -226,7 +227,7 @@ final a = A();
     // A file from each folder will be moved, and a file from each will remain.
     // All files will be moved into the same folder, so the relative paths
     // change,
-    var relativeTestPaths = [
+    final relativeTestPaths = [
       'moving1.dart',
       'not_moving1.dart',
       'f1/moving2.dart',
@@ -242,26 +243,27 @@ final a = A();
         .toList();
 
     // Build a mapping of old -> new paths.
-    var pathMappings = {
+    final pathMappings = {
       for (final relativeTestPath in relativeTestPaths)
         relativeTestPath: relativeTestPath.contains('not_moving')
             ? relativeTestPath
             : convertPath('dest/${pathContext.basename(relativeTestPath)}')
     };
 
-    var initialContent = buildFiles(pathMappings.keys.toList());
-    var expectedContent = buildFiles(pathMappings.keys.toList(), pathMappings);
-
-    // Create files with initial content.
-    for (var MapEntry(key: filePath, value: content)
-        in initialContent.entries) {
-      newFile(_asAbsolute(filePath), content);
-    }
-
     await initialize();
 
+    final initialContent = buildFiles(pathMappings.keys.toList());
+    final expectedContent =
+        buildFiles(pathMappings.keys.toList(), pathMappings);
+
+    // Open files with initial content.
+    for (final MapEntry(key: filePath, value: content)
+        in initialContent.entries) {
+      await openFile(_asAbsoluteUri(filePath), content);
+    }
+
     // Collect edits for the renames.
-    var edit = await onWillRename([
+    final edit = await onWillRename([
       for (final MapEntry(key: originalPath, value: newPath)
           in pathMappings.entries)
         FileRename(
@@ -272,7 +274,7 @@ final a = A();
 
     // Build expected edits in the format the change verifier uses (to avoid
     // hard-coding ~100 lines of files/imports here).
-    var expectedEdits = expectedContent.entries
+    final expectedEdits = expectedContent.entries
         .expand((entry) => [
               '>>>>>>>>>> lib/${_asUriString(entry.key)}\n',
               entry.value,

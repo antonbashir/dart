@@ -48,46 +48,6 @@ suggestions
 ''');
   }
 
-  Future<void> test_final_typeName_fieldName_in() async {
-    allowedIdentifiers = {'inputValue'};
-
-    await computeSuggestions(r'''
-class InputValue {}
-
-class A {
-  final InputValue in^
-}
-''');
-
-    assertResponse('''
-replacement
-  left: 2
-suggestions
-  inputValue
-    kind: identifier
-''');
-  }
-
-  Future<void> test_final_typeName_fieldName_is() async {
-    allowedIdentifiers = {'isValue'};
-
-    await computeSuggestions(r'''
-class IsValue {}
-
-class A {
-  final IsValue is^
-}
-''');
-
-    assertResponse('''
-replacement
-  left: 2
-suggestions
-  isValue
-    kind: identifier
-''');
-  }
-
   Future<void> test_initializer() async {
     await computeSuggestions('''
 class A {var foo = ^}
@@ -98,11 +58,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  true
-    kind: keyword
   null
     kind: keyword
   switch
+    kind: keyword
+  true
     kind: keyword
 ''');
   }

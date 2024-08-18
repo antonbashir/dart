@@ -9,8 +9,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use enums rather than classes that behave like enums.';
 
@@ -63,22 +61,23 @@ enum LogPriority {
 ''';
 
 class UseEnums extends LintRule {
+  static const LintCode code = LintCode('use_enums', 'Class should be an enum.',
+      correctionMessage: 'Try using an enum rather than a class.');
+
   UseEnums()
       : super(
             name: 'use_enums',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.use_enums;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    if (!context.libraryElement!.featureSet.isEnabled(Feature.enhanced_enums)) {
-      return;
-    }
+    if (!context.isEnabled(Feature.enhanced_enums)) return;
 
     var visitor = _Visitor(this, context);
     registry.addClassDeclaration(this, visitor);
@@ -191,9 +190,6 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   visitClassDeclaration(ClassDeclaration node) {
-    // Don't lint augmentations.
-    if (node.isAugmentation) return;
-
     if (node.abstractKeyword != null) return;
     var classElement = node.declaredElement;
     if (classElement == null) return;

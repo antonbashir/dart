@@ -36,13 +36,6 @@ class FindNode {
 
   AssignmentExpression get singleAssignmentExpression => _single();
 
-  AugmentationImportDirective get singleAugmentationImportDirective =>
-      _single();
-
-  AugmentedExpression get singleAugmentedExpression => _single();
-
-  AugmentedInvocation get singleAugmentedInvocation => _single();
-
   AwaitExpression get singleAwaitExpression => _single();
 
   BinaryExpression get singleBinaryExpression => _single();
@@ -55,18 +48,12 @@ class FindNode {
 
   ConditionalExpression get singleConditionalExpression => _single();
 
-  Configuration get singleConfiguration => _single();
-
   ConstructorDeclaration get singleConstructorDeclaration => _single();
 
   ConstructorFieldInitializer get singleConstructorFieldInitializer =>
       _single();
 
-  EnumDeclaration get singleEnumDeclaration => _single();
-
   ExportDirective get singleExportDirective => _single();
-
-  ExpressionStatement get singleExpressionStatement => _single();
 
   ExtendsClause get singleExtendsClause => _single();
 
@@ -96,12 +83,8 @@ class FindNode {
 
   FunctionReference get singleFunctionReference => _single();
 
-  FunctionTypeAlias get singleFunctionTypeAlias => _single();
-
   FunctionTypedFormalParameter get singleFunctionTypedFormalParameter =>
       _single();
-
-  GenericTypeAlias get singleGenericTypeAlias => _single();
 
   GuardedPattern get singleGuardedPattern => _single();
 
@@ -136,17 +119,9 @@ class FindNode {
 
   MixinDeclaration get singleMixinDeclaration => _single();
 
-  MixinOnClause get singleMixinOnClause => _single();
-
-  NamedType get singleNamedType => _single();
-
-  NullAwareElement get singleNullAwareElement => _single();
+  OnClause get singleOnClause => _single();
 
   ParenthesizedExpression get singleParenthesizedExpression => _single();
-
-  PartDirective get singlePartDirective => _single();
-
-  PartOfDirective get singlePartOfDirective => _single();
 
   PatternAssignment get singlePatternAssignment => _single();
 
@@ -174,8 +149,6 @@ class FindNode {
   RepresentationDeclaration get singleRepresentationDeclaration => _single();
 
   RethrowExpression get singleRethrowExpression => _single();
-
-  ReturnStatement get singleReturnStatement => _single();
 
   SetOrMapLiteral get singleSetOrMapLiteral => _single();
 
@@ -254,7 +227,7 @@ class FindNode {
   }
 
   BindPatternVariableElement bindPatternVariableElement(String search) {
-    var node = declaredVariablePattern(search);
+    final node = declaredVariablePattern(search);
     return node.declaredElement!;
   }
 
@@ -449,7 +422,7 @@ class FindNode {
   FormalParameterList formalParameterList(String search) {
     // If the search starts with `(` then NodeLocator will locate the definition
     // before it, so offset the search to within the parameter list.
-    var locateOffset = search.startsWith('(') ? 1 : 0;
+    final locateOffset = search.startsWith('(') ? 1 : 0;
     return _node(search, (n) => n is FormalParameterList,
         locateOffset: locateOffset);
   }
@@ -940,7 +913,7 @@ class FindNode {
   /// If [unit] has exactly one node of type [T], returns it.
   /// Otherwise, throws.
   T _single<T extends AstNode>() {
-    var visitor = _TypedNodeVisitor<T>();
+    final visitor = _TypedNodeVisitor<T>();
     unit.accept(visitor);
     return visitor.nodes.single;
   }

@@ -316,6 +316,47 @@ static HANDLE OpenNul() {
   return nul;
 }
 
+typedef BOOL(WINAPI* InitProcThreadAttrListFn)(LPPROC_THREAD_ATTRIBUTE_LIST,
+                                               DWORD,
+                                               DWORD,
+                                               PSIZE_T);
+
+typedef BOOL(WINAPI* UpdateProcThreadAttrFn)(LPPROC_THREAD_ATTRIBUTE_LIST,
+                                             DWORD,
+                                             DWORD_PTR,
+                                             PVOID,
+                                             SIZE_T,
+                                             PVOID,
+                                             PSIZE_T);
+
+typedef VOID(WINAPI* DeleteProcThreadAttrListFn)(LPPROC_THREAD_ATTRIBUTE_LIST);
+
+static InitProcThreadAttrListFn init_proc_thread_attr_list = nullptr;
+static UpdateProcThreadAttrFn update_proc_thread_attr = nullptr;
+static DeleteProcThreadAttrListFn delete_proc_thread_attr_list = nullptr;
+
+static Mutex* initialized_mutex = nullptr;
+static bool load_attempted = false;
+
+static bool EnsureInitialized() {
+  HMODULE kernel32_module = GetModuleHandleW(L"kernel32.dll");
+  if (!load_attempted) {
+    MutexLocker locker(initialized_mutex);
+    if (load_attempted) {
+      return (delete_proc_thread_attr_list != nullptr);
+    }
+    init_proc_thread_attr_list = reinterpret_cast<InitProcThreadAttrListFn>(
+        GetProcAddress(kernel32_module, "InitializeProcThreadAttributeList"));
+    update_proc_thread_attr = reinterpret_cast<UpdateProcThreadAttrFn>(
+        GetProcAddress(kernel32_module, "UpdateProcThreadAttribute"));
+    delete_proc_thread_attr_list = reinterpret_cast<DeleteProcThreadAttrListFn>(
+        GetProcAddress(kernel32_module, "DeleteProcThreadAttributeList"));
+    load_attempted = true;
+    return (delete_proc_thread_attr_list != nullptr);
+  }
+  return (delete_proc_thread_attr_list != nullptr);
+}
+
 const int kMaxPipeNameSize = 80;
 template <int Count>
 static int GenerateNames(wchar_t pipe_names[Count][kMaxPipeNameSize]) {
@@ -453,7 +494,7 @@ class ProcessStarter {
 
   ~ProcessStarter() {
     if (attribute_list_ != nullptr) {
-      DeleteProcThreadAttributeList(attribute_list_);
+      delete_proc_thread_attr_list(attribute_list_);
     }
   }
 
@@ -474,31 +515,34 @@ class ProcessStarter {
       startup_info.StartupInfo.hStdError = stderr_handles_[kWriteHandle];
       startup_info.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
 
-      // Setup the handles to inherit. We only want to inherit the three
-      // handles for stdin, stdout and stderr.
-      SIZE_T size = 0;
-      // The call to determine the size of an attribute list always fails with
-      // ERROR_INSUFFICIENT_BUFFER and that error should be ignored.
-      if (!InitializeProcThreadAttributeList(nullptr, 1, 0, &size) &&
-          (GetLastError() != ERROR_INSUFFICIENT_BUFFER)) {
-        return CleanupAndReturnError();
+      bool supports_proc_thread_attr_lists = EnsureInitialized();
+      if (supports_proc_thread_attr_lists) {
+        // Setup the handles to inherit. We only want to inherit the three
+        // handles for stdin, stdout and stderr.
+        SIZE_T size = 0;
+        // The call to determine the size of an attribute list always fails with
+        // ERROR_INSUFFICIENT_BUFFER and that error should be ignored.
+        if (!init_proc_thread_attr_list(nullptr, 1, 0, &size) &&
+            (GetLastError() != ERROR_INSUFFICIENT_BUFFER)) {
+          return CleanupAndReturnError();
+        }
+        attribute_list_ = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(
+            Dart_ScopeAllocate(size));
+        ZeroMemory(attribute_list_, size);
+        if (!init_proc_thread_attr_list(attribute_list_, 1, 0, &size)) {
+          return CleanupAndReturnError();
+        }
+        inherited_handles_ = {stdin_handles_[kReadHandle],
+                              stdout_handles_[kWriteHandle],
+                              stderr_handles_[kWriteHandle]};
+        if (!update_proc_thread_attr(
+                attribute_list_, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+                inherited_handles_.data(),
+                inherited_handles_.size() * sizeof(HANDLE), nullptr, nullptr)) {
+          return CleanupAndReturnError();
+        }
+        startup_info.lpAttributeList = attribute_list_;
       }
-      attribute_list_ = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(
-          Dart_ScopeAllocate(size));
-      ZeroMemory(attribute_list_, size);
-      if (!InitializeProcThreadAttributeList(attribute_list_, 1, 0, &size)) {
-        return CleanupAndReturnError();
-      }
-      inherited_handles_ = {stdin_handles_[kReadHandle],
-                            stdout_handles_[kWriteHandle],
-                            stderr_handles_[kWriteHandle]};
-      if (!UpdateProcThreadAttribute(
-              attribute_list_, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-              inherited_handles_.data(),
-              inherited_handles_.size() * sizeof(HANDLE), nullptr, nullptr)) {
-        return CleanupAndReturnError();
-      }
-      startup_info.lpAttributeList = attribute_list_;
     }
 
     PROCESS_INFORMATION process_info;
@@ -774,15 +818,7 @@ class OverlappedHandle {
  private:
   void ClearOverlapped() {
     memset(&overlapped_, 0, sizeof(overlapped_));
-    // |FileHandle| constructor eagerly associates the given handle with
-    // |EventHandler|'s completion port. However we don't want to notify
-    // that completion port when |ReadFile| operation completes because
-    // we are manually draining the pipe here instead of using |EventHandler|.
-    // Setting LSB of |hEvent| to 1 prevents completion packets from being
-    // enqueued. See documentation for |GetQueuedCompletionStatus| (specifically
-    // notes for |lpOverlapped| argument).
-    overlapped_.hEvent =
-        reinterpret_cast<HANDLE>(reinterpret_cast<uintptr_t>(event_) | 0x1);
+    overlapped_.hEvent = event_;
   }
 
   OVERLAPPED overlapped_;
@@ -805,11 +841,11 @@ bool Process::Wait(intptr_t pid,
 
   // All pipes created to the sub-process support overlapped IO.
   FileHandle* stdout_handle = reinterpret_cast<FileHandle*>(out);
-  ASSERT(stdout_handle->supports_overlapped_io());
+  ASSERT(stdout_handle->SupportsOverlappedIO());
   FileHandle* stderr_handle = reinterpret_cast<FileHandle*>(err);
-  ASSERT(stderr_handle->supports_overlapped_io());
+  ASSERT(stderr_handle->SupportsOverlappedIO());
   FileHandle* exit_handle = reinterpret_cast<FileHandle*>(exit_event);
-  ASSERT(exit_handle->supports_overlapped_io());
+  ASSERT(exit_handle->SupportsOverlappedIO());
 
   // Create three events for overlapped IO. These are created as already
   // signalled to ensure they have read called at least once.
@@ -874,7 +910,6 @@ bool Process::Wait(intptr_t pid,
     exit_code = -exit_code;
   }
   result->set_exit_code(exit_code);
-
   return true;
 }
 
@@ -993,12 +1028,16 @@ intptr_t Process::SetSignalHandler(intptr_t signal) {
   }
   MutexLocker lock(signal_mutex);
   FileHandle* write_handle = new FileHandle(fds[kWriteHandle]);
+  write_handle->EnsureInitialized(EventHandler::delegate());
   intptr_t write_fd = reinterpret_cast<intptr_t>(write_handle);
   if (signal_handlers == nullptr) {
     if (SetConsoleCtrlHandler(SignalHandler, true) == 0) {
       int error_code = GetLastError();
-      // Since SetConsoleCtrlHandler failed, there will be no subsequent IO
-      // operation on this handle. Release() it.
+      // Since SetConsoleCtrlHandler failed, the IO completion port will
+      // never receive an event for this handle, and will therefore never
+      // release the reference Retained by EnsureInitialized(). So, we
+      // have to do a second Release() here.
+      write_handle->Release();
       write_handle->Release();
       CloseProcessPipe(fds);
       SetLastError(error_code);
@@ -1025,6 +1064,8 @@ void Process::ClearSignalHandler(intptr_t signal, Dart_Port port) {
           signal_handlers = handler->next();
         }
         handler->Unlink();
+        FileHandle* file_handle = reinterpret_cast<FileHandle*>(handler->fd());
+        file_handle->Release();
         remove = true;
       }
     }
@@ -1085,6 +1126,10 @@ void Process::Init() {
   ASSERT(signal_mutex == nullptr);
   signal_mutex = new Mutex();
 
+  ASSERT(initialized_mutex == nullptr);
+  initialized_mutex = new Mutex();
+  load_attempted = false;
+
   ASSERT(Process::global_exit_code_mutex_ == nullptr);
   Process::global_exit_code_mutex_ = new Mutex();
 }
@@ -1095,6 +1140,10 @@ void Process::Cleanup() {
   ASSERT(signal_mutex != nullptr);
   delete signal_mutex;
   signal_mutex = nullptr;
+
+  ASSERT(initialized_mutex != nullptr);
+  delete initialized_mutex;
+  initialized_mutex = nullptr;
 
   ASSERT(Process::global_exit_code_mutex_ != nullptr);
   delete Process::global_exit_code_mutex_;

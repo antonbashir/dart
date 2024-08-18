@@ -3,7 +3,5 @@ class A {
 }
 
 List<T> foo<T>(void Function(T) f) => throw 0;
-
 test1() {}
-
 test2() {}

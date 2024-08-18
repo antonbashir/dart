@@ -12,13 +12,17 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:path/path.dart' as path;
 
 /// Return a protocol [Element] corresponding to the given [engine.Element].
-Element convertElement(engine.Element element) {
+Element convertElement(engine.Element element,
+    {required bool withNullability}) {
   var kind = convertElementToElementKind(element);
   var name = getElementDisplayName(element);
   var elementTypeParameters = _getTypeParametersString(element);
-  var aliasedType = getAliasedTypeString(element);
-  var elementParameters = _getParametersString(element);
-  var elementReturnType = getReturnTypeString(element);
+  var aliasedType =
+      getAliasedTypeString(element, withNullability: withNullability);
+  var elementParameters =
+      _getParametersString(element, withNullability: withNullability);
+  var elementReturnType =
+      getReturnTypeString(element, withNullability: withNullability);
   return Element(
     kind,
     name,
@@ -138,7 +142,8 @@ String getElementDisplayName(engine.Element element) {
   }
 }
 
-String? _getParametersString(engine.Element element) {
+String? _getParametersString(engine.Element element,
+    {required bool withNullability}) {
   // TODO(scheglov): expose the corresponding feature from ExecutableElement
   List<engine.ParameterElement> parameters;
   if (element is engine.ExecutableElement) {
@@ -149,7 +154,7 @@ String? _getParametersString(engine.Element element) {
     }
     parameters = element.parameters.toList();
   } else if (element is engine.TypeAliasElement) {
-    var aliasedType = element.aliasedType;
+    final aliasedType = element.aliasedType;
     if (aliasedType is FunctionType) {
       parameters = aliasedType.parameters.toList();
     } else {
@@ -181,7 +186,7 @@ String? _getParametersString(engine.Element element) {
     } else if (parameter.hasRequired) {
       sb.write('@required ');
     }
-    parameter.appendToWithoutDelimiters(sb);
+    parameter.appendToWithoutDelimiters(sb, withNullability: withNullability);
   }
   sb.write(closeOptionalString);
   return '($sb)';

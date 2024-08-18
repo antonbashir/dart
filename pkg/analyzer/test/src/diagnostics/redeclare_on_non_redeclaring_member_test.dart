@@ -16,7 +16,7 @@ main() {
 @reflectiveTest
 class RedeclareOnNonRedeclaringMemberTest extends PubPackageResolutionTest {
   @override
-  List<String> get experiments => [];
+  List<String> get experiments => ['inline-class'];
 
   @override
   void setUp() {
@@ -81,7 +81,7 @@ class D implements C {
 }
 ''', [
       // No REDECLARE_ON_NON_REDECLARING_MEMBER warning.
-      error(WarningCode.INVALID_ANNOTATION_TARGET, 72, 9),
+      error(WarningCode.INVALID_ANNOTATION_TARGET, 71, 10),
     ]);
   }
 
@@ -112,7 +112,7 @@ extension type E(C c) implements C {
 }
 ''', [
       // No REDECLARE_ON_NON_REDECLARING_MEMBER warning.
-      error(WarningCode.INVALID_ANNOTATION_TARGET, 86, 9),
+      error(WarningCode.INVALID_ANNOTATION_TARGET, 85, 10),
     ]);
   }
 

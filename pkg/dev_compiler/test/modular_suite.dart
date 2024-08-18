@@ -9,7 +9,6 @@ library;
 
 import 'package:modular_test/src/io_pipeline.dart';
 import 'package:modular_test/src/runner.dart';
-import 'package:modular_test/src/steps/macro_precompile_aot.dart';
 
 import 'modular_helpers.dart';
 
@@ -22,7 +21,6 @@ void main(List<String> args) async {
       'tests/modular',
       options,
       IOPipeline([
-        PrecompileMacroAotStep(verbose: options.verbose),
         SourceToSummaryDillStep(soundNullSafety: soundNullSafety),
         DDCStep(soundNullSafety: soundNullSafety, canaryFeatures: false),
         RunD8(),

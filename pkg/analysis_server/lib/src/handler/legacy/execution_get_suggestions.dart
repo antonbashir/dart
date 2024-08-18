@@ -17,7 +17,7 @@ class ExecutionGetSuggestionsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-//    var params = new ExecutionGetSuggestionsParams.fromRequest(request, clientUriConverter: server.uriConverter);
+//    var params = new ExecutionGetSuggestionsParams.fromRequest(request);
 //    var computer = new RuntimeCompletionComputer(
 //        server.resourceProvider,
 //        server.fileContentOverlay,
@@ -39,7 +39,6 @@ class ExecutionGetSuggestionsHandler extends LegacyHandler {
     var result = ExecutionGetSuggestionsResult(
         suggestions: <CompletionSuggestion>[],
         expressions: <RuntimeCompletionExpression>[]);
-    sendResponse(
-        result.toResponse(request.id, clientUriConverter: server.uriConverter));
+    sendResponse(result.toResponse(request.id));
   }
 }

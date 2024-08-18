@@ -2,129 +2,102 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/listener.dart';
-import 'package:analyzer/src/dart/ast/ast.dart';
-import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/error/codes.dart';
 
 /// Verifier for initializing fields in constructors.
 class ConstructorFieldsVerifier {
-  final TypeSystemImpl typeSystem;
-  final Map<AugmentedInstanceElement, _Interface> _interfaces = Map.identity();
+  final TypeSystemImpl _typeSystem;
+  final ErrorReporter _errorReporter;
+
+  bool _isInNativeClass = false;
+
+  /// When a new class or mixin is entered, [_initFieldsMap] initializes this
+  /// map, and [leaveClass] resets it.
+  ///
+  /// [_InitState.notInit] or [_InitState.initInDeclaration] is set for each
+  /// field. Later [verify] is called to verify each constructor of the class.
+  Map<FieldElement, _InitState>? _initialFieldMap;
+
+  /// The state of fields in the current constructor.
+  Map<FieldElement, _InitState> _fieldMap = {};
+
+  /// Set to `true` if the current constructor redirects.
+  bool _hasRedirectingConstructorInvocation = false;
 
   ConstructorFieldsVerifier({
-    required this.typeSystem,
-  });
-
-  void addConstructors(
-    ErrorReporter errorReporter,
-    AugmentedInstanceElement augmented,
-    List<ClassMember> members,
-  ) {
-    var interfaceFields = _forInterface(augmented);
-    var constructors = members.whereType<ConstructorDeclarationImpl>();
-    for (var constructor in constructors) {
-      _addConstructor(
-        errorReporter: errorReporter,
-        interfaceFields: interfaceFields,
-        node: constructor,
-      );
-    }
-  }
-
-  void report() {
-    for (var interface in _interfaces.values) {
-      for (var constructor in interface.constructors.values) {
-        constructor.report();
-      }
-    }
-  }
-
-  void _addConstructor({
+    required TypeSystemImpl typeSystem,
     required ErrorReporter errorReporter,
-    required _Interface interfaceFields,
-    required ConstructorDeclarationImpl node,
-  }) {
+  })  : _typeSystem = typeSystem,
+        _errorReporter = errorReporter;
+
+  void enterClass(ClassDeclaration node, ClassElementImpl element) {
+    _isInNativeClass = node.nativeClause != null;
+    _initFieldsMap(element.fields);
+  }
+
+  void enterEnum(EnumDeclaration node, EnumElementImpl element) {
+    _isInNativeClass = false;
+    _initFieldsMap(
+      element.fields,
+      enumConstants: element.constants,
+    );
+  }
+
+  void enterExtensionType(
+    ExtensionTypeDeclaration node,
+    ExtensionTypeElementImpl element,
+  ) {
+    _isInNativeClass = false;
+    _initFieldsMap(element.fields);
+  }
+
+  void leaveClass() {
+    _isInNativeClass = false;
+    _initialFieldMap = null;
+  }
+
+  /// Verify that the given [node] declaration does not violate any of
+  /// the error codes relating to the initialization of fields in the
+  /// enclosing class.
+  void verify(ConstructorDeclaration node) {
     if (node.factoryKeyword != null ||
         node.redirectedConstructor != null ||
         node.externalKeyword != null) {
       return;
     }
 
-    var element = node.declaredElement!;
-    var constructorState = interfaceFields.forConstructor(
-      errorReporter: errorReporter,
-      node: node,
-      element: element,
-    );
-    if (constructorState == null) {
+    switch (node.parent) {
+      case ClassDeclaration _:
+      case EnumDeclaration _:
+      case ExtensionTypeDeclaration _:
+        break;
+      default:
+        return;
+    }
+
+    if (_isInNativeClass) {
       return;
     }
 
-    if (!element.isAugmentation) {
-      constructorState.updateWithParameters(node);
-    }
+    _fieldMap = Map.of(_initialFieldMap!);
+    _hasRedirectingConstructorInvocation = false;
 
-    constructorState.updateWithInitializers(errorReporter, node);
-  }
+    _updateWithParameters(node);
+    _updateWithInitializers(node);
 
-  _Interface _forInterface(AugmentedInstanceElement augmented) {
-    if (_interfaces[augmented] case var result?) {
-      return result;
-    }
-
-    var fieldMap = <FieldElement, _InitState>{};
-
-    for (var field in augmented.fields) {
-      if (field.isSynthetic) {
-        continue;
-      }
-      if (augmented is AugmentedEnumElement && field.name == 'index') {
-        continue;
-      }
-      fieldMap[field] = field.hasInitializer
-          ? _InitState.initInDeclaration
-          : _InitState.notInit;
-    }
-
-    return _interfaces[augmented] = _Interface(
-      typeSystem: typeSystem,
-      augmented: augmented,
-      fields: fieldMap,
-    );
-  }
-}
-
-class _Constructor {
-  final TypeSystemImpl typeSystem;
-  final ErrorReporter errorReporter;
-  final ConstructorDeclaration node;
-  final ConstructorElementImpl element;
-  final Map<FieldElement, _InitState> fields;
-
-  /// Set to `true` if the constructor redirects.
-  bool hasRedirectingConstructorInvocation = false;
-
-  _Constructor({
-    required this.typeSystem,
-    required this.errorReporter,
-    required this.node,
-    required this.element,
-    required this.fields,
-  });
-
-  void report() {
-    if (hasRedirectingConstructorInvocation) {
+    if (_hasRedirectingConstructorInvocation) {
       return;
     }
 
     // Prepare lists of not initialized fields.
     var notInitFinalFields = <FieldElement>[];
     var notInitNonNullableFields = <FieldElement>[];
-    fields.forEach((FieldElement field, _InitState state) {
+    _fieldMap.forEach((FieldElement field, _InitState state) {
       if (state != _InitState.notInit) return;
       if (field.isLate) return;
       if (field.isAbstract || field.isExternal) return;
@@ -132,16 +105,42 @@ class _Constructor {
 
       if (field.isFinal) {
         notInitFinalFields.add(field);
-      } else if (typeSystem.isPotentiallyNonNullable(field.type)) {
+      } else if (_typeSystem.isNonNullableByDefault &&
+          _typeSystem.isPotentiallyNonNullable(field.type)) {
         notInitNonNullableFields.add(field);
       }
     });
 
-    reportNotInitializedFinal(node, notInitFinalFields);
-    reportNotInitializedNonNullable(node, notInitNonNullableFields);
+    _reportNotInitializedFinal(node, notInitFinalFields);
+    _reportNotInitializedNonNullable(node, notInitNonNullableFields);
   }
 
-  void reportNotInitializedFinal(
+  void _initFieldsMap(
+    List<FieldElement> fields, {
+    List<FieldElement>? enumConstants,
+  }) {
+    _initialFieldMap = <FieldElement, _InitState>{};
+
+    for (var field in fields) {
+      if (field.isSynthetic) {
+        continue;
+      }
+      if (enumConstants != null && field.name == 'index') {
+        continue;
+      }
+      _initialFieldMap![field] = field.hasInitializer
+          ? _InitState.initInDeclaration
+          : _InitState.notInit;
+    }
+
+    if (enumConstants != null) {
+      for (var field in enumConstants) {
+        _initialFieldMap![field] = _InitState.initInDeclaration;
+      }
+    }
+  }
+
+  void _reportNotInitializedFinal(
     ConstructorDeclaration node,
     List<FieldElement> notInitFinalFields,
   ) {
@@ -153,27 +152,27 @@ class _Constructor {
     names.sort();
 
     if (names.length == 1) {
-      errorReporter.atNode(
-        node.returnType,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_1,
-        arguments: names,
+        node.returnType,
+        names,
       );
     } else if (names.length == 2) {
-      errorReporter.atNode(
-        node.returnType,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_2,
-        arguments: names,
+        node.returnType,
+        names,
       );
     } else {
-      errorReporter.atNode(
-        node.returnType,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_3_PLUS,
-        arguments: [names[0], names[1], names.length - 2],
+        node.returnType,
+        [names[0], names[1], names.length - 2],
       );
     }
   }
 
-  void reportNotInitializedNonNullable(
+  void _reportNotInitializedNonNullable(
     ConstructorDeclaration node,
     List<FieldElement> notInitNonNullableFields,
   ) {
@@ -185,49 +184,46 @@ class _Constructor {
     names.sort();
 
     for (var name in names) {
-      errorReporter.atNode(
-        node.returnType,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode
             .NOT_INITIALIZED_NON_NULLABLE_INSTANCE_FIELD_CONSTRUCTOR,
-        arguments: [name],
+        node.returnType,
+        [name],
       );
     }
   }
 
-  void updateWithInitializers(
-    ErrorReporter errorReporter,
-    ConstructorDeclaration node,
-  ) {
+  void _updateWithInitializers(ConstructorDeclaration node) {
     for (var initializer in node.initializers) {
       if (initializer is RedirectingConstructorInvocation) {
-        hasRedirectingConstructorInvocation = true;
+        _hasRedirectingConstructorInvocation = true;
       }
       if (initializer is ConstructorFieldInitializer) {
         SimpleIdentifier fieldName = initializer.fieldName;
         var element = fieldName.staticElement;
         if (element is FieldElement) {
-          var state = fields[element];
+          var state = _fieldMap[element];
           if (state == _InitState.notInit) {
-            fields[element] = _InitState.initInInitializer;
+            _fieldMap[element] = _InitState.initInInitializer;
           } else if (state == _InitState.initInDeclaration) {
             if (element.isFinal || element.isConst) {
-              errorReporter.atNode(
-                fieldName,
+              _errorReporter.reportErrorForNode(
                 CompileTimeErrorCode
                     .FIELD_INITIALIZED_IN_INITIALIZER_AND_DECLARATION,
+                fieldName,
               );
             }
           } else if (state == _InitState.initInFieldFormal) {
-            errorReporter.atNode(
-              fieldName,
+            _errorReporter.reportErrorForNode(
               CompileTimeErrorCode
                   .FIELD_INITIALIZED_IN_PARAMETER_AND_INITIALIZER,
+              fieldName,
             );
           } else if (state == _InitState.initInInitializer) {
-            errorReporter.atNode(
-              fieldName,
+            _errorReporter.reportErrorForNode(
               CompileTimeErrorCode.FIELD_INITIALIZED_BY_MULTIPLE_INITIALIZERS,
-              arguments: [element.displayName],
+              fieldName,
+              [element.displayName],
             );
           }
         }
@@ -235,12 +231,10 @@ class _Constructor {
     }
   }
 
-  void updateWithParameters(
-    ConstructorDeclaration node,
-  ) {
+  void _updateWithParameters(ConstructorDeclaration node) {
     var formalParameters = node.parameters.parameters;
-    for (var parameter in formalParameters) {
-      parameter = parameter.notDefault;
+    for (FormalParameter parameter in formalParameters) {
+      parameter = _baseParameter(parameter);
       if (parameter is FieldFormalParameter) {
         var fieldElement =
             (parameter.declaredElement as FieldFormalParameterElementImpl)
@@ -248,16 +242,16 @@ class _Constructor {
         if (fieldElement == null) {
           continue;
         }
-        _InitState? state = fields[fieldElement];
+        _InitState? state = _fieldMap[fieldElement];
         if (state == _InitState.notInit) {
-          fields[fieldElement] = _InitState.initInFieldFormal;
+          _fieldMap[fieldElement] = _InitState.initInFieldFormal;
         } else if (state == _InitState.initInDeclaration) {
           if (fieldElement.isFinal || fieldElement.isConst) {
-            errorReporter.atToken(
-              parameter.name,
+            _errorReporter.reportErrorForToken(
               CompileTimeErrorCode
                   .FINAL_INITIALIZED_IN_DECLARATION_AND_CONSTRUCTOR,
-              arguments: [fieldElement.displayName],
+              parameter.name,
+              [fieldElement.displayName],
             );
           }
         } else if (state == _InitState.initInFieldFormal) {
@@ -265,6 +259,13 @@ class _Constructor {
         }
       }
     }
+  }
+
+  static FormalParameter _baseParameter(FormalParameter parameter) {
+    if (parameter is DefaultFormalParameter) {
+      return parameter.parameter;
+    }
+    return parameter;
   }
 }
 
@@ -286,41 +287,4 @@ enum _InitState {
   /// The field is initialized in the list of initializers of the constructor
   /// being verified.
   initInInitializer,
-}
-
-class _Interface {
-  final TypeSystemImpl typeSystem;
-  final AugmentedInstanceElement augmented;
-
-  /// [_InitState.notInit] or [_InitState.initInDeclaration] for each field
-  /// in [augmented]. This map works as the initial state for
-  /// [_Constructor].
-  final Map<FieldElement, _InitState> fields;
-
-  final Map<ConstructorElementImpl, _Constructor> constructors = Map.identity();
-
-  _Interface({
-    required this.typeSystem,
-    required this.augmented,
-    required this.fields,
-  });
-
-  _Constructor? forConstructor({
-    required ErrorReporter errorReporter,
-    required ConstructorDeclaration node,
-    required ConstructorElementImpl element,
-  }) {
-    var declaration = element.augmentedDeclaration;
-    if (declaration == null) {
-      return null;
-    }
-
-    return constructors[declaration] ??= _Constructor(
-      typeSystem: typeSystem,
-      errorReporter: errorReporter,
-      node: node,
-      element: declaration,
-      fields: {...fields},
-    );
-  }
 }

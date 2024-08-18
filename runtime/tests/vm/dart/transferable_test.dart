@@ -103,6 +103,8 @@ Future<Null> isolateMain(StartMessage startMessage) async {
     if (received == null) {
       break;
     }
+    final receivedData =
+        received is TransferableTypedData ? received.materialize() : received;
 
     final packagedData = packageList(data, startMessage.useTransferable);
 

@@ -4,12 +4,13 @@
 
 import 'dart:io';
 
+import 'package:front_end/src/base/nnbd_mode.dart';
 import 'package:kernel/target/targets.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/kernel.dart';
 import 'package:kernel/verifier.dart';
 import 'package:test/test.dart';
-import 'package:vm/modular/target/vm.dart' show VmTarget;
+import 'package:vm/target/vm.dart' show VmTarget;
 import 'package:vm/transformations/unreachable_code_elimination.dart'
     show transformComponent;
 import 'package:vm/transformations/vm_constant_evaluator.dart';
@@ -22,16 +23,19 @@ runTestCase(Uri source) async {
   // Do not perform constant evaluation for a specific target operating system.
   final targetOS = null;
   final enableAsserts = false;
+  final soundNullSafety = true;
+  final nnbdMode = NnbdMode.Strong;
 
-  final target = new VmTarget(new TargetFlags());
+  final target =
+      new VmTarget(new TargetFlags(soundNullSafety: soundNullSafety));
   Component component = await compileTestCaseToKernelProgram(source,
       target: target,
       environmentDefines: {
         'test.define.isTrue': 'true',
         'test.define.isFalse': 'false'
       });
-  final evaluator = VMConstantEvaluator.create(target, component, targetOS,
-      enableAsserts: enableAsserts);
+  final evaluator =
+      VMConstantEvaluator.create(target, component, targetOS, nnbdMode);
   component = transformComponent(target, component, evaluator, enableAsserts);
   verifyComponent(
       target, VerificationStage.afterGlobalTransformations, component);

@@ -46,11 +46,7 @@ static StackTracePtr CurrentStackTrace(Thread* thread,
   // Collect the frames.
   StackTraceUtils::CollectFrames(thread, skip_frames,
                                  [&](const StackTraceUtils::Frame& frame) {
-                                   if (!frame.bytecode.IsNull()) {
-                                     code_array.Add(frame.bytecode);
-                                   } else {
-                                     code_array.Add(frame.code);
-                                   }
+                                   code_array.Add(frame.code);
                                    pc_offset_array.Add(frame.pc_offset);
                                  });
 
@@ -76,7 +72,6 @@ static void AppendFrames(const GrowableObjectArray& code_list,
   StackFrame* frame = frames.NextFrame();
   ASSERT(frame != nullptr);  // We expect to find a dart invocation frame.
   Code& code = Code::Handle(zone);
-  Bytecode& bytecode = Bytecode::Handle(zone);
   for (; frame != nullptr; frame = frames.NextFrame()) {
     if (!frame->IsDartFrame()) {
       continue;
@@ -86,20 +81,10 @@ static void AppendFrames(const GrowableObjectArray& code_list,
       continue;
     }
 
-    if (frame->is_interpreted()) {
-      bytecode = frame->LookupDartBytecode();
-      if (bytecode.function() == Function::null()) {
-        continue;
-      }
-      const intptr_t pc_offset = frame->pc() - bytecode.PayloadStart();
-      code_list.Add(bytecode);
-      pc_offset_list->Add(pc_offset);
-    } else {
-      code = frame->LookupDartCode();
-      const intptr_t pc_offset = frame->pc() - code.PayloadStart();
-      code_list.Add(code);
-      pc_offset_list->Add(pc_offset);
-    }
+    code = frame->LookupDartCode();
+    const intptr_t pc_offset = frame->pc() - code.PayloadStart();
+    code_list.Add(code);
+    pc_offset_list->Add(pc_offset);
   }
 }
 

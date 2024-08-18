@@ -47,7 +47,7 @@ class StubCode : public AllStatic {
 
   // Check if specified pc is in the dart invocation stub used for
   // transitioning into dart code.
-  static bool InInvocationStub(uword pc, bool is_interpreted_frame = false);
+  static bool InInvocationStub(uword pc);
 
   // Check if the specified pc is in the jump to frame stub.
   static bool InJumpToFrameStub(uword pc);
@@ -86,12 +86,23 @@ class StubCode : public AllStatic {
   static CodePtr GetAllocationStubForTypedData(classid_t class_id);
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
+#if !defined(TARGET_ARCH_IA32)
+  static CodePtr GetBuildGenericMethodExtractorStub(
+      compiler::ObjectPoolBuilder* pool) {
+    return GetBuildMethodExtractorStub(pool, /*generic=*/true);
+  }
+  static CodePtr GetBuildNonGenericMethodExtractorStub(
+      compiler::ObjectPoolBuilder* pool) {
+    return GetBuildMethodExtractorStub(pool, /*generic=*/false);
+  }
+#endif
+
 #if !defined(DART_PRECOMPILED_RUNTIME)
   // Generate the stub and finalize the generated code into the stub
   // code executable area.
   static CodePtr Generate(const char* name,
                           compiler::ObjectPoolBuilder* object_pool_builder,
-                          void (compiler::StubCodeCompiler::* GenerateStub)());
+                          void (compiler::StubCodeCompiler::*GenerateStub)());
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
   static const Code& UnoptimizedStaticCallEntry(intptr_t num_args_tested);
@@ -121,6 +132,9 @@ class StubCode : public AllStatic {
  private:
   friend class MegamorphicCacheTable;
 
+  static CodePtr GetBuildMethodExtractorStub(compiler::ObjectPoolBuilder* pool,
+                                             bool generic);
+
   enum {
 #define STUB_CODE_ENTRY(name) k##name##Index,
     VM_STUB_CODE_LIST(STUB_CODE_ENTRY)
@@ -132,7 +146,7 @@ class StubCode : public AllStatic {
     Code* code;
     const char* name;
 #if !defined(DART_PRECOMPILED_RUNTIME)
-    void (compiler::StubCodeCompiler::* generator)();
+    void (compiler::StubCodeCompiler::*generator)();
 #endif
   };
   static StubCodeEntry entries_[kNumStubEntries];

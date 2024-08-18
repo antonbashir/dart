@@ -9,7 +9,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import '../analyzer.dart';
 import '../ast.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Document all public members.';
 
@@ -67,27 +66,26 @@ setters inherit the docs from the getters.
 // exports - and linting against that.
 
 class PublicMemberApiDocs extends LintRule {
+  static const LintCode code = LintCode(
+      'public_member_api_docs', 'Missing documentation for a public member.',
+      correctionMessage: 'Try adding documentation for the member.');
+
   PublicMemberApiDocs()
       : super(
             name: 'public_member_api_docs',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.publicInterface,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.public_member_api_docs;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var package = context.package;
-    if (package != null && !package.canHavePublicApi) {
+    if (!isInLibDir(context.currentUnit.unit, context.package)) {
       return;
     }
-    if (!context.isInLibDir) return;
 
     var visitor = _Visitor(this, context);
     registry.addClassDeclaration(this, visitor);
@@ -132,7 +130,7 @@ class _Visitor extends SimpleAstVisitor {
 
     // Identify getter/setter pairs.
     for (var member in members) {
-      if (member is MethodDeclaration && !member.name.isPrivate) {
+      if (member is MethodDeclaration && !isPrivate(member.name)) {
         if (member.isGetter) {
           getters[member.name.lexeme] = member;
         } else if (member.isSetter) {
@@ -176,7 +174,7 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitClassTypeAlias(ClassTypeAlias node) {
-    if (!node.name.isPrivate) {
+    if (!isPrivate(node.name)) {
       check(node);
     }
   }
@@ -195,7 +193,7 @@ class _Visitor extends SimpleAstVisitor {
     for (var member in node.declarations) {
       if (member is FunctionDeclaration) {
         var name = member.name;
-        if (!name.isPrivate && name.lexeme != 'main') {
+        if (!isPrivate(name) && name.lexeme != 'main') {
           if (member.isGetter) {
             getters[member.name.lexeme] = member;
           } else if (member.isSetter) {
@@ -224,18 +222,14 @@ class _Visitor extends SimpleAstVisitor {
     }
 
     // Check remaining functions.
-    for (var function in functions) {
-      if (!function.isEffectivelyPrivate) {
-        check(function);
-      }
-    }
+    functions.forEach(check);
 
     super.visitCompilationUnit(node);
   }
 
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
-    if (node.inPrivateMember || node.name.isPrivate) return;
+    if (inPrivateMember(node) || isPrivate(node.name)) return;
     var parent = node.parent;
     if (parent is EnumDeclaration) return;
     if (parent != null && parent.isEffectivelyPrivate) return;
@@ -248,14 +242,14 @@ class _Visitor extends SimpleAstVisitor {
     // TODO(pq): update this to be called from the parent (like with visitMembers)
     if (node.isInternal) return;
 
-    if (!node.inPrivateMember && !node.name.isPrivate) {
+    if (!inPrivateMember(node) && !isPrivate(node.name)) {
       check(node);
     }
   }
 
   @override
   void visitEnumDeclaration(EnumDeclaration node) {
-    if (node.name.isPrivate) return;
+    if (isPrivate(node.name)) return;
     if (node.isInternal) return;
 
     check(node);
@@ -264,7 +258,7 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
-    if (node.name == null || node.name.isPrivate) return;
+    if (node.name == null || isPrivate(node.name)) return;
     if (node.isInternal) return;
 
     check(node);
@@ -282,11 +276,11 @@ class _Visitor extends SimpleAstVisitor {
   void visitFieldDeclaration(FieldDeclaration node) {
     // TODO(pq): update this to be called from the parent (like with visitMembers)
     if (node.isInternal) return;
-    if (node.inPrivateMember) return;
+    if (inPrivateMember(node)) return;
     if (node.isInvalidExtensionTypeField) return;
 
     for (var field in node.fields.variables) {
-      if (!field.name.isPrivate) {
+      if (!isPrivate(field.name)) {
         check(field);
       }
     }
@@ -294,14 +288,14 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitFunctionTypeAlias(FunctionTypeAlias node) {
-    if (!node.name.isPrivate) {
+    if (!isPrivate(node.name)) {
       check(node);
     }
   }
 
   @override
   void visitGenericTypeAlias(GenericTypeAlias node) {
-    if (!node.name.isPrivate) {
+    if (!isPrivate(node.name)) {
       check(node);
     }
   }
@@ -314,15 +308,15 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
-    for (var variable in node.variables.variables) {
-      if (!variable.name.isPrivate) {
-        check(variable);
+    for (var decl in node.variables.variables) {
+      if (!isPrivate(decl.name)) {
+        check(decl);
       }
     }
   }
 
   void _visitMembers(Declaration node, Token name, List<ClassMember> members) {
-    if (name.isPrivate) return;
+    if (isPrivate(name)) return;
 
     check(node);
     checkMethods(members);

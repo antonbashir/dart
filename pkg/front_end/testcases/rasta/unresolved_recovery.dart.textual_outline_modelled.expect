@@ -5,5 +5,4 @@ class E {
 }
 
 main() {}
-
 testMissingTry() {}

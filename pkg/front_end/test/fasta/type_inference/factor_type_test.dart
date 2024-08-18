@@ -6,13 +6,14 @@ import 'package:_fe_analyzer_shared/src/flow_analysis/factory_type_test_helper.d
 import 'package:expect/expect.dart';
 import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:front_end/src/api_prototype/experimental_flags.dart';
+import 'package:front_end/src/fasta/type_inference/factor_type.dart';
 import 'package:front_end/src/kernel_generator_impl.dart';
-import 'package:front_end/src/testing/compiler_common.dart';
 import 'package:front_end/src/testing/id_testing_utils.dart';
-import 'package:front_end/src/type_inference/factor_type.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/type_environment.dart';
+
+import 'package:front_end/src/testing/compiler_common.dart';
 
 class FactorTypeTest extends Object with FactorTypeTestMixin<DartType> {
   final TypeEnvironment typeEnvironment;
@@ -59,6 +60,9 @@ class FactorTypeTest extends Object with FactorTypeTestMixin<DartType> {
   DartType get intQuestion => coreTypes.intNullableRawType;
 
   @override
+  DartType get intStar => coreTypes.intLegacyRawType;
+
+  @override
   DartType get nullNone => const NullType();
 
   @override
@@ -68,16 +72,25 @@ class FactorTypeTest extends Object with FactorTypeTestMixin<DartType> {
   DartType get numQuestion => coreTypes.numNullableRawType;
 
   @override
+  DartType get numStar => coreTypes.numLegacyRawType;
+
+  @override
   DartType get objectNone => coreTypes.objectNonNullableRawType;
 
   @override
   DartType get objectQuestion => coreTypes.objectNullableRawType;
 
   @override
+  DartType get objectStar => coreTypes.objectLegacyRawType;
+
+  @override
   DartType get stringNone => coreTypes.stringNonNullableRawType;
 
   @override
   DartType get stringQuestion => coreTypes.stringNullableRawType;
+
+  @override
+  DartType get stringStar => coreTypes.stringLegacyRawType;
 
   @override
   DartType get voidType => const VoidType();

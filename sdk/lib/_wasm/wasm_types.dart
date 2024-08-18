@@ -131,27 +131,6 @@ class WasmI32 extends _WasmBase {
   external int toIntSigned();
   external int toIntUnsigned();
   external bool toBool();
-  external WasmI32 operator -();
-  external bool operator <(WasmI32 other);
-  external bool operator <=(WasmI32 other);
-  external bool operator ==(covariant WasmI32 other);
-  external bool operator >(WasmI32 other);
-  external bool operator >=(WasmI32 other);
-  external WasmI32 operator +(WasmI32 other);
-  external WasmI32 operator -(WasmI32 other);
-  external WasmI32 operator >>(WasmI32 other);
-
-  /// Wasm `i32.le_u` instruction.
-  external bool leU(WasmI32 other);
-
-  /// Wasm `i32.lt_u` instruction.
-  external bool ltU(WasmI32 other);
-
-  /// Wasm `i32.ge_u` instruction.
-  external bool geU(WasmI32 other);
-
-  /// Wasm `i32.gt_u` instruction.
-  external bool gtU(WasmI32 other);
 }
 
 /// The Wasm `i64` type.
@@ -167,29 +146,11 @@ class WasmI64 extends _WasmBase {
 
   external int toInt();
 
-  /// Wasm `i64.le_u` instruction.
+  /// `i64.le_u`.
   external bool leU(WasmI64 other);
 
-  /// Wasm `i64.lt_u` instruction.
+  /// `i64.lt_u`.
   external bool ltU(WasmI64 other);
-
-  /// Wasm `i64.ge_u` instruction.
-  external bool geU(WasmI64 other);
-
-  /// Wasm `i64.gt_u` instruction.
-  external bool gtU(WasmI64 other);
-
-  /// Wasm `i64.shl` instruction.
-  external WasmI64 shl(WasmI64 shift);
-
-  /// Wasm `i64.shr_s` instruction.
-  external WasmI64 shrS(WasmI64 shift);
-
-  /// Wasm `i64.shr_u` instruction.
-  external WasmI64 shrU(WasmI64 shift);
-
-  /// Wasm `i64.div_s` instruction.
-  external WasmI64 divS(WasmI64 divisor);
 }
 
 /// The Wasm `f32` type.
@@ -218,11 +179,8 @@ class WasmF64 extends _WasmBase {
 
   external double toDouble();
 
-  /// Wasm `i64.trunc_sat_f64_s` instruction.
+  /// `i64.trunc_sat_f64_s`.
   external WasmI64 truncSatS();
-
-  /// Wasm `f64.copysign` instruction.
-  external WasmF64 copysign(WasmF64 other);
 }
 
 /// A Wasm array.
@@ -244,7 +202,6 @@ extension WasmArrayExt<T> on WasmArray<T> {
   external void copy(
       int offset, WasmArray<T> source, int sourceOffset, int size);
   external void fill(int offset, T value, int size);
-  external WasmArray<T> clone();
 }
 
 extension I8ArrayExt on WasmArray<WasmI8> {
@@ -330,61 +287,14 @@ class WasmTable<T> extends _WasmBase {
   external F callIndirect<F extends Function>(WasmI32 index);
 }
 
-extension IntWasmInstructions on int {
-  @pragma("wasm:prefer-inline")
+extension IntToWasmInt on int {
   WasmI32 toWasmI32() => WasmI32.fromInt(this);
-
-  @pragma("wasm:prefer-inline")
   WasmI64 toWasmI64() => WasmI64.fromInt(this);
-
-  /// Wasm `i64.le_u` instruction.
-  @pragma("wasm:prefer-inline")
-  bool leU(int other) => this.toWasmI64().leU(other.toWasmI64());
-
-  /// Wasm `i64.lt_u` instruction.
-  @pragma("wasm:prefer-inline")
-  bool ltU(int other) => this.toWasmI64().ltU(other.toWasmI64());
-
-  /// Wasm `i64.ge_u` instruction.
-  @pragma("wasm:prefer-inline")
-  bool geU(int other) => this.toWasmI64().geU(other.toWasmI64());
-
-  /// Wasm `i64.gt_u` instruction.
-  @pragma("wasm:prefer-inline")
-  bool gtU(int other) => this.toWasmI64().gtU(other.toWasmI64());
-
-  /// Wasm `i64.shl` instruction.
-  @pragma("wasm:prefer-inline")
-  int shl(int shift) => this.toWasmI64().shl(shift.toWasmI64()).toInt();
-
-  /// Wasm `i64.shr_s` instruction.
-  @pragma("wasm:prefer-inline")
-  int shrS(int shift) => this.toWasmI64().shrS(shift.toWasmI64()).toInt();
-
-  /// Wasm `i64.shr_u` instruction.
-  @pragma("wasm:prefer-inline")
-  int shrU(int shift) => this.toWasmI64().shrU(shift.toWasmI64()).toInt();
-
-  /// Wasm `i64.div_s` instruction.
-  @pragma("wasm:prefer-inline")
-  int divS(int divisor) => this.toWasmI64().divS(divisor.toWasmI64()).toInt();
 }
 
-extension DoubleWasmInstructions on double {
-  @pragma("wasm:prefer-inline")
+extension DoubleToWasmFloat on double {
   WasmF32 toWasmF32() => WasmF32.fromDouble(this);
-
-  @pragma("wasm:prefer-inline")
   WasmF64 toWasmF64() => WasmF64.fromDouble(this);
-
-  /// Wasm `i64.trunc_sat_f64_s` instruction.
-  @pragma("wasm:prefer-inline")
-  int truncSatS() => this.toWasmF64().truncSatS().toInt();
-
-  /// Wasm `f64.copysign` instruction.
-  @pragma("wasm:prefer-inline")
-  double copysign(double other) =>
-      this.toWasmF64().copysign(other.toWasmF64()).toDouble();
 }
 
 extension WasmExternRefToJSAny on WasmExternRef {

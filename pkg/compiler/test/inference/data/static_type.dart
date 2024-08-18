@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 class C<T> {
   /*member: C.field:Union([exact=JSString], [exact=JSUInt31])*/
   final T field;
@@ -10,10 +12,10 @@ class C<T> {
   int Function() fixedFunctionField = /*[exact=JSUInt31]*/ () => 0;
 
   /*member: C.functionField:[null|subclass=Closure]*/
-  T Function()? functionField;
+  T Function() functionField;
 
   /*member: C.genericFunctionField:[null|subclass=Closure]*/
-  S Function<S>(S)? genericFunctionField;
+  S Function<S>(S) genericFunctionField;
 
   /*member: C.:[exact=C]*/
   C(this. /*Union([exact=JSString], [exact=JSUInt31])*/ field) {
@@ -39,10 +41,10 @@ class C<T> {
   int Function() get fixedFunctionGetter => /*[exact=JSUInt31]*/ () => 0;
 
   /*member: C.functionGetter:[null|subclass=Closure]*/
-  T Function()? get functionGetter => /*[subclass=C]*/ functionField;
+  T Function() get functionGetter => /*[subclass=C]*/ functionField;
 
   /*member: C.genericFunctionGetter:[null|subclass=Closure]*/
-  S Function<S>(S)? get genericFunctionGetter =>
+  S Function<S>(S) get genericFunctionGetter =>
       /*[subclass=C]*/ genericFunctionField;
 
   /*member: C.genericMethod:Union([exact=JSString], [exact=JSUInt31])*/
@@ -56,10 +58,10 @@ class D1 extends C<int> {
   /*member: D1.superFieldAccess:[exact=JSUInt31]*/
   superFieldAccess() => super.field;
 
-  /*member: D1.superFieldInvoke:[subclass=JSInt]*/
-  superFieldInvoke() => super.functionField!();
+  /*member: D1.superFieldInvoke:[null|subclass=JSInt]*/
+  superFieldInvoke() => super.functionField();
 
-  /*member: D1.superFixedFieldInvoke:[subclass=JSInt]*/
+  /*member: D1.superFixedFieldInvoke:[null|subclass=JSInt]*/
   superFixedFieldInvoke() => super.fixedFunctionField();
 
   /*member: D1.superMethodInvoke:[exact=JSUInt31]*/
@@ -71,17 +73,17 @@ class D1 extends C<int> {
   /*member: D1.superGetterAccess:[exact=JSUInt31]*/
   superGetterAccess() => super.getter;
 
-  /*member: D1.superGetterInvoke:[subclass=JSInt]*/
-  superGetterInvoke() => super.functionGetter!();
+  /*member: D1.superGetterInvoke:[null|subclass=JSInt]*/
+  superGetterInvoke() => super.functionGetter();
 
-  /*member: D1.superFixedGetterInvoke:[subclass=JSInt]*/
+  /*member: D1.superFixedGetterInvoke:[null|subclass=JSInt]*/
   superFixedGetterInvoke() => super.fixedFunctionGetter();
 
-  /*member: D1.superGenericFieldInvoke1:[exact=JSString]*/
-  superGenericFieldInvoke1() => super.genericFunctionField!('');
+  /*member: D1.superGenericFieldInvoke1:[null|exact=JSString]*/
+  superGenericFieldInvoke1() => super.genericFunctionField('');
 
-  /*member: D1.superGenericFieldInvoke2:[subclass=JSInt]*/
-  superGenericFieldInvoke2() => super.genericFunctionField!(0);
+  /*member: D1.superGenericFieldInvoke2:[null|subclass=JSInt]*/
+  superGenericFieldInvoke2() => super.genericFunctionField(0);
 
   /*member: D1.superGenericMethodInvoke1:[exact=JSString]*/
   superGenericMethodInvoke1() => super.genericMethod('');
@@ -89,11 +91,11 @@ class D1 extends C<int> {
   /*member: D1.superGenericMethodInvoke2:[exact=JSUInt31]*/
   superGenericMethodInvoke2() => super.genericMethod(0);
 
-  /*member: D1.superGenericGetterInvoke1:[exact=JSString]*/
-  superGenericGetterInvoke1() => super.genericFunctionGetter!('');
+  /*member: D1.superGenericGetterInvoke1:[null|exact=JSString]*/
+  superGenericGetterInvoke1() => super.genericFunctionGetter('');
 
-  /*member: D1.superGenericGetterInvoke2:[subclass=JSInt]*/
-  superGenericGetterInvoke2() => super.genericFunctionGetter!(0);
+  /*member: D1.superGenericGetterInvoke2:[null|subclass=JSInt]*/
+  superGenericGetterInvoke2() => super.genericFunctionGetter(0);
 }
 
 class D2 extends C<String> {
@@ -103,10 +105,10 @@ class D2 extends C<String> {
   /*member: D2.superFieldAccess:[exact=JSString]*/
   superFieldAccess() => super.field;
 
-  /*member: D2.superFieldInvoke:[exact=JSString]*/
-  superFieldInvoke() => super.functionField!();
+  /*member: D2.superFieldInvoke:[null|exact=JSString]*/
+  superFieldInvoke() => super.functionField();
 
-  /*member: D2.superFixedFieldInvoke:[subclass=JSInt]*/
+  /*member: D2.superFixedFieldInvoke:[null|subclass=JSInt]*/
   superFixedFieldInvoke() => super.fixedFunctionField();
 
   /*member: D2.superMethodInvoke:[exact=JSString]*/
@@ -118,17 +120,17 @@ class D2 extends C<String> {
   /*member: D2.superGetterAccess:[exact=JSString]*/
   superGetterAccess() => super.getter;
 
-  /*member: D2.superGetterInvoke:[exact=JSString]*/
-  superGetterInvoke() => super.functionGetter!();
+  /*member: D2.superGetterInvoke:[null|exact=JSString]*/
+  superGetterInvoke() => super.functionGetter();
 
-  /*member: D2.superFixedGetterInvoke:[subclass=JSInt]*/
+  /*member: D2.superFixedGetterInvoke:[null|subclass=JSInt]*/
   superFixedGetterInvoke() => super.fixedFunctionGetter();
 
-  /*member: D2.superGenericFieldInvoke1:[exact=JSString]*/
-  superGenericFieldInvoke1() => super.genericFunctionField!('');
+  /*member: D2.superGenericFieldInvoke1:[null|exact=JSString]*/
+  superGenericFieldInvoke1() => super.genericFunctionField('');
 
-  /*member: D2.superGenericFieldInvoke2:[subclass=JSInt]*/
-  superGenericFieldInvoke2() => super.genericFunctionField!(0);
+  /*member: D2.superGenericFieldInvoke2:[null|subclass=JSInt]*/
+  superGenericFieldInvoke2() => super.genericFunctionField(0);
 
   /*member: D2.superGenericMethodInvoke1:[exact=JSString]*/
   superGenericMethodInvoke1() => super.genericMethod('');
@@ -136,11 +138,11 @@ class D2 extends C<String> {
   /*member: D2.superGenericMethodInvoke2:[exact=JSUInt31]*/
   superGenericMethodInvoke2() => super.genericMethod(0);
 
-  /*member: D2.superGenericGetterInvoke1:[exact=JSString]*/
-  superGenericGetterInvoke1() => super.genericFunctionGetter!('');
+  /*member: D2.superGenericGetterInvoke1:[null|exact=JSString]*/
+  superGenericGetterInvoke1() => super.genericFunctionGetter('');
 
-  /*member: D2.superGenericGetterInvoke2:[subclass=JSInt]*/
-  superGenericGetterInvoke2() => super.genericFunctionGetter!(0);
+  /*member: D2.superGenericGetterInvoke2:[null|subclass=JSInt]*/
+  superGenericGetterInvoke2() => super.genericFunctionGetter(0);
 }
 
 /*member: main:[null]*/
@@ -200,7 +202,7 @@ main() {
     .. /*invoke: [exact=D2]*/ superGenericGetterInvoke2();
 }
 
-/*member: closureInvoke:[subclass=JSInt]*/
+/*member: closureInvoke:[null|subclass=JSInt]*/
 closureInvoke() {
   int Function() f = /*[exact=JSUInt31]*/ () => 0;
   return f();
@@ -234,22 +236,22 @@ fieldAccess2() {
   return c. /*[exact=C]*/ field;
 }
 
-/*member: fixedFieldInvoke:[subclass=JSInt]*/
+/*member: fixedFieldInvoke:[null|subclass=JSInt]*/
 fixedFieldInvoke() {
   C<int> c = C<int>(0);
   return c.fixedFunctionField /*invoke: [exact=C]*/ ();
 }
 
-/*member: fieldInvoke1:[subclass=JSInt]*/
+/*member: fieldInvoke1:[null|subclass=JSInt]*/
 fieldInvoke1() {
   C<int> c = C<int>(0);
-  return c. /*[exact=C]*/ functionField!();
+  return c.functionField /*invoke: [exact=C]*/ ();
 }
 
-/*member: fieldInvoke2:[exact=JSString]*/
+/*member: fieldInvoke2:[null|exact=JSString]*/
 fieldInvoke2() {
   C<String> c = C<String>('');
-  return c. /*[exact=C]*/ functionField!();
+  return c.functionField /*invoke: [exact=C]*/ ();
 }
 
 /*member: methodInvoke1:[exact=JSUInt31]*/
@@ -276,7 +278,7 @@ operatorInvoke2() {
   return c /*invoke: [exact=C]*/ + '';
 }
 
-/*member: fixedGetterInvoke:[subclass=JSInt]*/
+/*member: fixedGetterInvoke:[null|subclass=JSInt]*/
 fixedGetterInvoke() {
   C<int> c = C<int>(0);
   return c.fixedFunctionGetter /*invoke: [exact=C]*/ ();
@@ -294,28 +296,28 @@ getterAccess2() {
   return c. /*[exact=C]*/ getter;
 }
 
-/*member: getterInvoke1:[subclass=JSInt]*/
+/*member: getterInvoke1:[null|subclass=JSInt]*/
 getterInvoke1() {
   C<int> c = C<int>(0);
-  return c. /*[exact=C]*/ functionGetter!();
+  return c.functionGetter /*invoke: [exact=C]*/ ();
 }
 
-/*member: getterInvoke2:[exact=JSString]*/
+/*member: getterInvoke2:[null|exact=JSString]*/
 getterInvoke2() {
   C<String> c = C<String>('');
-  return c. /*[exact=C]*/ functionGetter!();
+  return c.functionGetter /*invoke: [exact=C]*/ ();
 }
 
-/*member: genericFieldInvoke1:[exact=JSString]*/
+/*member: genericFieldInvoke1:[null|exact=JSString]*/
 genericFieldInvoke1() {
   C<int> c = C<int>(0);
-  return c. /*[exact=C]*/ genericFunctionField!('');
+  return c.genericFunctionField /*invoke: [exact=C]*/ ('');
 }
 
-/*member: genericFieldInvoke2:[subclass=JSInt]*/
+/*member: genericFieldInvoke2:[null|subclass=JSInt]*/
 genericFieldInvoke2() {
   C<String> c = C<String>('');
-  return c. /*[exact=C]*/ genericFunctionField!(0);
+  return c.genericFunctionField /*invoke: [exact=C]*/ (0);
 }
 
 /*member: genericMethodInvoke1:[exact=JSString]*/
@@ -330,14 +332,14 @@ genericMethodInvoke2() {
   return c. /*invoke: [exact=C]*/ genericMethod(0);
 }
 
-/*member: genericGetterInvoke1:[exact=JSString]*/
+/*member: genericGetterInvoke1:[null|exact=JSString]*/
 genericGetterInvoke1() {
   C<int> c = C<int>(0);
-  return c. /*[exact=C]*/ genericFunctionGetter!('');
+  return c.genericFunctionGetter /*invoke: [exact=C]*/ ('');
 }
 
-/*member: genericGetterInvoke2:[subclass=JSInt]*/
+/*member: genericGetterInvoke2:[null|subclass=JSInt]*/
 genericGetterInvoke2() {
   C<String> c = C<String>('');
-  return c. /*[exact=C]*/ genericFunctionGetter!(0);
+  return c.genericFunctionGetter /*invoke: [exact=C]*/ (0);
 }

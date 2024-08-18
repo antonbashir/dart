@@ -9,7 +9,5 @@ class B<T> {
 }
 
 expect(expected, actual) {}
-
 main() {}
-
 throws(void Function() f) {}

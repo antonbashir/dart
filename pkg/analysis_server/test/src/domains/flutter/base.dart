@@ -3,10 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/protocol_server.dart';
+import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../analysis_server_base.dart';
+import '../../utilities/mock_packages.dart';
 
 @reflectiveTest
 class FlutterBase extends PubPackageAnalysisServerTest {
@@ -24,15 +26,14 @@ class FlutterBase extends PubPackageAnalysisServerTest {
   ) async {
     var response = await getWidgetDescriptionResponse(search);
     expect(response.error, isNull);
-    return FlutterGetWidgetDescriptionResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    return FlutterGetWidgetDescriptionResult.fromResponse(response);
   }
 
   Future<Response> getWidgetDescriptionResponse(String search) async {
     var request = FlutterGetWidgetDescriptionParams(
       testFile.path,
       findOffset(search),
-    ).toRequest('0', clientUriConverter: server.uriConverter);
+    ).toRequest('0');
     return await handleRequest(request);
   }
 
@@ -42,9 +43,15 @@ class FlutterBase extends PubPackageAnalysisServerTest {
 
     newPubspecYamlFile(testPackageRootPath, '');
 
-    writeTestPackageConfig(
-      meta: true,
-      flutter: true,
+    var metaLib = MockPackages.instance.addMeta(resourceProvider);
+    var flutterLib = MockPackages.instance.addFlutter(resourceProvider);
+    newPackageConfigJsonFile(
+      '/home/test',
+      (PackageConfigFileBuilder()
+            ..add(name: 'test', rootPath: testPackageRootPath)
+            ..add(name: 'meta', rootPath: metaLib.parent.path)
+            ..add(name: 'flutter', rootPath: flutterLib.parent.path))
+          .toContent(toUriStr: toUriStr),
     );
 
     await setRoots(included: [workspaceRootPath], excluded: []);

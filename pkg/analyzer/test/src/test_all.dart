@@ -11,7 +11,6 @@ import 'dartdoc/test_all.dart' as dartdoc;
 import 'diagnostics/test_all.dart' as diagnostics;
 import 'fasta/test_all.dart' as fasta;
 import 'hint/test_all.dart' as hint;
-import 'ignore_comments/test_all.dart' as ignore_comments;
 import 'lint/test_all.dart' as lint;
 import 'manifest/test_all.dart' as manifest;
 import 'options/test_all.dart' as options;
@@ -35,7 +34,6 @@ main() {
     diagnostics.main();
     fasta.main();
     hint.main();
-    ignore_comments.main();
     lint.main();
     manifest.main();
     options.main();

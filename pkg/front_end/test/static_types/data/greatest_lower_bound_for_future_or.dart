@@ -5,6 +5,8 @@
 // This test checks that the greatest lower bound between two types is
 // calculated correctly, in case one of them is a FutureOr.
 
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
 import 'dart:async';
 
 class Foo {}
@@ -21,13 +23,14 @@ void func1<T extends Foo>(T t) {
   // type inference.
   void context(FutureOr<T> x) {}
   S expr<S extends Foo>() =>
-      /*Never*/ throw /*int!*/ 42;
+      /*cfe.Never*/ /*cfe:nnbd.Never*/
+      throw /*cfe.int*/ /*cfe:nnbd.int!*/ 42;
 
   // Type of the expression is GLB(FutureOr<T>, Foo) = T.
   /*invoke: void*/ context(
-      /*invoke: T!*/ expr
-          /*<T!>*/
-          ());
+      /*cfe.invoke: T*/ /*cfe:nnbd.invoke: T!*/ expr
+          /*cfe.<T>*/
+          /*cfe:nnbd.<T!>*/ ());
 }
 
 // -----------------------------------------------------------------------------
@@ -36,14 +39,15 @@ void func1<T extends Foo>(T t) {
 void func2<T extends Foo>() {
   void context(FutureOr<T> x) {}
   S expr<S extends Future<Foo>>() =>
-      /*Never*/ throw /*int!*/ 42;
+      /*cfe.Never*/ /*cfe:nnbd.Never*/
+      throw /*cfe.int*/ /*cfe:nnbd.int!*/ 42;
 
   // Type of the expression is GLB(FutureOr<T>, Future<Foo>) = Future<T>.
   /*invoke: void*/ context(
-      /*invoke: Future<T!>!*/
-      expr
-          /*<Future<T!>!>*/
-          ());
+      /*cfe.invoke: Future<T>*/
+      /*cfe:nnbd.invoke: Future<T!>!*/ expr
+          /*cfe.<Future<T>>*/
+          /*cfe:nnbd.<Future<T!>!>*/ ());
 }
 
 // -----------------------------------------------------------------------------
@@ -52,13 +56,14 @@ void func2<T extends Foo>() {
 void func3<T extends Foo>() {
   void context(T x) {}
   S expr<S extends FutureOr<Foo>>() =>
-      /*Never*/ throw /*int!*/ 42;
+      /*cfe.Never*/ /*cfe:nnbd.Never*/
+      throw /*cfe.int*/ /*cfe:nnbd.int!*/ 42;
 
   // Type of the expression is GLB(T, FutureOr<Foo>) = T.
   /*invoke: void*/ context(
-      /*invoke: T!*/ expr
-          /*<T!>*/
-          ());
+      /*cfe.invoke: T*/ /*cfe:nnbd.invoke: T!*/ expr
+          /*cfe.<T>*/
+          /*cfe:nnbd.<T!>*/ ());
 }
 
 // -----------------------------------------------------------------------------
@@ -67,14 +72,15 @@ void func3<T extends Foo>() {
 void func4<T extends Foo>() {
   void context(Future<T> x) {}
   S expr<S extends FutureOr<Foo>>() =>
-      /*Never*/ throw /*int!*/ 42;
+      /*cfe.Never*/ /*cfe:nnbd.Never*/
+      throw /*cfe.int*/ /*cfe:nnbd.int!*/ 42;
 
   // Type of the expression is GLB(Future<T>, FutureOr<Foo>) = Future<T>.
   /*invoke: void*/ context(
-      /*invoke: Future<T!>!*/
-      expr
-          /*<Future<T!>!>*/
-          ());
+      /*cfe.invoke: Future<T>*/
+      /*cfe:nnbd.invoke: Future<T!>!*/ expr
+          /*cfe.<Future<T>>*/
+          /*cfe:nnbd.<Future<T!>!>*/ ());
 }
 
 // -----------------------------------------------------------------------------
@@ -84,15 +90,16 @@ void func4<T extends Foo>() {
 void func5<T extends Foo>() {
   void context(FutureOr<FutureOr<T>> x) {}
   S expr<S extends FutureOr<Future<Foo>>>() =>
-      /*Never*/ throw /*int!*/ 42;
+      /*cfe.Never*/ /*cfe:nnbd.Never*/
+      throw /*cfe.int*/ /*cfe:nnbd.int!*/ 42;
 
   // Type of the expression is GLB(FutureOr<FutureOr<T>>, FutureOr<Future<Foo>>)
   // = FutureOr<Future<T>>.
   /*invoke: void*/ context(
-      /*invoke: FutureOr<Future<T!>!>!*/
-      expr
-          /*<FutureOr<Future<T!>!>!>*/
-          ());
+      /*cfe.invoke: FutureOr<Future<T>>*/
+      /*cfe:nnbd.invoke: FutureOr<Future<T!>!>!*/ expr
+          /*cfe.<FutureOr<Future<T>>>*/
+          /*cfe:nnbd.<FutureOr<Future<T!>!>!>*/ ());
 }
 
 // -----------------------------------------------------------------------------

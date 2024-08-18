@@ -18,18 +18,18 @@ void main() {
 @reflectiveTest
 class TypeDefinitionTest extends LspOverLegacyTest {
   Future<void> test_typeDefinition() async {
-    var content = '''
+    final content = '''
 class [!A!] {}
 
 final a^ = A();
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var results = await getTypeDefinitionAsLocation(
+    final results = await getTypeDefinitionAsLocation(
       testFileUri,
       code.position.position,
     );
-    var result = results.single;
+    final result = results.single;
 
     expect(result.range, code.range.range);
     expect(result.uri, testFileUri);

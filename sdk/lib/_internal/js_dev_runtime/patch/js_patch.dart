@@ -8,7 +8,7 @@ library dart.js;
 import 'dart:collection' show HashMap, ListMixin;
 
 import 'dart:_js_helper' show NoReifyGeneric, Primitives;
-import 'dart:_foreign_helper' show JS, TYPE_REF;
+import 'dart:_foreign_helper' show JS;
 import 'dart:_interceptors' show LegacyJavaScriptObject;
 import 'dart:_internal' show patch;
 import 'dart:_runtime' as dart;
@@ -302,31 +302,29 @@ class JsArray<E> /*extends JsObject with ListMixin<E>*/ {
 // We include the instanceof Object test to filter out cross frame objects
 // on FireFox. Surprisingly on FireFox the instanceof Window test succeeds for
 // cross frame windows while the instanceof Object test fails.
-bool _isBrowserType(Object o) =>
-    JS('!', '# instanceof Object', o) &&
-    (JS('!', '(#.Blob && # instanceof #.Blob)', dart.global_, o,
-            dart.global_) ||
-        JS('!', '(#.Event && # instanceof #.Event)', dart.global_, o,
-            dart.global_) ||
-        JS('!', '(#.KeyRange && # instanceof #.KeyRange)', dart.global_, o,
-            dart.global_) ||
-        JS('!', '(#.IDBKeyRange && # instanceof #.IDBKeyRange)', dart.global_,
-            o, dart.global_) ||
-        JS('!', '(#.ImageData && # instanceof #.ImageData)', dart.global_, o,
-            dart.global_) ||
-        JS('!', '(#.Node && # instanceof #.Node)', dart.global_, o,
-            dart.global_) ||
-        JS('!', '(#.DataView && # instanceof #.DataView)', dart.global_, o,
-            dart.global_) ||
+bool _isBrowserType(Object o) => JS(
+    'bool',
+    '# instanceof Object && ('
+        '# instanceof Blob || '
+        '# instanceof Event || '
+        '(window.KeyRange && # instanceof KeyRange) || '
+        '(window.IDBKeyRange && # instanceof IDBKeyRange) || '
+        '# instanceof ImageData || '
+        '# instanceof Node || '
+        '(window.DataView && # instanceof DataView) || '
         // Int8Array.__proto__ is TypedArray.
-        JS(
-            '!',
-            '(#.Int8Array && # instanceof Object.getPrototypeOf(#.Int8Array))',
-            dart.global_,
-            o,
-            dart.global_) ||
-        JS('!', '(#.Window && # instanceof #.Window)', dart.global_, o,
-            dart.global_));
+        '(window.Int8Array && # instanceof Object.getPrototypeOf(Int8Array)) || '
+        '# instanceof Window)',
+    o,
+    o,
+    o,
+    o,
+    o,
+    o,
+    o,
+    o,
+    o,
+    o);
 
 class _DartObject {
   final Object _dartObj;
@@ -373,7 +371,8 @@ Object? _convertToDart(Object? o) {
     int ms = JS('!', '#.getTime()', o);
     return DateTime.fromMillisecondsSinceEpoch(ms);
   } else if (o is _DartObject &&
-      !identical(dart.getReifiedType(o), TYPE_REF<LegacyJavaScriptObject>())) {
+      !identical(
+          dart.getReifiedType(o), dart.typeRep<LegacyJavaScriptObject>())) {
     return o._dartObj;
   } else {
     return _wrapToDart(o);

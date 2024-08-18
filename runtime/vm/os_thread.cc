@@ -128,15 +128,16 @@ void OSThread::SetName(const char* name) {
 #endif  // defined(SUPPORT_TIMELINE)
 }
 
+// Disable AddressSanitizer and SafeStack transformation on this function. In
+// particular, taking the address of a local gives an address on the stack
+// instead of an address in the shadow memory (AddressSanitizer) or the safe
+// stack (SafeStack).
+NO_SANITIZE_ADDRESS
+NO_SANITIZE_SAFE_STACK
 DART_NOINLINE
 uword OSThread::GetCurrentStackPointer() {
-#ifdef _MSC_VER
-  return reinterpret_cast<uword>(_AddressOfReturnAddress());
-#elif __GNUC__
-  return reinterpret_cast<uword>(__builtin_frame_address(0));
-#else
-#error Unimplemented
-#endif
+  uword stack_allocated_local = reinterpret_cast<uword>(&stack_allocated_local);
+  return stack_allocated_local;
 }
 
 #if !defined(PRODUCT)

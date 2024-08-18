@@ -26,7 +26,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 28, 5),
     ]);
 
-    var node = findNode.singleParenthesizedExpression;
+    final node = findNode.singleParenthesizedExpression;
     assertResolvedNodeText(node, r'''
 ParenthesizedExpression
   leftParenthesis: (

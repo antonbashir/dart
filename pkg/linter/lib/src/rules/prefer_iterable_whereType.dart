@@ -8,9 +8,8 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Prefer to use `whereType` on iterable.';
+const _desc = r'Prefer to use whereType on iterable.';
 
 const _details = r'''
 **PREFER** `iterable.whereType<T>()` over `iterable.where((e) => e is T)`.
@@ -28,15 +27,19 @@ iterable.whereType<MyClass>();
 ''';
 
 class PreferIterableWhereType extends LintRule {
+  static const LintCode code = LintCode('prefer_iterable_whereType',
+      "Use 'whereType' to select elements of a given type.",
+      correctionMessage: "Try rewriting the expression to use 'whereType'.");
+
   PreferIterableWhereType()
       : super(
             name: 'prefer_iterable_whereType',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_iterable_whereType;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

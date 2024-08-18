@@ -1,3 +1,2 @@
 method() {}
-
 void set setter(Never n) {}

@@ -17,6 +17,8 @@ namespace dart {
 
 class ParsedFunction;
 
+const char* RepresentationToCString(Representation rep);
+
 // Graph printing.
 class FlowGraphPrinter : public ValueObject {
  public:

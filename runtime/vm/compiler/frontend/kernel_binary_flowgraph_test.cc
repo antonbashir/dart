@@ -36,7 +36,7 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_ConstFoldStringConcats) {
   auto entry = flow_graph->graph_entry()->normal_entry();
   EXPECT(entry != nullptr);
 
-  DartReturnInstr* ret = nullptr;
+  ReturnInstr* ret = nullptr;
 
   ILMatcher cursor(flow_graph, entry);
   // clang-format off
@@ -44,7 +44,7 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_ConstFoldStringConcats) {
     kMatchAndMoveFunctionEntry,
     kMatchAndMoveCheckStackOverflow,
     kMoveDebugStepChecks,
-    {kMatchDartReturn, &ret},
+    {kMatchReturn, &ret},
   }));
   // clang-format on
 
@@ -88,10 +88,9 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_FlattenNestedStringInterp) {
     kMatchAndMoveCreateArray,
     {kMatchAndMoveStoreIndexed, &store1},
     {kMatchAndMoveStoreIndexed, &store2},
-    kMatchAndMoveRecordCoverage,
     kMatchAndMoveStaticCall,
     kMoveDebugStepChecks,
-    kMatchDartReturn,
+    kMatchReturn,
   }));
   // clang-format on
 
@@ -148,10 +147,9 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_DropEmptyStringInterp) {
     {kMatchAndMoveStoreIndexed, &store1},
     {kMatchAndMoveStoreIndexed, &store2},
     {kMatchAndMoveStoreIndexed, &store3},
-    kMatchAndMoveRecordCoverage,
     kMatchAndMoveStaticCall,
     kMoveDebugStepChecks,
-    kMatchDartReturn,
+    kMatchReturn,
   }));
   // clang-format on
 
@@ -217,10 +215,9 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_ConcatStringLits) {
     {kMatchAndMoveStoreIndexed, &store1},
     {kMatchAndMoveStoreIndexed, &store2},
     {kMatchAndMoveStoreIndexed, &store3},
-    kMatchAndMoveRecordCoverage,
     kMatchAndMoveStaticCall,
     kMoveDebugStepChecks,
-    kMatchDartReturn,
+    kMatchReturn,
   }));
   // clang-format on
 
@@ -278,14 +275,11 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_InvariantFlagInListLiterals) {
     kMatchAndMoveFunctionEntry,
     kMatchAndMoveCheckStackOverflow,
     kMoveDebugStepChecks,
-    kMatchAndMoveRecordCoverage,
     kMatchAndMoveStaticCall,
-    kMatchAndMoveRecordCoverage,
     kMatchAndMoveStaticCall,
-    kMatchAndMoveRecordCoverage,
     {kMatchAndMoveInstanceCall, &call_add},
     kMoveDebugStepChecks,
-    kMatchDartReturn,
+    kMatchReturn,
   }));
   // clang-format on
 
@@ -344,7 +338,7 @@ ISOLATE_UNIT_TEST_CASE(StreamingFlowGraphBuilder_TypedClosureCall) {
 #endif
     kMatchAndMoveClosureCall,
     kMoveDebugStepChecks,
-    kMatchDartReturn,
+    kMatchReturn,
   };
   RELEASE_ASSERT(cursor.TryMatch(expected));
   // clang-format on
@@ -372,14 +366,14 @@ ISOLATE_UNIT_TEST_CASE(
   auto entry = flow_graph->graph_entry()->normal_entry();
   EXPECT(entry != nullptr);
 
-  DartReturnInstr* return_instr = nullptr;
+  ReturnInstr* return_instr = nullptr;
 
   ILMatcher cursor(flow_graph, entry);
   RELEASE_ASSERT(cursor.TryMatch({
       kMatchAndMoveFunctionEntry,
       kMatchAndMoveCheckStackOverflow,
       kMoveDebugStepChecks,
-      {kMatchDartReturn, &return_instr},
+      {kMatchReturn, &return_instr},
   }));
 
   EXPECT(return_instr != nullptr);

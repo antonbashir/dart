@@ -3,5 +3,4 @@ library test;
 class A<T> {}
 
 main() {}
-
 test() {}

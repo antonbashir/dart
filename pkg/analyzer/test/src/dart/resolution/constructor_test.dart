@@ -29,46 +29,20 @@ B<int> b = B(0);
 
     nodeTextConfiguration.withRedirectedConstructors = true;
 
-    var node = findNode.constructorName('B(0)');
+    final node = findNode.constructorName('B(0)');
     assertResolvedNodeText(node, r'''
 ConstructorName
   type: NamedType
     name: B
-    element: <testLibraryFragment>::@class::B
+    element: self::@class::B
     type: B<int>
   staticElement: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {U: int}
     redirectedConstructor: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::new
+      base: self::@class::A::@constructor::new
       substitution: {T: int}
       redirectedConstructor: <null>
-''');
-  }
-
-  test_fieldShadowingWildcardParameter() async {
-    await assertErrorsInCode(r'''
-class A {
-  var v;
-  var _;
-  A(var _) : v = _;
-}
-''', [
-      error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 45, 1),
-    ]);
-
-    var node = findNode.constructorFieldInitializer('v = _');
-    assertResolvedNodeText(node, r'''
-ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
-    token: v
-    staticElement: <testLibraryFragment>::@class::A::@field::v
-    staticType: null
-  equals: =
-  expression: SimpleIdentifier
-    token: _
-    staticElement: <testLibraryFragment>::@class::A::@getter::_
-    staticType: dynamic
 ''');
   }
 
@@ -83,22 +57,22 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('B(');
+    final node = findNode.constructorDeclaration('B(');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   parameters: FormalParameterList
     leftParenthesis: (
     parameter: SimpleFormalParameter
       type: NamedType
         name: a
-        element: <testLibraryFragment>::@class::a
+        element: self::@class::a
         type: a
       name: a
-      declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+      declaredElement: self::@class::B::@constructor::new::@parameter::a
         type: a
     rightParenthesis: )
   body: BlockFunctionBody
@@ -108,11 +82,11 @@ ConstructorDeclaration
         ExpressionStatement
           expression: SimpleIdentifier
             token: a
-            staticElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+            staticElement: self::@class::B::@constructor::new::@parameter::a
             staticType: a
           semicolon: ;
       rightBracket: }
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new
+  declaredElement: self::@class::B::@constructor::new
     type: B Function(a)
 ''');
   }
@@ -128,13 +102,13 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   parameters: FormalParameterList
     leftParenthesis: (
@@ -143,17 +117,17 @@ ConstructorDeclaration
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     period: .
     name: SimpleIdentifier
       token: named
-      staticElement: <testLibraryFragment>::@class::A::@constructor::named
+      staticElement: self::@class::A::@constructor::named
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@constructor::named
+    staticElement: self::@class::A::@constructor::named
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new
+  declaredElement: self::@class::B::@constructor::new
     type: B Function()
 ''');
   }
@@ -169,13 +143,13 @@ class B<U> {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   parameters: FormalParameterList
     leftParenthesis: (
@@ -192,21 +166,21 @@ ConstructorDeclaration
             element: U@53
             type: U
         rightBracket: >
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A<U>
     period: .
     name: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: U}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: U}
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new
+  declaredElement: self::@class::B::@constructor::new
     type: B<U> Function()
 ''');
   }
@@ -224,13 +198,13 @@ class B {
       error(CompileTimeErrorCode.REDIRECT_TO_MISSING_CONSTRUCTOR, 59, 7),
     ]);
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   parameters: FormalParameterList
     leftParenthesis: (
@@ -239,7 +213,7 @@ ConstructorDeclaration
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     period: .
     name: SimpleIdentifier
@@ -249,7 +223,7 @@ ConstructorDeclaration
     staticElement: <null>
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new
+  declaredElement: self::@class::B::@constructor::new
     type: B Function()
 ''');
   }
@@ -265,13 +239,13 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   period: .
   name: named
@@ -282,12 +256,12 @@ ConstructorDeclaration
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
-    staticElement: <testLibraryFragment>::@class::A::@constructor::new
+    staticElement: self::@class::A::@constructor::new
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::named
+  declaredElement: self::@class::B::@constructor::named
     type: B Function()
 ''');
   }
@@ -303,13 +277,13 @@ class B<U> {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   period: .
   name: named
@@ -328,14 +302,14 @@ ConstructorDeclaration
             element: U@47
             type: U
         rightBracket: >
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A<U>
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::new
+      base: self::@class::A::@constructor::new
       substitution: {T: U}
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::named
+  declaredElement: self::@class::B::@constructor::named
     type: B<U> Function()
 ''');
   }
@@ -353,13 +327,13 @@ class B {
       error(CompileTimeErrorCode.REDIRECT_TO_MISSING_CONSTRUCTOR, 71, 1),
     ]);
 
-    var node = findNode.constructorDeclaration('factory B');
+    final node = findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
   returnType: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   period: .
   name: named
@@ -370,12 +344,12 @@ ConstructorDeclaration
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     staticElement: <null>
   body: EmptyFunctionBody
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::named
+  declaredElement: self::@class::B::@constructor::named
     type: B Function()
 ''');
   }

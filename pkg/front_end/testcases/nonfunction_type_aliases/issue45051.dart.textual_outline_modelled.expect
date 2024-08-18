@@ -9,5 +9,4 @@ class B implements A {
 }
 
 main() {}
-
 typedef BAlias = B;

@@ -5,11 +5,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/src/lint/linter.dart'; // ignore: implementation_imports
 import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid redundant argument values.';
 
@@ -42,20 +40,26 @@ void main() {
 ''';
 
 class AvoidRedundantArgumentValues extends LintRule {
+  static const LintCode code = LintCode(
+      'avoid_redundant_argument_values',
+      'The value of the argument is redundant because it matches the default '
+          'value.',
+      correctionMessage: 'Try removing the argument.');
+
   AvoidRedundantArgumentValues()
       : super(
             name: 'avoid_redundant_argument_values',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_redundant_argument_values;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addEnumConstantArguments(this, visitor);
     registry.addInstanceCreationExpression(this, visitor);
     registry.addFunctionExpressionInvocation(this, visitor);
@@ -65,8 +69,9 @@ class AvoidRedundantArgumentValues extends LintRule {
 
 class _Visitor extends SimpleAstVisitor {
   final LintRule rule;
+  final LinterContext context;
 
-  _Visitor(this.rule);
+  _Visitor(this.rule, this.context);
 
   void check(ArgumentList argumentList) {
     var arguments = argumentList.arguments;
@@ -103,7 +108,7 @@ class _Visitor extends SimpleAstVisitor {
     //   rule.reportLint(arg);
     // } else ...
     if (value != null && value.hasKnownValue) {
-      var expressionValue = arg.computeConstantValue().value;
+      var expressionValue = context.evaluateConstant(arg).value;
       if ((expressionValue?.hasKnownValue ?? false) &&
           expressionValue == value) {
         rule.reportLint(arg);
@@ -130,23 +135,15 @@ class _Visitor extends SimpleAstVisitor {
     }
 
     var redirectedConstructor = constructor?.redirectedConstructor;
-    if (constructor == null || redirectedConstructor == null) {
+    while (redirectedConstructor?.redirectedConstructor != null) {
+      redirectedConstructor = redirectedConstructor?.redirectedConstructor;
+    }
+    if (redirectedConstructor == null) {
       check(node.argumentList);
       return;
     }
 
-    var visitedConstructors = {constructor};
-    while (redirectedConstructor != null) {
-      if (visitedConstructors.contains(redirectedConstructor)) {
-        // Cycle. Compile-time error.
-        return;
-      }
-      visitedConstructors.add(redirectedConstructor);
-      constructor = redirectedConstructor;
-      redirectedConstructor = redirectedConstructor.redirectedConstructor;
-    }
-
-    var parameters = constructor!.parameters;
+    var parameters = redirectedConstructor.parameters;
 
     // If the constructor being called is a redirecting factory constructor, an
     // argument is redundant if it is equal to the default value of the

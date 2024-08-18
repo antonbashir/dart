@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/handlers/code_actions/abstract_code_actions_producer.dart';
 import 'package:analysis_server/src/services/correction/fix/analysis_options/fix_generator.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/analysis_options/analysis_options_provider.dart';
 import 'package:analyzer/src/generated/source.dart' show SourceFactory;
@@ -25,7 +24,6 @@ class AnalysisOptionsCodeActionsProducer extends AbstractCodeActionsProducer {
     required super.length,
     required super.shouldIncludeKind,
     required super.capabilities,
-    required super.analysisOptions,
   });
 
   @override
@@ -36,57 +34,58 @@ class AnalysisOptionsCodeActionsProducer extends AbstractCodeActionsProducer {
 
   @override
   Future<List<CodeActionWithPriority>> getFixActions() async {
-    var session = await server.getAnalysisSession(path);
+    final session = await server.getAnalysisSession(path);
     if (session == null) {
       return [];
     }
 
-    var driver = server.getAnalysisDriver(path);
+    final driver = server.getAnalysisDriver(path);
     if (driver == null) {
       return [];
     }
 
-    var resourceProvider = server.resourceProvider;
-    var sourceFactory = driver.sourceFactory;
-    var optionsFile = resourceProvider.getFile(path);
-    var content = safelyRead(optionsFile);
+    final resourceProvider = server.resourceProvider;
+    final sourceFactory = driver.sourceFactory;
+    final optionsFile = resourceProvider.getFile(path);
+    final content = safelyRead(optionsFile);
     if (content == null) {
       return [];
     }
-    var lineInfo = LineInfo.fromContent(content);
+    final lineInfo = LineInfo.fromContent(content);
 
-    var options = _getOptions(sourceFactory, content);
+    final options = _getOptions(sourceFactory, content);
     if (options == null) {
       return [];
     }
 
-    var contextRoot = session.analysisContext.contextRoot;
-    var package = contextRoot.workspace.findPackageFor(optionsFile.path);
-    var sdkVersionConstraint =
-        (package is PubPackage) ? package.sdkVersionConstraint : null;
+    final contextRoot = session.analysisContext.contextRoot;
+    final package = contextRoot.workspace.findPackageFor(optionsFile.path);
+    final sdkVersionConstraint =
+        (package is PubWorkspacePackage) ? package.sdkVersionConstraint : null;
 
-    var errors = analyzeAnalysisOptions(
-      FileSource(optionsFile),
+    final errors = analyzeAnalysisOptions(
+      optionsFile.createSource(),
       content,
       sourceFactory,
       contextRoot.root.path,
       sdkVersionConstraint,
     );
 
-    var codeActions = <CodeActionWithPriority>[];
-    for (var error in errors) {
-      var generator = AnalysisOptionsFixGenerator(
+    final codeActions = <CodeActionWithPriority>[];
+    for (final error in errors) {
+      final generator = AnalysisOptionsFixGenerator(
           resourceProvider, error, content, options);
-      var fixes = await generator.computeFixes();
+      final fixes = await generator.computeFixes();
       if (fixes.isEmpty) {
         continue;
       }
 
-      var result = createResult(session, lineInfo, errors);
-      var diagnostic = createDiagnostic(lineInfo, result, error);
+      final result = createResult(session, lineInfo, errors);
+      final diagnostic = createDiagnostic(lineInfo, result, error);
       codeActions.addAll(
         fixes.map((fix) {
-          var action = createFixAction(fix.change, diagnostic, path, lineInfo);
+          final action =
+              createFixAction(fix.change, diagnostic, path, lineInfo);
           return (action: action, priority: fix.kind.priority);
         }),
       );

@@ -119,7 +119,7 @@ class GatherUsedImportedElementsVisitor extends RecursiveAstVisitor<void> {
     Element? element,
   ) {
     if (element is MultiplyDefinedElement) {
-      for (var component in element.conflictingElements) {
+      for (final component in element.conflictingElements) {
         _recordPrefixedElement(importPrefix, component);
         return;
       }
@@ -132,9 +132,9 @@ class GatherUsedImportedElementsVisitor extends RecursiveAstVisitor<void> {
     }
 
     if (importPrefix != null) {
-      var prefixElement = importPrefix.element;
+      final prefixElement = importPrefix.element;
       if (prefixElement is PrefixElement) {
-        var map = usedElements.prefixMap[prefixElement] ??= [];
+        final map = usedElements.prefixMap[prefixElement] ??= [];
         if (element != null) {
           map.add(element);
         }
@@ -297,8 +297,8 @@ class ImportsVerifier {
       _duplicateShownNamesMap = {};
 
   void addImports(CompilationUnit node) {
-    var importsWithLibraries = <_NamespaceDirective>[];
-    var exportsWithLibraries = <_NamespaceDirective>[];
+    final importsWithLibraries = <_NamespaceDirective>[];
+    final exportsWithLibraries = <_NamespaceDirective>[];
     for (var directive in node.directives) {
       if (directive is ImportDirectiveImpl) {
         var libraryElement = directive.element?.importedLibrary;
@@ -366,10 +366,8 @@ class ImportsVerifier {
   void generateDuplicateExportWarnings(ErrorReporter errorReporter) {
     var length = _duplicateExports.length;
     for (var i = 0; i < length; i++) {
-      errorReporter.atNode(
-        _duplicateExports[i].uri,
-        WarningCode.DUPLICATE_EXPORT,
-      );
+      errorReporter.reportErrorForNode(
+          WarningCode.DUPLICATE_EXPORT, _duplicateExports[i].uri);
     }
   }
 
@@ -380,10 +378,8 @@ class ImportsVerifier {
   void generateDuplicateImportWarnings(ErrorReporter errorReporter) {
     var length = _duplicateImports.length;
     for (var i = 0; i < length; i++) {
-      errorReporter.atNode(
-        _duplicateImports[i].uri,
-        WarningCode.DUPLICATE_IMPORT,
-      );
+      errorReporter.reportErrorForNode(
+          WarningCode.DUPLICATE_IMPORT, _duplicateImports[i].uri);
     }
   }
 
@@ -399,10 +395,8 @@ class ImportsVerifier {
       int length = identifiers.length;
       for (int i = 0; i < length; i++) {
         Identifier identifier = identifiers[i];
-        reporter.atNode(
-          identifier,
-          WarningCode.DUPLICATE_HIDDEN_NAME,
-        );
+        reporter.reportErrorForNode(
+            WarningCode.DUPLICATE_HIDDEN_NAME, identifier);
       }
     });
     _duplicateShownNamesMap.forEach(
@@ -410,10 +404,8 @@ class ImportsVerifier {
       int length = identifiers.length;
       for (int i = 0; i < length; i++) {
         Identifier identifier = identifiers[i];
-        reporter.atNode(
-          identifier,
-          WarningCode.DUPLICATE_SHOWN_NAME,
-        );
+        reporter.reportErrorForNode(
+            WarningCode.DUPLICATE_SHOWN_NAME, identifier);
       }
     });
   }
@@ -457,11 +449,8 @@ class ImportsVerifier {
       // only way for it to be `null` is if the import contains a string
       // interpolation, in which case the import wouldn't have resolved and
       // would not have been included in [_unusedImports].
-      errorReporter.atNode(
-        uri,
-        WarningCode.UNUSED_IMPORT,
-        arguments: [uri.stringValue!],
-      );
+      errorReporter.reportErrorForNode(
+          WarningCode.UNUSED_IMPORT, uri, [uri.stringValue!]);
     }
   }
 
@@ -486,11 +475,8 @@ class ImportsVerifier {
         if (duplicateNames == null || !duplicateNames.contains(identifier)) {
           // Only generate a hint if we won't also generate a
           // "duplicate_shown_name" hint for the same identifier.
-          reporter.atNode(
-            identifier,
-            WarningCode.UNUSED_SHOWN_NAME,
-            arguments: [identifier.name],
-          );
+          reporter.reportErrorForNode(
+              WarningCode.UNUSED_SHOWN_NAME, identifier, [identifier.name]);
         }
       }
     });
@@ -620,7 +606,7 @@ class ImportsVerifier {
   void _addShownNames(ImportDirective importDirective) {
     List<SimpleIdentifier> identifiers = <SimpleIdentifier>[];
     _unusedShownNamesMap[importDirective] = identifiers;
-    for (var combinator in importDirective.combinators) {
+    for (final combinator in importDirective.combinators) {
       if (combinator is ShowCombinator) {
         for (SimpleIdentifier name in combinator.shownNames) {
           if (name.staticElement != null) {
@@ -642,7 +628,7 @@ class ImportsVerifier {
       });
       var currentDirective = directives[0];
       for (var i = 1; i < directives.length; i++) {
-        var nextDirective = directives[i];
+        final nextDirective = directives[i];
         if (currentDirective.libraryUriStr == nextDirective.libraryUriStr &&
             ImportDirectiveImpl.areSyntacticallyIdenticalExceptUri(
               currentDirective.node,
@@ -684,8 +670,7 @@ class ImportsVerifier {
       if (element is PropertyAccessorElement) {
         // If the getter or setter of a variable is used, then the variable (the
         // shown name) is used.
-        var variable = element.variable2;
-        if (variable != null && hasElement(identifier, variable)) {
+        if (hasElement(identifier, element.variable)) {
           identifiers.remove(identifier);
           break;
         }
@@ -756,26 +741,26 @@ class _UnnecessaryImportsVerifier {
   ) {
     assert(_usedElementSets.isEmpty);
 
-    var allUsedElements = <Element>{};
-    for (var usedElements in usedImportedElementsList) {
+    final allUsedElements = <Element>{};
+    for (final usedElements in usedImportedElementsList) {
       allUsedElements.addAll(usedElements.elements);
       allUsedElements.addAll(usedElements.usedExtensions);
-      for (var elements in usedElements.prefixMap.values) {
+      for (final elements in usedElements.prefixMap.values) {
         allUsedElements.addAll(elements);
       }
     }
 
-    for (var importDirective in _usedImports) {
-      var importElement = importDirective.element;
+    for (final importDirective in _usedImports) {
+      final importElement = importDirective.element;
       if (importElement == null) continue;
 
-      var importedLibrary = importElement.importedLibrary;
+      final importedLibrary = importElement.importedLibrary;
       if (importedLibrary == null) continue;
 
-      var combinators = importElement.combinators.build();
-      for (var exportedReference in importedLibrary.exportedReferences) {
-        var reference = exportedReference.reference;
-        var element = reference.element;
+      final combinators = importElement.combinators.build();
+      for (final exportedReference in importedLibrary.exportedReferences) {
+        final reference = exportedReference.reference;
+        final element = reference.element;
         if (combinators.allows(reference.name) && element != null) {
           if (allUsedElements.contains(element)) {
             if (!importedLibrary.isFromDeprecatedExport(exportedReference)) {
@@ -805,11 +790,8 @@ class _UnnecessaryImportsVerifier {
             // would have failed to resolve, and we would never reach here.  So
             // it is safe to assume that `uri.stringValue` and
             // `otherImport.uri.stringValue` are both non-`null`.
-            errorReporter.atNode(
-              uri,
-              HintCode.UNNECESSARY_IMPORT,
-              arguments: [uri.stringValue!, otherImport.uri.stringValue!],
-            );
+            errorReporter.reportErrorForNode(HintCode.UNNECESSARY_IMPORT, uri,
+                [uri.stringValue!, otherImport.uri.stringValue!]);
             // Break out of the loop of "other imports" to prevent reporting
             // UNNECESSARY_IMPORT on [importDirective] multiple times.
             break;

@@ -10,7 +10,6 @@ const int _maxUtf16 = 0xffff;
 const int _maxUnicode = 0x10ffff;
 
 @patch
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 class String {
   @patch
@@ -29,15 +28,19 @@ class String {
         return _OneByteString._allocate(1).._setAt(0, charCode);
       }
       if (charCode <= 0xffff) {
-        return _TwoByteString._allocate(1).._setAt(0, charCode);
+        return _StringBase._createFromCodePoints(
+            new _List(1)..[0] = charCode, 0, 1);
       }
       if (charCode <= 0x10ffff) {
         var low = 0xDC00 | (charCode & 0x3ff);
         int bits = charCode - 0x10000;
         var high = 0xD800 | (bits >> 10);
-        return _TwoByteString._allocate(2)
-          .._setAt(0, high)
-          .._setAt(1, low);
+        return _StringBase._createFromCodePoints(
+            new _List(2)
+              ..[0] = high
+              ..[1] = low,
+            0,
+            2);
       }
     }
     throw new RangeError.range(charCode, 0, 0x10ffff);
@@ -56,7 +59,6 @@ class String {
  * [_StringBase] contains common methods used by concrete String
  * implementations, e.g., _OneByteString.
  */
-@pragma('vm:deeply-immutable')
 abstract final class _StringBase implements String {
   bool _isWhitespace(int codeUnit);
 
@@ -107,7 +109,8 @@ abstract final class _StringBase implements String {
   bool get _isOneByte {
     // Alternatively return false and override it on one-byte string classes.
     int id = ClassID.getID(this);
-    return id == ClassID.cidOneByteString;
+    return id == ClassID.cidOneByteString ||
+        id == ClassID.cidExternalOneByteString;
   }
 
   /**
@@ -269,11 +272,7 @@ abstract final class _StringBase implements String {
   @pragma("vm:external-name", "String_charAt")
   external String operator [](int index);
 
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  @pragma("vm:idempotent")
-  @pragma("vm:exact-result-type", "dart:core#_Smi")
-  external int codeUnitAt(int index);
+  int codeUnitAt(int index); // Implemented in the subclasses.
 
   @pragma("vm:recognized", "graph-intrinsic")
   @pragma("vm:exact-result-type", "dart:core#_Smi")
@@ -998,7 +997,6 @@ int _clampedPositiveProduct(int a, int b) {
   return product;
 }
 
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 final class _OneByteString extends _StringBase {
   factory _OneByteString._uninstantiable() {
@@ -1009,6 +1007,11 @@ final class _OneByteString extends _StringBase {
   @pragma("vm:exact-result-type", "dart:core#_Smi")
   @pragma("vm:external-name", "String_getHashCode")
   external int get hashCode;
+
+  @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "String_codeUnitAt")
+  external int codeUnitAt(int index);
 
   bool _isWhitespace(int codeUnit) {
     return _StringBase._isOneByteWhitespace(codeUnit);
@@ -1078,7 +1081,8 @@ final class _OneByteString extends _StringBase {
     // Specialize for single character pattern.
     final pCid = ClassID.getID(pattern);
     if ((pCid == ClassID.cidOneByteString) ||
-        (pCid == ClassID.cidTwoByteString)) {
+        (pCid == ClassID.cidTwoByteString) ||
+        (pCid == ClassID.cidExternalOneByteString)) {
       final String patternAsString = unsafeCast<String>(pattern);
       final len = this.length;
       if ((patternAsString.length == 1) && (start >= 0) && (start < len)) {
@@ -1100,7 +1104,8 @@ final class _OneByteString extends _StringBase {
   bool contains(Pattern pattern, [int start = 0]) {
     final pCid = ClassID.getID(pattern);
     if ((pCid == ClassID.cidOneByteString) ||
-        (pCid == ClassID.cidTwoByteString)) {
+        (pCid == ClassID.cidTwoByteString) ||
+        (pCid == ClassID.cidExternalOneByteString)) {
       final String patternAsString = unsafeCast<String>(pattern);
       final len = this.length;
       if ((patternAsString.length == 1) && (start >= 0) && (start < len)) {
@@ -1139,7 +1144,8 @@ final class _OneByteString extends _StringBase {
 
   String padLeft(int width, [String padding = ' ']) {
     int padCid = ClassID.getID(padding);
-    if (padCid != ClassID.cidOneByteString) {
+    if ((padCid != ClassID.cidOneByteString) &&
+        (padCid != ClassID.cidExternalOneByteString)) {
       return super.padLeft(width, padding);
     }
     int length = this.length;
@@ -1169,7 +1175,8 @@ final class _OneByteString extends _StringBase {
 
   String padRight(int width, [String padding = ' ']) {
     int padCid = ClassID.getID(padding);
-    if (padCid != ClassID.cidOneByteString) {
+    if ((padCid != ClassID.cidOneByteString) &&
+        (padCid != ClassID.cidExternalOneByteString)) {
       return super.padRight(width, padding);
     }
     int length = this.length;
@@ -1311,7 +1318,7 @@ final class _OneByteString extends _StringBase {
   }
 
   // Should be optimizable to a memory move.
-  // Accepts _OneByteString as argument.
+  // Accepts both _OneByteString and _ExternalOneByteString as argument.
   // Returns index after last character written.
   int _setRange(int index, String oneByteString, int start, int end) {
     assert(oneByteString._isOneByte);
@@ -1328,7 +1335,6 @@ final class _OneByteString extends _StringBase {
   }
 }
 
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 final class _TwoByteString extends _StringBase {
   factory _TwoByteString._uninstantiable() {
@@ -1358,6 +1364,11 @@ final class _TwoByteString extends _StringBase {
     return _StringBase._isTwoByteWhitespace(codeUnit);
   }
 
+  @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "String_codeUnitAt")
+  external int codeUnitAt(int index);
+
   @pragma("vm:recognized", "asm-intrinsic")
   @pragma("vm:exact-result-type", bool)
   // Intrinsic is more efficient than an inlined body even for the small
@@ -1383,6 +1394,46 @@ final class _TwoByteString extends _StringBase {
       result._setAt(i, result.codeUnitAt(i - length));
     }
     return result;
+  }
+}
+
+@pragma("vm:entry-point")
+final class _ExternalOneByteString extends _StringBase {
+  factory _ExternalOneByteString._uninstantiable() {
+    throw "Unreachable";
+  }
+
+  bool _isWhitespace(int codeUnit) {
+    return _StringBase._isOneByteWhitespace(codeUnit);
+  }
+
+  @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "String_codeUnitAt")
+  external int codeUnitAt(int index);
+
+  bool operator ==(Object other) {
+    return super == other;
+  }
+}
+
+@pragma("vm:entry-point")
+final class _ExternalTwoByteString extends _StringBase {
+  factory _ExternalTwoByteString._uninstantiable() {
+    throw "Unreachable";
+  }
+
+  bool _isWhitespace(int codeUnit) {
+    return _StringBase._isTwoByteWhitespace(codeUnit);
+  }
+
+  @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "String_codeUnitAt")
+  external int codeUnitAt(int index);
+
+  bool operator ==(Object other) {
+    return super == other;
   }
 }
 

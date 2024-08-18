@@ -26,14 +26,14 @@ class ElementNameUnionTest extends PubPackageResolutionTest {
   }
 
   Future<void> _checkLibrary(String uriStr) async {
-    var analysisContext = contextFor(testFile);
-    var analysisSession = analysisContext.currentSession;
+    final analysisContext = contextFor(testFile);
+    final analysisSession = analysisContext.currentSession;
 
-    var result = await analysisSession.getLibraryByUri(uriStr);
+    final result = await analysisSession.getLibraryByUri(uriStr);
     result as LibraryElementResult;
-    var element = result.element;
+    final element = result.element;
 
-    var union = ElementNameUnion.forLibrary(element);
+    final union = ElementNameUnion.forLibrary(element);
     element.accept(
       _ElementVisitor(union),
     );
@@ -48,21 +48,16 @@ class _ElementVisitor extends GeneralizingElementVisitor<void> {
 
   @override
   void visitElement(Element element) {
-    var enclosing = element.enclosingElement;
+    final enclosing = element.enclosingElement;
     if (enclosing is CompilationUnitElement ||
         element is FieldElement ||
         element is MethodElement ||
         element is PropertyAccessorElement) {
-      var name = element.name;
+      final name = element.name;
       if (name != null) {
-        expect(union.contains(name), isTrue, reason: 'Expected to find $name');
-        // This might fail, but the probability is low. If this does fail, try
-        // adding another `z` to the prefix.
-        expect(
-          union.contains('zz$name'),
-          isFalse,
-          reason: 'Expected to not find $name',
-        );
+        expect(union.contains(name), isTrue, reason: name);
+        // Might fail, but probably we don't have such names.
+        expect(union.contains('Z$name'), isFalse, reason: name);
       }
     }
 

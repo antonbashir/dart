@@ -144,10 +144,10 @@ void main() {
       expect(outputJsFile.existsSync(), isTrue);
     });
 
-    test('can compile in basic mode with DDC modules', () async {
+    test('can compile in basic mode with "legacy" modules', () async {
       var args = List<String>.from(executableArgs)
         ..add('--modules')
-        ..add('ddc')
+        ..add('legacy')
         ..addAll(compilerArgs);
       var result = Process.runSync(Platform.executable, args);
 

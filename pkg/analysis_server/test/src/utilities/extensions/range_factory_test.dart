@@ -80,10 +80,10 @@ abstract class BaseRangeFactoryTest extends AbstractSingleUnitTest {
     expect(endsBefore == null, isNot(endsAfter == null),
         reason: 'Specify exactly one of endsBefore/endsAfter');
 
-    var offset = startsBefore != null
+    final offset = startsBefore != null
         ? testCode.indexOf(startsBefore)
         : testCode.indexOf(startsAfter!) + startsAfter.length;
-    var end = endsBefore != null
+    final end = endsBefore != null
         ? testCode.indexOf(endsBefore)
         : testCode.indexOf(endsAfter!) + endsAfter.length;
 

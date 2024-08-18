@@ -28,6 +28,7 @@ class ScopeModel {
 abstract class VariableScopeModel {
   VariableScope getScopeFor(ir.TreeNode node);
   Iterable<ir.VariableDeclaration> get assignedVariables;
+  bool isEffectivelyFinal(ir.VariableDeclaration node);
 }
 
 class VariableScopeModelImpl implements VariableScopeModel {
@@ -50,6 +51,11 @@ class VariableScopeModelImpl implements VariableScopeModel {
   @override
   Iterable<ir.VariableDeclaration> get assignedVariables =>
       _assignedVariables ?? <ir.VariableDeclaration>[];
+
+  @override
+  bool isEffectivelyFinal(ir.VariableDeclaration node) {
+    return _assignedVariables == null || !_assignedVariables!.contains(node);
+  }
 }
 
 /// Variable information for a scope.

@@ -6,25 +6,7 @@
 // but light weight enough to be suitable for unit testing of code in the
 // `_fe_analyzer_shared` package.
 
-import 'package:_fe_analyzer_shared/src/type_inference/nullability_suffix.dart';
-import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
-
-/// Surrounds [s] with parentheses if [condition] is `true`, otherwise returns
-/// [s] unchanged.
-String _parenthesizeIf(bool condition, String s) => condition ? '($s)' : s;
-
-/// Representation of the type `dynamic` suitable for unit testing of code in
-/// the `_fe_analyzer_shared` package.
-class DynamicType extends _SpecialSimpleType
-    implements SharedDynamicType<Type> {
-  static final instance = DynamicType._();
-
-  DynamicType._()
-      : super._('dynamic', nullabilitySuffix: NullabilitySuffix.none);
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) => this;
-}
+import 'package:test/test.dart';
 
 /// Representation of a function type suitable for unit testing of code in the
 /// `_fe_analyzer_shared` package.
@@ -38,23 +20,7 @@ class FunctionType extends Type {
   /// A list of the types of positional parameters.
   final List<Type> positionalParameters;
 
-  FunctionType(this.returnType, this.positionalParameters,
-      {super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._();
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) {
-    Type? newReturnType =
-        returnType.closureWithRespectToUnknown(covariant: covariant);
-    List<Type>? newPositionalParameters =
-        positionalParameters.closureWithRespectToUnknown(covariant: !covariant);
-    if (newReturnType == null && newPositionalParameters == null) {
-      return null;
-    }
-    return FunctionType(newReturnType ?? returnType,
-        newPositionalParameters ?? positionalParameters,
-        nullabilitySuffix: nullabilitySuffix);
-  }
+  FunctionType(this.returnType, this.positionalParameters) : super._();
 
   @override
   Type? recursivelyDemote({required bool covariant}) {
@@ -65,93 +31,17 @@ class FunctionType extends Type {
       return null;
     }
     return FunctionType(newReturnType ?? returnType,
-        newPositionalParameters ?? positionalParameters,
-        nullabilitySuffix: nullabilitySuffix);
+        newPositionalParameters ?? positionalParameters);
   }
 
   @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      FunctionType(returnType, positionalParameters, nullabilitySuffix: suffix);
-
-  @override
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex}) =>
-      _parenthesizeIf(parenthesizeIfComplex,
-          '$returnType Function(${positionalParameters.join(', ')})');
-}
-
-/// Representation of the type `FutureOr<T>` suitable for unit testing of code
-/// in the `_fe_analyzer_shared` package.
-class FutureOrType extends PrimaryType {
-  FutureOrType(Type typeArgument,
-      {super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._withSpecialName('FutureOr', args: [typeArgument]);
-
-  Type get typeArgument => args.single;
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) {
-    Type? newArg =
-        typeArgument.closureWithRespectToUnknown(covariant: covariant);
-    if (newArg == null) return null;
-    return FutureOrType(newArg, nullabilitySuffix: nullabilitySuffix);
+  String _toString({required bool allowSuffixes}) {
+    var result = '$returnType Function(${positionalParameters.join(', ')})';
+    if (!allowSuffixes) {
+      result = '($result)';
+    }
+    return result;
   }
-
-  @override
-  Type? recursivelyDemote({required bool covariant}) {
-    Type? newArg = typeArgument.recursivelyDemote(covariant: covariant);
-    if (newArg == null) return null;
-    return FutureOrType(newArg, nullabilitySuffix: nullabilitySuffix);
-  }
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      FutureOrType(typeArgument, nullabilitySuffix: suffix);
-}
-
-/// Representation of an invalid type suitable for unit testing of code in the
-/// `_fe_analyzer_shared` package.
-class InvalidType extends _SpecialSimpleType
-    implements SharedInvalidType<Type> {
-  static final instance = InvalidType._();
-
-  InvalidType._() : super._('error', nullabilitySuffix: NullabilitySuffix.none);
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) => this;
-}
-
-class NamedType implements SharedNamedType<Type> {
-  @override
-  final String name;
-
-  @override
-  final Type type;
-
-  NamedType({required this.name, required this.type});
-}
-
-/// Representation of the type `Never` suitable for unit testing of code in the
-/// `_fe_analyzer_shared` package.
-class NeverType extends _SpecialSimpleType {
-  static final instance = NeverType._();
-
-  NeverType._({super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._('Never');
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      NeverType._(nullabilitySuffix: suffix);
-}
-
-/// Representation of the type `Null` suitable for unit testing of code in the
-/// `_fe_analyzer_shared` package.
-class NullType extends _SpecialSimpleType {
-  static final instance = NullType._();
-
-  NullType._() : super._('Null', nullabilitySuffix: NullabilitySuffix.none);
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) => this;
 }
 
 /// Exception thrown if a type fails to parse properly.
@@ -170,66 +60,29 @@ class ParseError extends Error {
 /// reference to a type parameter, or one of the special types whose name is a
 /// single word (e.g. `dynamic`).
 class PrimaryType extends Type {
-  /// Names of primary types not originating from a class, a mixin, or an enum.
-  static const List<String> namedNonInterfaceTypes = [
-    'dynamic',
-    'error',
-    'FutureOr',
-    'Never',
-    'Null',
-    'void'
-  ];
-
   /// The name of the type.
   final String name;
 
   /// The type arguments, or `const []` if there are no type arguments.
   final List<Type> args;
 
-  PrimaryType(this.name,
-      {this.args = const [], super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._() {
-    if (namedNonInterfaceTypes.contains(name)) {
-      throw StateError('Tried to create a PrimaryType with special name $name');
-    }
-  }
-
-  PrimaryType._withSpecialName(this.name,
-      {this.args = const [], super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._() {
-    if (!namedNonInterfaceTypes.contains(name)) {
-      throw StateError(
-          'Tried to use PrimaryType._withSpecialName with non-special name '
-          '$name');
-    }
-  }
-
-  bool get isInterfaceType => !namedNonInterfaceTypes.contains(name);
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) {
-    List<Type>? newArgs =
-        args.closureWithRespectToUnknown(covariant: covariant);
-    if (newArgs == null) return null;
-    return PrimaryType(name,
-        args: newArgs, nullabilitySuffix: nullabilitySuffix);
-  }
+  PrimaryType(this.name, {this.args = const []}) : super._();
 
   @override
   Type? recursivelyDemote({required bool covariant}) {
     List<Type>? newArgs = args.recursivelyDemote(covariant: covariant);
     if (newArgs == null) return null;
-    return PrimaryType(name,
-        args: newArgs, nullabilitySuffix: nullabilitySuffix);
+    return PrimaryType(name, args: newArgs);
   }
 
   @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      PrimaryType(name, args: args, nullabilitySuffix: suffix);
-
-  @override
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex}) =>
-      args.isEmpty ? name : '$name<${args.join(', ')}>';
+  String _toString({required bool allowSuffixes}) {
+    if (args.isEmpty) {
+      return name;
+    } else {
+      return '$name<${args.join(', ')}>';
+    }
+  }
 }
 
 /// Representation of a promoted type parameter type suitable for unit testing
@@ -242,177 +95,173 @@ class PromotedTypeVariableType extends Type {
 
   final Type promotion;
 
-  PromotedTypeVariableType(this.innerType, this.promotion,
-      {super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._();
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) {
-    var newPromotion =
-        promotion.closureWithRespectToUnknown(covariant: covariant);
-    if (newPromotion == null) return null;
-    return PromotedTypeVariableType(innerType, newPromotion,
-        nullabilitySuffix: nullabilitySuffix);
-  }
+  PromotedTypeVariableType(this.innerType, this.promotion) : super._();
 
   @override
   Type? recursivelyDemote({required bool covariant}) =>
-      (covariant ? innerType : NeverType.instance)
-          .withNullability(nullabilitySuffix);
+      covariant ? innerType : new PrimaryType('Never');
 
   @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      PromotedTypeVariableType(innerType, promotion, nullabilitySuffix: suffix);
-
-  @override
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex}) =>
-      _parenthesizeIf(
-          parenthesizeIfComplex,
-          '${innerType.toString(parenthesizeIfComplex: true)}&'
-          '${promotion.toString(parenthesizeIfComplex: true)}');
+  String _toString({required bool allowSuffixes}) {
+    var result = '$innerType&${promotion._toString(allowSuffixes: false)}';
+    if (!allowSuffixes) {
+      result = '($result)';
+    }
+    return result;
+  }
 }
 
-class RecordType extends Type implements SharedRecordType<Type> {
-  @override
-  final List<Type> positionalTypes;
+/// Representation of a nullable type suitable for unit testing of code in the
+/// `_fe_analyzer_shared` package.  This class is used only for nullable types
+/// that are spelled with an explicit trailing `?`, e.g. `double?`; it is not
+/// used for e.g. `dynamic` or `FutureOr<int?>`, even though those types are
+/// nullable as well.
+class QuestionType extends Type {
+  final Type innerType;
+
+  QuestionType(this.innerType) : super._();
 
   @override
-  final List<NamedType> namedTypes;
+  Type? recursivelyDemote({required bool covariant}) {
+    Type? newInnerType = innerType.recursivelyDemote(covariant: covariant);
+    if (newInnerType == null) return null;
+    return QuestionType(newInnerType);
+  }
+
+  @override
+  String _toString({required bool allowSuffixes}) {
+    var result = '$innerType?';
+    if (!allowSuffixes) {
+      result = '($result)';
+    }
+    return result;
+  }
+}
+
+class RecordType extends Type {
+  final List<Type> positional;
+  final Map<String, Type> named;
 
   RecordType({
-    required this.positionalTypes,
-    required this.namedTypes,
-    super.nullabilitySuffix = NullabilitySuffix.none,
+    required this.positional,
+    required this.named,
   }) : super._();
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) {
-    List<Type>? newPositional;
-    for (var i = 0; i < positionalTypes.length; i++) {
-      var newType =
-          positionalTypes[i].closureWithRespectToUnknown(covariant: covariant);
-      if (newType != null) {
-        newPositional ??= positionalTypes.toList();
-        newPositional[i] = newType;
-      }
-    }
-
-    List<NamedType>? newNamed =
-        _closureWithRespectToUnknownNamed(covariant: covariant);
-
-    if (newPositional == null && newNamed == null) {
-      return null;
-    }
-    return RecordType(
-      positionalTypes: newPositional ?? positionalTypes,
-      namedTypes: newNamed ?? namedTypes,
-      nullabilitySuffix: nullabilitySuffix,
-    );
-  }
 
   @override
   Type? recursivelyDemote({required bool covariant}) {
     List<Type>? newPositional;
-    for (var i = 0; i < positionalTypes.length; i++) {
-      var newType = positionalTypes[i].recursivelyDemote(covariant: covariant);
+    for (var i = 0; i < positional.length; i++) {
+      var newType = positional[i].recursivelyDemote(covariant: covariant);
       if (newType != null) {
-        newPositional ??= positionalTypes.toList();
+        newPositional ??= positional.toList();
         newPositional[i] = newType;
       }
     }
 
-    List<NamedType>? newNamed = _recursivelyDemoteNamed(covariant: covariant);
+    Map<String, Type>? newNamed = _recursivelyDemoteNamed(covariant: covariant);
 
     if (newPositional == null && newNamed == null) {
       return null;
     }
     return RecordType(
-      positionalTypes: newPositional ?? positionalTypes,
-      namedTypes: newNamed ?? namedTypes,
-      nullabilitySuffix: nullabilitySuffix,
+      positional: newPositional ?? positional,
+      named: newNamed ?? named,
     );
   }
 
-  @override
-  Type withNullability(NullabilitySuffix suffix) => RecordType(
-      positionalTypes: positionalTypes,
-      namedTypes: namedTypes,
-      nullabilitySuffix: suffix);
-
-  List<NamedType>? _closureWithRespectToUnknownNamed(
-      {required bool covariant}) {
-    List<NamedType>? newNamed;
-    for (var i = 0; i < namedTypes.length; i++) {
-      var namedType = namedTypes[i];
-      var newType =
-          namedType.type.closureWithRespectToUnknown(covariant: covariant);
-      if (newType != null) {
-        (newNamed ??= namedTypes.toList())[i] =
-            NamedType(name: namedType.name, type: newType);
-      }
+  Map<String, Type>? _recursivelyDemoteNamed({required bool covariant}) {
+    Map<String, Type> newNamed = {};
+    bool hasChanged = false;
+    for (var entry in named.entries) {
+      var value = entry.value;
+      var newType = value.recursivelyDemote(covariant: covariant);
+      if (newType != null) hasChanged = true;
+      newNamed[entry.key] = newType ?? value;
     }
-    return newNamed;
-  }
-
-  List<NamedType>? _recursivelyDemoteNamed({required bool covariant}) {
-    List<NamedType>? newNamed;
-    for (var i = 0; i < namedTypes.length; i++) {
-      var namedType = namedTypes[i];
-      var newType = namedType.type.recursivelyDemote(covariant: covariant);
-      if (newType != null) {
-        (newNamed ??= namedTypes.toList())[i] =
-            NamedType(name: namedType.name, type: newType);
-      }
-    }
-    return newNamed;
+    return hasChanged ? newNamed : null;
   }
 
   @override
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex}) {
-    var positionalStr = positionalTypes.join(', ');
-    var namedStr = namedTypes.map((e) => '${e.type} ${e.name}').join(', ');
+  String _toString({required bool allowSuffixes}) {
+    var positionalStr = positional.map((e) => '$e').join(', ');
+    var namedStr = named.entries.map((e) => '${e.value} ${e.key}').join(', ');
     if (namedStr.isNotEmpty) {
-      return positionalTypes.isNotEmpty
-          ? '($positionalStr, {$namedStr})'
-          : '({$namedStr})';
+      if (positional.isNotEmpty) {
+        return '($positionalStr, {$namedStr})';
+      } else {
+        return '({$namedStr})';
+      }
+    } else if (positional.length == 1) {
+      return '($positionalStr,)';
     } else {
-      return positionalTypes.length == 1
-          ? '($positionalStr,)'
-          : '($positionalStr)';
+      return '($positionalStr)';
     }
+  }
+}
+
+/// Representation of a "star" type suitable for unit testing of code in the
+/// `_fe_analyzer_shared` package.
+class StarType extends Type {
+  final Type innerType;
+
+  StarType(this.innerType) : super._();
+
+  @override
+  Type? recursivelyDemote({required bool covariant}) {
+    Type? newInnerType = innerType.recursivelyDemote(covariant: covariant);
+    if (newInnerType == null) return null;
+    return StarType(newInnerType);
+  }
+
+  @override
+  String _toString({required bool allowSuffixes}) {
+    var result = '$innerType*';
+    if (!allowSuffixes) {
+      result = '($result)';
+    }
+    return result;
   }
 }
 
 /// Representation of a type suitable for unit testing of code in the
 /// `_fe_analyzer_shared` package.
-abstract class Type implements SharedType<Type> {
-  @override
-  final NullabilitySuffix nullabilitySuffix;
+///
+/// Note that we don't want code in `_fe_analyzer_shared` to inadvertently
+/// compare types using `==` (or to store types in sets/maps, which can trigger
+/// `==` to be used to compare them); this could cause bugs by causing
+/// alternative spellings of the same type to be treated differently (e.g.
+/// `FutureOr<int?>?` should be treated equivalently to `FutureOr<int?>`).  To
+/// help ensure this, both `==` and `hashCode` throw exceptions by default.  To
+/// defeat this behavior (e.g. so that a type can be passed to `expect`, use
+/// [Type.withComparisonsAllowed].
+abstract class Type {
+  static bool _allowComparisons = false;
 
   factory Type(String typeStr) => _TypeParser.parse(typeStr);
 
-  const Type._({this.nullabilitySuffix = NullabilitySuffix.none});
+  const Type._();
 
   @override
-  int get hashCode => type.hashCode;
+  int get hashCode {
+    if (!_allowComparisons) {
+      // Types should not be compared using hashCode.  They should be compared
+      // using relations like subtyping and assignability.
+      fail('Unexpected use of operator== on types');
+    }
+    return type.hashCode;
+  }
 
-  String get type => toString();
-
-  @override
-  bool operator ==(Object other) => other is Type && this.type == other.type;
-
-  /// Finds the nearest type that doesn't involve the unknown type (`_`).
-  ///
-  /// If [covariant] is `true`, a supertype will be returned (replacing `_` with
-  /// `Object?`); otherwise a subtype will be returned (replacing `_` with
-  /// `Never`).
-  Type? closureWithRespectToUnknown({required bool covariant});
+  String get type => _toString(allowSuffixes: true);
 
   @override
-  String getDisplayString() => type;
-
-  @override
-  bool isStructurallyEqualTo(SharedType other) => '$this' == '$other';
+  bool operator ==(Object other) {
+    if (!_allowComparisons) {
+      // Types should not be compared using hashCode.  They should be compared
+      // using relations like subtyping and assignability.
+      fail('Unexpected use of operator== on types');
+    }
+    return other is Type && this.type == other.type;
+  }
 
   /// Finds the nearest type that doesn't involve any type parameter promotion.
   /// If `covariant` is `true`, a supertype will be returned (replacing promoted
@@ -422,74 +271,25 @@ abstract class Type implements SharedType<Type> {
   /// Returns `null` if this type is already free from type promotion.
   Type? recursivelyDemote({required bool covariant});
 
-  /// Returns a string representation of this type.
-  ///
-  /// If [parenthesizeIfComplex] is `true`, then the result will be surrounded
-  /// by parenthesis if it takes any of the following forms:
-  /// - A type with a trailing `?` or `*`
-  /// - A function type (e.g. `void Function()`)
-  /// - A promoted type variable type (e.g. `T&int`)
   @override
-  String toString({bool parenthesizeIfComplex = false}) =>
-      switch (nullabilitySuffix) {
-        NullabilitySuffix.question => _parenthesizeIf(
-            parenthesizeIfComplex,
-            '${_toStringWithoutSuffix(parenthesizeIfComplex: true)}'
-            '?'),
-        NullabilitySuffix.star => _parenthesizeIf(
-            parenthesizeIfComplex,
-            '${_toStringWithoutSuffix(parenthesizeIfComplex: true)}'
-            '*'),
-        NullabilitySuffix.none =>
-          _toStringWithoutSuffix(parenthesizeIfComplex: parenthesizeIfComplex),
-      };
+  String toString() => type;
 
-  /// Returns a modifies version of this type, with the nullability suffix
-  /// changed to [suffix].
-  ///
-  /// For types that don't accept a nullability suffix (`dynamic`, InvalidType,
-  /// `Null`, `_`, and `void`), the type is returned unchanged.
-  Type withNullability(NullabilitySuffix suffix);
+  /// Returns a string representation of this type.  If `allowSuffixes` is
+  /// `false`, then the result will be surrounded in parenthesis if it would
+  /// otherwise have ended in a suffix.
+  String _toString({required bool allowSuffixes});
 
-  /// Returns a string representation of the portion of this string that
-  /// precedes the nullability suffix.
-  ///
-  /// If [parenthesizeIfComplex] is `true`, then the result will be surrounded
-  /// by parenthesis if it takes any of the following forms:
-  /// - A function type (e.g. `void Function()`)
-  /// - A promoted type variable type (e.g. `T&int`)
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex});
-}
-
-class TypeSchema implements SharedType<TypeSchema> {
-  final Type _type;
-
-  TypeSchema(String typeString) : _type = Type(typeString);
-
-  TypeSchema.fromType(this._type);
-
-  String get typeString => _type.type;
-
-  Type toType() => _type;
-
-  @override
-  String getDisplayString() {
-    throw UnsupportedError("TypeSchema.getDisplayString");
+  /// Executes [callback] while temporarily allowing types to be compared using
+  /// `==` and `hashCode`.
+  static T withComparisonsAllowed<T>(T Function() callback) {
+    assert(!_allowComparisons);
+    _allowComparisons = true;
+    try {
+      return callback();
+    } finally {
+      Type._allowComparisons = false;
+    }
   }
-
-  @override
-  bool isStructurallyEqualTo(SharedType<TypeSchema> other) {
-    throw UnsupportedError("TypeSchema.isStructurallyEqualTo");
-  }
-
-  @override
-  // TODO: implement nullabilitySuffix
-  NullabilitySuffix get nullabilitySuffix => throw UnimplementedError();
-}
-
-class DynamicTypeSchema extends TypeSchema
-    implements SharedDynamicType<TypeSchema> {
-  DynamicTypeSchema() : super.fromType(DynamicType.instance);
 }
 
 class TypeSystem {
@@ -506,6 +306,8 @@ class TypeSystem {
     'num': (_) => [Type('Object')],
     'String': (_) => [Type('Object')],
   };
+
+  static final _nullType = Type('Null');
 
   static final _objectQuestionType = Type('Object?');
 
@@ -527,41 +329,31 @@ class TypeSystem {
 
   Type factor(Type t, Type s) {
     // If T <: S then Never
-    if (isSubtype(t, s)) return NeverType.instance;
+    if (isSubtype(t, s)) return Type('Never');
 
     // Else if T is R? and Null <: S then factor(R, S)
-    if (t.nullabilitySuffix == NullabilitySuffix.question &&
-        isSubtype(NullType.instance, s)) {
-      return factor(t.withNullability(NullabilitySuffix.none), s);
+    if (t is QuestionType && isSubtype(_nullType, s)) {
+      return factor(t.innerType, s);
     }
 
     // Else if T is R? then factor(R, S)?
-    if (t.nullabilitySuffix == NullabilitySuffix.question) {
-      return factor(t.withNullability(NullabilitySuffix.none), s)
-          .withNullability(NullabilitySuffix.question);
-    }
+    if (t is QuestionType) return QuestionType(factor(t.innerType, s));
 
     // Else if T is R* and Null <: S then factor(R, S)
-    if (t.nullabilitySuffix == NullabilitySuffix.star &&
-        isSubtype(NullType.instance, s)) {
-      return factor(t.withNullability(NullabilitySuffix.none), s);
-    }
+    if (t is StarType && isSubtype(_nullType, s)) return factor(t.innerType, s);
 
     // Else if T is R* then factor(R, S)*
-    if (t.nullabilitySuffix == NullabilitySuffix.star) {
-      return factor(t.withNullability(NullabilitySuffix.none), s)
-          .withNullability(NullabilitySuffix.star);
-    }
+    if (t is StarType) return StarType(factor(t.innerType, s));
 
     // Else if T is FutureOr<R> and Future<R> <: S then factor(R, S)
-    if (t is FutureOrType) {
-      var r = t.typeArgument;
+    if (t is PrimaryType && t.args.length == 1 && t.name == 'FutureOr') {
+      var r = t.args[0];
       if (isSubtype(PrimaryType('Future', args: [r]), s)) return factor(r, s);
     }
 
     // Else if T is FutureOr<R> and R <: S then factor(Future<R>, S)
-    if (t is FutureOrType) {
-      var r = t.typeArgument;
+    if (t is PrimaryType && t.args.length == 1 && t.name == 'FutureOr') {
+      var r = t.args[0];
       if (isSubtype(r, s)) return factor(PrimaryType('Future', args: [r]), s);
     }
 
@@ -577,10 +369,8 @@ class TypeSystem {
     //   types with a single name and no type arguments (this covers both
     //   primitive types and type variables).
     if (t0 is PrimaryType &&
-        t0.nullabilitySuffix == NullabilitySuffix.none &&
         t0.args.isEmpty &&
         t1 is PrimaryType &&
-        t1.nullabilitySuffix == NullabilitySuffix.none &&
         t1.args.isEmpty &&
         t0.name == t1.name) {
       return true;
@@ -596,53 +386,46 @@ class TypeSystem {
     if (_isTop(t1)) return true;
 
     // Left Top: if T0 is dynamic or void then T0 <: T1 if Object? <: T1
-    if (t0 is DynamicType || t0 is InvalidType || t0 is VoidType) {
+    if (t0 is PrimaryType &&
+        t0.args.isEmpty &&
+        (t0.name == 'dynamic' || t0.name == 'error' || t0.name == 'void')) {
       return isSubtype(_objectQuestionType, t1);
     }
 
     // Left Bottom: if T0 is Never then T0 <: T1
-    if (t0 is NeverType && t0.nullabilitySuffix == NullabilitySuffix.none) {
-      return true;
-    }
+    if (t0 is PrimaryType && t0.args.isEmpty && t0.name == 'Never') return true;
 
     // Right Object: if T1 is Object then:
-    if (t1 is PrimaryType &&
-        t1.nullabilitySuffix == NullabilitySuffix.none &&
-        t1.args.isEmpty &&
-        t1.name == 'Object') {
+    if (t1 is PrimaryType && t1.args.isEmpty && t1.name == 'Object') {
       // - if T0 is an unpromoted type variable with bound B then T0 <: T1 iff
       //   B <: Object
-      if (t0 is PrimaryType &&
-          t0.nullabilitySuffix == NullabilitySuffix.none &&
-          _isTypeVar(t0)) {
+      if (t0 is PrimaryType && _isTypeVar(t0)) {
         return isSubtype(_typeVarBound(t0), _objectType);
       }
 
       // - if T0 is a promoted type variable X & S then T0 <: T1 iff S <: Object
-      if (t0 is PromotedTypeVariableType &&
-          t0.nullabilitySuffix == NullabilitySuffix.none) {
+      if (t0 is PromotedTypeVariableType) {
         return isSubtype(t0.promotion, _objectType);
       }
 
       // - if T0 is FutureOr<S> for some S, then T0 <: T1 iff S <: Object.
-      if (t0 is FutureOrType &&
-          t0.nullabilitySuffix == NullabilitySuffix.none) {
-        return isSubtype(t0.typeArgument, _objectType);
+      if (t0 is PrimaryType && t0.args.length == 1 && t0.name == 'FutureOr') {
+        return isSubtype(t0.args[0], _objectType);
       }
 
       // - if T0 is S* for any S, then T0 <: T1 iff S <: T1
-      if (t0.nullabilitySuffix == NullabilitySuffix.star) {
-        return isSubtype(t0.withNullability(NullabilitySuffix.none), t1);
-      }
+      if (t0 is StarType) return isSubtype(t0.innerType, t1);
 
       // - if T0 is Null, dynamic, void, or S? for any S, then the subtyping
       //   does not hold (per above, the result of the subtyping query is
       //   false).
-      if (t0 is NullType ||
-          t0 is DynamicType ||
-          t0 is InvalidType ||
-          t0 is VoidType ||
-          t0.nullabilitySuffix == NullabilitySuffix.question) {
+      if (t0 is PrimaryType &&
+              t0.args.isEmpty &&
+              (t0.name == 'Null' ||
+                  t0.name == 'dynamic' ||
+                  t0.name == 'error' ||
+                  t0.name == 'void') ||
+          t0 is QuestionType) {
         return false;
       }
 
@@ -651,21 +434,20 @@ class TypeSystem {
     }
 
     // Left Null: if T0 is Null then:
-    if (t0 is NullType) {
+    if (t0 is PrimaryType && t0.args.isEmpty && t0.name == 'Null') {
       // - if T1 is a type variable (promoted or not) the query is false
       if (_isTypeVar(t1)) return false;
 
       // - If T1 is FutureOr<S> for some S, then the query is true iff
       //   Null <: S.
-      if (t1 is FutureOrType &&
-          t1.nullabilitySuffix == NullabilitySuffix.none) {
-        return isSubtype(NullType.instance, t1.typeArgument);
+      if (t1 is PrimaryType && t1.args.length == 1 && t1.name == 'FutureOr') {
+        return isSubtype(_nullType, t0.args[0]);
       }
 
       // - If T1 is Null, S? or S* for some S, then the query is true.
-      if (t1 is NullType ||
-          t1.nullabilitySuffix == NullabilitySuffix.question ||
-          t1.nullabilitySuffix == NullabilitySuffix.star) {
+      if (t1 is PrimaryType && t1.args.isEmpty && t1.name == 'Null' ||
+          t1 is QuestionType ||
+          t1 is StarType) {
         return true;
       }
 
@@ -674,20 +456,20 @@ class TypeSystem {
     }
 
     // Left Legacy: if T0 is S0* then:
-    if (t0.nullabilitySuffix == NullabilitySuffix.star) {
+    if (t0 is StarType) {
       // - T0 <: T1 iff S0 <: T1.
-      return isSubtype(t0.withNullability(NullabilitySuffix.none), t1);
+      return isSubtype(t0.innerType, t1);
     }
 
     // Right Legacy: if T1 is S1* then:
-    if (t1.nullabilitySuffix == NullabilitySuffix.star) {
+    if (t1 is StarType) {
       // - T0 <: T1 iff T0 <: S1?.
-      return isSubtype(t0, t1.withNullability(NullabilitySuffix.question));
+      return isSubtype(t0, QuestionType(t1.innerType));
     }
 
     // Left FutureOr: if T0 is FutureOr<S0> then:
-    if (t0 is FutureOrType && t0.nullabilitySuffix == NullabilitySuffix.none) {
-      var s0 = t0.typeArgument;
+    if (t0 is PrimaryType && t0.args.length == 1 && t0.name == 'FutureOr') {
+      var s0 = t0.args[0];
 
       // - T0 <: T1 iff Future<S0> <: T1 and S0 <: T1
       return isSubtype(PrimaryType('Future', args: [s0]), t1) &&
@@ -695,17 +477,15 @@ class TypeSystem {
     }
 
     // Left Nullable: if T0 is S0? then:
-    if (t0.nullabilitySuffix == NullabilitySuffix.question) {
+    if (t0 is QuestionType) {
       // - T0 <: T1 iff S0 <: T1 and Null <: T1
-      return isSubtype(t0.withNullability(NullabilitySuffix.none), t1) &&
-          isSubtype(NullType.instance, t1);
+      return isSubtype(t0.innerType, t1) && isSubtype(_nullType, t1);
     }
 
     // Type Variable Reflexivity 1: if T0 is a type variable X0 or a promoted
     // type variables X0 & S0 and T1 is X0 then:
     if (_isTypeVar(t0) &&
         t1 is PrimaryType &&
-        t1.nullabilitySuffix == NullabilitySuffix.none &&
         t1.args.isEmpty &&
         _typeVarName(t0) == t1.name) {
       // - T0 <: T1
@@ -716,22 +496,20 @@ class TypeSystem {
     // type variables X0 & S0 and T1 is X0 & S1 then:
     if (_isTypeVar(t0) &&
         t1 is PromotedTypeVariableType &&
-        t1.nullabilitySuffix == NullabilitySuffix.none &&
         _typeVarName(t0) == _typeVarName(t1)) {
       // - T0 <: T1 iff T0 <: S1.
       return isSubtype(t0, t1.promotion);
     }
 
     // Right Promoted Variable: if T1 is a promoted type variable X1 & S1 then:
-    if (t1 is PromotedTypeVariableType &&
-        t1.nullabilitySuffix == NullabilitySuffix.none) {
+    if (t1 is PromotedTypeVariableType) {
       // - T0 <: T1 iff T0 <: X1 and T0 <: S1
       return isSubtype(t0, t1.innerType) && isSubtype(t0, t1.promotion);
     }
 
     // Right FutureOr: if T1 is FutureOr<S1> then:
-    if (t1 is FutureOrType && t1.nullabilitySuffix == NullabilitySuffix.none) {
-      var s1 = t1.typeArgument;
+    if (t1 is PrimaryType && t1.args.length == 1 && t1.name == 'FutureOr') {
+      var s1 = t1.args[0];
 
       // - T0 <: T1 iff any of the following hold:
       return
@@ -748,15 +526,15 @@ class TypeSystem {
     }
 
     // Right Nullable: if T1 is S1? then:
-    if (t1.nullabilitySuffix == NullabilitySuffix.question) {
-      var s1 = t1.withNullability(NullabilitySuffix.none);
+    if (t1 is QuestionType) {
+      var s1 = t1.innerType;
 
       // - T0 <: T1 iff any of the following hold:
       return
           //   - either T0 <: S1
           isSubtype(t0, s1) ||
               //   - or T0 <: Null
-              isSubtype(t0, NullType.instance) ||
+              isSubtype(t0, _nullType) ||
               //   - or T0 is X0 and X0 has bound S0 and S0 <: T1
               t0 is PrimaryType &&
                   _isTypeVar(t0) &&
@@ -908,18 +686,14 @@ class TypeSystem {
     // - and Vi <: Si for i in 0...m
     bool isRecordSubtype() {
       if (t0 is! RecordType || t1 is! RecordType) return false;
-      if (t0.positionalTypes.length != t1.positionalTypes.length) return false;
-      for (int i = 0; i < t0.positionalTypes.length; i++) {
-        if (!isSubtype(t0.positionalTypes[i], t1.positionalTypes[i])) {
-          return false;
-        }
+      if (t0.positional.length != t1.positional.length) return false;
+      for (int i = 0; i < t0.positional.length; i++) {
+        if (!isSubtype(t0.positional[i], t1.positional[i])) return false;
       }
-      if (t0.namedTypes.length != t1.namedTypes.length) return false;
-      var t1NamedMap = {
-        for (var NamedType(:name, :type) in t1.namedTypes) name: type
-      };
-      for (var NamedType(:name, type: vi) in t0.namedTypes) {
-        var si = t1NamedMap[name];
+      if (t0.named.length != t1.named.length) return false;
+      for (var entry in t0.named.entries) {
+        var vi = entry.value;
+        var si = t1.named[entry.key];
         if (si == null) return false;
         if (!isSubtype(vi, si)) return false;
       }
@@ -933,21 +707,22 @@ class TypeSystem {
 
   bool _isTop(Type t) {
     if (t is PrimaryType) {
-      return t is DynamicType || t is InvalidType || t is VoidType;
-    } else if (t.nullabilitySuffix == NullabilitySuffix.question) {
-      return t is PrimaryType && t.args.isEmpty && t.name == 'Object';
+      return t.args.isEmpty &&
+          (t.name == 'dynamic' || t.name == 'error' || t.name == 'void');
+    } else if (t is QuestionType) {
+      var innerType = t.innerType;
+      return innerType is PrimaryType &&
+          innerType.args.isEmpty &&
+          innerType.name == 'Object';
     }
     return false;
   }
 
   bool _isTypeVar(Type t) {
-    if (t is PromotedTypeVariableType &&
-        t.nullabilitySuffix == NullabilitySuffix.none) {
+    if (t is PromotedTypeVariableType) {
       assert(_isTypeVar(t.innerType));
       return true;
-    } else if (t is PrimaryType &&
-        t.nullabilitySuffix == NullabilitySuffix.none &&
-        t.args.isEmpty) {
+    } else if (t is PrimaryType && t.args.isEmpty) {
       return _typeVarBounds.containsKey(t.name);
     } else {
       return false;
@@ -958,8 +733,7 @@ class TypeSystem {
 
   String _typeVarName(Type t) {
     assert(_isTypeVar(t));
-    if (t is PromotedTypeVariableType &&
-        t.nullabilitySuffix == NullabilitySuffix.none) {
+    if (t is PromotedTypeVariableType) {
       return _typeVarName(t.innerType);
     } else {
       return (t as PrimaryType).name;
@@ -969,52 +743,14 @@ class TypeSystem {
 
 /// Representation of the unknown type suitable for unit testing of code in the
 /// `_fe_analyzer_shared` package.
-class UnknownType extends Type implements SharedUnknownType<Type> {
-  const UnknownType({super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._();
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) =>
-      covariant ? Type('Object?') : NeverType.instance;
+class UnknownType extends Type {
+  const UnknownType() : super._();
 
   @override
   Type? recursivelyDemote({required bool covariant}) => null;
 
   @override
-  Type withNullability(NullabilitySuffix suffix) =>
-      UnknownType(nullabilitySuffix: suffix);
-
-  @override
-  String _toStringWithoutSuffix({required bool parenthesizeIfComplex}) => '_';
-}
-
-/// Representation of the type `void` suitable for unit testing of code in the
-/// `_fe_analyzer_shared` package.
-class VoidType extends _SpecialSimpleType implements SharedVoidType<Type> {
-  static final instance = VoidType._();
-
-  VoidType._() : super._('void', nullabilitySuffix: NullabilitySuffix.none);
-
-  @override
-  Type withNullability(NullabilitySuffix suffix) => this;
-}
-
-/// Shared implementation of the types `void`, `dynamic`, `null`, `Never`, and
-/// the invalid type.
-///
-/// These types share the property that they are special cases of [PrimaryType]
-/// that don't need special functionality for the [closureWithRespectToUnknown]
-/// and [recursivelyDemote] methods.
-abstract class _SpecialSimpleType extends PrimaryType {
-  _SpecialSimpleType._(super.name,
-      {super.nullabilitySuffix = NullabilitySuffix.none})
-      : super._withSpecialName();
-
-  @override
-  Type? closureWithRespectToUnknown({required bool covariant}) => null;
-
-  @override
-  Type? recursivelyDemote({required bool covariant}) => null;
+  String _toString({required bool allowSuffixes}) => '?';
 }
 
 class _TypeParser {
@@ -1044,17 +780,17 @@ class _TypeParser {
         'Error parsing type `$_typeStr` at token $_currentToken: $message');
   }
 
-  List<NamedType> _parseRecordTypeNamedFields() {
+  Map<String, Type> _parseRecordTypeNamedFields() {
     assert(_currentToken == '{');
     _next();
-    var namedTypes = <NamedType>[];
+    var namedTypes = <String, Type>{};
     while (_currentToken != '}') {
       var type = _parseType();
       var name = _currentToken;
       if (_identifierRegexp.matchAsPrefix(name) == null) {
         _parseFailure('Expected an identifier');
       }
-      namedTypes.add(NamedType(name: name, type: type));
+      namedTypes[name] = type;
       _next();
       if (_currentToken == ',') {
         _next();
@@ -1073,7 +809,7 @@ class _TypeParser {
   }
 
   Type _parseRecordTypeRest(List<Type> positionalTypes) {
-    List<NamedType>? namedTypes;
+    Map<String, Type>? namedTypes;
     while (_currentToken != ')') {
       if (_currentToken == '{') {
         namedTypes = _parseRecordTypeNamedFields();
@@ -1094,16 +830,16 @@ class _TypeParser {
     }
     _next();
     return RecordType(
-        positionalTypes: positionalTypes, namedTypes: namedTypes ?? const []);
+        positional: positionalTypes, named: namedTypes ?? const {});
   }
 
   Type? _parseSuffix(Type type) {
     if (_currentToken == '?') {
       _next();
-      return type.withNullability(NullabilitySuffix.question);
+      return QuestionType(type);
     } else if (_currentToken == '*') {
       _next();
-      return type.withNullability(NullabilitySuffix.star);
+      return StarType(type);
     } else if (_currentToken == '&') {
       _next();
       var promotion = _parseUnsuffixedType();
@@ -1136,7 +872,7 @@ class _TypeParser {
     // We currently accept the following grammar for types:
     //   type := unsuffixedType nullability suffix*
     //   unsuffixedType := identifier typeArgs?
-    //                   | `_`
+    //                   | `?`
     //                   | `(` type `)`
     //                   | `(` recordTypeFields `,` recordTypeNamedFields `)`
     //                   | `(` recordTypeFields `,`? `)`
@@ -1162,7 +898,7 @@ class _TypeParser {
   }
 
   Type _parseUnsuffixedType() {
-    if (_currentToken == '_') {
+    if (_currentToken == '?') {
       _next();
       return const UnknownType();
     }
@@ -1184,7 +920,7 @@ class _TypeParser {
     }
     var typeName = _currentToken;
     if (_identifierRegexp.matchAsPrefix(typeName) == null) {
-      _parseFailure('Expected an identifier, `_`, or `(`');
+      _parseFailure('Expected an identifier, `?`, or `(`');
     }
     _next();
     List<Type> typeArgs;
@@ -1203,39 +939,7 @@ class _TypeParser {
     } else {
       typeArgs = const [];
     }
-    if (typeName == 'dynamic') {
-      if (typeArgs.isNotEmpty) {
-        throw ParseError('`dynamic` does not accept type arguments');
-      }
-      return DynamicType.instance;
-    } else if (typeName == 'error') {
-      if (typeArgs.isNotEmpty) {
-        throw ParseError('`error` does not accept type arguments');
-      }
-      return InvalidType.instance;
-    } else if (typeName == 'FutureOr') {
-      if (typeArgs.length != 1) {
-        throw ParseError('`FutureOr` requires exactly one type argument');
-      }
-      return FutureOrType(typeArgs.single);
-    } else if (typeName == 'Never') {
-      if (typeArgs.isNotEmpty) {
-        throw ParseError('`Never` does not accept type arguments');
-      }
-      return NeverType.instance;
-    } else if (typeName == 'Null') {
-      if (typeArgs.isNotEmpty) {
-        throw ParseError('`Null` does not accept type arguments');
-      }
-      return NullType.instance;
-    } else if (typeName == 'void') {
-      if (typeArgs.isNotEmpty) {
-        throw ParseError('`void` does not accept type arguments');
-      }
-      return VoidType.instance;
-    } else {
-      return PrimaryType(typeName, args: typeArgs);
-    }
+    return PrimaryType(typeName, args: typeArgs);
   }
 
   static Type parse(String typeStr) {
@@ -1271,23 +975,6 @@ class _TypeParser {
 }
 
 extension on List<Type> {
-  /// Calls [Type.closureWithRespectToUnknown] to translate every list member
-  /// into a type that doesn't involve the unknown type (`_`).  If no type would
-  /// be changed by this operation, returns `null`.
-  List<Type>? closureWithRespectToUnknown({required bool covariant}) {
-    List<Type>? newList;
-    for (int i = 0; i < length; i++) {
-      Type type = this[i];
-      Type? newType = type.closureWithRespectToUnknown(covariant: covariant);
-      if (newList == null) {
-        if (newType == null) continue;
-        newList = sublist(0, i);
-      }
-      newList.add(newType ?? type);
-    }
-    return newList;
-  }
-
   /// Calls [Type.recursivelyDemote] to translate every list member into a type
   /// that doesn't involve any type promotion.  If no type would be changed by
   /// this operation, returns `null`.

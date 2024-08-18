@@ -9,5 +9,4 @@ abstract class I {
 class C extends A implements I {}
 
 void main() {}
-
 throws(void Function() f) {}

@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -11,20 +11,13 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dar
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
-  ConvertToIfCaseStatementChain({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   AssistKind get assistKind =>
       DartAssistKind.CONVERT_TO_IF_CASE_STATEMENT_CHAIN;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var switchStatement = node;
+    final switchStatement = node;
     if (switchStatement is! SwitchStatementImpl) {
       return;
     }
@@ -33,18 +26,18 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
       return;
     }
 
-    var groups = _groups(switchStatement);
+    final groups = _groups(switchStatement);
     if (groups == null) {
       return;
     }
 
-    var ifIndent = utils.getLinePrefix(switchStatement.offset);
-    var expressionCode = utils.getNodeText(switchStatement.expression);
+    final ifIndent = utils.getLinePrefix(switchStatement.offset);
+    final expressionCode = utils.getNodeText(switchStatement.expression);
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addReplacement(range.node(switchStatement), (builder) {
         var isFirst = true;
-        for (var group in groups) {
+        for (final group in groups) {
           if (isFirst) {
             isFirst = false;
           } else {
@@ -52,10 +45,10 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
           }
           switch (group) {
             case _SingleCaseGroup():
-              var patternCode = utils.getNodeText(group.guardedPattern);
+              final patternCode = utils.getNodeText(group.guardedPattern);
               builder.writeln('if ($expressionCode case $patternCode) {');
             case _JoinedCaseGroup():
-              var patternCode = group.patterns
+              final patternCode = group.patterns
                   .map((pattern) => utils.getNodeText(pattern))
                   .join(' || ');
               builder.writeln('if ($expressionCode case $patternCode) {');
@@ -74,9 +67,9 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
   }
 
   List<_Group>? _groups(SwitchStatementImpl switchStatement) {
-    var result = <_Group>[];
-    for (var group in switchStatement.memberGroups) {
-      var members = group.members;
+    final result = <_Group>[];
+    for (final group in switchStatement.memberGroups) {
+      final members = group.members;
 
       // Support `default`, if alone.
       if (members.any((e) => e is SwitchDefault)) {
@@ -92,7 +85,7 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
       }
 
       // We expect only `SwitchPatternCase`s.
-      var guardedPatterns = members
+      final guardedPatterns = members
           .whereType<SwitchPatternCase>()
           .map((e) => e.guardedPattern)
           .toList();
@@ -101,7 +94,7 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
       }
 
       // For single `GuardedPattern` we allow `when`.
-      var singleGuardedPattern = guardedPatterns.singleOrNull;
+      final singleGuardedPattern = guardedPatterns.singleOrNull;
       if (singleGuardedPattern != null) {
         result.add(
           _SingleCaseGroup(
@@ -132,16 +125,16 @@ class ConvertToIfCaseStatementChain extends ResolvedCorrectionProducer {
     required List<Statement> statements,
     required String blockIndent,
   }) {
-    var first = statements.firstOrNull;
+    final first = statements.firstOrNull;
     if (first == null) {
       return;
     }
 
-    var range = utils.getLinesRangeStatements(statements);
-    var firstIndent = utils.getLinePrefix(first.offset);
-    var singleIndent = utils.oneIndent;
+    final range = utils.getLinesRangeStatements(statements);
+    final firstIndent = utils.getLinePrefix(first.offset);
+    final singleIndent = utils.getIndent(1);
 
-    var code = utils.replaceSourceRangeIndent(
+    final code = utils.replaceSourceRangeIndent(
       range,
       firstIndent,
       blockIndent + singleIndent,

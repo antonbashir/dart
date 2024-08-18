@@ -96,7 +96,7 @@ class RefactoringManager {
       CancellationToken cancellationToken) {
     // prepare for processing the request
     this.request = request;
-    var result = this.result = EditGetRefactoringResult(
+    final result = this.result = EditGetRefactoringResult(
         EMPTY_PROBLEM_LIST, EMPTY_PROBLEM_LIST, EMPTY_PROBLEM_LIST);
 
     // process the request
@@ -104,6 +104,9 @@ class RefactoringManager {
     if (server.sendResponseErrorIfInvalidFilePath(request, file)) {
       return;
     }
+
+    server.options.analytics
+        ?.sendEvent('refactor', params.kind.name.toLowerCase());
 
     runZonedGuarded(() async {
       await _init(
@@ -137,7 +140,7 @@ class RefactoringManager {
         throw 'A simulated refactoring exception - final.';
       }
       // validation and create change
-      var refactoring = this.refactoring!;
+      final refactoring = this.refactoring!;
       finalStatus = await refactoring.checkFinalConditions();
       _checkForReset_afterFinalConditions();
       if (_hasFatalError) {
@@ -270,14 +273,14 @@ class RefactoringManager {
         var node = NodeLocator(offset).searchWithin(resolvedUnit.unit);
         var element = server.getElementOfNode(node);
         if (node is RepresentationDeclaration) {
-          var extensionType = node.parent;
+          final extensionType = node.parent;
           if (extensionType is ExtensionTypeDeclaration &&
               extensionType.name.end == offset) {
             element = extensionType.declaredElement;
           }
         }
         if (node != null && element != null) {
-          var renameElement =
+          final renameElement =
               RenameRefactoring.getElementToRename(node, element);
           if (renameElement != null) {
             // do create the refactoring
@@ -314,7 +317,7 @@ class RefactoringManager {
     }
     // create a new Refactoring instance
     await _createRefactoringFromKind(file, offset, length, cancellationToken);
-    var refactoring = this.refactoring;
+    final refactoring = this.refactoring;
     if (refactoring == null) {
       initStatus = RefactoringStatus.fatal('Unable to create a refactoring');
       return;
@@ -323,7 +326,7 @@ class RefactoringManager {
     initStatus = await refactoring.checkInitialConditions();
     _checkForReset_afterInitialConditions();
     if (refactoring is ExtractLocalRefactoring) {
-      var feedback = this.feedback as ExtractLocalVariableFeedback;
+      final feedback = this.feedback as ExtractLocalVariableFeedback;
       feedback.names = refactoring.names;
       feedback.offsets = refactoring.offsets;
       feedback.lengths = refactoring.lengths;
@@ -332,7 +335,7 @@ class RefactoringManager {
       feedback.coveringExpressionLengths =
           refactoring.coveringExpressionLengths;
     } else if (refactoring is ExtractMethodRefactoring) {
-      var feedback = this.feedback as ExtractMethodFeedback;
+      final feedback = this.feedback as ExtractMethodFeedback;
       feedback.canCreateGetter = refactoring.canCreateGetter;
       feedback.returnType = refactoring.returnType;
       feedback.names = refactoring.names;
@@ -351,7 +354,7 @@ class RefactoringManager {
             className: refactoring.className);
       }
     } else if (refactoring is RenameRefactoring) {
-      var feedback = this.feedback as RenameFeedback;
+      final feedback = this.feedback as RenameFeedback;
       feedback.elementKindName = refactoring.elementKindName;
       feedback.oldName = refactoring.oldName;
     }
@@ -380,12 +383,12 @@ class RefactoringManager {
 
   void _sendResultResponse() {
     // ignore if was cancelled
-    var request = this.request;
+    final request = this.request;
     if (request == null) {
       return;
     }
     // set feedback
-    var result = this.result;
+    final result = this.result;
     if (result == null) {
       return;
     }
@@ -395,15 +398,14 @@ class RefactoringManager {
     result.optionsProblems = optionsStatus.problems;
     result.finalProblems = finalStatus.problems;
     // send the response
-    server.sendResponse(
-        result.toResponse(request.id, clientUriConverter: server.uriConverter));
+    server.sendResponse(result.toResponse(request.id));
     // done with this request
     this.request = null;
     this.result = null;
   }
 
   RefactoringStatus _setOptions(EditGetRefactoringParams params) {
-    var refactoring = this.refactoring;
+    final refactoring = this.refactoring;
     if (refactoring is ExtractLocalRefactoring) {
       var extractOptions = params.options as ExtractLocalVariableOptions;
       refactoring.name = extractOptions.name;

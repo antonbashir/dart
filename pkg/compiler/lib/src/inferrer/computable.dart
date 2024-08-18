@@ -6,6 +6,7 @@ import '../constants/values.dart' show ConstantValue, PrimitiveConstantValue;
 import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart' show DartType;
+import '../ir/static_type.dart';
 import '../js_model/js_world.dart';
 import '../serialization/serialization.dart';
 import '../universe/member_hierarchy.dart';
@@ -175,9 +176,10 @@ class ComputableAbstractValueDomain with AbstractValueDomain {
 
   @override
   AbstractValueWithPrecision createFromStaticType(DartType type,
-      {required bool nullable}) {
-    final unwrapped =
-        _wrappedDomain.createFromStaticType(type, nullable: nullable);
+      {ClassRelation classRelation = ClassRelation.subtype,
+      required bool nullable}) {
+    final unwrapped = _wrappedDomain.createFromStaticType(type,
+        classRelation: classRelation, nullable: nullable);
     return AbstractValueWithPrecision(
         ComputableAbstractValue(unwrapped.abstractValue), unwrapped.isPrecise);
   }
@@ -237,6 +239,11 @@ class ComputableAbstractValueDomain with AbstractValueDomain {
   AbstractBool containsOnlyType(
           covariant ComputableAbstractValue value, ClassEntity cls) =>
       _wrappedDomain.containsOnlyType(_unwrap(value), cls);
+
+  @override
+  AbstractBool isInstanceOfOrNull(
+          covariant ComputableAbstractValue value, ClassEntity cls) =>
+      _wrappedDomain.isInstanceOfOrNull(_unwrap(value), cls);
 
   @override
   AbstractBool isInstanceOf(

@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/context/packages.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options_map.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/performance_logger.dart';
@@ -48,10 +47,9 @@ Future<Uint8List> buildSdkSummary({
     }
   }
 
-  var logger = PerformanceLog(StringBuffer());
-  var scheduler = AnalysisDriverScheduler(logger);
-  var optionsMap = AnalysisOptionsMap.forSharedOptions(AnalysisOptionsImpl());
-  var analysisDriver = AnalysisDriver(
+  final logger = PerformanceLog(StringBuffer());
+  final scheduler = AnalysisDriverScheduler(logger);
+  final analysisDriver = AnalysisDriver(
     scheduler: scheduler,
     logger: logger,
     resourceProvider: resourceProvider,
@@ -59,12 +57,12 @@ Future<Uint8List> buildSdkSummary({
     sourceFactory: SourceFactory([
       DartUriResolver(sdk),
     ]),
-    analysisOptionsMap: optionsMap,
+    analysisOptions: AnalysisOptionsImpl(),
     packages: Packages({}),
   );
   scheduler.start();
 
-  var libraryUriList = sdk.uris.map(Uri.parse).toList();
+  final libraryUriList = sdk.uris.map(Uri.parse).toList();
   return await analysisDriver.buildPackageBundle(
     uriList: libraryUriList,
     packageBundleSdk: PackageBundleSdk(

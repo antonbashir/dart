@@ -18,6 +18,8 @@
 // the order in which the mixin declaration and application are analyzed does
 // not influence the behavior.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import '../static_type_helper.dart';
 
 abstract class C1 = Object with M;

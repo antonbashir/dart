@@ -3,15 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 
 f() sync* {
-  // Error: Returning value from generator: forbidden.
+  // Returning value from generator: forbidden.
   return missing;
 }
 
-// Error: Arrow generator: forbidden.
+// Arrow generator: forbidden.
 g() sync* => dummy;
 
 h() sync* {
-  // OK: Local function returning value within generator: permitted.
+  // Local function returning value within generator: permitted.
   (() => "return")();
 }
 

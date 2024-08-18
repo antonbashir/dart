@@ -6,10 +6,9 @@
 
 library slow_consumer3_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 const int KB = 1024;
 const int MB = KB * KB;

@@ -27,8 +27,7 @@ class CompletionGetSuggestionDetails2Handler extends CompletionHandler {
       return;
     }
 
-    var params = CompletionGetSuggestionDetails2Params.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = CompletionGetSuggestionDetails2Params.fromRequest(request);
 
     var file = params.file;
     if (server.sendResponseErrorIfInvalidFilePath(request, file)) {

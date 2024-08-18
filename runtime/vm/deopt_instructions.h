@@ -83,6 +83,7 @@ class DeoptContext : public MallocAllocated {
   }
 
   float FpuRegisterValueAsFloat(FpuRegister reg) const {
+    ASSERT(FlowGraphCompiler::SupportsUnboxedDoubles());
     ASSERT(fpu_registers_ != NULL);
     ASSERT(reg >= 0);
     ASSERT(reg < kNumberOfFpuRegisters);
@@ -90,6 +91,7 @@ class DeoptContext : public MallocAllocated {
   }
 
   double FpuRegisterValueAsDouble(FpuRegister reg) const {
+    ASSERT(FlowGraphCompiler::SupportsUnboxedDoubles());
     ASSERT(fpu_registers_ != nullptr);
     ASSERT(reg >= 0);
     ASSERT(reg < kNumberOfFpuRegisters);

@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid empty statements.';
 
@@ -42,15 +41,20 @@ if (complicated.expression.foo())
 ''';
 
 class EmptyStatements extends LintRule {
+  static const LintCode code = LintCode(
+      'empty_statements', 'Unnecessary empty statement.',
+      correctionMessage:
+          'Try removing the empty statement or restructuring the code.');
+
   EmptyStatements()
       : super(
             name: 'empty_statements',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.empty_statements;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

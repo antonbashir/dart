@@ -166,27 +166,13 @@ class AstComparator implements AstVisitor<bool> {
 
   @override
   bool visitAugmentationImportDirective(AugmentationImportDirective node) {
-    var other = _other as AugmentationImportDirective;
+    final other = _other as AugmentationImportDirective;
     return isEqualNodes(
             node.documentationComment, other.documentationComment) &&
         _isEqualNodeLists(node.metadata, other.metadata) &&
         isEqualTokens(node.importKeyword, other.importKeyword) &&
         isEqualNodes(node.uri, other.uri) &&
         isEqualTokens(node.semicolon, other.semicolon);
-  }
-
-  @override
-  bool visitAugmentedExpression(AugmentedExpression node) {
-    var other = _other as AugmentedExpression;
-    return isEqualTokens(node.augmentedKeyword, other.augmentedKeyword);
-  }
-
-  @override
-  bool visitAugmentedInvocation(AugmentedInvocation node) {
-    var other = _other as AugmentedInvocation;
-    return isEqualTokens(node.augmentedKeyword, other.augmentedKeyword) &&
-        isEqualNodes(node.typeArguments, other.typeArguments) &&
-        isEqualNodes(node.arguments, other.arguments);
   }
 
   @override
@@ -558,17 +544,11 @@ class AstComparator implements AstVisitor<bool> {
         isEqualTokens(node.extensionKeyword, other.extensionKeyword) &&
         isEqualTokens(node.name, other.name) &&
         isEqualNodes(node.typeParameters, other.typeParameters) &&
-        isEqualNodes(node.onClause, other.onClause) &&
+        isEqualTokens(node.onKeyword, other.onKeyword) &&
+        isEqualNodes(node.extendedType, other.extendedType) &&
         isEqualTokens(node.leftBracket, other.leftBracket) &&
         _isEqualNodeLists(node.members, other.members) &&
         isEqualTokens(node.rightBracket, other.rightBracket);
-  }
-
-  @override
-  bool visitExtensionOnClause(ExtensionOnClause node) {
-    var other = _other as ExtensionOnClause;
-    return isEqualTokens(node.onKeyword, other.onKeyword) &&
-        isEqualNodes(node.extendedType, other.extendedType);
   }
 
   @override
@@ -582,7 +562,7 @@ class AstComparator implements AstVisitor<bool> {
 
   @override
   bool visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    var other = _other as ExtensionTypeDeclaration;
+    final other = _other as ExtensionTypeDeclaration;
     return isEqualNodes(
             node.documentationComment, other.documentationComment) &&
         _isEqualNodeLists(node.metadata, other.metadata) &&
@@ -869,7 +849,7 @@ class AstComparator implements AstVisitor<bool> {
 
   @override
   bool? visitImportPrefixReference(ImportPrefixReference node) {
-    var other = _other as ImportPrefixReference;
+    final other = _other as ImportPrefixReference;
     return isEqualTokens(node.name, other.name) &&
         isEqualTokens(node.period, other.period);
   }
@@ -938,7 +918,7 @@ class AstComparator implements AstVisitor<bool> {
 
   @override
   bool? visitLibraryAugmentationDirective(LibraryAugmentationDirective node) {
-    var other = _other as LibraryAugmentationDirective;
+    final other = _other as LibraryAugmentationDirective;
     return isEqualNodes(
             node.documentationComment, other.documentationComment) &&
         _isEqualNodeLists(node.metadata, other.metadata) &&
@@ -1069,14 +1049,6 @@ class AstComparator implements AstVisitor<bool> {
   }
 
   @override
-  bool visitMixinOnClause(MixinOnClause node) {
-    var other = _other as MixinOnClause;
-    return isEqualTokens(node.onKeyword, other.onKeyword) &&
-        _isEqualNodeLists(
-            node.superclassConstraints, other.superclassConstraints);
-  }
-
-  @override
   bool visitNamedExpression(NamedExpression node) {
     NamedExpression other = _other as NamedExpression;
     return isEqualNodes(node.name, other.name) &&
@@ -1115,13 +1087,6 @@ class AstComparator implements AstVisitor<bool> {
   }
 
   @override
-  bool visitNullAwareElement(NullAwareElement node) {
-    NullAwareElement other = _other as NullAwareElement;
-    return isEqualTokens(node.question, other.question) &&
-        isEqualNodes(node.value, other.value);
-  }
-
-  @override
   bool visitNullCheckPattern(NullCheckPattern node) {
     var other = _other as NullCheckPattern;
     return isEqualNodes(node.pattern, other.pattern) &&
@@ -1143,10 +1108,12 @@ class AstComparator implements AstVisitor<bool> {
         isEqualTokens(node.rightParenthesis, other.rightParenthesis);
   }
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   bool visitOnClause(OnClause node) {
-    return visitMixinOnClause(node);
+    OnClause other = _other as OnClause;
+    return isEqualTokens(node.onKeyword, other.onKeyword) &&
+        _isEqualNodeLists(
+            node.superclassConstraints, other.superclassConstraints);
   }
 
   @override
@@ -1173,7 +1140,6 @@ class AstComparator implements AstVisitor<bool> {
         _isEqualNodeLists(node.metadata, other.metadata) &&
         isEqualTokens(node.partKeyword, other.partKeyword) &&
         isEqualNodes(node.uri, other.uri) &&
-        _isEqualNodeLists(node.configurations, other.configurations) &&
         isEqualTokens(node.semicolon, other.semicolon);
   }
 
@@ -1332,14 +1298,14 @@ class AstComparator implements AstVisitor<bool> {
 
   @override
   bool visitRepresentationConstructorName(RepresentationConstructorName node) {
-    var other = _other as RepresentationConstructorName;
+    final other = _other as RepresentationConstructorName;
     return isEqualTokens(node.period, other.period) &&
         isEqualTokens(node.name, other.name);
   }
 
   @override
   bool visitRepresentationDeclaration(RepresentationDeclaration node) {
-    var other = _other as RepresentationDeclaration;
+    final other = _other as RepresentationDeclaration;
     return isEqualNodes(node.constructorName, other.constructorName) &&
         isEqualTokens(node.leftParenthesis, other.leftParenthesis) &&
         _isEqualNodeLists(node.fieldMetadata, other.fieldMetadata) &&
@@ -1798,18 +1764,6 @@ class NodeLocator extends UnifyingAstVisitor<void> {
   }
 
   @override
-  void visitClassDeclaration(ClassDeclaration node) {
-    // Names do not have AstNodes but offsets at the end should be treated as
-    // part of the declaration (not parameter list).
-    if (_startOffset == _endOffset && _startOffset == node.name.end) {
-      _foundNode = node;
-      return;
-    }
-
-    super.visitClassDeclaration(node);
-  }
-
-  @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     // Names do not have AstNodes but offsets at the end should be treated as
     // part of the declaration (not parameter list).
@@ -1937,18 +1891,6 @@ class NodeLocator2 extends UnifyingAstVisitor<void> {
       return null;
     }
     return _foundNode;
-  }
-
-  @override
-  void visitClassDeclaration(ClassDeclaration node) {
-    // Names do not have AstNodes but offsets at the end should be treated as
-    // part of the declaration (not parameter list).
-    if (_startOffset == _endOffset && _startOffset == node.name.end) {
-      _foundNode = node;
-      return;
-    }
-
-    super.visitClassDeclaration(node);
   }
 
   @override
@@ -2424,9 +2366,9 @@ class NodeReplacer extends ThrowingAstVisitor<bool> {
       node.defaultValue = _newNode as ExpressionImpl;
       var parameterElement = node.declaredElement;
       if (parameterElement is DefaultParameterElementImpl) {
-        parameterElement.constantInitializer = _newNode;
+        parameterElement.constantInitializer = _newNode as ExpressionImpl;
       } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
-        parameterElement.constantInitializer = _newNode;
+        parameterElement.constantInitializer = _newNode as ExpressionImpl;
       }
       return true;
     }
@@ -2532,6 +2474,9 @@ class NodeReplacer extends ThrowingAstVisitor<bool> {
       return true;
     } else if (identical(node.typeParameters, _oldNode)) {
       node.typeParameters = _newNode as TypeParameterListImpl;
+      return true;
+    } else if (identical(node.extendedType, _oldNode)) {
+      node.extendedType = _newNode as TypeAnnotationImpl;
       return true;
     } else if (_replaceInList(node.members)) {
       return true;
@@ -3000,14 +2945,6 @@ class NodeReplacer extends ThrowingAstVisitor<bool> {
   }
 
   @override
-  bool visitMixinOnClause(covariant MixinOnClauseImpl node) {
-    if (_replaceInList(node.superclassConstraints)) {
-      return true;
-    }
-    return visitNode(node);
-  }
-
-  @override
   bool visitNamedExpression(covariant NamedExpressionImpl node) {
     if (identical(node.name, _oldNode)) {
       node.name = _newNode as LabelImpl;
@@ -3050,21 +2987,14 @@ class NodeReplacer extends ThrowingAstVisitor<bool> {
   }
 
   @override
-  bool visitNullAwareElement(NullAwareElement node) {
-    if (identical(node.value, _oldNode)) {
-      (node as NullAwareElementImpl).value = _newNode as ExpressionImpl;
+  bool visitNullLiteral(NullLiteral node) => visitNode(node);
+
+  @override
+  bool visitOnClause(covariant OnClauseImpl node) {
+    if (_replaceInList(node.superclassConstraints)) {
       return true;
     }
     return visitNode(node);
-  }
-
-  @override
-  bool visitNullLiteral(NullLiteral node) => visitNode(node);
-
-  @Deprecated('Use visitMixinOnClause() instead')
-  @override
-  bool visitOnClause(covariant MixinOnClauseImpl node) {
-    return visitMixinOnClause(node);
   }
 
   @override

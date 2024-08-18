@@ -26,19 +26,15 @@ class TestCode {
   static final _positionShorthand = '^';
   static final _rangeStartShorthand = '[!';
   static final _rangeEndShorthand = '!]';
-  static final _positionPattern = RegExp(r'/\*(\d+)\*/');
-  static final _rangeStartPattern = RegExp(r'/\*\[(\d+)\*/');
-  static final _rangeEndPattern = RegExp(r'/\*(\d+)\]\*/');
+  static final _positionPattern = RegExp(r'\/\*(\d+)\*\/');
+  static final _rangeStartPattern = RegExp(r'\/\*\[(\d+)\*\/');
+  static final _rangeEndPattern = RegExp(r'\/\*(\d+)\]\*\/');
 
   /// An empty code block with a single position at offset 0.
   static final empty = TestCode.parse('^');
 
-  /// The code with markers removed.
   final String code;
-
-  /// The code with markers like `^`.
-  /// These markers are used to fill [positions] and [ranges].
-  final String markedCode;
+  final String rawCode;
 
   /// A map of positions marked in code, indexed by their number.
   final List<TestCodePosition> positions;
@@ -47,7 +43,7 @@ class TestCode {
   final List<TestCodeRange> ranges;
 
   TestCode._({
-    required this.markedCode,
+    required this.rawCode,
     required this.code,
     required this.positions,
     required this.ranges,
@@ -57,15 +53,15 @@ class TestCode {
   TestCodeRange get range => ranges.single;
 
   static TestCode parse(
-    String markedCode, {
+    String rawCode, {
     bool positionShorthand = true,
     bool rangeShorthand = true,
   }) {
-    var scanner = _StringScanner(markedCode);
-    var codeBuffer = StringBuffer();
-    var positionOffsets = <int, int>{};
-    var rangeStartOffsets = <int, int>{};
-    var rangeEndOffsets = <int, int>{};
+    final scanner = _StringScanner(rawCode);
+    final codeBuffer = StringBuffer();
+    final positionOffsets = <int, int>{};
+    final rangeStartOffsets = <int, int>{};
+    final rangeEndOffsets = <int, int>{};
     late int start;
 
     int scannedNumber() => int.parse(scanner.lastMatch!.group(1)!);
@@ -123,24 +119,24 @@ class TestCode {
       }
     }
 
-    var unendedRanges =
+    final unendedRanges =
         rangeStartOffsets.keys.whereNot(rangeEndOffsets.keys.contains).toList();
     if (unendedRanges.isNotEmpty) {
       throw ArgumentError(
           'Code contains range starts numbered $unendedRanges without ends');
     }
 
-    var code = codeBuffer.toString();
-    var lineInfo = LineInfo.fromContent(code);
+    final code = codeBuffer.toString();
+    final lineInfo = LineInfo.fromContent(code);
 
-    var positions = positionOffsets.map(
+    final positions = positionOffsets.map(
       (number, offset) => MapEntry(
         number,
         TestCodePosition(lineInfo, offset),
       ),
     );
 
-    var ranges = rangeStartOffsets.map(
+    final ranges = rangeStartOffsets.map(
       (number, offset) => MapEntry(
         number,
         TestCodeRange(
@@ -153,7 +149,7 @@ class TestCode {
 
     return TestCode._(
       code: code,
-      markedCode: markedCode,
+      rawCode: rawCode,
       positions: positions.values.toList(),
       ranges: ranges.values.toList(),
     );
@@ -224,7 +220,7 @@ class _StringScanner {
       throw StateError('Unable to scan past the end of string');
     }
 
-    var match = pattern.matchAsPrefix(_source, _position);
+    final match = pattern.matchAsPrefix(_source, _position);
     if (match != null) {
       _position = match.end;
       _lastMatch = match;

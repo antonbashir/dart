@@ -22,7 +22,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleListLiteral;
+    final node = findNode.singleListLiteral;
     assertResolvedNodeText(node, r'''
 ListLiteral
   typeArguments: TypeArgumentList
@@ -30,7 +30,7 @@ ListLiteral
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: [
@@ -48,7 +48,7 @@ void f() {
       error(CompileTimeErrorCode.EXPECTED_ONE_LIST_TYPE_ARGUMENTS, 13, 13),
     ]);
 
-    var node = findNode.singleListLiteral;
+    final node = findNode.singleListLiteral;
     assertResolvedNodeText(node, r'''
 ListLiteral
   typeArguments: TypeArgumentList
@@ -56,11 +56,11 @@ ListLiteral
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       NamedType
         name: double
-        element: dart:core::<fragment>::@class::double
+        element: dart:core::@class::double
         type: double
     rightBracket: >
   leftBracket: [
@@ -76,7 +76,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleListLiteral;
+    final node = findNode.singleListLiteral;
     assertResolvedNodeText(node, r'''
 ListLiteral
   leftBracket: [
@@ -96,7 +96,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleListLiteral;
+    final node = findNode.singleListLiteral;
     assertResolvedNodeText(node, r'''
 ListLiteral
   leftBracket: [
@@ -119,7 +119,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleListLiteral;
+    final node = findNode.singleListLiteral;
     assertResolvedNodeText(node, r'''
 ListLiteral
   leftBracket: [

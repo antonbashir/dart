@@ -4,7 +4,6 @@
 
 import 'package:collection/collection.dart';
 import 'package:kernel/ast.dart' as ir;
-import 'package:kernel/type_environment.dart' as ir;
 
 import '../../compiler_api.dart' as api;
 import '../closure.dart';
@@ -114,6 +113,8 @@ class InferrerEngine {
       closedWorld.abstractValueDomain;
   CommonElements get commonElements => closedWorld.commonElements;
 
+  // TODO(johnniwinther): This should be part of [ClosedWorld] or
+  // [ClosureWorldRefiner].
   NoSuchMethodData get noSuchMethodData => closedWorld.noSuchMethodData;
 
   final MemberHierarchyBuilder memberHierarchyBuilder;
@@ -607,7 +608,6 @@ class InferrerEngine {
       case MemberKind.signature:
       case MemberKind.generatorBody:
       case MemberKind.recordGetter:
-      case MemberKind.parameterStub:
         break;
     }
     failedAt(member, 'Unexpected member definition: $definition.');
@@ -692,8 +692,6 @@ class InferrerEngine {
   /// Visits [body] to compute the [TypeInformation] node for [member].
   TypeInformation _computeMemberTypeInformation(
       MemberEntity member, ir.Node? body) {
-    final node = closedWorld.elementMap.getMemberContextNode(member);
-
     KernelTypeGraphBuilder visitor = KernelTypeGraphBuilder(
         _options,
         closedWorld,
@@ -701,10 +699,7 @@ class InferrerEngine {
         member,
         body,
         globalLocalsMap.getLocalsMap(member),
-        node != null
-            ? ir.StaticTypeContext(node, closedWorld.elementMap.typeEnvironment,
-                cache: ir.StaticTypeCacheImpl())
-            : null,
+        closedWorld.elementMap.getStaticTypeProvider(member),
         memberHierarchyBuilder);
     return visitor.run();
   }
@@ -1268,10 +1263,7 @@ class InferrerEngine {
       SideEffectsBuilder sideEffectsBuilder,
       {required bool inLoop,
       required bool isConditional}) {
-    if (selector.isMaybeClosureCall && node is! ir.InstanceGetterInvocation) {
-      // If node is an InstanceGetterInvocation then the target is an invocation
-      // of a closure retreived from an instance member (field or getter) rather
-      // than a method invocation.
+    if (selector.isClosureCall) {
       return registerCalledClosure(
           node, selector, receiverType, caller, arguments, sideEffectsBuilder,
           inLoop: inLoop);
@@ -1308,7 +1300,7 @@ class InferrerEngine {
   TypeInformation registerAwait(
       ir.AwaitExpression node, TypeInformation argument) {
     AwaitTypeInformation info =
-        AwaitTypeInformation(abstractValueDomain, types.currentMember!, node);
+        AwaitTypeInformation(abstractValueDomain, types.currentMember, node);
     info.addInput(argument);
     types.allocatedTypes.add(info);
     return info;

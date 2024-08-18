@@ -312,7 +312,7 @@ void FlowGraphTypePropagator::CheckNonNullSelector(
   Function& target = Function::Handle();
   if (Error::Handle(null_class.EnsureIsFinalized(thread)).IsNull()) {
     target = Resolver::ResolveDynamicAnyArgs(thread->zone(), null_class,
-                                             function_name, /*allow_add=*/true);
+                                             function_name);
   }
   if (target.IsNull()) {
     // If the selector is not defined on Null, we can propagate non-nullness.
@@ -425,7 +425,8 @@ void FlowGraphTypePropagator::VisitBranch(BranchInstr* instr) {
       left = instance_of->value()->definition();
     }
     if (!type->IsTopTypeForInstanceOf()) {
-      const bool is_nullable = (type->IsNullable() || type->IsTypeParameter())
+      const bool is_nullable = (type->IsNullable() || type->IsTypeParameter() ||
+                                (type->IsNeverType() && type->IsLegacy()))
                                    ? CompileType::kCanBeNull
                                    : CompileType::kCannotBeNull;
       EnsureMoreAccurateRedefinition(
@@ -699,15 +700,6 @@ CompileType CompileType::FromUnboxedRepresentation(Representation rep) {
     return CompileType::Int();
   }
   return CompileType::FromCid(Boxing::BoxCid(rep));
-}
-
-CompileType CompileType::FromRepresentation(Representation rep) {
-  if (rep == kUntagged) return CompileType::Object();
-  if (RepresentationUtils::IsUnboxed(rep)) {
-    return FromUnboxedRepresentation(rep);
-  }
-  ASSERT(rep != kNoRepresentation);
-  return CompileType::Dynamic();
 }
 
 CompileType CompileType::Dynamic() {
@@ -1046,9 +1038,11 @@ void CompileType::PrintTo(BaseTextBuffer* f) const {
   } else if ((cid_ != kIllegalCid) && (cid_ != kDynamicCid)) {
     const Class& cls =
         Class::Handle(IsolateGroup::Current()->class_table()->At(cid_));
-    type_name = cls.ScrubbedNameCString();
+    type_name = String::Handle(cls.ScrubbedName()).ToCString();
   } else if (type_ != nullptr) {
-    type_name = type_->IsDynamicType() ? "*" : type_->ScrubbedNameCString();
+    type_name = type_->IsDynamicType()
+                    ? "*"
+                    : String::Handle(type_->ScrubbedName()).ToCString();
   } else if (!is_nullable()) {
     type_name = "!null";
   }
@@ -1241,6 +1235,8 @@ CompileType ParameterInstr::ComputeType() const {
   }
 
   const intptr_t param_index = this->param_index();
+  ASSERT((param_index >= 0) || block_->IsCatchBlockEntry());
+
   if (param_index >= 0) {
     // Parameter is the receiver.
     if ((param_index == 0) &&
@@ -1345,6 +1341,10 @@ CompileType ParameterInstr::ComputeType() const {
   return CompileType::Dynamic();
 }
 
+CompileType MoveArgumentInstr::ComputeType() const {
+  return CompileType::Dynamic();
+}
+
 CompileType ConstantInstr::ComputeType() const {
   if (value().IsNull()) {
     return CompileType::Null();
@@ -1397,6 +1397,10 @@ CompileType BooleanNegateInstr::ComputeType() const {
   return CompileType::Bool();
 }
 
+CompileType BoolToIntInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
 CompileType IntToBoolInstr::ComputeType() const {
   return CompileType::Bool();
 }
@@ -1409,7 +1413,7 @@ CompileType StrictCompareInstr::ComputeType() const {
   return CompileType::Bool();
 }
 
-CompileType TestIntInstr::ComputeType() const {
+CompileType TestSmiInstr::ComputeType() const {
   return CompileType::Bool();
 }
 
@@ -1429,6 +1433,27 @@ CompileType EqualityCompareInstr::ComputeType() const {
 CompileType RelationalOpInstr::ComputeType() const {
   // Used for numeric comparisons only.
   return CompileType::Bool();
+}
+
+CompileType SpecialParameterInstr::ComputeType() const {
+  switch (kind()) {
+    case kContext:
+      return CompileType::FromCid(kContextCid);
+    case kTypeArgs:
+      return CompileType::FromCid(kTypeArgumentsCid);
+    case kArgDescriptor:
+      return CompileType::FromCid(kImmutableArrayCid);
+    case kException:
+      return CompileType(CompileType::kCannotBeNull,
+                         CompileType::kCannotBeSentinel, kDynamicCid,
+                         &Object::dynamic_type());
+    case kStackTrace:
+      // We cannot use [kStackTraceCid] here because any kind of object can be
+      // used as a stack trace via `new Future.error(..., <obj>)` :-/
+      return CompileType::Dynamic();
+  }
+  UNREACHABLE();
+  return CompileType::Dynamic();
 }
 
 CompileType CloneContextInstr::ComputeType() const {
@@ -1526,17 +1551,21 @@ CompileType DispatchTableCallInstr::ComputeType() const {
 }
 
 CompileType PolymorphicInstanceCallInstr::ComputeType() const {
+  bool is_nullable = CompileType::kCanBeNull;
   if (IsSureToCallSingleRecognizedTarget()) {
     const Function& target = *targets_.TargetAt(0)->target;
     if (target.has_pragma()) {
       const intptr_t cid = MethodRecognizer::ResultCidFromPragma(target);
       if (cid != kDynamicCid) {
         return CompileType::FromCid(cid);
+      } else if (MethodRecognizer::HasNonNullableResultTypeFromPragma(target)) {
+        is_nullable = CompileType::kCannotBeNull;
       }
     }
   }
 
-  return InstanceCallBaseInstr::ComputeType();
+  CompileType type = InstanceCallBaseInstr::ComputeType();
+  return is_nullable ? type : type.CopyNonNullable();
 }
 
 static CompileType ComputeListFactoryType(CompileType* inferred_type,
@@ -1590,6 +1619,9 @@ CompileType StaticCallInstr::ComputeType() const {
     const intptr_t cid = MethodRecognizer::ResultCidFromPragma(function_);
     if (cid != kDynamicCid) {
       return CompileType::FromCid(cid);
+    }
+    if (MethodRecognizer::HasNonNullableResultTypeFromPragma(function_)) {
+      is_nullable = CompileType::kCannotBeNull;
     }
   }
 
@@ -1694,6 +1726,10 @@ CompileType AllocateSmallRecordInstr::ComputeType() const {
   return CompileType::FromCid(kRecordCid);
 }
 
+CompileType LoadUntaggedInstr::ComputeType() const {
+  return CompileType::Object();
+}
+
 CompileType LoadClassIdInstr::ComputeType() const {
   return CompileType::FromCid(kSmiCid);
 }
@@ -1730,13 +1766,36 @@ CompileType LoadFieldInstr::ComputeType() const {
 CompileType LoadCodeUnitsInstr::ComputeType() const {
   switch (class_id()) {
     case kOneByteStringCid:
+    case kExternalOneByteStringCid:
     case kTwoByteStringCid:
+    case kExternalTwoByteStringCid:
       return can_pack_into_smi() ? CompileType::FromCid(kSmiCid)
                                  : CompileType::Int();
     default:
       UNIMPLEMENTED();
       return CompileType::Dynamic();
   }
+}
+
+CompileType BinaryUint32OpInstr::ComputeType() const {
+  return CompileType::Int32();
+}
+
+CompileType ShiftUint32OpInstr::ComputeType() const {
+  return CompileType::Int32();
+}
+
+CompileType SpeculativeShiftUint32OpInstr::ComputeType() const {
+  return CompileType::Int32();
+}
+
+CompileType UnaryUint32OpInstr::ComputeType() const {
+  return CompileType::Int32();
+}
+
+CompileType BinaryInt32OpInstr::ComputeType() const {
+  // TODO(vegorov): range analysis information shall be used here.
+  return CompileType::Int();
 }
 
 CompileType BinarySmiOpInstr::ComputeType() const {
@@ -1747,6 +1806,10 @@ CompileType UnarySmiOpInstr::ComputeType() const {
   return CompileType::FromCid(kSmiCid);
 }
 
+CompileType UnaryDoubleOpInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
 CompileType DoubleToSmiInstr::ComputeType() const {
   return CompileType::FromCid(kSmiCid);
 }
@@ -1755,17 +1818,42 @@ CompileType ConstraintInstr::ComputeType() const {
   return CompileType::FromCid(kSmiCid);
 }
 
+// Note that Int64Op may produce Smi-s as result of an
+// appended BoxInt64Instr node.
+CompileType BinaryInt64OpInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
+CompileType ShiftInt64OpInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
+CompileType SpeculativeShiftInt64OpInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
+CompileType UnaryInt64OpInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
 CompileType BoxIntegerInstr::ComputeType() const {
-  return ValueFitsSmi() ? CompileType::FromCid(kSmiCid)
-                        : BoxInstr::ComputeType();
+  return ValueFitsSmi() ? CompileType::FromCid(kSmiCid) : CompileType::Int();
 }
 
 bool BoxIntegerInstr::RecomputeType() {
   return UpdateType(ComputeType());
 }
 
+CompileType UnboxIntegerInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
 CompileType DoubleToIntegerInstr::ComputeType() const {
   return CompileType::Int();
+}
+
+CompileType BinaryDoubleOpInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
 }
 
 CompileType DoubleTestOpInstr::ComputeType() const {
@@ -1792,8 +1880,49 @@ CompileType CaseInsensitiveCompareInstr::ComputeType() const {
   return CompileType::FromCid(kBoolCid);
 }
 
+CompileType UnboxInstr::ComputeType() const {
+  switch (representation()) {
+    case kUnboxedFloat:
+    case kUnboxedDouble:
+      return CompileType::FromCid(kDoubleCid);
+
+    case kUnboxedFloat32x4:
+      return CompileType::FromCid(kFloat32x4Cid);
+
+    case kUnboxedFloat64x2:
+      return CompileType::FromCid(kFloat64x2Cid);
+
+    case kUnboxedInt32x4:
+      return CompileType::FromCid(kInt32x4Cid);
+
+    case kUnboxedInt64:
+      return CompileType::Int();
+
+    default:
+      UNREACHABLE();
+      return CompileType::Dynamic();
+  }
+}
+
 CompileType BoxInstr::ComputeType() const {
-  return CompileType::FromUnboxedRepresentation(from_representation());
+  switch (from_representation()) {
+    case kUnboxedFloat:
+    case kUnboxedDouble:
+      return CompileType::FromCid(kDoubleCid);
+
+    case kUnboxedFloat32x4:
+      return CompileType::FromCid(kFloat32x4Cid);
+
+    case kUnboxedFloat64x2:
+      return CompileType::FromCid(kFloat64x2Cid);
+
+    case kUnboxedInt32x4:
+      return CompileType::FromCid(kInt32x4Cid);
+
+    default:
+      UNREACHABLE();
+      return CompileType::Dynamic();
+  }
 }
 
 CompileType BoxLanesInstr::ComputeType() const {
@@ -1810,8 +1939,45 @@ CompileType BoxLanesInstr::ComputeType() const {
   }
 }
 
+CompileType Int32ToDoubleInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType SmiToDoubleInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType Int64ToDoubleInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType FloatToDoubleInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType FloatCompareInstr::ComputeType() const {
+  return CompileType::Int();
+}
+
+CompileType DoubleToFloatInstr::ComputeType() const {
+  // Type is double when converted back.
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType InvokeMathCFunctionInstr::ComputeType() const {
+  return CompileType::FromCid(kDoubleCid);
+}
+
+CompileType TruncDivModInstr::ComputeType() const {
+  return CompileType::Dynamic();
+}
+
 CompileType ExtractNthOutputInstr::ComputeType() const {
   return CompileType::FromCid(definition_cid_);
+}
+
+CompileType MakePairInstr::ComputeType() const {
+  return CompileType::Dynamic();
 }
 
 CompileType UnboxLaneInstr::ComputeType() const {
@@ -1889,30 +2055,54 @@ static CompileType ComputeArrayElementType(Value* array) {
 }
 
 CompileType LoadIndexedInstr::ComputeType() const {
-  // Use the precise array element representation instead of the returned
-  // representation, since for small elements, that results in a Smi type
-  // instead of a Int type on 32-bit architectures.
-  auto const rep =
-      RepresentationUtils::RepresentationOfArrayElement(class_id());
-  if (RepresentationUtils::IsUnboxed(rep)) {
-    return CompileType::FromUnboxedRepresentation(rep);
-  }
-  switch (class_id()) {
+  switch (class_id_) {
     case kArrayCid:
-    case kImmutableArrayCid: {
-      CompileType elem_type = ComputeArrayElementType(array());
+    case kImmutableArrayCid:
       if (result_type_ != nullptr &&
           !CompileType::Dynamic().IsEqualTo(result_type_)) {
         // The original call knew something.
-        return *CompileType::ComputeRefinedType(&elem_type, result_type_);
+        return *result_type_;
       }
-      return elem_type;
-    }
+      return ComputeArrayElementType(array());
 
     case kTypeArgumentsCid:
       return CompileType::FromAbstractType(Object::dynamic_type(),
                                            CompileType::kCannotBeNull,
                                            CompileType::kCannotBeSentinel);
+
+    case kTypedDataFloat32ArrayCid:
+    case kTypedDataFloat64ArrayCid:
+      return CompileType::FromCid(kDoubleCid);
+
+    case kTypedDataFloat32x4ArrayCid:
+      return CompileType::FromCid(kFloat32x4Cid);
+
+    case kTypedDataInt32x4ArrayCid:
+      return CompileType::FromCid(kInt32x4Cid);
+
+    case kTypedDataFloat64x2ArrayCid:
+      return CompileType::FromCid(kFloat64x2Cid);
+
+    case kTypedDataInt8ArrayCid:
+    case kTypedDataUint8ArrayCid:
+    case kTypedDataUint8ClampedArrayCid:
+    case kExternalTypedDataUint8ArrayCid:
+    case kExternalTypedDataUint8ClampedArrayCid:
+    case kTypedDataInt16ArrayCid:
+    case kTypedDataUint16ArrayCid:
+    case kOneByteStringCid:
+    case kTwoByteStringCid:
+    case kExternalOneByteStringCid:
+    case kExternalTwoByteStringCid:
+      return CompileType::FromCid(kSmiCid);
+
+    case kTypedDataInt32ArrayCid:
+    case kTypedDataUint32ArrayCid:
+      return CompileType::Int32();
+
+    case kTypedDataInt64ArrayCid:
+    case kTypedDataUint64ArrayCid:
+      return CompileType::Int();
 
     case kRecordCid:
       return CompileType::Dynamic();

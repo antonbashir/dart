@@ -68,18 +68,14 @@ class SlotCache : public ZoneAllocated {
 
 Slot* SlotCache::CreateNativeSlot(Slot::Kind kind) {
   switch (kind) {
-#define FIELD_FLAGS_FINAL                                                      \
-  (Slot::IsImmutableBit::encode(true) | Slot::IsWeakBit::encode(false))
-#define FIELD_FLAGS_VAR                                                        \
-  (Slot::IsImmutableBit::encode(false) | Slot::IsWeakBit::encode(false))
-#define FIELD_FLAGS_WEAK                                                       \
-  (Slot::IsImmutableBit::encode(false) | Slot::IsWeakBit::encode(true))
-#define DEFINE_NULLABLE_TAGGED_NATIVE_DART_FIELD(ClassName, UnderlyingType,    \
-                                                 FieldName, cid, mutability)   \
+#define FIELD_FINAL true
+#define FIELD_VAR false
+#define DEFINE_NULLABLE_BOXED_NATIVE_FIELD(ClassName, UnderlyingType,          \
+                                           FieldName, cid, mutability)         \
   case Slot::Kind::k##ClassName##_##FieldName:                                 \
     return new (zone_) Slot(                                                   \
         Slot::Kind::k##ClassName##_##FieldName,                                \
-        (FIELD_FLAGS_##mutability |                                            \
+        (Slot::IsImmutableBit::encode(FIELD_##mutability) |                    \
          Slot::IsCompressedBit::encode(                                        \
              ClassName::ContainsCompressedPointers())),                        \
         compiler::target::ClassName::FieldName##_offset(),                     \
@@ -88,17 +84,16 @@ Slot* SlotCache::CreateNativeSlot(Slot::Kind kind) {
                     k##cid##Cid, nullptr),                                     \
         kTagged);
 
-    NULLABLE_TAGGED_NATIVE_DART_SLOTS_LIST(
-        DEFINE_NULLABLE_TAGGED_NATIVE_DART_FIELD)
+    NULLABLE_BOXED_NATIVE_SLOTS_LIST(DEFINE_NULLABLE_BOXED_NATIVE_FIELD)
 
-#undef DEFINE_NULLABLE_TAGGED_NATIVE_DART_FIELD
+#undef DEFINE_NULLABLE_BOXED_NATIVE_FIELD
 
-#define DEFINE_NONNULLABLE_TAGGED_NATIVE_DART_FIELD(                           \
-    ClassName, UnderlyingType, FieldName, cid, mutability)                     \
+#define DEFINE_NONNULLABLE_BOXED_NATIVE_FIELD(ClassName, UnderlyingType,       \
+                                              FieldName, cid, mutability)      \
   case Slot::Kind::k##ClassName##_##FieldName:                                 \
     return new (zone_) Slot(                                                   \
         Slot::Kind::k##ClassName##_##FieldName,                                \
-        (FIELD_FLAGS_##mutability |                                            \
+        (Slot::IsImmutableBit::encode(FIELD_##mutability) |                    \
          Slot::IsCompressedBit::encode(                                        \
              ClassName::ContainsCompressedPointers())),                        \
         compiler::target::ClassName::FieldName##_offset(),                     \
@@ -107,95 +102,42 @@ Slot* SlotCache::CreateNativeSlot(Slot::Kind kind) {
                     CompileType::kCannotBeSentinel, k##cid##Cid, nullptr),     \
         kTagged);
 
-    NONNULLABLE_INT_TAGGED_NATIVE_DART_SLOTS_LIST(
-        DEFINE_NONNULLABLE_TAGGED_NATIVE_DART_FIELD)
-    NONNULLABLE_NONINT_TAGGED_NATIVE_DART_SLOTS_LIST(
-        DEFINE_NONNULLABLE_TAGGED_NATIVE_DART_FIELD)
+    NONNULLABLE_BOXED_NATIVE_SLOTS_LIST(DEFINE_NONNULLABLE_BOXED_NATIVE_FIELD)
 
-#undef DEFINE_NONNULLABLE_TAGGED_NATIVE_DART_FIELD
+#undef DEFINE_NONNULLABLE_BOXED_NATIVE_FIELD
 
-#define DEFINE_UNBOXED_NATIVE_DART_FIELD(ClassName, UnderlyingType, FieldName, \
-                                         representation, mutability)           \
+#define DEFINE_UNBOXED_NATIVE_NONADDRESS_FIELD(                                \
+    ClassName, UnderlyingType, FieldName, representation, mutability)          \
   case Slot::Kind::k##ClassName##_##FieldName:                                 \
     return new (zone_)                                                         \
         Slot(Slot::Kind::k##ClassName##_##FieldName,                           \
-             FIELD_FLAGS_##mutability | Slot::IsNonTaggedBit::encode(true),    \
+             Slot::IsImmutableBit::encode(FIELD_##mutability) |                \
+                 Slot::IsUnboxedBit::encode(true),                             \
              compiler::target::ClassName::FieldName##_offset(),                \
              #ClassName "." #FieldName,                                        \
              CompileType::FromUnboxedRepresentation(kUnboxed##representation), \
              kUnboxed##representation);
 
-    UNBOXED_NATIVE_DART_SLOTS_LIST(DEFINE_UNBOXED_NATIVE_DART_FIELD)
+    UNBOXED_NATIVE_NONADDRESS_SLOTS_LIST(DEFINE_UNBOXED_NATIVE_NONADDRESS_FIELD)
 
-#undef DEFINE_UNBOXED_NATIVE_DART_FIELD
+#undef DEFINE_UNBOXED_NATIVE_NONADDRESS_FIELD
 
-#define DEFINE_UNTAGGED_NATIVE_DART_FIELD(ClassName, UnderlyingType,           \
-                                          FieldName, GcMayMove, mutability)    \
+#define DEFINE_UNBOXED_NATIVE_ADDRESS_FIELD(ClassName, UnderlyingType,         \
+                                            FieldName, GcMayMove, mutability)  \
   case Slot::Kind::k##ClassName##_##FieldName:                                 \
     return new (zone_)                                                         \
         Slot(Slot::Kind::k##ClassName##_##FieldName,                           \
-             FIELD_FLAGS_##mutability |                                        \
+             Slot::IsImmutableBit::encode(FIELD_##mutability) |                \
                  Slot::MayContainInnerPointerBit::encode(GcMayMove) |          \
-                 Slot::IsNonTaggedBit::encode(true),                           \
+                 Slot::IsUnboxedBit::encode(true),                             \
              compiler::target::ClassName::FieldName##_offset(),                \
              #ClassName "." #FieldName, CompileType::Object(), kUntagged);
 
-    UNTAGGED_NATIVE_DART_SLOTS_LIST(DEFINE_UNTAGGED_NATIVE_DART_FIELD)
+    UNBOXED_NATIVE_ADDRESS_SLOTS_LIST(DEFINE_UNBOXED_NATIVE_ADDRESS_FIELD)
 
-#undef DEFINE_UNTAGGED_NATIVE_DART_FIELD
-
-#define DEFINE_NULLABLE_TAGGED_NATIVE_NONDART_FIELD(ClassName, __, FieldName,  \
-                                                    cid, mutability)           \
-  case Slot::Kind::k##ClassName##_##FieldName:                                 \
-    return new (zone_) Slot(                                                   \
-        Slot::Kind::k##ClassName##_##FieldName,                                \
-        FIELD_FLAGS_##mutability | Slot::HasUntaggedInstanceBit::encode(true), \
-        compiler::target::ClassName::FieldName##_offset(),                     \
-        #ClassName "." #FieldName,                                             \
-        CompileType(CompileType::kCanBeNull, CompileType::kCannotBeSentinel,   \
-                    k##cid##Cid, nullptr),                                     \
-        kTagged);
-
-    NULLABLE_TAGGED_NATIVE_NONDART_SLOTS_LIST(
-        DEFINE_NULLABLE_TAGGED_NATIVE_NONDART_FIELD)
-
-#undef DEFINE_NULLABLE_TAGGED_NONDART_FIELD
-
-#define DEFINE_UNBOXED_NATIVE_NONDART_FIELD(ClassName, __, FieldName,          \
-                                            representation, mutability)        \
-  case Slot::Kind::k##ClassName##_##FieldName:                                 \
-    return new (zone_)                                                         \
-        Slot(Slot::Kind::k##ClassName##_##FieldName,                           \
-             FIELD_FLAGS_##mutability | Slot::IsNonTaggedBit::encode(true) |   \
-                 Slot::HasUntaggedInstanceBit::encode(true),                   \
-             compiler::target::ClassName::FieldName##_offset(),                \
-             #ClassName "." #FieldName,                                        \
-             CompileType::FromUnboxedRepresentation(kUnboxed##representation), \
-             kUnboxed##representation);
-
-    UNBOXED_NATIVE_NONDART_SLOTS_LIST(DEFINE_UNBOXED_NATIVE_NONDART_FIELD)
-
-#undef DEFINE_UNBOXED_NATIVE_NONDART_FIELD
-
-#define DEFINE_UNTAGGED_NATIVE_NONDART_FIELD(ClassName, __, FieldName,         \
-                                             gc_may_move, mutability)          \
-  case Slot::Kind::k##ClassName##_##FieldName:                                 \
-    return new (zone_)                                                         \
-        Slot(Slot::Kind::k##ClassName##_##FieldName,                           \
-             FIELD_FLAGS_##mutability |                                        \
-                 Slot::MayContainInnerPointerBit::encode(gc_may_move) |        \
-                 Slot::IsNonTaggedBit::encode(true) |                          \
-                 Slot::HasUntaggedInstanceBit::encode(true),                   \
-             compiler::target::ClassName::FieldName##_offset(),                \
-             #ClassName "." #FieldName, CompileType::Object(), kUntagged);
-
-    UNTAGGED_NATIVE_NONDART_SLOTS_LIST(DEFINE_UNTAGGED_NATIVE_NONDART_FIELD)
-
-#undef DEFINE_UNTAGGED_NATIVE_NONDART_FIELD
-
-#undef FIELD_FLAGS_FINAL
-#undef FIELD_FLAGS_VAR
-#undef FIELD_FLAGS_WEAK
+#undef DEFINE_UNBOXED_NATIVE_NONADDRESS_FIELD
+#undef FIELD_VAR
+#undef FIELD_FINAL
     default:
       UNREACHABLE();
   }
@@ -205,19 +147,6 @@ const Slot& Slot::GetNativeSlot(Kind kind) {
   return SlotCache::Instance(Thread::Current()).GetNativeSlot(kind);
 }
 
-bool Slot::IsLengthSlot() const {
-  switch (kind()) {
-    case Slot::Kind::kArray_length:
-    case Slot::Kind::kTypedDataBase_length:
-    case Slot::Kind::kString_length:
-    case Slot::Kind::kTypeArguments_length:
-    case Slot::Kind::kGrowableObjectArray_length:
-      return true;
-    default:
-      return false;
-  }
-}
-
 bool Slot::IsImmutableLengthSlot() const {
   switch (kind()) {
     case Slot::Kind::kArray_length:
@@ -225,9 +154,81 @@ bool Slot::IsImmutableLengthSlot() const {
     case Slot::Kind::kString_length:
     case Slot::Kind::kTypeArguments_length:
       return true;
-    default:
+    case Slot::Kind::kGrowableObjectArray_length:
+      return false;
+
+      // Not length loads.
+#define UNBOXED_NATIVE_SLOT_CASE(Class, Untagged, Field, Rep, IsFinal)         \
+  case Slot::Kind::k##Class##_##Field:
+      UNBOXED_NATIVE_SLOTS_LIST(UNBOXED_NATIVE_SLOT_CASE)
+#undef UNBOXED_NATIVE_SLOT_CASE
+    case Slot::Kind::kReceivePort_send_port:
+    case Slot::Kind::kReceivePort_handler:
+    case Slot::Kind::kLinkedHashBase_index:
+    case Slot::Kind::kImmutableLinkedHashBase_index:
+    case Slot::Kind::kLinkedHashBase_data:
+    case Slot::Kind::kImmutableLinkedHashBase_data:
+    case Slot::Kind::kLinkedHashBase_hash_mask:
+    case Slot::Kind::kLinkedHashBase_used_data:
+    case Slot::Kind::kLinkedHashBase_deleted_keys:
+    case Slot::Kind::kArgumentsDescriptor_type_args_len:
+    case Slot::Kind::kArgumentsDescriptor_positional_count:
+    case Slot::Kind::kArgumentsDescriptor_count:
+    case Slot::Kind::kArgumentsDescriptor_size:
+    case Slot::Kind::kArrayElement:
+    case Slot::Kind::kInstance_native_fields_array:
+    case Slot::Kind::kTypeArguments:
+    case Slot::Kind::kTypeArguments_hash:
+    case Slot::Kind::kTypedDataView_offset_in_bytes:
+    case Slot::Kind::kTypedDataView_typed_data:
+    case Slot::Kind::kGrowableObjectArray_data:
+    case Slot::Kind::kArray_type_arguments:
+    case Slot::Kind::kContext_parent:
+    case Slot::Kind::kClosure_context:
+    case Slot::Kind::kClosure_delayed_type_arguments:
+    case Slot::Kind::kClosure_function:
+    case Slot::Kind::kClosure_function_type_arguments:
+    case Slot::Kind::kClosure_instantiator_type_arguments:
+    case Slot::Kind::kClosure_hash:
+    case Slot::Kind::kCapturedVariable:
+    case Slot::Kind::kDartField:
+    case Slot::Kind::kFinalizer_callback:
+    case Slot::Kind::kFinalizer_type_arguments:
+    case Slot::Kind::kFinalizerBase_all_entries:
+    case Slot::Kind::kFinalizerBase_detachments:
+    case Slot::Kind::kFinalizerBase_entries_collected:
+    case Slot::Kind::kFinalizerEntry_detach:
+    case Slot::Kind::kFinalizerEntry_finalizer:
+    case Slot::Kind::kFinalizerEntry_next:
+    case Slot::Kind::kFinalizerEntry_token:
+    case Slot::Kind::kFinalizerEntry_value:
+    case Slot::Kind::kNativeFinalizer_callback:
+    case Slot::Kind::kFunction_data:
+    case Slot::Kind::kFunction_signature:
+    case Slot::Kind::kFunctionType_named_parameter_names:
+    case Slot::Kind::kFunctionType_parameter_types:
+    case Slot::Kind::kFunctionType_type_parameters:
+    case Slot::Kind::kRecordField:
+    case Slot::Kind::kRecord_shape:
+    case Slot::Kind::kSuspendState_function_data:
+    case Slot::Kind::kSuspendState_then_callback:
+    case Slot::Kind::kSuspendState_error_callback:
+    case Slot::Kind::kTypeArgumentsIndex:
+    case Slot::Kind::kAbstractType_hash:
+    case Slot::Kind::kTypeParameters_names:
+    case Slot::Kind::kTypeParameters_flags:
+    case Slot::Kind::kTypeParameters_bounds:
+    case Slot::Kind::kTypeParameters_defaults:
+    case Slot::Kind::kUnhandledException_exception:
+    case Slot::Kind::kUnhandledException_stacktrace:
+    case Slot::Kind::kWeakProperty_key:
+    case Slot::Kind::kWeakProperty_value:
+    case Slot::Kind::kWeakReference_target:
+    case Slot::Kind::kWeakReference_type_arguments:
       return false;
   }
+  UNREACHABLE();
+  return false;
 }
 
 // Note: should only be called with cids of array-like classes.
@@ -243,6 +244,8 @@ const Slot& Slot::GetLengthFieldForArrayCid(intptr_t array_cid) {
 
     case kOneByteStringCid:
     case kTwoByteStringCid:
+    case kExternalOneByteStringCid:
+    case kExternalTwoByteStringCid:
       return GetNativeSlot(Kind::kString_length);
 
     case kArrayCid:
@@ -328,10 +331,7 @@ const Slot& Slot::GetCanonicalSlot(Thread* thread,
 
 FieldGuardState::FieldGuardState(const Field& field)
     : state_(GuardedCidBits::encode(field.guarded_cid()) |
-             IsNullableBit::encode(field.is_nullable())) {
-  ASSERT(compiler::target::UntaggedObject::kClassIdTagSize <=
-         GuardedCidBits::bitsize());
-}
+             IsNullableBit::encode(field.is_nullable())) {}
 
 const Slot& Slot::Get(const Field& field,
                       const ParsedFunction* parsed_function) {
@@ -345,6 +345,8 @@ const Slot& Slot::Get(const Field& field,
     const intptr_t cid = MethodRecognizer::ResultCidFromPragma(field);
     if (cid != kDynamicCid) {
       nullable_cid = cid;
+      is_nullable = false;
+    } else if (MethodRecognizer::HasNonNullableResultTypeFromPragma(field)) {
       is_nullable = false;
     }
   }
@@ -422,7 +424,7 @@ const Slot& Slot::Get(const Field& field,
           IsGuardedBit::encode(used_guarded_state) |
           IsCompressedBit::encode(
               compiler::target::Class::HasCompressedPointers(owner)) |
-          IsNonTaggedBit::encode(is_unboxed),
+          IsUnboxedBit::encode(is_unboxed),
       compiler::target::Field::OffsetOf(field), &field, type, rep,
       field_guard_state);
 

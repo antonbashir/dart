@@ -6,6 +6,8 @@
 // of the same name in the library that's a non-final field or a concrete
 // getter.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import '../static_type_helper.dart';
 
 part 'field_promotion_name_conflicts_part.dart';

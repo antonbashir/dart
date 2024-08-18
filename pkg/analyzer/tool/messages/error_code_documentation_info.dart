@@ -65,7 +65,10 @@ class ErrorCodeDocumentationBlock extends ErrorCodeDocumentationPart {
       this.uri});
 
   @override
-  String formatForDocumentation() => ['```$fileType', text, '```'].join('\n');
+  String formatForDocumentation() => fileType == 'dart' || fileType == 'yaml'
+      ? ['{% prettify $fileType tag=pre+code %}', text, '{% endprettify %}']
+          .join('\n')
+      : ['```$fileType', text, '```'].join('\n');
 }
 
 /// A portion of an error code's documentation.  This could be free form
@@ -117,7 +120,7 @@ class _ErrorCodeDocumentationParser {
 
   String get line => commentLines[currentLineNumber];
 
-  BlockSection? computeCurrentBlockSection() {
+  BlockSection computeCurrentBlockSection() {
     switch (currentSection) {
       case '#### Example':
       case '#### Examples':
@@ -127,7 +130,7 @@ class _ErrorCodeDocumentationParser {
       case null:
         problem('Code block before section header');
       default:
-        return null;
+        problem('Code block in invalid section ${json.encode(currentSection)}');
     }
   }
 
@@ -174,7 +177,7 @@ class _ErrorCodeDocumentationParser {
     List<String>? experiments;
     assert(line.startsWith('```'));
     var fileType = line.substring(3);
-    if (fileType.isEmpty && containingSection != null) {
+    if (fileType.isEmpty) {
       problem('Code blocks should have a file type, e.g. "```dart"');
     }
     ++currentLineNumber;
@@ -186,15 +189,12 @@ class _ErrorCodeDocumentationParser {
           problem('Code blocks should end with "```"');
         }
         ++currentLineNumber;
-        if (containingSection != null) {
-          // Ignore code blocks where they're allowed but aren't checked.
-          result.add(ErrorCodeDocumentationBlock(codeLines.join('\n'),
-              containingSection: containingSection,
-              experiments: experiments ?? const [],
-              fileType: fileType,
-              languageVersion: languageVersion,
-              uri: uri));
-        }
+        result.add(ErrorCodeDocumentationBlock(codeLines.join('\n'),
+            containingSection: containingSection,
+            experiments: experiments ?? const [],
+            fileType: fileType,
+            languageVersion: languageVersion,
+            uri: uri));
         return;
       } else if (line.startsWith('%')) {
         if (line.startsWith(languagePrefix)) {

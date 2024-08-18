@@ -28,13 +28,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:args/args.dart';
+import 'package:kernel/kernel.dart';
 import 'package:kernel/binary/ast_to_binary.dart';
 import 'package:kernel/core_types.dart' show CoreTypes;
-import 'package:kernel/kernel.dart';
-import 'package:kernel/target/targets.dart' show TargetFlags, getTarget;
 import 'package:vm/kernel_front_end.dart'
-    show runGlobalTransformations, ErrorDetector, KernelCompilationArguments;
-import 'package:vm/modular/target/install.dart' show installAdditionalTargets;
+    show runGlobalTransformations, ErrorDetector;
+import 'package:kernel/target/targets.dart' show TargetFlags, getTarget;
+import 'package:vm/target/install.dart' show installAdditionalTargets;
 import 'package:vm/transformations/type_flow/transformer.dart' as globalTypeFlow
     show transformComponent;
 
@@ -105,26 +105,29 @@ Future main(List<String> args) async {
     bytes = concatenate(File(platformFile).readAsBytesSync(), bytes);
   }
   final component = loadComponentFromBytes(bytes);
-  if (component.mode != NonNullableByDefaultCompiledMode.Strong) {
-    print('Input kernel file should be compiled with sound null safety.');
-    exit(-1);
-  }
 
   installAdditionalTargets();
 
-  final target = getTarget(argResults['target'], TargetFlags())!;
+  final target = getTarget(
+      argResults['target'],
+      TargetFlags(
+          soundNullSafety:
+              component.mode == NonNullableByDefaultCompiledMode.Strong))!;
 
   // The [component] is treeshaken and has TFA annotations. Write output.
   if (argResults['aot']) {
+    const bool useGlobalTypeFlowAnalysis = true;
+    const bool enableAsserts = false;
+    const bool useProtobufAwareTreeShakerV2 = true;
     final nopErrorDetector = ErrorDetector();
     runGlobalTransformations(
-        target,
-        component,
-        nopErrorDetector,
-        KernelCompilationArguments(
-            useGlobalTypeFlowAnalysis: true,
-            enableAsserts: false,
-            useProtobufTreeShakerV2: true));
+      target,
+      component,
+      useGlobalTypeFlowAnalysis,
+      enableAsserts,
+      useProtobufAwareTreeShakerV2,
+      nopErrorDetector,
+    );
   } else {
     globalTypeFlow.transformComponent(target, CoreTypes(component), component,
         treeShakeProtobufs: true, treeShakeSignatures: false);
@@ -182,8 +185,7 @@ bool isLibEmpty(Library lib) {
   return lib.classes.isEmpty &&
       lib.procedures.isEmpty &&
       lib.fields.isEmpty &&
-      lib.typedefs.isEmpty &&
-      lib.annotations.isEmpty;
+      lib.typedefs.isEmpty;
 }
 
 bool isCoreLibrary(Library library) {

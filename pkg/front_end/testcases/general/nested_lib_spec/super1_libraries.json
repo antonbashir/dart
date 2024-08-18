@@ -1,5 +1,5 @@
 {
-  "vm": {
+  "none": {
     "libraries": {
       "super1": {
         "uri": "super1_lib.dart"

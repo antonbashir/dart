@@ -389,8 +389,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
   void _verifyErrors(String fileName, List<AnalysisError> expectedErrors) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.errors');
-    var params = server.AnalysisErrorsParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.AnalysisErrorsParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, fileName);
     expect(params.errors, equals(expectedErrors));
@@ -401,8 +400,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
       String fileName, List<FoldingRegion> expectedRegions) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.folding');
-    var params = server.AnalysisFoldingParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.AnalysisFoldingParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, fileName);
     expect(params.regions, equals(expectedRegions));
@@ -413,8 +411,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
       String fileName, List<HighlightRegion> expectedRegions) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.highlights');
-    var params = server.AnalysisHighlightsParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.AnalysisHighlightsParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, fileName);
     expect(params.regions, equals(expectedRegions));
@@ -424,8 +421,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
   void _verifyNavigationParams(server.AnalysisNavigationParams expectedParams) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.navigation');
-    var params = server.AnalysisNavigationParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.AnalysisNavigationParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, expectedParams.file);
     expect(params.files, equals(expectedParams.files));
@@ -438,8 +434,8 @@ class NotificationManagerTest extends ProtocolTestUtilities {
       String fileName, List<Occurrences> expectedOccurrences) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.occurrences');
-    var params = server.AnalysisOccurrencesParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params =
+        server.AnalysisOccurrencesParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, fileName);
     expect(params.occurrences, equals(expectedOccurrences));
@@ -449,8 +445,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
   void _verifyOutlines(String fileName, Outline expectedOutline) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'analysis.outline');
-    var params = server.AnalysisOutlineParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.AnalysisOutlineParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.file, fileName);
     expect(params.outline, equals(expectedOutline));
@@ -460,8 +455,7 @@ class NotificationManagerTest extends ProtocolTestUtilities {
   void _verifyPluginError(bool isFatal, String message, String stackTrace) {
     var notification = channel.sentNotification!;
     expect(notification.event, 'server.error');
-    var params = server.ServerErrorParams.fromNotification(notification,
-        clientUriConverter: null);
+    var params = server.ServerErrorParams.fromNotification(notification);
     expect(params, isNotNull);
     expect(params.isFatal, isFatal);
     expect(params.message, message);

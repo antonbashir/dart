@@ -14,6 +14,8 @@ class ClassID {
   @pragma("vm:entry-point")
   static final int cidArray = 0;
   @pragma("vm:entry-point")
+  static final int cidExternalOneByteString = 0;
+  @pragma("vm:entry-point")
   static final int cidGrowableObjectArray = 0;
   @pragma("vm:entry-point")
   static final int cidImmutableArray = 0;

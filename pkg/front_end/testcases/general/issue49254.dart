@@ -7,12 +7,12 @@ class C3 extends B3 {
 }
 
 class B3 extends A3 {
-  var bar = A3.initializeFoo; // Error.
+  var bar = A3.initializeFoo;
   B3(this.bar) : super();
 }
 
 class A3 {
-  var foo = C3.new;
+  var foo = C3.new; // Error.
   A3();
   A3.initializeFoo(this.foo);
 }

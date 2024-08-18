@@ -1,5 +1,4 @@
 final int field = 42;
-
 void set field(int value) {}
 
 class Class {

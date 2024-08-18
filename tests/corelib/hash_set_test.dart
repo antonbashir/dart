@@ -10,7 +10,6 @@
 library hash_map2_test;
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 import 'dart:collection';
 import 'dart:math' as math;
 
@@ -316,7 +315,7 @@ void testIdentitySet(Set create()) {
     testIdentitySet
   ];
   set.addAll(constants);
-  if (v.jsNumbers) {
+  if (webNumbers) {
     // 0.0 and -0.0 are identical in JS.
     Expect.equals(constants.length - 1, set.length);
     Expect.isTrue(
@@ -328,7 +327,7 @@ void testIdentitySet(Set create()) {
   }
   for (var c in constants) {
     // identical(double.nan, double.nan) == false in JS.
-    if (v.jsNumbers && c is double && c.isNaN) continue;
+    if (webNumbers && c is double && c.isNaN) continue;
     Expect.isTrue(set.contains(c), "constant: $c");
   }
   set.clear();

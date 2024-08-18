@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/services/refactoring/framework/formal_parameter.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -21,19 +21,19 @@ Future<WriteArgumentsStatus> writeArguments({
   required ArgumentList argumentList,
   required ChangeBuilder builder,
 }) async {
-  var utils = CorrectionUtils(resolvedUnit);
+  final utils = CorrectionUtils(resolvedUnit);
 
-  var positionArguments = argumentList.positional;
-  var namedArguments = argumentList.namedMap;
+  final positionArguments = argumentList.positional;
+  final namedArguments = argumentList.namedMap;
 
-  var newArguments = <_Argument>[];
-  for (var update in formalParameterUpdates) {
+  final newArguments = <_Argument>[];
+  for (final update in formalParameterUpdates) {
     switch (update) {
-      case FormalParameterUpdateExisting(:var reference):
+      case FormalParameterUpdateExisting(:final reference):
         switch (reference) {
           case NamedFormalParameterReference():
-            var name = reference.name;
-            var argument = namedArguments.remove(name);
+            final name = reference.name;
+            final argument = namedArguments.remove(name);
             if (argument == null) {
               continue;
             }
@@ -52,7 +52,7 @@ Future<WriteArgumentsStatus> writeArguments({
               );
             }
           case PositionalFormalParameterReference():
-            var argument = positionArguments.elementAtOrNull(reference.index);
+            final argument = positionArguments.elementAtOrNull(reference.index);
             if (argument == null) {
               return WriteArgumentsStatusFailure();
             }
@@ -102,15 +102,15 @@ Future<WriteArgumentsStatus> writeArguments({
   await builder.addDartFileEdit(resolvedUnit.path, (builder) {
     builder.addReplacement(range.node(argumentList), (builder) {
       builder.write('(');
-      for (var argument in newArguments) {
+      for (final argument in newArguments) {
         switch (argument) {
           case _ArgumentAddName():
-            var text = utils.getNodeText(argument.argument);
+            final text = utils.getNodeText(argument.argument);
             builder.write(argument.name);
             builder.write(': ');
             builder.write(text);
           case _ArgumentAsIs():
-            var text = utils.getNodeText(argument.argument);
+            final text = utils.getNodeText(argument.argument);
             builder.write(text);
           case _ArgumentNewNamed():
             builder.write(argument.name);
@@ -119,8 +119,8 @@ Future<WriteArgumentsStatus> writeArguments({
           case _ArgumentNewPositional():
             builder.write(argument.valueCode);
           case _ArgumentRemoveName():
-            var expression = argument.namedExpression.expression;
-            var text = utils.getNodeText(expression);
+            final expression = argument.namedExpression.expression;
+            final text = utils.getNodeText(expression);
             builder.write(text);
         }
         if (argument != newArguments.last) {
@@ -292,15 +292,15 @@ final class _ArgumentRemoveName extends _Argument {
 
 extension on ArgumentList {
   bool get hasTrailingComma {
-    var last = arguments.lastOrNull;
-    var nextToken = last?.endToken.next;
+    final last = arguments.lastOrNull;
+    final nextToken = last?.endToken.next;
     return nextToken != null && nextToken.type == TokenType.COMMA;
   }
 
   Map<String, NamedExpression> get namedMap {
     return Map.fromEntries(
       arguments.whereType<NamedExpression>().map((namedExpression) {
-        var name = namedExpression.name.label.name;
+        final name = namedExpression.name.label.name;
         return MapEntry(name, namedExpression);
       }),
     );

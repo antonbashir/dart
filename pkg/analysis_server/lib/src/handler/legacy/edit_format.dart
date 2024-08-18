@@ -21,10 +21,11 @@ class EditFormatHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = EditFormatParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
-    var file = params.file;
+    unawaited(server.options.analytics?.sendEvent('edit', 'format'));
 
+    var params = EditFormatParams.fromRequest(request);
+    var file = params.file;
+//
     String unformattedCode;
     try {
       var resource = server.resourceProvider.getFile(file);
@@ -43,11 +44,11 @@ class EditFormatHandler extends LegacyHandler {
       length = null;
     }
 
-    var code = SourceCode(
-      unformattedCode,
-      selectionStart: start,
-      selectionLength: length,
-    );
+    var code = SourceCode(unformattedCode,
+        uri: null,
+        isCompilationUnit: true,
+        selectionStart: start,
+        selectionLength: length);
     var formatter = DartFormatter(pageWidth: params.lineLength);
     SourceCode formattedResult;
     try {

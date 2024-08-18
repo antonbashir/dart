@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/flutter_utils.dart';
 
 const _details = r'''
@@ -59,15 +58,23 @@ Widget buildLogo() {
 ''';
 
 class SizedBoxShrinkExpand extends LintRule {
+  static const LintCode code = LintCode(
+      'sized_box_shrink_expand',
+      "Use 'SizedBox.{0}' to avoid needing to specify the 'height' and "
+          "'width'.",
+      correctionMessage:
+          "Try using 'SizedBox.{0}' and removing the 'height' and 'width' "
+          'arguments.');
+
   SizedBoxShrinkExpand()
       : super(
             name: 'sized_box_shrink_expand',
             description: 'Use SizedBox shrink and expand named constructors.',
             details: _details,
-            categories: {LintRuleCategory.flutter, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.sized_box_shrink_expand;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -75,6 +82,29 @@ class SizedBoxShrinkExpand extends LintRule {
     var visitor = _Visitor(this);
 
     registry.addInstanceCreationExpression(this, visitor);
+  }
+}
+
+class _ArgumentData {
+  var positionalArgumentFound = false;
+
+  double? width;
+
+  double? height;
+
+  _ArgumentData(ArgumentList node) {
+    for (var argument in node.arguments) {
+      if (argument is! NamedExpression) {
+        positionalArgumentFound = true;
+        return;
+      }
+      var label = argument.name.label;
+      if (label.name == 'width') {
+        width = argument.expression.argumentValue;
+      } else if (label.name == 'height') {
+        height = argument.expression.argumentValue;
+      }
+    }
   }
 }
 
@@ -91,41 +121,16 @@ class _Visitor extends SimpleAstVisitor {
       return;
     }
 
-    var data = _analyzeArguments(node.argumentList);
-    if (data == null) {
+    var data = _ArgumentData(node.argumentList);
+    if (data.positionalArgumentFound) {
       return;
     }
-
     if (data.width == 0 && data.height == 0) {
       rule.reportLint(node.constructorName, arguments: ['shrink']);
     } else if (data.width == double.infinity &&
         data.height == double.infinity) {
       rule.reportLint(node.constructorName, arguments: ['expand']);
     }
-  }
-
-  /// Determine the value of the arguments specified in the [argumentList],
-  /// and return `null` if there are unsupported arguments.
-  static ({double? height, double? width})? _analyzeArguments(
-      ArgumentList argumentList) {
-    double? height;
-    double? width;
-
-    for (var argument in argumentList.arguments) {
-      if (argument is! NamedExpression) {
-        // Positional arguments are not supported.
-        return null;
-      }
-
-      switch (argument.name.label.name) {
-        case 'width':
-          width = argument.expression.argumentValue;
-        case 'height':
-          height = argument.expression.argumentValue;
-      }
-    }
-
-    return (height: height, width: width);
   }
 }
 

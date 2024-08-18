@@ -27,7 +27,7 @@ import 'helpers.dart';
 
 const runTestsArg = 'run-tests';
 
-void main(List<String> args, Object? message) async {
+main(List<String> args, Object? message) async {
   return await selfInvokingTest(
     doOnOuterInvocation: selfInvokes,
     doOnProcessInvocation: () async {
@@ -47,31 +47,20 @@ Future<void> selfInvokes() async {
   await invokeSelf(
     selfSourceUri: selfSourceUri,
     runtime: Runtime.jit,
-    kernelCombine: KernelCombine.concatenation,
     relativePath: RelativePath.same,
     arguments: [runTestsArg],
-    useSymlink: true,
-    protobufAwareTreeshaking: true,
   );
   await invokeSelf(
     selfSourceUri: selfSourceUri,
     runtime: Runtime.jit,
     relativePath: RelativePath.down,
     arguments: [runTestsArg],
-    useSymlink: true,
-    protobufAwareTreeshaking: false,
   );
   await invokeSelf(
     selfSourceUri: selfSourceUri,
     runtime: Runtime.aot,
-    kernelCombine: KernelCombine.concatenation,
-    aotCompile: (Platform.isLinux || Platform.isMacOS)
-        ? AotCompile.assembly
-        : AotCompile.elf,
     relativePath: RelativePath.up,
     arguments: [runTestsArg],
-    useSymlink: true,
-    protobufAwareTreeshaking: true,
   );
 }
 
@@ -86,11 +75,7 @@ Future<void> invokeSelf({
   required Uri selfSourceUri,
   required List<String> arguments,
   Runtime runtime = Runtime.jit,
-  KernelCombine kernelCombine = KernelCombine.source,
-  AotCompile aotCompile = AotCompile.elf,
   RelativePath relativePath = RelativePath.same,
-  bool useSymlink = false,
-  required bool protobufAwareTreeshaking,
 }) async {
   await withTempDir((Uri tempUri) async {
     final nestedUri = tempUri.resolve('nested/');
@@ -126,20 +111,10 @@ Future<void> invokeSelf({
       dartProgramUri: selfSourceUri,
       nativeAssetsYaml: nativeAssetsYaml,
       runtime: runtime,
-      kernelCombine: kernelCombine,
-      protobufAwareTreeshaking: protobufAwareTreeshaking,
-      aotCompile: aotCompile,
       runArguments: arguments,
-      useSymlink: useSymlink,
     );
-    print([
-      selfSourceUri.toFilePath(),
-      runtime.name,
-      kernelCombine.name,
-      if (runtime == Runtime.aot) aotCompile.name,
-      relativePath.name,
-      'done',
-    ].join(' '));
+    print([selfSourceUri.toFilePath(), runtime.name, relativePath.name, 'done']
+        .join(' '));
   });
 }
 
@@ -197,14 +172,6 @@ external Coord globalStruct;
 @Native<Coord Function()>()
 external Coord GetGlobalStruct();
 
-@Native()
-@Array(3)
-external Array<Int> globalArray;
-
-@Native()
-@Array(3, 3)
-external final Array<Array<Double>> identity3x3;
-
 void testFfiTestFieldsDll() {
   SetGlobalVar(42);
   Expect.equals(globalInt, 42);
@@ -234,22 +201,4 @@ void testFfiTestFieldsDll() {
   Expect.equals(globalStruct.x, 2.0);
   Expect.equals(globalStruct.y, 4.0);
   Expect.equals(globalStruct.next.address, 0xdeadbeef);
-
-  Expect.equals(globalArray[0], 1);
-  Expect.equals(globalArray[1], 2);
-  Expect.equals(globalArray[2], 3);
-
-  globalArray[0] = 42;
-  Expect.equals(globalArray[0], 42);
-  globalArray[0] = 1;
-
-  for (var i = 0; i < 3; i++) {
-    for (var j = 0; j < 3; j++) {
-      if (i == j) {
-        Expect.equals(identity3x3[i][j], 1);
-      } else {
-        Expect.equals(identity3x3[i][j], 0);
-      }
-    }
-  }
 }

@@ -34,9 +34,6 @@ class Class {
 }
 
 test() {}
-
 main() {}
-
 expect(expected, actual) {}
-
 throws(dynamic Function() f) {}

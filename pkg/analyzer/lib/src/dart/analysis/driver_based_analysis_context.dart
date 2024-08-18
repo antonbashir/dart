@@ -32,8 +32,10 @@ class DriverBasedAnalysisContext implements AnalysisContext {
   ]);
 
   /// Get all the analysis options objects associated with this context.
-  List<AnalysisOptions> get allAnalysisOptions =>
-      [...driver.analysisOptionsMap.entries.map((e) => e.options)];
+  List<AnalysisOptions> get allAnalysisOptions => [
+        // ignore: deprecated_member_use_from_same_package
+        analysisOptions,
+      ];
 
   @override
   @Deprecated("Use 'getAnalysisOptionsForFile(file)' instead")

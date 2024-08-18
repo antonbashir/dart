@@ -13,27 +13,7 @@ void main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(RemoveInitializerBulkTest);
     defineReflectiveTests(RemoveInitializerTest);
-    defineReflectiveTests(RemoveDeadWildcardInitializerTest);
   });
-}
-
-@reflectiveTest
-class RemoveDeadWildcardInitializerTest extends FixProcessorTest {
-  @override
-  FixKind get kind => DartFixKind.REMOVE_INITIALIZER;
-
-  Future<void> test_deadLateWildcardVariableInitializer() async {
-    await resolveTestCode('''
-f() {
-  late var _ = 0;
-}
-''');
-    await assertHasFix('''
-f() {
-  late var _;
-}
-''');
-  }
 }
 
 @reflectiveTest
@@ -141,21 +121,6 @@ class Test {
 ''');
     await assertHasFix('''
 class Test {
-  int? x;
-}
-''');
-  }
-
-  Future<void> test_field_late() async {
-    await resolveTestCode('''
-class Test {
-  /// field example
-  late int? x = null;
-}
-''');
-    await assertHasFix('''
-class Test {
-  /// field example
   int? x;
 }
 ''');

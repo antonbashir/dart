@@ -29,7 +29,7 @@ extension type E(int it) {
           5),
     ]);
 
-    var node = findNode.singleFormalParameterList;
+    final node = findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
   leftParenthesis: (
@@ -37,7 +37,7 @@ FormalParameterList
     thisKeyword: this
     period: .
     name: it
-    declaredElement: <testLibraryFragment>::@extensionType::E::@constructor::named::@parameter::it
+    declaredElement: self::@extensionType::E::@constructor::named::@parameter::it
       type: int
   leftDelimiter: {
   parameter: DefaultFormalParameter
@@ -45,9 +45,9 @@ FormalParameterList
       superKeyword: super
       period: .
       name: foo
-      declaredElement: <testLibraryFragment>::@extensionType::E::@constructor::named::@parameter::foo
+      declaredElement: self::@extensionType::E::@constructor::named::@parameter::foo
         type: dynamic
-    declaredElement: <testLibraryFragment>::@extensionType::E::@constructor::named::@parameter::foo
+    declaredElement: self::@extensionType::E::@constructor::named::@parameter::foo
       type: dynamic
   rightDelimiter: }
   rightParenthesis: )
@@ -67,7 +67,7 @@ extension type E(int it) {
           5),
     ]);
 
-    var node = findNode.singleFormalParameterList;
+    final node = findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
   leftParenthesis: (
@@ -75,13 +75,13 @@ FormalParameterList
     thisKeyword: this
     period: .
     name: it
-    declaredElement: <testLibraryFragment>::@extensionType::E::@constructor::named::@parameter::it
+    declaredElement: self::@extensionType::E::@constructor::named::@parameter::it
       type: int
   parameter: SuperFormalParameter
     superKeyword: super
     period: .
     name: foo
-    declaredElement: <testLibraryFragment>::@extensionType::E::@constructor::named::@parameter::foo
+    declaredElement: self::@extensionType::E::@constructor::named::@parameter::foo
       type: dynamic
   rightParenthesis: )
 ''');

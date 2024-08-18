@@ -5,7 +5,6 @@
 import 'package:analyzer/src/lint/pub.dart'; // ignore: implementation_imports
 
 import '../../analyzer.dart';
-import '../../linter_lint_codes.dart';
 
 const _desc = r'Use secure urls in `pubspec.yaml`.';
 
@@ -32,15 +31,19 @@ repository: https://github.com/dart-lang/example
 ''';
 
 class SecurePubspecUrls extends LintRule {
+  static const LintCode code = LintCode('secure_pubspec_urls',
+      "The '{0}' protocol shouldn't be used because it isn't secure.",
+      correctionMessage: "Try using a secure protocol, such as 'https'.");
+
   SecurePubspecUrls()
       : super(
             name: 'secure_pubspec_urls',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.pub});
+            group: Group.pub);
 
   @override
-  LintCode get lintCode => LinterLintCode.secure_pubspec_urls;
+  LintCode get lintCode => code;
 
   @override
   PubspecVisitor getPubspecVisitor() => Visitor(this);

@@ -127,7 +127,7 @@ class AnalysisSessionImpl implements AnalysisSession {
   @override
   Future<SomeResolvedUnitResult> getResolvedUnit(String path) async {
     checkConsistency();
-    return await _driver.getResolvedUnit(path);
+    return await _driver.getResult(path);
   }
 
   @override

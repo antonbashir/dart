@@ -3,9 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analyzer/dart/analysis/results.dart';
-import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -24,12 +21,12 @@ class FlutterOutlineNonFlutterProjectTest
   /// In a project that doesn't reference Flutter, no Flutter outlines should
   /// be sent.
   Future<void> test_noOutline() async {
-    var content = 'void f() {}';
+    final content = 'void f() {}';
     await initialize(initializationOptions: {'flutterOutline': true});
 
     // Wait up to 1sec to ensure no error/log notifications were sent back.
     var didTimeout = false;
-    var outlineNotification = waitForFlutterOutline(mainFileUri)
+    final outlineNotification = waitForFlutterOutline(mainFileUri)
         // ignore: unnecessary_cast
         .then((outline) => outline as FlutterOutline?)
         .timeout(
@@ -52,30 +49,30 @@ class FlutterOutlineTest extends AbstractLspAnalysisServerTest {
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(flutter: true);
+    writePackageConfig(projectFolderPath, flutter: true);
   }
 
   Future<void> test_afterChange() async {
-    var initialContent = '''
+    final initialContent = '''
 import 'package:flutter/material.dart';
 
 Widget build(BuildContext context) => Container();
 ''';
-    var updatedContent = '''
+    final updatedContent = '''
 import 'package:flutter/material.dart';
 
-Widget build(BuildContext context) => Icon(Icons.alarm);
+Widget build(BuildContext context) => Icon();
 ''';
 
     await initialize(initializationOptions: {'flutterOutline': true});
 
-    var outlineUpdateBeforeChange = waitForFlutterOutline(mainFileUri);
+    final outlineUpdateBeforeChange = waitForFlutterOutline(mainFileUri);
     await openFile(mainFileUri, initialContent);
-    var outlineBeforeChange = await outlineUpdateBeforeChange;
+    final outlineBeforeChange = await outlineUpdateBeforeChange;
 
-    var outlineUpdateAfterChange = waitForFlutterOutline(mainFileUri);
+    final outlineUpdateAfterChange = waitForFlutterOutline(mainFileUri);
     await replaceFile(1, mainFileUri, updatedContent);
-    var outlineAfterChange = await outlineUpdateAfterChange;
+    final outlineAfterChange = await outlineUpdateAfterChange;
 
     expect(outlineBeforeChange, isNotNull);
     expect(outlineBeforeChange.children, hasLength(1));
@@ -88,50 +85,29 @@ Widget build(BuildContext context) => Icon(Icons.alarm);
         outlineAfterChange.children![0].children![0].className, equals('Icon'));
   }
 
-  /// Test inside a file in 'package:flutter' itself.
-  Future<void> test_flutterPackage() async {
-    newFile(mainFilePath, '');
-    await initialize(initializationOptions: {'flutterOutline': true});
-
-    // Find the path to our mock 'package:flutter/widgets.dart'.
-    var driver = server.getAnalysisDriver(mainFilePath)!;
-    var widgetsFilePath =
-        driver.currentSession.uriConverter.uriToPath(Uri.parse(widgetsUri))!;
-    var widgetsFileUri = Uri.file(widgetsFilePath);
-
-    // We have to provide content to open a file so just read it.
-    var widgetsFileContent =
-        (driver.getFileSync(widgetsFilePath) as FileResult).content;
-    var outlineNotification = waitForFlutterOutline(widgetsFileUri);
-    await openFile(widgetsFileUri, widgetsFileContent);
-    var outline = await outlineNotification;
-
-    expect(outline, isNotNull);
-  }
-
   Future<void> test_initial() async {
-    var code = TestCode.parse('''
+    final content = '''
 import 'package:flutter/material.dart';
 
 /// My build method
-Widget build(BuildContext context) {
-  return Container(
-    child: DefaultTextStyle(
-      child: Row(
-        children: <Widget>[
-          Container(child: Icon(Icons.alarm)),
-          Expanded(child: Container()),
-        ],
+Widget build(BuildContext context) => Container(
+      child: DefaultTextStyle(
+        child: SafeArea(
+          child: Row(
+            children: <Widget>[
+              Container(child: Icon(Icons.ac_unit)),
+              Expanded(child: Container()),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
-}
-''');
+    );
+''';
     await initialize(initializationOptions: {'flutterOutline': true});
 
-    var outlineNotification = waitForFlutterOutline(mainFileUri);
-    await openFile(mainFileUri, code.code);
-    var outline = await outlineNotification;
+    final outlineNotification = waitForFlutterOutline(mainFileUri);
+    await openFile(mainFileUri, content);
+    final outline = await outlineNotification;
 
     expect(outline, isNotNull);
 
@@ -143,19 +119,19 @@ Widget build(BuildContext context) {
             end: Position(line: 15, character: 0))));
     expect(outline.children, hasLength(1));
 
-    var build = outline.children![0];
+    final build = outline.children![0];
     expect(build.kind, equals('DART_ELEMENT'));
     expect(
         build.range,
         equals(Range(
             start: Position(line: 2, character: 0),
-            end: Position(line: 14, character: 1))));
+            end: Position(line: 14, character: 6))));
     expect(
         build.codeRange,
         equals(Range(
             start: Position(line: 3, character: 0),
-            end: Position(line: 14, character: 1))));
-    var dartElement = build.dartElement!;
+            end: Position(line: 14, character: 6))));
+    final dartElement = build.dartElement!;
     expect(dartElement.kind, equals('FUNCTION'));
     expect(dartElement.name, equals('build'));
     expect(dartElement.parameters, equals('(BuildContext context)'));
@@ -167,25 +143,25 @@ Widget build(BuildContext context) {
     expect(dartElement.returnType, equals('Widget'));
     expect(build.children, hasLength(1));
 
-    var icon =
+    final icon =
         build.children![0].children![0].children![0].children![0].children![0];
     expect(icon.kind, equals('NEW_INSTANCE'));
     expect(icon.className, 'Icon');
     expect(
         icon.range,
         equals(Range(
-            start: Position(line: 8, character: 27),
-            end: Position(line: 8, character: 44))));
+            start: Position(line: 8, character: 31),
+            end: Position(line: 8, character: 50))));
     expect(icon.codeRange, equals(icon.range));
     expect(icon.attributes, hasLength(1));
-    var attributes = icon.attributes!;
+    final attributes = icon.attributes!;
     expect(attributes[0].name, equals('icon'));
-    expect(attributes[0].label, equals('Icons.alarm'));
+    expect(attributes[0].label, equals('Icons.ac_unit'));
     expect(
         attributes[0].valueRange,
         equals(Range(
-            start: Position(line: 8, character: 32),
-            end: Position(line: 8, character: 43))));
+            start: Position(line: 8, character: 36),
+            end: Position(line: 8, character: 49))));
     expect(icon.dartElement, isNull);
     expect(icon.children, hasLength(0));
   }

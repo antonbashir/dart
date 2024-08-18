@@ -6,7 +6,5 @@ class C<T> {
 }
 
 void g2(C<Object> c) {}
-
 void main() {}
-
 void test() {}

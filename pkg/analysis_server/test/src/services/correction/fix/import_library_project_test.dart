@@ -305,24 +305,6 @@ void f() {
 ''');
   }
 
-  Future<void> test_extensionType_notImported() async {
-    newFile('$testPackageLibPath/lib.dart', '''
-extension type ET(String it) {}
-''');
-    await resolveTestCode('''
-void f(String s) {
-  ET(s);
-}
-''');
-    await assertHasFix('''
-import 'package:test/lib.dart';
-
-void f(String s) {
-  ET(s);
-}
-''');
-  }
-
   Future<void> test_invalidUri_interpolation() async {
     newFile('$testPackageLibPath/lib.dart', r'''
 class Test {
@@ -979,65 +961,6 @@ import 'a.dart';
 
 void f(Test t) {}
 ''', target: b.path);
-  }
-
-  Future<void> test_withClass_simpleIdentifier_lowerCase() async {
-    newFile('$testPackageLibPath/lib.dart', '''
-class eX {}
-''');
-    await resolveTestCode('''
-void f() {
-  eX;
-}
-''');
-    await assertHasFix('''
-import 'package:test/lib.dart';
-
-void f() {
-  eX;
-}
-''');
-  }
-
-  Future<void> test_withClass_static_getter_annotation() async {
-    newFile('$testPackageLibPath/lib.dart', '''
-library lib;
-class Test {
-  const Test();
-  static const instance = Test();
-}
-''');
-    await resolveTestCode('''
-@Test.instance
-void f() {
-}
-''');
-    await assertHasFix('''
-import 'package:test/lib.dart';
-
-@Test.instance
-void f() {
-}
-''');
-  }
-
-  Future<void> test_withEnum_value() async {
-    newFile('$testPackageLibPath/lib.dart', '''
-library lib;
-enum E { one, two }
-''');
-    await resolveTestCode('''
-void f() {
-  E.one;
-}
-''');
-    await assertHasFix('''
-import 'package:test/lib.dart';
-
-void f() {
-  E.one;
-}
-''');
   }
 
   Future<void> test_withExtension_pub_this() async {

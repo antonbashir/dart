@@ -4,6 +4,8 @@
 
 import 'dart:async';
 
+/*library: nnbd=true*/
+
 /*class: A:A,Object*/
 class A {
   /*member: A.method:dynamic Function(dynamic, {dynamic named})*/

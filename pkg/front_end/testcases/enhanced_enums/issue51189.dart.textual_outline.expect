@@ -5,5 +5,4 @@ enum E<X extends A> {
 }
 
 main() {}
-
 expectEquals(x, y) {}

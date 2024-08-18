@@ -9,10 +9,10 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/utilities/extensions/file_system.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../../../util/tree_string_sink.dart';
 import '../resolution/context_collection_resolution.dart';
 import '../resolution/node_text_expectations.dart';
 
@@ -20,7 +20,6 @@ main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AnalysisSessionImplTest);
     defineReflectiveTests(AnalysisSessionImpl_BlazeWorkspaceTest);
-    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -31,7 +30,7 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
     var relPath = 'dart/my/lib/a.dart';
     newFile('$workspaceRootPath/blaze-bin/$relPath', '');
 
-    var file = getFile('$workspaceRootPath/$relPath');
+    final file = getFile('$workspaceRootPath/$relPath');
     var session = contextFor(file).currentSession;
     var result = await session.getErrors(file.path);
     expect(result, isA<NotPathOfUriResult>());
@@ -54,7 +53,7 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
     var relPath = 'dart/my/lib/a.dart';
     newFile('$workspaceRootPath/blaze-bin/$relPath', '');
 
-    var file = getFile('$workspaceRootPath/$relPath');
+    final file = getFile('$workspaceRootPath/$relPath');
     var session = contextFor(file).currentSession;
     var result = session.getParsedLibrary(file.path);
     expect(result, isA<NotPathOfUriResult>());
@@ -64,7 +63,7 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
     var relPath = 'dart/my/lib/a.dart';
     newFile('$workspaceRootPath/blaze-bin/$relPath', '');
 
-    var file = getFile('$workspaceRootPath/$relPath');
+    final file = getFile('$workspaceRootPath/$relPath');
     var session = contextFor(file).currentSession;
     var result = await session.getResolvedLibrary(file.path);
     expect(result, isA<NotPathOfUriResult>());
@@ -74,7 +73,7 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
     var relPath = 'dart/my/lib/a.dart';
     newFile('$workspaceRootPath/blaze-bin/$relPath', '');
 
-    var file = getFile('$workspaceRootPath/$relPath');
+    final file = getFile('$workspaceRootPath/$relPath');
     var session = contextFor(file).currentSession;
     var result = await session.getResolvedUnit(file.path);
     expect(result, isA<NotPathOfUriResult>());
@@ -108,7 +107,7 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
     var relPath = 'dart/my/lib/a.dart';
     newFile('$workspaceRootPath/blaze-bin/$relPath', '');
 
-    var file = getFile('$workspaceRootPath/$relPath');
+    final file = getFile('$workspaceRootPath/$relPath');
     var session = contextFor(file).currentSession;
     var result = await session.getUnitElement(file.path);
     expect(result, isA<NotPathOfUriResult>());
@@ -131,11 +130,11 @@ class AnalysisSessionImpl_BlazeWorkspaceTest
 @reflectiveTest
 class AnalysisSessionImplTest extends PubPackageResolutionTest {
   test_applyPendingFileChanges_getFile() async {
-    var a = newFile('$testPackageLibPath/a.dart', '');
-    var analysisContext = contextFor(a);
+    final a = newFile('$testPackageLibPath/a.dart', '');
+    final analysisContext = contextFor(a);
 
     int lineCount_in_a() {
-      var result = analysisContext.currentSession.getFileValid(a);
+      final result = analysisContext.currentSession.getFileValid(a);
       return result.lineInfo.lineCount;
     }
 
@@ -150,12 +149,12 @@ class AnalysisSessionImplTest extends PubPackageResolutionTest {
   }
 
   test_applyPendingFileChanges_getParsedLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', '');
-    var analysisContext = contextFor(a);
+    final a = newFile('$testPackageLibPath/a.dart', '');
+    final analysisContext = contextFor(a);
 
     int lineCount_in_a() {
-      var analysisSession = analysisContext.currentSession;
-      var result = analysisSession.getParsedLibraryValid(a);
+      final analysisSession = analysisContext.currentSession;
+      final result = analysisSession.getParsedLibraryValid(a);
       return result.units.first.lineInfo.lineCount;
     }
 
@@ -170,11 +169,11 @@ class AnalysisSessionImplTest extends PubPackageResolutionTest {
   }
 
   test_applyPendingFileChanges_getParsedUnit() async {
-    var a = newFile('$testPackageLibPath/a.dart', '');
-    var analysisContext = contextFor(a);
+    final a = newFile('$testPackageLibPath/a.dart', '');
+    final analysisContext = contextFor(a);
 
     int lineCount_in_a() {
-      var result = analysisContext.currentSession.getParsedUnitValid(a);
+      final result = analysisContext.currentSession.getParsedUnitValid(a);
       return result.lineInfo.lineCount;
     }
 
@@ -231,28 +230,22 @@ class AnalysisSessionImplTest extends PubPackageResolutionTest {
   }
 
   test_getFile_library() async {
-    var content = 'class A {}';
-    var a = newFile('$testPackageLibPath/a.dart', content);
+    var a = newFile('$testPackageLibPath/a.dart', '');
 
     var session = contextFor(testFile).currentSession;
     var file = session.getFileValid(a);
     expect(file.path, a.path);
     expect(file.uri.toString(), 'package:test/a.dart');
-    expect(file.content, content);
-    expect(file.isLibrary, isTrue);
     expect(file.isPart, isFalse);
   }
 
   test_getFile_part() async {
-    var content = 'part of lib;';
-    var a = newFile('$testPackageLibPath/a.dart', content);
+    var a = newFile('$testPackageLibPath/a.dart', 'part of lib;');
 
     var session = contextFor(testFile).currentSession;
     var file = session.getFileValid(a);
     expect(file.path, a.path);
     expect(file.uri.toString(), 'package:test/a.dart');
-    expect(file.content, content);
-    expect(file.isLibrary, isFalse);
     expect(file.isPart, isTrue);
   }
 
@@ -282,11 +275,11 @@ class B {}
 
   test_getLibraryByUri_notLibrary_augmentation() async {
     newFile(testFile.path, r'''
-augment library 'a.dart';
+library augment 'a.dart';
 ''');
 
-    var session = contextFor(testFile).currentSession;
-    var result = await session.getLibraryByUri('package:test/test.dart');
+    final session = contextFor(testFile).currentSession;
+    final result = await session.getLibraryByUri('package:test/test.dart');
     expect(result, isA<NotLibraryButAugmentationResult>());
   }
 
@@ -295,8 +288,8 @@ augment library 'a.dart';
 part of 'a.dart';
 ''');
 
-    var session = contextFor(testFile).currentSession;
-    var result = await session.getLibraryByUri('package:test/test.dart');
+    final session = contextFor(testFile).currentSession;
+    final result = await session.getLibraryByUri('package:test/test.dart');
     expect(result, isA<NotLibraryButPartResult>());
   }
 
@@ -307,7 +300,7 @@ part of 'a.dart';
   }
 
   test_getParsedLibrary() async {
-    var test = newFile('$testPackageLibPath/a.dart', r'''
+    final test = newFile('$testPackageLibPath/a.dart', r'''
 class A {}
 class B {}
 ''');
@@ -427,11 +420,11 @@ part 'c.dart';
 
   test_getParsedLibrary_notLibrary_augmentation() async {
     newFile(testFile.path, r'''
-augment library 'a.dart';
+library augment 'a.dart';
 ''');
 
-    var session = contextFor(testFile).currentSession;
-    var result = session.getParsedLibrary(testFile.path);
+    final session = contextFor(testFile).currentSession;
+    final result = session.getParsedLibrary(testFile.path);
     expect(result, isA<NotLibraryButAugmentationResult>());
   }
 
@@ -518,7 +511,7 @@ class C3 {}
     );
     var element = libraryResult.element;
 
-    var aaaFile = getFile('$workspaceRootPath/aaa/lib/a.dart');
+    final aaaFile = getFile('$workspaceRootPath/aaa/lib/a.dart');
     var aaaSession = contextFor(aaaFile).currentSession;
 
     var result = aaaSession.getParsedLibraryByElement(element);
@@ -689,11 +682,11 @@ part 'c.dart';
 
   test_getResolvedLibrary_notLibrary_augmentation() async {
     newFile(testFile.path, r'''
-augment library of 'a.dart';
+library augment of 'a.dart';
 ''');
 
-    var session = contextFor(testFile).currentSession;
-    var result = await session.getResolvedLibrary(testFile.path);
+    final session = contextFor(testFile).currentSession;
+    final result = await session.getResolvedLibrary(testFile.path);
     expect(result, isA<NotLibraryButAugmentationResult>());
   }
 
@@ -731,7 +724,7 @@ augment library of 'a.dart';
     );
     var element = libraryResult.element;
 
-    var aaaFile = getFile('$workspaceRootPath/aaa/lib/a.dart');
+    final aaaFile = getFile('$workspaceRootPath/aaa/lib/a.dart');
     var aaaSession = contextFor(aaaFile).currentSession;
 
     var result = await aaaSession.getResolvedLibraryByElement(element);
@@ -766,8 +759,8 @@ class B {}
   }
 
   test_getUnitElement_augmentationKnown_inLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 class A {}
 class B {}
 ''');
@@ -781,15 +774,15 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/test.dart::@fragment::package:test/a.dart
+    reference: root::package:test/test.dart::@augmentation::package:test/a.dart
     library: root::package:test/test.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_augmentationKnown_notInLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 class A {}
 class B {}
 ''');
@@ -799,7 +792,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/a.dart::@fragment::package:test/a.dart
+    reference: root::package:test/a.dart::@unit::package:test/a.dart
     library: root::package:test/a.dart
     classes: A, B
 ''');
@@ -826,14 +819,14 @@ unitElementResult
   path: /home/test/lib/test.dart
   uri: package:test/test.dart
   element
-    reference: root::package:test/test.dart::@fragment::package:test/test.dart
+    reference: root::package:test/test.dart::@unit::package:test/test.dart
     library: root::package:test/test.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_partOfUriKnown_inLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 part of 'test.dart';
 class A {}
 class B {}
@@ -848,14 +841,14 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/test.dart::@fragment::package:test/a.dart
+    reference: root::package:test/test.dart::@unit::package:test/a.dart
     library: root::package:test/test.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_partOfUriKnown_notInLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 part of 'test.dart';
 class A {}
 class B {}
@@ -866,14 +859,14 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/a.dart::@fragment::package:test/a.dart
+    reference: root::package:test/a.dart::@unit::package:test/a.dart
     library: root::package:test/a.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_partOfUriName_inLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 part of my_lib;
 class A {}
 class B {}
@@ -889,14 +882,14 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/test.dart::@fragment::package:test/a.dart
+    reference: root::package:test/test.dart::@unit::package:test/a.dart
     library: root::package:test/test.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_partOfUriName_notInLibrary() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 part of my_lib;
 class A {}
 class B {}
@@ -907,14 +900,14 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/a.dart::@fragment::package:test/a.dart
+    reference: root::package:test/a.dart::@unit::package:test/a.dart
     library: root::package:test/a.dart
     classes: A, B
 ''');
   }
 
   test_getUnitElement_partOfUriUnknown() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 part of 'foo:bar';
 class A {}
 class B {}
@@ -925,7 +918,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    reference: root::package:test/a.dart::@fragment::package:test/a.dart
+    reference: root::package:test/a.dart::@unit::package:test/a.dart
     library: root::package:test/a.dart
     classes: A, B
 ''');
@@ -940,8 +933,8 @@ unitElementResult
     File file,
     String expected,
   ) async {
-    var session = contextFor(file).currentSession;
-    var unitResult = await session.getUnitElementValid(file);
+    final session = contextFor(file).currentSession;
+    final unitResult = await session.getUnitElementValid(file);
     _assertUnitElementResultText(unitResult, expected);
   }
 
@@ -959,28 +952,28 @@ unitElementResult
   }
 
   String _getElementUnitResultText(UnitElementResult result) {
-    var buffer = StringBuffer();
-    var sink = TreeStringSink(sink: buffer, indent: '');
+    final buffer = StringBuffer();
+    final sink = TreeStringSink(sink: buffer, indent: '');
 
     sink.writelnWithIndent('unitElementResult');
     sink.withIndent(() {
       // We could print it, but currently it is always the current.
       expect(result.session, contextFor(testFile).currentSession);
 
-      var file = result.file;
+      final file = result.file;
       sink.writelnWithIndent('path: ${file.posixPath}');
 
       sink.writelnWithIndent('uri: ${result.uri}');
 
       sink.writelnWithIndent('element');
       sink.withIndent(() {
-        var element = result.element as CompilationUnitElementImpl;
+        final element = result.element as CompilationUnitElementImpl;
         sink.writelnWithIndent('reference: ${element.reference}');
 
-        var library = element.library;
+        final library = element.library;
         sink.writelnWithIndent('library: ${library.reference}');
 
-        var classListStr = element.classes.map((e) => e.name).join(', ');
+        final classListStr = element.classes.map((e) => e.name).join(', ');
         sink.writelnWithIndent('classes: $classListStr');
       });
     });

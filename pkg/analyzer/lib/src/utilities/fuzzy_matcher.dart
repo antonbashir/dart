@@ -4,8 +4,6 @@
 
 import 'dart:math' as math;
 
-import 'package:analyzer/src/utilities/completion_matcher.dart';
-
 /// Character role in a candidate string.
 enum CharRole {
   NONE,
@@ -51,7 +49,7 @@ enum CharRole {
 /// }
 /// // ... use topN.getTopElements();
 /// ```
-class FuzzyMatcher extends CompletionMatcher {
+class FuzzyMatcher {
   /// The maximum size of the input scored against the fuzzy matcher. Longer
   /// inputs will be truncated to this size.
   static const int maxInputSize = 127;
@@ -442,7 +440,6 @@ class FuzzyMatcher extends CompletionMatcher {
   /// Computes the fuzzy score of how well the [candidate] matches the pattern,
   /// and returns a value in the range of [0, 1] for matching strings, and -1
   /// for non-matching ones.
-  @override
   double score(String candidate) {
     lastCandidatePrefixTrimmedLen = 0;
     if (candidate.length > maxInputSize) {

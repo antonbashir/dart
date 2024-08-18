@@ -24,13 +24,12 @@ namespace dart {
 namespace bin {
 
 // Forward declarations.
-class ClientSocket;
 class EventHandlerImplementation;
-class FileHandle;
 class Handle;
-class ListenSocket;
-class MonitorLocker;
+class FileHandle;
 class SocketHandle;
+class ClientSocket;
+class ListenSocket;
 
 // An OverlappedBuffer encapsulates the OVERLAPPED structure and the
 // associated data buffer. For accept it also contains the pre-created
@@ -47,21 +46,14 @@ class OverlappedBuffer {
     kConnect
   };
 
-  static std::unique_ptr<OverlappedBuffer> AllocateAcceptBuffer(Handle* handle);
-  static std::unique_ptr<OverlappedBuffer> AllocateReadBuffer(Handle* handle,
-                                                              int buffer_size);
-  static std::unique_ptr<OverlappedBuffer> AllocateRecvFromBuffer(
-      Handle* handle,
-      int buffer_size);
-  static std::unique_ptr<OverlappedBuffer> AllocateWriteBuffer(Handle* handle,
-                                                               int buffer_size);
-  static std::unique_ptr<OverlappedBuffer> AllocateSendToBuffer(
-      Handle* handle,
-      int buffer_size);
-  static std::unique_ptr<OverlappedBuffer> AllocateDisconnectBuffer(
-      Handle* handle);
-  static std::unique_ptr<OverlappedBuffer> AllocateConnectBuffer(
-      Handle* handle);
+  static OverlappedBuffer* AllocateAcceptBuffer(int buffer_size);
+  static OverlappedBuffer* AllocateReadBuffer(int buffer_size);
+  static OverlappedBuffer* AllocateRecvFromBuffer(int buffer_size);
+  static OverlappedBuffer* AllocateWriteBuffer(int buffer_size);
+  static OverlappedBuffer* AllocateSendToBuffer(int buffer_size);
+  static OverlappedBuffer* AllocateDisconnectBuffer();
+  static OverlappedBuffer* AllocateConnectBuffer();
+  static void DisposeBuffer(OverlappedBuffer* buffer);
 
   // Find the IO buffer from the OVERLAPPED address.
   static OverlappedBuffer* GetFromOverlapped(OVERLAPPED* overlapped);
@@ -86,7 +78,9 @@ class OverlappedBuffer {
   SOCKET client() const { return client_; }
   char* GetBufferStart() { return reinterpret_cast<char*>(&buffer_data_); }
   int GetBufferSize() const { return buflen_; }
-  struct sockaddr* from() const { return from_; }
+  struct sockaddr* from() const {
+    return from_;
+  }
   socklen_t* from_len_addr() const { return from_len_addr_; }
   socklen_t from_len() const { return from_ == nullptr ? 0 : *from_len_addr_; }
 
@@ -108,17 +102,31 @@ class OverlappedBuffer {
 
   void operator delete(void* buffer) { free(buffer); }
 
-  Handle* StealHandle() {
-    auto handle = handle_;
-    handle_ = nullptr;
-    return handle;
-  }
-  void DetachClient() { client_ = INVALID_SOCKET; }
-
-  ~OverlappedBuffer();
-
  private:
-  OverlappedBuffer(Handle* handle, int buffer_size, Operation operation);
+  OverlappedBuffer(int buffer_size, Operation operation)
+      : operation_(operation), buflen_(buffer_size) {
+    memset(GetBufferStart(), 0, GetBufferSize());
+    if (operation == kRecvFrom) {
+      // Reserve part of the buffer for the length of source sockaddr
+      // and source sockaddr.
+      const int kAdditionalSize =
+          sizeof(struct sockaddr_storage) + sizeof(socklen_t);
+      ASSERT(buflen_ > kAdditionalSize);
+      buflen_ -= kAdditionalSize;
+      from_len_addr_ =
+          reinterpret_cast<socklen_t*>(GetBufferStart() + GetBufferSize());
+      *from_len_addr_ = sizeof(struct sockaddr_storage);
+      from_ = reinterpret_cast<struct sockaddr*>(from_len_addr_ + 1);
+    } else {
+      from_len_addr_ = nullptr;
+      from_ = nullptr;
+    }
+    index_ = 0;
+    data_length_ = 0;
+    if (operation_ == kAccept) {
+      client_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    }
+  }
 
   void* operator new(size_t size, int buffer_size) {
     return malloc(size + buffer_size);
@@ -127,15 +135,12 @@ class OverlappedBuffer {
   // Allocate an overlapped buffer for thse specified amount of data and
   // operation. Some operations need additional buffer space, which is
   // handled by this method.
-  static std::unique_ptr<OverlappedBuffer> AllocateBuffer(Handle* handle,
-                                                          int buffer_size,
-                                                          Operation operation);
+  static OverlappedBuffer* AllocateBuffer(int buffer_size, Operation operation);
 
-  OVERLAPPED overlapped_;           // OVERLAPPED structure for overlapped IO.
-  SOCKET client_ = INVALID_SOCKET;  // Used for AcceptEx client socket.
-  int buflen_;                      // Length of the buffer.
-  Operation operation_;             // Type of operation issued.
-  Handle* handle_ = nullptr;
+  OVERLAPPED overlapped_;  // OVERLAPPED structure for overlapped IO.
+  SOCKET client_;          // Used for AcceptEx client socket.
+  int buflen_;             // Length of the buffer.
+  Operation operation_;    // Type of operation issued.
 
   int index_;        // Index for next read from read buffer.
   int data_length_;  // Length of the actual data in the buffer.
@@ -168,8 +173,6 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
     kDatagramSocket
   };
 
-  enum class SupportsOverlappedIO { kYes, kNo };
-
   // Socket interface exposing normal socket operations.
   intptr_t Available();
   bool DataReady();
@@ -185,12 +188,15 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
                           socklen_t sa_len);
 
   // Internal interface used by the event handler.
-  virtual bool IssueReadLocked(MonitorLocker* ml);
-  virtual bool IssueRecvFromLocked(MonitorLocker* ml);
+  virtual bool IssueRead();
+  virtual bool IssueRecvFrom();
+  virtual bool IssueWrite();
+  virtual bool IssueSendTo(struct sockaddr* sa, socklen_t sa_len);
   bool HasPendingRead();
   bool HasPendingWrite();
-  void ReadComplete(std::unique_ptr<OverlappedBuffer> buffer);
-  void WriteComplete(std::unique_ptr<OverlappedBuffer> buffer);
+  void ReadComplete(OverlappedBuffer* buffer);
+  void RecvFromComplete(OverlappedBuffer* buffer);
+  void WriteComplete(OverlappedBuffer* buffer);
 
   bool IsClosing() { return (flags_ & (1 << kClosing)) != 0; }
   bool IsClosedRead() { return (flags_ & (1 << kCloseRead)) != 0; }
@@ -201,12 +207,14 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
   void MarkClosedWrite() { flags_ |= (1 << kCloseWrite); }
   void MarkError() { flags_ |= (1 << kError); }
 
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler) = 0;
+
   HANDLE handle() { return handle_; }
 
-  void Close();
-  void CloseLocked(MonitorLocker* ml);
+  bool CreateCompletionPort(HANDLE completion_port);
 
-  virtual void DoCloseLocked(MonitorLocker* ml);
+  void Close();
+  virtual void DoClose();
   virtual bool IsClosed() = 0;
 
   bool IsHandleClosed() const { return handle_ == INVALID_HANDLE_VALUE; }
@@ -221,7 +229,10 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
   bool is_client_socket() { return type_ == kClientSocket; }
   bool is_datagram_socket() { return type_ == kDatagramSocket; }
 
-  bool supports_overlapped_io() {
+  void MarkDoesNotSupportOverlappedIO() {
+    flags_ |= (1 << kDoesNotSupportOverlappedIO);
+  }
+  bool SupportsOverlappedIO() {
     return (flags_ & (1 << kDoesNotSupportOverlappedIO)) == 0;
   }
 
@@ -229,6 +240,14 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
 
   DWORD last_error() { return last_error_; }
   void set_last_error(DWORD last_error) { last_error_ = last_error; }
+
+  void set_completion_port(HANDLE completion_port) {
+    completion_port_ = completion_port;
+  }
+
+  void set_event_handler(EventHandlerImplementation* event_handler) {
+    event_handler_ = event_handler;
+  }
 
  protected:
   // For access to monitor_;
@@ -242,27 +261,28 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
     kError = 4
   };
 
-  Handle(intptr_t handle,
-         Type type_,
-         SupportsOverlappedIO supports_overlapped_io);
+  explicit Handle(intptr_t handle);
   virtual ~Handle();
 
   virtual void HandleIssueError();
 
   Monitor monitor_;
-  const Type type_;
+  Type type_;
   HANDLE handle_;
+  HANDLE completion_port_;
+  EventHandlerImplementation* event_handler_;
 
   std::unique_ptr<OverlappedBuffer>
-      data_ready_;  // Buffer for data ready to be read.
-  OverlappedBuffer* pending_read_ = nullptr;   // Buffer for pending read.
-  OverlappedBuffer* pending_write_ = nullptr;  // Buffer for pending write
+      data_ready_;                   // Buffer for data ready to be read.
+  OverlappedBuffer* pending_read_;   // Buffer for pending read.
+  OverlappedBuffer* pending_write_;  // Buffer for pending write
 
-  DWORD last_error_ = NOERROR;
+  DWORD last_error_;
 
-  HANDLE read_thread_ = INVALID_HANDLE_VALUE;
-  bool read_thread_starting_ = false;
-  bool read_thread_finished_ = false;
+  ThreadId read_thread_id_;
+  HANDLE read_thread_handle_;
+  bool read_thread_starting_;
+  bool read_thread_finished_;
 
  private:
   void WaitForReadThreadStarted();
@@ -270,14 +290,7 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
   void WaitForReadThreadFinished();
   void NotifyReadThreadFinished();
 
-  virtual bool IssueWriteLocked(MonitorLocker* ml,
-                                std::unique_ptr<OverlappedBuffer> buffer);
-  virtual bool IssueSendToLocked(MonitorLocker* ml,
-                                 std::unique_ptr<OverlappedBuffer> buffer,
-                                 struct sockaddr* sa,
-                                 socklen_t sa_len);
-
-  int flags_ = 0;
+  int flags_;
 
   friend class ReferenceCounted<Handle>;
   DISALLOW_COPY_AND_ASSIGN(Handle);
@@ -286,19 +299,12 @@ class Handle : public ReferenceCounted<Handle>, public DescriptorInfoBase {
 class FileHandle : public DescriptorInfoSingleMixin<Handle> {
  public:
   explicit FileHandle(HANDLE handle)
-      : DescriptorInfoSingleMixin(reinterpret_cast<intptr_t>(handle),
-                                  kFile,
-                                  SupportsOverlappedIO::kYes) {}
+      : DescriptorInfoSingleMixin(reinterpret_cast<intptr_t>(handle), true) {
+    type_ = kFile;
+  }
 
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler);
   virtual bool IsClosed();
-
- protected:
-  FileHandle(HANDLE handle,
-             Type type,
-             SupportsOverlappedIO supports_overlapped_io)
-      : DescriptorInfoSingleMixin(reinterpret_cast<intptr_t>(handle),
-                                  type,
-                                  supports_overlapped_io) {}
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FileHandle);
@@ -308,7 +314,7 @@ class StdHandle : public FileHandle {
  public:
   static StdHandle* Stdin(HANDLE handle);
 
-  virtual void DoCloseLocked(MonitorLocker* ml);
+  virtual void DoClose();
   virtual intptr_t Write(const void* buffer, intptr_t num_bytes);
 
   void WriteSyncCompleteAsync();
@@ -323,12 +329,20 @@ class StdHandle : public FileHandle {
   static StdHandle* stdin_;
 
   explicit StdHandle(HANDLE handle)
-      : FileHandle(handle, kStd, SupportsOverlappedIO::kNo) {}
+      : FileHandle(handle),
+        thread_id_(Thread::kInvalidThreadId),
+        thread_handle_(nullptr),
+        thread_wrote_(0),
+        write_thread_exists_(false),
+        write_thread_running_(false) {
+    type_ = kStd;
+  }
 
-  HANDLE thread_handle_ = INVALID_HANDLE_VALUE;
-  intptr_t thread_wrote_ = 0;
-  bool write_thread_exists_ = false;
-  bool write_thread_running_ = false;
+  ThreadId thread_id_;
+  HANDLE thread_handle_;
+  intptr_t thread_wrote_;
+  bool write_thread_exists_;
+  bool write_thread_running_;
 
   DISALLOW_COPY_AND_ASSIGN(StdHandle);
 };
@@ -336,17 +350,17 @@ class StdHandle : public FileHandle {
 class DirectoryWatchHandle : public DescriptorInfoSingleMixin<Handle> {
  public:
   DirectoryWatchHandle(HANDLE handle, int events, bool recursive)
-      : DescriptorInfoSingleMixin(reinterpret_cast<intptr_t>(handle),
-                                  kDirectoryWatch,
-                                  SupportsOverlappedIO::kYes),
+      : DescriptorInfoSingleMixin(reinterpret_cast<intptr_t>(handle), true),
         events_(events),
-        recursive_(recursive) {}
+        recursive_(recursive) {
+    type_ = kDirectoryWatch;
+  }
 
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler);
   virtual bool IsClosed();
 
-  virtual bool IssueReadLocked(MonitorLocker* ml);
+  virtual bool IssueRead();
 
-  void Start();
   void Stop();
 
  private:
@@ -361,8 +375,7 @@ class SocketHandle : public Handle {
   SOCKET socket() const { return socket_; }
 
  protected:
-  explicit SocketHandle(intptr_t s, Type type)
-      : Handle(s, type, SupportsOverlappedIO::kYes), socket_(s) {}
+  explicit SocketHandle(intptr_t s) : Handle(s), socket_(s) {}
 
   virtual void HandleIssueError();
 
@@ -376,11 +389,15 @@ class SocketHandle : public Handle {
 class ListenSocket : public DescriptorInfoMultipleMixin<SocketHandle> {
  public:
   explicit ListenSocket(intptr_t s)
-      : DescriptorInfoMultipleMixin(s, kListenSocket),
+      : DescriptorInfoMultipleMixin(s, true),
+        AcceptEx_(nullptr),
+        GetAcceptExSockaddrs_(nullptr),
         pending_accept_count_(0),
         accepted_head_(nullptr),
         accepted_tail_(nullptr),
-        accepted_count_(0) {}
+        accepted_count_(0) {
+    type_ = kListenSocket;
+  }
   virtual ~ListenSocket() {
     ASSERT(!HasPendingAccept());
     ASSERT(accepted_head_ == nullptr);
@@ -389,25 +406,27 @@ class ListenSocket : public DescriptorInfoMultipleMixin<SocketHandle> {
 
   // Socket interface exposing normal socket operations.
   ClientSocket* Accept();
-  bool StartAccept();
+  bool CanAccept();
 
   // Internal interface used by the event handler.
   bool HasPendingAccept() { return pending_accept_count_ > 0; }
-  void AcceptComplete(std::unique_ptr<OverlappedBuffer> buffer);
+  bool IssueAccept();
+  void AcceptComplete(OverlappedBuffer* buffer, HANDLE completion_port);
 
-  virtual void DoCloseLocked(MonitorLocker* ml);
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler);
+  virtual void DoClose();
   virtual bool IsClosed();
 
   int pending_accept_count() { return pending_accept_count_; }
 
   int accepted_count() { return accepted_count_; }
 
-  void DispatchCompletedAcceptsLocked(MonitorLocker* ml);
-
  private:
-  static constexpr intptr_t kMinIssuedAccepts = 5;
+  bool LoadAcceptEx();
+  bool LoadGetAcceptExSockaddrs();
 
-  bool IssueAcceptLocked(MonitorLocker* ml);
+  LPFN_ACCEPTEX AcceptEx_;
+  LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrs_;
 
   // The number of asynchronous `IssueAccept` operations which haven't completed
   // yet.
@@ -430,11 +449,15 @@ class ClientSocket : public DescriptorInfoSingleMixin<SocketHandle> {
  public:
   explicit ClientSocket(intptr_t s,
                         std::unique_ptr<RawAddr> remote_addr = nullptr)
-      : DescriptorInfoSingleMixin(s, kClientSocket),
+      : DescriptorInfoSingleMixin(s, true),
+        DisconnectEx_(nullptr),
         next_(nullptr),
         connected_(false),
         closed_(false),
-        remote_addr_(std::move(remote_addr)) {}
+        remote_addr_(std::move(remote_addr)) {
+    LoadDisconnectEx();
+    type_ = kClientSocket;
+  }
 
   virtual ~ClientSocket() {
     // Don't delete this object until all pending requests have been handled.
@@ -447,12 +470,14 @@ class ClientSocket : public DescriptorInfoSingleMixin<SocketHandle> {
   void Shutdown(int how);
 
   // Internal interface used by the event handler.
-  virtual bool IssueReadLocked(MonitorLocker* ml);
-  void IssueDisconnectLocked(MonitorLocker* ml);
-  void DisconnectComplete();
-  void ConnectComplete();
+  virtual bool IssueRead();
+  virtual bool IssueWrite();
+  void IssueDisconnect();
+  void DisconnectComplete(OverlappedBuffer* buffer);
+  void ConnectComplete(OverlappedBuffer* buffer);
 
-  virtual void DoCloseLocked(MonitorLocker* ml);
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler);
+  virtual void DoClose();
   virtual bool IsClosed();
 
   // If `ClientSocket` was constructed with a `remote_addr`, populate `addr`
@@ -473,9 +498,9 @@ class ClientSocket : public DescriptorInfoSingleMixin<SocketHandle> {
 #endif
 
  private:
-  virtual bool IssueWriteLocked(MonitorLocker* ml,
-                                std::unique_ptr<OverlappedBuffer> buffer);
+  bool LoadDisconnectEx();
 
+  LPFN_DISCONNECTEX DisconnectEx_;
   ClientSocket* next_;
   bool connected_;
   bool closed_;
@@ -490,8 +515,9 @@ class ClientSocket : public DescriptorInfoSingleMixin<SocketHandle> {
 
 class DatagramSocket : public DescriptorInfoSingleMixin<SocketHandle> {
  public:
-  explicit DatagramSocket(intptr_t s)
-      : DescriptorInfoSingleMixin(s, kDatagramSocket) {}
+  explicit DatagramSocket(intptr_t s) : DescriptorInfoSingleMixin(s, true) {
+    type_ = kDatagramSocket;
+  }
 
   virtual ~DatagramSocket() {
     // Don't delete this object until all pending requests have been handled.
@@ -500,17 +526,14 @@ class DatagramSocket : public DescriptorInfoSingleMixin<SocketHandle> {
   }
 
   // Internal interface used by the event handler.
-  virtual bool IssueRecvFromLocked(MonitorLocker* ml);
+  virtual bool IssueRecvFrom();
+  virtual bool IssueSendTo(sockaddr* sa, socklen_t sa_len);
 
-  virtual void DoCloseLocked(MonitorLocker* ml);
+  virtual void EnsureInitialized(EventHandlerImplementation* event_handler);
+  virtual void DoClose();
   virtual bool IsClosed();
 
  private:
-  virtual bool IssueSendToLocked(MonitorLocker* ml,
-                                 std::unique_ptr<OverlappedBuffer> buffer,
-                                 sockaddr* sa,
-                                 socklen_t sa_len);
-
   DISALLOW_COPY_AND_ASSIGN(DatagramSocket);
 };
 
@@ -519,8 +542,6 @@ class EventHandlerImplementation {
  public:
   EventHandlerImplementation();
   virtual ~EventHandlerImplementation();
-
-  void AssociateWithCompletionPort(Handle* handle);
 
   void SendData(intptr_t id, Dart_Port dart_port, int64_t data);
   void Start(EventHandler* handler);
@@ -531,8 +552,18 @@ class EventHandlerImplementation {
   int64_t GetTimeout();
   void HandleInterrupt(InterruptMessage* msg);
   void HandleTimeout();
-
-  void HandleIOCompletion(int32_t bytes, ULONG_PTR key, OVERLAPPED* overlapped);
+  void HandleAccept(ListenSocket* listen_socket, OverlappedBuffer* buffer);
+  void TryDispatchingPendingAccepts(ListenSocket* listen_socket);
+  void HandleRead(Handle* handle, int bytes, OverlappedBuffer* buffer);
+  void HandleRecvFrom(Handle* handle, int bytes, OverlappedBuffer* buffer);
+  void HandleWrite(Handle* handle, int bytes, OverlappedBuffer* buffer);
+  void HandleDisconnect(ClientSocket* client_socket,
+                        int bytes,
+                        OverlappedBuffer* buffer);
+  void HandleConnect(ClientSocket* client_socket,
+                     int bytes,
+                     OverlappedBuffer* buffer);
+  void HandleIOCompletion(DWORD bytes, ULONG_PTR key, OVERLAPPED* overlapped);
 
   void HandleCompletionOrInterrupt(BOOL ok,
                                    DWORD bytes,
@@ -541,59 +572,14 @@ class EventHandlerImplementation {
 
   HANDLE completion_port() { return completion_port_; }
 
-  LPFN_ACCEPTEX accept_ex() {
-    InitializeSocketExtensions();
-    return accept_ex_;
-  }
-
-  LPFN_CONNECTEX connect_ex() {
-    InitializeSocketExtensions();
-    return connect_ex_;
-  }
-
-  LPFN_DISCONNECTEX disconnect_ex() {
-    InitializeSocketExtensions();
-    return disconnect_ex_;
-  }
-
-  LPFN_GETACCEPTEXSOCKADDRS get_accept_ex_sockaddrs() {
-    InitializeSocketExtensions();
-    return get_accept_ex_sockaddrs_;
-  }
-
  private:
-  void InitializeSocketExtensions();
-
-  void HandleAccept(ListenSocket* listen_socket,
-                    std::unique_ptr<OverlappedBuffer> buffer);
-  void HandleRead(Handle* handle,
-                  int bytes,
-                  std::unique_ptr<OverlappedBuffer> buffer);
-  void HandleRecvFrom(Handle* handle,
-                      int bytes,
-                      std::unique_ptr<OverlappedBuffer> buffer);
-  void HandleWrite(Handle* handle,
-                   int bytes,
-                   std::unique_ptr<OverlappedBuffer> buffer);
-  void HandleDisconnect(ClientSocket* client_socket,
-                        int bytes,
-                        std::unique_ptr<OverlappedBuffer> buffer);
-  void HandleConnect(ClientSocket* client_socket,
-                     int bytes,
-                     std::unique_ptr<OverlappedBuffer> buffer);
-
-  Monitor monitor_;
-  HANDLE handler_thread_ = INVALID_HANDLE_VALUE;
+  Monitor startup_monitor_;
+  ThreadId handler_thread_id_;
+  HANDLE handler_thread_handle_;
 
   TimeoutQueue timeout_queue_;  // Time for next timeout.
-  bool shutdown_ = false;
-  HANDLE completion_port_ = INVALID_HANDLE_VALUE;
-
-  std::atomic<bool> socket_extensions_initialized_{false};
-  LPFN_ACCEPTEX accept_ex_ = nullptr;
-  LPFN_CONNECTEX connect_ex_ = nullptr;
-  LPFN_DISCONNECTEX disconnect_ex_ = nullptr;
-  LPFN_GETACCEPTEXSOCKADDRS get_accept_ex_sockaddrs_ = nullptr;
+  bool shutdown_;
+  HANDLE completion_port_;
 
   DISALLOW_COPY_AND_ASSIGN(EventHandlerImplementation);
 };

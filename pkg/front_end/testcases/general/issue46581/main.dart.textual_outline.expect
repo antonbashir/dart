@@ -5,5 +5,4 @@ class TestClass extends MyClass with MyMixin {
 }
 
 mixin MyMixin {}
-
 void main() {}

@@ -25,7 +25,6 @@ class RuntimeEntry;
   V(ClassLoading)                                                              \
   V(CompileParseRegExp)                                                        \
   V(Dart)                                                                      \
-  V(DartInterpreted)                                                           \
   V(GCNewSpace)                                                                \
   V(GCOldSpace)                                                                \
   V(GCIdle)                                                                    \

@@ -97,7 +97,8 @@ void NativeEntry::MaybePropagateError(NativeArguments* arguments) {
   // the kThreadInNative state.
   ASSERT(thread->execution_state() == Thread::kThreadInGenerated);
   ObjectPtr retval = arguments->ReturnValue();
-  if (UNLIKELY(IsErrorClassId(retval->GetClassId()))) {
+  if (UNLIKELY(retval->IsHeapObject() &&
+               IsErrorClassId(retval->GetClassId()))) {
     thread->UnwindScopes(thread->top_exit_frame_info());
 
     TransitionGeneratedToVM transition(thread);
@@ -141,7 +142,7 @@ void NativeEntry::BootstrapNativeCallWrapper(Dart_NativeArguments args,
     // A return of Object::sentinel means the return value has already
     // been set.
     ObjectPtr return_value_unsafe = reinterpret_cast<BootstrapNativeFunction>(
-        reinterpret_cast<void*>(func))(thread, zone.GetZone(), arguments);
+        func)(thread, zone.GetZone(), arguments);
     if (return_value_unsafe != Object::sentinel().ptr()) {
       ASSERT(return_value_unsafe->IsDartInstance());
       arguments->SetReturnUnsafe(return_value_unsafe);

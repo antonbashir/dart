@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Specify `@required` on named parameters without defaults.';
 
@@ -36,14 +35,21 @@ NOTE: Only asserts at the start of the bodies will be taken into account.
 ''';
 
 class AlwaysRequireNonNullNamedParameters extends LintRule {
+  static const LintCode code = LintCode(
+    'always_require_non_null_named_parameters',
+    'Named parameters without a default value should be annotated with '
+        "'@required'.",
+    correctionMessage: "Try adding the '@required' annotation.",
+  );
+
   AlwaysRequireNonNullNamedParameters()
       : super(
             name: 'always_require_non_null_named_parameters',
             description: _desc,
             details: _details,
             state: State.removed(since: dart3_3),
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.removed_lint;
+  LintCode get lintCode => code;
 }

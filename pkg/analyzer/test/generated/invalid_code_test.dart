@@ -382,14 +382,6 @@ extension on int {}
 ''');
   }
 
-  test_issue_52363() async {
-    await _assertCanBeAnalyzed(r'''
-class A {
-  const a = (var b,) = (0,);
-}
-''');
-  }
-
   test_issue_52432() async {
     await _assertCanBeAnalyzed(r'''
 void f() {
@@ -446,6 +438,20 @@ void foo() {
   // ignore:unused_element
   void bar({@my this.x}) {}
 }
+''');
+  }
+
+  test_methodInvocation_ofGenericClass_generic_static_fromLegacy() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A<T> {
+  static void foo<T2>() {}
+}
+''');
+    await _assertCanBeAnalyzed('''
+// @dart = 2.9
+import 'a.dart';
+
+const bar = A.foo();
 ''');
   }
 

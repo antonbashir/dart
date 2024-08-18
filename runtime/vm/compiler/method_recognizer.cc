@@ -77,6 +77,21 @@ intptr_t MethodRecognizer::ResultCidFromPragma(
   return kDynamicCid;
 }
 
+bool MethodRecognizer::HasNonNullableResultTypeFromPragma(
+    const Object& function_or_field) {
+  auto T = Thread::Current();
+  auto Z = T->zone();
+  auto& option = Object::Handle(Z);
+  if (Library::FindPragma(T, /*only_core=*/true, function_or_field,
+                          Symbols::vm_non_nullable_result_type(),
+                          /*multiple=*/false, &option)) {
+    return true;
+  }
+
+  // If nothing said otherwise, the return type is nullable.
+  return false;
+}
+
 intptr_t MethodRecognizer::MethodKindToReceiverCid(Kind kind) {
   switch (kind) {
     case kObjectArrayGetIndexed:
@@ -89,23 +104,69 @@ intptr_t MethodRecognizer::MethodKindToReceiverCid(Kind kind) {
     case kGrowableArraySetIndexedUnchecked:
       return kGrowableObjectArrayCid;
 
-#define TYPED_DATA_GET_SET_INDEXED_CASES(clazz)                                \
-  case k##clazz##ArrayGetIndexed:                                              \
-  case k##clazz##ArraySetIndexed:                                              \
-    return kTypedData##clazz##ArrayCid;                                        \
-  case kExternal##clazz##ArrayGetIndexed:                                      \
-    return kExternalTypedData##clazz##ArrayCid;                                \
-  case k##clazz##ArrayViewGetIndexed:                                          \
-    return kTypedData##clazz##ArrayViewCid;
+    case kFloat32ArrayGetIndexed:
+    case kFloat32ArraySetIndexed:
+      return kTypedDataFloat32ArrayCid;
 
-      DART_CLASS_LIST_TYPED_DATA(TYPED_DATA_GET_SET_INDEXED_CASES);
-#undef TYPED_DATA_GET_SET_INDEXED_CASES
+    case kFloat64ArrayGetIndexed:
+    case kFloat64ArraySetIndexed:
+      return kTypedDataFloat64ArrayCid;
 
+    case kInt8ArrayGetIndexed:
+    case kInt8ArraySetIndexed:
+      return kTypedDataInt8ArrayCid;
+
+    case kUint8ArrayGetIndexed:
+    case kUint8ArraySetIndexed:
+      return kTypedDataUint8ArrayCid;
+
+    case kUint8ClampedArrayGetIndexed:
+    case kUint8ClampedArraySetIndexed:
+      return kTypedDataUint8ClampedArrayCid;
+
+    case kExternalUint8ArrayGetIndexed:
     case kExternalUint8ArraySetIndexed:
       return kExternalTypedDataUint8ArrayCid;
 
+    case kExternalUint8ClampedArrayGetIndexed:
     case kExternalUint8ClampedArraySetIndexed:
       return kExternalTypedDataUint8ClampedArrayCid;
+
+    case kInt16ArrayGetIndexed:
+    case kInt16ArraySetIndexed:
+      return kTypedDataInt16ArrayCid;
+
+    case kUint16ArrayGetIndexed:
+    case kUint16ArraySetIndexed:
+      return kTypedDataUint16ArrayCid;
+
+    case kInt32ArrayGetIndexed:
+    case kInt32ArraySetIndexed:
+      return kTypedDataInt32ArrayCid;
+
+    case kUint32ArrayGetIndexed:
+    case kUint32ArraySetIndexed:
+      return kTypedDataUint32ArrayCid;
+
+    case kInt64ArrayGetIndexed:
+    case kInt64ArraySetIndexed:
+      return kTypedDataInt64ArrayCid;
+
+    case kUint64ArrayGetIndexed:
+    case kUint64ArraySetIndexed:
+      return kTypedDataUint64ArrayCid;
+
+    case kFloat32x4ArrayGetIndexed:
+    case kFloat32x4ArraySetIndexed:
+      return kTypedDataFloat32x4ArrayCid;
+
+    case kInt32x4ArrayGetIndexed:
+    case kInt32x4ArraySetIndexed:
+      return kTypedDataInt32x4ArrayCid;
+
+    case kFloat64x2ArrayGetIndexed:
+    case kFloat64x2ArraySetIndexed:
+      return kTypedDataFloat64x2ArrayCid;
 
     default:
       break;
@@ -115,12 +176,14 @@ intptr_t MethodRecognizer::MethodKindToReceiverCid(Kind kind) {
 }
 
 static const struct {
+  const char* const class_name;
   const char* const function_name;
   const char* const enum_name;
+  const uint32_t fp;
 } recognized_methods[MethodRecognizer::kNumRecognizedMethods] = {
-    {"", "Unknown"},
-#define RECOGNIZE_METHOD(library, class_name, function_name, enum_name, fp)    \
-  {"" #function_name, #enum_name},
+    {"", "", "Unknown", 0},
+#define RECOGNIZE_METHOD(class_name, function_name, enum_name, fp)             \
+  {"" #class_name, "" #function_name, #enum_name, fp},
     RECOGNIZED_LIST(RECOGNIZE_METHOD)
 #undef RECOGNIZE_METHOD
 };
@@ -158,60 +221,40 @@ bool MethodRecognizer::IsMarkedAsRecognized(const Function& function,
   return String::Cast(options).Equals(kind);
 }
 
-static bool IsAssemblerIntrinsic(MethodRecognizer::Kind kind) {
-  switch (kind) {
-#define RECOGNIZE_METHOD(library, class_name, function_name, enum_name, fp)    \
-  case MethodRecognizer::k##enum_name:
-    ASM_INTRINSICS_LIST(RECOGNIZE_METHOD)
-#undef RECOGNIZE_METHOD
-    return true;
-    default:
-      return false;
-  }
-}
-
-static bool IsGraphIntrinsic(MethodRecognizer::Kind kind) {
-  switch (kind) {
-#define RECOGNIZE_METHOD(library, class_name, function_name, enum_name, fp)    \
-  case MethodRecognizer::k##enum_name:
-    GRAPH_INTRINSICS_LIST(RECOGNIZE_METHOD)
-#undef RECOGNIZE_METHOD
-    return true;
-    default:
-      return false;
-  }
-}
-
 void MethodRecognizer::InitializeState() {
-  Library& lib = Library::Handle();
+  GrowableArray<Library*> libs(3);
+  Libraries(&libs);
   Function& func = Function::Handle();
   bool fingerprints_match = true;
 
-#define RECOGNIZE_METHOD(library, class_name, function_name, enum_name, fp)    \
-  lib = Library::library();                                                    \
-  func = Library::GetFunction(lib, #class_name, #function_name);               \
-  if (!func.IsNull()) {                                                        \
-    fingerprints_match =                                                       \
-        func.CheckSourceFingerprint(fp) && fingerprints_match;                 \
-    func.set_recognized_kind(k##enum_name);                                    \
-    if (IsAssemblerIntrinsic(k##enum_name)) {                                  \
-      func.reset_unboxed_parameters_and_return();                              \
-      func.set_is_intrinsic(true);                                             \
-    } else if (IsGraphIntrinsic(k##enum_name)) {                               \
-      func.set_is_intrinsic(true);                                             \
-    }                                                                          \
-  } else if (!FLAG_precompiled_mode) {                                         \
-    fingerprints_match = false;                                                \
-    OS::PrintErr("Missing %s %s::%s\n", #library, #class_name,                 \
-                 #function_name);                                              \
-  }
-  RECOGNIZED_LIST(RECOGNIZE_METHOD)
+  for (intptr_t i = 1; i < MethodRecognizer::kNumRecognizedMethods; i++) {
+    const MethodRecognizer::Kind kind = static_cast<MethodRecognizer::Kind>(i);
+    func = Library::GetFunction(libs, recognized_methods[i].class_name,
+                                recognized_methods[i].function_name);
+    if (!func.IsNull()) {
+      fingerprints_match =
+          func.CheckSourceFingerprint(recognized_methods[i].fp) &&
+          fingerprints_match;
+      func.set_recognized_kind(kind);
+      switch (kind) {
+#define RECOGNIZE_METHOD(class_name, function_name, enum_name, fp)             \
+  case MethodRecognizer::k##enum_name:                                         \
+    func.reset_unboxed_parameters_and_return();                                \
+    break;
+        ALL_INTRINSICS_LIST(RECOGNIZE_METHOD)
 #undef RECOGNIZE_METHOD
+        default:
+          break;
+      }
+    } else if (!FLAG_precompiled_mode) {
+      fingerprints_match = false;
+      OS::PrintErr("Missing %s::%s\n", recognized_methods[i].class_name,
+                   recognized_methods[i].function_name);
+    }
+  }
 
-#define SET_FUNCTION_BIT(library, class_name, function_name, dest, fp, setter, \
-                         value)                                                \
-  lib = Library::library();                                                    \
-  func = Library::GetFunction(lib, #class_name, #function_name);               \
+#define SET_FUNCTION_BIT(class_name, function_name, dest, fp, setter, value)   \
+  func = Library::GetFunction(libs, #class_name, #function_name);              \
   if (!func.IsNull()) {                                                        \
     fingerprints_match =                                                       \
         func.CheckSourceFingerprint(fp) && fingerprints_match;                 \
@@ -221,9 +264,8 @@ void MethodRecognizer::InitializeState() {
     fingerprints_match = false;                                                \
   }
 
-#define SET_IS_POLYMORPHIC_TARGET(library, class_name, function_name, dest,    \
-                                  fp)                                          \
-  SET_FUNCTION_BIT(library, class_name, function_name, dest, fp,               \
+#define SET_IS_POLYMORPHIC_TARGET(class_name, function_name, dest, fp)         \
+  SET_FUNCTION_BIT(class_name, function_name, dest, fp,                        \
                    set_is_polymorphic_target, true)
 
   POLYMORPHIC_TARGET_LIST(SET_IS_POLYMORPHIC_TARGET);
@@ -241,6 +283,20 @@ void MethodRecognizer::InitializeState() {
         "the VM's compiler. Otherwise the fingerprint can simply be "
         "updated in recognized_methods_list.h\n");
   }
+}
+
+void MethodRecognizer::Libraries(GrowableArray<Library*>* libs) {
+  libs->Add(&Library::ZoneHandle(Library::CoreLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::CollectionLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::MathLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::TypedDataLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::ConvertLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::InternalLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::IsolateLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::DeveloperLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::AsyncLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::FfiLibrary()));
+  libs->Add(&Library::ZoneHandle(Library::NativeWrappersLibrary()));
 }
 
 static Token::Kind RecognizeTokenKindHelper(const String& name) {
@@ -304,8 +360,7 @@ Token::Kind MethodTokenRecognizer::RecognizeTokenKind(const String& name) {
   }
 }
 
-#define RECOGNIZE_FACTORY(symbol, library, class_name, constructor_name, cid,  \
-                          fp)                                                  \
+#define RECOGNIZE_FACTORY(symbol, class_name, constructor_name, cid, fp)       \
   {Symbols::k##symbol##Id, cid, fp, #symbol ", " #cid},  // NOLINT
 
 static const struct {

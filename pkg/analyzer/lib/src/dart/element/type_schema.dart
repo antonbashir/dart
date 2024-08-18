@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
 import 'package:analyzer/dart/ast/token.dart' show Keyword;
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
@@ -18,11 +17,10 @@ import 'package:analyzer/src/dart/element/type_visitor.dart';
 /// parameters that we do not know yet. Notationally it is written `_`, for
 /// example `List<_>`. This is distinct from `List<dynamic>`. These types will
 /// never appear in the final resolved AST.
-class UnknownInferredType extends TypeImpl
-    implements SharedUnknownType<DartType> {
-  static const UnknownInferredType instance = UnknownInferredType._();
+class UnknownInferredType extends TypeImpl {
+  static final UnknownInferredType instance = UnknownInferredType._();
 
-  const UnknownInferredType._();
+  UnknownInferredType._();
 
   @override
   Element? get element => null;
@@ -43,7 +41,7 @@ class UnknownInferredType extends TypeImpl
   String get name => Keyword.DYNAMIC.lexeme;
 
   @override
-  NullabilitySuffix get nullabilitySuffix => NullabilitySuffix.question;
+  NullabilitySuffix get nullabilitySuffix => NullabilitySuffix.star;
 
   @override
   bool operator ==(Object other) => identical(other, this);
@@ -98,12 +96,12 @@ class UnknownInferredType extends TypeImpl
     }
 
     if (type is RecordType) {
-      for (var field in type.positionalFields) {
+      for (final field in type.positionalFields) {
         if (isUnknown(field.type)) {
           return true;
         }
       }
-      for (var field in type.namedFields) {
+      for (final field in type.namedFields) {
         if (isUnknown(field.type)) {
           return true;
         }

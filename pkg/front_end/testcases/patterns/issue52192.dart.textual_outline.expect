@@ -9,9 +9,6 @@ class B implements A<int> {
 }
 
 void foo(Object o, num value) {}
-
 void main() {}
-
 expect(expected, actual) {}
-
 throws(void Function() f) {}

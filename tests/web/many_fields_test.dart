@@ -2,6 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// TODO(https://github.com/dart-lang/sdk/issues/51557): Decide if the mixins
+// being applied in this test should be "mixin", "mixin class" or the test
+// should be left at 2.19.
+// @dart=2.19
+
 import "package:expect/expect.dart";
 
 // A plain class that implements many fields.
@@ -90,7 +95,7 @@ class B {
   var fieldD4 = 0x8801;
 }
 
-mixin C {
+class C {
   var fieldXA1 = 0x8001;
   var fieldXA2 = 0x4002;
   var fieldXA3 = 0x2004;
@@ -138,7 +143,7 @@ class D extends B with C {
 class E extends A with C {}
 
 // Another mixin for block C.
-mixin F {
+class F {
   var fieldYA1 = 0x0001;
   var fieldYA2 = 0x1022;
   var fieldYA3 = 0x0004;

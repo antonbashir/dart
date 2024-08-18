@@ -9,12 +9,16 @@ import '../context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(EqualTest);
+    defineReflectiveTests(EqualWithoutNullSafetyTest);
     defineReflectiveTests(NotEqualTest);
+    defineReflectiveTests(NotEqualWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
-class EqualTest extends PubPackageResolutionTest {
+class EqualTest extends PubPackageResolutionTest with EqualTestCases {}
+
+mixin EqualTestCases on PubPackageResolutionTest {
   test_simple() async {
     await resolveTestCode('''
 void f(Object a, Object b) {
@@ -27,7 +31,13 @@ void f(Object a, Object b) {
 }
 
 @reflectiveTest
-class NotEqualTest extends PubPackageResolutionTest {
+class EqualWithoutNullSafetyTest extends PubPackageResolutionTest
+    with EqualTestCases, WithoutNullSafetyMixin {}
+
+@reflectiveTest
+class NotEqualTest extends PubPackageResolutionTest with NotEqualTestCases {}
+
+mixin NotEqualTestCases on PubPackageResolutionTest {
   test_simple() async {
     await resolveTestCode('''
 void f(Object a, Object b) {
@@ -38,3 +48,7 @@ void f(Object a, Object b) {
     assertType(findNode.simple('c)'), 'bool');
   }
 }
+
+@reflectiveTest
+class NotEqualWithoutNullSafetyTest extends PubPackageResolutionTest
+    with NotEqualTestCases, WithoutNullSafetyMixin {}

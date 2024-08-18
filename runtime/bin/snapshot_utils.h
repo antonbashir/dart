@@ -5,7 +5,6 @@
 #ifndef RUNTIME_BIN_SNAPSHOT_UTILS_H_
 #define RUNTIME_BIN_SNAPSHOT_UTILS_H_
 
-#include "bin/dartutils.h"
 #include "platform/globals.h"
 
 namespace dart {
@@ -20,21 +19,10 @@ class AppSnapshot {
                           const uint8_t** isolate_data_buffer,
                           const uint8_t** isolate_instructions_buffer) = 0;
 
-  bool IsJIT() const { return magic_number_ == DartUtils::kAppJITMagicNumber; }
-  bool IsAOT() const { return DartUtils::IsAotMagicNumber(magic_number_); }
-  bool IsJITorAOT() const { return IsJIT() || IsAOT(); }
-  bool IsKernel() const {
-    return magic_number_ == DartUtils::kKernelMagicNumber;
-  }
-  bool IsKernelList() const {
-    return magic_number_ == DartUtils::kKernelListMagicNumber;
-  }
-
  protected:
-  explicit AppSnapshot(DartUtils::MagicNumber num) : magic_number_(num) {}
+  AppSnapshot() {}
 
  private:
-  DartUtils::MagicNumber magic_number_;
   DISALLOW_COPY_AND_ASSIGN(AppSnapshot);
 };
 
@@ -45,6 +33,10 @@ class Snapshot {
                              const char* package_config);
   static void GenerateAppJIT(const char* snapshot_filename);
   static void GenerateAppAOTAsAssembly(const char* snapshot_filename);
+
+  // Returns true if snapshot_filename points to an AOT snapshot (aka,
+  // an ELF binary). May report false negatives.
+  static bool IsAOTSnapshot(const char* snapshot_filename);
 
 #if defined(DART_TARGET_OS_MACOS)
   static bool IsMachOFormattedBinary(const char* container_path);
@@ -59,6 +51,10 @@ class Snapshot {
       bool force_load_elf_from_memory = false,
       bool decode_uri = true);
   static void WriteAppSnapshot(const char* filename,
+                               uint8_t* vm_data_buffer,
+                               intptr_t vm_data_size,
+                               uint8_t* vm_instructions_buffer,
+                               intptr_t vm_instructions_size,
                                uint8_t* isolate_data_buffer,
                                intptr_t isolate_data_size,
                                uint8_t* isolate_instructions_buffer,

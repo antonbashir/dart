@@ -2,9 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:dart2wasm/js/util.dart';
 import 'package:kernel/ast.dart';
-
-import 'util.dart';
 
 typedef JSMethods = Map<Procedure, String>;
 
@@ -28,7 +27,8 @@ class MethodCollector {
       {required bool isExternal}) {
     final procedure = Procedure(
         Name(name, _library), ProcedureKind.Method, function,
-        isStatic: true, isExternal: isExternal, fileUri: fileUri);
+        isStatic: true, isExternal: isExternal, fileUri: fileUri)
+      ..isNonNullableByDefault = true;
     _util.annotateProcedure(procedure, pragmaOptionString, type);
     _library.addProcedure(procedure);
     return procedure;

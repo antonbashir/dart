@@ -73,7 +73,7 @@ class Element extends Node {
   List<Element> get children => nodes.whereType<Element>().toList();
 
   List<String> get classes {
-    var classes = attributes['class'];
+    final classes = attributes['class'];
     if (classes != null) {
       return classes.split(' ').toList();
     } else {

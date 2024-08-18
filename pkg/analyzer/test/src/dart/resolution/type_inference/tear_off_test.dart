@@ -26,7 +26,7 @@ void test() {
   context = f; // 1
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 52, 7),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 52, 7),
     ]);
     _assertTearOff(
       'f; // 1',
@@ -44,7 +44,7 @@ void test() {
   context = f; // 1
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 54, 7),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 54, 7),
     ]);
     _assertTearOff(
       'f; // 1',
@@ -149,12 +149,12 @@ void test() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::f
+    staticElement: self::@function::f
     staticType: T Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -162,7 +162,7 @@ MethodInvocation
       IntegerLiteral
         literal: 0
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::f::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
         staticType: int
     rightParenthesis: )

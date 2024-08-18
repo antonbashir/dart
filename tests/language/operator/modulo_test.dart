@@ -5,7 +5,6 @@
 // VMOptions=--optimization-counter-threshold=10 --no-use-osr --no-background-compilation
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 main() {
   // Prime IC cache.
@@ -15,7 +14,7 @@ main() {
     Expect.equals(i % 256, foo(i));
     Expect.equals(i % -256, boo(i));
 
-    if (!v.jsNumbers) {
+    if (!webNumbers) {
       Expect.throws(() => hoo(i), (e) => e is UnsupportedError);
     } else {
       // web numbers can't distinguish doubles from ints, so `i % 0`, which
@@ -43,7 +42,7 @@ main() {
       Expect.equals(i ~/ i + i % i, fooTwo2(i));
     }
   }
-  if (!v.jsNumbers) {
+  if (!webNumbers) {
     Expect.throws(() => foo2(0), (e) => e is UnsupportedError);
   } else {
     // web numbers can't distinguish doubles from ints, so `0 % 0`, which should

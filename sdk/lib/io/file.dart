@@ -144,14 +144,13 @@ class FileLock {
 /// ```dart
 /// import 'dart:io';
 ///
-/// void main() async {
+/// void main() {
 ///   var file = File('file.txt');
 ///   var sink = file.openWrite();
 ///   sink.write('FILE ACCESSED ${DateTime.now()}\n');
-///   await sink.flush();
 ///
 ///   // Close the IOSink to free system resources.
-///   await sink.close();
+///   sink.close();
 /// }
 /// ```
 /// ## The use of asynchronous methods
@@ -172,13 +171,6 @@ class FileLock {
 /// ```
 /// In addition to length, the [exists], [lastModified], [stat], and
 /// other methods, are asynchronous.
-///
-/// ## Special 'nul' file
-///
-/// On Linux and Mac '/dev/null' and on Windows '\\?\NUL' refer to a special file,
-/// such that all writes to it get consumed and disappear, and all reads produce empty
-/// output. Note that on Windows 'nul'(without '\\?\'-prefix) refers to a regular file
-/// named  'nul' in current directory.
 ///
 /// ## Other resources
 ///
@@ -504,22 +496,6 @@ abstract interface class File implements FileSystemEntity {
   /// is closed before signaling "done". If there are no writers attached
   /// to the pipe when it is opened, then [Stream.listen] will wait until
   /// a writer opens the pipe.
-  ///
-  /// An error opening or reading the file will appear as a
-  /// [FileSystemException] error event on the returned [Stream], after which
-  /// the [Stream] is closed. For example:
-  ///
-  /// ```dart
-  /// // This example will print the "Error reading file" message and the
-  /// // `await for` loop will complete normally, without seeing any data
-  /// // events.
-  /// final stream = File('does-not-exist')
-  ///     .openRead()
-  ///     .handleError((e) => print('Error reading file: $e'));
-  /// await for (final data in stream) {
-  ///   print(data);
-  /// }
-  /// ```
   Stream<List<int>> openRead([int? start, int? end]);
 
   /// Creates a new independent [IOSink] for the file.
@@ -541,38 +517,6 @@ abstract interface class File implements FileSystemEntity {
   /// The returned [IOSink] does not transform newline characters (`"\n"`) to
   /// the platform's conventional line ending (e.g. `"\r\n"` on Windows). Write
   /// a [Platform.lineTerminator] if a platform-specific line ending is needed.
-  ///
-  /// If an error occurs while opening or writing to the file, the [IOSink.done]
-  /// [IOSink.flush], and [IOSink.close] futures will all complete with a
-  /// [FileSystemException]. You must handle errors from the [IOSink.done]
-  /// future or the error will be uncaught.
-  ///
-  /// For example, [FutureExtensions.ignore] the [IOSink.done] error and
-  /// remember to `await` the [IOSink.flush] and [IOSink.close] calls within a
-  /// `try`/`catch`:
-  ///
-  /// ```dart
-  /// final sink = File('/tmp').openWrite(); // Can't write to /tmp
-  /// sink.done.ignore();
-  /// sink.write("This is a test");
-  /// try {
-  ///   // If one of these isn't awaited, then errors will pass silently!
-  ///   await sink.flush();
-  ///   await sink.close();
-  /// } on FileSystemException catch (e) {
-  ///   print('Error writing file: $e');
-  /// }
-  /// ```
-  ///
-  /// To handle errors asynchronously outside of the context of [IOSink.flush]
-  /// and [IOSink.close], you can [Future.catchError] the [IOSink.done].
-  ///
-  /// ```dart
-  /// final sink = File('/tmp').openWrite(); // Can't write to /tmp
-  /// sink.done.catchError((e) {
-  ///  // Handle the error.
-  /// });
-  /// ```
   IOSink openWrite({FileMode mode = FileMode.write, Encoding encoding = utf8});
 
   /// Reads the entire file contents as a list of bytes.
@@ -668,7 +612,7 @@ abstract interface class File implements FileSystemEntity {
   /// This method does not transform newline characters (`"\n"`) to the
   /// platform conventional line ending (e.g. `"\r\n"` on Windows). Use
   /// [Platform.lineTerminator] to separate lines in [contents] if platform
-  /// conventional line endings are needed.
+  /// contentional line endings are needed.
   Future<File> writeAsString(String contents,
       {FileMode mode = FileMode.write,
       Encoding encoding = utf8,
@@ -690,7 +634,7 @@ abstract interface class File implements FileSystemEntity {
   /// This method does not transform newline characters (`"\n"`) to the
   /// platform conventional line ending (e.g. `"\r\n"` on Windows). Use
   /// [Platform.lineTerminator] to separate lines in [contents] if platform
-  /// conventional line endings are needed.
+  /// contentional line endings are needed.
   ///
   /// Throws a [FileSystemException] if the operation fails.
   void writeAsStringSync(String contents,
@@ -766,7 +710,7 @@ abstract interface class RandomAccessFile {
 
   /// Reads bytes into an existing [buffer].
   ///
-  /// Reads bytes and writes them into the range of [buffer]
+  /// Reads bytes and writes then into the range of [buffer]
   /// from [start] to [end].
   /// The [start] must be non-negative and no greater than [buffer].length.
   /// If [end] is omitted, it defaults to [buffer].length.
@@ -928,13 +872,6 @@ abstract interface class RandomAccessFile {
   /// On Windows the regions used for lock and unlock needs to match. If that
   /// is not the case unlocking will result in the OS error "The segment is
   /// already unlocked".
-  ///
-  /// On Windows, locking a file associates the lock with the specific file
-  /// handle used to acquire the lock. If the same file is opened again with a
-  /// different handle (even within the same process), attempts to write to the
-  /// locked region using the new handle will fail. To ensure successful writes
-  /// after locking, use the same [RandomAccessFile] object that acquired the
-  /// lock for subsequent write operations.
   Future<RandomAccessFile> lock(
       [FileLock mode = FileLock.exclusive, int start = 0, int end = -1]);
 
@@ -972,12 +909,6 @@ abstract interface class RandomAccessFile {
   /// is not the case unlocking will result in the OS error "The segment is
   /// already unlocked".
   ///
-  /// On Windows, locking a file associates the lock with the specific file
-  /// handle used to acquire the lock. If the same file is opened again with a
-  /// different handle (even within the same process), attempts to write to the
-  /// locked region using the new handle will fail. To ensure successful writes
-  /// after locking, use the same [RandomAccessFile] object that acquired the
-  /// lock for subsequent write operations.
   void lockSync(
       [FileLock mode = FileLock.exclusive, int start = 0, int end = -1]);
 
@@ -1070,7 +1001,6 @@ class FileSystemException implements IOException {
         case _errorFileNotFound:
         case _errorPathNotFound:
         case _errorInvalidDrive:
-        case _errorInvalidName:
         case _errorNoMoreFiles:
         case _errorBadNetpath:
         case _errorBadNetName:
@@ -1171,8 +1101,7 @@ abstract interface class ReadPipe implements Stream<List<int>> {}
 /// ```dart
 /// final pipe = await Pipe.create();
 /// pipe.write.add("Hello World!".codeUnits);
-/// await pipe.write.flush();
-/// await pipe.write.close();
+/// pipe.write.close();
 /// ```
 abstract interface class WritePipe implements IOSink {}
 
@@ -1192,8 +1121,7 @@ abstract interface class WritePipe implements IOSink {}
 ///     <ResourceHandle>[ResourceHandle.fromReadPipe(pipe.read)])
 /// ], 'Hello'.codeUnits);
 /// pipe.write.add('Hello over pipe!'.codeUnits);
-/// await pipe.write.flush();
-/// await pipe.write.close();
+/// pipe.write.close();
 /// ```
 abstract interface class Pipe {
   /// The read end of the [Pipe].

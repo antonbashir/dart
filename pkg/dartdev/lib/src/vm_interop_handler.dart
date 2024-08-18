@@ -16,17 +16,13 @@ abstract class VmInteropHandler {
   ///
   /// If [packageConfigOverride] is given, that is where the packageConfig is found.
   ///
-  /// If [markMainIsolateAsSystemIsolate] is given and set to true, the spawned
-  /// isolate will run with `--mark-main-isolate-as-system-isolate` enabled.
+  /// If [forceNoSoundNullSafety] is given and set to true, the spawned isolate will run
+  /// with `--no-sound-null-safety` enabled.
   static void run(
     String script,
     List<String> args, {
     String? packageConfigOverride,
-    // TODO(bkonyi): remove once DartDev moves to AOT and this flag can be
-    // provided directly to the process spawned by `dart run` and `dart test`.
-    //
-    // See https://github.com/dart-lang/sdk/issues/53576
-    bool markMainIsolateAsSystemIsolate = false,
+    bool forceNoSoundNullSafety = false,
   }) {
     final port = _port;
     if (port == null) return;
@@ -34,7 +30,7 @@ abstract class VmInteropHandler {
       _kResultRun,
       script,
       packageConfigOverride,
-      markMainIsolateAsSystemIsolate,
+      forceNoSoundNullSafety,
       // Copy the list so it doesn't get GC'd underneath us.
       args.toList()
     ];

@@ -54,15 +54,12 @@ abstract class AbstractCompletionDriverTest
   /// of the suggestions. Individual tests can replace the default set.
   Set<CompletionSuggestionKind> allowedKinds = {};
 
-  /// Whether keywords should be included in the text to be compared.
-  bool includeKeywords = true;
-
   /// Return `true` if closures (suggestions starting with a left paren) should
   /// be included in the text to be compared.
   bool get includeClosures => false;
 
-  /// Return `true` if overrides should be included in the text to be compared.
-  bool get includeOverrides => true;
+  /// Return `true` if keywords should be included in the text to be compared.
+  bool get includeKeywords => true;
 
   @override
   Future<List<CompletionSuggestion>> addTestFile(String content,
@@ -99,13 +96,13 @@ abstract class AbstractCompletionDriverTest
   /// Asserts that the [response] has the [expected] textual dump produced
   /// using [printerConfiguration].
   void assertResponse(String expected, {String where = ''}) {
-    var buffer = StringBuffer();
+    final buffer = StringBuffer();
     printer.CompletionResponsePrinter(
       buffer: buffer,
       configuration: printerConfiguration,
       response: response,
     ).writeResponse();
-    var actual = buffer.toString();
+    final actual = buffer.toString();
 
     if (actual != expected) {
       if (where.isEmpty) {
@@ -122,9 +119,8 @@ abstract class AbstractCompletionDriverTest
 The actual suggestions do not match the expected suggestions$where.
 
 To accept the current state change the expectation to
-\r${'-' * 64}
-\r${actual.trimRight().split('\n').join('\n\r')}
-\r${'-' * 64}
+
+$actual
 ''');
     }
   }
@@ -157,13 +153,8 @@ To accept the current state change the expectation to
 
     await addTestFile(content);
 
-    // Extract the internal request object.
-    var dartRequest = server.completionState.currentRequest;
-
     response = CompletionResponseForTesting(
       requestOffset: driver.completionOffset,
-      requestLocationName: dartRequest?.collectorLocationName,
-      opTypeLocationName: dartRequest?.opType.completionLocation,
       replacementOffset: driver.replacementOffset,
       replacementLength: driver.replacementLength,
       isIncomplete: false, // TODO(scheglov): not correct
@@ -206,8 +197,6 @@ name: test
               allowedIdentifiers.contains(completion);
         } else if (kind == CompletionSuggestionKind.KEYWORD) {
           return includeKeywords;
-        } else if (kind == CompletionSuggestionKind.OVERRIDE) {
-          return includeOverrides;
         } else if (allowedKinds.contains(kind)) {
           return true;
         }
@@ -264,7 +253,7 @@ name: test
     String? file,
     String? libraryUri,
   }) {
-    var matches = suggestionsWith(
+    final matches = suggestionsWith(
         completion: completion,
         element: element,
         kind: kind,

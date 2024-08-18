@@ -16,5 +16,4 @@ class Super {
 }
 
 main() {}
-
 test() {}

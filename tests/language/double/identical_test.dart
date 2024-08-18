@@ -3,14 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 main() {
   Expect.isTrue(identical(42.0, 42.0));
   Expect.isTrue(identical(-0.0, -0.0));
   Expect.isTrue(identical(0.0, 0.0));
   Expect.isTrue(identical(1.234E9, 1.234E9));
-  if (!v.jsNumbers) {
+  if (!webNumbers) {
     Expect.isFalse(identical(0.0, -0.0));
     Expect.isTrue(identical(double.nan, double.nan));
   } else {

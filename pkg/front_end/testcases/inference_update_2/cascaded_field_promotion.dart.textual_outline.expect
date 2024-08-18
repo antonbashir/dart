@@ -4,9 +4,6 @@ class C {
 }
 
 void cascadedPropertyAccess(C c) {}
-
 void cascadedNullAwarePropertyAccess(C? c) {}
-
 void cascadedInvocation(C c) {}
-
 main() {}

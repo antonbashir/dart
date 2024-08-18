@@ -5,9 +5,6 @@ class Class {
 }
 
 expect(expected, actual) {}
-
 int counter = 0;
-
 main() {}
-
 test(o) {}

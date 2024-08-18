@@ -62,10 +62,10 @@ mixin ScopeHelpers {
   void _reportDeprecatedExportUse({
     required Token nameToken,
   }) {
-    errorReporter.atToken(
-      nameToken,
+    errorReporter.reportErrorForToken(
       WarningCode.DEPRECATED_EXPORT_USE,
-      arguments: [nameToken.lexeme],
+      nameToken,
+      [nameToken.lexeme],
     );
   }
 }

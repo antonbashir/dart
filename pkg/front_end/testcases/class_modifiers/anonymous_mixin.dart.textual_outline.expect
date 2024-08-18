@@ -1,5 +1,4 @@
 base mixin M1 {}
-
 base mixin M2 {}
 
 base class S {}

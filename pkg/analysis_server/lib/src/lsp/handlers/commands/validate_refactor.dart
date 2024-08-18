@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/abstract_refactor.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/progress.dart';
@@ -32,7 +31,7 @@ class ValidateRefactorCommandHandler extends AbstractRefactorCommandHandler {
     ProgressReporter reporter,
     int? docVersion,
   ) async {
-    var actionName = 'dart.refactor.${kind.toLowerCase()}.validate';
+    final actionName = 'dart.refactor.${kind.toLowerCase()}.validate';
     server.analyticsManager.executedCommand(actionName);
 
     // In order to prevent clients asking users for a method/widget name and
@@ -44,20 +43,20 @@ class ValidateRefactorCommandHandler extends AbstractRefactorCommandHandler {
     // will be no visibility of the reason why the refactor is not available to
     // the user.
 
-    var result = await requireResolvedUnit(path);
+    final result = await requireResolvedUnit(path);
     return result.mapResult((result) async {
-      var refactoring = await getRefactoring(
+      final refactoring = await getRefactoring(
           RefactoringKind(kind), result, offset, length, options);
       return refactoring.mapResult((refactoring) async {
         // If the token we were given is not cancelable, wrap it with one that
         // is for the rest of this request as a future refactor may need to
         // cancel this request.
-        var cancelableToken = cancellationToken.asCancelable();
+        final cancelableToken = cancellationToken.asCancelable();
         manager.begin(cancelableToken);
 
         try {
           reporter.begin('Preparing Refactor…');
-          var status = await refactoring.checkInitialConditions();
+          final status = await refactoring.checkInitialConditions();
 
           if (status.hasError) {
             return success(

@@ -7,9 +7,6 @@ mixin M {
   int m();
   dynamic noSuchMethod(Invocation i) => "M";
 }
-
 class MA = Object with M;
-
 throws(void Function() f) {}
-
 main() {}

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -12,15 +12,16 @@ class AddEnumConstant extends ResolvedCorrectionProducer {
   /// The name of the constant to be created.
   String _constantName = '';
 
-  AddEnumConstant({required super.context});
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
-  List<String> get fixArguments => [_constantName];
+  List<Object> get fixArguments => [_constantName];
 
   @override
   FixKind get fixKind => DartFixKind.ADD_ENUM_CONSTANT;

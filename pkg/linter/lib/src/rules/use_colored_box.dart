@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/flutter_utils.dart';
 
 const _desc = r'Use `ColoredBox`.';
@@ -40,15 +39,19 @@ Widget buildArea() {
 ''';
 
 class UseColoredBox extends LintRule {
+  static const LintCode code = LintCode('use_colored_box',
+      "Use a 'ColoredBox' rather than a 'Container' with only a 'Color'.",
+      correctionMessage: "Try replacing the 'Container' with a 'ColoredBox'.");
+
   UseColoredBox()
       : super(
             name: 'use_colored_box',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.flutter, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.use_colored_box;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -56,6 +59,34 @@ class UseColoredBox extends LintRule {
     var visitor = _Visitor(this);
 
     registry.addInstanceCreationExpression(this, visitor);
+  }
+}
+
+class _ArgumentData {
+  var positionalArgumentsFound = false;
+  var additionalArgumentsFound = false;
+  var hasColor = false;
+  var hasChild = false;
+
+  _ArgumentData(ArgumentList node) {
+    for (var argument in node.arguments) {
+      if (argument is! NamedExpression) {
+        positionalArgumentsFound = true;
+        return;
+      }
+      var label = argument.name.label;
+      if (label.name == 'color' &&
+          argument.staticType?.nullabilitySuffix !=
+              NullabilitySuffix.question) {
+        hasColor = true;
+      } else if (label.name == 'child') {
+        hasChild = true;
+      } else if (label.name == 'key') {
+        // Ignore key
+      } else {
+        additionalArgumentsFound = true;
+      }
+    }
   }
 }
 
@@ -70,38 +101,14 @@ class _Visitor extends SimpleAstVisitor {
       return;
     }
 
-    if (_shouldReportForArguments(node.argumentList)) {
+    var data = _ArgumentData(node.argumentList);
+
+    if (data.additionalArgumentsFound || data.positionalArgumentsFound) {
+      return;
+    }
+
+    if (data.hasChild && data.hasColor) {
       rule.reportLint(node.constructorName);
     }
-  }
-
-  /// Determine if the lint [rule] should be reported for
-  /// the specified [argumentList].
-  static bool _shouldReportForArguments(ArgumentList argumentList) {
-    var hasChild = false;
-    var hasColor = false;
-
-    for (var argument in argumentList.arguments) {
-      if (argument is! NamedExpression) {
-        // Positional arguments are not supported.
-        return false;
-      }
-      switch (argument.name.label.name) {
-        case 'child':
-          hasChild = true;
-        case 'color'
-            when argument.staticType?.nullabilitySuffix !=
-                NullabilitySuffix.question:
-          hasColor = true;
-        case 'key':
-          // Ignore 'key' as both ColoredBox and Container have it.
-          break;
-        case _:
-          // Other named arguments are not supported.
-          return false;
-      }
-    }
-
-    return hasChild && hasColor;
   }
 }

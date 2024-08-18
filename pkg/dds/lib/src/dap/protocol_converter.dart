@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:dap/dap.dart' as dap;
@@ -69,7 +70,6 @@ class ProtocolConverter {
       var stringValue = allowCallingToString &&
               (valueAsString == null || !allowTruncatedValue)
           ? await _callToString(thread, ref,
-              allowTruncatedValue: allowTruncatedValue,
               // Quotes are handled below, so they can be wrapped around the
               // ellipsis.
               format: VariableFormat.noQuotes())
@@ -86,13 +86,12 @@ class ProtocolConverter {
       } else if (ref.kind == vm.InstanceKind.kInt) {
         return formatter.formatInt(int.tryParse(valueAsString));
       } else {
-        return valueAsString;
+        return valueAsString.toString();
       }
     } else if (ref.kind == 'PlainInstance') {
       var stringValue = ref.classRef?.name ?? '<unknown instance>';
       if (allowCallingToString) {
         final toStringValue = await _callToString(thread, ref,
-            allowTruncatedValue: allowTruncatedValue,
             // Suppress quotes because this is going inside a longer string.
             format: VariableFormat.noQuotes());
         // Include the toString() result only if it's not the default (which
@@ -163,7 +162,7 @@ class ProtocolConverter {
             name: name,
             evaluateName: itemEvaluateName,
             allowCallingToString:
-                allowCallingToString && index < maxToStringsPerEvaluation,
+                allowCallingToString && index <= maxToStringsPerEvaluation,
             format: format,
           );
         },
@@ -179,7 +178,7 @@ class ProtocolConverter {
         final key = mapEntry.key;
         final value = mapEntry.value;
         final callToString =
-            allowCallingToString && index < maxToStringsPerEvaluation;
+            allowCallingToString && index <= maxToStringsPerEvaluation;
 
         final keyDisplay = await convertVmResponseToDisplayString(
           thread,
@@ -212,7 +211,6 @@ class ProtocolConverter {
     } else if (_isList(instance) &&
         instance.length != null &&
         instance.bytes != null) {
-      final formatter = format ?? const VariableFormat();
       final elements = _decodeList(instance);
 
       final start = startItem ?? 0;
@@ -222,7 +220,7 @@ class ProtocolConverter {
           return dap.Variable(
             name: name,
             evaluateName: _adapter.combineEvaluateName(evaluateName, name),
-            value: formatter.format(element),
+            value: element.toString(),
             variablesReference: 0,
           );
         },
@@ -252,7 +250,7 @@ class ProtocolConverter {
             name: name ?? '<unnamed field>',
             evaluateName: fieldEvaluateName,
             allowCallingToString:
-                allowCallingToString && index < maxToStringsPerEvaluation,
+                allowCallingToString && index <= maxToStringsPerEvaluation,
             format: format,
           );
         },
@@ -285,7 +283,7 @@ class ProtocolConverter {
                     getterName: getterName,
                     evaluateName: evaluateName,
                     allowCallingToString: allowCallingToString &&
-                        index < maxToStringsPerEvaluation,
+                        index <= maxToStringsPerEvaluation,
                     format: format,
                   );
           } catch (e) {
@@ -297,17 +295,9 @@ class ProtocolConverter {
           }
         }
 
-        // Collect getter names for this instances class and its supers, but
-        // remove any names that have already showed up as fields because
-        // otherwise they will show up duplicated.
+        // Collect getter names for this instances class and its supers.
         final getterNames =
             await _getterNamesForClassHierarchy(thread, instance.classRef);
-
-        // Remove any existing field variables where there are getters, because
-        // otherwise we'll have dupes, and the user will generally expected to
-        // see the getters value (if not the same).
-        variables
-            .removeWhere((variable) => getterNames.contains(variable.name));
 
         final getterVariables = getterNames.mapIndexed(createVariable);
         variables.addAll(await Future.wait(getterVariables));
@@ -606,15 +596,16 @@ class ProtocolConverter {
     final uri = scriptRefUri != null ? Uri.parse(scriptRefUri) : null;
     final uriIsDart = uri?.isScheme('dart') ?? false;
     final uriIsPackage = uri?.isScheme('package') ?? false;
-    final sourcePathUri =
-        uri != null ? await thread.resolveUriToPath(uri) : null;
-    var canShowSource =
-        sourcePathUri != null && _adapter.isSupportedFileScheme(sourcePathUri);
+    final sourcePath = uri != null ? await thread.resolveUriToPath(uri) : null;
+    var canShowSource = sourcePath != null && File(sourcePath).existsSync();
 
     // If we don't have a local source file but the source is a "dart:" uri we
     // might still be able to download the source from the VM.
     int? sourceReference;
-    if (!canShowSource && uri != null && scriptRef != null) {
+    if (!canShowSource &&
+        uri != null &&
+        (uri.isScheme('dart') || uri.isScheme('org-dartlang-app')) &&
+        scriptRef != null) {
       // Try to download it (to avoid showing "source not available" errors if
       // navigated to) because a sourceRef here does not guarantee we can get
       // the source. The result will be cached (by `thread.getScript()`) and
@@ -657,13 +648,10 @@ class ProtocolConverter {
         ? dap.Source(
             name: uriIsPackage || uriIsDart
                 ? uri!.toString()
-                // TODO(dantup): Should we map macro-generated files in the same
-                //  way to avoid the long paths, even though they will appear as
-                //  the source rather than the generated file?
-                : sourcePathUri != null && sourcePathUri.isScheme('file')
-                    ? convertToRelativePath(sourcePathUri.toFilePath())
+                : sourcePath != null
+                    ? convertToRelativePath(sourcePath)
                     : uri?.toString() ?? '<unknown source>',
-            path: _adapter.toClientPathOrUri(sourcePathUri),
+            path: sourcePath,
             sourceReference: sourceReference,
             origin: origin,
             adapterData: location.script,
@@ -707,43 +695,34 @@ class ProtocolConverter {
   Future<String?> _callToString(
     ThreadInfo thread,
     vm.InstanceRef ref, {
-    bool allowTruncatedValue = true,
     VariableFormat? format,
   }) async {
     final service = _adapter.vmService;
     if (service == null) {
       return null;
     }
-    try {
-      var result = await service.invoke(
-        thread.isolate.id!,
-        ref.id!,
-        'toString',
-        [],
-        disableBreakpoints: true,
-      );
+    var result = await service.invoke(
+      thread.isolate.id!,
+      ref.id!,
+      'toString',
+      [],
+      disableBreakpoints: true,
+    );
 
-      // If the response is a string and is truncated, use getObject() to get the
-      // full value.
-      if (result is vm.InstanceRef &&
-          result.kind == 'String' &&
-          (result.valueAsStringIsTruncated ?? false) &&
-          !allowTruncatedValue) {
-        result = await service.getObject(thread.isolate.id!, result.id!);
-      }
-
-      return convertVmResponseToDisplayString(
-        thread,
-        result,
-        allowCallingToString: false, // Don't allow recursing.
-        format: format,
-      );
-    } on vm.SentinelException catch (e) {
-      // invoke() will throw on sentinels, so we should return the appropriate
-      // text from the sentinel instead of letting this bubble up and require
-      // handling by all callers.
-      return e.sentinel.valueAsString ?? '<sentinel>';
+    // If the response is a string and is truncated, use getObject() to get the
+    // full value.
+    if (result is vm.InstanceRef &&
+        result.kind == 'String' &&
+        (result.valueAsStringIsTruncated ?? false)) {
+      result = await service.getObject(thread.isolate.id!, result.id!);
     }
+
+    return convertVmResponseToDisplayString(
+      thread,
+      result,
+      allowCallingToString: false, // Don't allow recursing.
+      format: format,
+    );
   }
 
   /// Collect a list of all getter names for [classRef] and its super classes.
@@ -757,14 +736,8 @@ class ProtocolConverter {
     final getterNames = <String>{};
     final service = _adapter.vmService;
     while (service != null && classRef != null) {
-      vm.Obj classResponse;
-      try {
-        classResponse =
-            await service.getObject(thread.isolate.id!, classRef.id!);
-      } catch (e) {
-        _adapter.logger?.call('Failed to fetch getter for class: $e');
-        break;
-      }
+      final classResponse =
+          await service.getObject(thread.isolate.id!, classRef.id!);
       if (classResponse is! vm.Class) {
         break;
       }

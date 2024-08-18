@@ -25,7 +25,6 @@ class Pair {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:never-inline')
 List<Object> getPolymorphicListOfClass(
     int length, bool growable, bool withValues) {
@@ -41,7 +40,6 @@ List<Object> getPolymorphicListOfClass(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:never-inline')
 List<Object> getPolymorphicListOfRecords(
     int length, bool growable, bool withValues) {

@@ -7,5 +7,4 @@ class B<TypeU extends A> {}
 extension C<TypeU extends A> on int {}
 
 main() {}
-
 typedef D<TypeU extends A> = int;

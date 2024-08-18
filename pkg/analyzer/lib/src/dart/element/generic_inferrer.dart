@@ -4,8 +4,6 @@
 
 import 'dart:math' as math;
 
-import 'package:_fe_analyzer_shared/src/type_inference/shared_inference_log.dart';
-import 'package:_fe_analyzer_shared/src/type_inference/type_constraint.dart';
 import 'package:analyzer/dart/ast/ast.dart'
     show
         Annotation,
@@ -15,23 +13,21 @@ import 'package:analyzer/dart/ast/ast.dart'
         Expression,
         InvocationExpression,
         SimpleIdentifier;
-import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/listener.dart' show ErrorReporter;
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
+import 'package:analyzer/src/dart/element/nullability_eliminator.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/dart/element/type_constraint_gatherer.dart';
 import 'package:analyzer/src/dart/element/type_provider.dart';
 import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/error/codes.dart'
     show CompileTimeErrorCode, WarningCode;
-import 'package:analyzer/src/generated/inference_log.dart';
-import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 /// Tracks upper and lower type bounds for a set of type parameters.
 ///
@@ -59,16 +55,7 @@ import 'package:collection/collection.dart';
 class GenericInferrer {
   final TypeSystemImpl _typeSystem;
   final Set<TypeParameterElement> _typeParameters = Set.identity();
-  final Map<
-      TypeParameterElement,
-      List<
-          MergedTypeConstraint<
-              DartType,
-              DartType,
-              TypeParameterElement,
-              PromotableElement,
-              InterfaceType,
-              InterfaceElement>>> _constraints = {};
+  final Map<TypeParameterElement, List<_TypeConstraint>> _constraints = {};
 
   /// The list of type parameters being inferred.
   final List<TypeParameterElement> _typeFormals;
@@ -77,10 +64,9 @@ class GenericInferrer {
   /// `null` if errors shouldn't be reported.
   final ErrorReporter? errorReporter;
 
-  /// The [SyntacticEntity] to which errors should be attached.  May be `null`
-  /// if errors are not being reported (that is, if [errorReporter] is also
-  /// `null`).
-  final SyntacticEntity? errorEntity;
+  /// The [AstNode] to which errors should be attached.  May be `null` if errors
+  /// are not being reported (that is, if [errorReporter] is also `null`).
+  final AstNode? errorNode;
 
   /// Indicates whether the "generic metadata" feature is enabled.  When it is,
   /// type arguments are allowed to be instantiated with generic function types.
@@ -112,27 +98,22 @@ class GenericInferrer {
   /// implicit runtime checks).
   final Map<TypeParameterElement, DartType> _typesInferredSoFar = {};
 
-  final TypeSystemOperations _typeSystemOperations;
-
-  final TypeConstraintGenerationDataForTesting? dataForTesting;
-
   GenericInferrer(this._typeSystem, this._typeFormals,
       {this.errorReporter,
-      this.errorEntity,
+      this.errorNode,
       required this.genericMetadataIsEnabled,
-      required bool strictInference,
-      required TypeSystemOperations typeSystemOperations,
-      required this.dataForTesting})
-      : _strictInference = strictInference,
-        _typeSystemOperations = typeSystemOperations {
+      required bool strictInference})
+      : _strictInference = strictInference {
     if (errorReporter != null) {
-      assert(errorEntity != null);
+      assert(errorNode != null);
     }
     _typeParameters.addAll(_typeFormals);
     for (var formal in _typeFormals) {
       _constraints[formal] = [];
     }
   }
+
+  bool get isNonNullableByDefault => _typeSystem.isNonNullableByDefault;
 
   TypeProviderImpl get typeProvider => _typeSystem.typeProvider;
 
@@ -142,35 +123,21 @@ class GenericInferrer {
 
   /// Performs partial (either downwards or horizontal) inference, producing a
   /// set of inferred types that may contain references to the "unknown type".
-  List<DartType> choosePreliminaryTypes() {
-    var types = _chooseTypes(preliminary: true);
-    inferenceLogWriter?.recordPreliminaryTypes(types);
-    return types;
-  }
+  List<DartType> choosePreliminaryTypes() => _chooseTypes(preliminary: true);
 
   /// Apply an argument constraint, which asserts that the [argument] staticType
   /// is a subtype of the [parameterType].
   void constrainArgument(
       DartType argumentType, DartType parameterType, String parameterName,
-      {InterfaceElement? genericClass, required AstNode? nodeForTesting}) {
-    var origin = TypeConstraintFromArgument<
-        DartType,
-        DartType,
-        PromotableElement,
-        TypeParameterElement,
-        InterfaceType,
-        InterfaceElement>(
-      argumentType: argumentType,
-      parameterType: parameterType,
-      parameterName: parameterName,
-      genericClassName: genericClass?.name,
-      isGenericClassInDartCore: genericClass?.library.isDartCore ?? false,
+      {InterfaceElement? genericClass}) {
+    var origin = _TypeConstraintFromArgument(
+      argumentType,
+      parameterType,
+      parameterName,
+      genericClass: genericClass,
+      isNonNullableByDefault: isNonNullableByDefault,
     );
-    inferenceLogWriter?.enterConstraintGeneration(
-        ConstraintGenerationSource.argument, argumentType, parameterType);
-    _tryMatchSubtypeOf(argumentType, parameterType, origin,
-        covariant: false, nodeForTesting: nodeForTesting);
-    inferenceLogWriter?.exitConstraintGeneration();
+    _tryMatchSubtypeOf(argumentType, parameterType, origin, covariant: false);
   }
 
   /// Applies all the argument constraints implied by [parameters] and
@@ -178,8 +145,7 @@ class GenericInferrer {
   void constrainArguments(
       {InterfaceElement? genericClass,
       required List<ParameterElement> parameters,
-      required List<DartType> argumentTypes,
-      required AstNode? nodeForTesting}) {
+      required List<DartType> argumentTypes}) {
     for (int i = 0; i < argumentTypes.length; i++) {
       // Try to pass each argument to each parameter, recording any type
       // parameter bounds that were implied by this assignment.
@@ -188,7 +154,6 @@ class GenericInferrer {
         parameters[i].type,
         parameters[i].name,
         genericClass: genericClass,
-        nodeForTesting: nodeForTesting,
       );
     }
   }
@@ -196,15 +161,12 @@ class GenericInferrer {
   /// Constrain a universal function type [fnType] used in a context
   /// [contextType].
   void constrainGenericFunctionInContext(
-      FunctionType fnType, DartType contextType,
-      {required AstNode? nodeForTesting}) {
-    var origin = TypeConstraintFromFunctionContext<
-        DartType,
-        DartType,
-        PromotableElement,
-        TypeParameterElement,
-        InterfaceType,
-        InterfaceElement>(functionType: fnType, contextType: contextType);
+      FunctionType fnType, DartType contextType) {
+    var origin = _TypeConstraintFromFunctionContext(
+      fnType,
+      contextType,
+      isNonNullableByDefault: isNonNullableByDefault,
+    );
 
     // Since we're trying to infer the instantiation, we want to ignore type
     // formals as we check the parameters and return type.
@@ -214,31 +176,18 @@ class GenericInferrer {
       returnType: fnType.returnType,
       nullabilitySuffix: fnType.nullabilitySuffix,
     );
-    inferenceLogWriter?.enterConstraintGeneration(
-        ConstraintGenerationSource.genericFunctionInContext,
-        inferFnType,
-        contextType);
-    _tryMatchSubtypeOf(inferFnType, contextType, origin,
-        covariant: true, nodeForTesting: nodeForTesting);
-    inferenceLogWriter?.exitConstraintGeneration();
+    _tryMatchSubtypeOf(inferFnType, contextType, origin, covariant: true);
   }
 
   /// Apply a return type constraint, which asserts that the [declaredType]
   /// is a subtype of the [contextType].
-  void constrainReturnType(DartType declaredType, DartType contextType,
-      {required AstNode? nodeForTesting}) {
-    var origin = TypeConstraintFromReturnType<
-        DartType,
-        DartType,
-        PromotableElement,
-        TypeParameterElement,
-        InterfaceType,
-        InterfaceElement>(declaredType: declaredType, contextType: contextType);
-    inferenceLogWriter?.enterConstraintGeneration(
-        ConstraintGenerationSource.returnType, declaredType, contextType);
-    _tryMatchSubtypeOf(declaredType, contextType, origin,
-        covariant: true, nodeForTesting: nodeForTesting);
-    inferenceLogWriter?.exitConstraintGeneration();
+  void constrainReturnType(DartType declaredType, DartType contextType) {
+    var origin = _TypeConstraintFromReturnType(
+      declaredType,
+      contextType,
+      isNonNullableByDefault: isNonNullableByDefault,
+    );
+    _tryMatchSubtypeOf(declaredType, contextType, origin, covariant: true);
   }
 
   /// Same as [chooseFinalTypes], but if [failAtError] is `true` (the default)
@@ -254,8 +203,8 @@ class GenericInferrer {
       var constraints = _constraints[parameter]!;
 
       var inferred = inferredTypes[i];
-      bool success = constraints
-          .every((c) => c.isSatisfiedBy(inferred, _typeSystemOperations));
+      bool success =
+          constraints.every((c) => c.isSatisfiedBy(_typeSystem, inferred));
 
       // If everything else succeeded, check the `extends` constraint.
       if (success) {
@@ -264,38 +213,25 @@ class GenericInferrer {
           var parameterBound =
               Substitution.fromPairs(_typeFormals, inferredTypes)
                   .substituteType(parameterBoundRaw);
-          var extendsConstraint = MergedTypeConstraint<
-              DartType,
-              DartType,
-              TypeParameterElement,
-              PromotableElement,
-              InterfaceType,
-              InterfaceElement>.fromExtends(
-            typeParameterName: parameter.name,
-            boundType: parameterBoundRaw,
-            extendsType: parameterBound,
-            typeAnalyzerOperations: _typeSystemOperations,
+          parameterBound = _toLegacyElementIfOptOut(parameterBound);
+          var extendsConstraint = _TypeConstraint.fromExtends(
+            parameter,
+            parameterBoundRaw,
+            parameterBound,
+            isNonNullableByDefault: isNonNullableByDefault,
           );
           constraints.add(extendsConstraint);
-          success =
-              extendsConstraint.isSatisfiedBy(inferred, _typeSystemOperations);
+          success = extendsConstraint.isSatisfiedBy(_typeSystem, inferred);
         }
       }
 
       if (!success) {
-        if (failAtError) {
-          inferenceLogWriter?.exitGenericInference(failed: true);
-          return null;
-        }
+        if (failAtError) return null;
         hasErrorReported = true;
-        errorReporter?.atEntity(
-          errorEntity!,
-          CompileTimeErrorCode.COULD_NOT_INFER,
-          arguments: [
-            parameter.name,
-            _formatError(parameter, inferred, constraints)
-          ],
-        );
+        errorReporter?.reportErrorForNode(
+            CompileTimeErrorCode.COULD_NOT_INFER,
+            errorNode!,
+            [parameter.name, _formatError(parameter, inferred, constraints)]);
 
         // Heuristic: even if we failed, keep the erroneous type.
         // It should satisfy at least some of the constraints (e.g. the return
@@ -307,23 +243,17 @@ class GenericInferrer {
           inferred.typeFormals.isNotEmpty &&
           !genericMetadataIsEnabled &&
           errorReporter != null) {
-        if (failAtError) {
-          inferenceLogWriter?.exitGenericInference(failed: true);
-          return null;
-        }
+        if (failAtError) return null;
         hasErrorReported = true;
         var typeFormals = inferred.typeFormals;
         var typeFormalsStr = typeFormals.map(_elementStr).join(', ');
-        errorReporter!.atEntity(
-          errorEntity!,
-          CompileTimeErrorCode.COULD_NOT_INFER,
-          arguments: [
-            parameter.name,
-            ' Inferred candidate type ${_typeStr(inferred)} has type parameters'
-                ' [$typeFormalsStr], but a function with'
-                ' type parameters cannot be used as a type argument.'
-          ],
-        );
+        errorReporter!.reportErrorForNode(
+            CompileTimeErrorCode.COULD_NOT_INFER, errorNode!, [
+          parameter.name,
+          ' Inferred candidate type ${_typeStr(inferred)} has type parameters'
+              ' [$typeFormalsStr], but a function with'
+              ' type parameters cannot be used as a type argument.'
+        ]);
       }
 
       if (UnknownInferredType.isKnown(inferred)) {
@@ -335,7 +265,7 @@ class GenericInferrer {
         // mode.
         _reportInferenceFailure(
           errorReporter: errorReporter,
-          errorEntity: errorEntity,
+          errorNode: errorNode,
           genericMetadataIsEnabled: genericMetadataIsEnabled,
         );
       }
@@ -349,44 +279,37 @@ class GenericInferrer {
     // Report any errors from instantiateToBounds.
     for (int i = 0; i < hasError.length; i++) {
       if (hasError[i]) {
-        if (failAtError) {
-          inferenceLogWriter?.exitGenericInference(failed: true);
-          return null;
-        }
+        if (failAtError) return null;
         hasErrorReported = true;
         TypeParameterElement typeParam = _typeFormals[i];
         var typeParamBound = Substitution.fromPairs(_typeFormals, inferredTypes)
             .substituteType(typeParam.bound ?? typeProvider.objectType);
         // TODO(jmesserly): improve this error message.
-        errorReporter?.atEntity(
-          errorEntity!,
-          CompileTimeErrorCode.COULD_NOT_INFER,
-          arguments: [
-            typeParam.name,
-            "\nRecursive bound cannot be instantiated: '$typeParamBound'."
-                "\nConsider passing explicit type argument(s) "
-                "to the generic.\n\n'"
-          ],
-        );
+        errorReporter?.reportErrorForNode(
+            CompileTimeErrorCode.COULD_NOT_INFER, errorNode!, [
+          typeParam.name,
+          "\nRecursive bound cannot be instantiated: '$typeParamBound'."
+              "\nConsider passing explicit type argument(s) "
+              "to the generic.\n\n'"
+        ]);
       }
     }
 
     if (!hasErrorReported) {
       _checkArgumentsNotMatchingBounds(
-        errorEntity: errorEntity,
+        errorNode: errorNode,
         errorReporter: errorReporter,
         typeArguments: result,
       );
     }
 
-    _demoteTypes(result);
-    inferenceLogWriter?.exitGenericInference(finalTypes: result);
+    _nonNullifyTypes(result);
     return result;
   }
 
   /// Check that inferred [typeArguments] satisfy the [typeParameters] bounds.
   void _checkArgumentsNotMatchingBounds({
-    required SyntacticEntity? errorEntity,
+    required AstNode? errorNode,
     required ErrorReporter? errorReporter,
     required List<DartType> typeArguments,
   }) {
@@ -398,14 +321,15 @@ class GenericInferrer {
       if (rawBound == null) {
         continue;
       }
+      rawBound = _typeSystem.toLegacyTypeIfOptOut(rawBound);
 
       var substitution = Substitution.fromPairs(_typeFormals, typeArguments);
       var bound = substitution.substituteType(rawBound);
       if (!_typeSystem.isSubtypeOf(argument, bound)) {
-        errorReporter?.atEntity(
-          errorEntity!,
+        errorReporter?.reportErrorForNode(
           CompileTimeErrorCode.COULD_NOT_INFER,
-          arguments: [
+          errorNode!,
+          [
             parameter.name,
             "\n'${_typeStr(argument)}' doesn't conform to "
                 "the bound '${_typeStr(bound)}'"
@@ -442,13 +366,8 @@ class GenericInferrer {
   /// If [isContravariant] is `true`, then we are solving for a contravariant
   /// type parameter which means we choose the upper bound rather than the
   /// lower bound for normally covariant type parameters.
-  DartType _chooseTypeFromConstraints(
-      Iterable<
-              MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                  PromotableElement, InterfaceType, InterfaceElement>>
-          constraints,
-      {bool toKnownType = false,
-      required bool isContravariant}) {
+  DartType _chooseTypeFromConstraints(Iterable<_TypeConstraint> constraints,
+      {bool toKnownType = false, required bool isContravariant}) {
     DartType lower = UnknownInferredType.instance;
     DartType upper = UnknownInferredType.instance;
     for (var constraint in constraints) {
@@ -465,8 +384,10 @@ class GenericInferrer {
       //
       // This resulting constraint may be unsatisfiable; in that case inference
       // will fail.
-      upper = _typeSystem.greatestLowerBound(upper, constraint.upper);
-      lower = _typeSystem.leastUpperBound(lower, constraint.lower);
+      upper = _typeSystem.greatestLowerBound(upper, constraint.upperBound);
+      lower = _typeSystem.leastUpperBound(lower, constraint.lowerBound);
+      upper = _toLegacyElementIfOptOut(upper);
+      lower = _toLegacyElementIfOptOut(lower);
     }
 
     // Prefer the known bound, if any.
@@ -514,23 +435,15 @@ class GenericInferrer {
       // TODO(kallentu): : Clean up TypeParameterElementImpl casting once
       // variance is added to the interface.
       var typeParam = _typeFormals[i] as TypeParameterElementImpl;
-      MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-          PromotableElement, InterfaceType, InterfaceElement>? extendsClause;
+      _TypeConstraint? extendsClause;
       var bound = typeParam.bound;
       if (bound != null) {
-        extendsClause = MergedTypeConstraint<
-            DartType,
-            DartType,
-            TypeParameterElement,
-            PromotableElement,
-            InterfaceType,
-            InterfaceElement>.fromExtends(
-          typeParameterName: typeParam.name,
-          boundType: bound,
-          extendsType: Substitution.fromPairs(_typeFormals, inferredTypes)
-              .substituteType(bound),
-          typeAnalyzerOperations: _typeSystemOperations,
-        );
+        extendsClause = _TypeConstraint.fromExtends(
+            typeParam,
+            bound,
+            Substitution.fromPairs(_typeFormals, inferredTypes)
+                .substituteType(bound),
+            isNonNullableByDefault: isNonNullableByDefault);
       }
 
       var constraints = _constraints[typeParam]!;
@@ -556,60 +469,32 @@ class GenericInferrer {
     return inferredTypes;
   }
 
-  void _demoteTypes(List<DartType> types) {
-    for (var i = 0; i < types.length; i++) {
-      types[i] = _typeSystem.demoteType(types[i]);
-    }
-  }
-
   String _elementStr(Element element) {
-    return element.getDisplayString();
+    return element.getDisplayString(withNullability: isNonNullableByDefault);
   }
 
-  String _formatError(
-      TypeParameterElement typeParam,
-      DartType inferred,
-      Iterable<
-              MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                  PromotableElement, InterfaceType, InterfaceElement>>
-          constraints) {
-    var inferredStr = inferred.getDisplayString();
+  String _formatError(TypeParameterElement typeParam, DartType inferred,
+      Iterable<_TypeConstraint> constraints) {
+    var inferredStr = inferred.getDisplayString(
+      withNullability: isNonNullableByDefault,
+    );
     var intro = "Tried to infer '$inferredStr' for '${typeParam.name}'"
         " which doesn't work:";
 
-    var constraintsByOrigin = <TypeConstraintOrigin<
-            DartType,
-            DartType,
-            PromotableElement,
-            TypeParameterElement,
-            InterfaceType,
-            InterfaceElement>,
-        List<
-            MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                PromotableElement, InterfaceType, InterfaceElement>>>{};
+    var constraintsByOrigin = <_TypeConstraintOrigin, List<_TypeConstraint>>{};
     for (var c in constraints) {
       constraintsByOrigin.putIfAbsent(c.origin, () => []).add(c);
     }
 
     // Only report unique constraint origins.
-    Iterable<
-        MergedTypeConstraint<
-            DartType,
-            DartType,
-            TypeParameterElement,
-            PromotableElement,
-            InterfaceType,
-            InterfaceElement>> isSatisfied(bool expected) => constraintsByOrigin
+    Iterable<_TypeConstraint> isSatisfied(bool expected) => constraintsByOrigin
         .values
         .where((l) =>
-            l.every((c) => c.isSatisfiedBy(inferred, _typeSystemOperations)) ==
-            expected)
-        .flattenedToList;
+            l.every((c) => c.isSatisfiedBy(_typeSystem, inferred)) == expected)
+        .expand((i) => i);
 
-    String unsatisfied =
-        _formatConstraints(isSatisfied(false), _typeSystemOperations);
-    String satisfied =
-        _formatConstraints(isSatisfied(true), _typeSystemOperations);
+    String unsatisfied = _formatConstraints(isSatisfied(false));
+    String satisfied = _formatConstraints(isSatisfied(true));
 
     assert(unsatisfied.isNotEmpty);
     if (satisfied.isNotEmpty) {
@@ -621,13 +506,7 @@ class GenericInferrer {
   }
 
   DartType _inferTypeParameterFromAll(
-      List<
-              MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                  PromotableElement, InterfaceType, InterfaceElement>>
-          constraints,
-      MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-              PromotableElement, InterfaceType, InterfaceElement>?
-          extendsClause,
+      List<_TypeConstraint> constraints, _TypeConstraint? extendsClause,
       {required bool isContravariant}) {
     if (extendsClause != null) {
       constraints = constraints.toList()..add(extendsClause);
@@ -639,13 +518,7 @@ class GenericInferrer {
   }
 
   DartType _inferTypeParameterFromContext(
-      Iterable<
-              MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                  PromotableElement, InterfaceType, InterfaceElement>>
-          constraints,
-      MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-              PromotableElement, InterfaceType, InterfaceElement>?
-          extendsClause,
+      Iterable<_TypeConstraint> constraints, _TypeConstraint? extendsClause,
       {required bool isContravariant}) {
     DartType t = _chooseTypeFromConstraints(constraints,
         isContravariant: isContravariant);
@@ -668,55 +541,63 @@ class GenericInferrer {
     return t;
   }
 
-  /// Reports an inference failure on [errorEntity] according to its type.
+  void _nonNullifyTypes(List<DartType> types) {
+    if (_typeSystem.isNonNullableByDefault) {
+      for (var i = 0; i < types.length; i++) {
+        types[i] = _typeSystem.nonNullifyLegacy(types[i]);
+      }
+    }
+    for (var i = 0; i < types.length; i++) {
+      types[i] = _typeSystem.demoteType(types[i]);
+    }
+  }
+
+  /// Reports an inference failure on [errorNode] according to its type.
   void _reportInferenceFailure({
     ErrorReporter? errorReporter,
-    SyntacticEntity? errorEntity,
+    AstNode? errorNode,
     required bool genericMetadataIsEnabled,
   }) {
-    if (errorReporter == null || errorEntity == null) {
+    if (errorReporter == null || errorNode == null) {
       return;
     }
-    if (errorEntity is AstNode &&
-        errorEntity.parent is InvocationExpression &&
-        errorEntity.parent?.parent is AsExpression) {
+    if (errorNode.parent is InvocationExpression &&
+        errorNode.parent?.parent is AsExpression) {
       // Casts via `as` do not play a part in downward inference. We allow an
       // exception when inference has "failed" but the return value is
       // immediately cast with `as`.
       return;
     }
-    if (errorEntity is ConstructorName &&
-        !(errorEntity.type.type as InterfaceType).element.hasOptionalTypeArgs) {
-      String constructorName = errorEntity.name == null
-          ? errorEntity.type.qualifiedName
-          : '${errorEntity.type}.${errorEntity.name}';
-      errorReporter.atNode(
-        errorEntity,
-        WarningCode.INFERENCE_FAILURE_ON_INSTANCE_CREATION,
-        arguments: [constructorName],
-      );
-    } else if (errorEntity is Annotation) {
+    if (errorNode is ConstructorName &&
+        !(errorNode.type.type as InterfaceType).element.hasOptionalTypeArgs) {
+      String constructorName = errorNode.name == null
+          ? errorNode.type.qualifiedName
+          : '${errorNode.type}.${errorNode.name}';
+      errorReporter.reportErrorForNode(
+          WarningCode.INFERENCE_FAILURE_ON_INSTANCE_CREATION,
+          errorNode,
+          [constructorName]);
+    } else if (errorNode is Annotation) {
       if (genericMetadataIsEnabled) {
         // Only report an error if generic metadata is valid syntax.
-        var element = errorEntity.name.staticElement;
+        var element = errorNode.name.staticElement;
         if (element != null && !element.hasOptionalTypeArgs) {
-          String constructorName = errorEntity.constructorName == null
-              ? errorEntity.name.name
-              : '${errorEntity.name.name}.${errorEntity.constructorName}';
-          errorReporter.atNode(
-            errorEntity,
-            WarningCode.INFERENCE_FAILURE_ON_INSTANCE_CREATION,
-            arguments: [constructorName],
-          );
+          String constructorName = errorNode.constructorName == null
+              ? errorNode.name.name
+              : '${errorNode.name.name}.${errorNode.constructorName}';
+          errorReporter.reportErrorForNode(
+              WarningCode.INFERENCE_FAILURE_ON_INSTANCE_CREATION,
+              errorNode,
+              [constructorName]);
         }
       }
-    } else if (errorEntity is SimpleIdentifier) {
-      var element = errorEntity.staticElement;
+    } else if (errorNode is SimpleIdentifier) {
+      var element = errorNode.staticElement;
       if (element != null) {
         if (element is VariableElement) {
           // For variable elements, we check their type and possible alias type.
           var type = element.type;
-          var typeElement = type is InterfaceType ? type.element : null;
+          final typeElement = type is InterfaceType ? type.element : null;
           if (typeElement != null && typeElement.hasOptionalTypeArgs) {
             return;
           }
@@ -727,26 +608,32 @@ class GenericInferrer {
           }
         }
         if (!element.hasOptionalTypeArgs) {
-          errorReporter.atNode(
-            errorEntity,
-            WarningCode.INFERENCE_FAILURE_ON_FUNCTION_INVOCATION,
-            arguments: [errorEntity.name],
-          );
+          errorReporter.reportErrorForNode(
+              WarningCode.INFERENCE_FAILURE_ON_FUNCTION_INVOCATION,
+              errorNode,
+              [errorNode.name]);
           return;
         }
       }
-    } else if (errorEntity is Expression) {
-      var type = errorEntity.staticType;
+    } else if (errorNode is Expression) {
+      var type = errorNode.staticType;
       if (type != null) {
-        var typeDisplayString = _typeStr(type);
-        errorReporter.atNode(
-          errorEntity,
-          WarningCode.INFERENCE_FAILURE_ON_GENERIC_INVOCATION,
-          arguments: [typeDisplayString],
-        );
+        var typeDisplayString = type.getDisplayString(
+            withNullability: _typeSystem.isNonNullableByDefault);
+        errorReporter.reportErrorForNode(
+            WarningCode.INFERENCE_FAILURE_ON_GENERIC_INVOCATION,
+            errorNode,
+            [typeDisplayString]);
         return;
       }
     }
+  }
+
+  /// If in a legacy library, return the legacy version of the [type].
+  /// Otherwise, return the original type.
+  DartType _toLegacyElementIfOptOut(DartType type) {
+    if (isNonNullableByDefault) return type;
+    return NullabilityEliminator.perform(typeProvider, type);
   }
 
   /// Tries to make [i1] a subtype of [i2] and accumulate constraints as needed.
@@ -755,28 +642,21 @@ class GenericInferrer {
   /// unsuccessful, any constraints that were accumulated during the match
   /// attempt have been rewound (see [_rewindConstraints]).
   bool _tryMatchSubtypeOf(
-      DartType t1,
-      DartType t2,
-      TypeConstraintOrigin<DartType, DartType, PromotableElement,
-              TypeParameterElement, InterfaceType, InterfaceElement>
-          origin,
-      {required bool covariant,
-      required AstNode? nodeForTesting}) {
+      DartType t1, DartType t2, _TypeConstraintOrigin origin,
+      {required bool covariant}) {
     var gatherer = TypeConstraintGatherer(
-        typeSystem: _typeSystem,
-        typeParameters: _typeParameters,
-        typeSystemOperations: _typeSystemOperations,
-        dataForTesting: dataForTesting);
-    var success = gatherer.trySubtypeMatch(t1, t2, !covariant,
-        nodeForTesting: nodeForTesting);
+        typeSystem: _typeSystem, typeParameters: _typeParameters);
+    var success = gatherer.trySubtypeMatch(t1, t2, !covariant);
     if (success) {
       var constraints = gatherer.computeConstraints();
       for (var entry in constraints.entries) {
-        if (!entry.value.isEmpty(_typeSystemOperations) &&
+        if (!entry.value.isEmpty &&
             !_typesInferredSoFar.containsKey(entry.key)) {
           var constraint = _constraints[entry.key]!;
-          constraint.add(entry.value..origin = origin);
-          inferenceLogWriter?.recordGeneratedConstraint(entry.key, entry.value);
+          constraint.add(
+            _TypeConstraint(origin, entry.key,
+                lower: entry.value.lower, upper: entry.value.upper),
+          );
         }
       }
     }
@@ -785,25 +665,14 @@ class GenericInferrer {
   }
 
   String _typeStr(DartType type) {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: isNonNullableByDefault);
   }
 
-  static String _formatConstraints(
-      Iterable<
-              MergedTypeConstraint<DartType, DartType, TypeParameterElement,
-                  PromotableElement, InterfaceType, InterfaceElement>>
-          constraints,
-      TypeSystemOperations typeSystemOperations) {
-    List<List<String>> lineParts = Set<
-            TypeConstraintOrigin<
-                DartType,
-                DartType,
-                PromotableElement,
-                TypeParameterElement,
-                InterfaceType,
-                InterfaceElement>>.from(constraints.map((c) => c.origin))
-        .map((o) => o.formatError(typeSystemOperations))
-        .toList();
+  static String _formatConstraints(Iterable<_TypeConstraint> constraints) {
+    List<List<String>> lineParts =
+        Set<_TypeConstraintOrigin>.from(constraints.map((c) => c.origin))
+            .map((o) => o.formatError())
+            .toList();
 
     int prefixMax = lineParts.map((p) => p[0].length).fold(0, math.max);
 
@@ -823,4 +692,226 @@ class GenericInferrer {
 
     return messageLines.join('\n');
   }
+}
+
+/// A constraint on a type parameter that we're inferring.
+class _TypeConstraint extends _TypeRange {
+  /// The type parameter that is constrained by [lowerBound] or [upperBound].
+  final TypeParameterElement typeParameter;
+
+  /// Where this constraint comes from, used for error messages.
+  ///
+  /// See [toString].
+  final _TypeConstraintOrigin origin;
+
+  _TypeConstraint(this.origin, this.typeParameter, {super.upper, super.lower});
+
+  _TypeConstraint.fromExtends(
+      TypeParameterElement element, DartType boundType, DartType extendsType,
+      {required bool isNonNullableByDefault})
+      : this(
+            _TypeConstraintFromExtendsClause(
+              element,
+              boundType,
+              extendsType,
+              isNonNullableByDefault: isNonNullableByDefault,
+            ),
+            element,
+            upper: extendsType);
+
+  bool isSatisfiedBy(TypeSystemImpl ts, DartType type) {
+    return ts.isSubtypeOf(lowerBound, type) && ts.isSubtypeOf(type, upperBound);
+  }
+
+  /// Converts this constraint to a message suitable for a type inference error.
+  @override
+  String toString() => !identical(upperBound, UnknownInferredType.instance)
+      ? "'$typeParameter' must extend '$upperBound'"
+      : "'$lowerBound' must extend '$typeParameter'";
+}
+
+class _TypeConstraintFromArgument extends _TypeConstraintOrigin {
+  final DartType argumentType;
+  final DartType parameterType;
+  final String parameterName;
+  final InterfaceElement? genericClass;
+
+  _TypeConstraintFromArgument(
+      this.argumentType, this.parameterType, this.parameterName,
+      {this.genericClass, required super.isNonNullableByDefault});
+
+  @override
+  List<String> formatError() {
+    // TODO(jmesserly): we should highlight the span. That would be more useful.
+    // However in summary code it doesn't look like the AST node with span is
+    // available.
+    String prefix;
+    final genericClass = this.genericClass;
+    if (genericClass != null &&
+        (genericClass.name == "List" || genericClass.name == "Map") &&
+        genericClass.library.isDartCore == true) {
+      // This will become:
+      //     "List element"
+      //     "Map key"
+      //     "Map value"
+      prefix = "${genericClass.name} $parameterName";
+    } else {
+      prefix = "Parameter '$parameterName'";
+    }
+
+    return [
+      prefix,
+      "declared as     '${_typeStr(parameterType)}'",
+      "but argument is '${_typeStr(argumentType)}'."
+    ];
+  }
+}
+
+class _TypeConstraintFromExtendsClause extends _TypeConstraintOrigin {
+  final TypeParameterElement typeParam;
+
+  /// The declared bound of [typeParam], not `null`, because we create
+  /// this clause only when it is not `null`.
+  ///
+  /// For example `Iterable<T>` for `<T, E extends Iterable<T>>`.
+  final DartType boundType;
+
+  /// [boundType] in which type parameters are substituted with inferred
+  /// type arguments.
+  ///
+  /// For example `Iterable<int>` if `T` inferred to `int`.
+  final DartType extendsType;
+
+  _TypeConstraintFromExtendsClause(
+      this.typeParam, this.boundType, this.extendsType,
+      {required super.isNonNullableByDefault});
+
+  @override
+  List<String> formatError() {
+    var boundStr = _typeStr(boundType);
+    var extendsStr = _typeStr(extendsType);
+    return [
+      "Type parameter '${typeParam.name}'",
+      "is declared to extend '$boundStr' producing '$extendsStr'."
+    ];
+  }
+}
+
+class _TypeConstraintFromFunctionContext extends _TypeConstraintOrigin {
+  final DartType contextType;
+  final DartType functionType;
+
+  _TypeConstraintFromFunctionContext(this.functionType, this.contextType,
+      {required super.isNonNullableByDefault});
+
+  @override
+  List<String> formatError() {
+    return [
+      "Function type",
+      "declared as '${_typeStr(functionType)}'",
+      "used where  '${_typeStr(contextType)}' is required."
+    ];
+  }
+}
+
+class _TypeConstraintFromReturnType extends _TypeConstraintOrigin {
+  final DartType contextType;
+  final DartType declaredType;
+
+  _TypeConstraintFromReturnType(this.declaredType, this.contextType,
+      {required super.isNonNullableByDefault});
+
+  @override
+  List<String> formatError() {
+    return [
+      "Return type",
+      "declared as '${_typeStr(declaredType)}'",
+      "used where  '${_typeStr(contextType)}' is required."
+    ];
+  }
+}
+
+/// The origin of a type constraint, for the purposes of producing a human
+/// readable error message during type inference as well as determining whether
+/// the constraint was used to fix the type parameter or not.
+abstract class _TypeConstraintOrigin {
+  final bool isNonNullableByDefault;
+
+  _TypeConstraintOrigin({required this.isNonNullableByDefault});
+
+  List<String> formatError();
+
+  String _typeStr(DartType type) {
+    return type.getDisplayString(withNullability: isNonNullableByDefault);
+  }
+}
+
+class _TypeRange {
+  /// The upper bound of the type parameter. In other words, T <: upperBound.
+  ///
+  /// In Dart this can be written as `<T extends UpperBoundType>`.
+  ///
+  /// In inference, this can happen as a result of parameters of function type.
+  /// For example, consider a signature like:
+  ///
+  ///     T reduce<T>(List<T> values, T f(T x, T y));
+  ///
+  /// and a call to it like:
+  ///
+  ///     reduce(values, (num x, num y) => ...);
+  ///
+  /// From the function expression's parameters, we conclude `T <: num`. We may
+  /// still be able to conclude a different [lower] based on `values` or
+  /// the type of the elided `=> ...` body. For example:
+  ///
+  ///      reduce(['x'], (num x, num y) => 'hi');
+  ///
+  /// Here the [lower] will be `String` and the upper bound will be `num`,
+  /// which cannot be satisfied, so this is ill typed.
+  final DartType upperBound;
+
+  /// The lower bound of the type parameter. In other words, lowerBound <: T.
+  ///
+  /// This kind of constraint cannot be expressed in Dart, but it applies when
+  /// we're doing inference. For example, consider a signature like:
+  ///
+  ///     T pickAtRandom<T>(T x, T y);
+  ///
+  /// and a call to it like:
+  ///
+  ///     pickAtRandom(1, 2.0)
+  ///
+  /// when we see the first parameter is an `int`, we know that `int <: T`.
+  /// When we see `double` this implies `double <: T`.
+  /// Combining these constraints results in a lower bound of `num`.
+  ///
+  /// In general, we choose the lower bound as our inferred type, so we can
+  /// offer the most constrained (strongest) result type.
+  final DartType lowerBound;
+
+  _TypeRange({DartType? lower, DartType? upper})
+      : lowerBound = lower ?? UnknownInferredType.instance,
+        upperBound = upper ?? UnknownInferredType.instance;
+
+  /// Formats the typeRange as a string suitable for unit testing.
+  ///
+  /// For example, if [typeName] is 'T' and the range has bounds int and Object
+  /// respectively, the returned string will be 'int <: T <: Object'.
+  @visibleForTesting
+  String format(String typeName, {required bool withNullability}) {
+    String typeStr(DartType type) {
+      return type.getDisplayString(withNullability: withNullability);
+    }
+
+    var lowerString = identical(lowerBound, UnknownInferredType.instance)
+        ? ''
+        : '${typeStr(lowerBound)} <: ';
+    var upperString = identical(upperBound, UnknownInferredType.instance)
+        ? ''
+        : ' <: ${typeStr(upperBound)}';
+    return '$lowerString$typeName$upperString';
+  }
+
+  @override
+  String toString() => format('(type)', withNullability: true);
 }

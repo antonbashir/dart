@@ -4,7 +4,7 @@
 
 /// Utilities for building JS ASTs at runtime. Contains a builder class and a
 /// parser that parses part of the language.
-library;
+library js_ast.builder;
 
 import 'characters.dart' as char_codes;
 import 'nodes.dart';
@@ -383,52 +383,6 @@ class MiniJsParserError {
   }
 }
 
-enum _Category {
-  none,
-  alpha,
-  numeric,
-  string,
-  symbol,
-  assignment,
-  dot,
-  lparen,
-  rparen,
-  lbrace,
-  rbrace,
-  lsquare,
-  rsquare,
-  comma,
-  query,
-  colon,
-  semicolon,
-  arrow,
-  hash,
-  whitespace,
-  other,
-  ;
-
-  static const _asciiTable = <_Category>[
-    other, other, other, other, other, other, other, other, // 0-7
-    other, whitespace, whitespace, other, other, whitespace, // 8-13
-    other, other, other, other, other, other, other, other, // 14-21
-    other, other, other, other, other, other, other, other, // 22-29
-    other, other, whitespace, // 30-32
-    symbol, other, hash, alpha, symbol, symbol, other, // !"#$%&`
-    lparen, rparen, symbol, symbol, comma, symbol, dot, symbol, // ()*+,-./
-    numeric, numeric, numeric, numeric, numeric, // 01234
-    numeric, numeric, numeric, numeric, numeric, // 56789
-    colon, semicolon, symbol, symbol, symbol, query, other, // :;<=>?@
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // ABCDEFGH
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // IJKLMNOP
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // QRSTUVWX
-    alpha, alpha, lsquare, other, rsquare, symbol, alpha, other, // YZ[\]^_'
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // abcdefgh
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // ijklmnop
-    alpha, alpha, alpha, alpha, alpha, alpha, alpha, alpha, // qrstuvwx
-    alpha, alpha, lbrace, symbol, rbrace, symbol, // yx{|}~
-  ];
-}
-
 /// Mini JavaScript parser for tiny snippets of code that we want to make into
 /// AST nodes. Handles:
 /// * identifiers.
@@ -457,7 +411,7 @@ class MiniJsParser {
     getToken();
   }
 
-  _Category _lastCategory = _Category.none;
+  int lastCategory = NONE;
   String lastToken = '';
   int lastPosition = 0;
   int position = 0;
@@ -470,9 +424,99 @@ class MiniJsParser {
   bool get hasPositionalHoles =>
       interpolatedValues.isNotEmpty && interpolatedValues.first.isPositional;
 
+  static const NONE = -1;
+  static const ALPHA = 0;
+  static const NUMERIC = 1;
+  static const STRING = 2;
+  static const SYMBOL = 3;
+  static const ASSIGNMENT = 4;
+  static const DOT = 5;
+  static const LPAREN = 6;
+  static const RPAREN = 7;
+  static const LBRACE = 8;
+  static const RBRACE = 9;
+  static const LSQUARE = 10;
+  static const RSQUARE = 11;
+  static const COMMA = 12;
+  static const QUERY = 13;
+  static const COLON = 14;
+  static const SEMICOLON = 15;
+  static const ARROW = 16;
+  static const HASH = 17;
+  static const WHITESPACE = 18;
+  static const OTHER = 19;
+
   // Make sure that ]] is two symbols.
-  bool _singleCharCategory(_Category category) =>
-      category.index >= _Category.dot.index;
+  bool singleCharCategory(int category) => category >= DOT;
+
+  static String categoryToString(int cat) {
+    switch (cat) {
+      case NONE:
+        return 'NONE';
+      case ALPHA:
+        return 'ALPHA';
+      case NUMERIC:
+        return 'NUMERIC';
+      case SYMBOL:
+        return 'SYMBOL';
+      case ASSIGNMENT:
+        return 'ASSIGNMENT';
+      case DOT:
+        return 'DOT';
+      case LPAREN:
+        return 'LPAREN';
+      case RPAREN:
+        return 'RPAREN';
+      case LBRACE:
+        return 'LBRACE';
+      case RBRACE:
+        return 'RBRACE';
+      case LSQUARE:
+        return 'LSQUARE';
+      case RSQUARE:
+        return 'RSQUARE';
+      case STRING:
+        return 'STRING';
+      case COMMA:
+        return 'COMMA';
+      case QUERY:
+        return 'QUERY';
+      case COLON:
+        return 'COLON';
+      case SEMICOLON:
+        return 'SEMICOLON';
+      case ARROW:
+        return 'ARROW';
+      case HASH:
+        return 'HASH';
+      case WHITESPACE:
+        return 'WHITESPACE';
+      case OTHER:
+        return 'OTHER';
+    }
+    return 'Unknown: $cat';
+  }
+
+  static const CATEGORIES = <int>[
+    OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, // 0-7
+    OTHER, WHITESPACE, WHITESPACE, OTHER, OTHER, WHITESPACE, // 8-13
+    OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, // 14-21
+    OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, // 22-29
+    OTHER, OTHER, WHITESPACE, // 30-32
+    SYMBOL, OTHER, HASH, ALPHA, SYMBOL, SYMBOL, OTHER, // !"#$%&´
+    LPAREN, RPAREN, SYMBOL, SYMBOL, COMMA, SYMBOL, DOT, SYMBOL, // ()*+,-./
+    NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, // 01234
+    NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, // 56789
+    COLON, SEMICOLON, SYMBOL, SYMBOL, SYMBOL, QUERY, OTHER, // :;<=>?@
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // ABCDEFGH
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // IJKLMNOP
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // QRSTUVWX
+    ALPHA, ALPHA, LSQUARE, OTHER, RSQUARE, SYMBOL, ALPHA, OTHER, // YZ[\]^_'
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // abcdefgh
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // ijklmnop
+    ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, ALPHA, // qrstuvwx
+    ALPHA, ALPHA, LBRACE, SYMBOL, RBRACE, SYMBOL
+  ]; // yz{|}~
 
   // This must be a >= the highest precedence number handled by parseBinary.
   static var HIGHEST_PARSE_BINARY_PRECEDENCE = 16;
@@ -540,9 +584,9 @@ class MiniJsParser {
     'await'
   };
 
-  static _Category _category(int code) {
-    if (code >= _Category._asciiTable.length) return _Category.other;
-    return _Category._asciiTable[code];
+  static int category(int code) {
+    if (code >= CATEGORIES.length) return OTHER;
+    return CATEGORIES[code];
   }
 
   String getRegExp(int startPosition) {
@@ -561,7 +605,7 @@ class MiniJsParser {
             escaped == char_codes.$X ||
             escaped == char_codes.$u ||
             escaped == char_codes.$U ||
-            _category(escaped) == _Category.numeric) {
+            category(escaped) == NUMERIC) {
           error('Numeric and hex escapes are not supported in RegExp literals');
         }
       }
@@ -629,13 +673,13 @@ class MiniJsParser {
           continue;
         }
       }
-      if (_category(code) != _Category.whitespace) break;
+      if (category(code) != WHITESPACE) break;
       if (code == char_codes.$LF) skippedNewline = true;
       ++position;
     }
 
     if (position == src.length) {
-      _lastCategory = _Category.none;
+      lastCategory = NONE;
       lastToken = '';
       lastPosition = position;
       return;
@@ -644,24 +688,24 @@ class MiniJsParser {
     lastPosition = position;
     if (code == char_codes.$SQ || code == char_codes.$DQ) {
       // String literal.
-      _lastCategory = _Category.string;
+      lastCategory = STRING;
       lastToken = getString(position, code);
     } else if (code == char_codes.$0 &&
         position + 2 < src.length &&
         src.codeUnitAt(position + 1) == char_codes.$x) {
       // Hex literal.
       for (position += 2; position < src.length; position++) {
-        final cat = _category(src.codeUnitAt(position));
-        if (cat != _Category.numeric && cat != _Category.alpha) break;
+        int cat = category(src.codeUnitAt(position));
+        if (cat != NUMERIC && cat != ALPHA) break;
       }
-      _lastCategory = _Category.numeric;
+      lastCategory = NUMERIC;
       lastToken = src.substring(lastPosition, position);
       if (int.tryParse(lastToken) == null) {
         error('Unparseable number');
       }
     } else if (code == char_codes.$SLASH) {
       // Tokens that start with / are special due to regexp literals.
-      _lastCategory = _Category.symbol;
+      lastCategory = SYMBOL;
       position++;
       if (position < src.length && src.codeUnitAt(position) == char_codes.$EQ) {
         position++;
@@ -669,8 +713,8 @@ class MiniJsParser {
       lastToken = src.substring(lastPosition, position);
     } else {
       // All other tokens handled here.
-      final cat = _category(src.codeUnitAt(position));
-      _Category newCat;
+      int cat = category(src.codeUnitAt(position));
+      int newCat;
       do {
         position++;
         if (position == src.length) break;
@@ -681,46 +725,44 @@ class MiniJsParser {
         newCat = (code == char_codes.$BANG ||
                 code == char_codes.$SLASH ||
                 code == char_codes.$TILDE)
-            ? _Category.none
-            : _category(code);
-      } while (!_singleCharCategory(cat) &&
+            ? NONE
+            : category(code);
+      } while (!singleCharCategory(cat) &&
           (cat == newCat ||
-              (cat == _Category.alpha &&
-                  newCat == _Category.numeric) || // eg. level42.
-              (cat == _Category.numeric &&
-                  newCat == _Category.dot))); // eg. 3.1415
-      _lastCategory = cat;
+              (cat == ALPHA && newCat == NUMERIC) || // eg. level42.
+              (cat == NUMERIC && newCat == DOT))); // eg. 3.1415
+      lastCategory = cat;
       lastToken = src.substring(lastPosition, position);
-      if (cat == _Category.numeric) {
+      if (cat == NUMERIC) {
         if (double.tryParse(lastToken) == null) {
           error('Unparseable number');
         }
-      } else if (cat == _Category.symbol) {
+      } else if (cat == SYMBOL) {
         if (lastToken == '=>') {
-          _lastCategory = _Category.arrow;
+          lastCategory = ARROW;
         } else {
           int? binaryPrecedence = BINARY_PRECEDENCE[lastToken];
           if (binaryPrecedence == null &&
               !UNARY_OPERATORS.contains(lastToken)) {
             error('Unknown operator');
           }
-          if (isAssignment(lastToken)) _lastCategory = _Category.assignment;
+          if (isAssignment(lastToken)) lastCategory = ASSIGNMENT;
         }
-      } else if (cat == _Category.alpha) {
+      } else if (cat == ALPHA) {
         if (OPERATORS_THAT_LOOK_LIKE_IDENTIFIERS.contains(lastToken)) {
-          _lastCategory = _Category.symbol;
+          lastCategory = SYMBOL;
         }
       }
     }
   }
 
-  void _expectCategory(_Category cat) {
-    if (cat != _lastCategory) error('Expected $cat');
+  void expectCategory(int cat) {
+    if (cat != lastCategory) error('Expected ${categoryToString(cat)}');
     getToken();
   }
 
-  bool _acceptCategory(_Category cat) {
-    if (cat == _lastCategory) {
+  bool acceptCategory(int cat) {
+    if (cat == lastCategory) {
       getToken();
       return true;
     }
@@ -735,12 +777,12 @@ class MiniJsParser {
   bool acceptSemicolon() {
     // Accept semicolon or automatically inserted semicolon before close brace.
     // Miniparser forbids other kinds of semicolon insertion.
-    if (_Category.rbrace == _lastCategory) return true;
-    if (_Category.none == _lastCategory) return true; // end of input
+    if (RBRACE == lastCategory) return true;
+    if (NONE == lastCategory) return true; // end of input
     if (skippedNewline) {
       error('No automatic semicolon insertion at preceding newline');
     }
-    return _acceptCategory(_Category.semicolon);
+    return acceptCategory(SEMICOLON);
   }
 
   bool acceptString(String string) {
@@ -758,7 +800,7 @@ class MiniJsParser {
   /// Returns either the name for the hole, or its integer position.
   Object parseHash() {
     String holeName = lastToken;
-    if (_acceptCategory(_Category.alpha)) {
+    if (acceptCategory(ALPHA)) {
       // Named hole. Example: 'function #funName() { ... }'
       if (hasPositionalHoles) {
         error('Holes must all be positional or named. $holeName');
@@ -775,7 +817,7 @@ class MiniJsParser {
 
   Expression parsePrimary() {
     String last = lastToken;
-    if (_acceptCategory(_Category.alpha)) {
+    if (acceptCategory(ALPHA)) {
       if (last == 'true') {
         return LiteralBool(true);
       } else if (last == 'false') {
@@ -789,35 +831,35 @@ class MiniJsParser {
       } else {
         return VariableUse(last);
       }
-    } else if (_acceptCategory(_Category.lparen)) {
+    } else if (acceptCategory(LPAREN)) {
       return parseExpressionOrArrowFunction();
-    } else if (_acceptCategory(_Category.string)) {
+    } else if (acceptCategory(STRING)) {
       return LiteralString(last);
-    } else if (_acceptCategory(_Category.numeric)) {
+    } else if (acceptCategory(NUMERIC)) {
       return LiteralNumber(last);
-    } else if (_acceptCategory(_Category.lbrace)) {
+    } else if (acceptCategory(LBRACE)) {
       return parseObjectInitializer();
-    } else if (_acceptCategory(_Category.lsquare)) {
+    } else if (acceptCategory(LSQUARE)) {
       var values = <Expression>[];
       while (true) {
-        if (_acceptCategory(_Category.comma)) {
+        if (acceptCategory(COMMA)) {
           values.add(ArrayHole());
           continue;
         }
-        if (_acceptCategory(_Category.rsquare)) break;
+        if (acceptCategory(RSQUARE)) break;
         values.add(parseAssignment());
-        if (_acceptCategory(_Category.rsquare)) break;
-        _expectCategory(_Category.comma);
+        if (acceptCategory(RSQUARE)) break;
+        expectCategory(COMMA);
       }
       return ArrayInitializer(values);
     } else if (last.startsWith('/')) {
       String regexp = getRegExp(lastPosition);
       getToken();
       String flags = lastToken;
-      if (!_acceptCategory(_Category.alpha)) flags = '';
+      if (!acceptCategory(ALPHA)) flags = '';
       Expression expression = RegExpLiteral(regexp + flags);
       return expression;
-    } else if (_acceptCategory(_Category.hash)) {
+    } else if (acceptCategory(HASH)) {
       var nameOrPosition = parseHash();
       InterpolatedExpression expression =
           InterpolatedExpression(nameOrPosition);
@@ -829,7 +871,7 @@ class MiniJsParser {
   }
 
   Expression parseFunctionExpression() {
-    if (_lastCategory == _Category.alpha || _lastCategory == _Category.hash) {
+    if (lastCategory == ALPHA || lastCategory == HASH) {
       Declaration name = parseVariableDeclaration();
       return NamedFunction(name, parseFun());
     }
@@ -838,10 +880,10 @@ class MiniJsParser {
 
   Fun parseFun() {
     List<Parameter> params = [];
-    _expectCategory(_Category.lparen);
-    if (!_acceptCategory(_Category.rparen)) {
+    expectCategory(LPAREN);
+    if (!acceptCategory(RPAREN)) {
       for (;;) {
-        if (_acceptCategory(_Category.hash)) {
+        if (acceptCategory(HASH)) {
           var nameOrPosition = parseHash();
           InterpolatedParameter parameter =
               InterpolatedParameter(nameOrPosition);
@@ -849,11 +891,11 @@ class MiniJsParser {
           params.add(parameter);
         } else {
           String argumentName = lastToken;
-          _expectCategory(_Category.alpha);
+          expectCategory(ALPHA);
           params.add(Parameter(argumentName));
         }
-        if (_acceptCategory(_Category.comma)) continue;
-        _expectCategory(_Category.rparen);
+        if (acceptCategory(COMMA)) continue;
+        expectCategory(RPAREN);
         break;
       }
     }
@@ -870,7 +912,7 @@ class MiniJsParser {
     } else {
       asyncModifier = AsyncModifier.sync;
     }
-    _expectCategory(_Category.lbrace);
+    expectCategory(LBRACE);
     Block block = parseBlock();
     return Fun(params, block, asyncModifier: asyncModifier);
   }
@@ -878,10 +920,10 @@ class MiniJsParser {
   Expression parseObjectInitializer() {
     List<Property> properties = [];
     for (;;) {
-      if (_acceptCategory(_Category.rbrace)) break;
+      if (acceptCategory(RBRACE)) break;
       properties.add(parseMethodDefinitionOrProperty());
-      if (_acceptCategory(_Category.rbrace)) break;
-      _expectCategory(_Category.comma);
+      if (acceptCategory(RBRACE)) break;
+      expectCategory(COMMA);
     }
     return ObjectInitializer(properties);
   }
@@ -890,14 +932,14 @@ class MiniJsParser {
     // Limited subset: keys are identifiers, no 'get' or 'set' properties.
     Literal propertyName;
     String identifier = lastToken;
-    if (_acceptCategory(_Category.alpha)) {
+    if (acceptCategory(ALPHA)) {
       propertyName = LiteralString(identifier);
-    } else if (_acceptCategory(_Category.string)) {
+    } else if (acceptCategory(STRING)) {
       propertyName = LiteralString(identifier);
-    } else if (_acceptCategory(_Category.symbol)) {
+    } else if (acceptCategory(SYMBOL)) {
       // e.g. void
       propertyName = LiteralString(identifier);
-    } else if (_acceptCategory(_Category.hash)) {
+    } else if (acceptCategory(HASH)) {
       var nameOrPosition = parseHash();
       InterpolatedLiteral interpolatedLiteral =
           InterpolatedLiteral(nameOrPosition);
@@ -906,7 +948,7 @@ class MiniJsParser {
     } else {
       error('Expected property name');
     }
-    if (_acceptCategory(_Category.colon)) {
+    if (acceptCategory(COLON)) {
       Expression value = parseAssignment();
       return Property(propertyName, value);
     } else {
@@ -918,11 +960,11 @@ class MiniJsParser {
   Expression parseMember() {
     Expression receiver = parsePrimary();
     while (true) {
-      if (_acceptCategory(_Category.dot)) {
+      if (acceptCategory(DOT)) {
         receiver = getDotRhs(receiver);
-      } else if (_acceptCategory(_Category.lsquare)) {
+      } else if (acceptCategory(LSQUARE)) {
         Expression inBraces = parseExpression();
-        _expectCategory(_Category.rsquare);
+        expectCategory(RSQUARE);
         receiver = PropertyAccess(receiver, inBraces);
       } else {
         break;
@@ -935,24 +977,24 @@ class MiniJsParser {
     bool constructor = acceptString('new');
     Expression receiver = parseMember();
     while (true) {
-      if (_acceptCategory(_Category.lparen)) {
+      if (acceptCategory(LPAREN)) {
         final arguments = <Expression>[];
-        if (!_acceptCategory(_Category.rparen)) {
+        if (!acceptCategory(RPAREN)) {
           while (true) {
             Expression argument = parseAssignment();
             arguments.add(argument);
-            if (_acceptCategory(_Category.rparen)) break;
-            _expectCategory(_Category.comma);
+            if (acceptCategory(RPAREN)) break;
+            expectCategory(COMMA);
           }
         }
         receiver =
             constructor ? New(receiver, arguments) : Call(receiver, arguments);
         constructor = false;
-      } else if (!constructor && _acceptCategory(_Category.lsquare)) {
+      } else if (!constructor && acceptCategory(LSQUARE)) {
         Expression inBraces = parseExpression();
-        _expectCategory(_Category.rsquare);
+        expectCategory(RSQUARE);
         receiver = PropertyAccess(receiver, inBraces);
-      } else if (!constructor && _acceptCategory(_Category.dot)) {
+      } else if (!constructor && acceptCategory(DOT)) {
         receiver = getDotRhs(receiver);
       } else {
         // JS allows new without (), but we don't.
@@ -964,7 +1006,7 @@ class MiniJsParser {
   }
 
   Expression getDotRhs(Expression receiver) {
-    if (_acceptCategory(_Category.hash)) {
+    if (acceptCategory(HASH)) {
       var nameOrPosition = parseHash();
       InterpolatedSelector property = InterpolatedSelector(nameOrPosition);
       interpolatedValues.add(property);
@@ -973,12 +1015,12 @@ class MiniJsParser {
     String identifier = lastToken;
     // In ES5 keywords like delete and continue are allowed as property
     // names, and the IndexedDB API uses that, so we need to allow it here.
-    if (_acceptCategory(_Category.symbol)) {
+    if (acceptCategory(SYMBOL)) {
       if (!OPERATORS_THAT_LOOK_LIKE_IDENTIFIERS.contains(identifier)) {
         error('Expected alphanumeric identifier');
       }
     } else {
-      _expectCategory(_Category.alpha);
+      expectCategory(ALPHA);
     }
     return PropertyAccess.field(receiver, identifier);
   }
@@ -988,7 +1030,7 @@ class MiniJsParser {
     String operator = lastToken;
     // JavaScript grammar is:
     //     LeftHandSideExpression [no LineTerminator here] ++
-    if (_lastCategory == _Category.symbol &&
+    if (lastCategory == SYMBOL &&
         !skippedNewline &&
         (acceptString('++') || acceptString('--'))) {
       return Postfix(operator, expression);
@@ -1001,7 +1043,7 @@ class MiniJsParser {
 
   Expression parseUnaryHigh() {
     String operator = lastToken;
-    if (_lastCategory == _Category.symbol &&
+    if (lastCategory == SYMBOL &&
         UNARY_OPERATORS.contains(operator) &&
         (acceptString('++') || acceptString('--') || acceptString('await'))) {
       if (operator == 'await') return Await(parsePostfix());
@@ -1012,11 +1054,11 @@ class MiniJsParser {
 
   Expression parseUnaryLow() {
     String operator = lastToken;
-    if (_lastCategory == _Category.symbol &&
+    if (lastCategory == SYMBOL &&
         UNARY_OPERATORS.contains(operator) &&
         operator != '++' &&
         operator != '--') {
-      _expectCategory(_Category.symbol);
+      expectCategory(SYMBOL);
       if (operator == 'await') return Await(parsePostfix());
       return Prefix(operator, parseUnaryLow());
     }
@@ -1031,12 +1073,12 @@ class MiniJsParser {
 
     while (true) {
       final symbol = lastToken;
-      if (_lastCategory != _Category.symbol) break;
+      if (lastCategory != SYMBOL) break;
       final symbolPrecedence = BINARY_PRECEDENCE[symbol];
       if (symbolPrecedence == null) break;
       if (symbolPrecedence > maxPrecedence) break;
 
-      _expectCategory(_Category.symbol);
+      expectCategory(SYMBOL);
       if (rhs == null || symbolPrecedence >= minPrecedence) {
         if (rhs != null) lhs = Binary(lastSymbol, lhs, rhs);
         minPrecedence = symbolPrecedence;
@@ -1054,9 +1096,9 @@ class MiniJsParser {
 
   Expression parseConditional() {
     Expression lhs = parseBinary(HIGHEST_PARSE_BINARY_PRECEDENCE);
-    if (!_acceptCategory(_Category.query)) return lhs;
+    if (!acceptCategory(QUERY)) return lhs;
     Expression ifTrue = parseAssignment();
-    _expectCategory(_Category.colon);
+    expectCategory(COLON);
     Expression ifFalse = parseAssignment();
     return Conditional(lhs, ifTrue, ifFalse);
   }
@@ -1064,7 +1106,7 @@ class MiniJsParser {
   Expression parseAssignment() {
     Expression lhs = parseConditional();
     String assignmentOperator = lastToken;
-    if (_acceptCategory(_Category.assignment)) {
+    if (acceptCategory(ASSIGNMENT)) {
       Expression rhs = parseAssignment();
       if (assignmentOperator == '=') {
         return Assignment(lhs, rhs);
@@ -1080,7 +1122,7 @@ class MiniJsParser {
 
   Expression parseExpression() {
     Expression expression = parseAssignment();
-    while (_acceptCategory(_Category.comma)) {
+    while (acceptCategory(COMMA)) {
       Expression right = parseAssignment();
       expression = Binary(',', expression, right);
     }
@@ -1088,16 +1130,16 @@ class MiniJsParser {
   }
 
   Expression parseExpressionOrArrowFunction() {
-    if (_acceptCategory(_Category.rparen)) {
-      _expectCategory(_Category.arrow);
+    if (acceptCategory(RPAREN)) {
+      expectCategory(ARROW);
       return parseArrowFunctionBody([]);
     }
     List<Expression> expressions = [parseAssignment()];
-    while (_acceptCategory(_Category.comma)) {
+    while (acceptCategory(COMMA)) {
       expressions.add(parseAssignment());
     }
-    _expectCategory(_Category.rparen);
-    if (_acceptCategory(_Category.arrow)) {
+    expectCategory(RPAREN);
+    if (acceptCategory(ARROW)) {
       var params = <Parameter>[];
       for (Expression e in expressions) {
         if (e is VariableUse) {
@@ -1116,7 +1158,7 @@ class MiniJsParser {
 
   Expression parseArrowFunctionBody(List<Parameter> params) {
     Node body;
-    if (_acceptCategory(_Category.lbrace)) {
+    if (acceptCategory(LBRACE)) {
       body = parseBlock();
     } else {
       body = parseAssignment();
@@ -1142,7 +1184,7 @@ class MiniJsParser {
     }
 
     declare(firstVariable);
-    while (_acceptCategory(_Category.comma)) {
+    while (acceptCategory(COMMA)) {
       Declaration variable = parseVariableDeclaration();
       declare(variable);
     }
@@ -1159,16 +1201,16 @@ class MiniJsParser {
 
   Expression expression() {
     Expression expression = parseVarDeclarationOrExpression();
-    if (_lastCategory != _Category.none || position != src.length) {
-      error('Unparsed junk: $_lastCategory');
+    if (lastCategory != NONE || position != src.length) {
+      error('Unparsed junk: ${categoryToString(lastCategory)}');
     }
     return expression;
   }
 
   Statement statement() {
     Statement statement = parseStatement();
-    if (_lastCategory != _Category.none || position != src.length) {
-      error('Unparsed junk: $_lastCategory');
+    if (lastCategory != NONE || position != src.length) {
+      error('Unparsed junk: ${categoryToString(lastCategory)}');
     }
     // TODO(sra): interpolated capture here?
     return statement;
@@ -1177,7 +1219,7 @@ class MiniJsParser {
   Block parseBlock() {
     List<Statement> statements = [];
 
-    while (!_acceptCategory(_Category.rbrace)) {
+    while (!acceptCategory(RBRACE)) {
       Statement statement = parseStatement();
       statements.add(statement);
     }
@@ -1185,11 +1227,11 @@ class MiniJsParser {
   }
 
   Statement parseStatement() {
-    if (_acceptCategory(_Category.lbrace)) return parseBlock();
+    if (acceptCategory(LBRACE)) return parseBlock();
 
-    if (_acceptCategory(_Category.semicolon)) return EmptyStatement();
+    if (acceptCategory(SEMICOLON)) return EmptyStatement();
 
-    if (_lastCategory == _Category.alpha) {
+    if (lastCategory == ALPHA) {
       if (acceptString('return')) return parseReturn();
 
       if (acceptString('throw')) return parseThrow();
@@ -1233,11 +1275,11 @@ class MiniJsParser {
       }
     }
 
-    bool checkForInterpolatedStatement = _lastCategory == _Category.hash;
+    bool checkForInterpolatedStatement = lastCategory == HASH;
 
     Expression expression = parseExpression();
 
-    if (expression is VariableUse && _acceptCategory(_Category.colon)) {
+    if (expression is VariableUse && acceptCategory(COLON)) {
       return LabeledStatement(expression.name, parseStatement());
     }
 
@@ -1281,7 +1323,7 @@ class MiniJsParser {
 
   Statement parseBreakOrContinue(Statement Function(String?) constructor) {
     var identifier = lastToken;
-    if (!skippedNewline && _acceptCategory(_Category.alpha)) {
+    if (!skippedNewline && acceptCategory(ALPHA)) {
       expectSemicolon();
       return constructor(identifier);
     }
@@ -1290,9 +1332,9 @@ class MiniJsParser {
   }
 
   Statement parseIfThenElse() {
-    _expectCategory(_Category.lparen);
+    expectCategory(LPAREN);
     Expression condition = parseExpression();
-    _expectCategory(_Category.rparen);
+    expectCategory(RPAREN);
     Statement thenStatement = parseStatement();
     if (acceptString('else')) {
       // Resolves dangling else by binding 'else' to closest 'if'.
@@ -1312,21 +1354,21 @@ class MiniJsParser {
     //
     Statement finishFor(Expression? init) {
       Expression? condition;
-      if (!_acceptCategory(_Category.semicolon)) {
+      if (!acceptCategory(SEMICOLON)) {
         condition = parseExpression();
-        _expectCategory(_Category.semicolon);
+        expectCategory(SEMICOLON);
       }
       Expression? update;
-      if (!_acceptCategory(_Category.rparen)) {
+      if (!acceptCategory(RPAREN)) {
         update = parseExpression();
-        _expectCategory(_Category.rparen);
+        expectCategory(RPAREN);
       }
       Statement body = parseStatement();
       return For(init, condition, update, body);
     }
 
-    _expectCategory(_Category.lparen);
-    if (_acceptCategory(_Category.semicolon)) {
+    expectCategory(LPAREN);
+    if (acceptCategory(SEMICOLON)) {
       return finishFor(null);
     }
 
@@ -1334,7 +1376,7 @@ class MiniJsParser {
       Declaration declaration = parseVariableDeclaration();
       if (acceptString('in')) {
         Expression objectExpression = parseExpression();
-        _expectCategory(_Category.rparen);
+        expectCategory(RPAREN);
         Statement body = parseStatement();
         return ForIn(
             VariableDeclarationList(
@@ -1343,17 +1385,17 @@ class MiniJsParser {
             body);
       }
       Expression declarations = finishVariableDeclarationList(declaration);
-      _expectCategory(_Category.semicolon);
+      expectCategory(SEMICOLON);
       return finishFor(declarations);
     }
 
     Expression init = parseExpression();
-    _expectCategory(_Category.semicolon);
+    expectCategory(SEMICOLON);
     return finishFor(init);
   }
 
   Declaration parseVariableDeclaration() {
-    if (_acceptCategory(_Category.hash)) {
+    if (acceptCategory(HASH)) {
       var nameOrPosition = parseHash();
       InterpolatedDeclaration declaration =
           InterpolatedDeclaration(nameOrPosition);
@@ -1361,7 +1403,7 @@ class MiniJsParser {
       return declaration;
     } else {
       String token = lastToken;
-      _expectCategory(_Category.alpha);
+      expectCategory(ALPHA);
       return VariableDeclaration(token);
     }
   }
@@ -1373,13 +1415,13 @@ class MiniJsParser {
   }
 
   Statement parseTry() {
-    _expectCategory(_Category.lbrace);
+    expectCategory(LBRACE);
     Block body = parseBlock();
     Catch? catchPart;
     if (acceptString('catch')) catchPart = parseCatch();
     Block? finallyPart;
     if (acceptString('finally')) {
-      _expectCategory(_Category.lbrace);
+      expectCategory(LBRACE);
       finallyPart = parseBlock();
     } else {
       if (catchPart == null) error("expected 'finally'");
@@ -1391,15 +1433,15 @@ class MiniJsParser {
     Expression? expression;
     if (acceptString('case')) {
       expression = parseExpression();
-      _expectCategory(_Category.colon);
+      expectCategory(COLON);
     } else {
       if (!acceptString('default')) {
         error('expected case or default');
       }
-      _expectCategory(_Category.colon);
+      expectCategory(COLON);
     }
     List<Statement> statements = [];
-    while (_lastCategory != _Category.rbrace &&
+    while (lastCategory != RBRACE &&
         lastToken != 'case' &&
         lastToken != 'default') {
       statements.add(parseStatement());
@@ -1410,9 +1452,9 @@ class MiniJsParser {
   }
 
   Statement parseWhile() {
-    _expectCategory(_Category.lparen);
+    expectCategory(LPAREN);
     Expression condition = parseExpression();
-    _expectCategory(_Category.rparen);
+    expectCategory(RPAREN);
     Statement body = parseStatement();
     return While(condition, body);
   }
@@ -1421,31 +1463,31 @@ class MiniJsParser {
     Statement body = parseStatement();
     if (lastToken != 'while') error('Missing while after do body.');
     getToken();
-    _expectCategory(_Category.lparen);
+    expectCategory(LPAREN);
     Expression condition = parseExpression();
-    _expectCategory(_Category.rparen);
+    expectCategory(RPAREN);
     expectSemicolon();
     return Do(body, condition);
   }
 
   Statement parseSwitch() {
-    _expectCategory(_Category.lparen);
+    expectCategory(LPAREN);
     Expression key = parseExpression();
-    _expectCategory(_Category.rparen);
-    _expectCategory(_Category.lbrace);
+    expectCategory(RPAREN);
+    expectCategory(LBRACE);
     List<SwitchClause> clauses = [];
-    while (_lastCategory != _Category.rbrace) {
+    while (lastCategory != RBRACE) {
       clauses.add(parseSwitchClause());
     }
-    _expectCategory(_Category.rbrace);
+    expectCategory(RBRACE);
     return Switch(key, clauses);
   }
 
   Catch parseCatch() {
-    _expectCategory(_Category.lparen);
+    expectCategory(LPAREN);
     Declaration errorName = parseVariableDeclaration();
-    _expectCategory(_Category.rparen);
-    _expectCategory(_Category.lbrace);
+    expectCategory(RPAREN);
+    expectCategory(LBRACE);
     Block body = parseBlock();
     return Catch(errorName, body);
   }

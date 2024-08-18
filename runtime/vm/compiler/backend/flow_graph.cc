@@ -4,10 +4,7 @@
 
 #include "vm/compiler/backend/flow_graph.h"
 
-#include <array>
-
 #include "vm/bit_vector.h"
-#include "vm/compiler/backend/dart_calling_conventions.h"
 #include "vm/compiler/backend/flow_graph_compiler.h"
 #include "vm/compiler/backend/il.h"
 #include "vm/compiler/backend/il_printer.h"
@@ -24,30 +21,20 @@
 
 namespace dart {
 
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_IA32)
+// Smi->Int32 widening pass is disabled due to dartbug.com/32619.
+DEFINE_FLAG(bool, use_smi_widening, false, "Enable Smi->Int32 widening pass.");
+DEFINE_FLAG(bool, trace_smi_widening, false, "Trace Smi->Int32 widening pass.");
+#endif
 DEFINE_FLAG(bool, prune_dead_locals, true, "optimize dead locals away");
 
 // Quick access to the current zone.
 #define Z (zone())
 
-static bool ShouldReorderBlocks(const Function& function,
-                                FlowGraph::CompilationMode mode) {
-  return (mode == FlowGraph::CompilationMode::kOptimized) &&
-         FLAG_reorder_basic_blocks && !function.IsFfiCallbackTrampoline();
-}
-
-static bool IsMarkedWithNoBoundsChecks(const Function& function) {
-  Object& options = Object::Handle();
-  return Library::FindPragma(dart::Thread::Current(),
-                             /*only_core=*/false, function,
-                             Symbols::vm_unsafe_no_bounds_checks(),
-                             /*multiple=*/false, &options);
-}
-
 FlowGraph::FlowGraph(const ParsedFunction& parsed_function,
                      GraphEntryInstr* graph_entry,
                      intptr_t max_block_id,
-                     PrologueInfo prologue_info,
-                     CompilationMode compilation_mode)
+                     PrologueInfo prologue_info)
     : thread_(Thread::Current()),
       parent_(),
       current_ssa_temp_index_(0),
@@ -56,8 +43,7 @@ FlowGraph::FlowGraph(const ParsedFunction& parsed_function,
       num_direct_parameters_(parsed_function.function().MakesCopyOfParameters()
                                  ? 0
                                  : parsed_function.function().NumParameters()),
-      direct_parameter_locations_(
-          parsed_function.function().num_fixed_parameters()),
+      direct_parameters_size_(0),
       graph_entry_(graph_entry),
       preorder_(),
       postorder_(),
@@ -66,24 +52,17 @@ FlowGraph::FlowGraph(const ParsedFunction& parsed_function,
       constant_null_(nullptr),
       constant_dead_(nullptr),
       licm_allowed_(true),
-      should_reorder_blocks_(
-          ShouldReorderBlocks(parsed_function.function(), compilation_mode)),
       prologue_info_(prologue_info),
       loop_hierarchy_(nullptr),
       loop_invariant_loads_(nullptr),
       captured_parameters_(new(zone()) BitVector(zone(), variable_count())),
       inlining_id_(-1),
-      should_print_(false),
-      should_remove_all_bounds_checks_(
-          CompilerState::Current().is_aot() &&
-          IsMarkedWithNoBoundsChecks(parsed_function.function())) {
+      should_print_(false) {
   should_print_ = FlowGraphPrinter::ShouldPrint(parsed_function.function(),
                                                 &compiler_pass_filters_);
-  ComputeLocationsOfFixedParameters(
-      zone(), function(),
-      /*should_assign_stack_locations=*/
-      !parsed_function.function().MakesCopyOfParameters(),
-      &direct_parameter_locations_);
+
+  direct_parameters_size_ = ParameterOffsetAt(
+      function(), num_direct_parameters_, /*last_slot*/ false);
   DiscoverBlocks();
 }
 
@@ -93,17 +72,35 @@ void FlowGraph::EnsureSSATempIndex(Definition* defn, Definition* replacement) {
   }
 }
 
-intptr_t FlowGraph::ComputeArgumentsSizeInWords(const Function& function,
-                                                intptr_t argument_count) {
-  ASSERT(function.num_fixed_parameters() <= argument_count);
-  ASSERT(argument_count <= function.NumParameters());
-
-  const intptr_t fixed_parameters_size_in_bytes =
-      ComputeLocationsOfFixedParameters(Thread::Current()->zone(), function);
-
-  // Currently we box all optional parameters.
-  return fixed_parameters_size_in_bytes +
-         (argument_count - function.num_fixed_parameters());
+intptr_t FlowGraph::ParameterOffsetAt(const Function& function,
+                                      intptr_t index,
+                                      bool last_slot /*=true*/) {
+  ASSERT(index <= function.NumParameters());
+  intptr_t param_offset = 0;
+  for (intptr_t i = 0; i < index; i++) {
+    if (function.is_unboxed_integer_parameter_at(i)) {
+      param_offset += compiler::target::kIntSpillFactor;
+    } else if (function.is_unboxed_double_parameter_at(i)) {
+      param_offset += compiler::target::kDoubleSpillFactor;
+    } else {
+      ASSERT(!function.is_unboxed_parameter_at(i));
+      // Unboxed parameters always occupy one word
+      param_offset++;
+    }
+  }
+  if (last_slot) {
+    ASSERT(index < function.NumParameters());
+    if (function.is_unboxed_double_parameter_at(index) &&
+        compiler::target::kDoubleSpillFactor > 1) {
+      ASSERT(compiler::target::kDoubleSpillFactor == 2);
+      param_offset++;
+    } else if (function.is_unboxed_integer_parameter_at(index) &&
+               compiler::target::kIntSpillFactor > 1) {
+      ASSERT(compiler::target::kIntSpillFactor == 2);
+      param_offset++;
+    }
+  }
+  return param_offset;
 }
 
 Representation FlowGraph::ParameterRepresentationAt(const Function& function,
@@ -167,14 +164,16 @@ void FlowGraph::ReplaceCurrentInstruction(ForwardInstructionIterator* iterator,
   iterator->RemoveCurrentFromGraph();
 }
 
-GrowableArray<BlockEntryInstr*>* FlowGraph::CodegenBlockOrder() {
-  return should_reorder_blocks() ? &optimized_block_order_
-                                 : &reverse_postorder_;
+bool FlowGraph::ShouldReorderBlocks(const Function& function,
+                                    bool is_optimized) {
+  return is_optimized && FLAG_reorder_basic_blocks &&
+         !function.is_intrinsic() && !function.IsFfiCallbackTrampoline();
 }
 
-const GrowableArray<BlockEntryInstr*>* FlowGraph::CodegenBlockOrder() const {
-  return should_reorder_blocks() ? &optimized_block_order_
-                                 : &reverse_postorder_;
+GrowableArray<BlockEntryInstr*>* FlowGraph::CodegenBlockOrder(
+    bool is_optimized) {
+  return ShouldReorderBlocks(function(), is_optimized) ? &optimized_block_order_
+                                                       : &reverse_postorder_;
 }
 
 ConstantInstr* FlowGraph::GetExistingConstant(
@@ -531,8 +530,7 @@ FlowGraph::ToCheck FlowGraph::CheckForInstanceCall(
   }
 
   // Useful receiver class information?
-  if (receiver_class.IsNull() ||
-      receiver_class.has_dynamically_extendable_subtypes()) {
+  if (receiver_class.IsNull()) {
     return ToCheck::kCheckCid;
   } else if (call->HasICData()) {
     // If the static class type does not match information found in ICData
@@ -572,8 +570,7 @@ FlowGraph::ToCheck FlowGraph::CheckForInstanceCall(
         Class::Handle(zone(), isolate_group()->object_store()->null_class());
     Function& target = Function::Handle(zone());
     if (null_class.EnsureIsFinalized(thread()) == Error::null()) {
-      target = Resolver::ResolveDynamicAnyArgs(zone(), null_class, method_name,
-                                               /*allow_add=*/true);
+      target = Resolver::ResolveDynamicAnyArgs(zone(), null_class, method_name);
     }
     if (!target.IsNull()) {
       return ToCheck::kCheckCid;
@@ -1173,7 +1170,12 @@ void FlowGraph::Rename(GrowableArray<PhiInstr*>* live_phis,
   env.FillWith(constant_dead(), 0, num_direct_parameters());
   env.FillWith(constant_null(), num_direct_parameters(), num_stack_locals());
 
-  if (entry->catch_entries().is_empty()) {
+  if (entry->catch_entries().length() > 0) {
+    // Functions with try-catch have a fixed area of stack slots reserved
+    // so that all local variables are stored at a known location when
+    // on entry to the catch.
+    entry->set_fixed_slot_count(num_stack_locals());
+  } else {
     ASSERT(entry->unchecked_entry() != nullptr ? entry->SuccessorCount() == 2
                                                : entry->SuccessorCount() == 1);
   }
@@ -1201,21 +1203,6 @@ void FlowGraph::Rename(GrowableArray<PhiInstr*>* live_phis,
 #endif  // defined(DEBUG)
 }
 
-intptr_t FlowGraph::ComputeLocationsOfFixedParameters(
-    Zone* zone,
-    const Function& function,
-    bool should_assign_stack_locations /* = false */,
-    compiler::ParameterInfoArray* parameter_info /* = nullptr */) {
-  return compiler::ComputeCallingConvention(
-      zone, function, function.num_fixed_parameters(),
-      [&](intptr_t i) {
-        const intptr_t index = (function.IsFactory() ? (i - 1) : i);
-        return index >= 0 ? ParameterRepresentationAt(function, index)
-                          : kTagged;
-      },
-      should_assign_stack_locations, parameter_info);
-}
-
 void FlowGraph::PopulateEnvironmentFromFunctionEntry(
     FunctionEntryInstr* function_entry,
     GrowableArray<Definition*>* env,
@@ -1223,34 +1210,43 @@ void FlowGraph::PopulateEnvironmentFromFunctionEntry(
     VariableLivenessAnalysis* variable_liveness,
     ZoneGrowableArray<Definition*>* inlining_parameters) {
   ASSERT(!IsCompiledForOsr());
+  const intptr_t direct_parameter_count = num_direct_parameters_;
 
   // Check if inlining_parameters include a type argument vector parameter.
   const intptr_t inlined_type_args_param =
       ((inlining_parameters != nullptr) && function().IsGeneric()) ? 1 : 0;
 
   ASSERT(variable_count() == env->length());
-  ASSERT(function().num_fixed_parameters() <= env->length());
+  ASSERT(direct_parameter_count <= env->length());
+  intptr_t param_offset = 0;
+  for (intptr_t i = 0; i < direct_parameter_count; i++) {
+    ASSERT(FLAG_precompiled_mode || !function().is_unboxed_parameter_at(i));
+    ParameterInstr* param;
 
-  const bool copies_parameters = function().MakesCopyOfParameters();
-  for (intptr_t i = 0; i < function().num_fixed_parameters(); i++) {
-    const auto& [location, representation] = direct_parameter_locations_[i];
-    if (location.IsInvalid()) {
-      ASSERT(function().MakesCopyOfParameters());
-      continue;
+    const intptr_t index = (function().IsFactory() ? (i - 1) : i);
+
+    if (index >= 0 && function().is_unboxed_integer_parameter_at(index)) {
+      constexpr intptr_t kCorrection = compiler::target::kIntSpillFactor - 1;
+      param = new (zone()) ParameterInstr(/*env_index=*/i, /*param_index=*/i,
+                                          param_offset + kCorrection,
+                                          function_entry, kUnboxedInt64);
+      param_offset += compiler::target::kIntSpillFactor;
+    } else if (index >= 0 && function().is_unboxed_double_parameter_at(index)) {
+      constexpr intptr_t kCorrection = compiler::target::kDoubleSpillFactor - 1;
+      param = new (zone()) ParameterInstr(/*env_index=*/i, /*param_index=*/i,
+                                          param_offset + kCorrection,
+                                          function_entry, kUnboxedDouble);
+      param_offset += compiler::target::kDoubleSpillFactor;
+    } else {
+      ASSERT(index < 0 || !function().is_unboxed_parameter_at(index));
+      param =
+          new (zone()) ParameterInstr(/*env_index=*/i, /*param_index=*/i,
+                                      param_offset, function_entry, kTagged);
+      param_offset++;
     }
-
-    const intptr_t env_index =
-        copies_parameters ? EnvIndex(parsed_function_.RawParameterVariable(i))
-                          : i;
-
-    auto param = new (zone())
-        ParameterInstr(function_entry,
-                       /*env_index=*/env_index,
-                       /*param_index=*/i, location, representation);
-
     AllocateSSAIndex(param);
     AddToInitialDefinitions(function_entry, param);
-    (*env)[env_index] = param;
+    (*env)[i] = param;
   }
 
   // Override the entries in the renaming environment which are special (i.e.
@@ -1300,23 +1296,14 @@ void FlowGraph::PopulateEnvironmentFromFunctionEntry(
 
     // Replace the argument descriptor slot with a special parameter.
     if (parsed_function().has_arg_desc_var()) {
-      auto defn = new (Z)
-          ParameterInstr(function_entry, ArgumentDescriptorEnvIndex(),
-                         ParameterInstr::kNotFunctionParameter,
-                         Location::RegisterLocation(ARGS_DESC_REG), kTagged);
+      Definition* defn =
+          new (Z) SpecialParameterInstr(SpecialParameterInstr::kArgDescriptor,
+                                        DeoptId::kNone, function_entry);
       AllocateSSAIndex(defn);
       AddToInitialDefinitions(function_entry, defn);
       (*env)[ArgumentDescriptorEnvIndex()] = defn;
     }
   }
-}
-
-static Location EnvIndexToStackLocation(intptr_t num_direct_parameters,
-                                        intptr_t env_index) {
-  return Location::StackSlot(
-      compiler::target::frame_layout.FrameSlotForVariableIndex(
-          num_direct_parameters - env_index),
-      FPREG);
 }
 
 void FlowGraph::PopulateEnvironmentFromOsrEntry(
@@ -1332,9 +1319,8 @@ void FlowGraph::PopulateEnvironmentFromOsrEntry(
     const intptr_t param_index = (i < num_direct_parameters())
                                      ? i
                                      : ParameterInstr::kNotFunctionParameter;
-    ParameterInstr* param = new (zone()) ParameterInstr(
-        osr_entry, /*env_index=*/i, param_index,
-        EnvIndexToStackLocation(num_direct_parameters(), i), kTagged);
+    ParameterInstr* param = new (zone())
+        ParameterInstr(/*env_index=*/i, param_index, i, osr_entry, kTagged);
     AllocateSSAIndex(param);
     AddToInitialDefinitions(osr_entry, param);
     (*env)[i] = param;
@@ -1355,45 +1341,27 @@ void FlowGraph::PopulateEnvironmentFromCatchEntry(
 
   // Add real definitions for all locals and parameters.
   ASSERT(variable_count() == env->length());
-  intptr_t additional_slots = 0;
   for (intptr_t i = 0, n = variable_count(); i < n; ++i) {
-    // Local variables will arive on the stack while exception and
-    // stack trace will be passed in fixed registers.
-    Location loc;
+    // Replace usages of the raw exception/stacktrace variables with
+    // [SpecialParameterInstr]s.
+    Definition* param = nullptr;
     if (raw_exception_var_envindex == i) {
-      loc = LocationExceptionLocation();
+      param = new (Z) SpecialParameterInstr(SpecialParameterInstr::kException,
+                                            DeoptId::kNone, catch_entry);
     } else if (raw_stacktrace_var_envindex == i) {
-      loc = LocationStackTraceLocation();
+      param = new (Z) SpecialParameterInstr(SpecialParameterInstr::kStackTrace,
+                                            DeoptId::kNone, catch_entry);
     } else {
-      if (i < num_direct_parameters()) {
-        const auto [param_loc, param_rep] = GetDirectParameterInfoAt(i);
-        if (param_rep == kTagged && param_loc.IsStackSlot()) {
-          loc = param_loc;
-        } else {
-          // We can not reuse parameter location for synchronization purposes
-          // because it is either a register location or it is untagged
-          // location. This means we need to allocate additional slot
-          // for synchronization above slots reserved for other variables.
-          loc = EnvIndexToStackLocation(num_direct_parameters(),
-                                        n + additional_slots);
-          additional_slots++;
-        }
-      } else {
-        loc = EnvIndexToStackLocation(num_direct_parameters(), i);
-      }
+      param = new (Z)
+          ParameterInstr(/*env_index=*/i,
+                         /*param_index=*/ParameterInstr::kNotFunctionParameter,
+                         i, catch_entry, kTagged);
     }
-    auto param = new (Z) ParameterInstr(
-        catch_entry, /*env_index=*/i,
-        /*param_index=*/ParameterInstr::kNotFunctionParameter, loc, kTagged);
 
     AllocateSSAIndex(param);  // New SSA temp.
     (*env)[i] = param;
     AddToInitialDefinitions(catch_entry, param);
   }
-
-  graph_entry_->set_fixed_slot_count(Utils::Maximum(
-      graph_entry_->fixed_slot_count(),
-      variable_count() - num_direct_parameters() + additional_slots));
 }
 
 void FlowGraph::AttachEnvironment(Instruction* instr,
@@ -1594,11 +1562,10 @@ void FlowGraph::RenameRecursive(
         break;
       }
 
-      case Instruction::kConstant:
-      case Instruction::kUnboxedConstant: {
+      case Instruction::kConstant: {
         ConstantInstr* constant = current->Cast<ConstantInstr>();
         if (constant->HasTemp()) {
-          result = GetConstant(constant->value(), constant->representation());
+          result = GetConstant(constant->value());
         }
         break;
       }
@@ -1931,6 +1898,10 @@ static bool ShouldInlineSimd() {
   return FlowGraphCompiler::SupportsUnboxedSimd128();
 }
 
+static bool CanUnboxDouble() {
+  return FlowGraphCompiler::SupportsUnboxedDoubles();
+}
+
 static bool CanConvertInt64ToDouble() {
   return FlowGraphCompiler::CanConvertInt64ToDouble();
 }
@@ -1972,6 +1943,7 @@ void FlowGraph::InsertConversion(Representation from,
     const intptr_t deopt_id = (deopt_target != nullptr)
                                   ? deopt_target->DeoptimizationTarget()
                                   : DeoptId::kNone;
+    ASSERT(CanUnboxDouble());
     converted = new Int64ToDoubleInstr(use->CopyWithType(), deopt_id);
   } else if ((from == kTagged) && Boxing::Supports(to)) {
     const intptr_t deopt_id = (deopt_target != nullptr)
@@ -1984,7 +1956,7 @@ void FlowGraph::InsertConversion(Representation from,
   } else if ((to == kPairOfTagged) && (from == kTagged)) {
     // Insert conversion to an unboxed record, which can be only used
     // in Return instruction.
-    ASSERT(use->instruction()->IsDartReturn());
+    ASSERT(use->instruction()->IsReturn());
     Definition* x = new (Z)
         LoadFieldInstr(use->CopyWithType(),
                        Slot::GetRecordFieldSlot(
@@ -2007,13 +1979,10 @@ void FlowGraph::InsertConversion(Representation from,
     if (!Boxing::Supports(from) || !Boxing::Supports(to)) {
       if (FLAG_support_il_printer) {
         FATAL("Illegal conversion %s->%s for the use of %s at %s\n",
-              RepresentationUtils::ToCString(from),
-              RepresentationUtils::ToCString(to),
+              RepresentationToCString(from), RepresentationToCString(to),
               use->definition()->ToCString(), use->instruction()->ToCString());
       } else {
-        FATAL("Illegal conversion %s->%s for a use of v%" Pd "\n",
-              RepresentationUtils::ToCString(from),
-              RepresentationUtils::ToCString(to),
+        FATAL("Illegal representation conversion for a use of v%" Pd "\n",
               use->definition()->ssa_temp_index());
       }
     }
@@ -2125,16 +2094,18 @@ class PhiUnboxingHeuristic : public ValueObject {
     auto new_representation = phi->representation();
     switch (phi->Type()->ToCid()) {
       case kDoubleCid:
-        new_representation = DetermineIfAnyIncomingUnboxedFloats(phi)
-                                 ? kUnboxedFloat
-                                 : kUnboxedDouble;
+        if (CanUnboxDouble()) {
+          new_representation = DetermineIfAnyIncomingUnboxedFloats(phi)
+                                   ? kUnboxedFloat
+                                   : kUnboxedDouble;
 #if defined(DEBUG)
-        if (new_representation == kUnboxedFloat) {
-          for (auto input : phi->inputs()) {
-            ASSERT(input->representation() != kUnboxedDouble);
+          if (new_representation == kUnboxedFloat) {
+            for (auto input : phi->inputs()) {
+              ASSERT(input->representation() != kUnboxedDouble);
+            }
           }
-        }
 #endif
+        }
         break;
       case kFloat32x4Cid:
         if (ShouldInlineSimd()) {
@@ -2348,6 +2319,229 @@ void FlowGraph::SelectRepresentations() {
   }
 }
 
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_IA32)
+// Smi widening pass is only meaningful on platforms where Smi
+// is smaller than 32bit. For now only support it on ARM and ia32.
+static bool CanBeWidened(BinarySmiOpInstr* smi_op) {
+  return BinaryInt32OpInstr::IsSupported(smi_op->op_kind(), smi_op->left(),
+                                         smi_op->right());
+}
+
+static bool BenefitsFromWidening(BinarySmiOpInstr* smi_op) {
+  // TODO(vegorov): when shifts with non-constants shift count are supported
+  // add them here as we save untagging for the count.
+  switch (smi_op->op_kind()) {
+    case Token::kMUL:
+    case Token::kSHR:
+    case Token::kUSHR:
+      // For kMUL we save untagging of the argument.
+      // For kSHR/kUSHR we save tagging of the result.
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+// Maps an entry block to its closest enveloping loop id, or -1 if none.
+static intptr_t LoopId(BlockEntryInstr* block) {
+  LoopInfo* loop = block->loop_info();
+  if (loop != nullptr) {
+    return loop->id();
+  }
+  return -1;
+}
+
+void FlowGraph::WidenSmiToInt32() {
+  if (!FLAG_use_smi_widening) {
+    return;
+  }
+
+  GrowableArray<BinarySmiOpInstr*> candidates;
+
+  // Step 1. Collect all instructions that potentially benefit from widening of
+  // their operands (or their result) into int32 range.
+  for (BlockIterator block_it = reverse_postorder_iterator(); !block_it.Done();
+       block_it.Advance()) {
+    for (ForwardInstructionIterator instr_it(block_it.Current());
+         !instr_it.Done(); instr_it.Advance()) {
+      BinarySmiOpInstr* smi_op = instr_it.Current()->AsBinarySmiOp();
+      if ((smi_op != nullptr) && smi_op->HasSSATemp() &&
+          BenefitsFromWidening(smi_op) && CanBeWidened(smi_op)) {
+        candidates.Add(smi_op);
+      }
+    }
+  }
+
+  if (candidates.is_empty()) {
+    return;
+  }
+
+  // Step 2. For each block in the graph compute which loop it belongs to.
+  // We will use this information later during computation of the widening's
+  // gain: we are going to assume that only conversion occurring inside the
+  // same loop should be counted against the gain, all other conversions
+  // can be hoisted and thus cost nothing compared to the loop cost itself.
+  GetLoopHierarchy();
+
+  // Step 3. For each candidate transitively collect all other BinarySmiOpInstr
+  // and PhiInstr that depend on it and that it depends on and count amount of
+  // untagging operations that we save in assumption that this whole graph of
+  // values is using kUnboxedInt32 representation instead of kTagged.
+  // Convert those graphs that have positive gain to kUnboxedInt32.
+
+  // BitVector containing SSA indexes of all processed definitions. Used to skip
+  // those candidates that belong to dependency graph of another candidate.
+  BitVector* processed = new (Z) BitVector(Z, current_ssa_temp_index());
+
+  // Worklist used to collect dependency graph.
+  DefinitionWorklist worklist(this, candidates.length());
+  for (intptr_t i = 0; i < candidates.length(); i++) {
+    BinarySmiOpInstr* op = candidates[i];
+    if (op->WasEliminated() || processed->Contains(op->ssa_temp_index())) {
+      continue;
+    }
+
+    if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+      THR_Print("analysing candidate: %s\n", op->ToCString());
+    }
+    worklist.Clear();
+    worklist.Add(op);
+
+    // Collect dependency graph. Note: more items are added to worklist
+    // inside this loop.
+    intptr_t gain = 0;
+    for (intptr_t j = 0; j < worklist.definitions().length(); j++) {
+      Definition* defn = worklist.definitions()[j];
+
+      if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+        THR_Print("> %s\n", defn->ToCString());
+      }
+
+      if (defn->IsBinarySmiOp() &&
+          BenefitsFromWidening(defn->AsBinarySmiOp())) {
+        gain++;
+        if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+          THR_Print("^ [%" Pd "] (o) %s\n", gain, defn->ToCString());
+        }
+      }
+
+      const intptr_t defn_loop = LoopId(defn->GetBlock());
+
+      // Process all inputs.
+      for (intptr_t k = 0; k < defn->InputCount(); k++) {
+        Definition* input = defn->InputAt(k)->definition();
+        if (input->IsBinarySmiOp() && CanBeWidened(input->AsBinarySmiOp())) {
+          worklist.Add(input);
+        } else if (input->IsPhi() && (input->Type()->ToCid() == kSmiCid)) {
+          worklist.Add(input);
+        } else if (input->IsBinaryInt64Op()) {
+          // Mint operation produces untagged result. We avoid tagging.
+          gain++;
+          if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+            THR_Print("^ [%" Pd "] (i) %s\n", gain, input->ToCString());
+          }
+        } else if (defn_loop == LoopId(input->GetBlock()) &&
+                   (input->Type()->ToCid() == kSmiCid)) {
+          // Input comes from the same loop, is known to be smi and requires
+          // untagging.
+          // TODO(vegorov) this heuristic assumes that values that are not
+          // known to be smi have to be checked and this check can be
+          // coalesced with untagging. Start coalescing them.
+          gain--;
+          if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+            THR_Print("v [%" Pd "] (i) %s\n", gain, input->ToCString());
+          }
+        }
+      }
+
+      // Process all uses.
+      for (Value* use = defn->input_use_list(); use != nullptr;
+           use = use->next_use()) {
+        Instruction* instr = use->instruction();
+        Definition* use_defn = instr->AsDefinition();
+        if (use_defn == nullptr) {
+          // We assume that tagging before returning or pushing argument costs
+          // very little compared to the cost of the return/call itself.
+          ASSERT(!instr->IsMoveArgument());
+          if (!instr->IsReturn() &&
+              (use->use_index() >= instr->ArgumentCount())) {
+            gain--;
+            if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+              THR_Print("v [%" Pd "] (u) %s\n", gain,
+                        use->instruction()->ToCString());
+            }
+          }
+          continue;
+        } else if (use_defn->IsBinarySmiOp() &&
+                   CanBeWidened(use_defn->AsBinarySmiOp())) {
+          worklist.Add(use_defn);
+        } else if (use_defn->IsPhi() &&
+                   use_defn->AsPhi()->Type()->ToCid() == kSmiCid) {
+          worklist.Add(use_defn);
+        } else if (use_defn->IsBinaryInt64Op()) {
+          // BinaryInt64Op requires untagging of its inputs.
+          // Converting kUnboxedInt32 to kUnboxedInt64 is essentially zero cost
+          // sign extension operation.
+          gain++;
+          if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+            THR_Print("^ [%" Pd "] (u) %s\n", gain,
+                      use->instruction()->ToCString());
+          }
+        } else if (defn_loop == LoopId(instr->GetBlock())) {
+          gain--;
+          if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+            THR_Print("v [%" Pd "] (u) %s\n", gain,
+                      use->instruction()->ToCString());
+          }
+        }
+      }
+    }
+
+    processed->AddAll(worklist.contains_vector());
+
+    if (FLAG_support_il_printer && FLAG_trace_smi_widening) {
+      THR_Print("~ %s gain %" Pd "\n", op->ToCString(), gain);
+    }
+
+    if (gain > 0) {
+      // We have positive gain from widening. Convert all BinarySmiOpInstr into
+      // BinaryInt32OpInstr and set representation of all phis to kUnboxedInt32.
+      for (intptr_t j = 0; j < worklist.definitions().length(); j++) {
+        Definition* defn = worklist.definitions()[j];
+        ASSERT(defn->IsPhi() || defn->IsBinarySmiOp());
+
+        // Since we widen the integer representation we've to clear out type
+        // propagation information (e.g. it might no longer be a _Smi).
+        for (Value::Iterator it(defn->input_use_list()); !it.Done();
+             it.Advance()) {
+          it.Current()->SetReachingType(nullptr);
+        }
+
+        if (defn->IsBinarySmiOp()) {
+          BinarySmiOpInstr* smi_op = defn->AsBinarySmiOp();
+          BinaryInt32OpInstr* int32_op = new (Z) BinaryInt32OpInstr(
+              smi_op->op_kind(), smi_op->left()->CopyWithType(),
+              smi_op->right()->CopyWithType(), smi_op->DeoptimizationTarget());
+
+          smi_op->ReplaceWith(int32_op, nullptr);
+        } else if (defn->IsPhi()) {
+          defn->AsPhi()->set_representation(kUnboxedInt32);
+          ASSERT(defn->Type()->IsInt());
+        }
+      }
+    }
+  }
+}
+#else
+void FlowGraph::WidenSmiToInt32() {
+  // TODO(vegorov) ideally on 64-bit platforms we would like to narrow smi
+  // operations to 32-bit where it saves tagging and untagging and allows
+  // to use shorted (and faster) instructions. But we currently don't
+  // save enough range information in the ICData to drive this decision.
+}
+#endif
+
 void FlowGraph::EliminateEnvironments() {
   // After this pass we can no longer perform LICM and hoist instructions
   // that can deoptimize.
@@ -2367,97 +2561,13 @@ void FlowGraph::EliminateEnvironments() {
       // See FlowGraphChecker::VisitInstruction.
       if (!current->ComputeCanDeoptimize() &&
           !current->ComputeCanDeoptimizeAfterCall() &&
-          (!current->MayThrow() || !block->InsideTryBlock())) {
+          (!current->MayThrow() || !current->GetBlock()->InsideTryBlock())) {
         // Instructions that can throw need an environment for optimized
         // try-catch.
         // TODO(srdjan): --source-lines needs deopt environments to get at
         // the code for this instruction, however, leaving the environment
         // changes code.
         current->RemoveEnvironment();
-      }
-    }
-  }
-}
-
-void FlowGraph::ExtractUntaggedPayload(Instruction* instr,
-                                       Value* array,
-                                       const Slot& slot,
-                                       InnerPointerAccess access) {
-  auto* const untag_payload = new (Z)
-      LoadFieldInstr(array->CopyWithType(Z), slot, access, instr->source());
-  InsertBefore(instr, untag_payload, instr->env(), FlowGraph::kValue);
-  array->BindTo(untag_payload);
-  ASSERT_EQUAL(array->definition()->representation(), kUntagged);
-}
-
-bool FlowGraph::ExtractExternalUntaggedPayload(Instruction* instr,
-                                               Value* array,
-                                               classid_t cid) {
-  ASSERT(array->instruction() == instr);
-  // Nothing to do if already untagged.
-  if (array->definition()->representation() != kTagged) return false;
-  // If we've determined at compile time that this is an object that has an
-  // external payload, use the cid of the compile type instead.
-  if (IsExternalPayloadClassId(array->Type()->ToCid())) {
-    cid = array->Type()->ToCid();
-  } else if (!IsExternalPayloadClassId(cid)) {
-    // Can't extract the payload address if it points to GC-managed memory.
-    return false;
-  }
-
-  const Slot* slot = nullptr;
-  if (cid == kPointerCid || IsExternalTypedDataClassId(cid)) {
-    slot = &Slot::PointerBase_data();
-  } else {
-    UNREACHABLE();
-  }
-
-  ExtractUntaggedPayload(instr, array, *slot,
-                         InnerPointerAccess::kCannotBeInnerPointer);
-  return true;
-}
-
-void FlowGraph::ExtractNonInternalTypedDataPayload(Instruction* instr,
-                                                   Value* array,
-                                                   classid_t cid) {
-  ASSERT(array->instruction() == instr);
-  // Skip if the array payload has already been extracted.
-  if (array->definition()->representation() == kUntagged) return;
-  if (!IsTypedDataBaseClassId(cid)) return;
-  auto const type_cid = array->Type()->ToCid();
-  // For external PointerBase objects, the payload should have already been
-  // extracted during canonicalization.
-  ASSERT(!IsExternalPayloadClassId(cid) && !IsExternalPayloadClassId(type_cid));
-  // Extract payload for typed data view instructions even if array is
-  // an internal typed data (could happen in the unreachable code),
-  // as code generation handles direct accesses only for internal typed data.
-  //
-  // For internal typed data instructions (which are also used for
-  // non-internal typed data arrays), don't extract payload if the array is
-  // an internal typed data object.
-  if (IsTypedDataViewClassId(cid) || !IsTypedDataClassId(type_cid)) {
-    ExtractUntaggedPayload(instr, array, Slot::PointerBase_data(),
-                           InnerPointerAccess::kMayBeInnerPointer);
-  }
-}
-
-void FlowGraph::ExtractNonInternalTypedDataPayloads() {
-  for (BlockIterator block_it = reverse_postorder_iterator(); !block_it.Done();
-       block_it.Advance()) {
-    BlockEntryInstr* block = block_it.Current();
-    for (ForwardInstructionIterator it(block); !it.Done(); it.Advance()) {
-      Instruction* current = it.Current();
-      if (auto* const load_indexed = current->AsLoadIndexed()) {
-        ExtractNonInternalTypedDataPayload(load_indexed, load_indexed->array(),
-                                           load_indexed->class_id());
-      } else if (auto* const store_indexed = current->AsStoreIndexed()) {
-        ExtractNonInternalTypedDataPayload(
-            store_indexed, store_indexed->array(), store_indexed->class_id());
-      } else if (auto* const memory_copy = current->AsMemoryCopy()) {
-        ExtractNonInternalTypedDataPayload(memory_copy, memory_copy->src(),
-                                           memory_copy->src_cid());
-        ExtractNonInternalTypedDataPayload(memory_copy, memory_copy->dest(),
-                                           memory_copy->dest_cid());
       }
     }
   }
@@ -2944,11 +3054,7 @@ PhiInstr* FlowGraph::AddPhi(JoinEntryInstr* join,
 }
 
 void FlowGraph::InsertMoveArguments() {
-  compiler::ParameterInfoArray argument_locations;
-
   intptr_t max_argument_slot_count = 0;
-  auto& target = Function::Handle();
-
   for (BlockIterator block_it = reverse_postorder_iterator(); !block_it.Done();
        block_it.Advance()) {
     thread()->CheckForSafepoint();
@@ -2959,46 +3065,33 @@ void FlowGraph::InsertMoveArguments() {
       if (arg_count == 0) {
         continue;
       }
-
-      target = Function::null();
-      if (auto static_call = instruction->AsStaticCall()) {
-        target = static_call->function().ptr();
-      } else if (auto instance_call = instruction->AsInstanceCallBase()) {
-        target = instance_call->interface_target().ptr();
-      } else if (auto dispatch_call = instruction->AsDispatchTableCall()) {
-        target = dispatch_call->interface_target().ptr();
-      } else if (auto cachable_call = instruction->AsCachableIdempotentCall()) {
-        target = cachable_call->function().ptr();
-      }
-
       MoveArgumentsArray* arguments =
           new (Z) MoveArgumentsArray(zone(), arg_count);
       arguments->EnsureLength(arg_count, nullptr);
 
-      const intptr_t stack_arguments_size_in_words =
-          compiler::ComputeCallingConvention(
-              zone(), target, arg_count,
-              [&](intptr_t i) {
-                return instruction->RequiredInputRepresentation(i);
-              },
-              /*should_assign_stack_locations=*/true, &argument_locations);
-
-      for (intptr_t i = 0; i < arg_count; ++i) {
-        const auto& [location, rep] = argument_locations[i];
+      intptr_t sp_relative_index = 0;
+      for (intptr_t i = arg_count - 1; i >= 0; --i) {
         Value* arg = instruction->ArgumentValueAt(i);
-        (*arguments)[i] = new (Z) MoveArgumentInstr(
-            arg->CopyWithType(Z), rep, location.ToCallerSpRelative());
+        const auto rep = instruction->RequiredInputRepresentation(i);
+        (*arguments)[i] = new (Z)
+            MoveArgumentInstr(arg->CopyWithType(Z), rep, sp_relative_index);
+
+        static_assert(compiler::target::kIntSpillFactor ==
+                          compiler::target::kDoubleSpillFactor,
+                      "double and int are expected to be of the same size");
+        RELEASE_ASSERT(rep == kTagged || rep == kUnboxedDouble ||
+                       rep == kUnboxedInt64);
+        sp_relative_index +=
+            (rep == kTagged) ? 1 : compiler::target::kIntSpillFactor;
       }
-      max_argument_slot_count = Utils::Maximum(max_argument_slot_count,
-                                               stack_arguments_size_in_words);
+      max_argument_slot_count =
+          Utils::Maximum(max_argument_slot_count, sp_relative_index);
 
       for (auto move_arg : *arguments) {
         // Insert all MoveArgument instructions immediately before call.
         // MoveArgumentInstr::EmitNativeCode may generate more efficient
         // code for subsequent MoveArgument instructions (ARM, ARM64).
-        if (!move_arg->is_register_move()) {
-          InsertBefore(instruction, move_arg, /*env=*/nullptr, kEffect);
-        }
+        InsertBefore(instruction, move_arg, /*env=*/nullptr, kEffect);
       }
       instruction->ReplaceInputsWithMoveArguments(arguments);
       if (instruction->env() != nullptr) {

@@ -187,11 +187,13 @@ class StaticField {
   final bool isFinal;
   final bool isLazy;
   final bool isInitializedByConstant;
+  final bool usesNonNullableInitialization;
 
   StaticField(this.element, this.name, this.getterName, this.code,
       {required this.isFinal,
       required this.isLazy,
-      this.isInitializedByConstant = false});
+      this.isInitializedByConstant = false,
+      this.usesNonNullableInitialization = false});
 
   @override
   String toString() {
@@ -441,7 +443,7 @@ abstract class DartMethod extends Method {
   // only required and stored here if the method [canBeApplied]. The count is
   // always stored to help select specialized tear-off paths.
   final int requiredParameterCount;
-  final Object? /* Map | List */ optionalParameterDefaultValues;
+  final /* Map | List */ optionalParameterDefaultValues;
 
   // If this method can be torn off, contains the name of the corresponding
   // call method. For example, for the member `foo$1$name` it would be

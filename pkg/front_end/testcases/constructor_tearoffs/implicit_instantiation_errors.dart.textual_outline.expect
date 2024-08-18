@@ -1,5 +1,4 @@
 T id<T>(T t, int i) => t;
-
 T Function<T>(T, int i)? alias = id;
 
 class Class {
@@ -7,7 +6,5 @@ class Class {
 }
 
 method(int Function(int, int?) f) {}
-
 test() {}
-
 main() {}

@@ -30,8 +30,7 @@ class Thread;
 #elif defined(DART_HOST_OS_WINDOWS)
 // The compiler may dynamically align the stack on Windows, so do not check.
 #define CHECK_STACK_ALIGNMENT                                                  \
-  {                                                                            \
-  }
+  {}
 #else
 #define CHECK_STACK_ALIGNMENT                                                  \
   {                                                                            \
@@ -50,11 +49,9 @@ class Thread;
 #else
 
 #define CHECK_STACK_ALIGNMENT                                                  \
-  {                                                                            \
-  }
+  {}
 #define DEOPTIMIZE_ALOT                                                        \
-  {                                                                            \
-  }
+  {}
 
 #endif
 
@@ -85,8 +82,7 @@ class NativeArguments {
 
   ObjectPtr ArgAt(int index) const {
     ASSERT((index >= 0) && (index < ArgCount()));
-    ObjectPtr* arg_ptr =
-        &(argv_[ReverseArgOrderBit::decode(argc_tag_) ? index : -index]);
+    ObjectPtr* arg_ptr = &(argv_[-index]);
     // Tell MemorySanitizer the ObjectPtr was initialized (by generated code).
     MSAN_UNPOISON(arg_ptr, kWordSize);
     return *arg_ptr;
@@ -95,7 +91,7 @@ class NativeArguments {
   void SetArgAt(int index, const Object& value) const {
     ASSERT(thread_->execution_state() == Thread::kThreadInVM);
     ASSERT((index >= 0) && (index < ArgCount()));
-    argv_[ReverseArgOrderBit::decode(argc_tag_) ? index : -index] = value.ptr();
+    argv_[-index] = value.ptr();
   }
 
   // Does not include hidden type arguments vector.
@@ -106,6 +102,16 @@ class NativeArguments {
 
   ObjectPtr NativeArg0() const {
     int function_bits = FunctionBits::decode(argc_tag_);
+    if ((function_bits & (kClosureFunctionBit | kInstanceFunctionBit)) ==
+        (kClosureFunctionBit | kInstanceFunctionBit)) {
+      // Retrieve the receiver from the context.
+      const int closure_index =
+          (function_bits & kGenericFunctionBit) != 0 ? 1 : 0;
+      const Object& closure = Object::Handle(ArgAt(closure_index));
+      const Context& context =
+          Context::Handle(Closure::Cast(closure).context());
+      return context.At(0);
+    }
     return ArgAt(NumHiddenArgs(function_bits));
   }
 
@@ -171,16 +177,28 @@ class NativeArguments {
   static intptr_t ParameterCountForResolution(const Function& function) {
     ASSERT(function.is_old_native());
     ASSERT(!function.IsGenerativeConstructor());  // Not supported.
-    ASSERT(!function.IsClosureFunction());        // Not supported.
-    return function.NumParameters();
+    intptr_t count = function.NumParameters();
+    if (function.is_static() && function.IsClosureFunction()) {
+      // The closure object is hidden and not accessible from native code.
+      // However, if the function is an instance closure function, the captured
+      // receiver located in the context is made accessible in native code at
+      // index 0, thereby hiding the closure object at index 0.
+      count--;
+    }
+    return count;
   }
 
   static int ComputeArgcTag(const Function& function) {
     ASSERT(function.is_old_native());
     ASSERT(!function.IsGenerativeConstructor());  // Not supported.
-    ASSERT(!function.IsClosureFunction());        // Not supported.
     int argc = function.NumParameters();
     int function_bits = 0;
+    if (!function.is_static()) {
+      function_bits |= kInstanceFunctionBit;
+    }
+    if (function.IsClosureFunction()) {
+      function_bits |= kClosureFunctionBit;
+    }
     if (function.IsGeneric()) {
       function_bits |= kGenericFunctionBit;
       argc++;
@@ -192,36 +210,22 @@ class NativeArguments {
 
  private:
   enum {
-    kGenericFunctionBit = 1,
+    kInstanceFunctionBit = 1,
+    kClosureFunctionBit = 2,
+    kGenericFunctionBit = 4,
   };
   enum ArgcTagBits {
     kArgcBit = 0,
     kArgcSize = 24,
     kFunctionBit = kArgcBit + kArgcSize,
-    kFunctionSize = 1,
-    kReverseArgOrderBit = kFunctionBit + kFunctionSize,
-    kReverseArgOrderSize = 1,
+    kFunctionSize = 3,
   };
   class ArgcBits : public BitField<intptr_t, int32_t, kArgcBit, kArgcSize> {};
   class FunctionBits
       : public BitField<intptr_t, int, kFunctionBit, kFunctionSize> {};
-  class ReverseArgOrderBit
-      : public BitField<intptr_t, bool, kReverseArgOrderBit, 1> {};
   friend class Api;
-  friend class Interpreter;
   friend class NativeEntry;
   friend class Simulator;
-
-#if defined(DART_DYNAMIC_MODULES)
-  NativeArguments(Thread* thread,
-                  int argc_tag,
-                  ObjectPtr* argv,
-                  ObjectPtr* retval)
-      : thread_(thread),
-        argc_tag_(ReverseArgOrderBit::update(true, argc_tag)),
-        argv_(argv),
-        retval_(retval) {}
-#endif  // defined(DART_DYNAMIC_MODULES)
 
   // Since this function is passed an ObjectPtr directly, we need to be
   // exceedingly careful when we use it.  If there are any other side
@@ -232,6 +236,16 @@ class NativeArguments {
     *retval_ = value;
   }
 
+  // Returns true if the arguments are those of an instance function call.
+  bool ToInstanceFunction() const {
+    return (FunctionBits::decode(argc_tag_) & kInstanceFunctionBit) != 0;
+  }
+
+  // Returns true if the arguments are those of a closure function call.
+  bool ToClosureFunction() const {
+    return (FunctionBits::decode(argc_tag_) & kClosureFunctionBit) != 0;
+  }
+
   // Returns true if the arguments are those of a generic function call.
   bool ToGenericFunction() const {
     return (FunctionBits::decode(argc_tag_) & kGenericFunctionBit) != 0;
@@ -239,16 +253,23 @@ class NativeArguments {
 
   int NumHiddenArgs(int function_bits) const {
     int num_hidden_args = 0;
+    // For static closure functions, the closure at index 0 is hidden.
+    // In the instance closure function case, the receiver is accessed from
+    // the context and the closure at index 0 is hidden, so the apparent
+    // argument count remains unchanged.
+    if ((function_bits & kClosureFunctionBit) == kClosureFunctionBit) {
+      num_hidden_args++;
+    }
     if ((function_bits & kGenericFunctionBit) == kGenericFunctionBit) {
       num_hidden_args++;
     }
     return num_hidden_args;
   }
 
-  Thread* thread_;     // Current thread pointer.
-  intptr_t argc_tag_;  // Encodes argument count and invoked native call type.
-  ObjectPtr* argv_;    // Pointer to an array of arguments to runtime call.
-  ObjectPtr* retval_;  // Pointer to the return value area.
+  Thread* thread_;      // Current thread pointer.
+  intptr_t argc_tag_;   // Encodes argument count and invoked native call type.
+  ObjectPtr* argv_;     // Pointer to an array of arguments to runtime call.
+  ObjectPtr* retval_;   // Pointer to the return value area.
 };
 
 }  // namespace dart

@@ -102,12 +102,6 @@ class A<T> {
 ''');
   }
 
-  test_recordType() async {
-    await _assertConst(r'''
-(int, ) x;
-''');
-  }
-
   test_typeParameter_ofClass() async {
     await _assertPotentiallyConst(r'''
 class A<T> {
@@ -134,8 +128,11 @@ void foo<T>() {
 
   test_typeParameter_ofFunctionType() async {
     await _assertPotentiallyConst('''
-void foo() {
-  void Function<X>(X) x;
+class A<U> {
+  const A();
+  void foo() {
+    void Function<X>(X) x;
+  }
 }
 ''');
   }
@@ -199,6 +196,18 @@ class A<T> {
   }
 }
 ''', () => _xInitializer());
+  }
+
+  test_asExpression_typeParameter_29() async {
+    await _assertNotConst(r'''
+// @dart = 2.9
+const a = 0;
+class A<T> {
+  m() {
+    var x = a as T;
+  }
+}
+''', () => _xInitializer(), () => [findNode.namedType('T;')]);
   }
 
   test_asExpression_typeParameter_nested() async {
@@ -571,6 +580,18 @@ class A<T> {
   }
 }
 ''', () => _xInitializer());
+  }
+
+  test_isExpression_typeParameter_29() async {
+    await _assertNotConst(r'''
+// @dart = 2.9
+const a = 0;
+class A<T> {
+  m() {
+    var x = a is T;
+  }
+}
+''', () => _xInitializer(), () => [findNode.namedType('T;')]);
   }
 
   test_isExpression_typeParameter_nested() async {

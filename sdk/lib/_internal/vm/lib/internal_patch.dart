@@ -54,20 +54,11 @@ external void writeIntoOneByteString(String string, int index, int codePoint);
 /// [length] must specify ranges within the bounds of the list / string.
 @pragma("vm:recognized", "other")
 @pragma("vm:prefer-inline")
-@pragma("vm:idempotent")
 void copyRangeFromUint8ListToOneByteString(
     Uint8List from, String to, int fromStart, int toStart, int length) {
   for (int i = 0; i < length; i++) {
     writeIntoOneByteString(to, toStart + i, from[fromStart + i]);
   }
-}
-
-@pragma("vm:prefer-inline")
-String createOneByteStringFromCharacters(Uint8List bytes, int start, int end) {
-  final len = end - start;
-  final s = allocateOneByteString(len);
-  copyRangeFromUint8ListToOneByteString(bytes, s, start, 0, len);
-  return s;
 }
 
 /// The returned string is a [_TwoByteString] with uninitialized content.
@@ -173,16 +164,11 @@ abstract class VMInternalsForTesting {
   external static void deoptimizeFunctionsOnStack();
 
   // Used to verify that PC addresses in stubs can be named using DWARF info
-  // by returning the start offset into the isolate instructions that
-  // corresponds to a known stub.
-  @pragma("vm:external-name", "Internal_allocateObjectInstructionsStart")
-  external static int allocateObjectInstructionsStart();
-
-  // Used to verify that PC addresses in stubs can be named using DWARF info
-  // by returning the end offset into the isolate instructions that corresponds
+  // by returning an offset into the isolate instructions that should correspond
   // to a known stub.
-  @pragma("vm:external-name", "Internal_allocateObjectInstructionsEnd")
-  external static int allocateObjectInstructionsEnd();
+  @pragma("vm:external-name",
+      "Internal_randomInstructionsOffsetInsideAllocateObjectStub")
+  external static int randomInstructionsOffsetInsideAllocateObjectStub();
 }
 
 @patch
@@ -442,10 +428,3 @@ class FinalizerEntry {
 
 @pragma("vm:external-name", "StringBase_intern")
 external String intern(String str);
-
-@patch
-Future<Object?> loadDynamicModule({Uri? uri, Uint8List? bytes}) =>
-    Future.value(_loadDynamicModule(bytes!));
-
-@pragma("vm:external-name", "Internal_loadDynamicModule")
-external Object? _loadDynamicModule(Uint8List bytes);

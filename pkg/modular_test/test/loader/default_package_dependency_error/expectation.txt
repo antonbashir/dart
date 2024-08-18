@@ -8,7 +8,6 @@ expect
   lib/config.dart
   lib/expect.dart
   lib/minitest.dart
-  lib/variations.dart
 
 main
   **main module**

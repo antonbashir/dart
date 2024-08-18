@@ -23,41 +23,20 @@ class B implements A, A {}
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 33, 1),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
 ''');
-  }
-
-  test_class_implements_2times_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-
-class A {}
-class B implements A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-
-augment class B implements A {}
-''');
-
-    await assertErrorsInFile2(a, []);
-
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 54, 1),
-    ]);
   }
 
   test_class_implements_2times_viaTypeAlias() async {
@@ -69,20 +48,20 @@ class C implements A, B {}
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 48, 1),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: B
-      element: <testLibraryFragment>::@typeAlias::B
+      element: self::@typeAlias::B
       type: A
-        alias: <testLibraryFragment>::@typeAlias::B
+        alias: self::@typeAlias::B
 ''');
   }
 
@@ -107,41 +86,20 @@ enum E implements A, A {
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 32, 1),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
 ''');
-  }
-
-  test_enum_implements_2times_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-
-class A {}
-enum E implements A {v}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-
-augment enum E implements A {}
-''');
-
-    await assertErrorsInFile2(a, []);
-
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 53, 1),
-    ]);
   }
 
   test_enum_implements_2times_viaTypeAlias() async {
@@ -155,20 +113,20 @@ enum E implements A, B {
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 47, 1),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: B
-      element: <testLibraryFragment>::@typeAlias::B
+      element: self::@typeAlias::B
       type: A
-        alias: <testLibraryFragment>::@typeAlias::B
+        alias: self::@typeAlias::B
 ''');
   }
 
@@ -192,40 +150,20 @@ extension type A(int it) implements int, int {}
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 41, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
 ''');
-  }
-
-  test_extensionType_implements_2times_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-
-extension type A(int it) implements int {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-
-augment extension type A(int it) implements int {}
-''');
-
-    await assertErrorsInFile2(a, []);
-
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 71, 3),
-    ]);
   }
 
   test_extensionType_implements_2times_viaTypeAlias() async {
@@ -236,20 +174,20 @@ extension type B(int it) implements int, A {}
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 58, 1),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     NamedType
       name: A
-      element: <testLibraryFragment>::@typeAlias::A
+      element: self::@typeAlias::A
       type: int
-        alias: <testLibraryFragment>::@typeAlias::A
+        alias: self::@typeAlias::A
 ''');
   }
 
@@ -269,27 +207,6 @@ class A {}
 mixin M implements A, A {}
 ''', [
       error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 33, 1),
-    ]);
-  }
-
-  test_mixin_implements_2times_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-
-class A {}
-mixin M implements A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-
-augment mixin M implements A {}
-''');
-
-    await assertErrorsInFile2(a, []);
-
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.IMPLEMENTS_REPEATED, 54, 1),
     ]);
   }
 

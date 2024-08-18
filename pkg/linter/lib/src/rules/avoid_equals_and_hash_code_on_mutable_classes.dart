@@ -9,8 +9,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Avoid overloading operator == and hashCode on classes not marked `@immutable`.';
@@ -66,19 +64,21 @@ class C {
 ''';
 
 class AvoidEqualsAndHashCodeOnMutableClasses extends LintRule {
+  static const LintCode code = LintCode(
+      'avoid_equals_and_hash_code_on_mutable_classes',
+      "The method '{0}' should not be overridden in classes not annotated with '@immutable'.",
+      correctionMessage:
+          "Try removing the override or annotating the class with '@immutable'.");
+
   AvoidEqualsAndHashCodeOnMutableClasses()
       : super(
             name: 'avoid_equals_and_hash_code_on_mutable_classes',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.avoid_equals_and_hash_code_on_mutable_classes;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -95,20 +95,24 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    if (node.isAugmentation) return;
-
     if (node.name.type == TokenType.EQ_EQ || isHashCode(node)) {
-      var classElement = node.classElement;
-      if (classElement != null && !classElement.hasImmutableAnnotation) {
+      var classElement = _getClassForMethod(node);
+      if (classElement != null && !_hasImmutableAnnotation(classElement)) {
         rule.reportLintForToken(node.firstTokenAfterCommentAndMetadata,
             arguments: [node.name.lexeme]);
       }
     }
   }
-}
 
-extension on MethodDeclaration {
-  ClassElement? get classElement =>
+  ClassElement? _getClassForMethod(MethodDeclaration node) =>
       // TODO(pq): should this be ClassOrMixinDeclaration ?
-      thisOrAncestorOfType<ClassDeclaration>()?.declaredElement;
+      node.thisOrAncestorOfType<ClassDeclaration>()?.declaredElement;
+
+  bool _hasImmutableAnnotation(ClassElement clazz) {
+    var inheritedAndSelfElements = <InterfaceElement>[
+      ...clazz.allSupertypes.map((t) => t.element),
+      clazz,
+    ];
+    return inheritedAndSelfElements.any((e) => e.hasImmutable);
+  }
 }

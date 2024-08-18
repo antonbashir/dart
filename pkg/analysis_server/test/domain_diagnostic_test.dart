@@ -23,11 +23,9 @@ class DiagnosticDomainTest extends PubPackageAnalysisServerTest {
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
-    var request = DiagnosticGetDiagnosticsParams()
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = DiagnosticGetDiagnosticsParams().toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = DiagnosticGetDiagnosticsResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = DiagnosticGetDiagnosticsResult.fromResponse(response);
 
     var context = result.contexts
         .singleWhere((context) => context.name == testPackageRoot.path);
@@ -39,11 +37,9 @@ class DiagnosticDomainTest extends PubPackageAnalysisServerTest {
   }
 
   Future<void> test_getDiagnostics_noRoot() async {
-    var request = DiagnosticGetDiagnosticsParams()
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = DiagnosticGetDiagnosticsParams().toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = DiagnosticGetDiagnosticsResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = DiagnosticGetDiagnosticsResult.fromResponse(response);
     expect(result.contexts, isEmpty);
   }
 }

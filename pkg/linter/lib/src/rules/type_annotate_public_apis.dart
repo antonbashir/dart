@@ -7,8 +7,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
+import '../ast.dart';
 import '../util/ascii_utils.dart';
 
 const _desc = r'Type annotate public APIs.';
@@ -51,18 +50,19 @@ With types, all of this is clarified.
 ''';
 
 class TypeAnnotatePublicApis extends LintRule {
+  static const LintCode code = LintCode(
+      'type_annotate_public_apis', 'Missing type annotation on a public API.',
+      correctionMessage: 'Try adding a type annotation.');
+
   TypeAnnotatePublicApis()
       : super(
             name: 'type_annotate_public_apis',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.publicInterface
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.type_annotate_public_apis;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -83,8 +83,6 @@ class _Visitor extends SimpleAstVisitor<void> {
   _Visitor(this.rule) : v = _VisitorHelper(rule);
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
-    if (node.isAugmentation) return;
-
     if (node.fields.type == null) {
       node.fields.accept(v);
     }
@@ -92,9 +90,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    if (node.isAugmentation) return;
-
-    if (!node.name.isPrivate &&
+    if (!isPrivate(node.name) &&
         // Only report on top-level functions, not those declared within the
         // scope of another function.
         node.parent is CompilationUnit) {
@@ -108,7 +104,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFunctionTypeAlias(FunctionTypeAlias node) {
-    if (!node.name.isPrivate) {
+    if (!isPrivate(node.name)) {
       if (node.returnType == null) {
         rule.reportLintForToken(node.name);
       } else {
@@ -119,9 +115,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    if (node.isAugmentation) return;
-
-    if (!node.name.isPrivate) {
+    if (!isPrivate(node.name)) {
       if (node.returnType == null && !node.isSetter) {
         rule.reportLintForToken(node.name);
       } else {
@@ -132,8 +126,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
-    if (node.isAugmentation) return;
-
     if (node.variables.type == null) {
       node.variables.accept(v);
     }
@@ -164,7 +156,7 @@ class _VisitorHelper extends RecursiveAstVisitor {
 
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
-    if (!node.name.isPrivate &&
+    if (!isPrivate(node.name) &&
         !node.isConst &&
         !(node.isFinal && hasInferredType(node))) {
       rule.reportLintForToken(node.name);

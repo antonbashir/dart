@@ -259,9 +259,12 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
   }
 
   void convertInput(HInvokeDynamic instruction, HInstruction input,
-      AbstractValue type, PrimitiveCheckKind kind, DartType typeExpression) {
-    Selector? selector =
-        (kind == PrimitiveCheckKind.receiverType) ? instruction.selector : null;
+      AbstractValue type, int kind, DartType typeExpression) {
+    assert(kind == HPrimitiveCheck.RECEIVER_TYPE_CHECK ||
+        kind == HPrimitiveCheck.ARGUMENT_TYPE_CHECK);
+    Selector? selector = (kind == HPrimitiveCheck.RECEIVER_TYPE_CHECK)
+        ? instruction.selector
+        : null;
     HPrimitiveCheck converted = HPrimitiveCheck(
         typeExpression, kind, type, input, instruction.sourceInformation,
         receiverTypeCheckSelector: selector);
@@ -297,7 +300,7 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
           instruction,
           receiver,
           abstractValueDomain.excludeNull(receiver.instructionType),
-          PrimitiveCheckKind.receiverType,
+          HPrimitiveCheck.RECEIVER_TYPE_CHECK,
           commonElements.numType);
       return true;
     } else if (instruction.element == null) {
@@ -323,7 +326,7 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
         if (!isCheckEnoughForNsmOrAe(receiver, type)) return false;
         instruction.element = target;
         convertInput(instruction, receiver, type,
-            PrimitiveCheckKind.receiverType, typeExpression);
+            HPrimitiveCheck.RECEIVER_TYPE_CHECK, typeExpression);
         return true;
       }
     }
@@ -351,8 +354,8 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
       // variant and will do the check in their method anyway. We
       // still add a check because it allows to GVN these operations,
       // but we should find a better way.
-      convertInput(instruction, right, type, PrimitiveCheckKind.argumentType,
-          commonElements.numType);
+      convertInput(instruction, right, type,
+          HPrimitiveCheck.ARGUMENT_TYPE_CHECK, commonElements.numType);
       return true;
     }
     return false;
@@ -411,7 +414,7 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
     // Try to refine that the receiver is not null after this call by inserting
     // a refinement node (HTypeKnown).
     var selector = instruction.selector;
-    if (!selector.isMaybeClosureCall && !selector.appliesToNullWithoutThrow()) {
+    if (!selector.isClosureCall && !selector.appliesToNullWithoutThrow()) {
       var next = instruction.next;
       if (next is HTypeKnown && next.checkedInput == receiver) {
         // On a previous pass or iteration we already refined [receiver] by
@@ -440,13 +443,8 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
       }
     }
 
-    var result = instruction.specializer
+    return instruction.specializer
         .computeTypeFromInputTypes(instruction, results, closedWorld);
-    if (instruction.staticType != null) {
-      result =
-          abstractValueDomain.intersection(result, instruction.staticType!);
-    }
-    return result;
   }
 
   @override
@@ -507,13 +505,5 @@ class SsaTypePropagator extends HBaseVisitor<AbstractValue>
   AbstractValue visitBoolConversion(HBoolConversion instruction) {
     return abstractValueDomain.intersection(
         abstractValueDomain.boolType, instruction.checkedInput.instructionType);
-  }
-
-  @override
-  AbstractValue visitArrayFlagsCheck(HArrayFlagsCheck instruction) {
-    instruction.array
-        .replaceAllUsersDominatedBy(instruction.next!, instruction);
-    AbstractValue inputType = instruction.array.instructionType;
-    return instruction.computeInstructionType(inputType, abstractValueDomain);
   }
 }

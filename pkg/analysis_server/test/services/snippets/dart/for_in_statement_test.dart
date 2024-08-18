@@ -28,12 +28,12 @@ class ForInStatementTest extends DartSnippetProducerTest {
   String get prefix => ForInStatement.prefix;
 
   Future<void> test_for() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   forin^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

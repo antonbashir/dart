@@ -9,7 +9,6 @@ import 'class_hierarchy.dart';
 import 'core_types.dart';
 import 'type_algebra.dart';
 
-import 'src/bounds_checks.dart';
 import 'src/hierarchy_based_type_environment.dart'
     show HierarchyBasedTypeEnvironment;
 import 'src/types.dart';
@@ -30,6 +29,8 @@ abstract class TypeEnvironment extends Types {
   @override
   ClassHierarchy get hierarchy;
 
+  Class get intClass => coreTypes.intClass;
+  Class get numClass => coreTypes.numClass;
   Class get functionClass => coreTypes.functionClass;
   Class get objectClass => coreTypes.objectClass;
 
@@ -37,6 +38,7 @@ abstract class TypeEnvironment extends Types {
   InterfaceType get objectNonNullableRawType =>
       coreTypes.objectNonNullableRawType;
   InterfaceType get objectNullableRawType => coreTypes.objectNullableRawType;
+  InterfaceType get functionLegacyRawType => coreTypes.functionLegacyRawType;
 
   /// Returns the type `List<E>` with the given [nullability] and [elementType]
   /// as `E`.
@@ -66,11 +68,24 @@ abstract class TypeEnvironment extends Types {
         coreTypes.iterableClass, nullability, <DartType>[type]);
   }
 
+  /// Returns the type `Stream<E>` with the given [nullability] and [type]
+  /// as `E`.
+  InterfaceType streamType(DartType type, Nullability nullability) {
+    return new InterfaceType(
+        coreTypes.streamClass, nullability, <DartType>[type]);
+  }
+
   /// Returns the type `Future<E>` with the given [nullability] and [type]
   /// as `E`.
   InterfaceType futureType(DartType type, Nullability nullability) {
     return new InterfaceType(
         coreTypes.futureClass, nullability, <DartType>[type]);
+  }
+
+  DartType _withDeclaredNullability(DartType type, Nullability nullability) {
+    if (type is NullType) return type;
+    return type.withDeclaredNullability(
+        uniteNullabilities(type.declaredNullability, nullability));
   }
 
   DartType? _futureTypeOf(DartType t) {
@@ -85,10 +100,13 @@ abstract class TypeEnvironment extends Types {
     // future type.
     DartType resolved = t.nonTypeVariableBound;
     if (resolved is TypeDeclarationType) {
-      DartType? futureType =
-          getTypeAsInstanceOf(resolved, coreTypes.futureClass, coreTypes);
+      DartType? futureType = getTypeAsInstanceOf(
+          resolved, coreTypes.futureClass, coreTypes,
+          isNonNullableByDefault: true);
       if (futureType != null) {
-        return futureType.withDeclaredNullability(resolved.declaredNullability);
+        // TODO(johnniwinther): The two implementations are inconsistent wrt.
+        //  how [isNonNullableByDefault] is treated.
+        return futureType.withDeclaredNullability(resolved.nullability);
       }
     } else if (resolved is FutureOrType) {
       return resolved;
@@ -111,29 +129,33 @@ abstract class TypeEnvironment extends Types {
       DartType bound = t.right;
       DartType? futureType = _futureTypeOf(bound);
       if (futureType != null) {
-        return flatten(futureType);
+        DartType flattenedFutureType = flatten(futureType);
+        return _withDeclaredNullability(flattenedFutureType,
+            uniteNullabilities(t.nullability, flattenedFutureType.nullability));
       } else {
-        return flatten(t.left);
+        DartType flattenedFutureType = flatten(t.left);
+        return _withDeclaredNullability(flattenedFutureType,
+            uniteNullabilities(t.nullability, flattenedFutureType.nullability));
       }
     } else {
       DartType? futureType = _futureTypeOf(t);
       if (futureType is InterfaceType) {
         assert(futureType.classNode == coreTypes.futureClass);
         DartType typeArgument = futureType.typeArguments.single;
-        return typeArgument.withDeclaredNullability(
-            combineNullabilitiesForSubstitution(
-                combineNullabilitiesForSubstitution(
-                    typeArgument.declaredNullability,
-                    futureType.declaredNullability),
-                t.declaredNullability));
+        return _withDeclaredNullability(
+            typeArgument,
+            uniteNullabilities(
+                t.nullability,
+                uniteNullabilities(
+                    futureType.nullability, typeArgument.nullability)));
       } else if (futureType is FutureOrType) {
         DartType typeArgument = futureType.typeArgument;
-        return typeArgument.withDeclaredNullability(
-            combineNullabilitiesForSubstitution(
-                combineNullabilitiesForSubstitution(
-                    typeArgument.declaredNullability,
-                    futureType.declaredNullability),
-                t.declaredNullability));
+        return _withDeclaredNullability(
+            typeArgument,
+            uniteNullabilities(
+                t.nullability,
+                uniteNullabilities(
+                    futureType.nullability, typeArgument.nullability)));
       } else {
         return t;
       }
@@ -157,11 +179,16 @@ abstract class TypeEnvironment extends Types {
   ///     getUnionFreeType(int?) = int
   ///     getUnionFreeType(FutureOr<int>) = int
   ///     getUnionFreeType(FutureOr<int?>?) = int
-  DartType getUnionFreeType(DartType type) {
+  DartType getUnionFreeType(DartType type,
+      {required bool isNonNullableByDefault}) {
     if (isNullableTypeConstructorApplication(type)) {
-      return getUnionFreeType(computeTypeWithoutNullabilityMarker(type));
+      return getUnionFreeType(
+          computeTypeWithoutNullabilityMarker(type,
+              isNonNullableByDefault: isNonNullableByDefault),
+          isNonNullableByDefault: isNonNullableByDefault);
     } else if (type is FutureOrType) {
-      return getUnionFreeType(type.typeArgument);
+      return getUnionFreeType(type.typeArgument,
+          isNonNullableByDefault: isNonNullableByDefault);
     } else {
       return type;
     }
@@ -169,30 +196,46 @@ abstract class TypeEnvironment extends Types {
 
   /// True if [member] is a binary operator whose return type is defined by
   /// the both operand types.
-  bool isSpecialCasedBinaryOperator(Procedure member) {
-    Class? class_ = member.enclosingClass;
-    // TODO(johnniwinther): Do we need to recognize backend implementation
-    //  methods?
-    if (class_ == coreTypes.intClass ||
-        class_ == coreTypes.numClass ||
-        class_ == coreTypes.doubleClass) {
-      String name = member.name.text;
-      return name == '+' ||
-          name == '-' ||
-          name == '*' ||
-          name == 'remainder' ||
-          name == '%';
+  bool isSpecialCasedBinaryOperator(Procedure member,
+      {bool isNonNullableByDefault = false}) {
+    if (isNonNullableByDefault) {
+      Class? class_ = member.enclosingClass;
+      // TODO(johnniwinther): Do we need to recognize backend implementation
+      //  methods?
+      if (class_ == coreTypes.intClass ||
+          class_ == coreTypes.numClass ||
+          class_ == coreTypes.doubleClass) {
+        String name = member.name.text;
+        return name == '+' ||
+            name == '-' ||
+            name == '*' ||
+            name == 'remainder' ||
+            name == '%';
+      }
+    } else {
+      Class? class_ = member.enclosingClass;
+      if (class_ == coreTypes.intClass || class_ == coreTypes.numClass) {
+        String name = member.name.text;
+        return name == '+' ||
+            name == '-' ||
+            name == '*' ||
+            name == 'remainder' ||
+            name == '%';
+      }
     }
     return false;
   }
 
   /// True if [member] is a ternary operator whose return type is defined by
   /// the least upper bound of the operand types.
-  bool isSpecialCasedTernaryOperator(Procedure member) {
-    Class? class_ = member.enclosingClass;
-    if (class_ == coreTypes.intClass || class_ == coreTypes.numClass) {
-      String name = member.name.text;
-      return name == 'clamp';
+  bool isSpecialCasedTernaryOperator(Procedure member,
+      {bool isNonNullableByDefault = false}) {
+    if (isNonNullableByDefault) {
+      Class? class_ = member.enclosingClass;
+      if (class_ == coreTypes.intClass || class_ == coreTypes.numClass) {
+        String name = member.name.text;
+        return name == 'clamp';
+      }
     }
     return false;
   }
@@ -200,366 +243,112 @@ abstract class TypeEnvironment extends Types {
   /// Returns the static return type of a special cased binary operator
   /// (see [isSpecialCasedBinaryOperator]) given the static type of the
   /// operands.
-  DartType getTypeOfSpecialCasedBinaryOperator(DartType type1, DartType type2) {
-    // Let e be an expression of one of the forms e1 + e2, e1 - e2, e1 * e2,
-    // e1 % e2 or e1.remainder(e2), where the static type of e1 is a non-Never
-    // type T and T <: num, and where the static type of e2 is S and S is
-    // assignable to num. Then:
-    if (type1 is! NeverType &&
-            isSubtypeOf(type1, coreTypes.numNonNullableRawType,
-                SubtypeCheckMode.withNullabilities) &&
-            type2 is DynamicType ||
-        isSubtypeOf(type2, coreTypes.numNonNullableRawType,
+  DartType getTypeOfSpecialCasedBinaryOperator(DartType type1, DartType type2,
+      {bool isNonNullableByDefault = false}) {
+    if (isNonNullableByDefault) {
+      // Let e be an expression of one of the forms e1 + e2, e1 - e2, e1 * e2,
+      // e1 % e2 or e1.remainder(e2), where the static type of e1 is a non-Never
+      // type T and T <: num, and where the static type of e2 is S and S is
+      // assignable to num. Then:
+      if (type1 is! NeverType &&
+              isSubtypeOf(type1, coreTypes.numNonNullableRawType,
+                  SubtypeCheckMode.withNullabilities) &&
+              type2 is DynamicType ||
+          isSubtypeOf(type2, coreTypes.numNonNullableRawType,
+              SubtypeCheckMode.withNullabilities)) {
+        if (isSubtypeOf(type1, coreTypes.doubleNonNullableRawType,
             SubtypeCheckMode.withNullabilities)) {
-      if (isSubtypeOf(type1, coreTypes.doubleNonNullableRawType,
-          SubtypeCheckMode.withNullabilities)) {
-        // If T <: double then the static type of e is double. This includes S
-        // being dynamic or Never.
-        return coreTypes.doubleNonNullableRawType;
-      } else if (type2 is! NeverType &&
-          isSubtypeOf(type2, coreTypes.doubleNonNullableRawType,
-              SubtypeCheckMode.withNullabilities)) {
-        // If S <: double and not S <:Never, then the static type of e is
-        // double.
-        return coreTypes.doubleNonNullableRawType;
-      } else if (isSubtypeOf(type1, coreTypes.intNonNullableRawType,
-              SubtypeCheckMode.withNullabilities) &&
-          type2 is! NeverType &&
-          isSubtypeOf(type2, coreTypes.intNonNullableRawType,
-              SubtypeCheckMode.withNullabilities)) {
-        // If T <: int , S <: int and not S <: Never, then the static type of
-        // e is int.
-        return coreTypes.intNonNullableRawType;
-      } else if (type2 is! NeverType &&
-          isSubtypeOf(type2, type1, SubtypeCheckMode.withNullabilities)) {
-        // Otherwise the static type of e is num.
-        return coreTypes.numNonNullableRawType;
+          // If T <: double then the static type of e is double. This includes S
+          // being dynamic or Never.
+          return coreTypes.doubleNonNullableRawType;
+        } else if (type2 is! NeverType &&
+            isSubtypeOf(type2, coreTypes.doubleNonNullableRawType,
+                SubtypeCheckMode.withNullabilities)) {
+          // If S <: double and not S <:Never, then the static type of e is
+          // double.
+          return coreTypes.doubleNonNullableRawType;
+        } else if (isSubtypeOf(type1, coreTypes.intNonNullableRawType,
+                SubtypeCheckMode.withNullabilities) &&
+            type2 is! NeverType &&
+            isSubtypeOf(type2, coreTypes.intNonNullableRawType,
+                SubtypeCheckMode.withNullabilities)) {
+          // If T <: int , S <: int and not S <: Never, then the static type of
+          // e is int.
+          return coreTypes.intNonNullableRawType;
+        } else if (type2 is! NeverType &&
+            isSubtypeOf(type2, type1, SubtypeCheckMode.withNullabilities)) {
+          // Otherwise the static type of e is num.
+          return coreTypes.numNonNullableRawType;
+        }
       }
+      // Otherwise the static type of e is num.
+      return coreTypes.numNonNullableRawType;
+    } else {
+      type1 = type1.nonTypeVariableBound;
+      type2 = type2.nonTypeVariableBound;
+
+      if (type1 == type2) return type1;
+
+      if (type1 is InterfaceType && type2 is InterfaceType) {
+        if (type1.classNode == type2.classNode) {
+          return type1;
+        }
+        if (type1.classNode == coreTypes.doubleClass ||
+            type2.classNode == coreTypes.doubleClass) {
+          return coreTypes.doubleRawType(type1.nullability);
+        }
+      }
+
+      return coreTypes.numRawType(type1.nullability);
     }
-    // Otherwise the static type of e is num.
-    return coreTypes.numNonNullableRawType;
   }
 
   DartType getTypeOfSpecialCasedTernaryOperator(
-      DartType type1, DartType type2, DartType type3) {
-    // Let e be a normal invocation of the form e1.clamp(e2, e3), where the
-    // static types of e1, e2 and e3 are T1, T2 and T3 respectively, and where
-    // T1, T2, and T3 are all non-Never subtypes of num. Then:
-    if (type1 is! NeverType && type2 is! NeverType && type3 is! NeverType
-        /* We skip the check that all types are subtypes of num because, if
+      DartType type1, DartType type2, DartType type3, Library clientLibrary) {
+    if (clientLibrary.isNonNullableByDefault) {
+      // Let e be a normal invocation of the form e1.clamp(e2, e3), where the
+      // static types of e1, e2 and e3 are T1, T2 and T3 respectively, and where
+      // T1, T2, and T3 are all non-Never subtypes of num. Then:
+      if (type1 is! NeverType && type2 is! NeverType && type3 is! NeverType
+          /* We skip the check that all types are subtypes of num because, if
           not, we'll compute the static type to be num, anyway.*/
-        ) {
-      if (isSubtypeOf(type1, coreTypes.intNonNullableRawType,
-              SubtypeCheckMode.withNullabilities) &&
-          isSubtypeOf(type2, coreTypes.intNonNullableRawType,
-              SubtypeCheckMode.withNullabilities) &&
-          isSubtypeOf(type3, coreTypes.intNonNullableRawType,
-              SubtypeCheckMode.withNullabilities)) {
-        // If T1, T2 and T3 are all subtypes of int, the static type of e is
-        // int.
-        return coreTypes.intNonNullableRawType;
-      } else if (isSubtypeOf(type1, coreTypes.doubleNonNullableRawType,
-              SubtypeCheckMode.withNullabilities) &&
-          isSubtypeOf(type2, coreTypes.doubleNonNullableRawType,
-              SubtypeCheckMode.withNullabilities) &&
-          isSubtypeOf(type3, coreTypes.doubleNonNullableRawType,
-              SubtypeCheckMode.withNullabilities)) {
-        // If T1, T2 and T3 are all subtypes of double, the static type of e
-        // is double.
-        return coreTypes.doubleNonNullableRawType;
+          ) {
+        if (isSubtypeOf(type1, coreTypes.intNonNullableRawType,
+                SubtypeCheckMode.withNullabilities) &&
+            isSubtypeOf(type2, coreTypes.intNonNullableRawType,
+                SubtypeCheckMode.withNullabilities) &&
+            isSubtypeOf(type3, coreTypes.intNonNullableRawType,
+                SubtypeCheckMode.withNullabilities)) {
+          // If T1, T2 and T3 are all subtypes of int, the static type of e is
+          // int.
+          return coreTypes.intNonNullableRawType;
+        } else if (isSubtypeOf(type1, coreTypes.doubleNonNullableRawType,
+                SubtypeCheckMode.withNullabilities) &&
+            isSubtypeOf(type2, coreTypes.doubleNonNullableRawType,
+                SubtypeCheckMode.withNullabilities) &&
+            isSubtypeOf(type3, coreTypes.doubleNonNullableRawType,
+                SubtypeCheckMode.withNullabilities)) {
+          // If T1, T2 and T3 are all subtypes of double, the static type of e
+          // is double.
+          return coreTypes.doubleNonNullableRawType;
+        }
       }
+      // Otherwise the static type of e is num.
+      return coreTypes.numNonNullableRawType;
     }
-    // Otherwise the static type of e is num.
-    return coreTypes.numNonNullableRawType;
+    return coreTypes.numRawType(type1.nullability);
   }
 
-  bool _isRawTypeArgumentEquivalent(
-      TypeDeclarationType type, int typeArgumentIndex,
-      {required SubtypeCheckMode subtypeCheckMode}) {
-    assert(0 <= typeArgumentIndex &&
-        typeArgumentIndex < type.typeArguments.length);
-    DartType typeArgument = type.typeArguments[typeArgumentIndex];
-    DartType defaultType =
-        type.typeDeclaration.typeParameters[typeArgumentIndex].defaultType;
-    return areMutualSubtypes(typeArgument, defaultType, subtypeCheckMode);
-  }
-
-  /// Computes sufficiency of a shape check for the given types.
+  /// Returns the possibly abstract interface member of [class_] with the given
+  /// [name].
   ///
-  /// In expressions of the form `e is T` and `e as T` the static type of the
-  /// expression `e` is [expressionStaticType], and the type `T` is
-  /// [checkTargetType].
-  TypeShapeCheckSufficiency computeTypeShapeCheckSufficiency(
-      {required DartType expressionStaticType,
-      required DartType checkTargetType,
-      required SubtypeCheckMode subtypeCheckMode}) {
-    if (!IsSubtypeOf.basedSolelyOnNullabilities(
-            expressionStaticType, checkTargetType)
-        .inMode(subtypeCheckMode)) {
-      return TypeShapeCheckSufficiency.insufficient;
-    } else if (checkTargetType is InterfaceType &&
-        expressionStaticType is InterfaceType) {
-      // Analyze if an interface shape check is sufficient.
-
-      // If `T` in `e is/as T` doesn't have type arguments, there's nothing more to
-      // check besides the shape.
-      // TODO(cstefantsova): Investigate if [expressionStaticType] can be of any
-      // kind for the following sufficiency check to work.
-      if (checkTargetType.typeArguments.isEmpty) {
-        return TypeShapeCheckSufficiency.interfaceShape;
-      }
-
-      // If all of the type arguments of `A<T1, ..., Tn>` in `e is/as A<T1,
-      // ..., Tn>` are mutual subtypes with the default values for the
-      // corresponding type parameters, they don't need to be checked because
-      // in a well-bounded type the type arguments must be subtypes of the
-      // default types.
-      bool targetTypeArgumentsAreDefaultTypes = true;
-      List<TypeParameter> checkTargetTypeOwnTypeParameters =
-          checkTargetType.classNode.typeParameters;
-      assert(checkTargetType.typeArguments.length ==
-          checkTargetTypeOwnTypeParameters.length);
-      for (int typeParameterIndex = 0;
-          typeParameterIndex < checkTargetTypeOwnTypeParameters.length;
-          typeParameterIndex++) {
-        // TODO(cstefantsova): Investigate if super-bounded types can appear as
-        // [checkTargetType]s. In that case a subtype check should be done
-        // instead of the mutual subtype check.
-        if (!_isRawTypeArgumentEquivalent(checkTargetType, typeParameterIndex,
-            subtypeCheckMode: subtypeCheckMode)) {
-          targetTypeArgumentsAreDefaultTypes = false;
-          break;
-        }
-      }
-      // TODO(cstefantsova): Investigate if [expressionStaticType] can be of any
-      // kind for the following sufficiency check to work.
-      if (targetTypeArgumentsAreDefaultTypes) {
-        return TypeShapeCheckSufficiency.interfaceShape;
-      }
-
-      // If `A<T1, ..., Tn>` in `e is/as A<T1, ... Tn>` has non-trivial type
-      // arguments, but `e` is of static type `B` without type arguments, where
-      // `B` is a name of an interface, and `A` is a subclass of `B`, we have
-      // the following relation holding for any valid `S1`, ..., `Sn`: `A<S1,
-      // ..., Sn> <: B`, and we can't skip the type argument checks.
-      if (expressionStaticType.typeArguments.isEmpty) {
-        return TypeShapeCheckSufficiency.insufficient;
-      }
-
-      // The computation of the sufficiency of the shape check is based on the
-      // following observations. Let `T` be `A<T1, ..., Tn>` and `B<S1, ...,
-      // Sk>` be the static type of `e` in `e as/is T`. Let `A` be a subclass
-      // of `B` and let `B<Q1, ..., Qk>` be `A<T1, ..., Tn>` taken as an
-      // instance of `B`.
-      //
-      // Then the shape check is sufficient if (1) `B<S1, ..., Sk>` is a
-      // subtype of `B<Q1, ..., Qk>`, and (2) `A<T1, ..., Tn>` is the only
-      // instance of `A` that yields `B<Q1, ..., Qk>` being taken as an
-      // instance of `B`.
-      //
-      // For example, consider the following:
-      //
-      //   class C1<X> {}
-      //   class C2<Y> extends C1<Y> {}
-      //
-      // If we need to determine the sufficiency of a shape check in the
-      // expression `e is C2<num>` where `e` is of static type `C1<int>`, we
-      // compute (condition (2)) `C2<num>` as an instance of `C1`, which yields
-      // `C1<num>`.  Obviously, `C2<TYPE>` taken as an instance of `C1` won't
-      // yield `C1<num>` for any `TYPE` that isn't `num`.  Additionally
-      // (condition (1)), `C1<int>` is a subtype of `C1<num>`. Therefore, we
-      // conclude the shape check is sufficient in `e is C2<num>`.
-      //
-      // As an example of a case where the shape check isn't sufficient,
-      // consider the following:
-      //
-      //   class D1<X> {}
-      //   class D2 extends D1<int> {}
-      //   class D3<Y> extends D2 {}
-      //
-      // In the expression `e is D3<num>` let `e` be of static type `D1<int>`.
-      // Taken as an instance of `D1`, `D3<num>` yields `D1<int>`, and
-      // `D1<int>` is a subtype of `D1<int>` (condition (1)). However,
-      // `D3<num>` isn't the only instance of `D3` that yields `D1<int>` when
-      // taken as an instance of `D1` (failed condition (2)). Examples of other
-      // such instances are `D3<String>` or `D3<bool>`.  Therefore, we conclude
-      // that the shape check is insufficient in the expression `e is D3<num>`,
-      // which proves true when we consider the possibility of the runtime type
-      // of the value of `e` being `D3<String>` or `D3<bool>`.
-      //
-      // Finally, we can relax condition (2) by allowing multiple instances of
-      // `A<T1, ..., Tn>` yielding the same `B<Q1, ..., Qk>` being taken as an
-      // instance of `B` in case `A<T1, ..., Tn>` is a supertype of all such
-      // types. Let's call `AA` the set of all instances of `A` that yield
-      // `B<Q1, ..., Qk>` when taken as an instance of `B`.  We replace
-      // condition (2) with the relaxed condition (2*) requiring that `A<T1,
-      // ..., Tn>` is such that for every `Ti` either `Ti` is the type argument
-      // in the i-th position for all instances in `AA` or `Ti` is the default
-      // type for the i-th type parameter of `A`.
-      //
-      // Consider the following example.
-      //
-      //   class E1<X> {}
-      //   class E2<Y1, Y2> extends E1<Y1> {}
-      //
-      // In the expression `e is E2<num, dynamic>` let `e` be of static type
-      // `E1<int>`. Taken as an instance of `E1`, `E2<num, dynamic>` yields
-      // `E1<num>`. Condition (1) is satisfied because `E1<int>` is a subtype
-      // `E1<num>`. Then, to check the condition (2*), we notice that `E2<num,
-      // TYPE>` yields `E1<num>` for any type `TYPE` taken as an instance of
-      // `E1`. The first type argument of `E2<num, dynamic>` is the same in all
-      // such types, and the second type argument is the default type for the
-      // second parameter of `E2`, so condition (2*) is satisfied. We conclude
-      // that the shape check is sufficient in `e is E2<enum, dynamic>`.
-
-      // First, we compute `B<Q1, ..., Qk>`, which is `A<T1, ..., Tn>` taken as
-      // an instance of `B` in `e is/as A<T1, ..., Tn>`, where `B<S1, ..., Sk>`
-      // is the static type of `e`.
-      InterfaceType? testedAgainstTypeAsOperandClass = hierarchy
-          .getInterfaceTypeAsInstanceOfClass(
-              checkTargetType, expressionStaticType.classNode)
-          ?.withDeclaredNullability(checkTargetType.declaredNullability);
-
-      // If `A<T1, ..., Tn>` isn't an instance of `B`, the full type check
-      // should be done.
-      if (testedAgainstTypeAsOperandClass == null) {
-        return TypeShapeCheckSufficiency.insufficient;
-      } else {
-        // If `A<T1, ..., Tn>` is an instance of `B`, we proceed to checking
-        // condition (2*).  For that we compute `A<X1, ..., Xn>` as an instance
-        // of `B`, where `X1`, ..., `Xn` are the type variables declared by
-        // `A`.  The resulting type is `B<R1, ..., Rk>`, where `R1`, ..., `Rk`
-        // may contain occurrences of `X1`, ..., `Xn`.
-        InterfaceType unsubstitutedTestedAgainstTypeAsOperandClass =
-            hierarchy.getInterfaceTypeAsInstanceOfClass(
-                new InterfaceType(checkTargetType.classNode,
-                    checkTargetType.declaredNullability, [
-                  for (TypeParameter typeParameter
-                      in checkTargetTypeOwnTypeParameters)
-                    new TypeParameterType(
-                        typeParameter,
-                        TypeParameterType.computeNullabilityFromBound(
-                            typeParameter))
-                ]),
-                expressionStaticType.classNode)!;
-        // Now we search for the occurrences of `X1`, ..., `Xn` in `B<R1,
-        // ..., Rk>`. Those that are found indicate the positions in `A<T1,
-        // ..., Tn>` that are fixed and supposed to be the same for every
-        // instance of `A` that yields `B<Q1, ..., Qk>` when taken as an
-        // instance of `B`.  The other positions, that is, the indices of
-        // `Xi` that don't occur in `B<R1, ..., Rk>`, are supposed to hold
-        // the default types for the corresponding parameter of `A` in order
-        // to satisfy condition (2*).
-        OccurrenceCollectorVisitor occurrenceCollectorVisitor =
-            new OccurrenceCollectorVisitor(
-                checkTargetTypeOwnTypeParameters.toSet());
-        occurrenceCollectorVisitor
-            .visit(unsubstitutedTestedAgainstTypeAsOperandClass);
-
-        // Check that those of `Xi` that don't occur in `B<R1, ..., Rk>`
-        // indicate the positions of type arguments in `A<T1, ..., Tn>`
-        // that are equivalent to default types.
-        bool allNonOccurringAreDefaultTypes = true;
-        for (int typeParameterIndex = 0;
-            typeParameterIndex < checkTargetTypeOwnTypeParameters.length;
-            typeParameterIndex++) {
-          if (!occurrenceCollectorVisitor.occurred.contains(
-                  checkTargetTypeOwnTypeParameters[typeParameterIndex]) &&
-              !_isRawTypeArgumentEquivalent(checkTargetType, typeParameterIndex,
-                  subtypeCheckMode: subtypeCheckMode)) {
-            allNonOccurringAreDefaultTypes = false;
-            break;
-          }
-        }
-
-        if (allNonOccurringAreDefaultTypes) {
-          // Condition (2*) is satisfied. We need to check condition (1).
-          return isSubtypeOf(
-                  expressionStaticType,
-                  testedAgainstTypeAsOperandClass,
-                  SubtypeCheckMode.withNullabilities)
-              ? TypeShapeCheckSufficiency.interfaceShape
-              : TypeShapeCheckSufficiency.insufficient;
-        } else {
-          // Condition (2*) is not satisfied.
-          return TypeShapeCheckSufficiency.insufficient;
-        }
-      }
-    } else if (checkTargetType is RecordType &&
-        expressionStaticType is RecordType) {
-      bool isTopRecordTypeForTheShape = true;
-      for (DartType positional in checkTargetType.positional) {
-        if (!isTop(positional)) {
-          isTopRecordTypeForTheShape = false;
-          break;
-        }
-      }
-      for (NamedType named in checkTargetType.named) {
-        if (!isTop(named.type)) {
-          isTopRecordTypeForTheShape = false;
-          break;
-        }
-      }
-      if (isTopRecordTypeForTheShape) {
-        // TODO(cstefantsova): Investigate if [expressionStaticType] can be of
-        // any kind for the following sufficiency check to work.
-        return TypeShapeCheckSufficiency.recordShape;
-      }
-
-      if (isSubtypeOf(
-          expressionStaticType, checkTargetType, subtypeCheckMode)) {
-        return TypeShapeCheckSufficiency.recordShape;
-      } else {
-        return TypeShapeCheckSufficiency.insufficient;
-      }
-    } else if (checkTargetType is FunctionType &&
-        expressionStaticType is FunctionType) {
-      if (checkTargetType.typeParameters.isEmpty &&
-          expressionStaticType.typeParameters.isEmpty) {
-        bool isTopFunctionTypeForTheShape = true;
-        for (DartType positional in checkTargetType.positionalParameters) {
-          if (!isBottom(positional)) {
-            isTopFunctionTypeForTheShape = false;
-          }
-        }
-        for (NamedType named in checkTargetType.namedParameters) {
-          if (!isBottom(named.type)) {
-            isTopFunctionTypeForTheShape = false;
-          }
-        }
-        if (!isTop(checkTargetType.returnType)) {
-          isTopFunctionTypeForTheShape = false;
-        }
-
-        if (isTopFunctionTypeForTheShape) {
-          // TODO(cstefantsova): Investigate if [expressionStaticType] can be of
-          // any kind for the following sufficiency check to work.
-          return TypeShapeCheckSufficiency.functionShape;
-        }
-      }
-
-      if (isSubtypeOf(
-          expressionStaticType, checkTargetType, subtypeCheckMode)) {
-        return TypeShapeCheckSufficiency.functionShape;
-      } else {
-        return TypeShapeCheckSufficiency.insufficient;
-      }
-    } else if (checkTargetType is FutureOrType &&
-        expressionStaticType is FutureOrType) {
-      if (isTop(checkTargetType.typeArgument)) {
-        // TODO(cstefantsova): Investigate if [expressionStaticType] can be of
-        // any kind for the following sufficiency check to work.
-        return TypeShapeCheckSufficiency.futureOrShape;
-      } else if (isSubtypeOf(expressionStaticType.typeArgument,
-          checkTargetType.typeArgument, subtypeCheckMode)) {
-        return TypeShapeCheckSufficiency.futureOrShape;
-      } else {
-        return TypeShapeCheckSufficiency.insufficient;
-      }
-    } else {
-      return TypeShapeCheckSufficiency.insufficient;
-    }
-  }
+  /// If [setter] is `false`, only fields, methods, and getters with that name
+  /// will be found.  If [setter] is `true`, only non-final fields and setters
+  /// will be found.
+  ///
+  /// If multiple members with that name are inherited and not overridden, the
+  /// member from the first declared supertype is returned.
+  Member? getInterfaceMember(Class cls, Name name, {bool setter = false});
 }
 
 /// Tri-state logical result of a nullability-aware subtype check.
@@ -798,15 +587,6 @@ class IsSubtypeOf {
     }
     return "IsSubtypeOf.<unknown value '${_value}'>";
   }
-
-  bool inMode(SubtypeCheckMode subtypeCheckMode) {
-    switch (subtypeCheckMode) {
-      case SubtypeCheckMode.withNullabilities:
-        return isSubtypeWhenUsingNullabilities();
-      case SubtypeCheckMode.ignoringNullabilities:
-        return isSubtypeWhenIgnoringNullabilities();
-    }
-  }
 }
 
 enum SubtypeCheckMode {
@@ -882,6 +662,10 @@ abstract class StaticTypeContext {
   /// For opt out libraries this is [Nullability.legacy].
   Nullability get nullable;
 
+  /// Return `true` if the current library is opted in to non-nullable by
+  /// default.
+  bool get isNonNullableByDefault;
+
   /// Returns the mode under which the current library was compiled.
   NonNullableByDefaultCompiledMode get nonNullableByDefaultCompiledMode;
 
@@ -903,6 +687,9 @@ class StaticTypeContextImpl implements StaticTypeContext {
   final TypeEnvironment typeEnvironment;
 
   /// The library in which the static type is computed.
+  ///
+  /// The `library.isNonNullableByDefault` property is used to determine the
+  /// nullabilities of the static types.
   final Library _library;
 
   /// The static type of a `this` expression.
@@ -947,6 +734,11 @@ class StaticTypeContextImpl implements StaticTypeContext {
   /// For opt out libraries this is [Nullability.legacy].
   @override
   Nullability get nullable => _library.nullable;
+
+  /// Return `true` if the current library is opted in to non-nullable by
+  /// default.
+  @override
+  bool get isNonNullableByDefault => _library.isNonNullableByDefault;
 
   /// Returns the mode under which the current library was compiled.
   @override
@@ -1061,6 +853,9 @@ class _FlatStatefulStaticTypeContext extends StatefulStaticTypeContext {
   Nullability get nullable => _library.nullable;
 
   @override
+  bool get isNonNullableByDefault => _library.isNonNullableByDefault;
+
+  @override
   NonNullableByDefaultCompiledMode get nonNullableByDefaultCompiledMode =>
       _library.nonNullableByDefaultCompiledMode;
 
@@ -1163,6 +958,9 @@ class _StackedStatefulStaticTypeContext extends StatefulStaticTypeContext {
   Nullability get nullable => _library.nullable;
 
   @override
+  bool get isNonNullableByDefault => _library.isNonNullableByDefault;
+
+  @override
   NonNullableByDefaultCompiledMode get nonNullableByDefaultCompiledMode =>
       _library.nonNullableByDefaultCompiledMode;
 
@@ -1235,37 +1033,4 @@ class _StaticTypeContextState {
   final InterfaceType? _thisType;
 
   _StaticTypeContextState(this._node, this._library, this._thisType);
-}
-
-/// Describes whether only performing a shape check is sufficient for a
-/// successful type check.
-///
-/// In the following code, in expression `a is B<num>` it is sufficient just to
-/// check that the value stored in `a` has the shape `B<_>`, and the checks of
-/// the type arguments can be omitted. In contrast, in expression `a is B<int>`
-/// the check of the type arguments can't be skipped.
-///
-///   class A<X> {}
-///   class B<Y> extends A<Y> {}
-///
-///   test(A<num> a) {
-///     a is B<num>;
-///     a is B<int>;
-///   }
-enum TypeShapeCheckSufficiency {
-  /// Indicates that only the shape of the interface type needs to be checked.
-  interfaceShape,
-
-  /// Indicates that only the shape of the record type needs to be checked.
-  recordShape,
-
-  /// Indicates that only the shape of the function type needs to be checked.
-  functionShape,
-
-  /// Indicates that only the shape of the FutureOr type needs to be checked.
-  futureOrShape,
-
-  /// Indicates that a shape check is insufficient, and the full check is
-  /// required.
-  insufficient;
 }

@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/dart/error/lint_codes.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:linter/src/rules.dart';
@@ -17,53 +16,28 @@ void main() {
 }
 
 class DeprecatedRule extends LintRule {
-  static const LintCode code = LintCode('deprecated_rule', 'Deprecated rule.',
-      correctionMessage: 'Try deprecated rule.');
-
   DeprecatedRule()
       : super(
           name: 'deprecated_rule',
           description: '',
           details: '...',
-          categories: {LintRuleCategory.errors},
+          group: Group.errors,
           state: State.deprecated(since: dart2_12),
         );
-
-  @override
-  LintCode get lintCode => code;
-}
-
-class RemovedRule extends LintRule {
-  static const LintCode code = LintCode('removed_rule', 'Removed rule.',
-      correctionMessage: 'Try removed rule.');
-
-  RemovedRule()
-      : super(
-            name: 'removed_rule',
-            description: '',
-            details: '...',
-            categories: {LintRuleCategory.errors},
-            state: State.removed());
-
-  @override
-  LintCode get lintCode => code;
 }
 
 @reflectiveTest
 class RemoveLintTest extends AnalysisOptionsFixTest {
-  // Keep track of these rules so they can be unregistered in `tearDown`.
+  // Keep track of this rule so it can be unregistered in `tearDown`.
   var deprecatedRule = DeprecatedRule();
-  var removedRule = RemovedRule();
 
   void setUp() {
     registerLintRules();
     Registry.ruleRegistry.register(deprecatedRule);
-    Registry.ruleRegistry.register(removedRule);
   }
 
   void tearDown() {
     Registry.ruleRegistry.unregister(deprecatedRule);
-    Registry.ruleRegistry.unregister(removedRule);
   }
 
   Future<void> test_deprecated() async {
@@ -120,45 +94,6 @@ analyzer:
   exclude:
     - test/data/**
 
-linter:
-  rules:
-    - camel_case_types
-''');
-  }
-
-  Future<void> test_duplicated() async {
-    await assertHasFix('''
-linter:
-  rules:
-    - camel_case_types
-    - camel_case_types
-''', '''
-linter:
-  rules:
-    - camel_case_types
-''');
-  }
-
-  Future<void> test_removed() async {
-    await assertHasFix('''
-linter:
-  rules:
-    - camel_case_types
-    - removed_rule
-''', '''
-linter:
-  rules:
-    - camel_case_types
-''');
-  }
-
-  Future<void> test_undefined() async {
-    await assertHasFix('''
-linter:
-  rules:
-    - camel_case_types
-    - undefined_rule
-''', '''
 linter:
   rules:
     - camel_case_types

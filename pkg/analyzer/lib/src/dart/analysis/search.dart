@@ -176,7 +176,7 @@ class FindDeclarations {
       });
     }
 
-    var entries = [
+    final entries = [
       ...ownedFiles.addedFiles.entries,
       if (!onlyAnalyzed) ...ownedFiles.knownFiles.entries,
     ];
@@ -219,8 +219,8 @@ class ImportElementReferencesVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitNamedType(NamedType node) {
     if (importedElements.contains(node.element)) {
-      var importElementPrefix = importElement.prefix;
-      var importPrefix = node.importPrefix;
+      final importElementPrefix = importElement.prefix;
+      final importPrefix = node.importPrefix;
       if (importElementPrefix == null) {
         if (importPrefix == null) {
           _addResult(node.offset, 0);
@@ -228,8 +228,8 @@ class ImportElementReferencesVisitor extends RecursiveAstVisitor<void> {
       } else {
         if (importPrefix != null &&
             importPrefix.element == importElementPrefix.element) {
-          var offset = importPrefix.offset;
-          var end = importPrefix.period.end;
+          final offset = importPrefix.offset;
+          final end = importPrefix.period.end;
           _addResult(offset, end - offset);
         }
       }
@@ -304,10 +304,10 @@ class Search {
       element.methods.forEach(addElement);
     }
 
-    var files = await _driver.getFilesDefiningClassMemberName(name);
-    for (var file in files) {
-      if (searchedFiles.add(file.path, this)) {
-        var unitResult = await _driver.getUnitElement(file.path);
+    List<String> files = await _driver.getFilesDefiningClassMemberName(name);
+    for (String file in files) {
+      if (searchedFiles.add(file, this)) {
+        var unitResult = await _driver.getUnitElement(file);
         if (unitResult is UnitElementResult) {
           unitResult.element.classes.forEach(addElements);
           unitResult.element.enums.forEach(addElements);
@@ -438,7 +438,7 @@ class Search {
 
     await _driver.discoverAvailableFiles();
 
-    List<SubtypeResult> results = [];
+    final List<SubtypeResult> results = [];
 
     // Note, this is a defensive copy.
     var files = _driver.fsState.getFilesSubtypingName(name)?.toList();
@@ -495,13 +495,13 @@ class Search {
     }
 
     // Prepare the list of files that reference the name.
-    var files = await _driver.getFilesReferencingName(name);
+    List<String> files = await _driver.getFilesReferencingName(name);
 
     // Check the index of every file that references the element name.
     List<SearchResult> results = [];
-    for (var file in files) {
-      if (searchedFiles.add(file.path, this)) {
-        var index = await _driver.getIndex(file.path);
+    for (String file in files) {
+      if (searchedFiles.add(file, this)) {
+        var index = await _driver.getIndex(file);
         if (index != null) {
           _IndexRequest request = _IndexRequest(index);
           var fileResults = await request.getUnresolvedMemberReferences(
@@ -512,7 +512,7 @@ class Search {
               IndexRelationKind.IS_READ_WRITTEN_BY: SearchResultKind.READ_WRITE,
               IndexRelationKind.IS_INVOKED_BY: SearchResultKind.INVOCATION
             },
-            () => _getUnitElement(file.path),
+            () => _getUnitElement(file),
           );
           results.addAll(fileResults);
         }
@@ -534,23 +534,18 @@ class Search {
       name = element.enclosingElement.displayName;
     }
 
-    var elementPath = element.source!.fullName;
-    var elementFile = _driver.fsState.getExistingFromPath(elementPath);
-    if (elementFile == null) {
-      return;
-    }
-
     // Prepare the list of files that reference the element name.
-    var files = <FileState>[];
+    List<String> files = <String>[];
+    String path = element.source!.fullName;
     if (name.startsWith('_')) {
       String libraryPath = element.library!.source.fullName;
       if (searchedFiles.add(libraryPath, this)) {
-        var libraryFile = _driver.fsState.getFileForPath(libraryPath);
-        var libraryKind = libraryFile.kind;
+        final libraryFile = _driver.fsState.getFileForPath(libraryPath);
+        final libraryKind = libraryFile.kind;
         if (libraryKind is LibraryFileKind) {
-          for (var file in libraryKind.files) {
-            if (file == elementFile || file.referencedNames.contains(name)) {
-              files.add(file);
+          for (final file in libraryKind.files) {
+            if (file.path == path || file.referencedNames.contains(name)) {
+              files.add(file.path);
             }
           }
         }
@@ -559,29 +554,21 @@ class Search {
       if (filesToCheck != null) {
         for (FileState file in filesToCheck) {
           if (file.referencedNames.contains(name)) {
-            files.add(file);
+            files.add(file.path);
           }
         }
       } else {
         files = await _driver.getFilesReferencingName(name);
       }
-      // Add all files of the library.
-      if (elementFile.kind.library case var library?) {
-        for (var file in library.files) {
-          if (searchedFiles.add(file.path, this)) {
-            if (!files.contains(file)) {
-              files.add(file);
-            }
-          }
-        }
+      if (searchedFiles.add(path, this) && !files.contains(path)) {
+        files.add(path);
       }
     }
 
     // Check the index of every file that references the element name.
-    for (var file in files) {
-      if (searchedFiles.add(file.path, this)) {
-        await _addResultsInFile(
-            results, element, relationToResultKind, file.path);
+    for (String file in files) {
+      if (searchedFiles.add(file, this)) {
+        await _addResultsInFile(results, element, relationToResultKind, file);
       }
     }
   }
@@ -621,8 +608,8 @@ class Search {
       CompilationUnitElement element) async {
     String path = element.source.fullName;
 
-    var file = _driver.resourceProvider.getFile(path);
-    var fileState = _driver.fsState.getExisting(file);
+    final file = _driver.resourceProvider.getFile(path);
+    final fileState = _driver.fsState.getExisting(file);
 
     // If the file is not known, then it is not referenced.
     if (fileState == null) {
@@ -631,7 +618,7 @@ class Search {
 
     // Check files that reference the given file.
     List<SearchResult> results = <SearchResult>[];
-    for (var reference in fileState.referencingFiles) {
+    for (final reference in fileState.referencingFiles) {
       await _addResultsInFile(
         results,
         element,
@@ -713,7 +700,7 @@ class Search {
     LibraryElement libraryElement = element.library;
     for (CompilationUnitElement unitElement in libraryElement.units) {
       String unitPath = unitElement.source.fullName;
-      var unitResult = await _driver.getResolvedUnit(unitPath);
+      var unitResult = await _driver.getResult(unitPath);
       if (unitResult is ResolvedUnitResult) {
         var visitor = ImportElementReferencesVisitor(element, unitElement);
         unitResult.unit.accept(visitor);
@@ -733,18 +720,17 @@ class Search {
     List<SearchResult> results = <SearchResult>[];
     for (CompilationUnitElement unitElement in element.units) {
       String unitPath = unitElement.source.fullName;
-      var unitResult = await _driver.getResolvedUnit(unitPath);
+      var unitResult = await _driver.getResult(unitPath);
       if (unitResult is ResolvedUnitResult) {
         CompilationUnit unit = unitResult.unit;
         for (Directive directive in unit.directives) {
           if (directive is PartOfDirective && directive.element == element) {
-            var targetEntity = directive.libraryName ?? directive.uri;
             results.add(
               SearchResult._(
                 unit.declaredElement!,
                 SearchResultKind.REFERENCE,
-                targetEntity!.offset,
-                targetEntity.length,
+                directive.libraryName!.offset,
+                directive.libraryName!.length,
                 true,
                 false,
               ),
@@ -764,7 +750,7 @@ class Search {
     }
 
     // Prepare the unit.
-    var unitResult = await _driver.getResolvedUnit(path);
+    var unitResult = await _driver.getResult(path);
     if (unitResult is! ResolvedUnitResult) {
       return const <SearchResult>[];
     }
@@ -864,7 +850,7 @@ class Search {
     LibraryElement libraryElement = element.library;
     for (CompilationUnitElement unitElement in libraryElement.units) {
       String unitPath = unitElement.source.fullName;
-      var unitResult = await _driver.getResolvedUnit(unitPath);
+      var unitResult = await _driver.getResult(unitPath);
       if (unitResult is ResolvedUnitResult) {
         var visitor = _LocalReferencesVisitor({element}, unitElement);
         unitResult.unit.accept(visitor);
@@ -881,8 +867,8 @@ class SearchedFiles {
   final Map<Uri, Search> uriOwners = {};
 
   bool add(String path, Search search) {
-    var fsState = search._driver.fsState;
-    var fileState = fsState.getExistingFromPath(path);
+    final fsState = search._driver.fsState;
+    final fileState = fsState.getExistingFromPath(path);
     if (fileState == null) {
       return false;
     }
@@ -906,8 +892,7 @@ class SearchedFiles {
   }
 
   void ownKnown(Search search) {
-    for (var file in search._driver.knownFiles) {
-      var path = file.path;
+    for (var path in search._driver.knownFiles) {
       if (path.endsWith('.dart')) {
         add(path, search);
       }
@@ -1127,7 +1112,7 @@ class _FindCompilationUnitDeclarations {
 
     String? parameters;
     if (element is ExecutableElement) {
-      var displayString = element.getDisplayString();
+      var displayString = element.getDisplayString(withNullability: true);
       var parameterIndex = displayString.indexOf('(');
       if (parameterIndex > 0) {
         parameters = displayString.substring(parameterIndex);
@@ -1247,10 +1232,10 @@ class _FindDeclarations {
         var uri = entry.key;
         var analysisDriver = entry.value;
 
-        var libraryElement = await performance.runAsync(
+        final libraryElement = await performance.runAsync(
           'getLibraryByUri',
           (performance) async {
-            var result = await analysisDriver.getLibraryByUri('$uri');
+            final result = await analysisDriver.getLibraryByUri('$uri');
             if (result is LibraryElementResultImpl) {
               return result.element as LibraryElementImpl;
             }
@@ -1551,7 +1536,7 @@ class _LocalReferencesVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitImportPrefixReference(ImportPrefixReference node) {
-    var element = node.element;
+    final element = node.element;
     if (elements.contains(element)) {
       _addResult(node.name, SearchResultKind.REFERENCE);
     }
@@ -1559,7 +1544,7 @@ class _LocalReferencesVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitNamedType(NamedType node) {
-    var element = node.element;
+    final element = node.element;
     if (elements.contains(element)) {
       _addResult(node.name2, SearchResultKind.REFERENCE);
     }

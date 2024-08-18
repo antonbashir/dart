@@ -4,9 +4,6 @@ extension type const Class(int i) {
   factory Class.fact(int i) => Class(i);
   factory Class.redirect2(int i) = Class;
 }
-
 test() {}
-
 main() {}
-
 expect(expected, actual) {}

@@ -90,7 +90,7 @@ Future<int> outer() {
     completer.complete(v);
   }
 
-  inner().then(process);
+  inner().then(v);
 
   return completer.future;
 }

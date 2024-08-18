@@ -48,7 +48,7 @@ class IsKnownTest extends AbstractTypeSystemTest {
   }
 
   test_null() {
-    _checkKnown(nullNone);
+    _checkKnown(nullStar);
   }
 
   test_record() {

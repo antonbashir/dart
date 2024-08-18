@@ -7,5 +7,4 @@ class C<T> {
 }
 
 void test(C<int> x) {}
-
 main() {}

@@ -21,7 +21,7 @@ G<int> g;
 typedef T G<T>();
 ''');
 
-    var node = findNode.namedType('G<int>');
+    final node = findNode.namedType('G<int>');
     assertResolvedNodeText(node, r'''
 NamedType
   name: G
@@ -30,12 +30,12 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
-  element: <testLibraryFragment>::@typeAlias::G
+  element: self::@typeAlias::G
   type: int Function()
-    alias: <testLibraryFragment>::@typeAlias::G
+    alias: self::@typeAlias::G
       typeArguments
         int
 ''');

@@ -2,5 +2,4 @@ import "issue34515_lib1.dart";
 import "issue34515_lib2.dart";
 
 main() {}
-
 void test() {}

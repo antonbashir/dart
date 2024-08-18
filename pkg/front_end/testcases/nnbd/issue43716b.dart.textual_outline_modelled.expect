@@ -7,5 +7,4 @@ class C<X extends void Function(X)?> {
 }
 
 main() {}
-
 void f(Object o) {}

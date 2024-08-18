@@ -158,7 +158,7 @@ class _FieldNamingScope {
   }
 
   /// Checks whether [name] is already used in the current scope chain.
-  bool _isNameUnused(jsAst.Name name) {
+  _isNameUnused(jsAst.Name name) {
     return !names.values.contains(name) &&
         ((superScope == null) || superScope!._isNameUnused(name));
   }

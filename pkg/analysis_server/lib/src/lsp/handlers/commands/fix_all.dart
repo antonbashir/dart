@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/simple_edit_handler.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/lsp_analysis_server.dart';
@@ -41,18 +40,18 @@ class FixAllCommandHandler extends SimpleEditCommandHandler
     // Get the version of the doc before we calculate edits so we can send it
     // back to the client so that they can discard this edit if the document has
     // been modified since.
-    var path = parameters['path'] as String;
-    var docIdentifier = server.getVersionedDocumentIdentifier(path);
-    var autoTriggered = parameters['autoTriggered'] == true;
+    final path = parameters['path'] as String;
+    final docIdentifier = server.getVersionedDocumentIdentifier(path);
+    final autoTriggered = parameters['autoTriggered'] == true;
 
-    var operation = _FixAllOperation(
+    final operation = _FixAllOperation(
       server: server,
       message: message,
       path: path,
       cancellationToken: cancellationToken,
       autoTriggered: autoTriggered,
     );
-    var edit = await operation.computeEdits();
+    final edit = await operation.computeEdits();
 
     return edit.mapResult((edit) async {
       if (edit == null) {
@@ -102,7 +101,7 @@ class _FixAllOperation extends TemporaryOverlayOperation
 
   Future<ErrorOr<WorkspaceEdit?>> computeEdits() async {
     return await lockRequestsWithTemporaryOverlays(() async {
-      var result = await requireResolvedUnit(path);
+      final result = await requireResolvedUnit(path);
       return result.mapResult(_computeEditsImpl);
     });
   }
@@ -113,12 +112,12 @@ class _FixAllOperation extends TemporaryOverlayOperation
       return error(ErrorCodes.RequestCancelled, 'Request was cancelled');
     }
 
-    var context = server.contextManager.getContextFor(path);
+    final context = server.contextManager.getContextFor(path);
     if (context == null) {
       return success(null);
     }
 
-    var processor = IterativeBulkFixProcessor(
+    final processor = IterativeBulkFixProcessor(
       instrumentationService: server.instrumentationService,
       context: context,
       applyTemporaryOverlayEdits: applyTemporaryOverlayEdits,
@@ -144,7 +143,7 @@ class _FixAllOperation extends TemporaryOverlayOperation
     // LineInfos to reflect the original state while mapping to LSP.
     await revertOverlays();
 
-    var edit = createPlainWorkspaceEdit(server, changes);
+    final edit = createPlainWorkspaceEdit(server, changes);
 
     return success(edit);
   }

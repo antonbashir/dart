@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/precedence.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -15,11 +15,8 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class AddExplicitCast extends ResolvedCorrectionProducer {
-  AddExplicitCast({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.acrossSingleFile;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_EXPLICIT_CAST;
@@ -29,7 +26,7 @@ class AddExplicitCast extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var target = coveringNode;
+    var target = coveredNode;
     if (target is! Expression) {
       return;
     }
@@ -90,7 +87,7 @@ class AddExplicitCast extends ResolvedCorrectionProducer {
       return;
     }
 
-    var target_final = target;
+    final target_final = target;
 
     var needsParentheses = target.precedence < Precedence.postfix;
     if (toType is InterfaceType &&
@@ -98,7 +95,7 @@ class AddExplicitCast extends ResolvedCorrectionProducer {
             fromType.isDartCoreList ||
             fromType.isDartCoreSet) &&
         (toType.isDartCoreList || toType.isDartCoreSet)) {
-      var toType_final = toType;
+      final toType_final = toType;
       if (target.isCastMethodInvocation) {
         var typeArguments = (target as MethodInvocation).typeArguments;
         if (typeArguments != null) {
@@ -124,7 +121,7 @@ class AddExplicitCast extends ResolvedCorrectionProducer {
     } else if (fromType.isDartCoreMap &&
         toType is InterfaceType &&
         toType.isDartCoreMap) {
-      var toType_final = toType;
+      final toType_final = toType;
       if (target.isCastMethodInvocation) {
         var typeArguments = (target as MethodInvocation).typeArguments;
         if (typeArguments != null) {

@@ -5,5 +5,4 @@ class C {
 }
 
 int get y => throw '';
-
 main() {}

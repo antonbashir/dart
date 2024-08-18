@@ -217,7 +217,7 @@ class Collector {
   }
 
   void computeNeededStaticNonFinalFields() {
-    void addToOutputUnit(FieldEntity element) {
+    addToOutputUnit(FieldEntity element) {
       List<FieldEntity> list = outputStaticNonFinalFieldLists.putIfAbsent(
           _outputUnitData.outputUnitForMember(element), () => []);
       list.add(element);

@@ -13,7 +13,5 @@ abstract class D {
 abstract class E {}
 
 main() {}
-
 mixin C on D {}
-
 void f() {}

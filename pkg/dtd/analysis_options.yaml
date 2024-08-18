@@ -4,5 +4,3 @@ linter:
   rules:
     - avoid_void_async
     - unawaited_futures
-    - require_trailing_commas
-    - prefer_relative_imports

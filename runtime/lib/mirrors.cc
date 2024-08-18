@@ -23,7 +23,7 @@ namespace dart {
 
 #define RETURN_OR_PROPAGATE(expr)                                              \
   ObjectPtr result = expr;                                                     \
-  if (IsErrorClassId(result->GetClassId())) {                                  \
+  if (IsErrorClassId(result->GetClassIdMayBeSmi())) {                          \
     Exceptions::PropagateError(Error::Handle(Error::RawCast(result)));         \
   }                                                                            \
   return result;
@@ -216,7 +216,7 @@ static InstancePtr CreateTypeVariableList(const Class& cls) {
   TypeParameter& type = TypeParameter::Handle();
   String& name = String::Handle();
   for (intptr_t i = 0; i < num_type_params; i++) {
-    type = cls.TypeParameterAt(i, Nullability::kNonNullable);
+    type = cls.TypeParameterAt(i, Nullability::kLegacy);
     ASSERT(type.IsFinalized());
     name = type.UserVisibleName();
     result.SetAt(2 * i, name);
@@ -544,21 +544,21 @@ static InstancePtr CreateTypeMirror(const AbstractType& type) {
       args.SetAt(0, Symbols::Never());
       return CreateMirror(Symbols::_SpecialTypeMirror(), args);
     }
-    // TODO(regis): Until mirrors reflect nullability, force kNonNullable,
-    // except for Null type, which should remain nullable.
+    // TODO(regis): Until mirrors reflect nullability, force kLegacy, except for
+    // Null type, which should remain nullable.
     if (!type.IsNullType()) {
-      Type& legacy_type = Type::Handle(Type::Cast(type).ToNullability(
-          Nullability::kNonNullable, Heap::kOld));
+      Type& legacy_type = Type::Handle(
+          Type::Cast(type).ToNullability(Nullability::kLegacy, Heap::kOld));
       legacy_type ^= legacy_type.Canonicalize(Thread::Current());
       return CreateClassMirror(cls, legacy_type, Bool::False(),
                                Object::null_instance());
     }
     return CreateClassMirror(cls, type, Bool::False(), Object::null_instance());
   } else if (type.IsTypeParameter()) {
-    // TODO(regis): Until mirrors reflect nullability, force kNonNullable.
+    // TODO(regis): Until mirrors reflect nullability, force kLegacy.
     TypeParameter& legacy_type =
         TypeParameter::Handle(TypeParameter::Cast(type).ToNullability(
-            Nullability::kNonNullable, Heap::kOld));
+            Nullability::kLegacy, Heap::kOld));
     legacy_type ^= legacy_type.Canonicalize(Thread::Current());
     return CreateTypeVariableMirror(legacy_type, Object::null_instance());
   }

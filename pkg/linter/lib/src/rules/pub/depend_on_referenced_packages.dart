@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../../analyzer.dart';
 import '../../ast.dart';
-import '../../linter_lint_codes.dart';
 
 const _desc = r'Depend on referenced packages.';
 
@@ -46,22 +45,27 @@ dependencies:
 ''';
 
 class DependOnReferencedPackages extends LintRule {
+  static const LintCode code = LintCode('depend_on_referenced_packages',
+      "The imported package '{0}' isn't a dependency of the importing package.",
+      correctionMessage:
+          "Try adding a dependency for '{0}' in the 'pubspec.yaml' file.");
+
   DependOnReferencedPackages()
       : super(
             name: 'depend_on_referenced_packages',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.pub});
+            group: Group.pub);
 
   @override
-  LintCode get lintCode => LinterLintCode.depend_on_referenced_packages;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
     // Only lint if we have a pubspec.
     var package = context.package;
-    if (package is! PubPackage) return;
+    if (package is! PubWorkspacePackage) return;
     var pubspec = package.pubspec;
     if (pubspec == null) return;
     var name = pubspec.name?.value.text;
@@ -75,7 +79,7 @@ class DependOnReferencedPackages extends LintRule {
         for (var dep in dependencies)
           if (dep.name?.text != null) dep.name!.text!,
       if (devDependencies != null &&
-          !isInPublicDir(context.definingUnit.unit, context.package))
+          !isInPublicDir(context.currentUnit.unit, context.package))
         for (var dep in devDependencies)
           if (dep.name?.text != null) dep.name!.text!,
     ];

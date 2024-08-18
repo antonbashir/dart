@@ -20,13 +20,13 @@ void f(x) {
   if (x case int _ || double _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 LogicalOrPattern
   leftOperand: WildcardPattern
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     name: _
     matchedValueType: dynamic
@@ -34,7 +34,7 @@ LogicalOrPattern
   rightOperand: WildcardPattern
     type: NamedType
       name: double
-      element: dart:core::<fragment>::@class::double
+      element: dart:core::@class::double
       type: double
     name: _
     matchedValueType: dynamic
@@ -51,13 +51,13 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 LogicalOrPattern
   leftOperand: WildcardPattern
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     name: _
     matchedValueType: dynamic
@@ -65,7 +65,7 @@ LogicalOrPattern
   rightOperand: WildcardPattern
     type: NamedType
       name: double
-      element: dart:core::<fragment>::@class::double
+      element: dart:core::@class::double
       type: double
     name: _
     matchedValueType: dynamic

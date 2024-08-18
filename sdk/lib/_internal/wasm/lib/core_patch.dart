@@ -4,42 +4,30 @@
 
 import "dart:_internal"
     show
-        ClassID,
         CodeUnits,
+        ClassID,
         doubleToIntBits,
         EfficientLengthIterable,
         FixedLengthListMixin,
-        indexCheckWithName,
         intBitsToDouble,
         IterableElementError,
         jsonEncode,
         ListIterator,
         Lists,
-        makeFixedListUnmodifiable,
-        makeListFixedLength,
         mix64,
-        patch,
         POWERS_OF_TEN,
         SubListIterable,
-        Symbol,
         UnmodifiableListMixin,
-        unsafeCast,
-        WasmStringBase,
-        WasmTypedDataBase;
+        makeFixedListUnmodifiable,
+        makeListFixedLength,
+        patch,
+        unsafeCast;
 
-import "dart:_internal" as _internal;
+import "dart:_internal" as _internal show Symbol;
 
-import 'dart:_js_helper'
-    show
-        JS,
-        JSSyntaxRegExp,
-        quoteStringForRegExp,
-        jsStringFromDartString,
-        jsStringToDartString;
+import 'dart:_js_helper' show JS, JSSyntaxRegExp, quoteStringForRegExp;
 
-import 'dart:_list';
-
-import 'dart:_string' show JSStringImpl, JSStringImplExt;
+import 'dart:_js_types' show JSStringImpl;
 
 import "dart:collection"
     show
@@ -57,7 +45,7 @@ import 'dart:convert' show Encoding, utf8;
 
 import 'dart:math' show Random;
 
-import "dart:typed_data";
+import "dart:typed_data" show Uint8List, Uint16List;
 
 import 'dart:_object_helper';
 import 'dart:_string_helper';
@@ -68,7 +56,9 @@ part "bool.dart";
 part "closure.dart";
 part "double_patch.dart";
 part "errors_patch.dart";
+part "growable_list.dart";
 part "identical_patch.dart";
+part "list.dart";
 part "named_parameters.dart";
 part "object_patch.dart";
 part "record_patch.dart";

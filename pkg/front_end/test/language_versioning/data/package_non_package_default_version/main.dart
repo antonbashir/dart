@@ -7,7 +7,7 @@ import 'package:foo/foo.dart';
 // Version comes from the package foo having this file in it's root uri.
 
 /*library: 
- languageVersion=%VERSION_MARKER1%,
+ languageVersion=2.5,
  packageUri=package:foo
 */
 

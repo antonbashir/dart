@@ -95,33 +95,13 @@ void f() {
 ''');
   }
 
-  Future<void> test_read_prefixedIdentifier_identifier() async {
+  @failingTest
+  Future<void> test_propertyAccess() async {
+    // We should not offer to define a local variable named 'g'.
     await resolveTestCode('''
-void f(C c) {
-  c.test;
+void f(String s) {
+  s.g;
 }
-
-class C {}
-''');
-    await assertNoFix();
-  }
-
-  Future<void> test_read_prefixedIdentifier_prefix() async {
-    await resolveTestCode('''
-void f() {
-  test.foo;
-}
-''');
-    await assertNoFix();
-  }
-
-  Future<void> test_read_propertyAccess_propertyName() async {
-    await resolveTestCode('''
-void f(C c) {
-  (c).test;
-}
-
-class C {}
 ''');
     await assertNoFix();
   }
@@ -306,36 +286,5 @@ void f() {
   test += 42;
 }
 ''');
-  }
-
-  Future<void> test_write_prefixedIdentifier_identifier() async {
-    await resolveTestCode('''
-void f(C c) {
-  c.test = 0;
-}
-
-class C {}
-''');
-    await assertNoFix();
-  }
-
-  Future<void> test_write_prefixedIdentifier_prefix() async {
-    await resolveTestCode('''
-void f() {
-  test.foo = 0;
-}
-''');
-    await assertNoFix();
-  }
-
-  Future<void> test_write_propertyAccess_propertyName() async {
-    await resolveTestCode('''
-void f(C c) {
-  (c).test = 0;
-}
-
-class C {}
-''');
-    await assertNoFix();
   }
 }

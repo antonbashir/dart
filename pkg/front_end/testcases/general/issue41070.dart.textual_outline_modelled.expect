@@ -6,7 +6,5 @@ class Base {
 }
 
 expect(expected, actual) {}
-
 main() {}
-
 mixin Mixin {}

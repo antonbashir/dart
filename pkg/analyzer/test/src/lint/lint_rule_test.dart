@@ -10,6 +10,7 @@ import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/token.dart';
+import 'package:analyzer/src/dart/error/lint_codes.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:test/test.dart';
 
@@ -19,8 +20,8 @@ main() {
   group('lint rule', () {
     group('error code reporting', () {
       test('reportLintForToken (custom)', () {
-        var rule = TestRule();
-        var reporter =
+        final rule = TestRule();
+        final reporter =
             CollectingReporter(GatheringErrorListener(), _MockSource('mock'));
         rule.reporter = reporter;
 
@@ -29,8 +30,8 @@ main() {
         expect(reporter.code, customCode);
       });
       test('reportLintForToken (default)', () {
-        var rule = TestRule();
-        var reporter =
+        final rule = TestRule();
+        final reporter =
             CollectingReporter(GatheringErrorListener(), _MockSource('mock'));
         rule.reporter = reporter;
 
@@ -38,24 +39,24 @@ main() {
         expect(reporter.code, rule.lintCode);
       });
       test('reportLint (custom)', () {
-        var rule = TestRule();
-        var reporter =
+        final rule = TestRule();
+        final reporter =
             CollectingReporter(GatheringErrorListener(), _MockSource('mock'));
         rule.reporter = reporter;
 
-        var node = EmptyStatementImpl(
+        final node = EmptyStatementImpl(
           semicolon: SimpleToken(TokenType.SEMICOLON, 0),
         );
         rule.reportLint(node, errorCode: customCode);
         expect(reporter.code, customCode);
       });
       test('reportLint (default)', () {
-        var rule = TestRule();
-        var reporter =
+        final rule = TestRule();
+        final reporter =
             CollectingReporter(GatheringErrorListener(), _MockSource('mock'));
         rule.reporter = reporter;
 
-        var node = EmptyStatementImpl(
+        final node = EmptyStatementImpl(
           semicolon: SimpleToken(TokenType.SEMICOLON, 0),
         );
         rule.reportLint(node);
@@ -72,42 +73,15 @@ const LintCode customCode = LintCode(
 class CollectingReporter extends ErrorReporter {
   ErrorCode? code;
 
-  CollectingReporter(super.listener, super.source);
+  CollectingReporter(super.listener, super.source)
+      : super(isNonNullableByDefault: false);
 
   @override
-  void atElement(
-    Element element,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
+  void reportErrorForElement(ErrorCode errorCode, Element element,
+      [List<Object?>? arguments, List<DiagnosticMessage>? messages]) {
     code = errorCode;
   }
 
-  @override
-  void atNode(
-    AstNode node,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    code = errorCode;
-  }
-
-  @override
-  void atToken(
-    Token token,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    code = errorCode;
-  }
-
-  @Deprecated('Use atNode() instead')
   @override
   void reportErrorForNode(
     ErrorCode errorCode,
@@ -119,7 +93,6 @@ class CollectingReporter extends ErrorReporter {
     code = errorCode;
   }
 
-  @Deprecated('Use atToken() instead')
   @override
   void reportErrorForToken(
     ErrorCode errorCode,
@@ -133,19 +106,13 @@ class CollectingReporter extends ErrorReporter {
 }
 
 class TestRule extends LintRule {
-  static const LintCode code =
-      LintCode('test_rule', 'Test rule.', correctionMessage: 'Try test rule.');
-
   TestRule()
       : super(
           name: 'test_rule',
           description: '',
           details: '... tl;dr ...',
-          categories: {LintRuleCategory.errors},
+          group: Group.errors,
         );
-
-  @override
-  LintCode get lintCode => code;
 }
 
 class _MockSource implements Source {

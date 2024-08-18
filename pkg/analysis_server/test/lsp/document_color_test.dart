@@ -22,14 +22,14 @@ class DocumentColorPresentationTest extends AbstractLspAnalysisServerTest {
   late TestCode code;
   late String testFilePath;
   final uiImportUri = 'package:ui/ui.dart';
+
   Range get colorRange => code.range.range;
   set content(String content) => code = TestCode.parse(content);
-  Uri get testFileUri => pathContext.toUri(testFilePath);
 
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(flutter: true);
+    writePackageConfig(projectFolderPath, flutter: true);
 
     content = '';
     testFilePath = mainFilePath;
@@ -176,12 +176,12 @@ const white = [!Color(0xFFFFFFFF)!];
     );
   }
 
-  /// If a color is in a const context, we should not insert 'const'.
-  Future<void> test_colorConstructor_constContext_withSeparators() async {
+  /// If a color already has 'const' ahead of it, we should not insert another.
+  Future<void> test_colorConstructor_constKeyword() async {
     content = '''
 import 'package:flutter/material.dart';
 
-const white = [!Color(0xFF_FF_FF_FF)!];
+var white = const [!Color(0xFFFFFFFF)!];
 ''';
 
     await _checkPresentations(
@@ -190,25 +190,6 @@ const white = [!Color(0xFF_FF_FF_FF)!];
         _color('Color.fromARGB(255, 255, 0, 0)'),
         _color('Color.fromRGBO(255, 0, 0, 1)'),
         _color('Color(0xFFFF0000)'),
-      ],
-    );
-  }
-
-  /// If a color already has 'const' ahead of it, we should include it in the
-  /// replacement also.
-  Future<void> test_colorConstructor_constKeyword() async {
-    content = '''
-import 'package:flutter/material.dart';
-
-var white = [!const Color(0xFFFFFFFF)!];
-''';
-
-    await _checkPresentations(
-      select: Color(alpha: 1, red: 1, green: 0, blue: 0),
-      expectPresentations: [
-        _color('Color.fromARGB(255, 255, 0, 0)', withConst: true),
-        _color('Color.fromRGBO(255, 0, 0, 1)', withConst: true),
-        _color('Color(0xFFFF0000)', withConst: true),
       ],
     );
   }
@@ -230,52 +211,18 @@ var white = [!Color(0xFFFFFFFF)!];
     );
   }
 
-  Future<void> test_colorConstructor_nonConst_withSeparators() async {
-    content = '''
-import 'package:flutter/material.dart';
-
-var white = [!Color(0xFF_FF_FF_FF)!];
-''';
-
-    await _checkPresentations(
-      select: Color(alpha: 1, red: 1, green: 0, blue: 0),
-      expectPresentations: [
-        _color('Color.fromARGB(255, 255, 0, 0)'),
-        _color('Color.fromRGBO(255, 0, 0, 1)'),
-        _color('Color(0xFFFF0000)'),
-      ],
-    );
-  }
-
   Future<void> test_includesImportEdit() async {
-    failTestOnErrorDiagnostic = false; // Tests with missing import.
-
-    // We need to import `Colors` for a color range to be produced that would
-    // allow a picker, but we want to ensure the generated code needs to add
-    // an additional import to reference the `Color` class.
+    // Create a file that doesn't already import the required library.
     content = '''
-import 'package:flutter/material.dart' show Colors;^
-
 const white = [!Colors.white!];
 ''';
-
-    // Compute the expected additional edit to insert the import.
-    var edits = [
-      TextEdit(
-        range: Range(
-          start: code.position.position,
-          end: code.position.position,
-        ),
-        newText: "\nimport '$uiImportUri';",
-      )
-    ];
 
     await _checkPresentations(
       select: Color(alpha: 1, red: 1, green: 1, blue: 1),
       expectPresentations: [
-        _color('Color.fromARGB(255, 255, 255, 255)', additionalEdits: edits),
-        _color('Color.fromRGBO(255, 255, 255, 1)', additionalEdits: edits),
-        _color('Color(0xFFFFFFFF)', additionalEdits: edits),
+        _color('Color.fromARGB(255, 255, 255, 255)', importUri: uiImportUri),
+        _color('Color.fromRGBO(255, 255, 255, 1)', importUri: uiImportUri),
+        _color('Color(0xFFFFFFFF)', importUri: uiImportUri),
       ],
     );
   }
@@ -284,7 +231,7 @@ const white = [!Colors.white!];
     newFile(pubspecFilePath, simplePubspecContent);
     await initialize();
 
-    var colors = await getColorPresentation(
+    final colors = await getColorPresentation(
       pubspecFileUri,
       startOfDocRange,
       Color(alpha: 1, red: 1, green: 1, blue: 1),
@@ -318,19 +265,8 @@ const white = [!Color(0xFFFFFFFF)!];
     newFile(testFilePath, code.code);
     await initialize();
 
-    // Verify that the region in the test actually matches a region that we
-    // would product a range for when computing colours, otherwise the test
-    // might verify something different to what the user would actually see.
-    var colors = await getDocumentColors(testFileUri);
-    expect(
-      colors.map((color) => color.range),
-      contains(colorRange),
-      reason: 'Tests should only fetch colour presentations for ranges that '
-          'would be computed by server',
-    );
-
-    var colorPresentations = await getColorPresentation(
-      testFileUri,
+    final colorPresentations = await getColorPresentation(
+      pathContext.toUri(testFilePath),
       colorRange,
       select,
     );
@@ -342,11 +278,20 @@ const white = [!Color(0xFFFFFFFF)!];
   ColorPresentation _color(
     String label, {
     String? colorCode,
-    List<TextEdit>? additionalEdits,
+    String? importUri,
     bool withConst = false,
   }) {
     colorCode ??= (withConst ? 'const $label' : label);
-    var edit = TextEdit(range: colorRange, newText: colorCode);
+    final edit = TextEdit(range: colorRange, newText: colorCode);
+    final additionalEdits = importUri != null
+        ? [
+            TextEdit(
+              range: startOfDocRange,
+              newText: "import '$importUri';\n\n",
+            )
+          ]
+        : null;
+
     return ColorPresentation(
       label: label,
       textEdit: edit,
@@ -360,31 +305,31 @@ class DocumentColorTest extends AbstractLspAnalysisServerTest {
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(flutter: true);
+    writePackageConfig(projectFolderPath, flutter: true);
   }
 
   Future<void> test_nonDartFile() async {
     newFile(pubspecFilePath, simplePubspecContent);
     await initialize();
 
-    var colors = await getDocumentColors(pubspecFileUri);
+    final colors = await getDocumentColors(pubspecFileUri);
     expect(colors, isEmpty);
   }
 
   Future<void> test_simpleColor() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/material.dart';
 
 const red = [!Colors.red!];
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var colors = await getDocumentColors(mainFileUri);
+    final colors = await getDocumentColors(mainFileUri);
     expect(colors, hasLength(1));
 
-    var color = colors[0];
+    final color = colors[0];
     expect(color.range, code.range.range);
     expect(color.color.alpha, equals(1));
     expect(color.color.red, equals(1));

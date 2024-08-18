@@ -337,17 +337,8 @@ class _ServiceTesterRunner {
       timeout: Timeout.none,
     );
 
-    tearDown(() async {
+    tearDown(() {
       print('All service tests completed successfully.');
-      try {
-        await vm.dispose();
-      } catch (e, st) {
-        print('''
-Ignoring exception during vm-service connection shutdown:
-$e
-$st
-''');
-      }
       process.requestExit();
     });
 

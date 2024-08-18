@@ -8,7 +8,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:nativewrappers';
 
+import 'package:async_helper/async_helper.dart';
 import 'package:expect/expect.dart';
 
 import 'send_unsupported_objects_test.dart';

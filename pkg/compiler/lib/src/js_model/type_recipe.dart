@@ -67,16 +67,6 @@ abstract class TypeRecipeDomain {
     TypeEnvironmentStructure environmentStructure2,
     TypeRecipe recipe2,
   );
-
-  /// Combines the binding (extension) of [recipe1] with [recipe2], where both
-  /// recipes are evaluated against the same environment with structure
-  /// [environmentStructure].
-  ///
-  /// May return `null`.
-  TypeRecipeAndEnvironmentStructure? foldEvalBindEvalWithSharedEnvironment(
-      TypeEnvironmentStructure environmentStructure,
-      TypeRecipe recipe1,
-      TypeRecipe recipe2);
 }
 
 /// A type recipe and the structure of the type environment against which it is
@@ -489,22 +479,6 @@ class TypeRecipeDomainImpl implements TypeRecipeDomain {
 
     return null;
   }
-
-  @override
-  TypeRecipeAndEnvironmentStructure? foldEvalBindEvalWithSharedEnvironment(
-      TypeEnvironmentStructure environmentStructure,
-      TypeRecipe recipe1,
-      TypeRecipe recipe2) {
-    if (recipe1 is FullTypeEnvironmentRecipe &&
-        recipe2 is TypeExpressionRecipe) {
-      return TypeRecipeAndEnvironmentStructure(
-          FullTypeEnvironmentRecipe(
-              classType: recipe1.classType,
-              types: [...recipe1.types, recipe2.type]),
-          environmentStructure);
-    }
-    return null;
-  }
 }
 
 /// Substitution algorithm for transforming a TypeRecipe by substitution of
@@ -559,13 +533,13 @@ class _Substitution extends DartTypeSubstitutionVisitor<Null> {
   // Returns `null` if not bound.
   DartType? _lookupTypeVariableType(TypeVariableType type) {
     if (_variables != null) {
-      int index = _variables.indexOf(type);
+      int index = _variables!.indexOf(type);
       if (index >= 0) return _replacements![index];
     }
     if (_classEnvironment == null) return null;
 
-    if (_classEnvironment.element == _classValue?.element) {
-      int index = _classEnvironment.typeArguments.indexOf(type);
+    if (_classEnvironment!.element == _classValue?.element) {
+      int index = _classEnvironment!.typeArguments.indexOf(type);
       if (index >= 0) return _classValue!.typeArguments[index];
       return null;
     }

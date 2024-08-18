@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// SharedOptions=--enable-experiment=inline-class
 // Requirements=nnbd-strong
 
 // Test that external members returning numbers have correct semantics.
@@ -12,7 +13,7 @@ library number_test;
 import 'dart:js_interop';
 
 import 'package:expect/expect.dart';
-import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
+import 'package:expect/minitest.dart';
 
 extension type IntE(int _) {}
 

@@ -8,18 +8,18 @@ import 'package:test/test.dart';
 void main() {
   group('generated classes', () {
     test('can be checked for equality', () {
-      var a = TextDocumentIdentifier(uri: Uri.file('/a'));
-      var b = TextDocumentIdentifier(uri: Uri.file('/a'));
+      final a = TextDocumentIdentifier(uri: Uri.file('/a'));
+      final b = TextDocumentIdentifier(uri: Uri.file('/a'));
 
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
     });
 
     test('with list fields can be checked for equality', () {
-      var a = CodeActionLiteralSupportCodeActionKind(
+      final a = CodeActionLiteralSupportCodeActionKind(
         valueSet: [CodeActionKind.QuickFix],
       );
-      var b = CodeActionLiteralSupportCodeActionKind(
+      final b = CodeActionLiteralSupportCodeActionKind(
         valueSet: [CodeActionKind.QuickFix],
       );
 
@@ -28,10 +28,10 @@ void main() {
     });
 
     test('with aliased list fields can be checked for equality', () {
-      var a = TextDocumentRegistrationOptions(documentSelector: [
+      final a = TextDocumentRegistrationOptions(documentSelector: [
         TextDocumentFilterWithScheme(language: 'dart', scheme: 'file')
       ]);
-      var b = TextDocumentRegistrationOptions(documentSelector: [
+      final b = TextDocumentRegistrationOptions(documentSelector: [
         TextDocumentFilterWithScheme(language: 'dart', scheme: 'file')
       ]);
 
@@ -40,7 +40,7 @@ void main() {
     });
 
     test('with map fields can be checked for equality', () {
-      var a = WorkspaceEdit(changes: {
+      final a = WorkspaceEdit(changes: {
         Uri.file('/a'): [
           TextEdit(
               range: Range(
@@ -49,7 +49,7 @@ void main() {
               newText: 'a')
         ]
       });
-      var b = WorkspaceEdit(changes: {
+      final b = WorkspaceEdit(changes: {
         Uri.file('/a'): [
           TextEdit(
               range: Range(
@@ -64,19 +64,19 @@ void main() {
     });
 
     test('with unions of lists can be checked for equality', () {
-      var a = Either2<List<String>, List<int>>.t1(['test']);
-      var b = Either2<List<String>, List<int>>.t1(['test']);
+      final a = Either2<List<String>, List<int>>.t1(['test']);
+      final b = Either2<List<String>, List<int>>.t1(['test']);
 
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
     });
 
     test('with union fields can be checked for equality', () {
-      var a = SignatureInformation(
+      final a = SignatureInformation(
           label: 'a',
           documentation: Either2<MarkupContent, String>.t2('a'),
           parameters: []);
-      var b = SignatureInformation(
+      final b = SignatureInformation(
           label: 'a',
           documentation: Either2<MarkupContent, String>.t2('a'),
           parameters: []);
@@ -86,10 +86,10 @@ void main() {
     });
 
     test('consider subclasses when checking for equality', () {
-      var a = TextDocumentRegistrationOptions(documentSelector: [
+      final a = TextDocumentRegistrationOptions(documentSelector: [
         TextDocumentFilterWithScheme(language: 'dart', scheme: 'file')
       ]);
-      var b = TextDocumentSaveRegistrationOptions(
+      final b = TextDocumentSaveRegistrationOptions(
           includeText: true,
           documentSelector: [
             TextDocumentFilterWithScheme(language: 'dart', scheme: 'file')

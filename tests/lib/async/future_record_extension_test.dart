@@ -6,24 +6,17 @@ import "dart:async";
 
 import 'package:async_helper/async_helper.dart';
 import "package:expect/expect.dart";
-
-final fi = Future<int>.value(2);
-final fb = Future<bool>.value(true);
-final fs = Future<String>.value("s");
-final ie = StateError("ie error");
-final be = StateError("be error");
-final se = StateError("se error");
-final stie = StackTrace.fromString("ie stack");
-final stbe = StackTrace.fromString("be stack");
-final stse = StackTrace.fromString("se stack");
-final fie = Future<int>.error(ie, stie)..ignore();
-final fbe = Future<bool>.error(be, stbe)..ignore();
-final fse = Future<String>.error(se, stse)..ignore();
-final fsn = Completer<String>().future; // Never completes.
-final errorStackMapping = {ie: stie, be: stbe, se: stse};
+import '../../language/static_type_helper.dart';
 
 void main() async {
   asyncStart();
+  var fi = Future<int>.value(2);
+  var fb = Future<bool>.value(true);
+  var fs = Future<String>.value("s");
+  var fie = Future<int>.error("ie", StackTrace.empty)..ignore();
+  var fbe = Future<bool>.error("be", StackTrace.empty)..ignore();
+  var fse = Future<String>.error("se", StackTrace.empty)..ignore();
+  var fsn = Completer<String>().future; // Never completes.
 
   {
     // 2-tuple `wait` getter.
@@ -40,8 +33,7 @@ void main() async {
         (AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals((2, null), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(be, e.errors.$2?.error);
-      checkDefaultError(e, 1, [be]);
+      Expect.equals("be", e.errors.$2?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -53,9 +45,8 @@ void main() async {
     } on ParallelWaitError<(int?, bool?),
         (AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals((null, null), e.values);
-      Expect.equals(ie, e.errors.$1?.error);
-      Expect.equals(be, e.errors.$2?.error);
-      checkDefaultError(e, 2, [ie, be]);
+      Expect.equals("ie", e.errors.$1?.error);
+      Expect.equals("be", e.errors.$2?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -76,9 +67,8 @@ void main() async {
         (AsyncError?, AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals((true, null, 2), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(se, e.errors.$2?.error);
+      Expect.equals("se", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      checkDefaultError(e, 1, [se]);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -90,10 +80,9 @@ void main() async {
     } on ParallelWaitError<(bool?, String?, int?),
         (AsyncError?, AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals((null, null, null), e.values);
-      Expect.equals(be, e.errors.$1?.error);
-      Expect.equals(se, e.errors.$2?.error);
-      Expect.equals(ie, e.errors.$3?.error);
-      checkDefaultError(e, 3, [ie, be, se]);
+      Expect.equals("be", e.errors.$1?.error);
+      Expect.equals("se", e.errors.$2?.error);
+      Expect.equals("ie", e.errors.$3?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -114,10 +103,9 @@ void main() async {
         (AsyncError?, AsyncError?, AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals(("s", null, true, null), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(ie, e.errors.$2?.error);
+      Expect.equals("ie", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(se, e.errors.$4?.error);
-      checkDefaultError(e, 2, [ie, se]);
+      Expect.equals("se", e.errors.$4?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -129,11 +117,10 @@ void main() async {
     } on ParallelWaitError<(String?, int?, bool?, String?),
         (AsyncError?, AsyncError?, AsyncError?, AsyncError?)> catch (e, s) {
       Expect.equals((null, null, null, null), e.values);
-      Expect.equals(se, e.errors.$1?.error);
-      Expect.equals(ie, e.errors.$2?.error);
-      Expect.equals(be, e.errors.$3?.error);
-      Expect.equals(se, e.errors.$4?.error);
-      checkDefaultError(e, 4, [se, ie, be]);
+      Expect.equals("se", e.errors.$1?.error);
+      Expect.equals("ie", e.errors.$2?.error);
+      Expect.equals("be", e.errors.$3?.error);
+      Expect.equals("se", e.errors.$4?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -161,11 +148,10 @@ void main() async {
         )> catch (e, s) {
       Expect.equals((2, null, "s", null, true), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(be, e.errors.$2?.error);
+      Expect.equals("be", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(ie, e.errors.$4?.error);
+      Expect.equals("ie", e.errors.$4?.error);
       Expect.isNull(e.errors.$5);
-      checkDefaultError(e, 2, [ie, be]);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -184,12 +170,11 @@ void main() async {
           AsyncError?
         )> catch (e, s) {
       Expect.equals((null, null, null, null, null), e.values);
-      Expect.equals(ie, e.errors.$1?.error);
-      Expect.equals(be, e.errors.$2?.error);
-      Expect.equals(se, e.errors.$3?.error);
-      Expect.equals(ie, e.errors.$4?.error);
-      Expect.equals(be, e.errors.$5?.error);
-      checkDefaultError(e, 5, [ie, be, se]);
+      Expect.equals("ie", e.errors.$1?.error);
+      Expect.equals("be", e.errors.$2?.error);
+      Expect.equals("se", e.errors.$3?.error);
+      Expect.equals("ie", e.errors.$4?.error);
+      Expect.equals("be", e.errors.$5?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -218,12 +203,11 @@ void main() async {
         )> catch (e, s) {
       Expect.equals((true, null, 2, null, "s", null), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(se, e.errors.$2?.error);
+      Expect.equals("se", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(be, e.errors.$4?.error);
+      Expect.equals("be", e.errors.$4?.error);
       Expect.isNull(e.errors.$5);
-      Expect.equals(ie, e.errors.$6?.error);
-      checkDefaultError(e, 3, [ie, be, se]);
+      Expect.equals("ie", e.errors.$6?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -243,13 +227,12 @@ void main() async {
           AsyncError?
         )> catch (e, s) {
       Expect.equals((null, null, null, null, null, null), e.values);
-      Expect.equals(be, e.errors.$1?.error);
-      Expect.equals(se, e.errors.$2?.error);
-      Expect.equals(ie, e.errors.$3?.error);
-      Expect.equals(be, e.errors.$4?.error);
-      Expect.equals(se, e.errors.$5?.error);
-      Expect.equals(ie, e.errors.$6?.error);
-      checkDefaultError(e, 6, [ie, be, se]);
+      Expect.equals("be", e.errors.$1?.error);
+      Expect.equals("se", e.errors.$2?.error);
+      Expect.equals("ie", e.errors.$3?.error);
+      Expect.equals("be", e.errors.$4?.error);
+      Expect.equals("se", e.errors.$5?.error);
+      Expect.equals("ie", e.errors.$6?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -279,13 +262,12 @@ void main() async {
         )> catch (e, s) {
       Expect.equals(("s", null, true, null, 2, null, "s"), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(ie, e.errors.$2?.error);
+      Expect.equals("ie", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(se, e.errors.$4?.error);
+      Expect.equals("se", e.errors.$4?.error);
       Expect.isNull(e.errors.$5);
-      Expect.equals(be, e.errors.$6?.error);
+      Expect.equals("be", e.errors.$6?.error);
       Expect.isNull(e.errors.$7);
-      checkDefaultError(e, 3, [ie, be, se]);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -306,14 +288,13 @@ void main() async {
           AsyncError?
         )> catch (e, s) {
       Expect.equals((null, null, null, null, null, null, null), e.values);
-      Expect.equals(se, e.errors.$1?.error);
-      Expect.equals(ie, e.errors.$2?.error);
-      Expect.equals(be, e.errors.$3?.error);
-      Expect.equals(se, e.errors.$4?.error);
-      Expect.equals(ie, e.errors.$5?.error);
-      Expect.equals(be, e.errors.$6?.error);
-      Expect.equals(se, e.errors.$7?.error);
-      checkDefaultError(e, 7, [ie, be, se]);
+      Expect.equals("se", e.errors.$1?.error);
+      Expect.equals("ie", e.errors.$2?.error);
+      Expect.equals("be", e.errors.$3?.error);
+      Expect.equals("se", e.errors.$4?.error);
+      Expect.equals("ie", e.errors.$5?.error);
+      Expect.equals("be", e.errors.$6?.error);
+      Expect.equals("se", e.errors.$7?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -344,14 +325,13 @@ void main() async {
         )> catch (e, s) {
       Expect.equals((2, null, "s", null, true, null, 2, null), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(be, e.errors.$2?.error);
+      Expect.equals("be", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(ie, e.errors.$4?.error);
+      Expect.equals("ie", e.errors.$4?.error);
       Expect.isNull(e.errors.$5);
-      Expect.equals(se, e.errors.$6?.error);
+      Expect.equals("se", e.errors.$6?.error);
       Expect.isNull(e.errors.$7);
-      Expect.equals(be, e.errors.$8?.error);
-      checkDefaultError(e, 4, [ie, be, se]);
+      Expect.equals("be", e.errors.$8?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -373,15 +353,14 @@ void main() async {
           AsyncError?
         )> catch (e, s) {
       Expect.equals((null, null, null, null, null, null, null, null), e.values);
-      Expect.equals(ie, e.errors.$1?.error);
-      Expect.equals(be, e.errors.$2?.error);
-      Expect.equals(se, e.errors.$3?.error);
-      Expect.equals(ie, e.errors.$4?.error);
-      Expect.equals(be, e.errors.$5?.error);
-      Expect.equals(se, e.errors.$6?.error);
-      Expect.equals(ie, e.errors.$7?.error);
-      Expect.equals(be, e.errors.$8?.error);
-      checkDefaultError(e, 8, [ie, be, se]);
+      Expect.equals("ie", e.errors.$1?.error);
+      Expect.equals("be", e.errors.$2?.error);
+      Expect.equals("se", e.errors.$3?.error);
+      Expect.equals("ie", e.errors.$4?.error);
+      Expect.equals("be", e.errors.$5?.error);
+      Expect.equals("se", e.errors.$6?.error);
+      Expect.equals("ie", e.errors.$7?.error);
+      Expect.equals("be", e.errors.$8?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -413,15 +392,14 @@ void main() async {
         )> catch (e, s) {
       Expect.equals((true, null, 2, null, "s", null, true, null, 2), e.values);
       Expect.isNull(e.errors.$1);
-      Expect.equals(se, e.errors.$2?.error);
+      Expect.equals("se", e.errors.$2?.error);
       Expect.isNull(e.errors.$3);
-      Expect.equals(be, e.errors.$4?.error);
+      Expect.equals("be", e.errors.$4?.error);
       Expect.isNull(e.errors.$5);
-      Expect.equals(ie, e.errors.$6?.error);
+      Expect.equals("ie", e.errors.$6?.error);
       Expect.isNull(e.errors.$7);
-      Expect.equals(se, e.errors.$8?.error);
+      Expect.equals("se", e.errors.$8?.error);
       Expect.isNull(e.errors.$9);
-      checkDefaultError(e, 4, [ie, be, se]);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
@@ -445,38 +423,19 @@ void main() async {
         )> catch (e, s) {
       Expect.equals(
           (null, null, null, null, null, null, null, null, null), e.values);
-      Expect.equals(be, e.errors.$1?.error);
-      Expect.equals(se, e.errors.$2?.error);
-      Expect.equals(ie, e.errors.$3?.error);
-      Expect.equals(be, e.errors.$4?.error);
-      Expect.equals(se, e.errors.$5?.error);
-      Expect.equals(ie, e.errors.$6?.error);
-      Expect.equals(be, e.errors.$7?.error);
-      Expect.equals(se, e.errors.$8?.error);
-      Expect.equals(ie, e.errors.$9?.error);
-      checkDefaultError(e, 9, [ie, be, se]);
+      Expect.equals("be", e.errors.$1?.error);
+      Expect.equals("se", e.errors.$2?.error);
+      Expect.equals("ie", e.errors.$3?.error);
+      Expect.equals("be", e.errors.$4?.error);
+      Expect.equals("se", e.errors.$5?.error);
+      Expect.equals("ie", e.errors.$6?.error);
+      Expect.equals("be", e.errors.$7?.error);
+      Expect.equals("se", e.errors.$8?.error);
+      Expect.equals("ie", e.errors.$9?.error);
     } on Object catch (e) {
       Expect.fail("Did not throw expected error: ${e.runtimeType}");
     }
   }
 
   asyncEnd();
-}
-
-void checkDefaultError(
-    ParallelWaitError error, int errorCount, List<Object> expectedErrors) {
-  var toString = error.toString();
-  if (errorCount > 1) {
-    Expect.contains("ParallelWaitError($errorCount errors):", toString);
-  } else {
-    Expect.contains("ParallelWaitError:", toString);
-  }
-  for (var expectedError in expectedErrors) {
-    if (toString.contains(expectedError.toString())) {
-      var expectedStack = errorStackMapping[expectedError]!;
-      Expect.equals(error.stackTrace.toString(), expectedStack.toString());
-      return;
-    }
-  }
-  Expect.fail("Error toString did not contain one of the expected errors");
 }

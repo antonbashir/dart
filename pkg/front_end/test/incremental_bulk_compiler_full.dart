@@ -3,15 +3,21 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:expect/expect.dart' show Expect;
+
 import 'package:front_end/src/api_prototype/compiler_options.dart'
     show CompilerOptions, DiagnosticMessage;
+
 import 'package:front_end/src/api_prototype/incremental_kernel_generator.dart'
     show IncrementalCompilerResult, IncrementalKernelGenerator;
+
 import 'package:front_end/src/compute_platform_binaries_location.dart'
     show computePlatformBinariesLocation;
+
 import 'package:kernel/kernel.dart' show Component;
+
 import 'package:kernel/text/ast_to_text.dart'
     show globalDebuggingNames, NameSystem;
+
 import 'package:testing/testing.dart'
     show Chain, ChainContext, Result, Step, TestDescription, runMe;
 
@@ -30,6 +36,13 @@ class Context extends ChainContext {
   final List<Step> steps = const <Step>[
     const RunTest(),
   ];
+
+  // Override special handling of negative tests.
+  @override
+  Result processTestResult(
+      TestDescription description, Result result, bool last) {
+    return result;
+  }
 
   IncrementalKernelGenerator? compiler;
 }

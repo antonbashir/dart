@@ -8,7 +8,7 @@
       "name": "sourcemaps",
       "kind": "Chain",
       "source": "sourcemaps_suite.dart",
-      "root": "testfiles",
+      "path": "testfiles",
       "status": "sourcemaps.status",
       "pattern": [
         "\\.dart$",
@@ -21,7 +21,7 @@
       "name": "stacktrace",
       "kind": "Chain",
       "source": "stacktrace_suite.dart",
-      "root": "stacktrace_testfiles",
+      "path": "stacktrace_testfiles",
       "status": "stacktrace.status",
       "pattern": [
         "\\.dart$"

@@ -6,8 +6,7 @@ import 'type_analyzer.dart';
 
 /// Result for analyzing an assigned variable pattern in
 /// [TypeAnalyzer.analyzeAssignedVariablePattern].
-class AssignedVariablePatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class AssignedVariablePatternResult<Error> {
   /// Error for when a variable was assigned multiple times within a pattern.
   final Error? duplicateAssignmentPatternVariableError;
 
@@ -17,14 +16,12 @@ class AssignedVariablePatternResult<Type extends Object, Error>
 
   AssignedVariablePatternResult(
       {required this.duplicateAssignmentPatternVariableError,
-      required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      required this.patternTypeMismatchInIrrefutableContextError});
 }
 
 /// Result for analyzing a constant pattern in
 /// [TypeAnalyzer.analyzeConstantPattern].
-class ConstantPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class ConstantPatternResult<Type extends Object, Error> {
   /// The static type of the constant expression.
   final Type expressionType;
 
@@ -38,14 +35,12 @@ class ConstantPatternResult<Type extends Object, Error>
   ConstantPatternResult(
       {required this.expressionType,
       required this.refutablePatternInIrrefutableContextError,
-      required this.caseExpressionTypeMismatchError,
-      required super.matchedValueType});
+      required this.caseExpressionTypeMismatchError});
 }
 
 /// Result for analyzing a declared variable pattern in
 /// [TypeAnalyzer.analyzeDeclaredVariablePattern].
-class DeclaredVariablePatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class DeclaredVariablePatternResult<Type extends Object, Error> {
   /// The static type of the variable.
   final Type staticType;
 
@@ -55,8 +50,7 @@ class DeclaredVariablePatternResult<Type extends Object, Error>
 
   DeclaredVariablePatternResult(
       {required this.staticType,
-      required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      required this.patternTypeMismatchInIrrefutableContextError});
 }
 
 /// Container for the result of running type analysis on an expression.
@@ -113,8 +107,7 @@ class IntTypeAnalysisResult<Type extends Object>
 }
 
 /// Result for analyzing a list pattern in [TypeAnalyzer.analyzeListPattern].
-class ListPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class ListPatternResult<Type extends Object, Error> {
   /// The required type of the list pattern.
   final Type requiredType;
 
@@ -132,32 +125,21 @@ class ListPatternResult<Type extends Object, Error>
   ListPatternResult(
       {required this.requiredType,
       required this.duplicateRestPatternErrors,
-      required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      required this.patternTypeMismatchInIrrefutableContextError});
 }
 
 /// Result for analyzing a logical or pattern in
 /// [TypeAnalyzer.analyzeLogicalOrPattern].
-class LogicalOrPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class LogicalOrPatternResult<Error> {
   /// Error for when the pattern occurred in an irrefutable context.
   final Error? refutablePatternInIrrefutableContextError;
 
   LogicalOrPatternResult(
-      {required this.refutablePatternInIrrefutableContextError,
-      required super.matchedValueType});
-}
-
-/// Result for analyzing a pattern in [TypeAnalyzer].
-class PatternResult<Type extends Object> {
-  /// The matched value type that was used to type check the pattern.
-  final Type matchedValueType;
-
-  PatternResult({required this.matchedValueType});
+      {required this.refutablePatternInIrrefutableContextError});
 }
 
 /// Result for analyzing a map pattern in [TypeAnalyzer.analyzeMapPattern].
-class MapPatternResult<Type extends Object, Error> extends PatternResult<Type> {
+class MapPatternResult<Type extends Object, Error> {
   /// The required type of the map pattern.
   final Type requiredType;
 
@@ -177,8 +159,7 @@ class MapPatternResult<Type extends Object, Error> extends PatternResult<Type> {
       {required this.requiredType,
       required this.patternTypeMismatchInIrrefutableContextError,
       required this.emptyMapPatternError,
-      required this.restPatternErrors,
-      required super.matchedValueType});
+      required this.restPatternErrors});
 }
 
 /// Information about the code context surrounding a pattern match.
@@ -250,8 +231,9 @@ class MatchContext<Node extends Object, Expression extends Node,
         unnecessaryWildcardKind: unnecessaryWildcardKind,
       );
 
-  /// Returns a modified version of `this`, with [switchScrutinee] set to `null`
-  /// (because this context is not for a top-level pattern anymore).
+  /// Returns a modified version of `this`, with both [initializer] and
+  /// [switchScrutinee] set to `null` (because this context is not for a
+  /// top-level pattern anymore).
   MatchContext<Node, Expression, Pattern, Type, Variable>
       withUnnecessaryWildcardKind(
           UnnecessaryWildcardKind? unnecessaryWildcardKind) {
@@ -269,8 +251,7 @@ class MatchContext<Node extends Object, Expression extends Node,
 
 /// Result for analyzing a null check or null assert pattern in
 /// [TypeAnalyzer.analyzeNullCheckOrAssertPattern].
-class NullCheckOrAssertPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class NullCheckOrAssertPatternResult<Error> {
   /// Error for when the pattern occurred in an irrefutable context.
   final Error? refutablePatternInIrrefutableContextError;
 
@@ -279,14 +260,12 @@ class NullCheckOrAssertPatternResult<Type extends Object, Error>
 
   NullCheckOrAssertPatternResult(
       {required this.refutablePatternInIrrefutableContextError,
-      required this.matchedTypeIsStrictlyNonNullableError,
-      required super.matchedValueType});
+      required this.matchedTypeIsStrictlyNonNullableError});
 }
 
 /// Result for analyzing an object pattern in
 /// [TypeAnalyzer.analyzeObjectPattern].
-class ObjectPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class ObjectPatternResult<Type extends Object, Error> {
   /// The required type of the object pattern.
   final Type requiredType;
 
@@ -305,15 +284,14 @@ class ObjectPatternResult<Type extends Object, Error>
   ObjectPatternResult(
       {required this.requiredType,
       required this.duplicateRecordPatternFieldErrors,
-      required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      required this.patternTypeMismatchInIrrefutableContextError});
 }
 
 /// Container for the result of running type analysis on a pattern assignment.
-class PatternAssignmentAnalysisResult<Type extends Object,
-    TypeSchema extends Object> extends SimpleTypeAnalysisResult<Type> {
+class PatternAssignmentAnalysisResult<Type extends Object>
+    extends SimpleTypeAnalysisResult<Type> {
   /// The type schema of the pattern on the left hand size of the assignment.
-  final TypeSchema patternSchema;
+  final Type patternSchema;
 
   PatternAssignmentAnalysisResult({
     required this.patternSchema,
@@ -323,10 +301,9 @@ class PatternAssignmentAnalysisResult<Type extends Object,
 
 /// Container for the result of running type analysis on a pattern variable
 /// declaration.
-class PatternVariableDeclarationAnalysisResult<Type extends Object,
-    TypeSchema extends Object> {
+class PatternVariableDeclarationAnalysisResult<Type extends Object> {
   /// The type schema of the pattern on the left hand size of the declaration.
-  final TypeSchema patternSchema;
+  final Type patternSchema;
 
   /// The type of the initializer expression.
   final Type initializerType;
@@ -357,8 +334,7 @@ class PatternForInResult<Type extends Object, Error> {
 
 /// Result for analyzing a record pattern in
 /// [TypeAnalyzer.analyzeRecordPattern].
-class RecordPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class RecordPatternResult<Type extends Object, Error> {
   /// The required type of the record pattern.
   final Type requiredType;
 
@@ -377,14 +353,12 @@ class RecordPatternResult<Type extends Object, Error>
   RecordPatternResult(
       {required this.requiredType,
       required this.duplicateRecordPatternFieldErrors,
-      required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      required this.patternTypeMismatchInIrrefutableContextError});
 }
 
 /// Result for analyzing a relational pattern in
 /// [TypeAnalyzer.analyzeRelationalPattern].
-class RelationalPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class RelationalPatternResult<Type extends Object, Error> {
   /// The static type of the operand.
   final Type operandType;
 
@@ -402,8 +376,7 @@ class RelationalPatternResult<Type extends Object, Error>
       {required this.operandType,
       required this.refutablePatternInIrrefutableContextError,
       required this.argumentTypeNotAssignableError,
-      required this.operatorReturnTypeNotAssignableToBoolError,
-      required super.matchedValueType});
+      required this.operatorReturnTypeNotAssignableToBoolError});
 }
 
 /// Container for the result of running type analysis on an expression that does
@@ -513,13 +486,11 @@ enum UnnecessaryWildcardKind {
 
 /// Result for analyzing a wildcard pattern
 /// [TypeAnalyzer.analyzeWildcardPattern].
-class WildcardPatternResult<Type extends Object, Error>
-    extends PatternResult<Type> {
+class WildcardPatternResult<Error> {
   /// Error for when the matched value type is not assignable to the wildcard
   /// type in an irrefutable context.
   final Error? patternTypeMismatchInIrrefutableContextError;
 
   WildcardPatternResult(
-      {required this.patternTypeMismatchInIrrefutableContextError,
-      required super.matchedValueType});
+      {required this.patternTypeMismatchInIrrefutableContextError});
 }

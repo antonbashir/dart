@@ -15,7 +15,7 @@ void dependencyValidator(PubspecValidationContext ctx) {
   /// values are the specifications of those dependencies. The map is extracted
   /// from the given [contents] using the given [key].
   Map<dynamic, YamlNode> getDeclaredDependencies(String key) {
-    var contents = ctx.contents;
+    final contents = ctx.contents;
     if (contents is! YamlMap) return {};
     var field = contents.nodes[key];
     if (field == null || (field is YamlScalar && field.value == null)) {
@@ -80,13 +80,13 @@ void dependencyValidator(PubspecValidationContext ctx) {
     }
   }
 
-  var declaredDependencies =
+  final declaredDependencies =
       getDeclaredDependencies(PubspecField.DEPENDENCIES_FIELD);
-  var declaredDevDependencies =
+  final declaredDevDependencies =
       getDeclaredDependencies(PubspecField.DEV_DEPENDENCIES_FIELD);
 
   bool isPublishablePackage = false;
-  var contents = ctx.contents;
+  final contents = ctx.contents;
   if (contents is! YamlMap) return;
   var version = contents[PubspecField.VERSION_FIELD];
   if (version != null) {

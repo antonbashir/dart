@@ -10,13 +10,10 @@ import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid positional boolean parameters.';
 
 const _details = r'''
-From [Effective Dart](https://dart.dev/effective-dart/design#avoid-positional-boolean-parameters):
-
 **AVOID** positional boolean parameters.
 
 Positional boolean parameters are a bad practice because they are very
@@ -42,18 +39,19 @@ Button(ButtonState.enabled);
 ''';
 
 class AvoidPositionalBooleanParameters extends LintRule {
+  static const LintCode code = LintCode('avoid_positional_boolean_parameters',
+      "'bool' parameters should be named parameters.",
+      correctionMessage: 'Try converting the parameter to a named parameter.');
+
   AvoidPositionalBooleanParameters()
       : super(
             name: 'avoid_positional_boolean_parameters',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_positional_boolean_parameters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -81,9 +79,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
-    // Don't lint augmentations.
-    if (node.isAugmentation) return;
-
     var declaredElement = node.declaredElement;
     if (declaredElement != null && !declaredElement.isPrivate) {
       checkParams(node.parameters.parameters);
@@ -92,9 +87,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    // Don't lint augmentations.
-    if (node.isAugmentation) return;
-
     var declaredElement = node.declaredElement;
     if (declaredElement != null && !declaredElement.isPrivate) {
       checkParams(node.functionExpression.parameters?.parameters);
@@ -108,9 +100,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    // Don't lint augmentations.
-    if (node.isAugmentation) return;
-
     var declaredElement = node.declaredElement;
     if (declaredElement != null &&
         !node.isSetter &&

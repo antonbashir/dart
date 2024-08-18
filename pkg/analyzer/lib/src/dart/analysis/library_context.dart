@@ -8,9 +8,7 @@ import 'dart:typed_data';
 import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/dart/element/element.dart'
     show CompilationUnitElement, LibraryElement;
-import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/context/context.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options_map.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/file_state.dart';
@@ -20,13 +18,14 @@ import 'package:analyzer/src/dart/analysis/performance_logger.dart';
 import 'package:analyzer/src/dart/analysis/session.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/exception/exception.dart';
+import 'package:analyzer/src/generated/engine.dart'
+    show AnalysisContext, AnalysisOptionsImpl;
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:analyzer/src/summary2/bundle_reader.dart';
 import 'package:analyzer/src/summary2/link.dart';
 import 'package:analyzer/src/summary2/linked_element_factory.dart';
 import 'package:analyzer/src/summary2/macro.dart';
-import 'package:analyzer/src/summary2/macro_cache.dart';
 import 'package:analyzer/src/summary2/reference.dart';
 import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:collection/collection.dart';
@@ -43,7 +42,6 @@ class LibraryContext {
   final InfoDeclarationStore infoDeclarationStore;
   final FileSystemState fileSystemState;
   final MacroSupport? macroSupport;
-  final File? packagesFile;
   final SummaryDataStore store = SummaryDataStore();
 
   late final AnalysisContextImpl analysisContext;
@@ -58,15 +56,14 @@ class LibraryContext {
     required this.byteStore,
     required this.infoDeclarationStore,
     required this.fileSystemState,
-    required AnalysisOptionsMap analysisOptionsMap,
+    required AnalysisOptionsImpl analysisOptions,
     required DeclaredVariables declaredVariables,
     required SourceFactory sourceFactory,
     required this.macroSupport,
-    required this.packagesFile,
     required SummaryDataStore? externalSummaries,
   }) {
     analysisContext = AnalysisContextImpl(
-      analysisOptionsMap: analysisOptionsMap,
+      analysisOptions: analysisOptions,
       declaredVariables: declaredVariables,
       sourceFactory: sourceFactory,
     );
@@ -96,9 +93,23 @@ class LibraryContext {
     LibraryFileKind library,
     FileState unit,
   ) {
+    final kind = unit.kind;
+
+    String unitContainerName;
+    if (library == kind.library) {
+      unitContainerName = switch (unit.kind) {
+        AugmentationFileKind() => '@augmentation',
+        _ => '@unit',
+      };
+    } else {
+      // Recovery.
+      library = kind.asLibrary;
+      unitContainerName = '@unit';
+    }
+
     var reference = elementFactory.rootReference
         .getChild(library.file.uriStr)
-        .getChild('@fragment')
+        .getChild(unitContainerName)
         .getChild(unit.uriStr);
     var element = elementFactory.elementOfReference(reference);
     return element as CompilationUnitElementImpl;
@@ -108,7 +119,7 @@ class LibraryContext {
   ///
   /// Returns the keys of the artifacts that are no longer used.
   Set<String> dispose() {
-    var keys = unloadAll();
+    final keys = unloadAll();
     elementFactory.dispose();
     return keys;
   }
@@ -170,16 +181,6 @@ class LibraryContext {
         }
       }
 
-      var macroResultKey = cycle.cachedMacrosKey;
-      var inputMacroResults = <LibraryFileKind, MacroResultInput>{};
-      if (byteStore.get(macroResultKey) case var bytes?) {
-        _readMacroResults(
-          cycle: cycle,
-          bytes: bytes,
-          macroResults: inputMacroResults,
-        );
-      }
-
       var linkedBytes = byteStore.get(cycle.linkedKey);
 
       if (linkedBytes == null) {
@@ -191,17 +192,11 @@ class LibraryContext {
 
         LinkResult linkResult;
         try {
-          linkResult = await performance.runAsync(
-            'link',
-            (performance) async {
-              return await link(
-                elementFactory: elementFactory,
-                performance: performance,
-                inputLibraries: cycle.libraries,
-                inputMacroResults: inputMacroResults,
-                macroExecutor: this.macroSupport?.executor,
-              );
-            },
+          linkResult = await link(
+            elementFactory: elementFactory,
+            performance: OperationPerformanceImpl('link'),
+            inputLibraries: cycle.libraries,
+            macroExecutor: this.macroSupport?.executor,
           );
           librariesLinked += cycle.libraries.length;
         } catch (exception, stackTrace) {
@@ -214,12 +209,6 @@ class LibraryContext {
         testData?.forCycle(cycle).putKeys.add(cycle.linkedKey);
         bytesPut += linkedBytes.length;
 
-        _writeMacroResults(
-          cycle: cycle,
-          linkResult: linkResult,
-          macroResultKey: macroResultKey,
-        );
-
         librariesLinkedTimer.stop();
       } else {
         testData?.forCycle(cycle).getKeys.add(cycle.linkedKey);
@@ -228,33 +217,24 @@ class LibraryContext {
         // TODO(scheglov): Take / clear parsed units in files.
         bytesGet += linkedBytes.length;
         librariesLoaded += cycle.libraries.length;
-        var bundleReader = BundleReader(
+        final bundleReader = BundleReader(
           elementFactory: elementFactory,
           unitsInformativeBytes: unitsInformativeBytes,
           resolutionBytes: linkedBytes,
           infoDeclarationStore: infoDeclarationStore,
         );
         elementFactory.addBundle(bundleReader);
-        _addMacroParts(cycle, bundleReader);
+        _addMacroAugmentations(cycle, bundleReader);
       }
 
       // If we can compile to kernel, check if there are macros.
-      var macroSupport = this.macroSupport;
-      var packagesFile = this.packagesFile;
-      if (macroSupport is KernelMacroSupport &&
-          packagesFile != null &&
-          macroLibraries.isNotEmpty) {
+      final macroSupport = this.macroSupport;
+      if (macroSupport is KernelMacroSupport && macroLibraries.isNotEmpty) {
         var kernelBytes = byteStore.get(cycle.macroKey);
         if (kernelBytes == null) {
-          kernelBytes = await performance.runAsync<Uint8List>(
-            'macroCompileKernel',
-            (performance) async {
-              return await macroSupport.builder.build(
-                fileSystem: _MacroFileSystem(fileSystemState),
-                packageFilePath: packagesFile.path,
-                libraries: macroLibraries,
-              );
-            },
+          kernelBytes = await macroSupport.builder.build(
+            fileSystem: _MacroFileSystem(fileSystemState),
+            libraries: macroLibraries,
           );
           byteStore.putGet(cycle.macroKey, kernelBytes);
           bytesPut += kernelBytes.length;
@@ -271,14 +251,7 @@ class LibraryContext {
     }
 
     await logger.runAsync('Prepare linked bundles', () async {
-      var libraryCycle = performance.run('libraryCycle', (performance) {
-        fileSystemState.newFileOperationPerformance = performance;
-        try {
-          return targetLibrary.libraryCycle;
-        } finally {
-          fileSystemState.newFileOperationPerformance = null;
-        }
-      });
+      var libraryCycle = targetLibrary.libraryCycle;
       await loadBundle(libraryCycle);
       logger.writeln(
         '[librariesTotal: $librariesTotal]'
@@ -303,7 +276,7 @@ class LibraryContext {
     );
 
     loadedBundles.removeWhere((cycle) {
-      var cycleFiles = cycle.libraries.map((e) => e.file);
+      final cycleFiles = cycle.libraries.map((e) => e.file);
       if (cycleFiles.any(removed.contains)) {
         removedKeys.add(cycle.linkedKey);
         return true;
@@ -316,10 +289,10 @@ class LibraryContext {
   ///
   /// Returns the keys of the artifacts that are no longer used.
   Set<String> unloadAll() {
-    var keySet = <String>{};
-    var uriSet = <Uri>{};
+    final keySet = <String>{};
+    final uriSet = <Uri>{};
 
-    for (var cycle in loadedBundles) {
+    for (final cycle in loadedBundles) {
       keySet.add(cycle.linkedKey);
       uriSet.addAll(cycle.libraries.map((e) => e.file.uri));
     }
@@ -330,17 +303,17 @@ class LibraryContext {
     return keySet;
   }
 
-  /// Create files with macro generated parts.
-  void _addMacroParts(LibraryCycle cycle, BundleReader bundleReader) {
-    for (var libraryReader in bundleReader.libraryMap.values) {
-      var macroGeneratedCode = libraryReader.macroGeneratedCode;
+  /// Create files with macro generated augmentation libraries.
+  void _addMacroAugmentations(LibraryCycle cycle, BundleReader bundleReader) {
+    for (final libraryReader in bundleReader.libraryMap.values) {
+      final macroGeneratedCode = libraryReader.macroGeneratedCode;
       if (macroGeneratedCode != null) {
-        for (var libraryKind in cycle.libraries) {
+        for (final libraryKind in cycle.libraries) {
           if (libraryKind.file.uri == libraryReader.uri) {
-            libraryKind.addMacroPart(
+            libraryKind.addMacroAugmentation(
               macroGeneratedCode,
+              addLibraryAugmentDirective: false,
               partialIndex: null,
-              performance: OperationPerformanceImpl('<root>'),
             );
           }
         }
@@ -355,42 +328,6 @@ class LibraryContext {
         elementFactory.dartCoreElement,
         elementFactory.dartAsyncElement,
       );
-    }
-  }
-
-  /// Fills [macroResults] with results that can be reused.
-  void _readMacroResults({
-    required LibraryCycle cycle,
-    required Uint8List bytes,
-    required Map<LibraryFileKind, MacroResultInput> macroResults,
-  }) {
-    var bundle = MacroCacheBundle.fromBytes(cycle, bytes);
-    var testUsedList = <File>[];
-    for (var library in bundle.libraries) {
-      // If the library itself changed, then declarations that macros see
-      // could be different now.
-      if (!ListEquality<int>().equals(
-        library.apiSignature,
-        library.kind.apiSignature,
-      )) {
-        continue;
-      }
-
-      // TODO(scheglov): Record more specific dependencies.
-      if (library.hasAnyIntrospection) {
-        continue;
-      }
-
-      testUsedList.add(library.kind.file.resource);
-
-      macroResults[library.kind] = MacroResultInput(
-        code: library.code,
-      );
-    }
-
-    if (testUsedList.isNotEmpty) {
-      var cycleTestData = testData?.forCycle(cycle);
-      cycleTestData?.macrosUsedCached.add(testUsedList);
     }
   }
 
@@ -409,37 +346,6 @@ class LibraryContext {
       }
     }
     throw CaughtExceptionWithFiles(exception, stackTrace, fileContentMap);
-  }
-
-  void _writeMacroResults({
-    required LibraryCycle cycle,
-    required LinkResult linkResult,
-    required String macroResultKey,
-  }) {
-    var results = linkResult.macroResults;
-    if (results.isEmpty) {
-      return;
-    }
-
-    testData?.forCycle(cycle).macrosGenerated.add(
-          linkResult.macroResults
-              .map((result) => result.library.file.resource)
-              .toList(),
-        );
-
-    var bundle = MacroCacheBundle(
-      libraries: results.map((result) {
-        return MacroCacheLibrary(
-          kind: result.library,
-          apiSignature: result.library.apiSignature,
-          hasAnyIntrospection: result.processing.hasAnyIntrospection,
-          code: result.code,
-        );
-      }).toList(),
-    );
-
-    var bytes = bundle.toBytes();
-    byteStore.putGet(macroResultKey, bytes);
   }
 }
 
@@ -461,8 +367,8 @@ class LibraryContextTestData {
   });
 
   LibraryCycleTestData forCycle(LibraryCycle cycle) {
-    var files = cycle.libraries.map((library) {
-      var file = library.file;
+    final files = cycle.libraries.map((library) {
+      final file = library.file;
       return fileSystemTestData.forFile(file.resource, file.uri);
     }).toList();
     files.sortBy((fileData) => fileData.file.path);
@@ -474,8 +380,6 @@ class LibraryContextTestData {
 class LibraryCycleTestData {
   final List<String> getKeys = [];
   final List<String> putKeys = [];
-  final List<List<File>> macrosUsedCached = [];
-  final List<List<File>> macrosGenerated = [];
 }
 
 class _MacroFileEntry implements MacroFileEntry {
@@ -501,7 +405,7 @@ class _MacroFileSystem implements MacroFileSystem {
 
   @override
   MacroFileEntry getFile(String path) {
-    var fileState = fileSystemState.getExistingFromPath(path);
+    final fileState = fileSystemState.getExistingFromPath(path);
     if (fileState != null) {
       return _MacroFileEntry(
         content: fileState.content,
@@ -509,7 +413,7 @@ class _MacroFileSystem implements MacroFileSystem {
       );
     }
 
-    var fileContent = fileSystemState.fileContentStrategy.get(path);
+    final fileContent = fileSystemState.fileContentStrategy.get(path);
     return _MacroFileEntry(
       content: fileContent.content,
       exists: fileContent.exists,

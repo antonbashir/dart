@@ -52,14 +52,14 @@ GuardedPattern
     expression: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: A
-        staticElement: <testLibraryFragment>::@class::A
+        staticElement: self::@class::A
         staticType: null
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::A::@getter::a
+        staticElement: self::@class::A::@getter::a
         staticType: int
-      staticElement: <testLibraryFragment>::@class::A::@getter::a
+      staticElement: self::@class::A::@getter::a
       staticType: int
     matchedValueType: dynamic
 ''');
@@ -121,19 +121,19 @@ GuardedPattern
       target: PrefixedIdentifier
         prefix: SimpleIdentifier
           token: prefix
-          staticElement: <testLibraryFragment>::@prefix::prefix
+          staticElement: self::@prefix::prefix
           staticType: null
         period: .
         identifier: SimpleIdentifier
           token: A
-          staticElement: package:test/a.dart::<fragment>::@class::A
+          staticElement: package:test/a.dart::@class::A
           staticType: null
-        staticElement: package:test/a.dart::<fragment>::@class::A
+        staticElement: package:test/a.dart::@class::A
         staticType: null
       operator: .
       propertyName: SimpleIdentifier
         token: a
-        staticElement: package:test/a.dart::<fragment>::@class::A::@getter::a
+        staticElement: package:test/a.dart::@class::A::@getter::a
         staticType: int
       staticType: int
     matchedValueType: dynamic
@@ -163,19 +163,19 @@ GuardedPattern
       target: PrefixedIdentifier
         prefix: SimpleIdentifier
           token: prefix
-          staticElement: <testLibraryFragment>::@prefix::prefix
+          staticElement: self::@prefix::prefix
           staticType: null
         period: .
         identifier: SimpleIdentifier
           token: A
-          staticElement: package:test/a.dart::<fragment>::@class::A
+          staticElement: package:test/a.dart::@class::A
           staticType: null
-        staticElement: package:test/a.dart::<fragment>::@class::A
+        staticElement: package:test/a.dart::@class::A
         staticType: null
       operator: .
       propertyName: SimpleIdentifier
         token: a
-        staticElement: package:test/a.dart::<fragment>::@class::A::@getter::a
+        staticElement: package:test/a.dart::@class::A::@getter::a
         staticType: int
       staticType: int
     matchedValueType: dynamic
@@ -202,9 +202,9 @@ GuardedPattern
       constructorName: ConstructorName
         type: NamedType
           name: A
-          element: <testLibraryFragment>::@class::A
+          element: self::@class::A
           type: A
-        staticElement: <testLibraryFragment>::@class::A::@constructor::new
+        staticElement: self::@class::A::@constructor::new
       argumentList: ArgumentList
         leftParenthesis: (
         rightParenthesis: )
@@ -524,7 +524,7 @@ GuardedPattern
   pattern: ConstantPattern
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@getter::a
+      staticElement: self::@getter::a
       staticType: int
     matchedValueType: dynamic
 ''');
@@ -548,7 +548,7 @@ GuardedPattern
   pattern: ConstantPattern
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@getter::a
+      staticElement: self::@getter::a
       staticType: int
     matchedValueType: dynamic
 ''');
@@ -563,7 +563,7 @@ void f(Object? x) {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 33, 3),
     ]);
 
-    var node = findNode.singleGuardedPattern;
+    final node = findNode.singleGuardedPattern;
     assertResolvedNodeText(node, r'''
 GuardedPattern
   pattern: ConstantPattern

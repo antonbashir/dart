@@ -165,6 +165,11 @@ class Utf8DecodeBenchmarkBase extends BenchmarkBase {
   }
 
   @override
+  void warmup() {
+    BenchmarkBase.measureFor(run, 100);
+  }
+
+  @override
   double measure() {
     // Report time per input byte.
     return super.measure() / totalInputSize;

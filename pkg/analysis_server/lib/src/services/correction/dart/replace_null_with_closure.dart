@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -12,11 +12,11 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ReplaceNullWithClosure extends ResolvedCorrectionProducer {
-  ReplaceNullWithClosure({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_NULL_WITH_CLOSURE;
@@ -29,11 +29,11 @@ class ReplaceNullWithClosure extends ResolvedCorrectionProducer {
     AstNode? nodeToFix;
     var parameters = const <ParameterElement>[];
 
-    var coveringNode = this.coveringNode;
-    if (coveringNode is NamedExpression) {
-      var expression = coveringNode.expression;
+    final coveredNode = this.coveredNode;
+    if (coveredNode is NamedExpression) {
+      var expression = coveredNode.expression;
       if (expression is NullLiteral) {
-        var element = coveringNode.element;
+        var element = coveredNode.element;
         if (element is ParameterElement) {
           var type = element.type;
           if (type is FunctionType) {
@@ -42,15 +42,15 @@ class ReplaceNullWithClosure extends ResolvedCorrectionProducer {
         }
         nodeToFix = expression;
       }
-    } else if (coveringNode is NullLiteral) {
-      nodeToFix = coveringNode;
+    } else if (coveredNode is NullLiteral) {
+      nodeToFix = coveredNode;
     }
 
     if (nodeToFix == null) {
       return;
     }
 
-    var nodeToFix_final = nodeToFix;
+    final nodeToFix_final = nodeToFix;
     await builder.addDartFileEdit(file, (builder) {
       builder.addReplacement(range.node(nodeToFix_final), (builder) {
         builder.writeParameters(parameters);

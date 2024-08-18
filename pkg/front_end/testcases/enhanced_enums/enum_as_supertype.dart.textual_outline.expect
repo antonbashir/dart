@@ -23,5 +23,4 @@ mixin N implements Enum {
 enum EN with N { element }
 
 expectEquals(x, y) {}
-
 main() {}

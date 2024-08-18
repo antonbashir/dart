@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /// Tool presenting how much each function contributes to the total code.
-library;
+library compiler.tool.function_size_analysis;
 
 import 'dart:math' as math;
 

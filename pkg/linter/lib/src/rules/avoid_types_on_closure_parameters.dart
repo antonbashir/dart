@@ -7,8 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid annotating types for function expression parameters.';
 
@@ -32,18 +30,22 @@ var names = people.map((person) => person.name);
 ''';
 
 class AvoidTypesOnClosureParameters extends LintRule {
+  static const LintCode code = LintCode('avoid_types_on_closure_parameters',
+      'Unnecessary type annotation on a function expression parameter.',
+      correctionMessage: 'Try removing the type annotation.');
+
   AvoidTypesOnClosureParameters()
       : super(
             name: 'avoid_types_on_closure_parameters',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
   List<String> get incompatibleRules => const ['always_specify_types'];
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_types_on_closure_parameters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -53,10 +55,10 @@ class AvoidTypesOnClosureParameters extends LintRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final LintRule rule;
+class AvoidTypesOnClosureParametersVisitor extends SimpleAstVisitor {
+  LintRule rule;
 
-  _Visitor(this.rule);
+  AvoidTypesOnClosureParametersVisitor(this.rule);
 
   @override
   void visitDefaultFormalParameter(DefaultFormalParameter node) {
@@ -65,8 +67,9 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFunctionExpression(FunctionExpression node) {
-    var contextType = node.approximateContextType;
-    if (contextType is! FunctionType) return;
+    if (node.parent is FunctionDeclaration) {
+      return;
+    }
     var parameterList = node.parameters?.parameters;
     if (parameterList != null) {
       for (var parameter in parameterList) {
@@ -86,5 +89,17 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (type is NamedType && type.type is! DynamicType) {
       rule.reportLint(node.type);
     }
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  final LintRule rule;
+
+  _Visitor(this.rule);
+
+  @override
+  void visitFunctionExpression(FunctionExpression node) {
+    var visitor = AvoidTypesOnClosureParametersVisitor(rule);
+    visitor.visitFunctionExpression(node);
   }
 }

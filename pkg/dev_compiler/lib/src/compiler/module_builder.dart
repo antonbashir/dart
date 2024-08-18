@@ -6,8 +6,8 @@ import 'package:args/args.dart' show ArgParser, ArgResults;
 import 'package:path/path.dart' as p;
 
 import '../js_ast/js_ast.dart';
-import '../kernel/compiler.dart';
 import 'js_names.dart';
+import 'shared_compiler.dart';
 
 /// The module format to emit.
 enum ModuleFormat {
@@ -82,6 +82,7 @@ void addModuleFormatOptions(ArgParser argParser, {bool hide = true}) {
 Program transformModuleFormat(ModuleFormat format, Program module) {
   switch (format) {
     case ModuleFormat.ddc:
+      // Legacy format always generates output compatible with single file mode.
       return DdcModuleBuilder().build(module);
     case ModuleFormat.common:
       return CommonJSModuleBuilder().build(module);
@@ -107,6 +108,7 @@ Fun transformFunctionModuleFormat(
     List<ModuleItem> items, Fun function, ModuleFormat format) {
   switch (format) {
     case ModuleFormat.ddc:
+      // Legacy format always generates output compatible with single file mode.
       return DdcModuleBuilder().buildFunctionWithImports(items, function);
     case ModuleFormat.amd:
       return AmdModuleBuilder().buildFunctionWithImports(items, function);
@@ -170,7 +172,8 @@ abstract class _ModuleBuilder {
   }
 }
 
-/// Generates DDC modules with our `ddc_module_loader.js` loading mechanism.
+/// Generates modules for with our DDC `dart_library.js` loading mechanism.
+// TODO(jmesserly): remove this and replace with something that interoperates.
 class DdcModuleBuilder extends _ModuleBuilder {
   /// Build a module variable definition for [import].
   ///
@@ -294,7 +297,7 @@ class DdcModuleBuilder extends _ModuleBuilder {
       js.commentExpression(
           'Imports', ArrayInitializer(importNames, multiline: true)),
       resultModule,
-      ProgramCompiler.metricsLocationID
+      SharedCompiler.metricsLocationID
     ]);
     return Program(<ModuleItem>[...module.header, moduleDef]);
   }

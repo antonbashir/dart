@@ -44,5 +44,4 @@ class J<
     Z extends X> {}
 
 J j = throw '';
-
 main() {}

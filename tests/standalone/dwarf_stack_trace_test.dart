@@ -7,10 +7,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:expect/config.dart';
-import 'package:expect/expect.dart';
 import 'package:native_stack_traces/native_stack_traces.dart';
 import 'package:path/path.dart' as path;
+import 'package:expect/expect.dart';
 
 @pragma("vm:prefer-inline")
 bar() {
@@ -32,7 +31,8 @@ Future<void> main() async {
     rawStack = st.toString();
   }
 
-  if (!isVmAotConfiguration) {
+  if (path.basenameWithoutExtension(Platform.executable) !=
+      "dart_precompiled_runtime") {
     return; // Not running from an AOT compiled snapshot.
   }
 
@@ -181,7 +181,7 @@ Future<void> checkStackTrace(String rawStack, Dwarf dwarf,
   final gotCallsTrace =
       gotSymbolizedCalls.sublist(0, expectedCallCount).join('\n');
 
-  Expect.containsInOrder(expectedStrings, gotCallsTrace);
+  Expect.stringContainsInOrder(gotCallsTrace, expectedStrings);
 }
 
 final expectedCallsInfo = <List<DartCallInfo>>[

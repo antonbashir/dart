@@ -27,7 +27,7 @@
 ///     `$__dart_deferred_initializers__.allocations` in the page.
 ///
 ///   * Finally, run this tool.
-library;
+library compiler.tool.runtime_coverage_analysis;
 
 import 'dart:convert';
 import 'dart:io';

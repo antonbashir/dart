@@ -25,7 +25,5 @@ class H extends G {
 }
 
 G bar() => new H();
-
 var x = bar().foo();
-
 main() {}

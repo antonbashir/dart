@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "package:expect/expect.dart";
-import "package:expect/variations.dart" as v;
 
 import "dart:math" show pow;
 
@@ -125,7 +124,11 @@ testGcd() {
   // Test that gcd of value and other (non-negative) throws.
   testThrows(value, other) {
     callCombos(value, other, (a, b) {
-      Expect.throwsWhen(v.checkedParameters || a is! int, () => a.gcd(b));
+      if (!dart2jsProductionMode || a is! int) {
+        Expect.throws(() => a.gcd(b));
+      } else {
+        a.gcd(b);
+      }
     });
   }
 

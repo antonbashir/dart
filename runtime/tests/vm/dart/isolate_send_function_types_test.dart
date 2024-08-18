@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:async_helper/async_helper.dart' show asyncEnd, asyncStart;
+import 'package:expect/expect.dart';
 
 class A<T> {}
 

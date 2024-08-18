@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:linter/src/rules/prefer_interpolation_to_compose_strings.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../rule_test_support.dart';
@@ -15,7 +16,7 @@ main() {
 @reflectiveTest
 class PreferInterpolationToComposeStringsTest extends LintRuleTest {
   @override
-  String get lintRule => 'prefer_interpolation_to_compose_strings';
+  String get lintRule => PreferInterpolationToComposeStrings.code.name;
 
   test_stringLiteral_stringLiteral() async {
     await assertNoDiagnostics(r'''

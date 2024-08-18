@@ -47,16 +47,7 @@ class FlutterStyleTodosTest extends LintRuleTest {
     );
   }
 
-  test_badUsername_comma() async {
-    await assertDiagnostics(
-      r'// TODO(user1,user2): bla',
-      [
-        lint(0, 25),
-      ],
-    );
-  }
-
-  test_badUsername_extraSymbols() async {
+  test_badUsername1() async {
     await assertDiagnostics(
       r'// TODO(#12357): bla',
       [
@@ -65,13 +56,12 @@ class FlutterStyleTodosTest extends LintRuleTest {
     );
   }
 
-  test_charactersBeforeTODO() async {
-    await assertNoDiagnostics(
-      r'''
-// comment TODO(user): bla
-/// final todo = Todo(name: 'test todo', description: 'todo description');
-/// Something interesting. TODO(someone): this is an ugly test case.
-''',
+  test_badUsername2() async {
+    await assertDiagnostics(
+      r'// TODO(user1,user2): bla',
+      [
+        lint(0, 25),
+      ],
     );
   }
 
@@ -120,6 +110,15 @@ class FlutterStyleTodosTest extends LintRuleTest {
     );
   }
 
+  test_leadingText() async {
+    await assertDiagnostics(
+      r'// comment TODO(user): bla',
+      [
+        lint(0, 26),
+      ],
+    );
+  }
+
   test_missingColon() async {
     await assertDiagnostics(
       r'// TODO(user) bla',
@@ -136,10 +135,6 @@ class FlutterStyleTodosTest extends LintRuleTest {
         lint(0, 12),
       ],
     );
-  }
-
-  test_properFormat_dottedUsername() async {
-    await assertNoDiagnostics(r'// TODO(user.name): bla');
   }
 
   test_properFormat_hyphenatedUsername() async {

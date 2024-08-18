@@ -35,7 +35,6 @@ extension on String {
 }
 
 objectPattern(o) {}
-
 relationalPattern(
   dynamic dyn,
   Never never,
@@ -46,15 +45,9 @@ relationalPattern(
   Class2 cls2,
   Class2? cls2_,
 ) {}
-
 typedef Class_ = Class?;
-
 typedef Dynamic = dynamic;
-
 typedef Function1 = void Function();
-
 typedef Function1_ = Function1?;
-
 typedef Record1 = (int, {String named});
-
 typedef Record1_ = Record1?;

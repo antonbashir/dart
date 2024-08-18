@@ -7,5 +7,4 @@ class Foo {
 }
 
 main() {}
-
 use(x) {}

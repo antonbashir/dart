@@ -5,10 +5,8 @@
 /// Test to ensure that incremental_perf.dart is running without errors.
 
 import 'dart:io';
-
 import 'package:front_end/src/compute_platform_binaries_location.dart'
     show computePlatformBinariesLocation;
-
 import 'incremental_perf.dart' as m show main;
 
 Future<void> main() async {

@@ -66,23 +66,6 @@ class FfiCode extends AnalyzerErrorCode {
   );
 
   ///  No parameters.
-  static const FfiCode ADDRESS_POSITION = FfiCode(
-    'ADDRESS_POSITION',
-    "The '.address' expression can only be used as argument to a leaf native "
-        "external call.",
-  );
-
-  ///  No parameters.
-  static const FfiCode ADDRESS_RECEIVER = FfiCode(
-    'ADDRESS_RECEIVER',
-    "The receiver of '.address' must be a concrete 'TypedData', a concrete "
-        "'TypedData' '[]', an 'Array', an 'Array' '[]', a Struct field, or a "
-        "Union field.",
-    correctionMessage:
-        "Change the receiver of '.address' to one of the allowed kinds.",
-  );
-
-  ///  No parameters.
   static const FfiCode ANNOTATION_ON_POINTER_FIELD = FfiCode(
     'ANNOTATION_ON_POINTER_FIELD',
     "Fields in a struct class whose type is 'Pointer' shouldn't have any "
@@ -106,6 +89,21 @@ class FfiCode extends AnalyzerErrorCode {
     "Argument to 'Native.addressOf' must be annotated with @Native",
     correctionMessage:
         "Try passing a static function or field annotated with '@Native'",
+  );
+
+  ///  No parameters.
+  static const FfiCode CALLBACK_MUST_NOT_USE_TYPED_DATA = FfiCode(
+    'CALLBACK_MUST_NOT_USE_TYPED_DATA',
+    "FFI callbacks can't take typed data arguments or return value.",
+    correctionMessage: "Try changing using `Pointer`s.",
+    hasPublishedDocs: true,
+  );
+
+  ///  No parameters.
+  static const FfiCode CALL_MUST_NOT_RETURN_TYPED_DATA = FfiCode(
+    'CALL_MUST_NOT_RETURN_TYPED_DATA',
+    "FFI calls can't return typed data.",
+    correctionMessage: "Try changing using `Pointer`s.",
     hasPublishedDocs: true,
   );
 
@@ -161,7 +159,6 @@ class FfiCode extends AnalyzerErrorCode {
     'FFI_NATIVE_INVALID_DUPLICATE_DEFAULT_ASSET',
     "There may be at most one @DefaultAsset annotation on a library.",
     correctionMessage: "Try removing the extra annotation.",
-    hasPublishedDocs: true,
   );
 
   ///  No parameters
@@ -169,7 +166,6 @@ class FfiCode extends AnalyzerErrorCode {
     'FFI_NATIVE_INVALID_MULTIPLE_ANNOTATIONS',
     "Native functions and fields must have exactly one `@Native` annotation.",
     correctionMessage: "Try removing the extra annotation.",
-    hasPublishedDocs: true,
   );
 
   ///  No parameters.
@@ -177,7 +173,6 @@ class FfiCode extends AnalyzerErrorCode {
     'FFI_NATIVE_MUST_BE_EXTERNAL',
     "Native functions must be declared external.",
     correctionMessage: "Add the `external` keyword to the function.",
-    hasPublishedDocs: true,
   );
 
   ///  No parameters.
@@ -197,7 +192,6 @@ class FfiCode extends AnalyzerErrorCode {
     "Unexpected number of Native annotation parameters. Expected {0} but has "
         "{1}.",
     correctionMessage: "Make sure parameters match the function annotated.",
-    hasPublishedDocs: true,
   );
 
   ///  Parameters:
@@ -212,6 +206,24 @@ class FfiCode extends AnalyzerErrorCode {
     correctionMessage:
         "Make sure parameters match the function annotated, including an extra "
         "first parameter for the receiver.",
+  );
+
+  ///  No parameters.
+  static const FfiCode FIELD_INITIALIZER_IN_STRUCT = FfiCode(
+    'FIELD_INITIALIZER_IN_STRUCT',
+    "Constructors in subclasses of 'Struct' and 'Union' can't have field "
+        "initializers.",
+    correctionMessage:
+        "Try removing the field initializer and marking the field as external.",
+    hasPublishedDocs: true,
+  );
+
+  ///  No parameters.
+  static const FfiCode FIELD_IN_STRUCT_WITH_INITIALIZER = FfiCode(
+    'FIELD_IN_STRUCT_WITH_INITIALIZER',
+    "Fields in subclasses of 'Struct' and 'Union' can't have initializers.",
+    correctionMessage:
+        "Try removing the initializer and marking the field as external.",
     hasPublishedDocs: true,
   );
 
@@ -362,10 +374,10 @@ class FfiCode extends AnalyzerErrorCode {
   static const FfiCode NATIVE_FIELD_INVALID_TYPE = FfiCode(
     'NATIVE_FIELD_INVALID_TYPE',
     "'{0}' is an unsupported type for native fields. Native fields only "
-        "support pointers, arrays or numeric and compound types.",
+        "support pointers or numeric and compound types.",
     correctionMessage:
         "Try changing the type in the `@Native` annotation to a numeric FFI "
-        "type, a pointer, array, or a compound class.",
+        "type, a pointer, or a compound class.",
     hasPublishedDocs: true,
   );
 
@@ -395,6 +407,14 @@ class FfiCode extends AnalyzerErrorCode {
     "The type arguments to '{0}' must be known at compile time, so they can't "
         "be type parameters.",
     correctionMessage: "Try changing the type argument to be a constant type.",
+    hasPublishedDocs: true,
+  );
+
+  ///  No parameters.
+  static const FfiCode NON_LEAF_CALL_MUST_NOT_TAKE_TYPED_DATA = FfiCode(
+    'NON_LEAF_CALL_MUST_NOT_TAKE_TYPED_DATA',
+    "FFI non-leaf calls can't take typed data arguments.",
+    correctionMessage: "Try changing the call to a leaf call.",
     hasPublishedDocs: true,
   );
 
@@ -494,13 +514,6 @@ class FfiCode extends AnalyzerErrorCode {
         "Try extending 'Struct', 'Union', or 'AbiSpecificInteger' directly.",
     hasPublishedDocs: true,
     uniqueName: 'SUBTYPE_OF_STRUCT_CLASS_IN_WITH',
-  );
-
-  ///  No parameters.
-  static const FfiCode VARIABLE_LENGTH_ARRAY_NOT_LAST = FfiCode(
-    'VARIABLE_LENGTH_ARRAY_NOT_LAST',
-    "Variable length 'Array's must only occur as the last field of Structs.",
-    correctionMessage: "Try adjusting the arguments in the 'Array' annotation.",
   );
 
   /// Initialize a newly created error code to have the given [name].

@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r"Don't assign a variable to itself.";
 
@@ -114,15 +113,20 @@ class C {
 ''';
 
 class NoSelfAssignments extends LintRule {
+  static const LintCode code = LintCode('no_self_assignments',
+      'The variable or property is being assigned to itself.',
+      correctionMessage:
+          'Try removing the assignment that has no direct effect.');
+
   NoSelfAssignments()
       : super(
             name: 'no_self_assignments',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.unintentional});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.no_self_assignments;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

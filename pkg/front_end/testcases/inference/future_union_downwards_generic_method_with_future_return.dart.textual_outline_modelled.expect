@@ -5,5 +5,4 @@ import 'dart:async';
 class A {}
 
 foo(Future<List<A>> f1, Future<List<A>> f2) async {}
-
 main() {}

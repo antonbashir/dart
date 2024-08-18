@@ -61,14 +61,12 @@ class C {
 
   test_localVar() async {
     await assertDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
 f() {
   var _ = 1;
   print(_);
 }
 ''', [
-      lint(70, 1),
+      lint(27, 1),
     ]);
   }
 

@@ -8,7 +8,6 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r"Don't use the Null type, unless you are positive that you don't want void.";
@@ -48,15 +47,19 @@ for any type of map or list:
 ''';
 
 class PreferVoidToNull extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_void_to_null', "Unnecessary use of the type 'Null'.",
+      correctionMessage: "Try using 'void' instead.");
+
   PreferVoidToNull()
       : super(
             name: 'prefer_void_to_null',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_void_to_null;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -135,7 +138,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     }
 
     // extension _ on Null {}
-    if (parent is ExtensionOnClause) {
+    if (parent is ExtensionDeclaration) {
       return;
     }
 
@@ -148,14 +151,6 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (parent is MethodDeclaration &&
         isVoidIncompatibleOverride(parent, node)) {
       return;
-    }
-
-    if (parent != null) {
-      AstNode? declaration = parent.thisOrAncestorOfType<ClassMember>();
-      declaration ??= parent.thisOrAncestorOfType<NamedCompilationUnitMember>();
-      declaration ??=
-          parent.thisOrAncestorOfType<TopLevelVariableDeclaration>();
-      if (declaration?.isAugmentation ?? false) return;
     }
 
     rule.reportLintForToken(node.name2);

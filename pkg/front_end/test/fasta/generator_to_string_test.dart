@@ -7,25 +7,25 @@
 import 'package:_fe_analyzer_shared/src/scanner/scanner.dart'
     show Token, scanString;
 import 'package:expect/expect.dart' show Expect;
-import 'package:front_end/src/base/compiler_context.dart' show CompilerContext;
-import 'package:front_end/src/base/local_scope.dart';
-import 'package:front_end/src/base/scope.dart';
-import 'package:front_end/src/base/uri_translator.dart';
-import 'package:front_end/src/builder/declaration_builders.dart';
-import 'package:front_end/src/builder/prefix_builder.dart';
-import 'package:front_end/src/builder/type_builder.dart';
-import 'package:front_end/src/codes/cfe_codes.dart'
+import 'package:front_end/src/fasta/builder/declaration_builders.dart';
+import 'package:front_end/src/fasta/builder/prefix_builder.dart';
+import 'package:front_end/src/fasta/builder/type_builder.dart';
+import 'package:front_end/src/fasta/compiler_context.dart' show CompilerContext;
+import 'package:front_end/src/fasta/dill/dill_target.dart' show DillTarget;
+import 'package:front_end/src/fasta/fasta_codes.dart'
     show Message, templateUnspecified;
-import 'package:front_end/src/dill/dill_target.dart' show DillTarget;
-import 'package:front_end/src/kernel/body_builder.dart' show BodyBuilder;
-import 'package:front_end/src/kernel/body_builder_context.dart';
-import 'package:front_end/src/kernel/expression_generator.dart';
-import 'package:front_end/src/kernel/expression_generator_helper.dart';
-import 'package:front_end/src/kernel/kernel_target.dart' show KernelTarget;
-import 'package:front_end/src/kernel/load_library_builder.dart';
-import 'package:front_end/src/source/source_library_builder.dart'
+import 'package:front_end/src/fasta/kernel/body_builder.dart' show BodyBuilder;
+import 'package:front_end/src/fasta/kernel/body_builder_context.dart';
+import 'package:front_end/src/fasta/kernel/expression_generator.dart';
+import 'package:front_end/src/fasta/kernel/expression_generator_helper.dart';
+import 'package:front_end/src/fasta/kernel/kernel_target.dart'
+    show KernelTarget;
+import 'package:front_end/src/fasta/kernel/load_library_builder.dart';
+import 'package:front_end/src/fasta/scope.dart';
+import 'package:front_end/src/fasta/source/source_library_builder.dart'
     show ImplicitLanguageVersion, SourceLibraryBuilder;
-import 'package:front_end/src/type_inference/type_inference_engine.dart';
+import 'package:front_end/src/fasta/type_inference/type_inference_engine.dart';
+import 'package:front_end/src/fasta/uri_translator.dart';
 import 'package:kernel/ast.dart'
     show
         Arguments,
@@ -41,7 +41,8 @@ import 'package:kernel/ast.dart'
         TypeParameter,
         VariableDeclaration,
         VariableGet,
-        defaultLanguageVersion;
+        defaultLanguageVersion,
+        dummyLibraryDependency;
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/target/targets.dart' show NoneTarget, TargetFlags;
@@ -54,8 +55,6 @@ void check(String expected, Object generator) {
 
 Future<void> main() async {
   await CompilerContext.runWithDefaultOptions((CompilerContext c) async {
-    await c.options.validateOptions(errorOnMissingInput: false);
-
     Token token = scanString("    myToken").tokens;
     Uri uri = Uri.parse("org-dartlang-test:my_library.dart");
 
@@ -73,28 +72,20 @@ Future<void> main() async {
     SourceLibraryBuilder libraryBuilder = new SourceLibraryBuilder(
         importUri: uri,
         fileUri: uri,
-        originImportUri: uri,
         packageLanguageVersion:
             new ImplicitLanguageVersion(defaultLanguageVersion),
         loader: new KernelTarget(
-                c,
                 const MockFileSystem(),
                 false,
-                new DillTarget(c, c.options.ticker, uriTranslator,
+                new DillTarget(c.options.ticker, uriTranslator,
                     new NoneTarget(new TargetFlags())),
                 uriTranslator)
             .loader,
         isUnsupported: false,
-        isAugmentation: false,
-        isPatch: false);
-    libraryBuilder.compilationUnit.markLanguageVersionFinal();
-    LoadLibraryBuilder loadLibraryBuilder = new LoadLibraryBuilder(
-        libraryBuilder,
-        /*dummyLibraryDependency,*/ -1,
-        libraryBuilder.compilationUnit,
-        'prefix',
-        -1,
-        null);
+        isAugmentation: false);
+    libraryBuilder.markLanguageVersionFinal();
+    LoadLibraryBuilder loadLibraryBuilder =
+        new LoadLibraryBuilder(libraryBuilder, dummyLibraryDependency, -1);
     Procedure getter = new Procedure(
         new Name("myGetter"), ProcedureKind.Getter, new FunctionNode(null),
         fileUri: uri);
@@ -110,9 +101,8 @@ Future<void> main() async {
     PrefixBuilder prefixBuilder =
         new PrefixBuilder("myPrefix", false, libraryBuilder, null, -1, -1);
     String assignmentOperator = "+=";
-    TypeDeclarationBuilder declaration = new NominalVariableBuilder.fromKernel(
-        new TypeParameter("T"),
-        loader: null);
+    TypeDeclarationBuilder declaration =
+        new NominalVariableBuilder.fromKernel(new TypeParameter("T"));
     VariableDeclaration variable =
         new VariableDeclaration(null, isSynthesized: true);
 
@@ -121,13 +111,9 @@ Future<void> main() async {
 
     BodyBuilder helper = new BodyBuilder(
         libraryBuilder: libraryBuilder,
-        context: new LibraryBodyBuilderContext(libraryBuilder,
-            inOutlineBuildingPhase: false,
-            inMetadata: false,
-            inConstFields: false),
+        context: new LibraryBodyBuilderContext(libraryBuilder),
         uri: uri,
-        enclosingScope:
-            new FixedLocalScope(kind: ScopeKind.library, debugName: "dummy"),
+        enclosingScope: new Scope.immutable(kind: ScopeKind.functionBody),
         coreTypes: coreTypes,
         hierarchy: hierarchy,
         typeInferrer:

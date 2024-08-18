@@ -38,164 +38,18 @@ class A {
     ]);
   }
 
-  test_class_3() async {
+  test_class_3Plus() async {
     await assertErrorsInCode('''
-class A {
+enum E {
+  v;
   final int a;
   final int b;
   final int c;
-  A() {}
+  const E();
 }
 ''', [
       error(
-          CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_3_PLUS, 57, 1),
-    ]);
-  }
-
-  test_class_augmentation_augmentsConstructor2_2of2() async {
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-import augment 'b.dart';
-
-class A {
-  final int f1;
-  final int f2;
-  A();
-}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment A() : f1 = 0;
-}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment A() : f2 = 0;
-}
-''');
-
-    await resolveFile2(testFile);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-
-    await resolveFile2(b);
-    assertNoErrorsInResult();
-  }
-
-  test_class_augmentation_augmentsConstructor_1of1() async {
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  final int f;
-  A();
-}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment A() : f = 0;
-}
-''');
-
-    await resolveFile2(testFile);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-  }
-
-  test_class_augmentation_augmentsConstructor_1of2() async {
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  final int f1;
-  final int f2;
-  A();
-}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment A() : f1 = 0;
-}
-''');
-
-    await resolveFile2(testFile);
-    assertErrorsInResult([
-      error(
-        CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_1,
-        70,
-        1,
-        messageContains: ['f2'],
-      ),
-    ]);
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-  }
-
-  test_class_augmentation_augmentsConstructor_noInitializers() async {
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  final int f;
-  A() : f = 0;
-}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment A();
-}
-''');
-
-    await resolveFile2(testFile);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-  }
-
-  test_class_augmentation_declaresConstructor_noInitializers() async {
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  final int f;
-}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  A();
-}
-''');
-
-    await resolveFile2(testFile);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_1, 50, 1),
+          CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_3_PLUS, 67, 1),
     ]);
   }
 
@@ -253,21 +107,6 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_2, 52, 1),
-    ]);
-  }
-
-  test_enum_3Plus() async {
-    await assertErrorsInCode('''
-enum E {
-  v;
-  final int a;
-  final int b;
-  final int c;
-  const E();
-}
-''', [
-      error(
-          CompileTimeErrorCode.FINAL_NOT_INITIALIZED_CONSTRUCTOR_3_PLUS, 67, 1),
     ]);
   }
 

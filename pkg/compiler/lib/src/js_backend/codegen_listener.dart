@@ -16,8 +16,7 @@ import '../js_model/records.dart';
 import '../native/enqueue.dart';
 import '../options.dart';
 import '../universe/call_structure.dart' show CallStructure;
-import '../universe/codegen_world_builder.dart';
-import '../universe/use.dart' show ConditionalUse, StaticUse, TypeUse;
+import '../universe/use.dart' show StaticUse, TypeUse;
 import '../universe/world_impact.dart'
     show WorldImpact, WorldImpactBuilder, WorldImpactBuilderImpl;
 import 'backend_impact.dart';
@@ -42,7 +41,6 @@ class CodegenEnqueuerListener extends EnqueuerListener {
 
   final NativeData _nativeData;
   final NativeCodegenEnqueuer _nativeEnqueuer;
-  final CodegenWorldBuilder _worldBuilder;
 
   bool _isNoSuchMethodUsed = false;
   bool _isNewRtiUsed = false;
@@ -58,8 +56,7 @@ class CodegenEnqueuerListener extends EnqueuerListener {
       this._customElementsAnalysis,
       this._recordsCodegen,
       this._nativeData,
-      this._nativeEnqueuer,
-      this._worldBuilder);
+      this._nativeEnqueuer);
 
   @override
   WorldImpact registerClosurizedMember(FunctionEntity element) {
@@ -155,13 +152,6 @@ class CodegenEnqueuerListener extends EnqueuerListener {
       enqueuer
           .applyImpact(_impacts.allowInterop.createImpact(_elementEnvironment));
     }
-
-    final newParameterStubs = _worldBuilder.generateParameterStubs();
-    final impactBuilder = WorldImpactBuilderImpl();
-    for (final stub in newParameterStubs) {
-      impactBuilder.registerStaticUse(StaticUse.implicitInvoke(stub));
-    }
-    enqueuer.applyImpact(impactBuilder);
 
     if (!enqueuer.queueIsEmpty) return false;
 
@@ -354,11 +344,5 @@ class CodegenEnqueuerListener extends EnqueuerListener {
   @override
   void logSummary(void log(String message)) {
     _nativeEnqueuer.logSummary(log);
-  }
-
-  @override
-  void registerPendingConditionalUse(ConditionalUse use) {
-    throw UnsupportedError(
-        'Codegen enqueuer does not support conditional impacts.');
   }
 }

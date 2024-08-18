@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use raw string to avoid escapes.';
 
@@ -26,15 +25,20 @@ var s = r'A string with only \ and $';
 ''';
 
 class UseRawStrings extends LintRule {
+  static const LintCode code = LintCode(
+      'use_raw_strings', 'Use a raw string to avoid using escapes.',
+      correctionMessage:
+          'Try making the string a raw string and removing the escapes.');
+
   UseRawStrings()
       : super(
             name: 'use_raw_strings',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.use_raw_strings;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

@@ -81,7 +81,7 @@ class MustCallSuperVerifier {
 
     // Walk up the type hierarchy from [classElement], ignoring direct
     // interfaces.
-    var superclasses = Queue<InterfaceElement?>();
+    final superclasses = Queue<InterfaceElement?>();
 
     void addToQueue(InterfaceElement element) {
       superclasses.addAll(element.mixins.map((i) => i.element));
@@ -92,7 +92,7 @@ class MustCallSuperVerifier {
       }
     }
 
-    var visitedClasses = <InterfaceElement>{};
+    final visitedClasses = <InterfaceElement>{};
     addToQueue(classElement);
     while (superclasses.isNotEmpty) {
       var ancestor = superclasses.removeFirst();
@@ -143,11 +143,8 @@ class MustCallSuperVerifier {
     if (!declaredElement.invokesSuperSelf) {
       // Overridable elements are always enclosed in named elements, so it is
       // safe to assume [overriddenEnclosingName] is non-`null`.
-      _errorReporter.atToken(
-        node.name,
-        WarningCode.MUST_CALL_SUPER,
-        arguments: [overriddenEnclosingName!],
-      );
+      _errorReporter.reportErrorForToken(
+          WarningCode.MUST_CALL_SUPER, node.name, [overriddenEnclosingName!]);
     }
     return;
   }

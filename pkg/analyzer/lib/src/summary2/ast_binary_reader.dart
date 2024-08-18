@@ -42,10 +42,6 @@ class AstBinaryReader {
         return _readAssertInitializer();
       case Tag.AssignmentExpression:
         return _readAssignmentExpression();
-      case Tag.AugmentedExpression:
-        return _readAugmentedExpression();
-      case Tag.AugmentedInvocation:
-        return _readAugmentedInvocation();
       case Tag.AwaitExpression:
         return _readAwaitExpression();
       case Tag.BinaryExpression:
@@ -124,8 +120,6 @@ class AstBinaryReader {
         return _readMethodInvocation();
       case Tag.NamedExpression:
         return _readNamedExpression();
-      case Tag.NullAwareElement:
-        return _readNullAwareElement();
       case Tag.NullLiteral:
         return _readNullLiteral();
       case Tag.InstanceCreationExpression:
@@ -195,7 +189,6 @@ class AstBinaryReader {
 
   IntegerLiteral _createIntegerLiteral(String lexeme, int value) {
     var node = IntegerLiteralImpl(
-      // TODO(srawlins): TokenType.INT_WITH_SEPARATORS?
       literal: TokenFactory.tokenFromTypeAndString(TokenType.INT, lexeme),
       value: value,
     );
@@ -280,29 +273,6 @@ class AstBinaryReader {
     return node;
   }
 
-  AugmentedExpression _readAugmentedExpression() {
-    var node = AugmentedExpressionImpl(
-      augmentedKeyword: Tokens.augmented(),
-    );
-    node.element = _reader.readElement();
-    _readExpressionResolution(node);
-    return node;
-  }
-
-  AugmentedInvocation _readAugmentedInvocation() {
-    var typeArguments = _readOptionalNode() as TypeArgumentListImpl?;
-    var arguments = readNode() as ArgumentListImpl;
-
-    var node = AugmentedInvocationImpl(
-      augmentedKeyword: Tokens.augmented(),
-      typeArguments: typeArguments,
-      arguments: arguments,
-    );
-    node.element = _reader.readElement() as ExecutableElement?;
-    _readExpressionResolution(node);
-    return node;
-  }
-
   AwaitExpression _readAwaitExpression() {
     var expression = readNode() as ExpressionImpl;
     return AwaitExpressionImpl(
@@ -347,7 +317,7 @@ class AstBinaryReader {
       target: target,
       cascadeSections: sections,
     );
-    node.setPseudoExpressionStaticType(target.staticType);
+    node.staticType = target.staticType;
     return node;
   }
 
@@ -485,7 +455,7 @@ class AstBinaryReader {
   }
 
   void _readExpressionResolution(ExpressionImpl node) {
-    node.setPseudoExpressionStaticType(_reader.readType());
+    node.staticType = _reader.readType();
   }
 
   ExtensionOverride _readExtensionOverride() {
@@ -799,7 +769,6 @@ class AstBinaryReader {
   IntegerLiteral _readIntegerLiteralNull() {
     var lexeme = _readStringReference();
     var node = IntegerLiteralImpl(
-      // TODO(srawlins): TokenType.INT_WITH_SEPARATORS?
       literal: TokenFactory.tokenFromTypeAndString(TokenType.INT, lexeme),
       value: null,
     );
@@ -878,17 +847,11 @@ class AstBinaryReader {
   }
 
   MapLiteralEntry _readMapLiteralEntry() {
-    var keyFlags = _readByte();
     var key = readNode() as ExpressionImpl;
-    var valueFlags = _readByte();
     var value = readNode() as ExpressionImpl;
     return MapLiteralEntryImpl(
-      keyQuestion:
-          AstBinaryFlags.hasQuestion(keyFlags) ? Tokens.question() : null,
       key: key,
       separator: Tokens.colon(),
-      valueQuestion:
-          AstBinaryFlags.hasQuestion(valueFlags) ? Tokens.question() : null,
       value: value,
     );
   }
@@ -935,7 +898,7 @@ class AstBinaryReader {
       name: nameNode,
       expression: expression,
     );
-    node.setPseudoExpressionStaticType(expression.staticType);
+    node.staticType = expression.staticType;
     return node;
   }
 
@@ -961,13 +924,8 @@ class AstBinaryReader {
     return List.generate(length, (_) => readNode() as T);
   }
 
-  NullAwareElement _readNullAwareElement() {
-    var value = readNode() as ExpressionImpl;
-    return NullAwareElementImpl(question: Tokens.question(), value: value);
-  }
-
   NullLiteral _readNullLiteral() {
-    var node = NullLiteralImpl(
+    final node = NullLiteralImpl(
       literal: Tokens.null_(),
     );
     _readExpressionResolution(node);
@@ -1091,13 +1049,13 @@ class AstBinaryReader {
   }
 
   RecordTypeAnnotationImpl _readRecordTypeAnnotation() {
-    var flags = _readByte();
-    var positionalFields =
+    final flags = _readByte();
+    final positionalFields =
         _readNodeList<RecordTypeAnnotationPositionalFieldImpl>();
-    var namedFields =
+    final namedFields =
         _readOptionalNode() as RecordTypeAnnotationNamedFieldsImpl?;
 
-    var node = RecordTypeAnnotationImpl(
+    final node = RecordTypeAnnotationImpl(
       leftParenthesis: Tokens.openParenthesis(),
       positionalFields: positionalFields,
       namedFields: namedFields,
@@ -1109,11 +1067,11 @@ class AstBinaryReader {
   }
 
   RecordTypeAnnotationNamedFieldImpl _readRecordTypeAnnotationNamedField() {
-    var metadata = _readNodeList<AnnotationImpl>();
-    var type = readNode() as TypeAnnotationImpl;
+    final metadata = _readNodeList<AnnotationImpl>();
+    final type = readNode() as TypeAnnotationImpl;
 
-    var lexeme = _reader.readStringReference();
-    var name = TokenFactory.tokenFromString(lexeme);
+    final lexeme = _reader.readStringReference();
+    final name = TokenFactory.tokenFromString(lexeme);
 
     return RecordTypeAnnotationNamedFieldImpl(
       metadata: metadata,
@@ -1123,7 +1081,7 @@ class AstBinaryReader {
   }
 
   RecordTypeAnnotationNamedFieldsImpl _readRecordTypeAnnotationNamedFields() {
-    var fields = _readNodeList<RecordTypeAnnotationNamedFieldImpl>();
+    final fields = _readNodeList<RecordTypeAnnotationNamedFieldImpl>();
     return RecordTypeAnnotationNamedFieldsImpl(
       leftBracket: Tokens.openCurlyBracket(),
       fields: fields,
@@ -1133,11 +1091,11 @@ class AstBinaryReader {
 
   RecordTypeAnnotationPositionalFieldImpl
       _readRecordTypeAnnotationPositionalField() {
-    var metadata = _readNodeList<AnnotationImpl>();
-    var type = readNode() as TypeAnnotationImpl;
+    final metadata = _readNodeList<AnnotationImpl>();
+    final type = readNode() as TypeAnnotationImpl;
 
-    var name = _reader.readOptionalObject((reader) {
-      var lexeme = reader.readStringReference();
+    final name = _reader.readOptionalObject((reader) {
+      final lexeme = reader.readStringReference();
       return TokenFactory.tokenFromString(lexeme);
     });
 
@@ -1325,7 +1283,7 @@ class AstBinaryReader {
     return node;
   }
 
-  TypeArgumentListImpl _readTypeArgumentList() {
+  TypeArgumentList _readTypeArgumentList() {
     var arguments = _readNodeList<TypeAnnotationImpl>();
     return TypeArgumentListImpl(
       leftBracket: Tokens.lt(),

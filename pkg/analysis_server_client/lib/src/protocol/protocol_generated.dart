@@ -912,7 +912,7 @@ class AnalysisGetLibraryDependenciesParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'analysis.getLibraryDependencies');
+    return Request(id, 'analysis.getLibraryDependencies', null);
   }
 
   @override
@@ -2403,7 +2403,7 @@ class AnalysisReanalyzeParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'analysis.reanalyze');
+    return Request(id, 'analysis.reanalyze', null);
   }
 
   @override
@@ -2422,7 +2422,7 @@ class AnalysisReanalyzeResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -2649,7 +2649,7 @@ class AnalysisSetAnalysisRootsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -2737,7 +2737,7 @@ class AnalysisSetGeneralSubscriptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -2819,7 +2819,7 @@ class AnalysisSetPriorityFilesResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -2912,7 +2912,7 @@ class AnalysisSetSubscriptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -3191,7 +3191,7 @@ class AnalysisUpdateOptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -3271,7 +3271,7 @@ class AnalyticsEnableResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -3290,7 +3290,7 @@ class AnalyticsIsEnabledParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'analytics.isEnabled');
+    return Request(id, 'analytics.isEnabled', null);
   }
 
   @override
@@ -3433,7 +3433,7 @@ class AnalyticsSendEventResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -3527,7 +3527,7 @@ class AnalyticsSendTimingResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -4523,7 +4523,7 @@ class CompletionRegisterLibraryPathsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -4704,7 +4704,7 @@ class DiagnosticGetDiagnosticsParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'diagnostic.getDiagnostics');
+    return Request(id, 'diagnostic.getDiagnostics', null);
   }
 
   @override
@@ -4793,7 +4793,7 @@ class DiagnosticGetServerPortParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'diagnostic.getServerPort');
+    return Request(id, 'diagnostic.getServerPort', null);
   }
 
   @override
@@ -6867,7 +6867,7 @@ class EditListPostfixCompletionTemplatesParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'edit.listPostfixCompletionTemplates');
+    return Request(id, 'edit.listPostfixCompletionTemplates', null);
   }
 
   @override
@@ -7738,7 +7738,7 @@ class ExecutionDeleteContextResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -8418,7 +8418,7 @@ class ExecutionSetSubscriptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -10078,7 +10078,7 @@ class FlutterSetSubscriptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -11887,66 +11887,6 @@ class LspHandleResult implements ResponseResult {
 
   @override
   int get hashCode => lspResponse.hashCode;
-}
-
-/// lsp.notification params
-///
-/// {
-///   "lspNotification": object
-/// }
-///
-/// Clients may not extend, implement or mix-in this class.
-class LspNotificationParams implements HasToJson {
-  /// The LSP NotificationMessage sent by the server.
-  Object lspNotification;
-
-  LspNotificationParams(this.lspNotification);
-
-  factory LspNotificationParams.fromJson(
-      JsonDecoder jsonDecoder, String jsonPath, Object? json) {
-    json ??= {};
-    if (json is Map) {
-      Object lspNotification;
-      if (json.containsKey('lspNotification')) {
-        lspNotification = json['lspNotification'] as Object;
-      } else {
-        throw jsonDecoder.mismatch(jsonPath, 'lspNotification');
-      }
-      return LspNotificationParams(lspNotification);
-    } else {
-      throw jsonDecoder.mismatch(jsonPath, 'lsp.notification params', json);
-    }
-  }
-
-  factory LspNotificationParams.fromNotification(Notification notification) {
-    return LspNotificationParams.fromJson(
-        ResponseDecoder(null), 'params', notification.params);
-  }
-
-  @override
-  Map<String, Object> toJson() {
-    var result = <String, Object>{};
-    result['lspNotification'] = lspNotification;
-    return result;
-  }
-
-  Notification toNotification() {
-    return Notification('lsp.notification', toJson());
-  }
-
-  @override
-  String toString() => json.encode(toJson());
-
-  @override
-  bool operator ==(other) {
-    if (other is LspNotificationParams) {
-      return lspNotification == other.lspNotification;
-    }
-    return false;
-  }
-
-  @override
-  int get hashCode => lspNotification.hashCode;
 }
 
 /// MessageAction
@@ -14773,7 +14713,7 @@ class ServerCancelRequestResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -14959,7 +14899,7 @@ class ServerGetVersionParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'server.getVersion');
+    return Request(id, 'server.getVersion', null);
   }
 
   @override
@@ -15332,7 +15272,7 @@ class ServerOpenUrlRequestResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -15395,7 +15335,6 @@ class ServerService implements Enum {
 ///
 /// {
 ///   "requests": List<String>
-///   "supportsUris": optional bool
 /// }
 ///
 /// Clients may not extend, implement or mix-in this class.
@@ -15415,20 +15354,7 @@ class ServerSetClientCapabilitiesParams implements RequestParams {
   /// - showMessageRequest
   List<String> requests;
 
-  /// True if the client supports the server sending URIs in place of file
-  /// paths.
-  ///
-  /// In this mode, the server will use URIs in all protocol fields with the
-  /// type FilePath. Returned URIs may be `file://` URIs or custom schemes. The
-  /// client can fetch the file contents for URIs with custom schemes (and
-  /// receive modification events) through the LSP protocol (see the "lsp"
-  /// domain).
-  ///
-  /// LSP notifications are automatically enabled when the client sets this
-  /// capability.
-  bool? supportsUris;
-
-  ServerSetClientCapabilitiesParams(this.requests, {this.supportsUris});
+  ServerSetClientCapabilitiesParams(this.requests);
 
   factory ServerSetClientCapabilitiesParams.fromJson(
       JsonDecoder jsonDecoder, String jsonPath, Object? json) {
@@ -15441,13 +15367,7 @@ class ServerSetClientCapabilitiesParams implements RequestParams {
       } else {
         throw jsonDecoder.mismatch(jsonPath, 'requests');
       }
-      bool? supportsUris;
-      if (json.containsKey('supportsUris')) {
-        supportsUris = jsonDecoder.decodeBool(
-            '$jsonPath.supportsUris', json['supportsUris']);
-      }
-      return ServerSetClientCapabilitiesParams(requests,
-          supportsUris: supportsUris);
+      return ServerSetClientCapabilitiesParams(requests);
     } else {
       throw jsonDecoder.mismatch(
           jsonPath, 'server.setClientCapabilities params', json);
@@ -15463,10 +15383,6 @@ class ServerSetClientCapabilitiesParams implements RequestParams {
   Map<String, Object> toJson() {
     var result = <String, Object>{};
     result['requests'] = requests;
-    var supportsUris = this.supportsUris;
-    if (supportsUris != null) {
-      result['supportsUris'] = supportsUris;
-    }
     return result;
   }
 
@@ -15482,17 +15398,13 @@ class ServerSetClientCapabilitiesParams implements RequestParams {
   bool operator ==(other) {
     if (other is ServerSetClientCapabilitiesParams) {
       return listEqual(
-              requests, other.requests, (String a, String b) => a == b) &&
-          supportsUris == other.supportsUris;
+          requests, other.requests, (String a, String b) => a == b);
     }
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(
-        Object.hashAll(requests),
-        supportsUris,
-      );
+  int get hashCode => Object.hashAll(requests);
 }
 
 /// server.setClientCapabilities result
@@ -15504,7 +15416,7 @@ class ServerSetClientCapabilitiesResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -15591,7 +15503,7 @@ class ServerSetSubscriptionsResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override
@@ -15775,7 +15687,7 @@ class ServerShutdownParams implements RequestParams {
 
   @override
   Request toRequest(String id) {
-    return Request(id, 'server.shutdown');
+    return Request(id, 'server.shutdown', null);
   }
 
   @override
@@ -15794,7 +15706,7 @@ class ServerShutdownResult implements ResponseResult {
 
   @override
   Response toResponse(String id) {
-    return Response(id);
+    return Response(id, result: null);
   }
 
   @override

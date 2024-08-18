@@ -8,7 +8,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use initializing formals when possible.';
 
@@ -20,7 +19,7 @@ Using initializing formals when possible makes your code more terse.
 **BAD:**
 ```dart
 class Point {
-  num? x, y;
+  num x, y;
   Point(num x, num y) {
     this.x = x;
     this.y = y;
@@ -31,16 +30,16 @@ class Point {
 **GOOD:**
 ```dart
 class Point {
-  num? x, y;
-  Point(num this.x, num this.y);
+  num x, y;
+  Point(this.x, this.y);
 }
 ```
 
 **BAD:**
 ```dart
 class Point {
-  num? x, y;
-  Point({num? x, num? y}) {
+  num x, y;
+  Point({num x, num y}) {
     this.x = x;
     this.y = y;
   }
@@ -50,8 +49,8 @@ class Point {
 **GOOD:**
 ```dart
 class Point {
-  num? x, y;
-  Point({required num this.x, required num this.y});
+  num x, y;
+  Point({this.x, this.y});
 }
 ```
 
@@ -64,8 +63,8 @@ the following will not generate a lint:
 
 ```dart
 class Point {
-  bool? isEnabled;
-  Point({bool? enabled}) {
+  bool isEnabled;
+  Point({bool enabled}) {
     this.isEnabled = enabled; // OK
   }
 }
@@ -79,9 +78,9 @@ example the unnamed `Bid` constructor requires a non-null `int` despite
 
 ```dart
 class Bid {
-  final int? amount;
-  Bid(int this.amount);
-  Bid.pass() : amount = null;
+ final int? amount;
+ Bid(int this.amount);
+ Bid.pass() : amount = null;
 }
 ```
 ''';
@@ -117,15 +116,20 @@ Element? _getRightElement(AssignmentExpression assignment) =>
     assignment.rightHandSide.canonicalElement;
 
 class PreferInitializingFormals extends LintRule {
+  static const LintCode code = LintCode('prefer_initializing_formals',
+      'Use an initializing formal to assign a parameter to a field.',
+      correctionMessage:
+          "Try using an initialing formal ('this.{0}') to initialize the field.");
+
   PreferInitializingFormals()
       : super(
             name: 'prefer_initializing_formals',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_initializing_formals;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

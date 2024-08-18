@@ -6,9 +6,10 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/src/generated/engine.dart'; //ignore: implementation_imports
+import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/dart_type_utilities.dart';
 
 const _desc =
@@ -131,23 +132,39 @@ class DerivedClass2 extends ClassBase with Mixin {}
 ''';
 
 class UnrelatedTypeEqualityChecks extends LintRule {
+  static const LintCode expressionCode = LintCode(
+      'unrelated_type_equality_checks',
+      uniqueName: 'LintCode.unrelated_type_equality_checks_expression',
+      "The type of the right operand ('{0}') isn't a subtype or a supertype of "
+          "the left operand ('{1}').",
+      correctionMessage: 'Try changing one or both of the operands.');
+
+  static const LintCode patternCode = LintCode(
+      'unrelated_type_equality_checks',
+      uniqueName: 'LintCode.unrelated_type_equality_checks_pattern',
+      "The type of the operand ('{0}') isn't a subtype or a supertype of the "
+          "value being matched ('{1}').",
+      correctionMessage: 'Try changing one or both of the operands.');
+
   UnrelatedTypeEqualityChecks()
       : super(
             name: 'unrelated_type_equality_checks',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.unintentional});
+            group: Group.errors);
 
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.unrelated_type_equality_checks_in_expression,
-        LinterLintCode.unrelated_type_equality_checks_in_pattern
-      ];
+  List<LintCode> get lintCodes => [expressionCode, patternCode];
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this, context.typeSystem);
+    // TODO(pq): update when there's a better API to access strictCasts.
+    var strictCasts =
+        // ignore: deprecated_member_use
+        (context.analysisOptions as AnalysisOptionsImpl).strictCasts;
+
+    var visitor = _Visitor(this, context.typeSystem, strictCasts: strictCasts);
     registry.addBinaryExpression(this, visitor);
     registry.addRelationalPattern(this, visitor);
   }
@@ -156,8 +173,9 @@ class UnrelatedTypeEqualityChecks extends LintRule {
 class _Visitor extends SimpleAstVisitor<void> {
   final LintRule rule;
   final TypeSystem typeSystem;
+  final bool strictCasts;
 
-  _Visitor(this.rule, this.typeSystem);
+  _Visitor(this.rule, this.typeSystem, {required this.strictCasts});
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
@@ -178,10 +196,10 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (_nonComparable(leftType, rightType)) {
       rule.reportLintForToken(
         node.operator,
-        errorCode: LinterLintCode.unrelated_type_equality_checks_in_expression,
+        errorCode: UnrelatedTypeEqualityChecks.expressionCode,
         arguments: [
-          rightType.getDisplayString(),
-          leftType.getDisplayString(),
+          rightType.getDisplayString(withNullability: true),
+          leftType.getDisplayString(withNullability: true),
         ],
       );
     }
@@ -197,17 +215,18 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (_nonComparable(valueType, operandType)) {
       rule.reportLint(
         node,
-        errorCode: LinterLintCode.unrelated_type_equality_checks_in_pattern,
+        errorCode: UnrelatedTypeEqualityChecks.patternCode,
         arguments: [
-          operandType.getDisplayString(),
-          valueType.getDisplayString(),
+          operandType.getDisplayString(withNullability: true),
+          valueType.getDisplayString(withNullability: true),
         ],
       );
     }
   }
 
   bool _nonComparable(DartType leftType, DartType rightType) =>
-      typesAreUnrelated(typeSystem, leftType, rightType) &&
+      typesAreUnrelated(typeSystem, leftType, rightType,
+          strictCasts: strictCasts) &&
       !(leftType.isFixnumIntX && rightType.isCoreInt);
 }
 

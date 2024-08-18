@@ -7,12 +7,11 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Prefer using `??` operators.';
+const _desc = r'Prefer using if null operators.';
 
 const _details = r'''
-**PREFER** using `??` operators instead of `null` checks and conditional
+**PREFER** using if null operators instead of null checks in conditional
 expressions.
 
 **BAD:**
@@ -28,15 +27,19 @@ v = a ?? b;
 ''';
 
 class PreferIfNullOperators extends LintRule {
+  static const LintCode code = LintCode('prefer_if_null_operators',
+      "Use the '??' operator rather than '?:' when testing for 'null'.",
+      correctionMessage: "Try rewriting the code to use '??'.");
+
   PreferIfNullOperators()
       : super(
             name: 'prefer_if_null_operators',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_if_null_operators;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

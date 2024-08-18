@@ -7,16 +7,16 @@
 
 #include "bin/file.h"
 
-#include <errno.h>               // NOLINT
-#include <fcntl.h>               // NOLINT
-#include <lib/fdio/fdio.h>       // NOLINT
+#include <errno.h>           // NOLINT
+#include <fcntl.h>           // NOLINT
+#include <lib/fdio/fdio.h>   // NOLINT
 #include <lib/fdio/namespace.h>  // NOLINT
-#include <libgen.h>              // NOLINT
-#include <sys/mman.h>            // NOLINT
-#include <sys/stat.h>            // NOLINT
-#include <sys/types.h>           // NOLINT
-#include <unistd.h>              // NOLINT
-#include <utime.h>               // NOLINT
+#include <libgen.h>          // NOLINT
+#include <sys/mman.h>        // NOLINT
+#include <sys/stat.h>        // NOLINT
+#include <sys/types.h>       // NOLINT
+#include <unistd.h>          // NOLINT
+#include <utime.h>           // NOLINT
 
 #include "bin/builtin.h"
 #include "bin/fdutils.h"
@@ -132,7 +132,7 @@ bool File::VPrint(const char* format, va_list args) {
   // Measure.
   va_list measure_args;
   va_copy(measure_args, args);
-  intptr_t len = Utils::VSNPrint(nullptr, 0, format, measure_args);
+  intptr_t len = vsnprintf(nullptr, 0, format, measure_args);
   va_end(measure_args);
 
   char* buffer = reinterpret_cast<char*>(malloc(len + 1));
@@ -140,7 +140,7 @@ bool File::VPrint(const char* format, va_list args) {
   // Print.
   va_list print_args;
   va_copy(print_args, args);
-  Utils::VSNPrint(buffer, len + 1, format, print_args);
+  vsnprintf(buffer, len + 1, format, print_args);
   va_end(print_args);
 
   bool result = WriteFully(buffer, len);
@@ -253,15 +253,15 @@ File* File::Open(Namespace* namespc, const char* name, FileOpenMode mode) {
   return OpenFD(fd);
 }
 
-CStringUniquePtr File::UriToPath(const char* uri) {
-  const char* path =
-      (strlen(uri) >= 8 && strncmp(uri, "file:///", 8) == 0) ? uri + 7 : uri;
+Utils::CStringUniquePtr File::UriToPath(const char* uri) {
+  const char* path = (strlen(uri) >= 8 && strncmp(uri, "file:///", 8) == 0)
+      ? uri + 7 : uri;
   UriDecoder uri_decoder(path);
   if (uri_decoder.decoded() == nullptr) {
     errno = EINVAL;
-    return CStringUniquePtr(nullptr);
+    return Utils::CreateCStringUniquePtr(nullptr);
   }
-  return CStringUniquePtr(strdup(uri_decoder.decoded()));
+  return Utils::CreateCStringUniquePtr(strdup(uri_decoder.decoded()));
 }
 
 File* File::OpenUri(Namespace* namespc, const char* uri, FileOpenMode mode) {
@@ -456,15 +456,15 @@ bool File::Copy(Namespace* namespc,
   if (NO_RETRY_EXPECTED(fstatat(oldns.fd(), oldns.path(), &st, 0)) != 0) {
     return false;
   }
-  const int old_fd =
-      NO_RETRY_EXPECTED(openat(oldns.fd(), oldns.path(), O_RDONLY | O_CLOEXEC));
+  const int old_fd = NO_RETRY_EXPECTED(
+      openat(oldns.fd(), oldns.path(), O_RDONLY | O_CLOEXEC));
   if (old_fd < 0) {
     return false;
   }
   NamespaceScope newns(namespc, new_path);
   const int new_fd = NO_RETRY_EXPECTED(
-      openat(newns.fd(), newns.path(), O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
-             st.st_mode));
+      openat(newns.fd(), newns.path(),
+             O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, st.st_mode));
   if (new_fd < 0) {
     close(old_fd);
     return false;
@@ -492,7 +492,9 @@ bool File::Copy(Namespace* namespc,
   return true;
 }
 
-static bool StatHelper(Namespace* namespc, const char* name, struct stat* st) {
+static bool StatHelper(Namespace* namespc,
+                       const char* name,
+                       struct stat* st) {
   NamespaceScope ns(namespc, name);
   if (NO_RETRY_EXPECTED(fstatat(ns.fd(), ns.path(), st, 0)) != 0) {
     return false;
@@ -681,7 +683,7 @@ const char* File::StringEscapedPathSeparator() {
 }
 
 static int fd_is_valid(int fd) {
-  return NO_RETRY_EXPECTED(fcntl(fd, F_GETFD)) != -1 || errno != EBADF;
+    return NO_RETRY_EXPECTED(fcntl(fd, F_GETFD)) != -1 || errno != EBADF;
 }
 
 File::StdioHandleType File::GetStdioHandleType(int fd) {

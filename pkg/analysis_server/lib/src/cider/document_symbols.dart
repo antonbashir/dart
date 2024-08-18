@@ -17,12 +17,12 @@ class CiderDocumentSymbolsComputer {
 
   Future<List<DocumentSymbol>> compute2(String filePath) async {
     var result = <DocumentSymbol>[];
-    var resolvedUnit = await _fileResolver.resolve(path: filePath);
+    var resolvedUnit = await _fileResolver.resolve2(path: filePath);
 
-    var computer = DartUnitOutlineComputer(resolvedUnit);
-    var outline = computer.compute();
+    final computer = DartUnitOutlineComputer(resolvedUnit);
+    final outline = computer.compute();
 
-    var children = outline.children;
+    final children = outline.children;
     if (children == null) {
       return result;
     }
@@ -40,9 +40,9 @@ class CiderDocumentSymbolsComputer {
     LineInfo lineInfo,
     Outline outline,
   ) {
-    var codeRange = toRange(lineInfo, outline.codeOffset, outline.codeLength);
-    var nameLocation = outline.element.location;
-    var nameRange = nameLocation != null
+    final codeRange = toRange(lineInfo, outline.codeOffset, outline.codeLength);
+    final nameLocation = outline.element.location;
+    final nameRange = nameLocation != null
         ? toRange(lineInfo, nameLocation.offset, nameLocation.length)
         : null;
     return DocumentSymbol(

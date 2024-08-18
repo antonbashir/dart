@@ -7,7 +7,7 @@
 ///
 /// The [dart:indexed_db] APIs is a recommended alternatives.
 ///
-/// {@category Web (Legacy)}
+/// {@category Web}
 /// {@nodoc}
 library dart.dom.web_sql;
 

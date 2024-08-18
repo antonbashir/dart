@@ -56,7 +56,7 @@ void NativeSymbolResolver::Cleanup() {
 #endif
 }
 
-const char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
+char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
 #ifdef DART_TARGET_OS_WINDOWS_UWP
   return nullptr;
 #else
@@ -89,13 +89,13 @@ const char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
 #endif  // ifdef DART_TARGET_OS_WINDOWS_UWP
 }
 
-void NativeSymbolResolver::FreeSymbolName(const char* name) {
-  free(const_cast<char*>(name));
+void NativeSymbolResolver::FreeSymbolName(char* name) {
+  free(name);
 }
 
 bool NativeSymbolResolver::LookupSharedObject(uword pc,
                                               uword* dso_base,
-                                              const char** dso_name) {
+                                              char** dso_name) {
   return false;
 }
 

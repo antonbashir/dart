@@ -280,13 +280,6 @@ class VMTestSuite extends TestSuite {
       hostRunnerPath = targetRunnerPath;
     }
 
-    if (!File(hostRunnerPath).existsSync()) {
-      throw Exception(
-          "Failed to find VM test runner binary at '$hostRunnerPath'.\n"
-          "Did you include the 'runtime' or 'most' targets in "
-          'the corresponding build?');
-    }
-
     if (configuration.useQemu) {
       final config = QemuConfig.all[configuration.architecture]!;
       initialHostArguments.insert(0, hostRunnerPath);
@@ -838,10 +831,6 @@ class StandardTestSuite extends TestSuite {
         for (var opt in vmOptions)
           opt.replaceAll(r'$TEST_COMPILATION_DIR', tempDir)
       ];
-      for (var i = 0; i < testFile.dart2wasmOptions.length; i += 1) {
-        testFile.dart2wasmOptions[i] = testFile.dart2wasmOptions[i]
-            .replaceAll(r'$TEST_COMPILATION_DIR', tempDir);
-      }
       environment['TEST_COMPILATION_DIR'] = tempDir;
 
       compileTimeArguments = compilerConfiguration.computeCompilerArguments(
@@ -948,9 +937,6 @@ class StandardTestSuite extends TestSuite {
 
     var commonArguments = _commonArgumentsFromFile(testFile);
 
-    var args = configuration.compilerConfiguration
-        .computeCompilerArguments(testFile, const [], commonArguments);
-
     // Use existing HTML document if available.
     String content;
     var customHtml = File(
@@ -983,25 +969,17 @@ class StandardTestSuite extends TestSuite {
             Path(compilationTempDir).relativeTo(Repository.dir).toString();
         var nullAssertions =
             testFile.sharedOptions.contains('--null-assertions');
-        var nativeNonNullAsserts =
-            testFile.ddcOptions.contains('--native-null-assertions');
-        var jsInteropNonNullAsserts =
-            testFile.ddcOptions.contains('--interop-null-assertions');
         var weakNullSafetyErrors =
             testFile.ddcOptions.contains('--weak-null-safety-errors');
-        var ddcModuleFormat = args.contains('--modules=ddc');
         content = ddcHtml(
             nameNoExt,
             nameFromModuleRootNoExt,
             jsDir,
             configuration.compiler,
             configuration.nnbdMode,
-            ddcConfig.buildOptionsDir,
+            ddcConfig.genDir,
             nullAssertions,
-            nativeNonNullAsserts,
-            jsInteropNonNullAsserts,
-            weakNullSafetyErrors,
-            ddcModuleFormat: ddcModuleFormat);
+            weakNullSafetyErrors);
       } else {
         throw UnsupportedError(
             'Unexpected compiler in browser test: ${configuration.compiler}');
@@ -1021,6 +999,8 @@ class StandardTestSuite extends TestSuite {
     };
     assert(supportedCompilers.contains(configuration.compiler));
 
+    var args = configuration.compilerConfiguration
+        .computeCompilerArguments(testFile, const [], commonArguments);
     var compilation = configuration.compilerConfiguration
         .computeCompilationArtifact(outputDir, args, environmentOverrides);
     commands.addAll(compilation.commands);

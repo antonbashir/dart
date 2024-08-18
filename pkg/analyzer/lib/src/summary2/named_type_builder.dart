@@ -19,6 +19,8 @@ import 'package:analyzer/src/utilities/extensions/collection.dart';
 
 /// The type builder for a [NamedType].
 class NamedTypeBuilder extends TypeBuilder {
+  // TODO(scheglov): Replace with `DartType` in `TypeAliasElementImpl`.
+  static const _aliasedTypeKey = '_aliasedType';
   static DynamicTypeImpl get _dynamicType => DynamicTypeImpl.instance;
 
   /// The linker that contains this type.
@@ -93,25 +95,33 @@ class NamedTypeBuilder extends TypeBuilder {
       return _type!;
     }
 
-    var element = this.element;
+    final element = this.element;
     if (element is InterfaceElement) {
       var parameters = element.typeParameters;
       var arguments = _buildArguments(parameters);
-      _type = element.instantiate(
+      var type = element.instantiate(
         typeArguments: arguments,
         nullabilitySuffix: nullabilitySuffix,
       );
+      type = typeSystem.toLegacyTypeIfOptOut(type) as InterfaceType;
+      _type = type;
     } else if (element is TypeAliasElementImpl) {
       var aliasedType = _getAliasedType(element);
       var parameters = element.typeParameters;
       var arguments = _buildArguments(parameters);
       element.aliasedType = aliasedType;
-      _type = element.instantiate(
+      var type = element.instantiate(
         typeArguments: arguments,
         nullabilitySuffix: nullabilitySuffix,
       );
+      type = typeSystem.toLegacyTypeIfOptOut(type);
+      _type = type;
     } else if (element is NeverElementImpl) {
-      _type = NeverTypeImpl.instance.withNullability(nullabilitySuffix);
+      if (typeSystem.isNonNullableByDefault) {
+        _type = NeverTypeImpl.instance.withNullability(nullabilitySuffix);
+      } else {
+        _type = typeSystem.typeProvider.nullType;
+      }
     } else if (element is TypeParameterElement) {
       _type = TypeParameterTypeImpl(
         element: element,
@@ -253,11 +263,11 @@ class NamedTypeBuilder extends TypeBuilder {
     }
 
     // Break a possible recursion.
-    var existing = element.aliasedTypeRaw;
+    var existing = typedefNode.getProperty(_aliasedTypeKey) as DartType?;
     if (existing != null) {
       return existing;
     } else {
-      element.aliasedType = _dynamicType;
+      _setAliasedType(typedefNode, _dynamicType);
     }
 
     if (typedefNode is FunctionTypeAlias) {
@@ -267,12 +277,12 @@ class NamedTypeBuilder extends TypeBuilder {
         parameterList: typedefNode.parameters,
         hasQuestion: false,
       );
-      element.aliasedType = result;
+      _setAliasedType(typedefNode, result);
       return result;
     } else if (typedefNode is GenericTypeAlias) {
       var aliasedTypeNode = typedefNode.type;
       var aliasedType = _buildAliasedType(aliasedTypeNode);
-      element.aliasedType = aliasedType;
+      _setAliasedType(typedefNode, aliasedType);
       return aliasedType;
     } else {
       throw StateError('(${element.runtimeType}) $element');
@@ -282,8 +292,10 @@ class NamedTypeBuilder extends TypeBuilder {
   NullabilitySuffix _getNullabilitySuffix(bool hasQuestion) {
     if (hasQuestion) {
       return NullabilitySuffix.question;
-    } else {
+    } else if (typeSystem.isNonNullableByDefault) {
       return NullabilitySuffix.none;
+    } else {
+      return NullabilitySuffix.star;
     }
   }
 
@@ -297,7 +309,11 @@ class NamedTypeBuilder extends TypeBuilder {
   }
 
   static List<DartType> _listOfDynamic(int length) {
-    return List<DartType>.filled(length, _dynamicType);
+    return List<DartType>.filled(length, _dynamicType, growable: false);
+  }
+
+  static void _setAliasedType(AstNode node, DartType type) {
+    node.setProperty(_aliasedTypeKey, type);
   }
 
   static List<TypeParameterElement> _typeParameters(TypeParameterList? node) {

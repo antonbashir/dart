@@ -27,14 +27,14 @@ int f(Object p01) {
 ''');
     assertResponse(r'''
 suggestions
-  p01
-    kind: parameter
   const
     kind: keyword
   false
     kind: keyword
   null
     kind: keyword
+  p01
+    kind: parameter
   switch
     kind: keyword
   true
@@ -57,8 +57,8 @@ class A1 {}
 suggestions
   A1
     kind: class
-  A1.new
-    kind: constructor
+  A1
+    kind: constructorInvocation
   const
     kind: keyword
   false
@@ -94,14 +94,16 @@ int f01() => 0;
 ''');
     assertResponse(r'''
 suggestions
-  c01
-    kind: topLevelVariable
   A1
     kind: class
   A1.named
-    kind: constructor
+    kind: constructorInvocation
+  c01
+    kind: topLevelVariable
   const
     kind: keyword
+  f01
+    kind: functionInvocation
   false
     kind: keyword
   final
@@ -110,6 +112,8 @@ suggestions
     kind: keyword
   true
     kind: keyword
+  v01
+    kind: topLevelVariable
   var
     kind: keyword
 ''');
@@ -140,12 +144,12 @@ int B04() => 0;
 replacement
   left: 1
 suggestions
-  A02
-    kind: topLevelVariable
   A01
     kind: class
   A01
     kind: constructorInvocation
+  A02
+    kind: topLevelVariable
   A03
     kind: topLevelVariable
   A04
@@ -178,12 +182,12 @@ int B04() => 0;
 replacement
   left: 1
 suggestions
-  A02
-    kind: topLevelVariable
   A01
     kind: class
   A01
     kind: constructorInvocation
+  A02
+    kind: topLevelVariable
   A03
     kind: topLevelVariable
   A04
@@ -199,14 +203,14 @@ int f(Object p01) {
 ''');
     assertResponse(r'''
 suggestions
-  p01
-    kind: parameter
   const
     kind: keyword
   false
     kind: keyword
   null
     kind: keyword
+  p01
+    kind: parameter
   switch
     kind: keyword
   true

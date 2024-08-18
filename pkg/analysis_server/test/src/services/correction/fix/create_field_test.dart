@@ -10,109 +10,9 @@ import 'fix_processor.dart';
 
 void main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(CreateFieldEnumTest);
-    defineReflectiveTests(CreateFieldMixinTest);
     defineReflectiveTests(CreateFieldTest);
+    defineReflectiveTests(CreateFieldMixinTest);
   });
-}
-
-@reflectiveTest
-class CreateFieldEnumTest extends FixProcessorTest {
-  @override
-  FixKind get kind => DartFixKind.CREATE_FIELD;
-
-  Future<void> test_initializingFormal_dynamic() async {
-    await resolveTestCode('''
-enum E {
-  one(1), two(2);
-
-  const E(dynamic this.f);
-}
-''');
-    await assertHasFix('''
-enum E {
-  one(1), two(2);
-
-  final dynamic f;
-
-  const E(dynamic this.f);
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_withoutType() async {
-    await resolveTestCode('''
-enum E {
-  one(1), two(2);
-
-  const E(this.f);
-}
-''');
-    await assertHasFix('''
-enum E {
-  one(1), two(2);
-
-  final dynamic f;
-
-  const E(this.f);
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_withType() async {
-    await resolveTestCode('''
-enum E {
-  one(1), two(2);
-
-  const E(int this.f);
-}
-''');
-    await assertHasFix('''
-enum E {
-  one(1), two(2);
-
-  final int f;
-
-  const E(int this.f);
-}
-''');
-  }
-
-  Future<void> test_usedAsGetter() async {
-    await resolveTestCode('''
-enum E {
-  one, two;
-}
-
-int f(E e) {
-  return e.a;
-}
-''');
-    await assertHasFix('''
-enum E {
-  one, two;
-
-  final int a;
-}
-
-int f(E e) {
-  return e.a;
-}
-''');
-  }
-
-  Future<void> test_usedAsSetter() async {
-    await resolveTestCode('''
-enum E {
-  one, two;
-}
-
-void f(E e) {
-  e.a = 1;
-}
-''');
-    await assertNoFix();
-  }
 }
 
 @reflectiveTest
@@ -463,84 +363,9 @@ void f() {
     await assertNoFix();
   }
 
-  Future<void> test_initializingFormal_functionTyped() async {
-    await resolveTestCode('''
-class C {
-  C(String this.text());
-}
-''');
-    await assertHasFix('''
-class C {
-  String Function() text;
-
-  C(String this.text());
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_typeVariable() async {
-    await resolveTestCode('''
-class C<T> {
-  C(T this.text);
-}
-''');
-    await assertHasFix('''
-class C<T> {
-  T text;
-
-  C(T this.text);
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_withDefaultValue() async {
-    await resolveTestCode('''
-class C {
-  C([String this.text = '']);
-}
-''');
-    await assertHasFix('''
-class C {
-  String text;
-
-  C([String this.text = '']);
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_withType() async {
-    await resolveTestCode('''
-class C {
-  C(String this.text);
-}
-''');
-    await assertHasFix('''
-class C {
-  String text;
-
-  C(String this.text);
-}
-''');
-  }
-
-  Future<void> test_initializingFormal_withType_constConstuctor() async {
-    await resolveTestCode('''
-class C {
-  const C(String this.text);
-}
-''');
-    await assertHasFix('''
-class C {
-  final String text;
-
-  const C(String this.text);
-}
-''');
-  }
-
   Future<void> test_inPart_self() async {
     await resolveTestCode('''
-part of 'a.dart';
+part of lib;
 class A {
 }
 void f(A a) {
@@ -571,6 +396,21 @@ class C {
   var text;
 
   C(this.text);
+}
+''');
+  }
+
+  Future<void> test_invalidInitializer_withType() async {
+    await resolveTestCode('''
+class C {
+  C(String this.text);
+}
+''');
+    await assertHasFix('''
+class C {
+  String text;
+
+  C(String this.text);
 }
 ''');
   }

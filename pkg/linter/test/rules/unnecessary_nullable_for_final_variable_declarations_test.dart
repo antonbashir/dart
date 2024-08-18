@@ -24,7 +24,7 @@ f() {
   print('$a$c');
 }
 ''', [
-      lint(27, 1),
+      lint(22, 6),
     ]);
   }
 
@@ -96,8 +96,8 @@ class A {
   static final int? j = 1;
 }
 ''', [
-      lint(49, 2),
-      lint(97, 1),
+      lint(49, 6),
+      lint(97, 5),
     ]);
   }
 
@@ -109,8 +109,8 @@ extension E on Object {
   static final int? e = 1;
 }
 ''', [
-      lint(70, 2),
-      lint(98, 1),
+      lint(70, 6),
+      lint(98, 5),
     ]);
   }
 
@@ -121,9 +121,9 @@ final int? _i = 1;
 final int? i = 1;
 const int? ic = 1;
 ''', [
-      lint(37, 2),
-      lint(56, 1),
-      lint(74, 2),
+      lint(37, 6),
+      lint(56, 5),
+      lint(74, 6),
     ]);
   }
 
@@ -134,8 +134,8 @@ f() {
   final int? i = 1;
 }
 ''', [
-      lint(19, 2),
-      lint(40, 1),
+      lint(19, 6),
+      lint(40, 5),
     ]);
   }
 
@@ -146,8 +146,8 @@ f() {
   print('$a$c');
 }
 ''', [
-      lint(26, 1),
-      lint(34, 1),
+      lint(15, 12),
+      lint(29, 6),
     ]);
   }
 }

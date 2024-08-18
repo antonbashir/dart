@@ -18,56 +18,56 @@ void main() {
 @reflectiveTest
 class CallHierarchyTest extends LspOverLegacyTest {
   Future<void> test_incoming() async {
-    var content = '''
+    final content = '''
 String f^() => 'f';
 String g() => [!f!]();
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var prepareResults = await prepareCallHierarchy(
+    final prepareResults = await prepareCallHierarchy(
       testFileUri,
       code.position.position,
     );
-    var prepareResult = prepareResults!.single;
+    final prepareResult = prepareResults!.single;
 
-    var incomingResults = await callHierarchyIncoming(prepareResult);
-    var incomingResult = incomingResults!.single;
+    final incomingResults = await callHierarchyIncoming(prepareResult);
+    final incomingResult = incomingResults!.single;
 
     expect(incomingResult.from.name, 'g');
     expect(incomingResult.fromRanges, code.ranges.ranges);
   }
 
   Future<void> test_outgoing() async {
-    var content = '''
+    final content = '''
 String f() => 'f';
 String g^() => [!f!]();
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var prepareResults = await prepareCallHierarchy(
+    final prepareResults = await prepareCallHierarchy(
       testFileUri,
       code.position.position,
     );
-    var prepareResult = prepareResults!.single;
+    final prepareResult = prepareResults!.single;
 
-    var outgoingResults = await callHierarchyOutgoing(prepareResult);
-    var outgoingResult = outgoingResults!.single;
+    final outgoingResults = await callHierarchyOutgoing(prepareResult);
+    final outgoingResult = outgoingResults!.single;
 
     expect(outgoingResult.to.name, 'f');
     expect(outgoingResult.fromRanges, code.ranges.ranges);
   }
 
   Future<void> test_prepare() async {
-    var content = '''
+    final content = '''
 void f^() {}
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var results = await prepareCallHierarchy(
+    final results = await prepareCallHierarchy(
       testFileUri,
       code.position.position,
     );
-    var result = results!.single;
+    final result = results!.single;
 
     expect(result.name, 'f');
   }

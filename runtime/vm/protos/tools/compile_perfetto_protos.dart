@@ -11,6 +11,7 @@ Future<void> compilePerfettoProtos() async {
     [
       '-mdebug',
       '-ax64',
+      '--no-goma',
       'runtime/vm:perfetto_protos_protozero',
       'runtime/vm:perfetto_protos_dart'
     ],

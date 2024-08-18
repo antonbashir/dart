@@ -179,7 +179,7 @@ final Future<Null> nullFuture = Zone.root.run(() => Future<Null>.value(null));
 ///
 /// TODO(lrn): Consider specializing this code per platform,
 /// so the VM can use its 64-bit integers directly.
-abstract final class SystemHash {
+class SystemHash {
   static int combine(int hash, int value) {
     hash = 0x1fffffff & (hash + value);
     hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
@@ -625,14 +625,14 @@ abstract final class SystemHash {
   /// too easily having colliding hash results.
   ///
   /// Assumes the input hash code is an unsigned 32-bit integer.
-  /// Found by Christopher Wellons and parameters adjusted by TheIronBorn,
-  /// <https://github.com/skeeto/hash-prospector>.
+  /// Found by Christopher Wellons [https://github.com/skeeto/hash-prospector].
   static int smear(int x) {
-    x ^= x >>> 16;
-    x = (x * 0x21f0aaad) & 0xFFFFFFFF;
-    x ^= x >>> 15;
-    x = (x * 0xd35a2d97) & 0xFFFFFFFF;
-    x ^= x >>> 15;
+    // TODO: Use >>> instead of >> when available.
+    x ^= x >> 16;
+    x = (x * 0x7feb352d) & 0xFFFFFFFF;
+    x ^= x >> 15;
+    x = (x * 0x846ca68b) & 0xFFFFFFFF;
+    x ^= x >> 16;
     return x;
   }
 }
@@ -1053,23 +1053,4 @@ bool isToStringVisiting(Object object) {
     if (identical(object, toStringVisiting[i])) return true;
   }
   return false;
-}
-
-/// Load a dynamic module and execute its entry point method.
-///
-/// Only one of the two arguments must be provided, depending on the delivery
-/// mechanism and the underlying platform.
-///
-/// Entry point method is a no-argument method annotated with
-/// `@pragma('dyn-module:entry-point')`.
-///
-/// Returns a future containing the result of the entry point method.
-external Future<Object?> loadDynamicModule({Uri? uri, Uint8List? bytes});
-
-/// Helper class to create `bool Function(Object?)` functions which
-/// perform an `v is T` type test.
-///
-/// Intended use: `TypeTest<T>().test`.
-class TypeTest<T> {
-  bool test(Object? v) => v is T;
 }

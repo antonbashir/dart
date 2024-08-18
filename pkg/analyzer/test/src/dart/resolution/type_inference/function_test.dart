@@ -24,12 +24,12 @@ f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(');
+    final node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@function::foo
+    staticElement: self::@function::foo
     staticType: void Function<T>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -37,13 +37,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::y
+          base: root::@parameter::y
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
@@ -65,12 +65,12 @@ f() {
       error(CompileTimeErrorCode.MISSING_REQUIRED_ARGUMENT, 54, 3),
     ]);
 
-    var node = findNode.methodInvocation('foo(');
+    final node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@function::foo
+    staticElement: self::@function::foo
     staticType: void Function<T>({required T x, required T y})
   argumentList: ArgumentList
     leftParenthesis: (
@@ -80,7 +80,7 @@ MethodInvocation
           label: SimpleIdentifier
             token: x
             staticElement: ParameterMember
-              base: <testLibraryFragment>::@function::foo::@parameter::x
+              base: root::@parameter::x
               substitution: {T: int}
             staticType: null
           colon: :
@@ -88,7 +88,7 @@ MethodInvocation
           literal: 1
           staticType: int
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
     rightParenthesis: )
   staticInvokeType: void Function({required int x, required int y})
@@ -110,12 +110,12 @@ f() {
           39, 1),
     ]);
 
-    var node = findNode.methodInvocation('foo(');
+    final node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@function::foo
+    staticElement: self::@function::foo
     staticType: void Function<T>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -123,7 +123,7 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
@@ -145,12 +145,12 @@ f() {
       error(CompileTimeErrorCode.EXTRA_POSITIONAL_ARGUMENTS, 44, 1),
     ]);
 
-    var node = findNode.methodInvocation('foo(');
+    final node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@function::foo
+    staticElement: self::@function::foo
     staticType: void Function<T>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -158,13 +158,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::y
+          base: root::@parameter::y
           substitution: {T: int}
         staticType: int
       IntegerLiteral
@@ -190,12 +190,12 @@ f() {
       error(CompileTimeErrorCode.UNDEFINED_NAMED_PARAMETER, 44, 1),
     ]);
 
-    var node = findNode.methodInvocation('foo(');
+    final node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@function::foo
+    staticElement: self::@function::foo
     staticType: void Function<T>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -203,13 +203,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::x
+          base: root::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::foo::@parameter::y
+          base: root::@parameter::y
           substitution: {T: int}
         staticType: int
       NamedExpression

@@ -28,7 +28,7 @@ void<int> f() {}
       error(ParserErrorCode.VOID_WITH_TYPE_ARGUMENTS, 4, 1),
     ]);
 
-    var node = findNode.namedType('void<int>');
+    final node = findNode.namedType('void<int>');
     assertResolvedNodeText(node, r'''
 NamedType
   name: void
@@ -37,7 +37,7 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   element: <null>

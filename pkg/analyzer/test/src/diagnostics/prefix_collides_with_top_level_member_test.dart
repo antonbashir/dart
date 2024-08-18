@@ -25,11 +25,8 @@ import 'lib.dart' as p;
 typedef p();
 p.A a = p.A();
 ''', [
-      error(WarningCode.UNUSED_IMPORT, 7, 10),
       error(CompileTimeErrorCode.PREFIX_COLLIDES_WITH_TOP_LEVEL_MEMBER, 32, 1,
-          contextMessages: [message(testFile, 21, 1)]),
-      error(CompileTimeErrorCode.NOT_A_TYPE, 37, 3),
-      error(CompileTimeErrorCode.UNDEFINED_METHOD, 47, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 1)]),
     ]);
   }
 
@@ -57,11 +54,8 @@ import 'lib.dart' as p;
 p() {}
 p.A a = p.A();
 ''', [
-      error(WarningCode.UNUSED_IMPORT, 7, 10),
       error(CompileTimeErrorCode.PREFIX_COLLIDES_WITH_TOP_LEVEL_MEMBER, 24, 1,
-          contextMessages: [message(testFile, 21, 1)]),
-      error(CompileTimeErrorCode.PREFIX_SHADOWED_BY_LOCAL_DECLARATION, 31, 1),
-      error(CompileTimeErrorCode.UNDEFINED_METHOD, 41, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 1)]),
     ]);
   }
 
@@ -75,10 +69,8 @@ import 'lib.dart' as p;
 var p = null;
 p.A a = p.A();
 ''', [
-      error(WarningCode.UNUSED_IMPORT, 7, 10),
       error(CompileTimeErrorCode.PREFIX_COLLIDES_WITH_TOP_LEVEL_MEMBER, 28, 1,
-          contextMessages: [message(testFile, 21, 1)]),
-      error(CompileTimeErrorCode.PREFIX_SHADOWED_BY_LOCAL_DECLARATION, 38, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 1)]),
     ]);
   }
 
@@ -92,11 +84,8 @@ import 'lib.dart' as p;
 class p {}
 p.A a = p.A();
 ''', [
-      error(WarningCode.UNUSED_IMPORT, 7, 10),
       error(CompileTimeErrorCode.PREFIX_COLLIDES_WITH_TOP_LEVEL_MEMBER, 30, 1,
-          contextMessages: [message(testFile, 21, 1)]),
-      error(CompileTimeErrorCode.NOT_A_TYPE, 35, 3),
-      error(CompileTimeErrorCode.UNDEFINED_METHOD, 45, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 1)]),
     ]);
   }
 }

@@ -11,5 +11,4 @@ class C extends B {
 }
 
 main() {}
-
 throws(void Function() f) {}

@@ -44,22 +44,22 @@ void f(({int f01, int f02, int g01}) x0) {
     // TODO(scheglov): This is wrong.
     assertResponse(r'''
 suggestions
-  v01
-    kind: localVariable
-  x0
-    kind: parameter
+  const
+    kind: keyword
   false
+    kind: keyword
+  final
     kind: keyword
   null
     kind: keyword
   true
     kind: keyword
-  const
-    kind: keyword
-  final
-    kind: keyword
+  v01
+    kind: localVariable
   var
     kind: keyword
+  x0
+    kind: parameter
 ''');
   }
 
@@ -175,22 +175,6 @@ suggestions
 ''');
   }
 
-  Future<void>
-      test_matchingContext_namedField_name_afterField_implicitName() async {
-    await computeSuggestions('''
-void f(({int f01, int f02, int f03}) x0) {
-  if (x0 case (:var f01, ^: )) {}
-}
-''');
-    assertResponse(r'''
-suggestions
-  f02
-    kind: identifier
-  f03
-    kind: identifier
-''');
-  }
-
   Future<void> test_matchingContext_namedField_name_beforeField() async {
     await computeSuggestions('''
 void f(({int f01, int f02, int g01}) x0) {
@@ -231,14 +215,8 @@ void f(({int f01, int f02, int g01}) x0) {
 ''');
     assertResponse(r'''
 suggestions
-  f01
-    kind: identifier
-  f02
-    kind: identifier
   final
     kind: keyword
-  g01
-    kind: identifier
   var
     kind: keyword
 ''');

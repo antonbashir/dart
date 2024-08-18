@@ -108,7 +108,9 @@ class A {
 ''');
     var excluded = <String>{};
     var expr = findNode.instanceCreation('Map(');
-    expect(getVariableNameSuggestionsForExpression(null, expr, excluded),
+    expect(
+        getVariableNameSuggestionsForExpression(null, expr, excluded,
+            isMethod: false),
         unorderedEquals(['map']));
     expect(
         getVariableNameSuggestionsForExpression(null, expr, excluded,

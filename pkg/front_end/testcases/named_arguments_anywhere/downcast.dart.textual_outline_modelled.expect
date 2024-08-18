@@ -1,3 +1,0 @@
-void foo(String x, {required bool y, required num z}) {}
-
-void main() {}

@@ -133,7 +133,7 @@ class TypeGraphDump {
 }
 
 /// Builds the Graphviz Dot file for one function body.
-class _GraphGenerator extends TypeInformationVisitor<void> {
+class _GraphGenerator extends TypeInformationVisitor {
   final TypeGraphDump global;
   final Set<TypeInformation> seen = Set<TypeInformation>();
   final List<TypeInformation> worklist = <TypeInformation>[];

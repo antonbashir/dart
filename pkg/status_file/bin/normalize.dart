@@ -18,11 +18,6 @@ ArgParser buildParser() {
       negatable: false,
       defaultsTo: false,
       help: "Overwrite input files with formatted output.");
-  parser.addFlag("delete-non-existing",
-      abbr: 'd',
-      negatable: true,
-      defaultsTo: true,
-      help: "Remove non-existing test entries.");
   parser.addFlag("help",
       abbr: "h",
       negatable: false,
@@ -49,28 +44,24 @@ void main(List<String> arguments) {
   }
   print("");
   bool overwrite = results["overwrite"];
-  bool deleteNonExisting = results["delete-non-existing"];
   for (var path in results.rest) {
     if (FileSystemEntity.isFileSync(path)) {
-      normalizeFile(path, overwrite, deleteNonExisting: deleteNonExisting);
+      normalizeFile(path, overwrite);
     } else if (FileSystemEntity.isDirectorySync(path)) {
       Directory(path).listSync(recursive: true).forEach((entry) {
         if (!canLint(entry.path)) {
           return;
         }
-        normalizeFile(entry.path, overwrite,
-            deleteNonExisting: deleteNonExisting);
+        normalizeFile(entry.path, overwrite);
       });
     }
   }
 }
 
-bool normalizeFile(String path, bool writeFile,
-    {required bool deleteNonExisting}) {
+bool normalizeFile(String path, bool writeFile) {
   try {
     var statusFile = StatusFile.read(path);
-    var normalizedStatusFile =
-        normalizeStatusFile(statusFile, deleteNonExisting: deleteNonExisting);
+    var normalizedStatusFile = normalizeStatusFile(statusFile);
     if (writeFile) {
       File(path).writeAsStringSync(normalizedStatusFile.toString());
       print("Normalized $path");
@@ -79,8 +70,7 @@ bool normalizeFile(String path, bool writeFile,
     }
     // Check if there are linting errors remaining, such as line comments,
     // that needs to be handled manually.
-    var lintErrors =
-        lint(normalizedStatusFile, checkForNonExisting: deleteNonExisting);
+    var lintErrors = lint(normalizedStatusFile);
     if (lintErrors.isNotEmpty) {
       print("The normalizer could not remove all linting errors. The following "
           "has to be removed manually:");

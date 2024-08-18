@@ -62,26 +62,13 @@ public class SourceEdit {
   private final String id;
 
   /**
-   * A human readable description of the change made by this edit.
-   *
-   * This description should be short and suitable to use as a heading with changes grouped by it.
-   * For example, a change made as part of a quick-fix may use the message "Replace final with var",
-   * allowing multiple changes and multiple applications of the fix to be grouped together.
-   *
-   * This value may be more specific than any value in an enclosing SourceChange.message which could
-   * contain edits made for different reasons (such as during a bulk fix operation).
-   */
-  private final String description;
-
-  /**
    * Constructor for {@link SourceEdit}.
    */
-  public SourceEdit(int offset, int length, String replacement, String id, String description) {
+  public SourceEdit(int offset, int length, String replacement, String id) {
     this.offset = offset;
     this.length = length;
     this.replacement = replacement;
     this.id = id;
-    this.description = description;
   }
 
   @Override
@@ -92,8 +79,7 @@ public class SourceEdit {
         other.offset == offset &&
         other.length == length &&
         ObjectUtilities.equals(other.replacement, replacement) &&
-        ObjectUtilities.equals(other.id, id) &&
-        ObjectUtilities.equals(other.description, description);
+        ObjectUtilities.equals(other.id, id);
     }
     return false;
   }
@@ -103,8 +89,7 @@ public class SourceEdit {
     int length = jsonObject.get("length").getAsInt();
     String replacement = jsonObject.get("replacement").getAsString();
     String id = jsonObject.get("id") == null ? null : jsonObject.get("id").getAsString();
-    String description = jsonObject.get("description") == null ? null : jsonObject.get("description").getAsString();
-    return new SourceEdit(offset, length, replacement, id, description);
+    return new SourceEdit(offset, length, replacement, id);
   }
 
   public static List<SourceEdit> fromJsonArray(JsonArray jsonArray) {
@@ -117,20 +102,6 @@ public class SourceEdit {
       list.add(fromJson(iterator.next().getAsJsonObject()));
     }
     return list;
-  }
-
-  /**
-   * A human readable description of the change made by this edit.
-   *
-   * This description should be short and suitable to use as a heading with changes grouped by it.
-   * For example, a change made as part of a quick-fix may use the message "Replace final with var",
-   * allowing multiple changes and multiple applications of the fix to be grouped together.
-   *
-   * This value may be more specific than any value in an enclosing SourceChange.message which could
-   * contain edits made for different reasons (such as during a bulk fix operation).
-   */
-  public String getDescription() {
-    return description;
   }
 
   /**
@@ -174,7 +145,6 @@ public class SourceEdit {
     builder.append(length);
     builder.append(replacement);
     builder.append(id);
-    builder.append(description);
     return builder.toHashCode();
   }
 
@@ -185,9 +155,6 @@ public class SourceEdit {
     jsonObject.addProperty("replacement", replacement);
     if (id != null) {
       jsonObject.addProperty("id", id);
-    }
-    if (description != null) {
-      jsonObject.addProperty("description", description);
     }
     return jsonObject;
   }
@@ -203,9 +170,7 @@ public class SourceEdit {
     builder.append("replacement=");
     builder.append(replacement + ", ");
     builder.append("id=");
-    builder.append(id + ", ");
-    builder.append("description=");
-    builder.append(description);
+    builder.append(id);
     builder.append("]");
     return builder.toString();
   }

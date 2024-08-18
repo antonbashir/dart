@@ -1,33 +1,4 @@
-## 14.2.5
-- Include a stack trace in the RPCError that is thrown when an attempt is made
-  to invoke an RPC using a `VmService` instance that has been disposed.
-
-## 14.2.4
-- Improved deserialization performance by utilizing a combination of `Utf8Decoder` and
-  `JsonDecoder` to avoid extra type conversions.
-
-## 14.2.3
-- An instance of RPCError is now thrown when attempting to invoke an RPC after the
-  `VmService` instance has been disposed.
-
-## 14.2.2
-- Fixes issue where outstanding service requests were not automatically completed
-  with an error when the VM service connection was closed.
-
-## 14.2.1
-- Fixes heap snapshot decoding error (dart-lang/sdk#55475).
-
-## 14.2.0
-- Update to version `4.15` of the spec.
-- Added `closureReceiver` property to `Instance` and `InstanceRef`.
-- Added `Finalizer`, `NativeFinalizer`, and `FinalizerEntry` instance kinds.
-
-## 14.1.0
-- Added `HeapSnapshotGraph.toChunks()`.
-- Added optional `calculateReferrers`, `decodeObjectData`, `decodeExternalProperties`,
-  and `decodeIdentityHashCodes` parameters to `HeapSnapshotGraph.fromChunks()`.
-
-## 14.0.0
+## 13.1.0-dev
 - Add the following error codes to `RPCErrorKind`:
   - `kVmMustBePaused`
   - `kCannotAddBreakpoint`
@@ -37,32 +8,6 @@
   - `kIsolateCannotReload`
   - `kIsolateNoReloadChangesApplied`
   - `kInvalidTimelineRequest`
-- Update to version `4.0` of the Dart IO service protocol extensions by making
-the following changes:
-  - Change the type of the `updatedSince` parameter of `getHttpProfile` from
-  `int?` to `DateTime?`.
-  - Change the type of the `timestamp` property of `HttpProfile` from `int` to
-  `DateTime`.
-  - Add `events` property to `HttpProfileRequestRef` and `HttpProfileRequest`.
-  - Change the type of the `startTime` property of `HttpProfileRequestRef` and
-  `HttpProfileRequest` from `int` to `DateTime`.
-  - Change the type of the `endTime` property of `HttpProfileRequestRef` and
-  `HttpProfileRequest` from `int?` to `DateTime?`.
-  - Remove the `events` and `method` properties from `HttpProfileRequestData`.
-  - Make the `contentLength`, `cookies`, `followRedirects`, `headers`,
-  `maxRedirects`, `method`, and `persistentConnection` properties of
-  `HttpProfileRequestData` nullable.
-  - Change the type of the `startTime` property of `HttpProfileResponseData`
-  from `int` to `DateTime?`.
-  - Change the type of the `endTime` property of `HttpProfileResponseData`
-  from `int?` to `DateTime?`.
-  - Make the `cookies`, `headers`, `compressionState`, `reasonPhrase`,
-  `isRedirect`, `persistentConnection`, `contentLength`, `statusCode`, and
-  `startTime` properties of `HttpProfileResponseData` nullable.
-  - Add `isDirect` and `port` properties to `HttpProfileProxyData`.
-  - Add `arguments` property to `HttpProfileRequestEvent`.
-  - Change the type of the `timestamp` property of `HttpProfileRequestEvent`
-  from `int` to `DateTime`.
 
 ## 13.0.0
 - Add Dart IO extension methods:
@@ -153,7 +98,7 @@ instance and connect it to a web socket URI.
 - Change `HttpProfileRequestRef.id` type from `int` to `String`.
 - Change `SocketStatistic.id` type from `int` to `String`.
 - Change `ext.dart.io.getHttpProfileRequest` `id` parameter type from `int` to `String`.
-- Change `ext.dart.io.httpEnableTimelineLogging` parameter from 'enable' to 'enabled'.
+- Change `ext.dart.io.socketProfilingEnabled` parameter from 'enable' to 'enabled'.
 
 ## 10.1.2
 - Fix bug where code would try to call `.toJson()` on `String`s.

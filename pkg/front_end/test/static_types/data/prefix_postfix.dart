@@ -2,259 +2,382 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-num numTopLevel = /*int!*/ 0;
-int intTopLevel = /*int!*/ 0;
-dynamic dynamicTopLevel = /*int!*/ 0;
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
+
+num numTopLevel = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
+int intTopLevel = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
+dynamic dynamicTopLevel = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
 
 testTopLevel() {
-  /*update: num!*/
-  /*num!*/
+  /*cfe.update: num*/
+  /*cfe:nnbd.update: num!*/
+  /*cfe.num*/
+  /*cfe:nnbd.num!*/
   numTopLevel
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*update: num!*/
-  /*num!*/
+  /*cfe.update: num*/
+  /*cfe:nnbd.update: num!*/
+  /*cfe.num*/
+  /*cfe:nnbd.num!*/
   numTopLevel
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*update: num!*/
-      /*num!*/
+      /*cfe.update: num*/
+      /*cfe:nnbd.update: num!*/
+      /*cfe.num*/
+      /*cfe:nnbd.num!*/
       numTopLevel;
 
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*update: num!*/
-      /*num!*/
+      /*cfe.update: num*/
+      /*cfe:nnbd.update: num!*/
+      /*cfe.num*/
+      /*cfe:nnbd.num!*/
       numTopLevel;
 
-  /*update: int!*/
-  /*int!*/
+  /*cfe.update: int*/
+  /*cfe:nnbd.update: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   intTopLevel
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*update: int!*/
-  /*int!*/
+  /*cfe.update: int*/
+  /*cfe:nnbd.update: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   intTopLevel
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*update: int!*/
-      /*int!*/
+      /*cfe.update: int*/
+      /*cfe:nnbd.update: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       intTopLevel;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*update: int!*/
-      /*int!*/
+      /*cfe.update: int*/
+      /*cfe:nnbd.update: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       intTopLevel;
 
   /*update: dynamic*/ /*dynamic*/ dynamicTopLevel
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
   /*update: dynamic*/ /*dynamic*/ dynamicTopLevel
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
       /*update: dynamic*/ /*dynamic*/ dynamicTopLevel;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
       /*update: dynamic*/ /*dynamic*/ dynamicTopLevel;
 }
 
 class Class {
-  num numInstance = /*int!*/ 0;
-  int intInstance = /*int!*/ 0;
-  dynamic dynamicInstance = /*int!*/ 0;
+  num numInstance = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
+  int intInstance = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
+  dynamic dynamicInstance = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
 
   testInstance() {
-    /*update: num!*/
-    /*num!*/
+    /*cfe.update: num*/
+    /*cfe:nnbd.update: num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     numInstance
-        /*invoke: num!*/
-        /*int!*/
+        /*cfe.invoke: num*/
+        /*cfe:nnbd.invoke: num!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         ++;
 
-    /*update: num!*/
-    /*num!*/
+    /*cfe.update: num*/
+    /*cfe:nnbd.update: num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     numInstance
-        /*invoke: num!*/
-        /*int!*/
+        /*cfe.invoke: num*/
+        /*cfe:nnbd.invoke: num!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         --;
 
-    /*invoke: num!*/
-    /*int!*/
+    /*cfe.invoke: num*/
+    /*cfe:nnbd.invoke: num!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     ++
-        /*update: num!*/
-        /*num!*/
+        /*cfe.update: num*/
+        /*cfe:nnbd.update: num!*/
+        /*cfe.num*/
+        /*cfe:nnbd.num!*/
         numInstance;
 
-    /*invoke: num!*/
-    /*int!*/
+    /*cfe.invoke: num*/
+    /*cfe:nnbd.invoke: num!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     --
-        /*update: num!*/
-        /*num!*/
+        /*cfe.update: num*/
+        /*cfe:nnbd.update: num!*/
+        /*cfe.num*/
+        /*cfe:nnbd.num!*/
         numInstance;
 
-    /*update: int!*/
-    /*int!*/
+    /*cfe.update: int*/
+    /*cfe:nnbd.update: int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     intInstance
-        /*invoke: int!*/
-        /*int!*/
+        /*cfe.invoke: int*/
+        /*cfe:nnbd.invoke: int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         ++;
 
-    /*update: int!*/
-    /*int!*/
+    /*cfe.update: int*/
+    /*cfe:nnbd.update: int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     intInstance
-        /*invoke: int!*/
-        /*int!*/
+        /*cfe.invoke: int*/
+        /*cfe:nnbd.invoke: int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         --;
 
-    /*invoke: int!*/
-    /*int!*/
+    /*cfe.invoke: int*/
+    /*cfe:nnbd.invoke: int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     ++
-        /*update: int!*/
-        /*int!*/
+        /*cfe.update: int*/
+        /*cfe:nnbd.update: int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         intInstance;
 
-    /*invoke: int!*/
-    /*int!*/
+    /*cfe.invoke: int*/
+    /*cfe:nnbd.invoke: int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     --
-        /*update: int!*/
-        /*int!*/
+        /*cfe.update: int*/
+        /*cfe:nnbd.update: int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         intInstance;
 
     /*update: dynamic*/ /*dynamic*/ dynamicInstance
         /*invoke: dynamic*/
-        /*int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         ++;
     /*update: dynamic*/ /*dynamic*/ dynamicInstance
         /*invoke: dynamic*/
-        /*int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         --;
     /*invoke: dynamic*/
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     ++
         /*update: dynamic*/ /*dynamic*/ dynamicInstance;
     /*invoke: dynamic*/
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     --
         /*update: dynamic*/ /*dynamic*/ dynamicInstance;
   }
 }
 
 testInstanceOnClass(Class c) {
-  /*Class!*/
-  c. /*update: num!*/
-          /*num!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
+  c. /*cfe.update: num*/
+          /*cfe:nnbd.update: num!*/
+          /*cfe.num*/
+          /*cfe:nnbd.num!*/
           numInstance
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*Class!*/
-  c. /*update: num!*/
-          /*num!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
+  c. /*cfe.update: num*/
+          /*cfe:nnbd.update: num!*/
+          /*cfe.num*/
+          /*cfe:nnbd.num!*/
           numInstance
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*Class!*/
-      c. /*update: num!*/
-          /*num!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
+      c. /*cfe.update: num*/
+          /*cfe:nnbd.update: num!*/
+          /*cfe.num*/
+          /*cfe:nnbd.num!*/
           numInstance;
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*Class!*/
-      c. /*update: num!*/
-          /*num!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
+      c. /*cfe.update: num*/
+          /*cfe:nnbd.update: num!*/
+          /*cfe.num*/
+          /*cfe:nnbd.num!*/
           numInstance;
 
-  /*Class!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
   c.
-          /*update: int!*/
-          /*int!*/
+          /*cfe.update: int*/
+          /*cfe:nnbd.update: int!*/
+          /*cfe.int*/
+          /*cfe:nnbd.int!*/
           intInstance
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*Class!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
   c.
-          /*update: int!*/
-          /*int!*/
+          /*cfe.update: int*/
+          /*cfe:nnbd.update: int!*/
+          /*cfe.int*/
+          /*cfe:nnbd.int!*/
           intInstance
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*Class!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
       c.
-          /*update: int!*/
-          /*int!*/
+          /*cfe.update: int*/
+          /*cfe:nnbd.update: int!*/
+          /*cfe.int*/
+          /*cfe:nnbd.int!*/
           intInstance;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*Class!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
       c.
-          /*update: int!*/
-          /*int!*/
+          /*cfe.update: int*/
+          /*cfe:nnbd.update: int!*/
+          /*cfe.int*/
+          /*cfe:nnbd.int!*/
           intInstance;
 
-  /*Class!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
   c. /*update: dynamic*/ /*dynamic*/ dynamicInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*Class!*/
+  /*cfe.Class*/
+  /*cfe:nnbd.Class!*/
   c. /*update: dynamic*/ /*dynamic*/ dynamicInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*Class!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
       c. /*update: dynamic*/ /*dynamic*/ dynamicInstance;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*Class!*/
+      /*cfe.Class*/
+      /*cfe:nnbd.Class!*/
       c. /*update: dynamic*/ /*dynamic*/ dynamicInstance;
 }
 
@@ -262,23 +385,27 @@ testInstanceOnDynamic(dynamic c) {
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ numInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ numInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ numInstance;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ numInstance;
@@ -286,23 +413,27 @@ testInstanceOnDynamic(dynamic c) {
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ intInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ intInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ intInstance;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ intInstance;
@@ -310,23 +441,27 @@ testInstanceOnDynamic(dynamic c) {
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ dynamicInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
   /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ dynamicInstance
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ dynamicInstance;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
       /*dynamic*/ c.
           /*update: dynamic*/ /*dynamic*/ dynamicInstance;
@@ -334,87 +469,123 @@ testInstanceOnDynamic(dynamic c) {
 
 main() {
   /// ignore: unused_local_variable
-  num numLocal = /*int!*/ 0;
+  num numLocal = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
 
   /// ignore: unused_local_variable
-  int intLocal = /*int!*/ 0;
+  int intLocal = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
 
   /// ignore: unused_local_variable
-  dynamic dynamicLocal = /*int!*/ 0;
+  dynamic dynamicLocal = /*cfe.int*/ /*cfe:nnbd.int!*/ 0;
 
-  /*update: num!*/
-  /*num!*/
+  /*cfe.update: num*/
+  /*cfe:nnbd.update: num!*/
+  /*cfe.num*/
+  /*cfe:nnbd.num!*/
   numLocal
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*update: num!*/
-  /*num!*/
+  /*cfe.update: num*/
+  /*cfe:nnbd.update: num!*/
+  /*cfe.num*/
+  /*cfe:nnbd.num!*/
   numLocal
-      /*invoke: num!*/
-      /*int!*/
+      /*cfe.invoke: num*/
+      /*cfe:nnbd.invoke: num!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*update: num!*/
-      /*num!*/
+      /*cfe.update: num*/
+      /*cfe:nnbd.update: num!*/
+      /*cfe.num*/
+      /*cfe:nnbd.num!*/
       numLocal;
 
-  /*invoke: num!*/
-  /*int!*/
+  /*cfe.invoke: num*/
+  /*cfe:nnbd.invoke: num!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*update: num!*/
-      /*num!*/
+      /*cfe.update: num*/
+      /*cfe:nnbd.update: num!*/
+      /*cfe.num*/
+      /*cfe:nnbd.num!*/
       numLocal;
 
-  /*update: int!*/
-  /*int!*/
+  /*cfe.update: int*/
+  /*cfe:nnbd.update: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   intLocal
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
-  /*update: int!*/
-  /*int!*/
+  /*cfe.update: int*/
+  /*cfe:nnbd.update: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   intLocal
-      /*invoke: int!*/
-      /*int!*/
+      /*cfe.invoke: int*/
+      /*cfe:nnbd.invoke: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
-      /*update: int!*/
-      /*int!*/
+      /*cfe.update: int*/
+      /*cfe:nnbd.update: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       intLocal;
 
-  /*invoke: int!*/
-  /*int!*/
+  /*cfe.invoke: int*/
+  /*cfe:nnbd.invoke: int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
-      /*update: int!*/
-      /*int!*/
+      /*cfe.update: int*/
+      /*cfe:nnbd.update: int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       intLocal;
 
   /*update: dynamic*/ /*dynamic*/ dynamicLocal
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       ++;
 
   /*update: dynamic*/ /*dynamic*/ dynamicLocal
       /*invoke: dynamic*/
-      /*int!*/
+      /*cfe.int*/
+      /*cfe:nnbd.int!*/
       --;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   ++
       /*update: dynamic*/ /*dynamic*/ dynamicLocal;
 
   /*invoke: dynamic*/
-  /*int!*/
+  /*cfe.int*/
+  /*cfe:nnbd.int!*/
   --
       /*update: dynamic*/ /*dynamic*/ dynamicLocal;
 }

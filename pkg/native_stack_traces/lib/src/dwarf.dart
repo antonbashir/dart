@@ -1867,20 +1867,11 @@ class PCOffset {
   /// Whether the architecture was being simulated, when available.
   final bool? usingSimulator;
 
-  /// The build ID of the corresponding instructions section, when available.
-  final String? buildId;
-
-  /// The loading unit ID of the corresponding instructions section, when
-  /// available.
-  final int? unitId;
-
   PCOffset(this.offset, this.section,
       {this.os,
       this.architecture,
       this.compressedPointers,
-      this.usingSimulator,
-      this.buildId,
-      this.unitId});
+      this.usingSimulator});
 
   /// The virtual address for this [PCOffset] in [dwarf].
   int virtualAddressIn(Dwarf dwarf) => dwarf.virtualAddressOf(this);
@@ -1907,25 +1898,23 @@ class PCOffset {
       os == other.os &&
       architecture == other.architecture &&
       compressedPointers == other.compressedPointers &&
-      usingSimulator == other.usingSimulator &&
-      buildId == other.buildId &&
-      unitId == other.unitId;
+      usingSimulator == other.usingSimulator;
 
   @override
   String toString() {
     final buffer = StringBuffer();
     buffer
       ..write('PCOffset(')
-      ..write(section.name)
+      ..write(section)
       ..write(', 0x')
       ..write(offset.toRadixString(16));
     if (os != null) {
       buffer
-        ..write(', os: ')
+        ..write(', ')
         ..write(os!);
     }
     if (architecture != null) {
-      buffer.write(', architecture: ');
+      buffer.write(', ');
       if (usingSimulator ?? false) {
         buffer.write('SIM');
       }
@@ -1933,17 +1922,6 @@ class PCOffset {
       if (compressedPointers ?? false) {
         buffer.write('C');
       }
-    }
-    if (buildId != null) {
-      buffer
-        ..write(", buildId: '")
-        ..write(buildId)
-        ..write("'");
-    }
-    if (unitId != null) {
-      buffer
-        ..write(', unitId: ')
-        ..write(unitId!);
     }
     buffer.write(')');
     return buffer.toString();
@@ -2047,24 +2025,20 @@ class DwarfSnapshot extends Dwarf {
   DwarfSnapshot._(this._container, this._abbreviationsTables, this._debugInfo,
       this._lineNumberInfo);
 
-  static DwarfSnapshot? fromDwarfContainer(
+  static DwarfSnapshot fromDwarfContainer(
           Reader reader, DwarfContainer container) =>
       // We use Zone values to pass around the string tables that may be used
       // when parsing different sections.
       runZoned(() {
         final abbrevReader = container.abbreviationsTableReader(reader);
-        if (abbrevReader == null) return null;
         final abbreviationsTables = Map.fromEntries(abbrevReader
             .readRepeatedWithOffsets(_AbbreviationsTable.fromReader));
 
-        final debugInfoReader = container.debugInfoReader(reader);
-        if (debugInfoReader == null) return null;
-        final debugInfo =
-            DebugInfo.fromReader(debugInfoReader, abbreviationsTables);
+        final debugInfo = DebugInfo.fromReader(
+            container.debugInfoReader(reader), abbreviationsTables);
 
-        final lineNumberInfoReader = container.lineNumberInfoReader(reader);
-        if (lineNumberInfoReader == null) return null;
-        final lineNumberInfo = LineNumberInfo.fromReader(lineNumberInfoReader);
+        final lineNumberInfo =
+            LineNumberInfo.fromReader(container.lineNumberInfoReader(reader));
 
         return DwarfSnapshot._(
             container, abbreviationsTables, debugInfo, lineNumberInfo);
@@ -2194,10 +2168,8 @@ class DwarfUniversalBinary extends Dwarf {
       final container = binary.containerForCpuType(cpuType)!;
       final reader = binary.readerForCpuType(originalReader, cpuType)!;
       final dwarf = DwarfSnapshot.fromDwarfContainer(reader, container);
-      if (dwarf == null) continue;
       dwarfs[cpuType] = dwarf;
     }
-    if (dwarfs.isEmpty) return null;
     return DwarfUniversalBinary._(binary, dwarfs);
   }
 

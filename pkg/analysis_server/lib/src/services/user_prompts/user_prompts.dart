@@ -18,7 +18,7 @@ abstract class UserPromptPreferences {
     ResourceProvider resourceProvider,
     InstrumentationService instrumentationService,
   ) {
-    var stateFolder = resourceProvider.getStateLocation('.prompts');
+    final stateFolder = resourceProvider.getStateLocation('.prompts');
     if (stateFolder == null) {
       instrumentationService.logInfo(
         'No state location is available for saving user prompt preferences. '
@@ -26,7 +26,7 @@ abstract class UserPromptPreferences {
       );
       return _NotPersistableUserPromptPreferences();
     }
-    var preferencesFile =
+    final preferencesFile =
         (stateFolder..create()).getChildAssumingFile('preferences.json');
 
     return _PersistableUserPromptPreferences(
@@ -98,7 +98,7 @@ class _PersistableUserPromptPreferences implements UserPromptPreferences {
   /// any reason.
   Map<String, Object?>? _readFile() {
     try {
-      var contents = preferencesFile.readAsStringSync();
+      final contents = preferencesFile.readAsStringSync();
       return jsonDecode(contents) as Map<String, Object?>;
     } on FileSystemException catch (_) {
       // File did not exist, do nothing.
@@ -116,11 +116,11 @@ class _PersistableUserPromptPreferences implements UserPromptPreferences {
   /// Returns [defaultValue] if it does not exist or cannot be read for any
   /// reason.
   T _readValue<T>(String name, T defaultValue) {
-    var values = _readFile();
+    final values = _readFile();
     if (values == null) {
       return defaultValue;
     }
-    var value = values[name];
+    final value = values[name];
     if (value is! T) {
       return defaultValue;
     }
@@ -139,7 +139,7 @@ class _PersistableUserPromptPreferences implements UserPromptPreferences {
   /// written to the instrumentation log.
   bool _writeFile(Map<String, Object?> data) {
     try {
-      var contents = _jsonEncoder.convert(data);
+      final contents = _jsonEncoder.convert(data);
       preferencesFile.writeAsStringSync(contents);
       return true;
     } catch (e) {
@@ -158,7 +158,7 @@ class _PersistableUserPromptPreferences implements UserPromptPreferences {
   /// written to the instrumentation log.
   bool _writeValue<T>(String name, T value) {
     assert(value is bool || value is num || value is String);
-    var data = _readFile() ?? {};
+    final data = _readFile() ?? {};
     data[name] = value;
     return _writeFile(data);
   }

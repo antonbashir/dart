@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:convert';
+
 // We need to use the 'io' prefix here, otherwise io.exitCode will shadow
 // CommandOutput.exitCode in subclasses of CommandOutput.
 import 'dart:io' as io;
@@ -429,7 +430,9 @@ class BrowserCommandOutput extends CommandOutput
 
     // Show the events unless the above error was sufficient.
     // TODO(rnystrom): Let users enable or disable this explicitly?
-    if (errorShown && progress != Progress.verbose) {
+    if (errorShown &&
+        progress != Progress.buildbot &&
+        progress != Progress.verbose) {
       return;
     }
 
@@ -592,10 +595,7 @@ class AnalysisCommandOutput extends CommandOutput with _StaticErrorOutput {
   ]) {
     StaticError convert(AnalyzerError error) {
       var staticError = StaticError(ErrorSource.analyzer, error.errorCode,
-          path: error.file,
-          line: error.line,
-          column: error.column,
-          length: error.length);
+          line: error.line, column: error.column, length: error.length);
 
       for (var context in error.contextMessages) {
         // TODO(rnystrom): Include these when static error tests get support
@@ -608,7 +608,6 @@ class AnalysisCommandOutput extends CommandOutput with _StaticErrorOutput {
 
         staticError.contextMessages.add(StaticError(
             ErrorSource.context, context.message,
-            path: context.file,
             line: context.line,
             column: context.column,
             length: context.length));
@@ -1108,7 +1107,7 @@ class Dart2jsCompilerCommandOutput extends CompilationCommandOutput
   /// suggested fixes, so we only parse the first line.
   // TODO(rnystrom): Support validating context messages.
   static final _errorRegexp =
-      RegExp(r"^([^:\n\r]+):(\d+):(\d+):\n(Error): (.*)$", multiLine: true);
+      RegExp(r"^([^:]+):(\d+):(\d+):\n(Error): (.*)$", multiLine: true);
 
   Dart2jsCompilerCommandOutput(super.command, super.exitCode, super.timedOut,
       super.stdout, super.stderr, super.time, super.compilationSkipped);
@@ -1139,7 +1138,7 @@ class Dart2WasmCompilerCommandOutput extends CompilationCommandOutput
   /// suggested fixes, so we only parse the first line.
   // TODO(rnystrom): Support validating context messages.
   static final _errorRegexp =
-      RegExp(r"^([^:\n\r]+):(\d+):(\d+): (Error): (.*)$", multiLine: true);
+      RegExp(r"^([^:]+):(\d+):(\d+): (Error): (.*)$", multiLine: true);
 
   Dart2WasmCompilerCommandOutput(super.command, super.exitCode, super.timedOut,
       super.stdout, super.stderr, super.time, super.compilationSkipped);
@@ -1147,18 +1146,12 @@ class Dart2WasmCompilerCommandOutput extends CompilationCommandOutput
   @override
   void _parseErrors() {
     var errors = <StaticError>[];
-    // We expect errors to be printed to `stderr` for dart2wasm.
-    parseErrors(decodeUtf8(stderr), errors);
+    parseErrors(decodeUtf8(stdout), errors);
     errors.forEach(addError);
   }
 }
 
 class DevCompilerCommandOutput extends CommandOutput with _StaticErrorOutput {
-  static void parseErrors(String stdout, List<StaticError> errors) {
-    _StaticErrorOutput._parseCfeErrors(
-        ErrorSource.web, _errorRegexp, stdout, errors);
-  }
-
   /// Matches the first line of a DDC error message. DDC prints errors to
   /// stdout that look like:
   ///
@@ -1171,7 +1164,7 @@ class DevCompilerCommandOutput extends CommandOutput with _StaticErrorOutput {
   /// suggested fixes, so we only parse the first line.
   // TODO(rnystrom): Support validating context messages.
   static final _errorRegexp = RegExp(
-      r"^org-dartlang-app:/([^\n\r]+):(\d+):(\d+): (Error): (.*)$",
+      r"^org-dartlang-app:/([^:]+):(\d+):(\d+): (Error): (.*)$",
       multiLine: true);
 
   DevCompilerCommandOutput(
@@ -1228,7 +1221,8 @@ class DevCompilerCommandOutput extends CommandOutput with _StaticErrorOutput {
   @override
   void _parseErrors() {
     var errors = <StaticError>[];
-    parseErrors(decodeUtf8(stdout), errors);
+    _StaticErrorOutput._parseCfeErrors(
+        ErrorSource.web, _errorRegexp, decodeUtf8(stdout), errors);
     errors.forEach(addError);
   }
 }
@@ -1476,7 +1470,7 @@ class FastaCommandOutput extends CompilationCommandOutput
   /// The test runner only validates the first line of the message, and not the
   /// suggested fixes.
   static final _errorRegexp = RegExp(
-      r"^(?:([^:\n\r]+):(\d+):(\d+): )?(Context|Error|Warning): (.*)$",
+      r"^(?:([^:]+):(\d+):(\d+): )?(Context|Error|Warning): (.*)$",
       multiLine: true);
 
   FastaCommandOutput(super.command, super.exitCode, super.hasTimedOut,
@@ -1502,19 +1496,15 @@ mixin _StaticErrorOutput on CommandOutput {
       [List<StaticError>? warnings]) {
     StaticError? previousError;
     for (var match in regExp.allMatches(stdout)) {
-      // These three are either all present or all null.
-      var path = match[1];
-      var line = _parseNullableInt(match[2]);
-      var column = _parseNullableInt(match[3]);
+      var line = _parseNullableInt(match.group(2));
+      var column = _parseNullableInt(match.group(3));
+      var severity = match.group(4);
+      var message = match.group(5);
 
-      var severity = match[4];
-      var message = match[5];
-
-      if (path == null) {
+      if (line == null) {
         // No location information.
         if (severity == 'Context' && previousError != null) {
           // We can use the location information from the error message
-          path = previousError.path;
           line = previousError.line;
           column = previousError.column;
         } else {
@@ -1523,14 +1513,13 @@ mixin _StaticErrorOutput on CommandOutput {
           continue;
         }
       }
-      // Line and column information should have been present or it should have
-      // been filled in by the code above.
-      assert(line != null);
+      // Column information should have been present or it should have been
+      // filled in by the code above.
       assert(column != null);
 
       var error = StaticError(
           severity == "Context" ? ErrorSource.context : errorSource, message!,
-          path: path, line: line!, column: column!);
+          line: line, column: column!);
 
       if (severity == "Context") {
         // Attach context messages to the preceding error/warning.

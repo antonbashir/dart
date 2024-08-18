@@ -2,11 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
-import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -17,15 +18,8 @@ class CreateConstructor extends ResolvedCorrectionProducer {
   // TODO(migration): We set this node when we have the change.
   late String _constructorName;
 
-  CreateConstructor({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_constructorName];
+  List<Object> get fixArguments => [_constructorName];
 
   @override
   FixKind get fixKind => DartFixKind.CREATE_CONSTRUCTOR;
@@ -33,7 +27,7 @@ class CreateConstructor extends ResolvedCorrectionProducer {
   @override
   Future<void> compute(ChangeBuilder builder) async {
     var node = this.node;
-    var argumentList = node.parent is ArgumentList ? node.parent : node;
+    final argumentList = node.parent is ArgumentList ? node.parent : node;
     if (argumentList is ArgumentList) {
       var instanceCreation = argumentList.parent;
       if (instanceCreation is InstanceCreationExpression) {
@@ -92,12 +86,20 @@ class CreateConstructor extends ResolvedCorrectionProducer {
       return;
     }
 
-    var resolvedUnit = targetResult.resolvedUnit;
-    if (resolvedUnit == null) {
+    var targetUnit = targetResult.resolvedUnit;
+    if (targetUnit == null) {
       return;
     }
 
-    await _write(builder, resolvedUnit, name, targetNode,
+    // prepare location
+    var targetLocation = CorrectionUtils(targetUnit)
+        .prepareNewConstructorLocation(
+            unitResult.session, targetNode, targetUnit.file);
+    if (targetLocation == null) {
+      return;
+    }
+
+    await _write(builder, name, targetElement, targetLocation,
         constructorName: name, argumentList: instanceCreation.argumentList);
   }
 
@@ -123,10 +125,14 @@ class CreateConstructor extends ResolvedCorrectionProducer {
       return;
     }
 
-    var resolvedUnit = targetResult.resolvedUnit;
-    if (resolvedUnit == null) {
+    var targetUnit = targetResult.resolvedUnit;
+    if (targetUnit == null) {
       return;
     }
+
+    // prepare location
+    var targetLocation = CorrectionUtils(targetUnit)
+        .prepareEnumNewConstructorLocation(targetNode);
 
     var arguments = parent.arguments;
     _constructorName =
@@ -134,9 +140,9 @@ class CreateConstructor extends ResolvedCorrectionProducer {
 
     await _write(
       builder,
-      resolvedUnit,
       name,
-      targetNode,
+      targetElement,
+      targetLocation,
       isConst: true,
       constructorName: arguments?.constructorSelector?.name.token,
       argumentList: arguments?.argumentList,
@@ -166,38 +172,50 @@ class CreateConstructor extends ResolvedCorrectionProducer {
       return;
     }
 
-    var resolvedUnit = targetResult.resolvedUnit;
-    if (resolvedUnit == null) {
+    var targetUnit = targetResult.resolvedUnit;
+    if (targetUnit == null) {
+      return;
+    }
+
+    // prepare location
+    var targetLocation = CorrectionUtils(targetUnit)
+        .prepareNewConstructorLocation(
+            unitResult.session, targetNode, targetUnit.file);
+    if (targetLocation == null) {
       return;
     }
 
     var targetSource = targetElement.source;
     var targetFile = targetSource.fullName;
     await builder.addDartFileEdit(targetFile, (builder) {
-      builder.insertConstructor(targetNode, (builder) {
+      builder.addInsertion(targetLocation.offset, (builder) {
+        builder.write(targetLocation.prefix);
         builder.writeConstructorDeclaration(targetElement.name,
             argumentList: instanceCreation.argumentList);
+        builder.write(targetLocation.suffix);
       });
     });
   }
 
   Future<void> _write(
     ChangeBuilder builder,
-    ResolvedUnitResult resolvedUnit,
     Token name,
-    NamedCompilationUnitMember unitMember, {
+    InterfaceElement targetElement,
+    InsertionLocation targetLocation, {
     Token? constructorName,
     bool isConst = false,
     ArgumentList? argumentList,
   }) async {
-    var targetFile = resolvedUnit.file.path;
+    var targetFile = targetElement.source.fullName;
     await builder.addDartFileEdit(targetFile, (builder) {
-      builder.insertConstructor(unitMember, (builder) {
-        builder.writeConstructorDeclaration(unitMember.name.lexeme,
+      builder.addInsertion(targetLocation.offset, (builder) {
+        builder.write(targetLocation.prefix);
+        builder.writeConstructorDeclaration(targetElement.name,
             isConst: isConst,
             argumentList: argumentList,
             constructorName: constructorName?.lexeme,
             constructorNameGroupName: 'NAME');
+        builder.write(targetLocation.suffix);
       });
       if (targetFile == file) {
         builder.addLinkedPosition(range.token(name), 'NAME');

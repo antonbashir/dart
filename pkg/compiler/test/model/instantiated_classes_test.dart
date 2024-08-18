@@ -49,10 +49,10 @@ void main() {
                   class Class extends A {}""", ["Class"]);
     await test("""class A {}
                   class Class implements A {}""", ["Class"]);
-    await test("""mixin A {}
+    await test("""class A {}
                   class Class extends Object with A {}""", ["Class"]);
     await test("""class A {}
-                  mixin B {}
+                  class B {}
                   class Class extends Object with B implements A {}""",
         ["Class"]);
 
@@ -66,7 +66,7 @@ void main() {
     await test("""class A {}
                   class B extends A {}
                   class Class extends B {}""", ["Class", "A"], ["Class", "A"]);
-    await test("""mixin class A {}
+    await test("""class A {}
                   class B {}
                   class Class extends B with A {}""", ["Class", "A"],
         ["Class", "A"]);

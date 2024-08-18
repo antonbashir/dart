@@ -416,10 +416,7 @@ abstract class RenameRefactoring implements Refactoring {
     var session = resolvedUnit.session;
     var sessionHelper = AnalysisSessionHelper(session);
     if (element is PropertyAccessorElement) {
-      element = element.variable2;
-      if (element == null) {
-        return null;
-      }
+      element = element.variable;
     }
     var enclosingElement = element.enclosingElement;
     if (enclosingElement is CompilationUnitElement) {
@@ -534,7 +531,7 @@ abstract class RenameRefactoring implements Refactoring {
 
     // Rename the class when on `new` in an instance creation.
     if (node is InstanceCreationExpression) {
-      var namedType = node.constructorName.type;
+      final namedType = node.constructorName.type;
       element = namedType.element;
       offset = namedType.name2.offset;
       length = namedType.name2.length;

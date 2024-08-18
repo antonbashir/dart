@@ -2,7 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// Based on tests/language/type_variable_function_type_test.dart
+// @dart = 2.7
+
+// Based on tests/language_2/type_variable_function_type_test.dart
 
 import 'package:compiler/src/util/testing.dart';
 
@@ -17,7 +19,7 @@ class Foo<S> {
 class Bar<T> {
   f() {
     /*checks=[$signature],instance*/
-    T? local() => null;
+    T local() => null;
     return local;
   }
 }

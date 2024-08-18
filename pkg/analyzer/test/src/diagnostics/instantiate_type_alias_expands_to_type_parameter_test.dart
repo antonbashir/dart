@@ -111,14 +111,14 @@ void f() {
       error(_errorCode, 57, 1),
     ]);
 
-    var node = findNode.instanceCreation('new B()');
+    final node = findNode.instanceCreation('new B()');
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType
       name: B
-      element: <testLibraryFragment>::@typeAlias::B
+      element: self::@typeAlias::B
       type: InvalidType
     staticElement: <null>
   argumentList: ArgumentList

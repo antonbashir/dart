@@ -30,8 +30,8 @@ import 'dart:_internal';
   }
 
   test_wasm_fromJs() async {
-    var packageRootPath = _newPackage('js');
-    var file = newFile('$packageRootPath/lib/js.dart', '''
+    final packageRootPath = _newPackage('js');
+    final file = newFile('$packageRootPath/lib/js.dart', '''
 import 'dart:_wasm';
 ''');
     await resolveFile2(file);
@@ -50,8 +50,8 @@ import 'dart:_wasm';
   }
 
   test_wasm_fromUi() async {
-    var packageRootPath = _newPackage('ui');
-    var file = newFile('$packageRootPath/lib/ui.dart', '''
+    final packageRootPath = _newPackage('ui');
+    final file = newFile('$packageRootPath/lib/ui.dart', '''
 import 'dart:_wasm';
 ''');
     await resolveFile2(file);

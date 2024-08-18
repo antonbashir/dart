@@ -15,8 +15,15 @@ class FunctionBuilder extends ir.BaseFunction
 
   FunctionBuilder(ModuleBuilder module, super.index, super.type,
       [super.functionName]) {
-    body = InstructionsBuilder(module, type.inputs, type.outputs);
+    body = InstructionsBuilder(module, type.outputs);
+    for (ir.ValueType paramType in type.inputs) {
+      body.addLocal(paramType, isParameter: true);
+    }
   }
+
+  /// Add a local variable to the function.
+  ir.Local addLocal(ir.ValueType type) =>
+      body.addLocal(type, isParameter: false);
 
   @override
   ir.DefinedFunction forceBuild() =>

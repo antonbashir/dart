@@ -11,5 +11,4 @@ class C implements B {
 }
 
 test() {}
-
 main() {}

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/dart/analysis/features.dart';
+import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -27,18 +27,12 @@ class HorizontalInferenceDisabledTest extends PubPackageResolutionTest
 class HorizontalInferenceEnabledTest extends PubPackageResolutionTest
     with HorizontalInferenceTestCases {
   @override
-  List<String> get experiments {
-    return [
-      ...super.experiments,
-      Feature.inference_update_1.enableString,
-    ];
-  }
+  List<String> get experiments =>
+      [...super.experiments, EnableString.inference_update_1];
 }
 
 mixin HorizontalInferenceTestCases on PubPackageResolutionTest {
-  bool get _isEnabled => experiments.contains(
-        Feature.inference_update_1.enableString,
-      );
+  bool get _isEnabled => experiments.contains(EnableString.inference_update_1);
 
   test_closure_passed_to_dynamic() async {
     await assertNoErrorsInCode('''
@@ -65,7 +59,7 @@ example(List<int> list) {
 ''';
     if (_isEnabled) {
       await assertErrorsInCode(code, [
-        error(WarningCode.UNUSED_LOCAL_VARIABLE, 32, 1),
+        error(HintCode.UNUSED_LOCAL_VARIABLE, 32, 1),
       ]);
       assertType(findElement.localVar('a').type, 'int');
       assertType(findElement.parameter('x').type, 'int');
@@ -74,7 +68,7 @@ example(List<int> list) {
           findNode.binary('x + y').staticElement!.enclosingElement.name, 'num');
     } else {
       await assertErrorsInCode(code, [
-        error(WarningCode.UNUSED_LOCAL_VARIABLE, 32, 1),
+        error(HintCode.UNUSED_LOCAL_VARIABLE, 32, 1),
         error(
             CompileTimeErrorCode
                 .UNCHECKED_OPERATOR_INVOCATION_OF_NULLABLE_VALUE,
@@ -94,7 +88,7 @@ test() {
   var a = f(() => 0, (h) => [h()]);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 60, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 60, 1),
       if (!_isEnabled)
         error(
             CompileTimeErrorCode.UNCHECKED_INVOCATION_OF_NULLABLE_VALUE, 83, 1),
@@ -125,7 +119,7 @@ test(List<int> list) {
   var a = list.fold(0, (x, int y) => x + y);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 29, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 29, 1),
       if (!_isEnabled)
         error(
             CompileTimeErrorCode
@@ -148,7 +142,7 @@ test() {
   var a = f((x) => [x], () => 0);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 71, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 71, 1),
     ]);
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![0], 'int');
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![1],
@@ -171,7 +165,7 @@ test() {
   var a = f(() => 0, (x) => [x]);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 71, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 71, 1),
     ]);
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![0], 'int');
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![1],
@@ -194,7 +188,7 @@ test() {
   var a = f(0, (x) => [x]);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 60, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 60, 1),
     ]);
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![0], 'int');
     assertType(findNode.methodInvocation('f(').typeArgumentTypes![1],
@@ -296,7 +290,7 @@ test(List<int> list) {
   var a = list.fold(null, (int? x, y) => (x ?? 0) + y);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 29, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 29, 1),
     ]);
     assertType(findElement.localVar('a').type, 'int?');
     assertType(findElement.parameter('x').type, 'int?');
@@ -313,7 +307,7 @@ test() {
   var a = f(null, ({int? x, required y}) => (x ?? 0) + y);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 86, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 86, 1),
     ]);
     assertType(findElement.localVar('a').type, 'int?');
     assertType(findElement.parameter('x').type, 'int?');

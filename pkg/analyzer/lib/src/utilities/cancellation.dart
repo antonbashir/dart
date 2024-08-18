@@ -43,7 +43,7 @@ class _WrappedCancelableToken extends CancelableToken {
   @override
   void cancel() {
     super.cancel();
-    var child = _child;
+    final child = _child;
     if (child is CancelableToken) {
       child.cancel();
     }
@@ -53,7 +53,7 @@ class _WrappedCancelableToken extends CancelableToken {
 extension CancellationTokenExtension on CancellationToken {
   /// Wraps this token to make it cancelable if it is not already.
   CancelableToken asCancelable() {
-    var token = this;
+    final token = this;
     return token is CancelableToken ? token : _WrappedCancelableToken(token);
   }
 }

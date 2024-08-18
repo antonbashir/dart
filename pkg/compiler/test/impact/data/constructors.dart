@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: main:
  static=[
   testConstRedirectingFactoryInvoke(0),
@@ -115,7 +117,7 @@ testConstRedirectingFactoryInvoke() {
   const Class.redirect();
 }
 
-/*member: testConstRedirectingFactoryInvokeGeneric:type=[const:GenericClass<int,String>]*/
+/*member: testConstRedirectingFactoryInvokeGeneric:type=[const:GenericClass<int*,String*>]*/
 testConstRedirectingFactoryInvokeGeneric() {
   const GenericClass<int, String>.redirect();
 }
@@ -137,11 +139,8 @@ class ClassImplicitConstructor {}
 testImplicitConstructor() => ClassImplicitConstructor();
 
 class ClassFactoryConstructor {
-  /*member: ClassFactoryConstructor._:static=[Object.(0)]*/
-  ClassFactoryConstructor._();
-
-  /*member: ClassFactoryConstructor.:static=[ClassFactoryConstructor._(0)]*/
-  factory ClassFactoryConstructor() => ClassFactoryConstructor._();
+  /*member: ClassFactoryConstructor.:type=[inst:JSNull]*/
+  factory ClassFactoryConstructor() => null;
 }
 
 /*member: testFactoryConstructor:static=[ClassFactoryConstructor.(0)]*/
@@ -151,8 +150,8 @@ class Class {
   /*member: Class.generative:static=[Object.(0)]*/
   const Class.generative();
 
-  /*member: Class.fact:static=[Class.generative(0)]*/
-  factory Class.fact() => Class.generative();
+  /*member: Class.fact:type=[inst:JSNull]*/
+  factory Class.fact() => null;
 
   const factory Class.redirect() = Class.generative;
 }
@@ -163,7 +162,6 @@ class GenericClass<X, Y> {
 
   /*member: GenericClass.fact:
    static=[
-    GenericClass.generative(0),
     Rti._bind(1),
     Rti._eval(1),
     _arrayInstanceType(1),
@@ -197,15 +195,15 @@ class GenericClass<X, Y> {
     _isObject(1),
     _isString(1),
     _isTop(1),
-    checkTypeBound(4),
     findType(1),
     instanceType(1)],
    type=[
     inst:Closure,
     inst:JSBool,
-    param:Object?]
+    inst:JSNull,
+    param:Object*]
   */
-  factory GenericClass.fact() => GenericClass<X, Y>.generative();
+  factory GenericClass.fact() => null;
 
   const factory GenericClass.redirect() = GenericClass<X, Y>.generative;
 }

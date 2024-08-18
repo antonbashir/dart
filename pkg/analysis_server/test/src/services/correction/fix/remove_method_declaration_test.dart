@@ -4,6 +4,7 @@
 
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/services/linter/lint_names.dart';
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -13,7 +14,6 @@ void main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(RemoveMethodDeclarationBulkTest);
     defineReflectiveTests(RemoveMethodDeclarationTest);
-    defineReflectiveTests(UnnecessaryOverridesTest);
   });
 }
 
@@ -49,37 +49,7 @@ class B extends A {
 }
 
 @reflectiveTest
-class RemoveMethodDeclarationTest extends FixProcessorTest {
-  @override
-  FixKind get kind => DartFixKind.REMOVE_METHOD_DECLARATION;
-
-  Future<void> test_extensionDeclaresMemberOfObject() async {
-    await resolveTestCode('''
-extension E on String {
-  bool operator==(Object _) => false;
-}
-''');
-    await assertHasFix('''
-extension E on String {
-}
-''');
-  }
-
-  Future<void> test_extensionTypeDeclaresMemberOfObject() async {
-    await resolveTestCode('''
-extension type E(int i) {
-  int get hashCode => 0;
-}
-''');
-    await assertHasFix('''
-extension type E(int i) {
-}
-''');
-  }
-}
-
-@reflectiveTest
-class UnnecessaryOverridesTest extends FixProcessorLintTest {
+class RemoveMethodDeclarationTest extends FixProcessorLintTest {
   @override
   FixKind get kind => DartFixKind.REMOVE_METHOD_DECLARATION;
 
@@ -149,6 +119,32 @@ class A<T> {
 }
 
 class B extends A<int> {
+}
+''');
+  }
+
+  Future<void> test_method_nullSafety_optIn_fromOptOut() async {
+    noSoundNullSafety = false;
+    createAnalysisOptionsFile(lints: [lintCode]);
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  int foo() => 0;
+}
+''');
+    await resolveTestCode('''
+// @dart = 2.7
+import 'a.dart';
+
+class B extends A {
+  @override
+  int foo() => super.foo();
+}
+''');
+    await assertHasFix('''
+// @dart = 2.7
+import 'a.dart';
+
+class B extends A {
 }
 ''');
   }

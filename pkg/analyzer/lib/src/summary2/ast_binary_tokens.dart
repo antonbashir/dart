@@ -16,8 +16,6 @@ class Tokens {
 
   static Token at() => TokenFactory.tokenFromType(TokenType.AT);
 
-  static Token augmented() => TokenFactory.tokenFromString('augmented');
-
   static Token await_() => TokenFactory.tokenFromKeyword(Keyword.AWAIT);
 
   static Token bang() => TokenFactory.tokenFromType(TokenType.BANG);

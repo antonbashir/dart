@@ -13,5 +13,4 @@ E e = throw '';
 class F<X extends X Function()> {}
 
 F f = throw '';
-
 main() {}

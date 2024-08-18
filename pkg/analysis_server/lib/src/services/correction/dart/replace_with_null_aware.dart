@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -16,21 +16,24 @@ class ReplaceWithNullAware extends ResolvedCorrectionProducer {
   /// The operator to replace.
   String _operator = '.';
 
-  ReplaceWithNullAware.inChain({required super.context})
-      : _correctionKind = _CorrectionKind.inChain;
+  ReplaceWithNullAware.inChain() : _correctionKind = _CorrectionKind.inChain;
 
-  ReplaceWithNullAware.single({required super.context})
-      : _correctionKind = _CorrectionKind.single;
+  ReplaceWithNullAware.single() : _correctionKind = _CorrectionKind.single;
 
   @override
-  CorrectionApplicability get applicability =>
-      // NNBD makes this obsolete in the "chain" application; for the "single"
-      // application, there are other options and a null-aware replacement is
-      // not predictably correct.
-      CorrectionApplicability.singleLocation;
+  // NNBD makes this obsolete in the "chain" application; for the "single"
+  // application, there are other options and a null-aware replacement is not
+  // predictably correct.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  List<String> get fixArguments => [_operator, '?$_operator'];
+  // NNBD makes this obsolete in the "chain" application; for the "single"
+  // application, there are other options and a null-aware replacement is not
+  // predictably correct.
+  bool get canBeAppliedToFile => false;
+
+  @override
+  List<Object> get fixArguments => [_operator, '?$_operator'];
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_WITH_NULL_AWARE;
@@ -45,9 +48,9 @@ class ReplaceWithNullAware extends ResolvedCorrectionProducer {
   }
 
   Future<void> _computeInChain(ChangeBuilder builder) async {
-    var node = coveringNode;
+    var node = coveredNode;
     if (node is Expression) {
-      var node_final = node;
+      final node_final = node;
       await builder.addDartFileEdit(file, (builder) {
         var parent = node_final.parent;
         while (parent != null) {
@@ -69,13 +72,13 @@ class ReplaceWithNullAware extends ResolvedCorrectionProducer {
   }
 
   Future<void> _computeSingle(ChangeBuilder builder) async {
-    var node = coveringNode?.parent;
+    var node = coveredNode?.parent;
     if (node is CascadeExpression) {
       node = node.cascadeSections.first;
     } else {
-      var coveringNode = this.coveringNode;
-      if (coveringNode is IndexExpression) {
-        await _insert(builder, coveringNode.leftBracket);
+      var coveredNode = this.coveredNode;
+      if (coveredNode is IndexExpression) {
+        await _insert(builder, coveredNode.leftBracket);
         return;
       }
       var parent = node?.parent;

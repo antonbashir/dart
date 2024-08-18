@@ -139,6 +139,11 @@ void ServiceIsolate::SetServerAddress(const char* address) {
   server_address_ = Utils::StrDup(address);
 }
 
+bool ServiceIsolate::NameEquals(const char* name) {
+  ASSERT(name != nullptr);
+  return strcmp(name, kName) == 0;
+}
+
 bool ServiceIsolate::Exists() {
   MonitorLocker ml(monitor_);
   return isolate_ != nullptr;
@@ -147,6 +152,11 @@ bool ServiceIsolate::Exists() {
 bool ServiceIsolate::IsRunning() {
   MonitorLocker ml(monitor_);
   return (port_ != ILLEGAL_PORT) && (isolate_ != nullptr);
+}
+
+bool ServiceIsolate::IsServiceIsolate(const Isolate* isolate) {
+  MonitorLocker ml(monitor_);
+  return isolate != nullptr && isolate == isolate_;
 }
 
 bool ServiceIsolate::IsServiceIsolateDescendant(Isolate* isolate) {
@@ -224,7 +234,7 @@ bool ServiceIsolate::SendIsolateStartupMessage() {
   }
   Thread* thread = Thread::Current();
   Isolate* isolate = thread->isolate();
-  if (isolate->is_vm_isolate()) {
+  if (Dart::VmIsolateNameEquals(isolate->name())) {
     return false;
   }
 
@@ -247,7 +257,7 @@ bool ServiceIsolate::SendIsolateShutdownMessage() {
   }
   Thread* thread = Thread::Current();
   Isolate* isolate = thread->isolate();
-  if (isolate->is_vm_isolate()) {
+  if (Dart::VmIsolateNameEquals(isolate->name())) {
     return false;
   }
 
@@ -257,7 +267,7 @@ bool ServiceIsolate::SendIsolateShutdownMessage() {
                                               " deregistered.\n",
                  isolate->name(), main_port);
   }
-  isolate->set_is_service_registered(false);
+
   return SendServiceControlMessage(thread, main_port,
                                    VM_SERVICE_ISOLATE_SHUTDOWN_MESSAGE_ID,
                                    isolate->name());
@@ -296,7 +306,7 @@ void ServiceIsolate::SetServiceIsolate(Isolate* isolate) {
   MonitorLocker ml(monitor_);
   isolate_ = isolate;
   if (isolate_ != nullptr) {
-    ASSERT(isolate->is_service_isolate());
+    isolate_->set_is_service_isolate(true);
     origin_ = isolate_->origin_id();
   }
 }
@@ -306,7 +316,7 @@ void ServiceIsolate::MaybeMakeServiceIsolate(Isolate* I) {
   ASSERT(I == T->isolate());
   ASSERT(I != nullptr);
   ASSERT(I->name() != nullptr);
-  if (!I->is_service_isolate()) {
+  if (!ServiceIsolate::NameEquals(I->name())) {
     // Not service isolate.
     return;
   }
@@ -359,7 +369,6 @@ class RunServiceTask : public ThreadPool::Task {
     Dart_IsolateFlags api_flags;
     Isolate::FlagsInitialize(&api_flags);
     api_flags.is_system_isolate = true;
-    api_flags.is_service_isolate = true;
     isolate = reinterpret_cast<Isolate*>(
         create_group_callback(ServiceIsolate::kName, ServiceIsolate::kName,
                               nullptr, nullptr, &api_flags, nullptr, &error));
@@ -415,7 +424,7 @@ class RunServiceTask : public ThreadPool::Task {
       HandleScope handle_scope(T);
 
       auto I = T->isolate();
-      ASSERT(I->is_service_isolate());
+      ASSERT(ServiceIsolate::IsServiceIsolate(I));
 
       // Print the error if there is one.  This may execute dart code to
       // print the exception object, so we need to use a StartIsolateScope.
@@ -597,7 +606,7 @@ void ServiceIsolate::RegisterRunningIsolates(
   auto thread = Thread::Current();
   auto zone = thread->zone();
 
-  ASSERT(thread->isolate()->is_service_isolate());
+  ASSERT(ServiceIsolate::IsServiceIsolate(thread->isolate()));
 
   // Obtain "_registerIsolate" function to call.
   const String& library_url = Symbols::DartVMService();

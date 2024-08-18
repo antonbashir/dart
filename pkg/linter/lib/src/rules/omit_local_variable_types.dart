@@ -9,7 +9,6 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Omit type annotations for local variables.';
 
@@ -65,21 +64,22 @@ Widget build(BuildContext context) {
 ''';
 
 class OmitLocalVariableTypes extends LintRule {
+  static const LintCode code = LintCode('omit_local_variable_types',
+      'Unnecessary type annotation on a local variable.',
+      correctionMessage: 'Try removing the type annotation.');
+
   OmitLocalVariableTypes()
       : super(
             name: 'omit_local_variable_types',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  List<String> get incompatibleRules => const [
-        'always_specify_types',
-        'specify_nonobvious_local_variable_types',
-      ];
+  List<String> get incompatibleRules => const ['always_specify_types'];
 
   @override
-  LintCode get lintCode => LinterLintCode.omit_local_variable_types;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

@@ -8,9 +8,8 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r"Don't invoke asynchronous functions in non-`async` blocks.";
+const _desc = r"Don't invoke asynchronous functions in non-async blocks.";
 
 const _details = r'''
 Making asynchronous calls in non-`async` functions is usually the sign of a
@@ -45,15 +44,21 @@ Future<void> createDir(String path) async {}
 ''';
 
 class DiscardedFutures extends LintRule {
+  static const LintCode code = LintCode('discarded_futures',
+      "Asynchronous function invoked in a non-'async' function.",
+      correctionMessage:
+          "Try converting the enclosing function to be 'async' and then "
+          "'await' the future.");
+
   DiscardedFutures()
       : super(
             name: 'discarded_futures',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.discarded_futures;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

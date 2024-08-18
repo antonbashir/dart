@@ -173,9 +173,7 @@ class RequestStatisticsHelper {
         'server.log',
         <String, Object>{
           'time': DateTime.now().millisecondsSinceEpoch,
-          'kind': kind.toJson(
-            clientUriConverter: null,
-          ),
+          'kind': kind.toJson(),
           'data': data,
           'sdkVersion': _sdkVersion,
         },
@@ -220,7 +218,7 @@ class _RequestStatisticsItem {
   _RequestStatisticsItem(this.name, {this.timeValue});
 
   Map<String, Object> toJson() {
-    var timeValue = this.timeValue;
+    final timeValue = this.timeValue;
     if (timeValue != null) {
       return {
         'name': name,

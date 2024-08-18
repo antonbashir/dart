@@ -6,7 +6,7 @@
 /// Ultimately we should consider carefully when we use RegExps where a simple
 /// loop would do (and would do so far more performantly).
 /// See: https://github.com/dart-lang/linter/issues/1828
-library;
+library ascii_utils;
 
 import 'charcodes.dart';
 
@@ -25,7 +25,7 @@ bool isUnderScore(int character) => character == $_;
 /// Check if the given [name] is a valid Dart filename.
 ///
 /// Files with a strict `.dart` extension are required to use:
-/// * lower_case_with_underscores and are
+/// * `lower_snake_case` and are
 /// * limited to valid Dart identifiers
 ///
 /// (Files without a strict `.dart` extension are considered valid.)

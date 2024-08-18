@@ -3,7 +3,6 @@ class A {}
 class B extends A {}
 
 late List<B> xs;
-
 late List<List<B>> xss;
 
 class Class<T extends A> {
@@ -14,7 +13,5 @@ class Class<T extends A> {
 }
 
 void main() {}
-
 void errors() {}
-
 void throws(void Function() f) {}

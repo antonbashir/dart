@@ -25,20 +25,20 @@ void f(x) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: int
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   matchedValueType: dynamic
 ''');
@@ -55,7 +55,7 @@ void f(x) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   const: const
@@ -63,9 +63,9 @@ ConstantPattern
     constructorName: ConstructorName
       type: NamedType
         name: A
-        element: <testLibraryFragment>::@class::A
+        element: self::@class::A
         type: A
-      staticElement: <testLibraryFragment>::@class::A::@constructor::new
+      staticElement: self::@class::A::@constructor::new
     argumentList: ArgumentList
       leftParenthesis: (
       rightParenthesis: )
@@ -80,7 +80,7 @@ void f(x) {
   if (x case 0) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: IntegerLiteral
@@ -99,7 +99,7 @@ void f(double x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: IntegerLiteral
@@ -115,7 +115,7 @@ void f(x) {
   if (x case const [0]) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   const: const
@@ -137,7 +137,7 @@ void f(x) {
   if (x case const {0: 1}) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   const: const
@@ -174,26 +174,26 @@ void f(x) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
-        staticElement: <testLibraryFragment>::@prefix::prefix
+        staticElement: self::@prefix::prefix
         staticType: null
       period: .
       identifier: SimpleIdentifier
         token: A
-        staticElement: package:test/a.dart::<fragment>::@class::A
+        staticElement: package:test/a.dart::@class::A
         staticType: null
-      staticElement: package:test/a.dart::<fragment>::@class::A
+      staticElement: package:test/a.dart::@class::A
       staticType: null
     operator: .
     propertyName: SimpleIdentifier
       token: foo
-      staticElement: package:test/a.dart::<fragment>::@class::A::@getter::foo
+      staticElement: package:test/a.dart::@class::A::@getter::foo
       staticType: int
     staticType: int
   matchedValueType: dynamic
@@ -213,20 +213,20 @@ void f(x) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: package:test/a.dart::<fragment>::@getter::foo
+      staticElement: package:test/a.dart::@getter::foo
       staticType: int
-    staticElement: package:test/a.dart::<fragment>::@getter::foo
+    staticElement: package:test/a.dart::@getter::foo
     staticType: int
   matchedValueType: dynamic
 ''');
@@ -238,7 +238,7 @@ void f(x) {
   if (x case const {0, 1}) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   const: const
@@ -266,12 +266,12 @@ void f(x) {
   if (x case foo) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@getter::foo
+    staticElement: self::@getter::foo
     staticType: int
   matchedValueType: dynamic
 ''');
@@ -283,13 +283,13 @@ void f(Object? x) {
   if (x case int) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: TypeLiteral
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     staticType: Type
   matchedValueType: Object?
@@ -302,7 +302,7 @@ void f(Object? x) {
   if (x case [0, int]) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -316,7 +316,7 @@ ListPattern
       expression: TypeLiteral
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         staticType: Type
       matchedValueType: Object?
@@ -334,15 +334,15 @@ void f(Object? x) {
   if (x case A) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: TypeLiteral
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@typeAlias::A
+      element: self::@typeAlias::A
       type: int
-        alias: <testLibraryFragment>::@typeAlias::A
+        alias: self::@typeAlias::A
     staticType: Type
   matchedValueType: Object?
 ''');
@@ -356,7 +356,7 @@ void f(Object? x) {
   if (x case math.Random) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: TypeLiteral
@@ -364,9 +364,9 @@ ConstantPattern
       importPrefix: ImportPrefixReference
         name: math
         period: .
-        element: <testLibraryFragment>::@prefix::math
+        element: self::@prefix::math
       name: Random
-      element: dart:math::<fragment>::@class::Random
+      element: dart:math::@class::Random
       type: Random
     staticType: Type
   matchedValueType: Object?
@@ -386,7 +386,7 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: TypeLiteral
@@ -394,11 +394,11 @@ ConstantPattern
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix::prefix
+        element: self::@prefix::prefix
       name: A
-      element: package:test/a.dart::<fragment>::@typeAlias::A
+      element: package:test/a.dart::@typeAlias::A
       type: int
-        alias: package:test/a.dart::<fragment>::@typeAlias::A
+        alias: package:test/a.dart::@typeAlias::A
     staticType: Type
   matchedValueType: Object?
 ''');
@@ -410,7 +410,7 @@ void f(x) {
   if (x case 0) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: IntegerLiteral
@@ -429,7 +429,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ConstantPattern
   expression: IntegerLiteral

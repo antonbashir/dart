@@ -282,7 +282,9 @@ abstract class LoopHandler {
   }
 
   /// Determine what kind of loop [node] represents.
-  LoopBlockInformationKind loopKind(ir.TreeNode node);
+  ///
+  /// The result is one of the kinds defined in [HLoopBlockInformation].
+  int loopKind(ir.TreeNode node);
 
   /// Creates a [JumpHandler] for a statement. The node must be a jump
   /// target. If there are no breaks or continues targeting the statement,
@@ -306,33 +308,30 @@ class KernelLoopHandler extends LoopHandler {
       builder.createJumpHandler(node, jumpTarget, isLoopJump: isLoopJump);
 
   @override
-  LoopBlockInformationKind loopKind(ir.TreeNode node) =>
-      node.accept(_KernelLoopTypeVisitor());
+  int loopKind(ir.TreeNode node) => node.accept(_KernelLoopTypeVisitor());
 }
 
-class _KernelLoopTypeVisitor extends ir.VisitorDefault<LoopBlockInformationKind>
-    with ir.VisitorDefaultValueMixin<LoopBlockInformationKind> {
+class _KernelLoopTypeVisitor extends ir.VisitorDefault<int>
+    with ir.VisitorDefaultValueMixin<int> {
   @override
-  LoopBlockInformationKind get defaultValue =>
-      LoopBlockInformationKind.notALoop;
+  int get defaultValue => HLoopBlockInformation.NOT_A_LOOP;
 
   @override
-  LoopBlockInformationKind visitWhileStatement(ir.WhileStatement node) =>
-      LoopBlockInformationKind.whileLoop;
+  int visitWhileStatement(ir.WhileStatement node) =>
+      HLoopBlockInformation.WHILE_LOOP;
 
   @override
-  LoopBlockInformationKind visitForStatement(ir.ForStatement node) =>
-      LoopBlockInformationKind.forLoop;
+  int visitForStatement(ir.ForStatement node) => HLoopBlockInformation.FOR_LOOP;
 
   @override
-  LoopBlockInformationKind visitDoStatement(ir.DoStatement node) =>
-      LoopBlockInformationKind.doWhileLoop;
+  int visitDoStatement(ir.DoStatement node) =>
+      HLoopBlockInformation.DO_WHILE_LOOP;
 
   @override
-  LoopBlockInformationKind visitForInStatement(ir.ForInStatement node) =>
-      LoopBlockInformationKind.forInLoop;
+  int visitForInStatement(ir.ForInStatement node) =>
+      HLoopBlockInformation.FOR_IN_LOOP;
 
   @override
-  LoopBlockInformationKind visitSwitchStatement(ir.SwitchStatement node) =>
-      LoopBlockInformationKind.switchContinueLoop;
+  int visitSwitchStatement(ir.SwitchStatement node) =>
+      HLoopBlockInformation.SWITCH_CONTINUE_LOOP;
 }

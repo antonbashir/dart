@@ -2,13 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../utils.dart';
 
 const _desc =
@@ -36,45 +33,39 @@ import 'package:javascript_utils/javascript_utils.dart' as js_utils;
 ''';
 
 class LibraryPrefixes extends LintRule {
+  static const LintCode code = LintCode(
+      'library_prefixes', "The prefix '{0}' isn't a snake_case identifier.",
+      correctionMessage:
+          'Try changing the prefix to follow the snake_case style.');
+
   LibraryPrefixes()
       : super(
             name: 'library_prefixes',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.library_prefixes;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this, context.libraryElement);
+    var visitor = _Visitor(this);
     registry.addImportDirective(this, visitor);
   }
 }
 
 class _Visitor extends SimpleAstVisitor<void> {
-  /// Whether the `wildcard_variables` feature is enabled.
-  final bool _wildCardVariablesEnabled;
-
   final LintRule rule;
 
-  _Visitor(this.rule, LibraryElement? library)
-      : _wildCardVariablesEnabled =
-            library?.featureSet.isEnabled(Feature.wildcard_variables) ?? false;
+  _Visitor(this.rule);
 
   @override
   void visitImportDirective(ImportDirective node) {
     var prefix = node.prefix;
-    if (prefix == null) return;
-
-    var prefixString = prefix.toString();
-    // With wildcards, `_` is allowed.
-    if (_wildCardVariablesEnabled && prefixString == '_') return;
-
-    if (!isValidLibraryPrefix(prefixString)) {
-      rule.reportLint(prefix, arguments: [prefixString]);
+    if (prefix != null && !isValidLibraryPrefix(prefix.toString())) {
+      rule.reportLint(prefix, arguments: [prefix.toString()]);
     }
   }
 }

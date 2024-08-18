@@ -29,12 +29,12 @@ class TestDefinitionTest extends DartSnippetProducerTest {
 
   Future<void> test_inTestFile() async {
     testFilePath = convertPath('$testPackageLibPath/test/foo_test.dart');
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   test^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

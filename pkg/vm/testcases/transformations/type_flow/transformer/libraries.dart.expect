@@ -6,15 +6,11 @@ import "libraries_lib2.lib.dart" as lib;
 import "file:pkg/vm/testcases/transformations/type_flow/transformer/libraries_lib2.lib.dart";
 import "file:pkg/vm/testcases/transformations/type_flow/transformer/libraries_lib3.lib.dart";
 
-
-[@vm.inferred-return-type.metadata=dart.core::Null? (value: null)]
 static method used() → void {
   core::print(new lib::Foo2::•());
   core::print([@vm.inferred-type.metadata=dart.core::_OneByteString (value: "hi")] lib::bar2());
   core::print(#C1);
 }
-
-[@vm.inferred-return-type.metadata=dart.core::Null? (value: null)]
 static method main() → dynamic {
   self::used();
 }
@@ -30,8 +26,6 @@ class Foo2 extends core::Object {
     : super core::Object::•()
     ;
 }
-
-[@vm.inferred-return-type.metadata=dart.core::_OneByteString (value: "hi")]
 static method bar2() → core::String
   return "hi";
 library libraries_lib3.lib.dart;

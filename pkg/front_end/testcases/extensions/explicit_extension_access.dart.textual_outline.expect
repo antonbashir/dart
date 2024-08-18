@@ -18,5 +18,4 @@ extension Extension2 on Class {
 }
 
 main() {}
-
 expect(expected, actual) {}

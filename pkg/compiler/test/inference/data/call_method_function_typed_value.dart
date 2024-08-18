@@ -2,7 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// Test based on language/call_method_function_typed_value_test/04
+// @dart = 2.7
+
+// Test based on language_2/call_method_function_typed_value_test/04
 
 import "package:expect/expect.dart";
 
@@ -10,7 +12,7 @@ import "package:expect/expect.dart";
 int f(
         int
             /*spec.[null|subclass=Object]*/
-            /*prod.[subclass=JSInt]*/
+            /*prod.[null|subclass=JSInt]*/
             i) =>
     2 /*invoke: [exact=JSUInt31]*/ * i;
 

@@ -3,7 +3,5 @@ extension CheckType<T> on T {
 }
 
 typedef Exactly<T> = T Function(T);
-
 void f<X>(X? arg) {}
-
 void main() {}

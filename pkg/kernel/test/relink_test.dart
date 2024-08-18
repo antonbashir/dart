@@ -80,10 +80,6 @@ void main() {
     // After the relink only the libs from component1Prime are reachable!
     expectReachable(findAllReferencedLibraries(component1Prime.libraries),
         component1Prime.libraries);
-    expectReachable(
-        findAllReferencedLibraries(component1Prime.libraries,
-            collectViaReferencesToo: true),
-        component1Prime.libraries);
     if (duplicateLibrariesReachable(component1Prime.libraries)) {
       throw "Didn't expect duplicates libraries!";
     }
@@ -106,10 +102,6 @@ void main() {
     component2Prime.relink();
     // After the relink only the libs from component1Prime are reachable!
     expectReachable(findAllReferencedLibraries(component2Prime.libraries),
-        component2Prime.libraries);
-    expectReachable(
-        findAllReferencedLibraries(component2Prime.libraries,
-            collectViaReferencesToo: true),
         component2Prime.libraries);
     if (duplicateLibrariesReachable(component2Prime.libraries)) {
       throw "Didn't expect duplicates libraries!";
@@ -168,21 +160,6 @@ Component createComponent(int literal) {
       fileUri: libUri);
   lib.addProcedure(libProcedure);
 
-  ExtensionTypeDeclaration extensionTypeDeclaration =
-      new ExtensionTypeDeclaration(name: "Foo", fileUri: libUri);
-  extensionTypeDeclaration.declaredRepresentationType = DynamicType();
-  extensionTypeDeclaration.representationName = "extensionTypeMethod";
-  final Block extensionTypeProcedureBody =
-      new Block([new ReturnStatement(new IntLiteral(literal))]);
-  final Procedure extensionTypeProcedure = new Procedure(
-      new Name("extensionTypeMethod"),
-      ProcedureKind.Method,
-      new FunctionNode(extensionTypeProcedureBody,
-          returnType: new DynamicType()),
-      fileUri: libUri);
-  extensionTypeDeclaration.addProcedure(extensionTypeProcedure);
-  lib.addExtensionTypeDeclaration(extensionTypeDeclaration);
-
   final Uri mainUri = Uri.parse('org-dartlang:///main.dart');
   final Library main = new Library(mainUri, fileUri: mainUri);
   final Block mainProcedureBody = new Block([
@@ -196,6 +173,5 @@ Component createComponent(int literal) {
       fileUri: mainUri);
   main.addProcedure(mainProcedure);
   return new Component(libraries: [main, lib])
-    ..setMainMethodAndMode(
-        null, false, NonNullableByDefaultCompiledMode.Strong);
+    ..setMainMethodAndMode(null, false, NonNullableByDefaultCompiledMode.Weak);
 }

@@ -7,5 +7,4 @@ class B extends A<Function<Y>(Y)> {}
 class C<Z extends Function<Y>(Y)> {}
 
 bar<V extends Function<Y>(Y)>() => throw 42;
-
 main() {}

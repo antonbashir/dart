@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Unnecessary new keyword.';
 
@@ -33,22 +32,22 @@ m(){
 ''';
 
 class UnnecessaryNew extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_new', "Unnecessary 'new' keyword.",
+      correctionMessage: "Try removing the 'new' keyword.");
+
   UnnecessaryNew()
       : super(
             name: 'unnecessary_new',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.brevity,
-              LintRuleCategory.languageFeatureUsage,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
   bool get canUseParsedResult => true;
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_new;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -65,7 +64,7 @@ class _Visitor extends SimpleAstVisitor {
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     if (node.keyword?.type == Keyword.NEW) {
-      rule.reportLintForToken(node.keyword);
+      rule.reportLint(node);
     }
   }
 }

@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: main:[null]*/
 main() {
   forInDirect();
@@ -74,7 +76,7 @@ forInReturnNonNull() {
   for (var a in [1, 2, 3]) {
     // TODO(johnniwinther): We should know the type of [a] here. Even if [a] has
     // type `dynamic`.
-    a. /*[subclass=JSInt]*/ isEven;
+    a. /*[null|subclass=JSInt]*/ isEven;
     a. /*[subclass=JSInt]*/ isEven;
     return a;
   }

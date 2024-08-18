@@ -34,7 +34,7 @@ class DartSnippetRequest {
     required this.unit,
     required this.offset,
   }) : filePath = unit.path {
-    var target = CompletionTarget.forOffset(unit.unit, offset);
+    final target = CompletionTarget.forOffset(unit.unit, offset);
     context = _getContext(target);
     replacementRange = target.computeReplacementRange(offset);
   }
@@ -46,9 +46,9 @@ class DartSnippetRequest {
   ResourceProvider get resourceProvider => analysisSession.resourceProvider;
 
   static SnippetContext _getContext(CompletionTarget target) {
-    var entity = target.entity;
+    final entity = target.entity;
     if (entity is Token) {
-      var tokenType = (entity.beforeSynthetic ?? entity).type;
+      final tokenType = (entity.beforeSynthetic ?? entity).type;
 
       if (tokenType == TokenType.MULTI_LINE_COMMENT ||
           tokenType == TokenType.SINGLE_LINE_COMMENT) {

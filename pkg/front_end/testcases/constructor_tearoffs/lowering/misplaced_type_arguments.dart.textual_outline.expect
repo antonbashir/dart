@@ -6,7 +6,5 @@ class A<T> {
 }
 
 typedef B<T extends num> = A<T>;
-
 test() {}
-
 main() {}

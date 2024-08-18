@@ -80,11 +80,11 @@ class StrongComponents {
     }
 
     if (entrypoint == null) {
-      throw new Exception('Could not find entrypoint $mainUri in Component.');
+      throw Exception('Could not find entrypoint $mainUri in Component.');
     }
 
     final List<List<Library>> results = computeStrongComponents(
-        new _LibraryGraph(entrypoint, loadedLibraries, partialComponent));
+        _LibraryGraph(entrypoint, loadedLibraries, partialComponent));
     for (List<Library> component in results) {
       assert(component.isNotEmpty);
       final Uri moduleUri = component

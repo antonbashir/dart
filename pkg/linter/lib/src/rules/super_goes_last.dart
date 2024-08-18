@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Place the `super` call last in a constructor initialization list.';
@@ -44,14 +43,20 @@ View(Style style, List children)
 ''';
 
 class SuperGoesLast extends LintRule {
+  static const LintCode code = LintCode('super_goes_last',
+      "Place the 'super' call last in an initialization list.",
+      correctionMessage:
+          "Try moving the 'super' invocation to the end of the initialization "
+          'list.');
+
   SuperGoesLast()
       : super(
             name: 'super_goes_last',
             description: _desc,
             details: _details,
             state: State.removed(since: dart3),
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.removed_lint;
+  LintCode get lintCode => code;
 }

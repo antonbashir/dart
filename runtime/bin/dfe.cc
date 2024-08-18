@@ -11,7 +11,6 @@
 #include "bin/file.h"
 #include "bin/lockers.h"
 #include "bin/platform.h"
-#include "bin/snapshot_utils.h"
 #include "bin/utils.h"
 #include "include/dart_tools_api.h"
 #include "platform/utils.h"
@@ -101,7 +100,7 @@ void DFE::InitKernelServiceAndPlatformDills() {
   }
 
   // |dir_prefix| includes the last path separator.
-  auto dir_prefix = EXEUtils::GetDirectoryPrefixFromResolvedExeName();
+  auto dir_prefix = EXEUtils::GetDirectoryPrefixFromExeName();
 
   // Look for the frontend snapshot next to the executable.
   frontend_filename_ =
@@ -239,14 +238,13 @@ void DFE::CompileAndReadScript(const char* script_uri,
 }
 
 void DFE::ReadScript(const char* script_uri,
-                     const AppSnapshot* app_snapshot,
                      uint8_t** kernel_buffer,
                      intptr_t* kernel_buffer_size,
                      bool decode_uri,
                      std::shared_ptr<uint8_t>* kernel_blob_ptr) {
   int64_t start = Dart_TimelineGetMicros();
-  if (!TryReadKernelFile(script_uri, app_snapshot, kernel_buffer,
-                         kernel_buffer_size, decode_uri, kernel_blob_ptr)) {
+  if (!TryReadKernelFile(script_uri, kernel_buffer, kernel_buffer_size,
+                         decode_uri, kernel_blob_ptr)) {
     return;
   }
   if (!Dart_IsKernel(*kernel_buffer, *kernel_buffer_size)) {
@@ -311,10 +309,11 @@ class KernelIRNode {
   KernelIRNode(uint8_t* kernel_ir, intptr_t kernel_size)
       : kernel_ir_(kernel_ir), kernel_size_(kernel_size) {}
 
-  ~KernelIRNode() { free(kernel_ir_); }
+  ~KernelIRNode() {
+    free(kernel_ir_);
+  }
 
-  static void Add(KernelIRNode** p_head,
-                  KernelIRNode** p_tail,
+  static void Add(KernelIRNode** p_head, KernelIRNode** p_tail,
                   KernelIRNode* node) {
     if (*p_head == nullptr) {
       *p_head = node;
@@ -324,7 +323,8 @@ class KernelIRNode {
     *p_tail = node;
   }
 
-  static void Merge(KernelIRNode* head, uint8_t** p_bytes, intptr_t* p_size) {
+  static void Merge(KernelIRNode* head, uint8_t** p_bytes,
+                             intptr_t* p_size) {
     intptr_t size = 0;
     for (KernelIRNode* node = head; node != nullptr; node = node->next_) {
       size = size + node->kernel_size_;
@@ -435,7 +435,6 @@ static bool TryReadKernelListBuffer(const char* script_uri,
 }
 
 bool DFE::TryReadKernelFile(const char* script_uri,
-                            const AppSnapshot* app_snapshot,
                             uint8_t** kernel_ir,
                             intptr_t* kernel_ir_size,
                             bool decode_uri,
@@ -452,31 +451,19 @@ bool DFE::TryReadKernelFile(const char* script_uri,
       return true;
     }
   }
-  if (app_snapshot == nullptr || app_snapshot->IsKernel() ||
-      app_snapshot->IsKernelList()) {
-    uint8_t* buffer;
-    if (!TryReadFile(script_uri, &buffer, kernel_ir_size, decode_uri)) {
-      return false;
-    }
-    auto magic_number = DartUtils::kUnknownMagicNumber;
-    if (app_snapshot == nullptr) {
-      magic_number = DartUtils::SniffForMagicNumber(buffer, *kernel_ir_size);
-    } else if (app_snapshot->IsKernel()) {
-      magic_number = DartUtils::kKernelMagicNumber;
-      ASSERT(DartUtils::SniffForMagicNumber(buffer, *kernel_ir_size) ==
-             DartUtils::kKernelMagicNumber);
-    } else {
-      magic_number = DartUtils::kKernelListMagicNumber;
-      ASSERT(DartUtils::SniffForMagicNumber(buffer, *kernel_ir_size) ==
-             DartUtils::kKernelListMagicNumber);
-    }
-    if (magic_number == DartUtils::kKernelListMagicNumber) {
-      return TryReadKernelListBuffer(script_uri, buffer, *kernel_ir_size,
-                                     kernel_ir, kernel_ir_size);
-    }
-    return TryReadSimpleKernelBuffer(buffer, kernel_ir, kernel_ir_size);
+
+  uint8_t* buffer;
+  if (!TryReadFile(script_uri, &buffer, kernel_ir_size, decode_uri)) {
+    return false;
   }
-  return false;
+
+  DartUtils::MagicNumber magic_number =
+      DartUtils::SniffForMagicNumber(buffer, *kernel_ir_size);
+  if (magic_number == DartUtils::kKernelListMagicNumber) {
+    return TryReadKernelListBuffer(script_uri, buffer, *kernel_ir_size,
+                                   kernel_ir, kernel_ir_size);
+  }
+  return TryReadSimpleKernelBuffer(buffer, kernel_ir, kernel_ir_size);
 }
 
 const char* DFE::RegisterKernelBlob(const uint8_t* kernel_buffer,

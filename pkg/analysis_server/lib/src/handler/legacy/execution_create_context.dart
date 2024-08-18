@@ -16,9 +16,7 @@ class ExecutionCreateContextHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var file = ExecutionCreateContextParams.fromRequest(request,
-            clientUriConverter: server.uriConverter)
-        .contextRoot;
+    var file = ExecutionCreateContextParams.fromRequest(request).contextRoot;
     var executionContext = server.executionContext;
     var contextId = (executionContext.nextContextId++).toString();
     executionContext.contextMap[contextId] = file;

@@ -205,7 +205,7 @@ class ObjectGraph::Stack : public ObjectPointerVisitor {
   void Visit(void* ptr, ObjectPtr obj) {
     if (obj->IsHeapObject() && !obj->untag()->InVMIsolateHeap() &&
         object_ids_->GetValueExclusive(obj) == 0) {  // not visited yet
-      if (!include_vm_objects_ && !IsUserClass(obj->GetClassIdOfHeapObject())) {
+      if (!include_vm_objects_ && !IsUserClass(obj->GetClassId())) {
         return;
       }
       object_ids_->SetValueExclusive(obj, 1);
@@ -241,7 +241,7 @@ class ObjectGraph::Stack : public ObjectPointerVisitor {
       if (direction == ObjectGraph::Visitor::kProceed) {
         set_gc_root_type(node.gc_root_type);
         ASSERT(obj->IsHeapObject());
-        switch (obj->GetClassIdOfHeapObject()) {
+        switch (obj->GetClassId()) {
           case kWeakArrayCid:
             VisitWeakArray(static_cast<WeakArrayPtr>(obj));
             break;
@@ -440,7 +440,7 @@ class InstanceAccumulator : public ObjectVisitor {
       : stack_(stack), class_id_(class_id) {}
 
   void VisitObject(ObjectPtr obj) override {
-    if (obj->GetClassIdOfHeapObject() == class_id_) {
+    if (obj->GetClassId() == class_id_) {
       ObjectPtr rawobj = obj;
       stack_->VisitPointer(&rawobj);
     }
@@ -495,7 +495,7 @@ class SizeExcludingClassVisitor : public SizeVisitor {
  public:
   explicit SizeExcludingClassVisitor(intptr_t skip) : skip_(skip) {}
   virtual bool ShouldSkip(ObjectPtr obj) const {
-    return obj->GetClassIdOfHeapObject() == skip_;
+    return obj->GetClassId() == skip_;
   }
 
  private:
@@ -550,7 +550,7 @@ class RetainingPathVisitor : public ObjectGraph::Visitor {
   bool ShouldSkip(ObjectPtr obj) {
     // A retaining path through ICData is never the only retaining path,
     // and it is less informative than its alternatives.
-    intptr_t cid = obj->GetClassIdOfHeapObject();
+    intptr_t cid = obj->GetClassId();
     switch (cid) {
       case kICDataCid:
         return true;
@@ -941,6 +941,11 @@ intptr_t HeapSnapshotWriter::GetObjectId(ObjectPtr obj) const {
     return id;
   }
 
+  if (FLAG_write_protect_code && obj->IsInstructions() && !OnImagePage(obj)) {
+    // A non-writable alias mapping may exist for instruction pages.
+    obj = Page::ToWritable(obj);
+  }
+
   CountingPage* counting_page = FindCountingPage(obj);
   intptr_t id;
   if (counting_page != nullptr) {
@@ -988,7 +993,7 @@ class Pass1Visitor : public ObjectVisitor,
     if (obj->IsPseudoObject()) return;
 
     writer_->AssignObjectId(obj);
-    const auto cid = obj->GetClassIdOfHeapObject();
+    const auto cid = obj->GetClassId();
 
     if (object_slots_->ContainsOnlyTaggedPointers(cid)) {
       obj->untag()->VisitPointersPrecise(this);
@@ -1123,7 +1128,7 @@ class Pass2Visitor : public ObjectVisitor,
   void VisitObject(ObjectPtr obj) override {
     if (obj->IsPseudoObject()) return;
 
-    intptr_t cid = obj->GetClassIdOfHeapObject();
+    intptr_t cid = obj->GetClassId();
     writer_->WriteUnsigned(cid + kNumExtraCids);
     writer_->WriteUnsigned(discount_sizes_ ? 0 : obj->untag()->HeapSize());
 
@@ -1137,6 +1142,9 @@ class Pass2Visitor : public ObjectVisitor,
       if (obj == Object::sentinel().ptr()) {
         writer_->WriteUnsigned(kNameData);
         writer_->WriteUtf8("uninitialized");
+      } else if (obj == Object::transition_sentinel().ptr()) {
+        writer_->WriteUnsigned(kNameData);
+        writer_->WriteUtf8("initializing");
       } else {
         writer_->WriteUnsigned(kNoData);
       }
@@ -1157,6 +1165,14 @@ class Pass2Visitor : public ObjectVisitor,
       writer_->WriteUnsigned(len);
       writer_->WriteUnsigned(trunc_len);
       writer_->WriteBytes(&str->untag()->data()[0], trunc_len);
+    } else if (cid == kExternalOneByteStringCid) {
+      ExternalOneByteStringPtr str = static_cast<ExternalOneByteStringPtr>(obj);
+      intptr_t len = Smi::Value(str->untag()->length());
+      intptr_t trunc_len = Utils::Minimum(len, kMaxStringElements);
+      writer_->WriteUnsigned(kLatin1Data);
+      writer_->WriteUnsigned(len);
+      writer_->WriteUnsigned(trunc_len);
+      writer_->WriteBytes(&str->untag()->external_data_[0], trunc_len);
     } else if (cid == kTwoByteStringCid) {
       TwoByteStringPtr str = static_cast<TwoByteStringPtr>(obj);
       intptr_t len = Smi::Value(str->untag()->length());
@@ -1165,6 +1181,14 @@ class Pass2Visitor : public ObjectVisitor,
       writer_->WriteUnsigned(len);
       writer_->WriteUnsigned(trunc_len);
       writer_->WriteBytes(&str->untag()->data()[0], trunc_len * 2);
+    } else if (cid == kExternalTwoByteStringCid) {
+      ExternalTwoByteStringPtr str = static_cast<ExternalTwoByteStringPtr>(obj);
+      intptr_t len = Smi::Value(str->untag()->length());
+      intptr_t trunc_len = Utils::Minimum(len, kMaxStringElements);
+      writer_->WriteUnsigned(kUTF16Data);
+      writer_->WriteUnsigned(len);
+      writer_->WriteUnsigned(trunc_len);
+      writer_->WriteBytes(&str->untag()->external_data_[0], trunc_len * 2);
     } else if (cid == kArrayCid || cid == kImmutableArrayCid) {
       writer_->WriteUnsigned(kLengthData);
       writer_->WriteUnsigned(
@@ -1753,7 +1777,7 @@ void HeapSnapshotWriter::Write() {
 uint32_t HeapSnapshotWriter::GetHeapSnapshotIdentityHash(Thread* thread,
                                                          ObjectPtr obj) {
   if (!obj->IsHeapObject()) return 0;
-  intptr_t cid = obj->GetClassIdOfHeapObject();
+  intptr_t cid = obj->GetClassId();
   uint32_t hash = 0;
   switch (cid) {
     case kForwardingCorpse:
@@ -1765,6 +1789,8 @@ uint32_t HeapSnapshotWriter::GetHeapSnapshotIdentityHash(Thread* thread,
     case kCodeSourceMapCid:
     case kCompressedStackMapsCid:
     case kDoubleCid:
+    case kExternalOneByteStringCid:
+    case kExternalTwoByteStringCid:
     case kGrowableObjectArrayCid:
     case kImmutableArrayCid:
     case kConstMapCid:
@@ -1843,7 +1869,7 @@ CountObjectsVisitor::CountObjectsVisitor(Thread* thread, intptr_t class_count)
 }
 
 void CountObjectsVisitor::VisitObject(ObjectPtr obj) {
-  intptr_t cid = obj->GetClassIdOfHeapObject();
+  intptr_t cid = obj->GetClassId();
   intptr_t size = obj->untag()->HeapSize();
   if (obj->IsNewObject()) {
     new_count_[cid] += 1;
@@ -1861,7 +1887,7 @@ void CountObjectsVisitor::VisitHandle(uword addr) {
   if (!obj->IsHeapObject()) {
     return;
   }
-  intptr_t cid = obj->GetClassIdOfHeapObject();
+  intptr_t cid = obj->GetClassId();
   intptr_t size = handle->external_size();
   if (obj->IsNewObject()) {
     new_external_size_[cid] += size;

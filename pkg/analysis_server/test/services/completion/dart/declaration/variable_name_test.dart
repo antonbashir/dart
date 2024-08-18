@@ -109,27 +109,6 @@ suggestions
 ''');
   }
 
-  Future<void> test_localVariable_afterGenericType() async {
-    await computeSuggestions('''
-void f() {
-  AbstractCrazyNonsenseClassName<int> ^
-}
-''');
-    assertResponse(r'''
-suggestions
-  abstractCrazyNonsenseClassName
-    kind: identifier
-  className
-    kind: identifier
-  crazyNonsenseClassName
-    kind: identifier
-  name
-    kind: identifier
-  nonsenseClassName
-    kind: identifier
-''');
-  }
-
   Future<void> test_localVariable_dontSuggestType_beforeEnd() async {
     await computeSuggestions('''
 void f() {

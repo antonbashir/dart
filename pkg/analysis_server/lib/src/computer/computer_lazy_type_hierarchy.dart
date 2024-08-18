@@ -37,7 +37,7 @@ class DartLazyTypeHierarchyComputer {
     ElementLocation location,
     SearchEngine searchEngine,
   ) async {
-    var targetElement = await _findTargetElement(location);
+    final targetElement = await _findTargetElement(location);
     if (targetElement is! InterfaceElement) {
       return null;
     }
@@ -80,7 +80,7 @@ class DartLazyTypeHierarchyComputer {
 
   /// Finds a target for starting type hierarchy navigation at [offset].
   TypeHierarchyItem? findTarget(int offset) {
-    var node = _result.unit.nodeCovering(offset: offset);
+    final node = _result.unit.nodeCovering(offset: offset);
 
     DartType? type;
 
@@ -89,9 +89,9 @@ class DartLazyTypeHierarchyComputer {
 
     if (type == null) {
       // Try enclosing class/mixins.
-      Declaration? declaration = node
+      final Declaration? declaration = node
           ?.thisOrAncestorMatching((node) => _isValidTargetDeclaration(node));
-      var element = declaration?.declaredElement;
+      final element = declaration?.declaredElement;
       if (element is InterfaceElement) {
         type = element.thisType;
       }
@@ -102,7 +102,7 @@ class DartLazyTypeHierarchyComputer {
 
   /// Locate the [Element] referenced by [location].
   Future<InterfaceElement?> _findTargetElement(ElementLocation location) async {
-    var element = await _result.session.locateElement(location);
+    final element = await _result.session.locateElement(location);
     return element is InterfaceElement ? element : null;
   }
 
@@ -111,8 +111,8 @@ class DartLazyTypeHierarchyComputer {
       InterfaceElement target, SearchEngine searchEngine) async {
     /// Helper to convert a [SearchMatch] to a [TypeHierarchyRelatedItem].
     TypeHierarchyRelatedItem toHierarchyItem(SearchMatch match) {
-      var element = match.element as InterfaceElement;
-      var type = element.thisType;
+      final element = match.element as InterfaceElement;
+      final type = element.thisType;
       switch (match.kind) {
         case MatchKind.REFERENCE_IN_EXTENDS_CLAUSE:
           return TypeHierarchyRelatedItem.extends_(type);
@@ -130,10 +130,7 @@ class DartLazyTypeHierarchyComputer {
 
     var matches =
         await searchEngine.searchSubtypes(target, SearchEngineCache());
-    return matches
-        .where((match) => !(match.element as InterfaceElement).isAugmentation)
-        .map(toHierarchyItem)
-        .toList();
+    return matches.map(toHierarchyItem).toList();
   }
 
   /// Gets immediate super types for the class/mixin [element].
@@ -145,12 +142,12 @@ class DartLazyTypeHierarchyComputer {
     InterfaceType type, {
     TypeHierarchyAnchor? anchor,
   }) {
-    var supertype = type.superclass;
-    var interfaces = type.interfaces;
-    var mixins = type.mixins;
-    var superclassConstraints = type.superclassConstraints;
+    final supertype = type.superclass;
+    final interfaces = type.interfaces;
+    final mixins = type.mixins;
+    final superclassConstraints = type.superclassConstraints;
 
-    var supertypes = [
+    final supertypes = [
       if (supertype != null) TypeHierarchyRelatedItem.extends_(supertype),
       ...superclassConstraints.map(TypeHierarchyRelatedItem.constrainedTo),
       ...interfaces.map(TypeHierarchyRelatedItem.implements),
@@ -158,7 +155,7 @@ class DartLazyTypeHierarchyComputer {
     ];
 
     if (anchor != null) {
-      for (var (index, item) in supertypes.indexed) {
+      for (final (index, item) in supertypes.indexed) {
         // We only need to carry the anchor along if the supertype has type
         // arguments that we may be populating.
         if (item._type.typeArguments.isNotEmpty) {
@@ -186,14 +183,14 @@ class DartLazyTypeHierarchyComputer {
   Future<InterfaceType?> _locateTargetFromAnchor(
       TypeHierarchyAnchor anchor, InterfaceType target) async {
     // Start from the anchor.
-    var anchorElement = await _findTargetElement(anchor.location);
-    var anchorPath = anchor.path;
+    final anchorElement = await _findTargetElement(anchor.location);
+    final anchorPath = anchor.path;
 
     // Follow the provided path.
     var type = anchorElement?.thisType;
     for (int i = 0; i < anchorPath.length && type != null; i++) {
-      var index = anchorPath[i];
-      var supertypes = _getSupertypes(type);
+      final index = anchorPath[i];
+      final supertypes = _getSupertypes(type);
       type = supertypes.length >= index + 1 ? supertypes[index]._type : null;
     }
 
@@ -260,13 +257,13 @@ class TypeHierarchyItem {
   /// Returns the [SourceRange] of the code for [element].
   static SourceRange _codeRangeForElement(Element element) {
     // Non-synthetic elements should always have code locations.
-    var elementImpl = element.nonSynthetic as ElementImpl;
+    final elementImpl = element.nonSynthetic as ElementImpl;
     return SourceRange(elementImpl.codeOffset!, elementImpl.codeLength!);
   }
 
   /// Returns a name to display in the hierarchy for [type].
   static String _displayNameForType(InterfaceType type) {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: false);
   }
 
   /// Returns the [SourceRange] of the name for [element].

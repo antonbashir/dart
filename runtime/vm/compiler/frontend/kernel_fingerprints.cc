@@ -82,8 +82,8 @@ void KernelFingerprintHelper::CalculateConstructorFingerprint() {
 void KernelFingerprintHelper::CalculateArgumentsFingerprint() {
   BuildHash(ReadUInt());  // read argument count.
 
-  CalculateListOfDartTypesFingerprint();         // read list of types.
-  CalculateListOfExpressionsFingerprint();       // read positional.
+  CalculateListOfDartTypesFingerprint();    // read list of types.
+  CalculateListOfExpressionsFingerprint();  // read positional.
   CalculateListOfNamedExpressionsFingerprint();  // read named.
 }
 
@@ -250,7 +250,7 @@ void KernelFingerprintHelper::CalculateDartTypeFingerprint() {
     case kTypeParameterType: {
       Nullability nullability = ReadNullability();
       BuildHash(static_cast<uint32_t>(nullability));
-      ReadUInt();  // read index for parameter.
+      ReadUInt();                              // read index for parameter.
       break;
     }
     case kIntersectionType:
@@ -481,7 +481,6 @@ void KernelFingerprintHelper::CalculateExpressionFingerprint() {
       return;
     case kDynamicInvocation:
       ReadByte();                                // read kind.
-      ReadByte();                                // read flags.
       ReadPosition();                            // read position.
       CalculateExpressionFingerprint();          // read receiver.
       BuildHash(ReadNameAsMethodName().Hash());  // read name.
@@ -518,9 +517,9 @@ void KernelFingerprintHelper::CalculateExpressionFingerprint() {
       UNREACHABLE();
       break;
     case kSuperMethodInvocation:
-      ReadPosition();                             // read position.
-      BuildHash(ReadNameAsMethodName().Hash());   // read name.
-      CalculateArgumentsFingerprint();            // read arguments.
+      ReadPosition();                            // read position.
+      BuildHash(ReadNameAsMethodName().Hash());  // read name.
+      CalculateArgumentsFingerprint();           // read arguments.
       CalculateInterfaceMemberNameFingerprint();  // read target_reference.
       return;
     case kStaticInvocation:
@@ -560,6 +559,7 @@ void KernelFingerprintHelper::CalculateExpressionFingerprint() {
       return;
     case kIsExpression:
       ReadPosition();                    // read position.
+      BuildHash(ReadFlags());            // read flags.
       CalculateExpressionFingerprint();  // read operand.
       CalculateDartTypeFingerprint();    // read type.
       return;
@@ -581,7 +581,6 @@ void KernelFingerprintHelper::CalculateExpressionFingerprint() {
       return;
     case kThrow:
       ReadPosition();                    // read position.
-      BuildHash(ReadFlags());            // read flags.
       CalculateExpressionFingerprint();  // read expression.
       return;
     case kListLiteral:
@@ -910,7 +909,7 @@ void KernelFingerprintHelper::CalculateFunctionNodeFingerprint() {
   CalculateListOfVariableDeclarationsFingerprint();  // read positionals
   CalculateListOfVariableDeclarationsFingerprint();  // read named
   CalculateDartTypeFingerprint();                    // read return type.
-  CalculateOptionalDartTypeFingerprint();            // read emitted value type.
+  CalculateOptionalDartTypeFingerprint();            // read future value type.
 
   if (ReadTag() == kSomething) {   // read redirecting factory target
     ReadCanonicalNameReference();  // read member reference

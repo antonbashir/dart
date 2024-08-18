@@ -1,7 +1,5 @@
 int x;
-
 int? y;
-
 late int z;
 
 class A<T extends Object?> {

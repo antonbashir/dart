@@ -18,16 +18,13 @@ namespace compiler {
 // Helper class for building basic blocks in SSA form.
 class BlockBuilder : public ValueObject {
  public:
-  BlockBuilder(FlowGraph* flow_graph,
-               BlockEntryInstr* entry,
-               bool with_frame = true)
+  BlockBuilder(FlowGraph* flow_graph, BlockEntryInstr* entry)
       : flow_graph_(flow_graph),
         source_(InstructionSource(flow_graph_->function().token_pos(),
                                   flow_graph->inlining_id())),
         entry_(entry),
         current_(entry),
-        dummy_env_(new Environment(0, 0, 0, flow_graph->function(), nullptr)),
-        with_frame_(with_frame) {
+        dummy_env_(new Environment(0, 0, 0, flow_graph->function(), nullptr)) {
     // Some graph transformations use environments from block entries.
     entry->SetEnvironment(dummy_env_);
   }
@@ -61,14 +58,10 @@ class BlockBuilder : public ValueObject {
 
   const Function& function() const { return flow_graph_->function(); }
 
-  DartReturnInstr* AddReturn(Value* value) {
+  ReturnInstr* AddReturn(Value* value) {
     const auto& function = flow_graph_->function();
     const auto representation = FlowGraph::ReturnRepresentationOf(function);
-    return AddReturn(value, representation);
-  }
-
-  DartReturnInstr* AddReturn(Value* value, Representation representation) {
-    DartReturnInstr* instr = new DartReturnInstr(
+    ReturnInstr* instr = new ReturnInstr(
         Source(), value, CompilerState::Current().GetNextDeoptId(),
         representation);
     AddInstruction(instr);
@@ -76,21 +69,22 @@ class BlockBuilder : public ValueObject {
     return instr;
   }
 
-  Definition* AddParameter(intptr_t index) {
-    const auto [location, representation] =
-        flow_graph_->GetDirectParameterInfoAt(index);
-    return AddParameter(index, representation,
-                        with_frame_ ? location : location.ToEntrySpRelative());
+  Definition* AddParameter(intptr_t index, bool with_frame) {
+    const auto& function = flow_graph_->function();
+    const intptr_t param_offset = FlowGraph::ParameterOffsetAt(function, index);
+    const auto representation =
+        FlowGraph::ParameterRepresentationAt(function, index);
+    return AddParameter(index, param_offset, with_frame, representation);
   }
 
   Definition* AddParameter(intptr_t index,
-                           Representation representation,
-                           Location location = Location()) {
+                           intptr_t param_offset,
+                           bool with_frame,
+                           Representation representation) {
     auto normal_entry = flow_graph_->graph_entry()->normal_entry();
-    return AddToInitialDefinitions(
-        new ParameterInstr(normal_entry,
-                           /*env_index=*/index,
-                           /*param_index=*/index, location, representation));
+    return AddToInitialDefinitions(new ParameterInstr(
+        /*env_index=*/index, /*param_index=*/index, param_offset, normal_entry,
+        representation, with_frame ? FPREG : SPREG));
   }
 
   TokenPosition TokenPos() const { return source_.token_pos; }
@@ -101,28 +95,14 @@ class BlockBuilder : public ValueObject {
   }
 
   Definition* AddUnboxInstr(Representation rep, Value* value, bool is_checked) {
-    // Unbox floats by first unboxing a double then converting it to a float.
-    auto const unbox_rep = rep == kUnboxedFloat
-                               ? kUnboxedDouble
-                               : Boxing::NativeRepresentation(rep);
     Definition* unboxed_value =
-        AddDefinition(UnboxInstr::Create(unbox_rep, value, DeoptId::kNone));
-    if (rep != unbox_rep && unboxed_value->IsUnboxInteger()) {
-      ASSERT(RepresentationUtils::ValueSize(rep) <
-             RepresentationUtils::ValueSize(unbox_rep));
-      // Mark unboxing of small unboxed integer representations as truncating.
-      unboxed_value->AsUnboxInteger()->mark_truncating();
-    }
+        AddDefinition(UnboxInstr::Create(rep, value, DeoptId::kNone));
     if (is_checked) {
       // The type of |value| has already been checked and it is safe to
       // adjust reaching type. This is done manually because there is no type
       // propagation when building intrinsics.
       unboxed_value->AsUnbox()->value()->SetReachingType(
-          new CompileType(CompileType::FromUnboxedRepresentation(rep)));
-    }
-    if (rep == kUnboxedFloat) {
-      unboxed_value = AddDefinition(
-          new DoubleToFloatInstr(new Value(unboxed_value), DeoptId::kNone));
+          TypeForRepresentation(rep));
     }
     return unboxed_value;
   }
@@ -158,12 +138,30 @@ class BlockBuilder : public ValueObject {
   Instruction* last() const { return current_; }
 
  private:
+  static CompileType* TypeForRepresentation(Representation rep) {
+    switch (rep) {
+      case kUnboxedDouble:
+        return new CompileType(CompileType::FromCid(kDoubleCid));
+      case kUnboxedFloat32x4:
+        return new CompileType(CompileType::FromCid(kFloat32x4Cid));
+      case kUnboxedInt32x4:
+        return new CompileType(CompileType::FromCid(kInt32x4Cid));
+      case kUnboxedFloat64x2:
+        return new CompileType(CompileType::FromCid(kFloat64x2Cid));
+      case kUnboxedUint32:
+      case kUnboxedInt64:
+        return new CompileType(CompileType::Int());
+      default:
+        UNREACHABLE();
+        return nullptr;
+    }
+  }
+
   FlowGraph* const flow_graph_;
   const InstructionSource source_;
   BlockEntryInstr* entry_;
   Instruction* current_;
   Environment* dummy_env_;
-  const bool with_frame_;
 };
 
 }  // namespace compiler

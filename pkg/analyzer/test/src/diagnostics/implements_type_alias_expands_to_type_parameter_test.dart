@@ -36,11 +36,11 @@ class B implements T {}
           1),
     ]);
 
-    var node = findNode.namedType('T {}');
+    final node = findNode.namedType('T {}');
     assertResolvedNodeText(node, r'''
 NamedType
   name: T
-  element: <testLibraryFragment>::@typeAlias::T
+  element: self::@typeAlias::T
   type: InvalidType
 ''');
   }
@@ -57,7 +57,7 @@ class B implements T<A> {}
           1),
     ]);
 
-    var node = findNode.namedType('T<A> {}');
+    final node = findNode.namedType('T<A> {}');
     assertResolvedNodeText(node, r'''
 NamedType
   name: T
@@ -66,10 +66,10 @@ NamedType
     arguments
       NamedType
         name: A
-        element: <testLibraryFragment>::@class::A
+        element: self::@class::A
         type: A
     rightBracket: >
-  element: <testLibraryFragment>::@typeAlias::T
+  element: self::@typeAlias::T
   type: InvalidType
 ''');
   }
@@ -86,11 +86,11 @@ mixin M implements T {}
           1),
     ]);
 
-    var node = findNode.namedType('T {}');
+    final node = findNode.namedType('T {}');
     assertResolvedNodeText(node, r'''
 NamedType
   name: T
-  element: <testLibraryFragment>::@typeAlias::T
+  element: self::@typeAlias::T
   type: InvalidType
 ''');
   }

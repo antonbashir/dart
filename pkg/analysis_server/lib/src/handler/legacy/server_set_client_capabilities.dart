@@ -18,9 +18,8 @@ class ServerSetClientCapabilitiesHandler extends LegacyHandler {
   @override
   Future<void> handle() async {
     try {
-      server.clientCapabilities = ServerSetClientCapabilitiesParams.fromRequest(
-          request,
-          clientUriConverter: server.uriConverter);
+      server.clientCapabilities =
+          ServerSetClientCapabilitiesParams.fromRequest(request);
     } on RequestFailure catch (exception) {
       sendResponse(exception.response);
       return;

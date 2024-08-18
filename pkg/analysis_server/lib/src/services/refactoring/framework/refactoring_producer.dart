@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/services/refactoring/framework/refactoring_context.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
-import 'package:analysis_server_plugin/src/utilities/selection.dart';
+import 'package:analysis_server/src/utilities/selection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -13,21 +13,6 @@ import 'package:analyzer/src/dart/analysis/session_helper.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:language_server_protocol/protocol_custom_generated.dart';
 import 'package:language_server_protocol/protocol_generated.dart';
-
-/// The status of running [RefactoringProducer.compute].
-sealed class ComputeStatus {}
-
-/// The supertype for any failure inside [RefactoringProducer.compute].
-class ComputeStatusFailure extends ComputeStatus {
-  final String? reason;
-
-  ComputeStatusFailure({
-    this.reason,
-  });
-}
-
-/// The result that signals the success.
-class ComputeStatusSuccess extends ComputeStatus {}
 
 /// An object that can compute a refactoring in a Dart file.
 abstract class RefactoringProducer {
@@ -82,7 +67,7 @@ abstract class RefactoringProducer {
   /// that require the ability to create new files must not create a refactoring
   /// if this getter returns `false`.
   bool get supportsFileCreation {
-    var capabilities = refactoringContext.server.lspClientCapabilities;
+    final capabilities = refactoringContext.server.lspClientCapabilities;
     return capabilities != null &&
         capabilities.documentChanges == true &&
         capabilities.createResourceOperations == true;
@@ -100,10 +85,7 @@ abstract class RefactoringProducer {
 
   /// Given the [commandArguments] associated with the command, use the
   /// [builder] to generate the edits necessary to apply this refactoring.
-  Future<ComputeStatus> compute(
-    List<Object?> commandArguments,
-    ChangeBuilder builder,
-  );
+  Future<void> compute(List<Object?> commandArguments, ChangeBuilder builder);
 
   /// Return `true` if this refactoring is available in the given context.
   bool isAvailable();
@@ -118,7 +100,7 @@ abstract class RefactoringProducer {
   /// that don't have a default value must not create a refactoring if this
   /// returns `false`.
   bool supportsCommandParameter(String kind) {
-    var capabilities = refactoringContext.server.lspClientCapabilities;
+    final capabilities = refactoringContext.server.lspClientCapabilities;
     return capabilities != null &&
         capabilities.codeActionCommandParameterSupportedKinds.contains(kind);
   }

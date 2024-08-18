@@ -6,7 +6,7 @@ import 'package:kernel/ast.dart';
 
 import 'package:wasm_builder/wasm_builder.dart' as w;
 
-import 'translator.dart';
+import 'package:dart2wasm/translator.dart';
 
 /// Handles lazy initialization of static fields.
 class Globals {
@@ -119,7 +119,7 @@ class Globals {
             b.global_get(_prepareDummyValue(type)!);
           }
         } else {
-          throw "Unsupported global type $type ($type)";
+          throw "Unsupported global type ${type} ($type)";
         }
         break;
     }
@@ -138,18 +138,18 @@ class Globals {
 
   /// Return (and if needed create) the Wasm global corresponding to a static
   /// field.
-  w.Global getGlobal(Field field) {
-    assert(!field.isLate);
-    return _globals.putIfAbsent(field, () {
-      final Constant? init = _getConstantInitializer(field);
-      w.ValueType type = translator.translateTypeOfField(field);
+  w.Global getGlobal(Field variable) {
+    assert(!variable.isLate);
+    return _globals.putIfAbsent(variable, () {
+      w.ValueType type = translator.translateType(variable.type);
+      Constant? init = _getConstantInitializer(variable);
       if (init != null &&
           !(translator.constants.ensureConstant(init)?.isLazy ?? false)) {
         // Initialized to a constant
         final global =
-            m.globals.define(w.GlobalType(type, mutable: !field.isFinal));
+            m.globals.define(w.GlobalType(type, mutable: !variable.isFinal));
         translator.constants
-            .instantiateConstant(global.initializer, init, type);
+            .instantiateConstant(null, global.initializer, init, type);
         global.initializer.end();
         return global;
       } else {
@@ -161,15 +161,15 @@ class Globals {
           final flag = m.globals.define(w.GlobalType(w.NumType.i32));
           flag.initializer.i32_const(0);
           flag.initializer.end();
-          _globalInitializedFlag[field] = flag;
+          _globalInitializedFlag[variable] = flag;
         }
 
         final global = m.globals.define(w.GlobalType(type));
         instantiateDummyValue(global.initializer, type);
         global.initializer.end();
 
-        _globalInitializers[field] =
-            translator.functions.getFunction(field.fieldReference);
+        _globalInitializers[variable] =
+            translator.functions.getFunction(variable.fieldReference);
         return global;
       }
     });

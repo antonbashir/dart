@@ -76,7 +76,6 @@ import 'package:analysis_server/src/handler/legacy/server_shutdown.dart';
 import 'package:analysis_server/src/handler/legacy/unsupported_request.dart';
 import 'package:analysis_server/src/lsp/client_capabilities.dart' as lsp;
 import 'package:analysis_server/src/lsp/client_configuration.dart' as lsp;
-import 'package:analysis_server/src/lsp/handlers/handler_states.dart';
 import 'package:analysis_server/src/operation/operation_analysis.dart';
 import 'package:analysis_server/src/plugin/notification_manager.dart';
 import 'package:analysis_server/src/protocol_server.dart' as server;
@@ -108,12 +107,12 @@ import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:analyzer/src/utilities/cancellation.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' hide Element;
-import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
 import 'package:analyzer_plugin/src/utilities/navigation/navigation.dart';
 import 'package:analyzer_plugin/utilities/navigation/navigation_dart.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:telemetry/crash_reporting.dart';
+import 'package:telemetry/telemetry.dart' as telemetry;
 import 'package:watcher/watcher.dart';
 
 /// A function that can be executed to create a handler for a request.
@@ -135,6 +134,10 @@ class AnalysisServerOptions {
   /// The path to the package config file override.
   /// If `null`, then the default discovery mechanism is used.
   String? packagesFile;
+
+  /// The analytics instance; note, this object can be `null`, and should be
+  /// accessed via a null-aware operator.
+  telemetry.Analytics? analytics;
 
   /// The crash report sender instance; note, this object can be `null`, and
   /// should be accessed via a null-aware operator.
@@ -168,7 +171,7 @@ class LegacyAnalysisServer extends AnalysisServer {
   /// handler.
   ///
   /// Requests that don't match anything in this map will be passed to
-  /// [LspOverLegacyHandler] for possible handling before returning an error.
+  /// [_LspOverLegacyHandler] for possible handling before returning an error.
   static final Map<String, HandlerGenerator> requestHandlerGenerators = {
     ANALYSIS_REQUEST_GET_ERRORS: AnalysisGetErrorsHandler.new,
     ANALYSIS_REQUEST_GET_HOVER: AnalysisGetHoverHandler.new,
@@ -257,10 +260,6 @@ class LegacyAnalysisServer extends AnalysisServer {
   /// be sent.
   final ServerCommunicationChannel channel;
 
-  @override
-  late final FutureOr<InitializedStateMessageHandler> lspInitialized =
-      InitializedStateMessageHandler(this);
-
   /// A flag indicating the value of the 'analyzing' parameter sent in the last
   /// status message to the client.
   bool statusAnalyzing = false;
@@ -283,10 +282,8 @@ class LegacyAnalysisServer extends AnalysisServer {
   Map<AnalysisService, Set<String>> analysisServices = {};
 
   /// The most recently registered set of client capabilities. The default is to
-  /// have no registered requests and no additional capabilities.
-  ///
-  /// Must be modified through the [clientCapabilities] setter.
-  ServerSetClientCapabilitiesParams _clientCapabilities =
+  /// have no registered requests.
+  ServerSetClientCapabilitiesParams clientCapabilities =
       ServerSetClientCapabilitiesParams([]);
 
   @override
@@ -365,12 +362,6 @@ class LegacyAnalysisServer extends AnalysisServer {
   /// response when it has been received.
   Map<String, Completer<Response>> pendingServerRequests = {};
 
-  /// Whether the server should send LSP notifications.
-  ///
-  /// This is set once the client sends any LSP request or client capability
-  /// that depends on LSP functionality.
-  bool sendLspNotifications = false;
-
   /// Initialize a newly created server to receive requests from and send
   /// responses to the given [channel].
   ///
@@ -394,7 +385,6 @@ class LegacyAnalysisServer extends AnalysisServer {
     // Disable to avoid using this in unit tests.
     bool enableBlazeWatcher = false,
     DartFixPromptManager? dartFixPromptManager,
-    super.providedByteStore,
   })  : lspClientConfiguration =
             lsp.LspClientConfiguration(baseResourceProvider.pathContext),
         super(
@@ -416,8 +406,7 @@ class LegacyAnalysisServer extends AnalysisServer {
         ServerContextManagerCallbacks(this, resourceProvider);
     contextManager.callbacks = contextManagerCallbacks;
 
-    analysisDriverSchedulerEventsSubscription =
-        analysisDriverScheduler.events.listen(handleAnalysisEvent);
+    analysisDriverScheduler.status.listen(handleAnalysisStatusChange);
     analysisDriverScheduler.start();
 
     onAnalysisStarted.first.then((_) {
@@ -429,31 +418,11 @@ class LegacyAnalysisServer extends AnalysisServer {
       ServerConnectedParams(
         options.reportProtocolVersion ?? PROTOCOL_VERSION,
         io.pid,
-      ).toNotification(clientUriConverter: uriConverter),
+      ).toNotification(),
     );
     debounceRequests(channel, discardedRequests)
         .listen(handleRequestOrResponse, onDone: done, onError: error);
     _newRefactoringManager();
-  }
-
-  /// The most recently registered set of client capabilities. The default is to
-  /// have no registered requests and no additional capabilities.
-  ServerSetClientCapabilitiesParams get clientCapabilities =>
-      _clientCapabilities;
-
-  /// Updates the current set of client capabilities.
-  set clientCapabilities(ServerSetClientCapabilitiesParams capabilities) {
-    _clientCapabilities = capabilities;
-
-    if (capabilities.supportsUris ?? false) {
-      // URI support implies LSP, as that's the only way to access (and get
-      // change notifications for) custom-scheme files.
-      uriConverter = ClientUriConverter.withVirtualFileSupport(
-          resourceProvider.pathContext);
-      initializeLspOverLegacy();
-    } else {
-      uriConverter = ClientUriConverter.noop(resourceProvider.pathContext);
-    }
   }
 
   /// The [Future] that completes when analysis is complete.
@@ -485,10 +454,9 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
 
     return (Uri uri) async {
-      var requestId = '${nextServerRequestId++}';
+      final requestId = '${nextServerRequestId++}';
       await sendRequest(
-        ServerOpenUrlRequestParams('$uri')
-            .toRequest(requestId, clientUriConverter: uriConverter),
+        ServerOpenUrlRequestParams('$uri').toRequest(requestId),
       );
     };
   }
@@ -518,6 +486,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     cancellationTokens[id]?.cancel();
   }
 
+  Future<void> dispose() async {}
+
   /// The socket from which requests are being read has been closed.
   void done() {}
 
@@ -533,7 +503,7 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
 
     var driver = getAnalysisDriver(path);
-    return driver?.getCachedResolvedUnit(path);
+    return driver?.getCachedResult(path);
   }
 
   /// Gets the current version number of a document.
@@ -551,14 +521,14 @@ class LegacyAnalysisServer extends AnalysisServer {
 
   /// Handle a [request] that was read from the communication channel.
   void handleRequest(Request request) {
-    var startTime = DateTime.now();
+    final startTime = DateTime.now();
     performance.logRequestTiming(request.clientRequestTime);
 
     // Because we don't `await` the execution of the handlers, we wrap the
     // execution in order to have one central place to handle exceptions.
     runZonedGuarded(() async {
       // Record performance information for the request.
-      var rootPerformance = OperationPerformanceImpl('<root>');
+      final rootPerformance = OperationPerformanceImpl('<root>');
       RequestPerformance? requestPerformance;
       await rootPerformance.runAsync('request', (performance) async {
         requestPerformance = RequestPerformance(
@@ -634,18 +604,6 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
   }
 
-  /// Initializes LSP support over the legacy server.
-  ///
-  /// This method is called when the client sends an LSP request, or indicates
-  /// that it will use LSP-overy-Legacy via client capabilities.
-  ///
-  /// This only applies to LSP over the legacy protocol and not DTD, since we
-  /// do not want a DTD-LSP client to trigger LSP notifications going to the
-  /// legacy protocol client, only the legacy protocol client should do that.
-  void initializeLspOverLegacy() {
-    sendLspNotifications = true;
-  }
-
   /// Return `true` if the [path] is both absolute and normalized.
   bool isAbsoluteAndNormalized(String path) {
     var pathContext = resourceProvider.pathContext;
@@ -654,7 +612,7 @@ class LegacyAnalysisServer extends AnalysisServer {
 
   /// Return `true` if analysis is complete.
   bool isAnalysisComplete() {
-    return !analysisDriverScheduler.isWorking;
+    return !analysisDriverScheduler.isAnalyzing;
   }
 
   /// Return `true` if the given path is a valid `FilePath`.
@@ -668,19 +626,6 @@ class LegacyAnalysisServer extends AnalysisServer {
   @override
   void notifyFlutterWidgetDescriptions(String path) {
     flutterWidgetDescriptions.flush();
-  }
-
-  /// Send the given LSP [notification] to the client.
-  @override
-  void sendLspNotification(lsp.NotificationMessage notification) {
-    if (!sendLspNotifications) {
-      return;
-    }
-
-    channel.sendNotification(
-      LspNotificationParams(notification)
-          .toNotification(clientUriConverter: uriConverter),
-    );
   }
 
   /// Send the given [notification] to the client.
@@ -727,8 +672,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
 
     // send the notification
-    channel.sendNotification(ServerErrorParams(fatal, msg, '$stackTrace')
-        .toNotification(clientUriConverter: uriConverter));
+    channel.sendNotification(
+        ServerErrorParams(fatal, msg, '$stackTrace').toNotification());
 
     // remember the last few exceptions
     if (exception is CaughtException) {
@@ -746,7 +691,7 @@ class LegacyAnalysisServer extends AnalysisServer {
   /// Send status notification to the client. The state of analysis is given by
   /// the [status] information.
   void sendStatusNotificationNew(analysis.AnalysisStatus status) {
-    var isAnalyzing = status.isWorking;
+    var isAnalyzing = status.isAnalyzing;
     if (isAnalyzing) {
       _onAnalysisStartedController.add(true);
     }
@@ -762,7 +707,6 @@ class LegacyAnalysisServer extends AnalysisServer {
         sendAnalysisNotificationAnalyzedFiles(this);
       }
       _scheduleAnalysisImplementedNotification();
-      filesResolvedSinceLastIdle.clear();
     }
     // Only send status when subscribed.
     if (!serverServices.contains(ServerService.STATUS)) {
@@ -778,8 +722,8 @@ class LegacyAnalysisServer extends AnalysisServer {
       reportAnalysisAnalytics();
     }
     var analysis = AnalysisStatus(isAnalyzing);
-    channel.sendNotification(ServerStatusParams(analysis: analysis)
-        .toNotification(clientUriConverter: uriConverter));
+    channel.sendNotification(
+        ServerStatusParams(analysis: analysis).toNotification());
   }
 
   /// Implementation for `analysis.setAnalysisRoots`.
@@ -794,7 +738,7 @@ class LegacyAnalysisServer extends AnalysisServer {
   // projects/contexts support.
   Future<void> setAnalysisRoots(String requestId, List<String> includedPaths,
       List<String> excludedPaths) async {
-    var completer = analysisContextRebuildCompleter = Completer();
+    final completer = analysisContextRebuildCompleter = Completer();
     try {
       notificationManager.setAnalysisRoots(includedPaths, excludedPaths);
       try {
@@ -803,6 +747,7 @@ class LegacyAnalysisServer extends AnalysisServer {
         throw RequestFailure(Response.unsupportedFeature(
             requestId, e.message ?? 'Unsupported feature.'));
       }
+      analysisDriverScheduler.transitionToAnalyzingToIdleIfNoFilesToAnalyze();
     } finally {
       completer.complete();
     }
@@ -846,7 +791,7 @@ class LegacyAnalysisServer extends AnalysisServer {
 
     // When pubspecs are opened, trigger pre-loading of pub package names and
     // versions.
-    var pubspecs = files.where(isPubspec).toList();
+    final pubspecs = files.where(isPubspec).toList();
     if (pubspecs.isNotEmpty) {
       pubPackageService.beginCachePreloads(pubspecs);
     }
@@ -871,8 +816,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     var actions = actionLabels.map((label) => MessageAction(label)).toList();
     var request =
         ServerShowMessageRequestParams(type.forLegacy, message, actions)
-            .toRequest(requestId, clientUriConverter: uriConverter);
-    var response = await sendRequest(request);
+            .toRequest(requestId);
+    final response = await sendRequest(request);
     return response.result?['action'] as String?;
   }
 
@@ -881,6 +826,17 @@ class LegacyAnalysisServer extends AnalysisServer {
     await super.shutdown();
 
     pubApi.close();
+
+    // TODO(brianwilkerson): Remove the following 6 lines when the
+    //  analyticsManager is being correctly initialized.
+    var analytics = options.analytics;
+    if (analytics != null) {
+      unawaited(analytics
+          .waitForLastPing(timeout: Duration(milliseconds: 200))
+          .then((_) {
+        analytics.close();
+      }));
+    }
 
     detachableFileSystemManager?.dispose();
 
@@ -996,17 +952,10 @@ class LegacyAnalysisServer extends AnalysisServer {
   }
 
   void _scheduleAnalysisImplementedNotification() {
-    var subscribed = analysisServices[AnalysisService.IMPLEMENTED];
-    if (subscribed == null) {
-      return;
+    var files = analysisServices[AnalysisService.IMPLEMENTED];
+    if (files != null) {
+      scheduleImplementedNotification(this, files);
     }
-
-    var toSend = subscribed.intersection(filesResolvedSinceLastIdle);
-    if (toSend.isEmpty) {
-      return;
-    }
-
-    scheduleImplementedNotification(this, toSend);
   }
 
   void _sendSubscriptions({bool analysis = false, bool flutter = false}) {

@@ -46,7 +46,7 @@ var tests = <IsolateTest>[
         (ServiceEvent event) {
       expect(event.isolate != null, isTrue);
       expect(event.kind, equals('WriteEvent'));
-      expect(event.bytesAsString, equals('print\n'));
+      expect(event.bytesAsString, equals('print'));
       stdoutSub.cancel().then((_) {
         completer.complete();
       });

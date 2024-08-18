@@ -163,10 +163,6 @@ class FlowGraphAllocator : public ValueObject {
 
   intptr_t NumberOfRegisters() const { return number_of_registers_; }
 
-  // Test if [param] is live only after [catch_entry].
-  bool IsLiveAfterCatchEntry(CatchBlockEntryInstr* catch_entry,
-                             ParameterInstr* param);
-
   // Find all safepoints that are covered by this live range.
   void AssignSafepoints(Definition* defn, LiveRange* range);
 
@@ -285,11 +281,14 @@ class FlowGraphAllocator : public ValueObject {
     return Location::MachineRegisterLocation(register_kind_, reg);
   }
 
-  void SplitInitialDefinitionAt(LiveRange* range,
-                                intptr_t pos,
-                                Location::Kind kind);
+  void SplitInitialDefinitionAt(LiveRange* range, intptr_t pos);
 
   void PrintLiveRanges();
+
+  Location ComputeParameterLocation(BlockEntryInstr* block,
+                                    ParameterInstr* param,
+                                    Register base_reg,
+                                    intptr_t pair_index);
 
   // Assign locations for each outgoing argument. Outgoing argumenst are
   // currently stored at the top of the stack in direct order (last argument

@@ -51,9 +51,6 @@ namespace dart {
   V(AllocateMintSharedWithFPURegs)                                             \
   V(AllocateMintSharedWithoutFPURegs)                                          \
   V(AllocateClosure)                                                           \
-  V(AllocateClosureGeneric)                                                    \
-  V(AllocateClosureTA)                                                         \
-  V(AllocateClosureTAGeneric)                                                  \
   V(AllocateContext)                                                           \
   V(AllocateGrowableArray)                                                     \
   V(AllocateObject)                                                            \
@@ -71,7 +68,6 @@ namespace dart {
   V(CloneContext)                                                              \
   V(CallToRuntime)                                                             \
   V(LazyCompile)                                                               \
-  V(InterpretCall)                                                             \
   V(CallBootstrapNative)                                                       \
   V(CallNoScopeNative)                                                         \
   V(CallAutoScopeNative)                                                       \
@@ -79,7 +75,6 @@ namespace dart {
   V(CallStaticFunction)                                                        \
   V(OptimizeFunction)                                                          \
   V(InvokeDartCode)                                                            \
-  V(InvokeDartCodeFromBytecode)                                                \
   V(DebugStepCheck)                                                            \
   V(SwitchableCallMiss)                                                        \
   V(MonomorphicSmiableCheck)                                                   \
@@ -109,7 +104,9 @@ namespace dart {
   V(AssertSubtype)                                                             \
   V(AssertAssignable)                                                          \
   V(TypeIsTopTypeForSubtyping)                                                 \
+  V(TypeIsTopTypeForSubtypingNullSafe)                                         \
   V(NullIsAssignableToType)                                                    \
+  V(NullIsAssignableToTypeNullSafe)                                            \
   V(Subtype1TestCache)                                                         \
   V(Subtype2TestCache)                                                         \
   V(Subtype3TestCache)                                                         \
@@ -150,8 +147,6 @@ namespace dart {
   V(InitInstanceField)                                                         \
   V(InitLateInstanceField)                                                     \
   V(InitLateFinalInstanceField)                                                \
-  V(InitSharedLateStaticField)                                                 \
-  V(InitSharedLateFinalStaticField)                                            \
   V(Throw)                                                                     \
   V(ReThrow)                                                                   \
   V(AssertBoolean)                                                             \
@@ -159,8 +154,10 @@ namespace dart {
   V(InstantiateType)                                                           \
   V(InstantiateTypeNonNullableClassTypeParameter)                              \
   V(InstantiateTypeNullableClassTypeParameter)                                 \
+  V(InstantiateTypeLegacyClassTypeParameter)                                   \
   V(InstantiateTypeNonNullableFunctionTypeParameter)                           \
   V(InstantiateTypeNullableFunctionTypeParameter)                              \
+  V(InstantiateTypeLegacyFunctionTypeParameter)                                \
   V(InstantiateTypeArguments)                                                  \
   V(InstantiateTypeArgumentsMayShareInstantiatorTA)                            \
   V(InstantiateTypeArgumentsMayShareFunctionTA)                                \

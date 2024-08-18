@@ -1,3 +1,4 @@
+// @dart = 2.9
 Class test1<T>(T t1) {}
 
 class Class {}
@@ -13,7 +14,5 @@ extension Extension<T> on T {
 }
 
 main() {}
-
 test2<T extends Class>(T t2) {}
-
 test3<T>(T t3) {}

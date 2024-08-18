@@ -29,7 +29,7 @@ class EditFormatIfEnabledHandler extends LegacyHandler {
     // TODO(brianwilkerson): Move this to a superclass when `edit.format` is
     //  implemented by a handler class so the code can be shared.
     var originalContent = file.readAsStringSync();
-    var code = SourceCode(originalContent);
+    var code = SourceCode(originalContent, uri: null, isCompilationUnit: true);
 
     var formatter = DartFormatter();
     var formatResult = formatter.formatSource(code);
@@ -47,8 +47,7 @@ class EditFormatIfEnabledHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = EditFormatIfEnabledParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = EditFormatIfEnabledParams.fromRequest(request);
     var collection = AnalysisContextCollectionImpl(
       includedPaths: params.directories,
       resourceProvider: server.resourceProvider,

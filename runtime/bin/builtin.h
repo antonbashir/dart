@@ -24,14 +24,13 @@ namespace bin {
 class Builtin {
  public:
   // Note: Changes to this enum should be accompanied with changes to
-  // the builtin_libraries_ array in builtin.cc.
+  // the builtin_libraries_ array in builtin.cc and builtin_nolib.cc.
   enum BuiltinLibraryId {
     kInvalidLibrary = -1,
     kBuiltinLibrary = 0,
     kIOLibrary,
     kHttpLibrary,
     kCLILibrary,
-    kConcurrentLibrary,
   };
 
   // Setup native resolver method built in library specified in 'id'.

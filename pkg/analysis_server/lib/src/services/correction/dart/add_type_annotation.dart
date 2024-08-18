@@ -4,14 +4,14 @@
 
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
-import 'package:analyzer/src/utilities/extensions/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -19,16 +19,21 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class AddTypeAnnotation extends ResolvedCorrectionProducer {
   @override
-  final CorrectionApplicability applicability;
+  bool canBeAppliedInBulk;
 
-  /// Initializes a newly created instance that can't apply bulk and in-file
+  @override
+  bool canBeAppliedToFile;
+
+  /// Initialize a newly created instance that can't apply bulk and in-file
   /// fixes.
-  AddTypeAnnotation({required super.context})
-      : applicability = CorrectionApplicability.singleLocation;
+  AddTypeAnnotation()
+      : canBeAppliedInBulk = false,
+        canBeAppliedToFile = false;
 
-  /// Initializes a newly created instance that can apply bulk and in-file fixes.
-  AddTypeAnnotation.bulkFixable({required super.context})
-      : applicability = CorrectionApplicability.automatically;
+  /// Initialize a newly created instance that can apply bulk and in-file fixes.
+  AddTypeAnnotation.bulkFixable()
+      : canBeAppliedInBulk = true,
+        canBeAppliedToFile = true;
 
   @override
   AssistKind get assistKind => DartAssistKind.ADD_TYPE_ANNOTATION;
@@ -41,7 +46,7 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var node = this.node;
+    final node = this.node;
 
     if (node is SimpleFormalParameter) {
       await _forSimpleFormalParameter(builder, node);
@@ -84,6 +89,8 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
 
   Future<void> _applyChange(
       ChangeBuilder builder, Token? keyword, Token name, DartType type) async {
+    _configureTargetLocation(node);
+
     await builder.addDartFileEdit(file, (builder) {
       if (builder.canWriteType(type)) {
         if (keyword != null && keyword.keyword == Keyword.VAR) {
@@ -98,6 +105,18 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
         }
       }
     });
+  }
+
+  /// Configure the [utils] using the given [target].
+  void _configureTargetLocation(Object target) {
+    utils.targetClassElement = null;
+    if (target is AstNode) {
+      var targetClassDeclaration =
+          target.thisOrAncestorOfType<ClassDeclaration>();
+      if (targetClassDeclaration != null) {
+        utils.targetClassElement = targetClassDeclaration.declaredElement;
+      }
+    }
   }
 
   Future<void> _forDeclaredIdentifier(
@@ -123,7 +142,7 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
       return;
     }
     // Ensure that the parameter is named.
-    var name = parameter.name;
+    final name = parameter.name;
     if (name == null) {
       return;
     }
@@ -147,14 +166,14 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
     if (declarationList.type != null) {
       return;
     }
-    var variables = declarationList.variables;
-    var variable = variables[0];
+    final variables = declarationList.variables;
+    final variable = variables[0];
     // Ensure that the selection is not after the name of the variable.
     if (selectionOffset > variable.name.end) {
       return;
     }
     // Ensure that there is an initializer to get the type from.
-    var type = _typeForVariable(variable);
+    final type = _typeForVariable(variable);
     if (type == null) {
       return;
     }
@@ -173,17 +192,19 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
   }
 
   Future<void> _typedLiteral(ChangeBuilder builder, TypedLiteral node) async {
-    var type = node.staticType;
+    final type = node.staticType;
     if (type is! InterfaceType) {
       return;
     }
 
-    int offset;
+    final int offset;
     switch (node) {
       case ListLiteral():
         offset = node.leftBracket.offset;
       case SetOrMapLiteral():
         offset = node.leftBracket.offset;
+      default:
+        return;
     }
 
     await builder.addDartFileEdit(file, (builder) {

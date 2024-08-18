@@ -51,6 +51,11 @@ class MockContextRoot implements ContextRoot {
 
 class MockDartEditBuilderImpl implements DartEditBuilderImpl {
   @override
+  final bool isNonNullableByDefault;
+
+  MockDartEditBuilderImpl({this.isNonNullableByDefault = true});
+
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     return super.noSuchMethod(invocation);
   }

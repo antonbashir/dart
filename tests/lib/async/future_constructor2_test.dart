@@ -4,10 +4,9 @@
 
 library future_delayed_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 Future<int> createIntFuture() {
   return new Future<int>.value(499);

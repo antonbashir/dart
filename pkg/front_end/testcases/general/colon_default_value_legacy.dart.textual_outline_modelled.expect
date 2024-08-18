@@ -1,5 +1,4 @@
 // @dart = 2.19
-
 class Class {
   method({int x: 3}) {}
 }

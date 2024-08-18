@@ -29,9 +29,9 @@ ${parser.usage}""");
 
 late bool verbose;
 
-void main(List<String> args) async {
+main(List<String> args) async {
   final options = parser.parse(args);
-  if (options.flag("help")) {
+  if (options["help"]) {
     printUsage();
     return;
   }
@@ -43,10 +43,9 @@ void main(List<String> args) async {
     exitCode = 1;
     return;
   }
-  verbose = options.flag('verbose');
+  verbose = options['verbose'] ?? false;
 
-  final globs = List<Glob>.from(
-      options.multiOption('bot').map((pattern) => Glob(pattern)));
+  final globs = List<Glob>.from(options["bot"].map((pattern) => Glob(pattern)));
   final vmBuilders = loadVmBuildersFromTestMatrix(globs);
 
   final futures = <Future<List<Result>>>[];
@@ -87,7 +86,7 @@ Future<DateTime> getDateOfCommit(String commit) async {
     print(result.stderr);
     exit(1);
   }
-  return DateTime.parse((result.stdout as String).trim());
+  return DateTime.parse(result.stdout.trim());
 }
 
 Future<List<Result>> getResults(
@@ -147,12 +146,12 @@ Future<List<Result>> getResults(
   } else {
     print('Running the following query failed:\nbq ${arguments.join(' ')}');
     print('Exit code: ${result.exitCode}');
-    final stdout = (result.stdout as String).trim();
-    if (stdout.isNotEmpty) {
+    final stdout = result.stdout.trim();
+    if (stdout.length > 0) {
       print('Stdout:\n$stdout');
     }
-    final stderr = (result.stderr as String).trim();
-    if (stderr.isNotEmpty) {
+    final stderr = result.stderr.trim();
+    if (stderr.length > 0) {
       print('Stderr:\n$stderr');
     }
     return <Result>[];
@@ -302,7 +301,7 @@ class Result {
         result == other.result;
   }
 
-  bool equals(Object other) {
+  bool equals(other) {
     if (other is Result) {
       if (name != other.name) return false;
       if (builderName != other.builderName) return false;
@@ -327,14 +326,11 @@ String currentDate() {
 
 Set<String> loadVmBuildersFromTestMatrix(List<Glob> globs) {
   final contents = File('tools/bots/test_matrix.json').readAsStringSync();
-  final testMatrix = json.decode(contents) as Map<String, dynamic>;
+  final testMatrix = json.decode(contents);
 
   final vmBuilders = <String>{};
   for (final config in testMatrix['builder_configurations']) {
-    for (final builder in (config as Map)['builders']) {
-      // Cast to a string.
-      builder as String;
-
+    for (final builder in config['builders']) {
       if (builder.startsWith('vm-') || builder.startsWith('app-')) {
         vmBuilders.add(builder);
       }

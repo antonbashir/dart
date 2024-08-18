@@ -119,6 +119,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -126,10 +128,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -140,8 +138,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -162,6 +158,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -169,10 +167,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -183,8 +177,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -207,6 +199,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -214,10 +208,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -228,8 +218,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -250,6 +238,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -257,10 +247,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -271,8 +257,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -293,6 +277,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -300,10 +286,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -314,8 +296,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -338,6 +318,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -345,10 +327,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -359,8 +337,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -396,6 +372,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -404,17 +382,15 @@ suggestions
     kind: import
   dart:isolate
     kind: import
-  dart:js
-    kind: import
-  dart:js_interop
-    kind: import
   dart:math
     kind: import
   dart:typed_data
     kind: import
-  package:test/test.dart
+  package:
     kind: import
-  dart:core
+  package:test/
+    kind: import
+  package:test/test.dart
     kind: import
 ''');
   }
@@ -437,6 +413,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -445,15 +423,9 @@ suggestions
     kind: import
   dart:isolate
     kind: import
-  dart:js
-    kind: import
-  dart:js_interop
-    kind: import
   dart:math
     kind: import
   dart:typed_data
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -476,6 +448,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -484,15 +458,9 @@ suggestions
     kind: import
   dart:isolate
     kind: import
-  dart:js
-    kind: import
-  dart:js_interop
-    kind: import
   dart:math
     kind: import
   dart:typed_data
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -518,6 +486,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -525,10 +495,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -539,8 +505,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -868,6 +832,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -875,10 +841,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -889,8 +851,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -929,6 +889,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -936,10 +898,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -950,8 +908,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -974,6 +930,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -981,10 +939,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -995,8 +949,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -1032,6 +984,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -1040,15 +994,9 @@ suggestions
     kind: import
   dart:isolate
     kind: import
-  dart:js
-    kind: import
-  dart:js_interop
-    kind: import
   dart:math
     kind: import
   dart:typed_data
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -1072,67 +1020,64 @@ suggestions
   }
 
   Future<void> test_part_file() async {
-    newFile('$testPackageLibPath/a.dart', '');
-    newFile('$testPackageLibPath/foo/b.dart', '');
+    newFile('$testPackageRootPath/other.dart', '');
+    newFile('$testPackageRootPath/foo/bar.dart', '');
+    newFile('$workspaceRootPath/blat.dart', '');
     await computeSuggestions('''
-part '^'
+library x; part "^" import
 ''');
+    // TODO(brianwilkerson): Before being converted, this test used to produce
+    //  'other.dart' and 'foo/'.
     assertResponse(r'''
 suggestions
-  a.dart
-    kind: import
-  foo/
-    kind: import
+''');
+  }
+
+  Future<void> test_part_file2() async {
+    newFile('$testPackageRootPath/other.dart', '');
+    newFile('$testPackageRootPath/foo/bar.dart', '');
+    newFile('$workspaceRootPath/blat.dart', '');
+    await computeSuggestions('''
+library x; part "..^" import
+''');
+    // TODO(brianwilkerson): Before being converted, this test used to produce
+    //  'other.dart' and 'foo/'.
+    assertResponse(r'''
+replacement
+  left: 2
+suggestions
 ''');
   }
 
   Future<void> test_part_file_child() async {
-    newFile('$testPackageLibPath/a.dart', '');
-    newFile('$testPackageLibPath/foo/b.dart', '');
+    newFile('$testPackageRootPath/other.dart', '');
+    newFile('$testPackageRootPath/foo/bar.dart', '');
+    newFile('$workspaceRootPath/blat.dart', '');
     await computeSuggestions('''
-part 'foo/^'
+library x; part "foo/^" import
 ''');
+    // TODO(brianwilkerson): Before being converted, this test used to produce
+    //  'foo/bar.dart'.
     assertResponse(r'''
 replacement
   left: 4
 suggestions
-  foo/b.dart
-    kind: import
 ''');
   }
 
   Future<void> test_part_file_parent() async {
-    testFilePath = getFile('$testPackageLibPath/foo/test.dart').path;
-    newFile('$testPackageLibPath/a.dart', '');
-    newFile('$testPackageLibPath/bar/b.dart', '');
+    newFile('$testPackageRootPath/other.dart', '');
+    newFile('$testPackageRootPath/foo/bar.dart', '');
+    newFile('$workspaceRootPath/blat.dart', '');
     await computeSuggestions('''
-part '../^'
+library x; part "../^" import
 ''');
+    // TODO(brianwilkerson): Before being converted, this test used to produce
+    //  '../blat.dart'.
     assertResponse(r'''
 replacement
   left: 3
 suggestions
-  ../a.dart
-    kind: import
-  ../bar/
-    kind: import
-  ../foo/
-    kind: import
-''');
-  }
-
-  Future<void> test_partOf_file() async {
-    newFile('$testPackageLibPath/a.dart', '');
-    newFile('$testPackageLibPath/foo/b.dart', '');
-    await computeSuggestions('''
-part of '^'
-''');
-    assertResponse(r'''
-suggestions
-  a.dart
-    kind: import
-  foo/
-    kind: import
 ''');
   }
 }

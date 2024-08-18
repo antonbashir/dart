@@ -10,21 +10,13 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ConstNotInitializedTest);
+    defineReflectiveTests(ConstNotInitializedWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
-class ConstNotInitializedTest extends PubPackageResolutionTest {
-  test_class_static() async {
-    await assertErrorsInCode(r'''
-class A {
-  static const F;
-}
-''', [
-      error(CompileTimeErrorCode.CONST_NOT_INITIALIZED, 25, 1),
-    ]);
-  }
-
+class ConstNotInitializedTest extends PubPackageResolutionTest
+    with ConstNotInitializedTestCases {
   test_enum_static() async {
     await assertErrorsInCode('''
 enum E {
@@ -33,6 +25,18 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.CONST_NOT_INITIALIZED, 29, 1),
+    ]);
+  }
+}
+
+mixin ConstNotInitializedTestCases on PubPackageResolutionTest {
+  test_class_static() async {
+    await assertErrorsInCode(r'''
+class A {
+  static const F;
+}
+''', [
+      error(CompileTimeErrorCode.CONST_NOT_INITIALIZED, 25, 1),
     ]);
   }
 
@@ -52,7 +56,7 @@ f() {
   const int x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 18, 1),
       error(CompileTimeErrorCode.CONST_NOT_INITIALIZED, 18, 1),
     ]);
   }
@@ -65,3 +69,7 @@ const F;
     ]);
   }
 }
+
+@reflectiveTest
+class ConstNotInitializedWithoutNullSafetyTest extends PubPackageResolutionTest
+    with ConstNotInitializedTestCases, WithoutNullSafetyMixin {}

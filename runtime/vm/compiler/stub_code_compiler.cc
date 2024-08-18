@@ -50,8 +50,7 @@ void StubCodeCompiler::GenerateInitStaticFieldStub() {
   __ Ret();
 }
 
-void StubCodeCompiler::GenerateInitLateStaticFieldStub(bool is_final,
-                                                       bool is_shared) {
+void StubCodeCompiler::GenerateInitLateStaticFieldStub(bool is_final) {
   const Register kResultReg = InitStaticFieldABI::kResultReg;
   const Register kFieldReg = InitStaticFieldABI::kFieldReg;
   const Register kAddressReg = InitLateStaticFieldInternalRegs::kAddressReg;
@@ -72,7 +71,7 @@ void StubCodeCompiler::GenerateInitLateStaticFieldStub(bool is_final,
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
   __ MoveRegister(kResultReg, CallingConventions::kReturnReg);
   __ PopRegister(kFieldReg);
-  __ LoadStaticFieldAddress(kAddressReg, kFieldReg, kScratchReg, is_shared);
+  __ LoadStaticFieldAddress(kAddressReg, kFieldReg, kScratchReg);
 
   Label throw_exception;
   if (is_final) {
@@ -102,19 +101,11 @@ void StubCodeCompiler::GenerateInitLateStaticFieldStub(bool is_final,
 }
 
 void StubCodeCompiler::GenerateInitLateStaticFieldStub() {
-  GenerateInitLateStaticFieldStub(/*is_final=*/false, /*is_shared=*/false);
+  GenerateInitLateStaticFieldStub(/*is_final=*/false);
 }
 
 void StubCodeCompiler::GenerateInitLateFinalStaticFieldStub() {
-  GenerateInitLateStaticFieldStub(/*is_final=*/true, /*shared=*/false);
-}
-
-void StubCodeCompiler::GenerateInitSharedLateStaticFieldStub() {
-  GenerateInitLateStaticFieldStub(/*is_final=*/false, /*is_shared=*/true);
-}
-
-void StubCodeCompiler::GenerateInitSharedLateFinalStaticFieldStub() {
-  GenerateInitLateStaticFieldStub(/*is_final=*/true, /*shared=*/true);
+  GenerateInitLateStaticFieldStub(/*is_final=*/true);
 }
 
 void StubCodeCompiler::GenerateInitInstanceFieldStub() {
@@ -150,14 +141,8 @@ void StubCodeCompiler::GenerateInitLateInstanceFieldStub(bool is_final) {
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG,
                                      target::Function::code_offset());
-#if defined(DART_DYNAMIC_MODULES)
-    // InterpretCall stub needs arguments descriptor for all function calls.
-    __ LoadObject(ARGS_DESC_REG, ArgumentsDescriptorBoxed(/*type_args_len=*/0,
-                                                          /*num_arguments=*/1));
-#else
     // Load a GC-safe value for the arguments descriptor (unused but tagged).
     __ LoadImmediate(ARGS_DESC_REG, 0);
-#endif  // defined(DART_DYNAMIC_MODULES)
   }
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
   __ Drop(1);  // Drop argument.
@@ -230,8 +215,7 @@ void StubCodeCompiler::GenerateReThrowStub() {
   __ PushObject(NullObject());  // Make room for (unused) result.
   __ PushRegistersInOrder(
       {ReThrowABI::kExceptionReg, ReThrowABI::kStackTraceReg});
-  __ PushImmediate(Smi::RawValue(0));  // Do not bypass debugger.
-  __ CallRuntime(kReThrowRuntimeEntry, /*argument_count=*/3);
+  __ CallRuntime(kReThrowRuntimeEntry, /*argument_count=*/2);
   __ Breakpoint();
 }
 
@@ -315,10 +299,9 @@ void StubCodeCompiler::GenerateInstantiateTypeArgumentsStub() {
     static_assert(TypeArguments::Cache::kSentinelIndex ==
                       TypeArguments::Cache::kInstantiatorTypeArgsIndex,
                   "sentinel is not same index as instantiator type args");
-    __ LoadAcquireCompressedFromOffset(
-        InstantiationABI::kScratchReg, kEntryReg,
-        TypeArguments::Cache::kInstantiatorTypeArgsIndex *
-            target::kCompressedWordSize);
+    __ LoadAcquireCompressed(InstantiationABI::kScratchReg, kEntryReg,
+                             TypeArguments::Cache::kInstantiatorTypeArgsIndex *
+                                 target::kCompressedWordSize);
     // Test for an unoccupied entry by checking for the Smi sentinel.
     __ BranchIfSmi(InstantiationABI::kScratchReg, not_found);
     // Otherwise it must be occupied and contain TypeArguments objects.
@@ -338,7 +321,7 @@ void StubCodeCompiler::GenerateInstantiateTypeArgumentsStub() {
   };
 
   // Lookup cache before calling runtime.
-  __ LoadAcquireCompressedFromOffset(
+  __ LoadAcquireCompressed(
       InstantiationABI::kScratchReg,
       InstantiationABI::kUninstantiatedTypeArgumentsReg,
       target::TypeArguments::instantiations_offset() - kHeapObjectTag);
@@ -391,7 +374,7 @@ void StubCodeCompiler::GenerateInstantiateTypeArgumentsStub() {
       TypeArguments::Cache::kHeaderSize * target::kCompressedWordSize);
 
   __ Comment("Calculate probe mask");
-  __ LoadAcquireCompressedFromOffset(
+  __ LoadAcquireCompressed(
       InstantiationABI::kScratchReg, kEntryReg,
       TypeArguments::Cache::kMetadataIndex * target::kCompressedWordSize);
   __ LsrImmediate(
@@ -477,11 +460,11 @@ void StubCodeCompiler::GenerateInstantiateTypeArgumentsStub() {
 #endif
   __ PushRegistersInOrder({
 #if defined(DART_ASSEMBLER_HAS_NULL_REG)
-      NULL_REG,
+    NULL_REG,
 #endif
-      InstantiationABI::kUninstantiatedTypeArgumentsReg,
-      InstantiationABI::kInstantiatorTypeArgumentsReg,
-      InstantiationABI::kFunctionTypeArgumentsReg,
+        InstantiationABI::kUninstantiatedTypeArgumentsReg,
+        InstantiationABI::kInstantiatorTypeArgumentsReg,
+        InstantiationABI::kFunctionTypeArgumentsReg,
   });
   __ CallRuntime(kInstantiateTypeArgumentsRuntimeEntry, 3);
   __ Drop(3);  // Drop 2 type vectors, and uninstantiated type.
@@ -616,6 +599,13 @@ static void BuildInstantiateTypeParameterStub(Assembler* assembler,
       __ BranchIf(NOT_EQUAL, &runtime_call);
       __ Ret();
       break;
+    case Nullability::kLegacy:
+      __ CompareAbstractTypeNullabilityWith(
+          InstantiateTypeABI::kResultTypeReg,
+          static_cast<int8_t>(Nullability::kNonNullable),
+          InstantiateTypeABI::kScratchReg);
+      __ BranchIf(EQUAL, &runtime_call);
+      __ Ret();
   }
 
   // The TAV was null, so the value of the type parameter is "dynamic".
@@ -638,6 +628,11 @@ void StubCodeCompiler::GenerateInstantiateTypeNullableClassTypeParameterStub() {
                                     /*is_function_parameter=*/false);
 }
 
+void StubCodeCompiler::GenerateInstantiateTypeLegacyClassTypeParameterStub() {
+  BuildInstantiateTypeParameterStub(assembler, Nullability::kLegacy,
+                                    /*is_function_parameter=*/false);
+}
+
 void StubCodeCompiler::
     GenerateInstantiateTypeNonNullableFunctionTypeParameterStub() {
   BuildInstantiateTypeParameterStub(assembler, Nullability::kNonNullable,
@@ -647,6 +642,12 @@ void StubCodeCompiler::
 void StubCodeCompiler::
     GenerateInstantiateTypeNullableFunctionTypeParameterStub() {
   BuildInstantiateTypeParameterStub(assembler, Nullability::kNullable,
+                                    /*is_function_parameter=*/true);
+}
+
+void StubCodeCompiler::
+    GenerateInstantiateTypeLegacyFunctionTypeParameterStub() {
+  BuildInstantiateTypeParameterStub(assembler, Nullability::kLegacy,
                                     /*is_function_parameter=*/true);
 }
 
@@ -704,7 +705,8 @@ static void EnsureIsTypeOrFunctionTypeOrTypeParameter(Assembler* assembler,
 //   non-zero otherwise.
 //
 // All registers other than outputs and non-preserved scratches are preserved.
-void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingStub() {
+static void GenerateTypeIsTopTypeForSubtyping(Assembler* assembler,
+                                              bool null_safety) {
   // The only case where the original value of kSubtypeTestCacheReg is needed
   // after the stub call is on IA32, where it's currently preserved on the stack
   // before calling the stub (as it's also CODE_REG on that architecture), so we
@@ -752,11 +754,13 @@ void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingStub() {
   __ BranchIf(EQUAL, &unwrap_future_or, compiler::Assembler::kNearJump);
   __ CompareImmediate(scratch2_reg, kInstanceCid);
   __ BranchIf(NOT_EQUAL, &done, compiler::Assembler::kNearJump);
-  // Instance type isn't a top type if non-nullable.
-  __ CompareAbstractTypeNullabilityWith(
-      scratch1_reg, static_cast<int8_t>(Nullability::kNonNullable),
-      scratch2_reg);
-  __ BranchIf(EQUAL, &done, compiler::Assembler::kNearJump);
+  if (null_safety) {
+    // Instance type isn't a top type if non-nullable in null safe mode.
+    __ CompareAbstractTypeNullabilityWith(
+        scratch1_reg, static_cast<int8_t>(Nullability::kNonNullable),
+        scratch2_reg);
+    __ BranchIf(EQUAL, &done, compiler::Assembler::kNearJump);
+  }
   __ Bind(&is_top_type);
   __ LoadImmediate(output_reg, 0);
   __ Bind(&done);
@@ -781,6 +785,14 @@ void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingStub() {
   __ Jump(&check_top_type, compiler::Assembler::kNearJump);
 }
 
+void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingStub() {
+  GenerateTypeIsTopTypeForSubtyping(assembler, /*null_safety=*/false);
+}
+
+void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingNullSafeStub() {
+  GenerateTypeIsTopTypeForSubtyping(assembler, /*null_safety=*/true);
+}
+
 // Version of Instance::NullIsAssignableTo(other, inst_tav, fun_tav) used when
 // the destination type was not known at compile time. Must be kept in sync.
 //
@@ -798,7 +810,8 @@ void StubCodeCompiler::GenerateTypeIsTopTypeForSubtypingStub() {
 //   non-zero otherwise.
 //
 // All registers other than outputs and non-preserved scratches are preserved.
-void StubCodeCompiler::GenerateNullIsAssignableToTypeStub() {
+static void GenerateNullIsAssignableToType(Assembler* assembler,
+                                           bool null_safety) {
   // The only case where the original value of kSubtypeTestCacheReg is needed
   // after the stub call is on IA32, where it's currently preserved on the stack
   // before calling the stub (as it's also CODE_REG on that architecture), so we
@@ -825,83 +838,87 @@ void StubCodeCompiler::GenerateNullIsAssignableToTypeStub() {
   compiler::Label is_assignable, done;
   // Initialize the first scratch register (and thus the output register) with
   // the destination type. We do this before the check to ensure the output
-  // register has a non-zero value if kInstanceReg is not null.
+  // register has a non-zero value if !null_safety and kInstanceReg is not null.
   __ MoveRegister(kCurrentTypeReg, TypeTestABI::kDstTypeReg);
   __ CompareObject(TypeTestABI::kInstanceReg, Object::null_object());
+  if (null_safety) {
+    compiler::Label check_null_assignable;
+    // Skip checking the type if not null.
+    __ BranchIf(NOT_EQUAL, &done);
+    __ Bind(&check_null_assignable);
+    // scratch1_reg: Current type to check.
+    EnsureIsTypeOrFunctionTypeOrTypeParameter(assembler, kCurrentTypeReg,
+                                              kScratchReg);
+    compiler::Label is_not_type;
+    __ CompareClassId(kCurrentTypeReg, kTypeCid, kScratchReg);
+    __ BranchIf(NOT_EQUAL, &is_not_type, compiler::Assembler::kNearJump);
+    __ CompareAbstractTypeNullabilityWith(
+        kCurrentTypeReg, static_cast<int8_t>(Nullability::kNonNullable),
+        kScratchReg);
+    __ BranchIf(NOT_EQUAL, &is_assignable);
+    // FutureOr is a special case because it may have the non-nullable bit set,
+    // but FutureOr<T> functions as the union of T and Future<T>, so it must be
+    // unwrapped to see if T is nullable.
+    __ LoadTypeClassId(kScratchReg, kCurrentTypeReg);
+    __ CompareImmediate(kScratchReg, kFutureOrCid);
+    __ BranchIf(NOT_EQUAL, &done);
+    __ LoadCompressedField(
+        kScratchReg,
+        compiler::FieldAddress(kCurrentTypeReg,
+                               compiler::target::Type::arguments_offset()));
+    __ CompareObject(kScratchReg, Object::null_object());
+    // If the arguments are null, then unwrapping gives the dynamic type,
+    // which can take null.
+    __ BranchIf(EQUAL, &is_assignable);
+    __ LoadCompressedField(
+        kCurrentTypeReg,
+        compiler::FieldAddress(
+            kScratchReg, compiler::target::TypeArguments::type_at_offset(0)));
+    __ Jump(&check_null_assignable, compiler::Assembler::kNearJump);
+    __ Bind(&is_not_type);
+    // Null is assignable to a type parameter only if it is nullable or if the
+    // instantiation is nullable.
+    __ CompareAbstractTypeNullabilityWith(
+        kCurrentTypeReg, static_cast<int8_t>(Nullability::kNonNullable),
+        kScratchReg);
+    __ BranchIf(NOT_EQUAL, &is_assignable);
 
-  compiler::Label check_null_assignable;
-  // Skip checking the type if not null.
-  __ BranchIf(NOT_EQUAL, &done);
-  __ Bind(&check_null_assignable);
-  // scratch1_reg: Current type to check.
-  EnsureIsTypeOrFunctionTypeOrTypeParameter(assembler, kCurrentTypeReg,
-                                            kScratchReg);
-  compiler::Label is_not_type;
-  __ CompareClassId(kCurrentTypeReg, kTypeCid, kScratchReg);
-  __ BranchIf(NOT_EQUAL, &is_not_type, compiler::Assembler::kNearJump);
-  __ CompareAbstractTypeNullabilityWith(
-      kCurrentTypeReg, static_cast<int8_t>(Nullability::kNonNullable),
-      kScratchReg);
-  __ BranchIf(NOT_EQUAL, &is_assignable);
-  // FutureOr is a special case because it may have the non-nullable bit set,
-  // but FutureOr<T> functions as the union of T and Future<T>, so it must be
-  // unwrapped to see if T is nullable.
-  __ LoadTypeClassId(kScratchReg, kCurrentTypeReg);
-  __ CompareImmediate(kScratchReg, kFutureOrCid);
-  __ BranchIf(NOT_EQUAL, &done);
-  __ LoadCompressedField(
-      kScratchReg,
-      compiler::FieldAddress(kCurrentTypeReg,
-                             compiler::target::Type::arguments_offset()));
-  __ CompareObject(kScratchReg, Object::null_object());
-  // If the arguments are null, then unwrapping gives the dynamic type,
-  // which can take null.
-  __ BranchIf(EQUAL, &is_assignable);
-  __ LoadCompressedField(
-      kCurrentTypeReg,
-      compiler::FieldAddress(
-          kScratchReg, compiler::target::TypeArguments::type_at_offset(0)));
-  __ Jump(&check_null_assignable, compiler::Assembler::kNearJump);
-  __ Bind(&is_not_type);
-  // Null is assignable to a type parameter only if it is nullable or if the
-  // instantiation is nullable.
-  __ CompareAbstractTypeNullabilityWith(
-      kCurrentTypeReg, static_cast<int8_t>(Nullability::kNonNullable),
-      kScratchReg);
-  __ BranchIf(NOT_EQUAL, &is_assignable);
+    // Don't set kScratchReg in here as on IA32, that's the function TAV reg.
+    auto handle_case = [&](Register tav) {
+      // We can reuse kCurrentTypeReg to hold the index because we no longer
+      // need the type parameter afterwards.
+      auto const kIndexReg = kCurrentTypeReg;
+      // If the TAV is null, resolving gives the (nullable) dynamic type.
+      __ CompareObject(tav, NullObject());
+      __ BranchIf(EQUAL, &is_assignable, Assembler::kNearJump);
+      // Resolve the type parameter to its instantiated type and loop.
+      __ LoadFieldFromOffset(kIndexReg, kCurrentTypeReg,
+                             target::TypeParameter::index_offset(),
+                             kUnsignedTwoBytes);
+      __ LoadIndexedCompressed(kCurrentTypeReg, tav,
+                               target::TypeArguments::types_offset(),
+                               kIndexReg);
+      __ Jump(&check_null_assignable);
+    };
 
-  // Don't set kScratchReg in here as on IA32, that's the function TAV reg.
-  auto handle_case = [&](Register tav) {
-    // We can reuse kCurrentTypeReg to hold the index because we no longer
-    // need the type parameter afterwards.
-    auto const kIndexReg = kCurrentTypeReg;
-    // If the TAV is null, resolving gives the (nullable) dynamic type.
-    __ CompareObject(tav, NullObject());
-    __ BranchIf(EQUAL, &is_assignable, Assembler::kNearJump);
-    // Resolve the type parameter to its instantiated type and loop.
-    __ LoadFieldFromOffset(kIndexReg, kCurrentTypeReg,
-                           target::TypeParameter::index_offset(),
-                           kUnsignedTwoBytes);
-    __ LoadIndexedCompressed(kCurrentTypeReg, tav,
-                             target::TypeArguments::types_offset(), kIndexReg);
-    __ Jump(&check_null_assignable);
-  };
-
-  Label function_type_param;
-  __ LoadFromSlot(kScratchReg, TypeTestABI::kDstTypeReg,
-                  Slot::AbstractType_flags());
-  __ BranchIfBit(kScratchReg,
-                 target::UntaggedTypeParameter::kIsFunctionTypeParameterBit,
-                 NOT_ZERO, &function_type_param, Assembler::kNearJump);
-  handle_case(TypeTestABI::kInstantiatorTypeArgumentsReg);
-  __ Bind(&function_type_param);
+    Label function_type_param;
+    __ LoadFromSlot(kScratchReg, TypeTestABI::kDstTypeReg,
+                    Slot::AbstractType_flags());
+    __ BranchIfBit(kScratchReg,
+                   target::UntaggedTypeParameter::kIsFunctionTypeParameterBit,
+                   NOT_ZERO, &function_type_param, Assembler::kNearJump);
+    handle_case(TypeTestABI::kInstantiatorTypeArgumentsReg);
+    __ Bind(&function_type_param);
 #if defined(TARGET_ARCH_IA32)
-  // Function TAV is on top of stack because we're using that register as
-  // kScratchReg.
-  __ LoadFromStack(TypeTestABI::kFunctionTypeArgumentsReg, 0);
+    // Function TAV is on top of stack because we're using that register as
+    // kScratchReg.
+    __ LoadFromStack(TypeTestABI::kFunctionTypeArgumentsReg, 0);
 #endif
-  handle_case(TypeTestABI::kFunctionTypeArgumentsReg);
-
+    handle_case(TypeTestABI::kFunctionTypeArgumentsReg);
+  } else {
+    // Null in non-null-safe mode is always assignable.
+    __ BranchIf(NOT_EQUAL, &done, compiler::Assembler::kNearJump);
+  }
   __ Bind(&is_assignable);
   __ LoadImmediate(kOutputReg, 0);
   __ Bind(&done);
@@ -912,6 +929,13 @@ void StubCodeCompiler::GenerateNullIsAssignableToTypeStub() {
   __ Ret();
 }
 
+void StubCodeCompiler::GenerateNullIsAssignableToTypeStub() {
+  GenerateNullIsAssignableToType(assembler, /*null_safety=*/false);
+}
+
+void StubCodeCompiler::GenerateNullIsAssignableToTypeNullSafeStub() {
+  GenerateNullIsAssignableToType(assembler, /*null_safety=*/true);
+}
 #if !defined(TARGET_ARCH_IA32)
 // The <X>TypeTestStubs are used to test whether a given value is of a given
 // type. All variants have the same calling convention:
@@ -1158,19 +1182,18 @@ VM_TYPE_TESTING_STUB_CODE_LIST(GENERATE_BREAKPOINT_STUB)
 // Called for inline allocation of closure.
 // Input (preserved):
 //   AllocateClosureABI::kFunctionReg: closure function.
-//   AllocateClosureABI::kContextReg: closure context.
-//   AllocateClosureABI::kInstantiatorTypeArgs: instantiator type arguments.
 // Output:
 //   AllocateClosureABI::kResultReg: new allocated Closure object.
 // Clobbered:
 //   AllocateClosureABI::kScratchReg
-void StubCodeCompiler::GenerateAllocateClosureStub(
-    bool has_instantiator_type_args,
-    bool is_generic) {
+void StubCodeCompiler::GenerateAllocateClosureStub() {
   const intptr_t instance_size =
       target::RoundedAllocationSize(target::Closure::InstanceSize());
   __ EnsureHasClassIdInDEBUG(kFunctionCid, AllocateClosureABI::kFunctionReg,
                              AllocateClosureABI::kScratchReg);
+  __ EnsureHasClassIdInDEBUG(kContextCid, AllocateClosureABI::kContextReg,
+                             AllocateClosureABI::kScratchReg,
+                             /*can_be_null=*/true);
   if (!FLAG_use_slow_path && FLAG_inline_alloc) {
     Label slow_case;
     __ Comment("Inline allocation of uninitialized closure");
@@ -1190,23 +1213,15 @@ void StubCodeCompiler::GenerateAllocateClosureStub(
     // Since the TryAllocateObject above did not go to the slow path, we're
     // guaranteed an object in new space here, and thus no barriers are needed.
     __ LoadObject(AllocateClosureABI::kScratchReg, NullObject());
-    if (has_instantiator_type_args) {
-      __ StoreToSlotNoBarrier(AllocateClosureABI::kInstantiatorTypeArgsReg,
-                              AllocateClosureABI::kResultReg,
-                              Slot::Closure_instantiator_type_arguments());
-    } else {
-      __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
-                              AllocateClosureABI::kResultReg,
-                              Slot::Closure_instantiator_type_arguments());
-    }
+    __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
+                            AllocateClosureABI::kResultReg,
+                            Slot::Closure_instantiator_type_arguments());
     __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
                             AllocateClosureABI::kResultReg,
                             Slot::Closure_function_type_arguments());
-    if (!is_generic) {
-      __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
-                              AllocateClosureABI::kResultReg,
-                              Slot::Closure_delayed_type_arguments());
-    }
+    __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
+                            AllocateClosureABI::kResultReg,
+                            Slot::Closure_delayed_type_arguments());
     __ StoreToSlotNoBarrier(AllocateClosureABI::kFunctionReg,
                             AllocateClosureABI::kResultReg,
                             Slot::Closure_function());
@@ -1216,12 +1231,6 @@ void StubCodeCompiler::GenerateAllocateClosureStub(
     __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
                             AllocateClosureABI::kResultReg,
                             Slot::Closure_hash());
-    if (is_generic) {
-      __ LoadObject(AllocateClosureABI::kScratchReg, EmptyTypeArguments());
-      __ StoreToSlotNoBarrier(AllocateClosureABI::kScratchReg,
-                              AllocateClosureABI::kResultReg,
-                              Slot::Closure_delayed_type_arguments());
-    }
 #if defined(DART_PRECOMPILER) && !defined(TARGET_ARCH_IA32)
     if (FLAG_precompiled_mode) {
       // Set the closure entry point in precompiled mode, either to the function
@@ -1248,23 +1257,7 @@ void StubCodeCompiler::GenerateAllocateClosureStub(
   __ PushObject(NullObject());  // Space on the stack for the return value.
   __ PushRegistersInOrder(
       {AllocateClosureABI::kFunctionReg, AllocateClosureABI::kContextReg});
-  if (has_instantiator_type_args) {
-    __ PushRegister(AllocateClosureABI::kInstantiatorTypeArgsReg);
-  } else {
-    __ PushObject(NullObject());
-  }
-  if (is_generic) {
-    __ PushObject(EmptyTypeArguments());
-  } else {
-    __ PushObject(NullObject());
-  }
-  __ CallRuntime(kAllocateClosureRuntimeEntry, 4);
-  if (has_instantiator_type_args) {
-    __ Drop(1);
-    __ PopRegister(AllocateClosureABI::kInstantiatorTypeArgsReg);
-  } else {
-    __ Drop(2);
-  }
+  __ CallRuntime(kAllocateClosureRuntimeEntry, 2);
   __ PopRegister(AllocateClosureABI::kContextReg);
   __ PopRegister(AllocateClosureABI::kFunctionReg);
   __ PopRegister(AllocateClosureABI::kResultReg);
@@ -1274,26 +1267,6 @@ void StubCodeCompiler::GenerateAllocateClosureStub(
 
   // AllocateClosureABI::kResultReg: new object
   __ Ret();
-}
-
-void StubCodeCompiler::GenerateAllocateClosureStub() {
-  GenerateAllocateClosureStub(/*has_instantiator_type_args=*/false,
-                              /*is_generic=*/false);
-}
-
-void StubCodeCompiler::GenerateAllocateClosureGenericStub() {
-  GenerateAllocateClosureStub(/*has_instantiator_type_args=*/false,
-                              /*is_generic=*/true);
-}
-
-void StubCodeCompiler::GenerateAllocateClosureTAStub() {
-  GenerateAllocateClosureStub(/*has_instantiator_type_args=*/true,
-                              /*is_generic=*/false);
-}
-
-void StubCodeCompiler::GenerateAllocateClosureTAGenericStub() {
-  GenerateAllocateClosureStub(/*has_instantiator_type_args=*/true,
-                              /*is_generic=*/true);
 }
 
 // Generates allocation stub for _GrowableList class.
@@ -1354,13 +1327,12 @@ void StubCodeCompiler::GenerateAllocateRecordStub() {
     const intptr_t fixed_size_plus_alignment_padding =
         (target::Record::field_offset(0) +
          target::ObjectAlignment::kObjectAlignment - 1);
-    __ AddScaled(temp_reg, kNoRegister, temp_reg,
-                 TIMES_COMPRESSED_HALF_WORD_SIZE,
+    __ AddScaled(temp_reg, temp_reg, TIMES_COMPRESSED_HALF_WORD_SIZE,
                  fixed_size_plus_alignment_padding);
     __ AndImmediate(temp_reg, -target::ObjectAlignment::kObjectAlignment);
 
     // Now allocate the object.
-    __ LoadFromOffset(result_reg, THR, target::Thread::top_offset());
+    __ LoadFromOffset(result_reg, Address(THR, target::Thread::top_offset()));
     __ MoveRegister(new_top_reg, temp_reg);
     __ AddRegisters(new_top_reg, result_reg);
     // Check if the allocation fits into the remaining space.
@@ -1371,7 +1343,7 @@ void StubCodeCompiler::GenerateAllocateRecordStub() {
 
     // Successfully allocated the object, now update top to point to
     // next object start and initialize the object.
-    __ StoreToOffset(new_top_reg, THR, target::Thread::top_offset());
+    __ StoreToOffset(new_top_reg, Address(THR, target::Thread::top_offset()));
     __ AddImmediate(result_reg, kHeapObjectTag);
 
     // Calculate the size tag.
@@ -1391,8 +1363,9 @@ void StubCodeCompiler::GenerateAllocateRecordStub() {
       __ Bind(&done);
       uword tags = target::MakeTagWordForNewSpaceObject(kRecordCid, 0);
       __ OrImmediate(temp_reg, tags);
-      __ StoreFieldToOffset(temp_reg, result_reg,
-                            target::Object::tags_offset());  // Tags.
+      __ StoreToOffset(
+          temp_reg,
+          FieldAddress(result_reg, target::Object::tags_offset()));  // Tags.
     }
 
     __ StoreCompressedIntoObjectNoBarrier(
@@ -1706,9 +1679,9 @@ EMIT_BOX_ALLOCATION(Int32x4)
 static void GenerateBoxFpuValueStub(Assembler* assembler,
                                     const dart::Class& cls,
                                     const RuntimeEntry& runtime_entry,
-                                    void (Assembler::* store_value)(FpuRegister,
-                                                                    Register,
-                                                                    int32_t)) {
+                                    void (Assembler::*store_value)(FpuRegister,
+                                                                   Register,
+                                                                   int32_t)) {
   Label call_runtime;
   if (!FLAG_use_slow_path && FLAG_inline_alloc) {
     __ TryAllocate(cls, &call_runtime, compiler::Assembler::kFarJump,
@@ -1783,10 +1756,11 @@ static void CallDartCoreLibraryFunction(
     __ Call(Address(THR, entry_point_offset_in_thread));
   } else {
     __ LoadIsolateGroup(FUNCTION_REG);
-    __ LoadFromOffset(FUNCTION_REG, FUNCTION_REG,
-                      target::IsolateGroup::object_store_offset());
-    __ LoadFromOffset(FUNCTION_REG, FUNCTION_REG,
-                      function_offset_in_object_store);
+    __ LoadFromOffset(
+        FUNCTION_REG,
+        Address(FUNCTION_REG, target::IsolateGroup::object_store_offset()));
+    __ LoadFromOffset(FUNCTION_REG,
+                      Address(FUNCTION_REG, function_offset_in_object_store));
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG,
                                      target::Function::code_offset());
     if (!uses_args_desc) {
@@ -1830,7 +1804,7 @@ static void GenerateAllocateSuspendState(Assembler* assembler,
   __ AndImmediate(temp_reg, -target::ObjectAlignment::kObjectAlignment);
 
   // Now allocate the object.
-  __ LoadFromOffset(result_reg, THR, target::Thread::top_offset());
+  __ LoadFromOffset(result_reg, Address(THR, target::Thread::top_offset()));
   __ AddRegisters(temp_reg, result_reg);
   // Check if the allocation fits into the remaining space.
   __ CompareWithMemoryValue(temp_reg,
@@ -1840,7 +1814,7 @@ static void GenerateAllocateSuspendState(Assembler* assembler,
 
   // Successfully allocated the object, now update top to point to
   // next object start and initialize the object.
-  __ StoreToOffset(temp_reg, THR, target::Thread::top_offset());
+  __ StoreToOffset(temp_reg, Address(THR, target::Thread::top_offset()));
   __ SubRegisters(temp_reg, result_reg);
   __ AddImmediate(result_reg, kHeapObjectTag);
 
@@ -1848,8 +1822,9 @@ static void GenerateAllocateSuspendState(Assembler* assembler,
     // Use rounded object size to calculate and save frame capacity.
     __ AddImmediate(temp_reg, temp_reg,
                     -target::SuspendState::payload_offset());
-    __ StoreFieldToOffset(temp_reg, result_reg,
-                          target::SuspendState::frame_capacity_offset());
+    __ StoreToOffset(
+        temp_reg, FieldAddress(result_reg,
+                               target::SuspendState::frame_capacity_offset()));
     // Restore rounded object size.
     __ AddImmediate(temp_reg, temp_reg, target::SuspendState::payload_offset());
   }
@@ -1871,12 +1846,14 @@ static void GenerateAllocateSuspendState(Assembler* assembler,
     __ Bind(&done);
     uword tags = target::MakeTagWordForNewSpaceObject(kSuspendStateCid, 0);
     __ OrImmediate(temp_reg, tags);
-    __ StoreFieldToOffset(temp_reg, result_reg,
-                          target::Object::tags_offset());  // Tags.
+    __ StoreToOffset(
+        temp_reg,
+        FieldAddress(result_reg, target::Object::tags_offset()));  // Tags.
   }
 
-  __ StoreFieldToOffset(frame_size_reg, result_reg,
-                        target::SuspendState::frame_size_offset());
+  __ StoreToOffset(
+      frame_size_reg,
+      FieldAddress(result_reg, target::SuspendState::frame_size_offset()));
 }
 
 void StubCodeCompiler::GenerateSuspendStub(
@@ -1899,7 +1876,7 @@ void StubCodeCompiler::GenerateSuspendStub(
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
-  __ LoadFromOffset(kSuspendState, FPREG, SuspendStateFpOffset());
+  __ LoadFromOffset(kSuspendState, Address(FPREG, SuspendStateFpOffset()));
 
   __ AddImmediate(
       kFrameSize, FPREG,
@@ -1926,8 +1903,9 @@ void StubCodeCompiler::GenerateSuspendStub(
                      target::SuspendState::frame_capacity_offset()));
     __ BranchIf(UNSIGNED_GREATER, &resize_suspend_state);
 
-    __ StoreFieldToOffset(kFrameSize, kSuspendState,
-                          target::SuspendState::frame_size_offset());
+    __ StoreToOffset(
+        kFrameSize,
+        FieldAddress(kSuspendState, target::SuspendState::frame_size_offset()));
     __ Jump(&init_done);
 
     __ Bind(&alloc_suspend_state);
@@ -1967,8 +1945,9 @@ void StubCodeCompiler::GenerateSuspendStub(
   __ Bind(&alloc_done);
 
   __ Comment("Save SuspendState to frame");
-  __ LoadFromOffset(kTemp, FPREG, kSavedCallerFpSlotFromFp * target::kWordSize);
-  __ StoreToOffset(kSuspendState, kTemp, SuspendStateFpOffset());
+  __ LoadFromOffset(
+      kTemp, Address(FPREG, kSavedCallerFpSlotFromFp * target::kWordSize));
+  __ StoreToOffset(kSuspendState, Address(kTemp, SuspendStateFpOffset()));
 
   __ Bind(&init_done);
   __ Comment("Copy frame to SuspendState");
@@ -1977,14 +1956,20 @@ void StubCodeCompiler::GenerateSuspendStub(
   {
     // Verify that SuspendState.frame_size == kFrameSize.
     Label okay;
-    __ LoadFieldFromOffset(kTemp, kSuspendState,
-                           target::SuspendState::frame_size_offset());
+    __ LoadFromOffset(
+        kTemp,
+        FieldAddress(kSuspendState, target::SuspendState::frame_size_offset()));
     __ CompareRegisters(kTemp, kFrameSize);
     __ BranchIf(EQUAL, &okay);
     __ Breakpoint();
     __ Bind(&okay);
   }
 #endif
+
+  __ LoadFromOffset(
+      kTemp, Address(FPREG, kSavedCallerPcSlotFromFp * target::kWordSize));
+  __ StoreToOffset(
+      kTemp, FieldAddress(kSuspendState, target::SuspendState::pc_offset()));
 
   if (kSrcFrame == THR) {
     __ PushRegister(THR);
@@ -1997,21 +1982,18 @@ void StubCodeCompiler::GenerateSuspendStub(
     __ PopRegister(THR);
   }
 
-  __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreFieldToOffset(kTemp, kSuspendState,
-                        target::SuspendState::pc_offset());
-
 #ifdef DEBUG
   {
     // Verify that kSuspendState matches :suspend_state in the copied stack
     // frame.
     Label okay;
-    __ LoadFieldFromOffset(kTemp, kSuspendState,
-                           target::SuspendState::frame_size_offset());
+    __ LoadFromOffset(
+        kTemp,
+        FieldAddress(kSuspendState, target::SuspendState::frame_size_offset()));
     __ AddRegisters(kTemp, kSuspendState);
-    __ LoadFieldFromOffset(
-        kTemp, kTemp,
-        target::SuspendState::payload_offset() + SuspendStateFpOffset());
+    __ LoadFromOffset(
+        kTemp, FieldAddress(kTemp, target::SuspendState::payload_offset() +
+                                       SuspendStateFpOffset()));
     __ CompareRegisters(kTemp, kSuspendState);
     __ BranchIf(EQUAL, &okay);
     __ Breakpoint();
@@ -2027,7 +2009,7 @@ void StubCodeCompiler::GenerateSuspendStub(
 
   // Write barrier.
   __ AndImmediate(kTemp, kSuspendState, target::kPageMask);
-  __ LoadFromOffset(kTemp, kTemp, target::Page::original_top_offset());
+  __ LoadFromOffset(kTemp, Address(kTemp, target::Page::original_top_offset()));
   __ CompareRegisters(kSuspendState, kTemp);
   __ BranchIf(UNSIGNED_LESS, &remember_object);
   // Assumption: SuspendStates are always on non-image pages.
@@ -2064,8 +2046,8 @@ void StubCodeCompiler::GenerateSuspendStub(
   // will only unwind frame and return.
   if (!FLAG_precompiled_mode) {
     __ LoadFromOffset(
-        PP, FPREG,
-        target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
+        PP, Address(FPREG, target::frame_layout.saved_caller_pp_from_fp *
+                               target::kWordSize));
   }
 #endif
   __ Ret();
@@ -2192,8 +2174,8 @@ void StubCodeCompiler::GenerateInitSuspendableFunctionStub(
   __ LeaveStubFrame();
 
   // Set :suspend_state in the caller frame.
-  __ StoreToOffset(CallingConventions::kReturnReg, FPREG,
-                   SuspendStateFpOffset());
+  __ StoreToOffset(CallingConventions::kReturnReg,
+                   Address(FPREG, SuspendStateFpOffset()));
   __ Ret();
 }
 
@@ -2233,7 +2215,8 @@ void StubCodeCompiler::GenerateResumeStub() {
 
   const intptr_t param_offset =
       target::frame_layout.param_end_from_fp * target::kWordSize;
-  __ LoadFromOffset(kSuspendState, FPREG, param_offset + 4 * target::kWordSize);
+  __ LoadFromOffset(kSuspendState,
+                    Address(FPREG, param_offset + 4 * target::kWordSize));
 #ifdef DEBUG
   {
     Label okay;
@@ -2244,8 +2227,8 @@ void StubCodeCompiler::GenerateResumeStub() {
   }
   {
     Label okay;
-    __ LoadFieldFromOffset(kTemp, kSuspendState,
-                           target::SuspendState::pc_offset());
+    __ LoadFromOffset(
+        kTemp, FieldAddress(kSuspendState, target::SuspendState::pc_offset()));
     __ CompareImmediate(kTemp, 0);
     __ BranchIf(NOT_EQUAL, &okay);
     __ Breakpoint();
@@ -2253,16 +2236,17 @@ void StubCodeCompiler::GenerateResumeStub() {
   }
 #endif
 
-  __ LoadFieldFromOffset(kFrameSize, kSuspendState,
-                         target::SuspendState::frame_size_offset());
+  __ LoadFromOffset(
+      kFrameSize,
+      FieldAddress(kSuspendState, target::SuspendState::frame_size_offset()));
 #ifdef DEBUG
   {
     Label okay;
     __ MoveRegister(kTemp, kFrameSize);
     __ AddRegisters(kTemp, kSuspendState);
-    __ LoadFieldFromOffset(
-        kTemp, kTemp,
-        target::SuspendState::payload_offset() + SuspendStateFpOffset());
+    __ LoadFromOffset(
+        kTemp, FieldAddress(kTemp, target::SuspendState::payload_offset() +
+                                       SuspendStateFpOffset()));
     __ CompareRegisters(kTemp, kSuspendState);
     __ BranchIf(EQUAL, &okay);
     __ Breakpoint();
@@ -2275,11 +2259,13 @@ void StubCodeCompiler::GenerateResumeStub() {
     __ MoveRegister(kTemp, kSuspendState);
     __ AddRegisters(kTemp, kFrameSize);
     __ LoadFromOffset(
-        CODE_REG, kTemp,
-        target::SuspendState::payload_offset() - kHeapObjectTag +
-            target::frame_layout.code_from_fp * target::kWordSize);
-    __ StoreToOffset(CODE_REG, FPREG,
-                     target::frame_layout.code_from_fp * target::kWordSize);
+        CODE_REG,
+        Address(kTemp,
+                target::SuspendState::payload_offset() - kHeapObjectTag +
+                    target::frame_layout.code_from_fp * target::kWordSize));
+    __ StoreToOffset(
+        CODE_REG,
+        Address(FPREG, target::frame_layout.code_from_fp * target::kWordSize));
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
 #endif
@@ -2312,8 +2298,8 @@ void StubCodeCompiler::GenerateResumeStub() {
 
   __ Comment("Transfer control");
 
-  __ LoadFieldFromOffset(kResumePc, kSuspendState,
-                         target::SuspendState::pc_offset());
+  __ LoadFromOffset(kResumePc, FieldAddress(kSuspendState,
+                                            target::SuspendState::pc_offset()));
   __ StoreZero(FieldAddress(kSuspendState, target::SuspendState::pc_offset()),
                kTemp);
 
@@ -2326,14 +2312,15 @@ void StubCodeCompiler::GenerateResumeStub() {
 
   static_assert((kException != CODE_REG) && (kException != PP),
                 "should not interfere");
-  __ LoadFromOffset(kException, FPREG, param_offset + 2 * target::kWordSize);
+  __ LoadFromOffset(kException,
+                    Address(FPREG, param_offset + 2 * target::kWordSize));
   __ CompareObject(kException, NullObject());
   __ BranchIf(NOT_EQUAL, &call_runtime);
 
   if (!FLAG_precompiled_mode) {
     // Check if Code is disabled.
-    __ LoadFieldFromOffset(kTemp, CODE_REG,
-                           target::Code::instructions_offset());
+    __ LoadFromOffset(
+        kTemp, FieldAddress(CODE_REG, target::Code::instructions_offset()));
     __ CompareWithMemoryValue(
         kTemp,
         FieldAddress(CODE_REG, target::Code::active_instructions_offset()));
@@ -2342,23 +2329,25 @@ void StubCodeCompiler::GenerateResumeStub() {
 #if !defined(PRODUCT)
     // Check if there is a breakpoint at resumption.
     __ LoadIsolate(kTemp);
-    __ LoadFromOffset(kTemp, kTemp,
-                      target::Isolate::has_resumption_breakpoints_offset(),
-                      kUnsignedByte);
+    __ LoadFromOffset(
+        kTemp,
+        Address(kTemp, target::Isolate::has_resumption_breakpoints_offset()),
+        kUnsignedByte);
     __ CompareImmediate(kTemp, 0);
     __ BranchIf(NOT_EQUAL, &call_runtime);
 #endif
   }
 
-  __ LoadFromOffset(CallingConventions::kReturnReg, FPREG,
-                    param_offset + 3 * target::kWordSize);
+  __ LoadFromOffset(CallingConventions::kReturnReg,
+                    Address(FPREG, param_offset + 3 * target::kWordSize));
 
   __ Jump(kResumePc);
 
   __ Comment("Call runtime to throw exception or deopt");
   __ Bind(&call_runtime);
 
-  __ LoadFromOffset(kStackTrace, FPREG, param_offset + 1 * target::kWordSize);
+  __ LoadFromOffset(kStackTrace,
+                    Address(FPREG, param_offset + 1 * target::kWordSize));
   static_assert((kStackTrace != CODE_REG) && (kStackTrace != PP),
                 "should not interfere");
 
@@ -2381,8 +2370,8 @@ void StubCodeCompiler::GenerateResumeStub() {
     __ Breakpoint();
   } else {
     __ LeaveStubFrame();
-    __ LoadFromOffset(CallingConventions::kReturnReg, FPREG,
-                      param_offset + 3 * target::kWordSize);
+    __ LoadFromOffset(CallingConventions::kReturnReg,
+                      Address(FPREG, param_offset + 3 * target::kWordSize));
     // Lazy deoptimize.
     __ Ret();
   }
@@ -2398,7 +2387,7 @@ void StubCodeCompiler::GenerateReturnStub(
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
-  __ LoadFromOffset(kSuspendState, FPREG, SuspendStateFpOffset());
+  __ LoadFromOffset(kSuspendState, Address(FPREG, SuspendStateFpOffset()));
 #ifdef DEBUG
   {
     Label okay;
@@ -2452,7 +2441,7 @@ void StubCodeCompiler::GenerateAsyncExceptionHandlerStub() {
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
-  __ LoadFromOffset(kSuspendState, FPREG, SuspendStateFpOffset());
+  __ LoadFromOffset(kSuspendState, Address(FPREG, SuspendStateFpOffset()));
 
   // Check if suspend_state is initialized. Otherwise
   // exception was thrown from the prologue code and
@@ -2489,8 +2478,7 @@ void StubCodeCompiler::GenerateAsyncExceptionHandlerStub() {
   __ EnterStubFrame();
   __ PushObject(NullObject());  // Make room for (unused) result.
   __ PushRegistersInOrder({kExceptionObjectReg, kStackTraceObjectReg});
-  __ PushImmediate(Smi::RawValue(0));  // Do not bypass debugger.
-  __ CallRuntime(kReThrowRuntimeEntry, /*argument_count=*/3);
+  __ CallRuntime(kReThrowRuntimeEntry, /*argument_count=*/2);
   __ Breakpoint();
 }
 
@@ -2507,7 +2495,8 @@ void StubCodeCompiler::GenerateCloneSuspendStateStub() {
   {
     // Can only clone _SuspendState objects with copied frames.
     Label okay;
-    __ LoadFieldFromOffset(kTemp, kSource, target::SuspendState::pc_offset());
+    __ LoadFromOffset(kTemp,
+                      FieldAddress(kSource, target::SuspendState::pc_offset()));
     __ CompareImmediate(kTemp, 0);
     __ BranchIf(NOT_EQUAL, &okay);
     __ Breakpoint();
@@ -2515,15 +2504,18 @@ void StubCodeCompiler::GenerateCloneSuspendStateStub() {
   }
 #endif
 
-  __ LoadFieldFromOffset(kFrameSize, kSource,
-                         target::SuspendState::frame_size_offset());
+  __ LoadFromOffset(
+      kFrameSize,
+      FieldAddress(kSource, target::SuspendState::frame_size_offset()));
 
   GenerateAllocateSuspendState(assembler, &alloc_slow_case, kDestination,
                                kFrameSize, kTemp);
 
   // Copy pc.
-  __ LoadFieldFromOffset(kTemp, kSource, target::SuspendState::pc_offset());
-  __ StoreFieldToOffset(kTemp, kDestination, target::SuspendState::pc_offset());
+  __ LoadFromOffset(kTemp,
+                    FieldAddress(kSource, target::SuspendState::pc_offset()));
+  __ StoreToOffset(
+      kTemp, FieldAddress(kDestination, target::SuspendState::pc_offset()));
 
   // Copy function_data.
   __ LoadCompressedFieldFromOffset(
@@ -2563,15 +2555,15 @@ void StubCodeCompiler::GenerateCloneSuspendStateStub() {
 
   // Update value of :suspend_state variable in the copied frame
   // for the new SuspendState.
-  __ LoadFieldFromOffset(kTemp, kDestination,
-                         target::SuspendState::frame_size_offset());
+  __ LoadFromOffset(
+      kTemp,
+      FieldAddress(kDestination, target::SuspendState::frame_size_offset()));
   __ AddRegisters(kTemp, kDestination);
-  __ StoreFieldToOffset(
-      kDestination, kTemp,
-      target::SuspendState::payload_offset() + SuspendStateFpOffset());
+  __ StoreToOffset(kDestination,
+                   FieldAddress(kTemp, target::SuspendState::payload_offset() +
+                                           SuspendStateFpOffset()));
 
   __ MoveRegister(CallingConventions::kReturnReg, kDestination);
-  EnsureIsNewOrRemembered();
   __ Ret();
 
   __ Bind(&alloc_slow_case);
@@ -2627,11 +2619,10 @@ static void GenerateSubtypeTestCacheLoopBody(Assembler* assembler,
   //
   // Instead, just use LoadAcquire to load the lower bits when compressed and
   // only compare the low bits of the loaded value using CompareObjectRegisters.
-  __ LoadAcquireFromOffset(
-      TypeTestABI::kScratchReg, cache_entry_reg,
-      target::kCompressedWordSize *
-          target::SubtypeTestCache::kInstanceCidOrSignature,
-      kObjectBytes);
+  __ LoadAcquire(TypeTestABI::kScratchReg, cache_entry_reg,
+                 target::kCompressedWordSize *
+                     target::SubtypeTestCache::kInstanceCidOrSignature,
+                 kObjectBytes);
   __ CompareObjectRegisters(TypeTestABI::kScratchReg, null_reg);
   __ BranchIf(EQUAL, not_found, Assembler::kNearJump);
   __ CompareObjectRegisters(TypeTestABI::kScratchReg, instance_cid_or_sig_reg);
@@ -3132,7 +3123,7 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
   __ Bind(&search_stc);
 #endif
 
-  __ LoadAcquireCompressedFromOffset(
+  __ LoadAcquireCompressed(
       cache_entry_reg, TypeTestABI::kSubtypeTestCacheReg,
       target::SubtypeTestCache::cache_offset() - kHeapObjectTag);
 

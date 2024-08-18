@@ -7,13 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid annotating with `dynamic` when not required.';
+const _desc = r'Avoid annotating with dynamic when not required.';
 
 const _details = r'''
-**AVOID** annotating with `dynamic` when not required.
+**AVOID** annotating with dynamic when not required.
 
 As `dynamic` is the assumed return value of a function or method, it is usually
 not necessary to annotate it.
@@ -39,15 +37,19 @@ lookUpOrDefault(String name, Map map, defaultValue) {
 ''';
 
 class AvoidAnnotatingWithDynamic extends LintRule {
+  static const LintCode code = LintCode(
+      'avoid_annotating_with_dynamic', "Unnecessary 'dynamic' type annotation.",
+      correctionMessage: "Try removing the type 'dynamic'.");
+
   AvoidAnnotatingWithDynamic()
       : super(
             name: 'avoid_annotating_with_dynamic',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_annotating_with_dynamic;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -80,23 +82,8 @@ class _Visitor extends SimpleAstVisitor<void> {
   }
 
   void _checkNode(NormalFormalParameter node, TypeAnnotation? type) {
-    if (node.inAugmentation) return;
-
     if (type is NamedType && type.type is DynamicType) {
       rule.reportLint(node);
     }
-  }
-}
-
-extension on AstNode {
-  bool get inAugmentation {
-    AstNode? target = this;
-    while (target != null) {
-      if (target.isAugmentation) return true;
-      if (target is Block) return false;
-      if (target is Declaration) return false;
-      target = target.parent;
-    }
-    return false;
   }
 }

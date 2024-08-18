@@ -10,7 +10,6 @@ library futurevaluetype_test;
 
 import 'dart:html';
 
-import 'package:async_helper/async_helper.dart';
 import 'package:js/js.dart';
 
 @JS()
@@ -26,6 +25,6 @@ Future<JSWindow> returnInteropType() async {
   return window as JSWindow;
 }
 
-void main() {
-  asyncTest(() async => await returnInteropType());
+void main() async {
+  await returnInteropType();
 }

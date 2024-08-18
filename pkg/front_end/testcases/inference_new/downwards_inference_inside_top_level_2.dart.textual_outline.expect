@@ -5,5 +5,4 @@ class A<T> {
 }
 
 var t2 = [new A(2)];
-
 main() {}

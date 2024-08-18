@@ -32,7 +32,7 @@ class BuildSdkSummaryTest with ResourceProviderMixin {
 
     // The idea of the embedder is probably to replace the SDK.
     // But the current implementation only adds new libraries.
-    var skyEngineLib = getFolder('/home/sky_engine/lib');
+    final skyEngineLib = getFolder('/home/sky_engine/lib');
     newFile('${skyEngineLib.path}/core/core.dart', r'''
 class NotObject {}
 ''');
@@ -45,13 +45,13 @@ class Offset {}
 part of dart.ui;
 class FontStyle {}
 ''');
-    var embedderFile = newFile('${skyEngineLib.path}/_embedder.yaml', r'''
+    final embedderFile = newFile('${skyEngineLib.path}/_embedder.yaml', r'''
 embedded_libs:
   "dart:core": "core/core.dart"
   "dart:ui": "ui/ui.dart"
 ''');
 
-    var sdkSummaryBytes = await buildSdkSummary(
+    final sdkSummaryBytes = await buildSdkSummary(
       resourceProvider: resourceProvider,
       sdkPath: sdkRoot.path,
       embedderYamlPath: embedderFile.path,
@@ -62,31 +62,31 @@ embedded_libs:
     skyEngineLib.delete();
 
     // Write the summary bytes, will be read later.
-    var sdkSummaryFile = getFile('/home/sdk_summary.bytes');
+    final sdkSummaryFile = getFile('/home/sdk_summary.bytes');
     sdkSummaryFile.writeAsBytesSync(sdkSummaryBytes);
 
     // Pub workspace does not support SDK summaries.
     // So, we use Blaze workspace.
     const workspacePath = '/workspace';
     newFile('$workspacePath/${file_paths.blazeWorkspaceMarker}', '');
-    var myPackageRoot = getFolder('$workspacePath/dart/my');
+    final myPackageRoot = getFolder('$workspacePath/dart/my');
 
-    var collection = AnalysisContextCollectionImpl(
+    final collection = AnalysisContextCollectionImpl(
       includedPaths: [myPackageRoot.path],
       librarySummaryPaths: [],
       resourceProvider: resourceProvider,
       sdkSummaryPath: sdkSummaryFile.path,
     );
 
-    var analysisContext = collection.contextFor(myPackageRoot.path);
-    var analysisSession = analysisContext.currentSession;
+    final analysisContext = collection.contextFor(myPackageRoot.path);
+    final analysisSession = analysisContext.currentSession;
 
     // We can ask for SDK libraries and classes.
     // They should be created from the summary bytes.
-    var dartAsync = await analysisSession.getLibrary('dart:async');
-    var dartCore = await analysisSession.getLibrary('dart:core');
-    var dartMath = await analysisSession.getLibrary('dart:math');
-    var dartUi = await analysisSession.getLibrary('dart:ui');
+    final dartAsync = await analysisSession.getLibrary('dart:async');
+    final dartCore = await analysisSession.getLibrary('dart:core');
+    final dartMath = await analysisSession.getLibrary('dart:math');
+    final dartUi = await analysisSession.getLibrary('dart:ui');
     expect(dartAsync.getClass('Stream'), isNotNull);
     expect(dartCore.getClass('String'), isNotNull);
     expect(dartMath.getClass('Random'), isNotNull);
@@ -100,7 +100,7 @@ embedded_libs:
       root: sdkRoot,
     );
 
-    var sdkSummaryBytes = await buildSdkSummary(
+    final sdkSummaryBytes = await buildSdkSummary(
       resourceProvider: resourceProvider,
       sdkPath: sdkRoot.path,
     );
@@ -109,30 +109,30 @@ embedded_libs:
     sdkRoot.delete();
 
     // Write the summary bytes, will be read later.
-    var sdkSummaryFile = getFile('/home/sdk_summary.bytes');
+    final sdkSummaryFile = getFile('/home/sdk_summary.bytes');
     sdkSummaryFile.writeAsBytesSync(sdkSummaryBytes);
 
     // Pub workspace does not support SDK summaries.
     // So, we use Blaze workspace.
     const workspacePath = '/workspace';
     newFile('$workspacePath/${file_paths.blazeWorkspaceMarker}', '');
-    var myPackageRoot = getFolder('$workspacePath/dart/my');
+    final myPackageRoot = getFolder('$workspacePath/dart/my');
 
-    var collection = AnalysisContextCollectionImpl(
+    final collection = AnalysisContextCollectionImpl(
       includedPaths: [myPackageRoot.path],
       librarySummaryPaths: [],
       resourceProvider: resourceProvider,
       sdkSummaryPath: sdkSummaryFile.path,
     );
 
-    var analysisContext = collection.contextFor(myPackageRoot.path);
-    var analysisSession = analysisContext.currentSession;
+    final analysisContext = collection.contextFor(myPackageRoot.path);
+    final analysisSession = analysisContext.currentSession;
 
     // We can ask for SDK libraries and classes.
     // They should be created from the summary bytes.
-    var dartAsync = await analysisSession.getLibrary('dart:async');
-    var dartCore = await analysisSession.getLibrary('dart:core');
-    var dartMath = await analysisSession.getLibrary('dart:math');
+    final dartAsync = await analysisSession.getLibrary('dart:async');
+    final dartCore = await analysisSession.getLibrary('dart:core');
+    final dartMath = await analysisSession.getLibrary('dart:math');
     expect(dartAsync.getClass('Stream'), isNotNull);
     expect(dartCore.getClass('String'), isNotNull);
     expect(dartMath.getClass('Random'), isNotNull);
@@ -141,7 +141,7 @@ embedded_libs:
 
 extension on AnalysisSession {
   Future<LibraryElement> getLibrary(String uriStr) async {
-    var libraryResult = await getLibraryByUri(uriStr);
+    final libraryResult = await getLibraryByUri(uriStr);
     libraryResult as LibraryElementResult;
     return libraryResult.element;
   }

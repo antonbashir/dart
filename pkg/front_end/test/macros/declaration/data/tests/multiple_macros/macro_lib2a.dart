@@ -7,7 +7,7 @@
  macrosAreAvailable
 */
 
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 
 macro class Macro2a implements Macro {
   const Macro2a();

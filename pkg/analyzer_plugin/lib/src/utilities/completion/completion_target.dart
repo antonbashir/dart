@@ -121,7 +121,7 @@ class CompletionTarget {
 
   /// The enclosing [InterfaceElement], or `null` if not in a class.
   late final InterfaceElement? enclosingInterfaceElement = () {
-    var unitMember =
+    final unitMember =
         containingNode.thisOrAncestorOfType<CompilationUnitMember>();
     if (unitMember is ClassDeclaration) {
       return unitMember.declaredElement;
@@ -279,7 +279,7 @@ class CompletionTarget {
       }
     }
     if (node is NamedType) {
-      var importPrefix = node.importPrefix;
+      final importPrefix = node.importPrefix;
       if (importPrefix != null && identical(node.name2, entity)) {
         return SimpleIdentifierImpl(importPrefix.name)
           ..staticElement = importPrefix.element;
@@ -356,7 +356,7 @@ class CompletionTarget {
       var invocation = argumentList.parent;
 
       if (invocation is FunctionExpressionInvocation) {
-        var invokeType = invocation.staticInvokeType;
+        final invokeType = invocation.staticInvokeType;
         if (invokeType is FunctionType) {
           _functionType = invokeType;
         }
@@ -398,7 +398,7 @@ class CompletionTarget {
           token.type == TokenType.COMMA;
     }
 
-    var token = lastTokenOfEntity;
+    final token = lastTokenOfEntity;
     if (token == null) {
       return false;
     }
@@ -427,18 +427,6 @@ class CompletionTarget {
     }
 
     return isExistingRightParenthesis(token.next);
-  }
-
-  bool get isInClassLikeBody {
-    switch (containingNode) {
-      case ClassDeclaration():
-      case EnumDeclaration():
-      case ExtensionDeclaration():
-      case ExtensionTypeDeclaration():
-      case MixinDeclaration():
-        return true;
-    }
-    return false;
   }
 
   Token? get lastTokenOfEntity {
@@ -498,7 +486,7 @@ class CompletionTarget {
           directive = containingNode;
           uri = containingNode.uri;
           // Check whether the offset was in a configurations URI.
-          for (var configuration in containingNode.configurations) {
+          for (final configuration in containingNode.configurations) {
             if (configuration.uri.offset <= requestOffset &&
                 configuration.uri.end >= requestOffset) {
               uri = configuration.uri;
@@ -532,9 +520,7 @@ class CompletionTarget {
     if (entity is Token) {
       var previousTokenType = containingNode.findPrevious(entity)?.type;
       return previousTokenType == TokenType.DOUBLE ||
-          previousTokenType == TokenType.DOUBLE_WITH_SEPARATORS ||
-          previousTokenType == TokenType.INT ||
-          previousTokenType == TokenType.INT_WITH_SEPARATORS;
+          previousTokenType == TokenType.INT;
     }
     return false;
   }
@@ -657,7 +643,7 @@ class CompletionTarget {
     if (!token.isEof && offset >= token.offset) {
       return null;
     }
-    var startToken = token;
+    final startToken = token;
     token = token.precedingComments;
     while (token != null) {
       if (offset <= token.offset) {

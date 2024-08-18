@@ -4,15 +4,14 @@
 
 import 'dart:collection';
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/services/correction/namespace.dart';
 import 'package:analysis_server/src/utilities/extensions/element.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/source_range.dart';
-import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/resolver/applicable_extensions.dart';
 import 'package:analyzer_plugin/src/utilities/change_builder/change_builder_dart.dart';
 import 'package:analyzer_plugin/src/utilities/library.dart';
@@ -24,78 +23,175 @@ class ImportLibrary extends MultiCorrectionProducer {
 
   /// Initialize a newly created instance that will add an import of
   /// `dart:async`.
-  ImportLibrary.dartAsync({required super.context})
-      : _importKind = _ImportKind.dartAsync;
+  ImportLibrary.dartAsync() : _importKind = _ImportKind.dartAsync;
 
   /// Initialize a newly created instance that will add an import for an
   /// extension.
-  ImportLibrary.forExtension({required super.context})
-      : _importKind = _ImportKind.forExtension;
+  ImportLibrary.forExtension() : _importKind = _ImportKind.forExtension;
 
   /// Initialize a newly created instance that will add an import for a member
   /// of an extension.
-  ImportLibrary.forExtensionMember({required super.context})
+  ImportLibrary.forExtensionMember()
       : _importKind = _ImportKind.forExtensionMember;
-
-  /// Initialize a newly created instance that will add an import for an
-  /// extension type.
-  ImportLibrary.forExtensionType({required super.context})
-      : _importKind = _ImportKind.forExtensionType;
 
   /// Initialize a newly created instance that will add an import for a
   /// top-level function.
-  ImportLibrary.forFunction({required super.context})
-      : _importKind = _ImportKind.forFunction;
+  ImportLibrary.forFunction() : _importKind = _ImportKind.forFunction;
 
   /// Initialize a newly created instance that will add an import for a
   /// top-level variable.
-  ImportLibrary.forTopLevelVariable({required super.context})
+  ImportLibrary.forTopLevelVariable()
       : _importKind = _ImportKind.forTopLevelVariable;
 
-  /// Initialize a newly created instance that will add an import for a
-  /// type-like declaration (class, enum, mixin, typedef), a constructor, a
-  /// static member of a declaration, or an enum value.
-  ImportLibrary.forType({required super.context})
-      : _importKind = _ImportKind.forType;
+  /// Initialize a newly created instance that will add an import for a type
+  /// (class or mixin).
+  ImportLibrary.forType() : _importKind = _ImportKind.forType;
 
   @override
   Future<List<ResolvedCorrectionProducer>> get producers async {
-    return switch (_importKind) {
-      _ImportKind.dartAsync =>
-        _importLibrary(DartFixKind.IMPORT_ASYNC, Uri.parse('dart:async')),
-      _ImportKind.forExtension => await _producersForExtension(),
-      _ImportKind.forExtensionMember => await _producersForExtensionMember(),
-      _ImportKind.forExtensionType => await _producersForExtensionType(),
-      _ImportKind.forFunction => await _producersForFunction(),
-      _ImportKind.forTopLevelVariable => await _producersForTopLevelVariable(),
-      _ImportKind.forType => await _producersForType(),
-    };
+    final node = this.node;
+    var producers = <ResolvedCorrectionProducer>[];
+    if (_importKind == _ImportKind.dartAsync) {
+      _importLibrary(
+          producers, DartFixKind.IMPORT_ASYNC, Uri.parse('dart:async'));
+    } else if (_importKind == _ImportKind.forExtension) {
+      if (node is SimpleIdentifier) {
+        var extensionName = node.name;
+        await _importLibraryForElement(producers, extensionName, const [
+          ElementKind.EXTENSION,
+        ]);
+      }
+    } else if (_importKind == _ImportKind.forExtensionMember) {
+      /// Return producers that will import extensions that apply to the
+      /// [targetType] and that define a member with the given [memberName].
+      Future<void> importMatchingExtensions(
+          String memberName, DartType? targetType) async {
+        if (targetType == null) {
+          return;
+        }
+        await for (var libraryToImport in librariesWithExtensions(memberName)) {
+          _importExtensionInLibrary(
+              producers, libraryToImport, targetType, memberName);
+        }
+      }
+
+      if (node is SimpleIdentifier) {
+        var memberName = node.name;
+        if (memberName.startsWith('_')) {
+          return const [];
+        }
+        await importMatchingExtensions(memberName, _targetType(node));
+      } else if (node is BinaryExpression) {
+        var memberName = node.operator.lexeme;
+        await importMatchingExtensions(memberName, node.leftOperand.staticType);
+      }
+    } else if (_importKind == _ImportKind.forFunction) {
+      if (node is SimpleIdentifier) {
+        var parent = node.parent;
+        if (parent is MethodInvocation) {
+          if (parent.realTarget != null || parent.methodName != node) {
+            return const [];
+          }
+        }
+
+        var name = node.name;
+        await _importLibraryForElement(producers, name, const [
+          ElementKind.FUNCTION,
+          ElementKind.TOP_LEVEL_VARIABLE,
+        ]);
+      }
+    } else if (_importKind == _ImportKind.forTopLevelVariable) {
+      var targetNode = node;
+      if (targetNode is Annotation) {
+        var name = targetNode.name;
+        if (name.staticElement == null) {
+          if (targetNode.arguments != null) {
+            return const [];
+          }
+          targetNode = name;
+        }
+      }
+      if (targetNode is SimpleIdentifier) {
+        var name = targetNode.name;
+        await _importLibraryForElement(producers, name, const [
+          ElementKind.TOP_LEVEL_VARIABLE,
+        ]);
+      }
+    } else if (_importKind == _ImportKind.forType) {
+      var targetNode = node;
+      if (targetNode is Annotation) {
+        var name = targetNode.name;
+        if (name.staticElement == null) {
+          if (targetNode.arguments == null) {
+            return const [];
+          }
+          targetNode = name;
+        }
+      }
+      var typeName = nameOfType(targetNode);
+      if (typeName != null) {
+        await _importLibraryForElement(producers, typeName, const [
+          ElementKind.CLASS,
+          ElementKind.ENUM,
+          ElementKind.FUNCTION_TYPE_ALIAS,
+          ElementKind.MIXIN,
+          ElementKind.TYPE_ALIAS,
+        ]);
+      } else if (mightBeImplicitConstructor(targetNode)) {
+        var typeName = (targetNode as SimpleIdentifier).name;
+        await _importLibraryForElement(producers, typeName, const [
+          ElementKind.CLASS,
+        ]);
+      }
+    }
+    return producers;
   }
 
-  List<ResolvedCorrectionProducer> _importExtensionInLibrary(
+  @override
+  String? nameOfType(AstNode node) {
+    final parent = node.parent;
+    if (node is NamedType) {
+      final importPrefix = node.importPrefix;
+      if (parent is ConstructorName && importPrefix != null) {
+        return importPrefix.name.lexeme;
+      }
+      return node.name2.lexeme;
+    } else if (node is PrefixedIdentifier) {
+      if (parent is NamedType) {
+        return node.prefix.name;
+      }
+    }
+    return super.nameOfType(node);
+  }
+
+  void _importExtensionInLibrary(
+    List<ResolvedCorrectionProducer> producers,
     LibraryElement libraryToImport,
     DartType targetType,
-    Name memberName,
+    String memberName,
   ) {
     // Look to see whether the library at the [uri] is already imported. If it
     // is, then we can check the extension elements without needing to perform
     // additional analysis.
     var foundImport = false;
-    var producers = <ResolvedCorrectionProducer>[];
-    for (var import in libraryElement.libraryImports) {
+    for (var imp in libraryElement.libraryImports) {
       // prepare element
-      var importedLibrary = import.importedLibrary;
+      var importedLibrary = imp.importedLibrary;
       if (importedLibrary == null || importedLibrary != libraryToImport) {
         continue;
       }
       foundImport = true;
       var instantiatedExtensions = importedLibrary.exportedExtensions
-          .havingMemberWithBaseName(memberName)
-          .applicableTo(targetLibrary: libraryElement, targetType: targetType);
+          .hasMemberWithBaseName(memberName)
+          .applicableTo(
+            targetLibrary: libraryElement,
+            targetType: targetType,
+            strictInference: strictInference,
+          );
       for (var instantiatedExtension in instantiatedExtensions) {
         // If the import has a combinator that needs to be updated, then offer
         // to update it.
-        var combinators = import.combinators;
+        var combinators = imp.combinators;
         if (combinators.length == 1) {
           var combinator = combinators[0];
           if (combinator is HideElementCombinator) {
@@ -103,28 +199,21 @@ class ImportLibrary extends MultiCorrectionProducer {
             //  hide combinator.
           } else if (combinator is ShowElementCombinator) {
             producers.add(_ImportLibraryShow(
-              libraryToImport.source.uri.toString(),
-              combinator,
-              instantiatedExtension.extension.name!,
-              context: context,
-            ));
+                libraryToImport.source.uri.toString(),
+                combinator,
+                instantiatedExtension.extension.name!));
           }
         }
       }
     }
 
-    // If the library at the URI is not already imported, we return a correction
-    // producer that will either add an import or not based on the result of
-    // analyzing the library.
+    // If the library at the [uri] is not already imported, we return a
+    // correction producer that will either add an import or not based on the
+    // result of analyzing the library.
     if (!foundImport) {
       producers.add(_ImportLibraryContainingExtension(
-        libraryToImport,
-        targetType,
-        memberName,
-        context: context,
-      ));
+          libraryToImport, targetType, memberName));
     }
-    return producers;
   }
 
   /// Returns a list of one or two import corrections.
@@ -134,41 +223,38 @@ class ImportLibrary extends MultiCorrectionProducer {
   /// path and a correction with a relative path are returned. If the
   /// `prefer_relative_imports` lint rule is enabled, the relative path is
   /// returned first.
-  List<ResolvedCorrectionProducer> _importLibrary(
+  void _importLibrary(
+    List<ResolvedCorrectionProducer> producers,
     FixKind fixKind,
     Uri library, {
     bool includeRelativeFix = false,
   }) {
     if (!includeRelativeFix) {
-      return [_ImportAbsoluteLibrary(fixKind, library, context: context)];
+      producers.add(_ImportAbsoluteLibrary(fixKind, library));
     } else if (getCodeStyleOptions(unitResult.file).useRelativeUris) {
-      return [
-        _ImportRelativeLibrary(fixKind, library, context: context),
-        _ImportAbsoluteLibrary(fixKind, library, context: context),
-      ];
+      producers.add(_ImportRelativeLibrary(fixKind, library));
+      producers.add(_ImportAbsoluteLibrary(fixKind, library));
     } else {
-      return [
-        _ImportAbsoluteLibrary(fixKind, library, context: context),
-        _ImportRelativeLibrary(fixKind, library, context: context),
-      ];
+      producers.add(_ImportAbsoluteLibrary(fixKind, library));
+      producers.add(_ImportRelativeLibrary(fixKind, library));
     }
   }
 
-  Future<List<ResolvedCorrectionProducer>> _importLibraryForElement(
+  Future<void> _importLibraryForElement(
+    List<ResolvedCorrectionProducer> producers,
     String name,
     List<ElementKind> kinds,
   ) async {
-    // Ignore the element if the name is private.
+    // ignore if private
     if (name.startsWith('_')) {
-      return const [];
+      return;
     }
-    var producers = <ResolvedCorrectionProducer>[];
-    // Maybe there is an existing import, but it is with prefix and we don't use
-    // this prefix.
+    // may be there is an existing import,
+    // but it is with prefix and we don't use this prefix
     var alreadyImportedWithPrefix = <LibraryElement>{};
-    for (var import in libraryElement.libraryImports) {
-      // Prepare the element.
-      var libraryElement = import.importedLibrary;
+    for (var imp in libraryElement.libraryImports) {
+      // prepare element
+      var libraryElement = imp.importedLibrary;
       if (libraryElement == null) {
         continue;
       }
@@ -177,39 +263,34 @@ class ImportLibrary extends MultiCorrectionProducer {
         continue;
       }
       if (element is PropertyAccessorElement) {
-        element = element.variable2;
-        if (element == null) {
-          continue;
-        }
+        element = element.variable;
       }
       if (!kinds.contains(element.kind)) {
         continue;
       }
-      // Maybe apply a prefix.
-      var prefix = import.prefix?.element;
+      // may be apply prefix
+      var prefix = imp.prefix?.element;
       if (prefix != null) {
-        producers.add(
-            _ImportLibraryPrefix(libraryElement, prefix, context: context));
+        producers.add(_ImportLibraryPrefix(libraryElement, prefix));
         continue;
       }
-      // Maybe update a "show" directive.
-      var combinators = import.combinators;
+      // may be update "show" directive
+      var combinators = imp.combinators;
       if (combinators.length == 1) {
         var combinator = combinators[0];
         if (combinator is HideElementCombinator) {
           // TODO(brianwilkerson): Support removing the element name from a
           //  hide combinator.
         } else if (combinator is ShowElementCombinator) {
-          // Prepare library name - unit name or 'dart:name' for SDK library.
+          // prepare library name - unit name or 'dart:name' for SDK library
           var libraryName =
               libraryElement.definingCompilationUnit.source.uri.toString();
           if (libraryElement.isInSdk) {
             libraryName = libraryElement.source.shortName;
           }
-          // Don't add this library again.
+          // don't add this library again
           alreadyImportedWithPrefix.add(libraryElement);
-          producers.add(_ImportLibraryShow(libraryName, combinator, name,
-              context: context));
+          producers.add(_ImportLibraryShow(libraryName, combinator, name));
         }
       }
     }
@@ -227,7 +308,7 @@ class ImportLibrary extends MultiCorrectionProducer {
       if (alreadyImportedWithPrefix.contains(libraryElement)) {
         continue;
       }
-      // Check that the import doesn't end with '.template.dart'.
+      // Check that the import doesn't end with '.template.dart'
       if (librarySource.uri.path.endsWith('.template.dart')) {
         continue;
       }
@@ -245,15 +326,14 @@ class ImportLibrary extends MultiCorrectionProducer {
         // Good: direct declaration.
         fixKind = DartFixKind.IMPORT_LIBRARY_PROJECT1;
       }
-      // If both files are in the same package's 'lib' folder, also include a
+      // If both files are in the same package's lib folder, also include a
       // relative import.
       var includeRelativeUri = canBeRelativeImport(
           librarySource.uri, this.libraryElement.librarySource.uri);
       // Add the fix(es).
-      producers.addAll(_importLibrary(fixKind, librarySource.uri,
-          includeRelativeFix: includeRelativeUri));
+      _importLibrary(producers, fixKind, librarySource.uri,
+          includeRelativeFix: includeRelativeUri);
     }
-    return producers;
   }
 
   bool _isLibSrcPath(String path) {
@@ -266,130 +346,51 @@ class ImportLibrary extends MultiCorrectionProducer {
     return false;
   }
 
-  Future<List<ResolvedCorrectionProducer>> _producersForExtension() async {
-    if (node case SimpleIdentifier(:var name)) {
-      return await _importLibraryForElement(
-        name,
-        const [ElementKind.EXTENSION],
-      );
-    }
-
-    return const [];
-  }
-
-  Future<List<ResolvedCorrectionProducer>>
-      _producersForExtensionMember() async {
-    String memberName;
-    DartType? targetType;
-    var node = this.node;
-    if (node is SimpleIdentifier) {
-      memberName = node.name;
-      if (memberName.startsWith('_')) {
-        return const [];
+  /// If the [node] might represent an access to a member of a type, return the
+  /// type of the object being accessed, otherwise return `null`.
+  DartType? _targetType(SimpleIdentifier node) {
+    var parent = node.parent;
+    if (parent is MethodInvocation && parent.methodName == node) {
+      var target = parent.realTarget;
+      if (target != null) {
+        return target.staticType;
       }
-      targetType = node.targetType;
-    } else if (node is BinaryExpression) {
-      memberName = node.operator.lexeme;
-      targetType = node.leftOperand.staticType;
-    } else {
-      return const [];
+    } else if (parent is PropertyAccess && parent.propertyName == node) {
+      return parent.realTarget.staticType;
+    } else if (parent is PrefixedIdentifier && parent.identifier == node) {
+      return parent.prefix.staticType;
+    }
+    // If there is no explicit target, then return the type of an implicit
+    // `this`.
+    DartType? enclosingThisType(AstNode node) {
+      var parent = node.parent;
+      if (parent is ClassDeclaration) {
+        return parent.declaredElement?.thisType;
+      } else if (parent is ExtensionDeclaration) {
+        return parent.extendedType.type;
+      } else if (parent is MixinDeclaration) {
+        return parent.declaredElement?.thisType;
+      } else {
+        return null;
+      }
     }
 
-    if (targetType == null) {
-      return const [];
-    }
-
-    var dartFixContext = context.dartFixContext;
-    if (dartFixContext == null) {
-      return const [];
-    }
-
-    var name = Name(
-        dartFixContext.resolvedResult.libraryElement.source.uri, memberName);
-    var producers = <ResolvedCorrectionProducer>[];
-    await for (var libraryToImport in librariesWithExtensions(memberName)) {
-      producers
-          .addAll(_importExtensionInLibrary(libraryToImport, targetType, name));
-    }
-    return producers;
-  }
-
-  Future<List<ResolvedCorrectionProducer>> _producersForExtensionType() async {
-    if (node case SimpleIdentifier(:var name)) {
-      return await _importLibraryForElement(
-        name,
-        const [ElementKind.EXTENSION_TYPE],
-      );
-    }
-
-    return const [];
-  }
-
-  Future<List<ResolvedCorrectionProducer>> _producersForFunction() async {
-    if (node case SimpleIdentifier(:var name, :var parent)) {
-      if (parent is MethodInvocation) {
-        if (parent.realTarget != null || parent.methodName != node) {
-          return const [];
+    while (parent != null) {
+      if (parent is MethodDeclaration) {
+        if (!parent.isStatic) {
+          return enclosingThisType(parent);
         }
-      }
-
-      return await _importLibraryForElement(name, const [
-        ElementKind.FUNCTION,
-        ElementKind.TOP_LEVEL_VARIABLE,
-      ]);
-    }
-
-    return const [];
-  }
-
-  Future<List<ResolvedCorrectionProducer>>
-      _producersForTopLevelVariable() async {
-    var targetNode = node;
-    if (targetNode case Annotation(:var name)) {
-      if (name.staticElement == null) {
-        if (targetNode.arguments != null) {
-          return const [];
+        return null;
+      } else if (parent is FieldDeclaration) {
+        if (!parent.isStatic) {
+          return enclosingThisType(parent);
         }
-        targetNode = name;
+        return null;
       }
-    }
-    if (targetNode case SimpleIdentifier(:var name)) {
-      return await _importLibraryForElement(name, const [
-        ElementKind.TOP_LEVEL_VARIABLE,
-      ]);
+      parent = parent.parent;
     }
 
-    return const [];
-  }
-
-  Future<List<ResolvedCorrectionProducer>> _producersForType() async {
-    var targetNode = node;
-    if (targetNode case Annotation(:var name)) {
-      if (name.staticElement == null) {
-        if (targetNode.period != null && targetNode.arguments == null) {
-          return const [];
-        }
-        targetNode = name;
-      }
-    }
-    var typeName = targetNode.nameOfType;
-    if (typeName != null) {
-      return await _importLibraryForElement(typeName, const [
-        ElementKind.CLASS,
-        ElementKind.ENUM,
-        ElementKind.FUNCTION_TYPE_ALIAS,
-        ElementKind.MIXIN,
-        ElementKind.TYPE_ALIAS,
-      ]);
-    }
-    if (targetNode.mightBeImplicitConstructor) {
-      var typeName = (targetNode as SimpleIdentifier).name;
-      return await _importLibraryForElement(typeName, const [
-        ElementKind.CLASS,
-      ]);
-    }
-
-    return const [];
+    return null;
   }
 }
 
@@ -401,16 +402,10 @@ class _ImportAbsoluteLibrary extends ResolvedCorrectionProducer {
 
   String _uriText = '';
 
-  _ImportAbsoluteLibrary(this._fixKind, this._library,
-      {required super.context});
+  _ImportAbsoluteLibrary(this._fixKind, this._library);
 
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_uriText];
+  List<Object> get fixArguments => [_uriText];
 
   @override
   FixKind get fixKind => _fixKind;
@@ -429,7 +424,6 @@ enum _ImportKind {
   dartAsync,
   forExtension,
   forExtensionMember,
-  forExtensionType,
   forFunction,
   forTopLevelVariable,
   forType
@@ -445,7 +439,7 @@ class _ImportLibraryContainingExtension extends ResolvedCorrectionProducer {
   DartType targetType;
 
   /// The name of the member that the extension must declare.
-  Name memberName;
+  String memberName;
 
   /// The URI that is being proposed for the import directive.
   String _uriText = '';
@@ -453,17 +447,11 @@ class _ImportLibraryContainingExtension extends ResolvedCorrectionProducer {
   _ImportLibraryContainingExtension(
     this.library,
     this.targetType,
-    this.memberName, {
-    required super.context,
-  });
+    this.memberName,
+  );
 
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_uriText];
+  List<Object> get fixArguments => [_uriText];
 
   @override
   FixKind get fixKind => DartFixKind.IMPORT_LIBRARY_PROJECT1;
@@ -471,8 +459,12 @@ class _ImportLibraryContainingExtension extends ResolvedCorrectionProducer {
   @override
   Future<void> compute(ChangeBuilder builder) async {
     var instantiatedExtensions = library.exportedExtensions
-        .havingMemberWithBaseName(memberName)
-        .applicableTo(targetLibrary: libraryElement, targetType: targetType);
+        .hasMemberWithBaseName(memberName)
+        .applicableTo(
+          targetLibrary: libraryElement,
+          targetType: targetType,
+          strictInference: strictInference,
+        );
     if (instantiatedExtensions.isNotEmpty) {
       await builder.addDartFileEdit(file, (builder) {
         _uriText = builder.importLibrary(library.source.uri);
@@ -487,19 +479,10 @@ class _ImportLibraryPrefix extends ResolvedCorrectionProducer {
   final LibraryElement _importedLibrary;
   final PrefixElement _importPrefix;
 
-  _ImportLibraryPrefix(
-    this._importedLibrary,
-    this._importPrefix, {
-    required super.context,
-  });
+  _ImportLibraryPrefix(this._importedLibrary, this._importPrefix);
 
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments {
+  List<Object> get fixArguments {
     var uriStr = _importedLibrary.source.uri.toString();
     return [uriStr, _prefixName];
   }
@@ -532,20 +515,10 @@ class _ImportLibraryShow extends ResolvedCorrectionProducer {
 
   final String _addedName;
 
-  _ImportLibraryShow(
-    this._libraryName,
-    this._showCombinator,
-    this._addedName, {
-    required super.context,
-  });
+  _ImportLibraryShow(this._libraryName, this._showCombinator, this._addedName);
 
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_libraryName];
+  List<Object> get fixArguments => [_libraryName];
 
   @override
   FixKind get fixKind => DartFixKind.IMPORT_LIBRARY_SHOW;
@@ -573,19 +546,10 @@ class _ImportRelativeLibrary extends ResolvedCorrectionProducer {
 
   String _uriText = '';
 
-  _ImportRelativeLibrary(
-    this._fixKind,
-    this._library, {
-    required super.context,
-  });
+  _ImportRelativeLibrary(this._fixKind, this._library);
 
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_uriText];
+  List<Object> get fixArguments => [_uriText];
 
   @override
   FixKind get fixKind => _fixKind;
@@ -597,85 +561,5 @@ class _ImportRelativeLibrary extends ResolvedCorrectionProducer {
         _uriText = builder.importLibraryWithRelativeUri(_library);
       }
     });
-  }
-}
-
-extension on AstNode {
-  /// Whether this [AstNode] is in a location where an implicit constructor
-  /// invocation would be allowed.
-  bool get mightBeImplicitConstructor {
-    if (this is SimpleIdentifier) {
-      var parent = this.parent;
-      if (parent is MethodInvocation) {
-        return parent.realTarget == null;
-      }
-    }
-    return false;
-  }
-
-  /// The "type name" of this node if it might represent a type, and `null`
-  /// otherwise.
-  String? get nameOfType {
-    switch (this) {
-      case NamedType(:var importPrefix, :var name2):
-        if (parent is ConstructorName && importPrefix != null) {
-          return importPrefix.name.lexeme;
-        }
-        return name2.lexeme;
-      case PrefixedIdentifier(:var prefix):
-        return prefix.name;
-      case SimpleIdentifier(:var name):
-        return name;
-    }
-    return null;
-  }
-}
-
-extension on SimpleIdentifier {
-  /// The type of the object being accessed, if this node might represent an
-  /// access to a member of a type, otherwise `null`.
-  DartType? get targetType {
-    var parent = this.parent;
-    if (parent is MethodInvocation && parent.methodName == this) {
-      var target = parent.realTarget;
-      if (target != null) {
-        return target.staticType;
-      }
-    } else if (parent is PropertyAccess && parent.propertyName == this) {
-      return parent.realTarget.staticType;
-    } else if (parent is PrefixedIdentifier && parent.identifier == this) {
-      return parent.prefix.staticType;
-    }
-    // If there is no explicit target, then return the type of an implicit
-    // `this`.
-    DartType? enclosingThisType(AstNode node) {
-      var parent = node.parent;
-      if (parent is ClassDeclaration) {
-        return parent.declaredElement?.thisType;
-      } else if (parent is ExtensionDeclaration) {
-        return parent.onClause?.extendedType.type;
-      } else if (parent is MixinDeclaration) {
-        return parent.declaredElement?.thisType;
-      } else {
-        return null;
-      }
-    }
-
-    while (parent != null) {
-      if (parent is MethodDeclaration) {
-        if (!parent.isStatic) {
-          return enclosingThisType(parent);
-        }
-        return null;
-      } else if (parent is FieldDeclaration) {
-        if (!parent.isStatic) {
-          return enclosingThisType(parent);
-        }
-        return null;
-      }
-      parent = parent.parent;
-    }
-
-    return null;
   }
 }

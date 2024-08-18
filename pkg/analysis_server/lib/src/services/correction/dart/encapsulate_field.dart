@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
@@ -11,13 +11,6 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class EncapsulateField extends ResolvedCorrectionProducer {
-  EncapsulateField({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   AssistKind get assistKind => DartAssistKind.ENCAPSULATE_FIELD;
 
@@ -61,7 +54,7 @@ class EncapsulateField extends ResolvedCorrectionProducer {
 
     // Should be in a class or mixin.
     List<ClassMember> classMembers;
-    var parent = fieldDeclaration.parent;
+    final parent = fieldDeclaration.parent;
     if (parent is ClassDeclaration) {
       classMembers = parent.members;
     } else if (parent is MixinDeclaration) {
@@ -86,7 +79,8 @@ class EncapsulateField extends ResolvedCorrectionProducer {
                 var normalParam = parameter.parameter;
                 if (normalParam is FieldFormalParameter) {
                   var start = normalParam.thisKeyword;
-                  var type = parameterElement.type.getDisplayString();
+                  var type = parameterElement.type
+                      .getDisplayString(withNullability: true);
                   builder.addSimpleReplacement(
                       range.startEnd(start, normalParam.period), '$type ');
 

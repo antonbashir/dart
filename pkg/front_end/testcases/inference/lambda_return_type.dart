@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart=2.9
+
 /*@testedFeatures=inference*/
 library test;
 
@@ -9,13 +11,13 @@ typedef num FunctionReturningNum();
 
 test() {
   int i = 1;
-  dynamic o = 1;
-  FunctionReturningNum a = /*@returnType=int*/ () => i;
-  FunctionReturningNum b = /*@returnType=num*/ () => o;
-  FunctionReturningNum c = /*@returnType=int*/ () {
+  Object o = 1;
+  FunctionReturningNum a = /*@returnType=int**/ () => i;
+  FunctionReturningNum b = /*@returnType=num**/ () => o;
+  FunctionReturningNum c = /*@returnType=int**/ () {
     return i;
   };
-  FunctionReturningNum d = /*@returnType=num*/ () {
+  FunctionReturningNum d = /*@returnType=num**/ () {
     return o;
   };
 }

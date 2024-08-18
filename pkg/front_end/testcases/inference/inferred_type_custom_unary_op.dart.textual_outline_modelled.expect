@@ -7,5 +7,4 @@ class C {
 }
 
 main() {}
-
 var x = -c;

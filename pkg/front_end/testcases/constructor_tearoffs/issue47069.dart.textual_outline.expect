@@ -1,6 +1,4 @@
 func() {}
-
 @func()
 test() {}
-
 main() {}

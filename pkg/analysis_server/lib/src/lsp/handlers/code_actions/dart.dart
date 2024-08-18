@@ -8,16 +8,15 @@ import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/code_actions/abstract_code_actions_producer.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
-import 'package:analysis_server/src/protocol_server.dart'
-    hide AnalysisOptions, Position;
+import 'package:analysis_server/src/protocol_server.dart' hide Position;
 import 'package:analysis_server/src/services/correction/assist.dart';
 import 'package:analysis_server/src/services/correction/assist_internal.dart';
+import 'package:analysis_server/src/services/correction/change_workspace.dart';
+import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/services/refactoring/framework/refactoring_context.dart';
 import 'package:analysis_server/src/services/refactoring/framework/refactoring_processor.dart';
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart';
-import 'package:analysis_server_plugin/edit/fix/dart_fix_context.dart';
-import 'package:analysis_server_plugin/src/correction/dart_change_workspace.dart';
-import 'package:analysis_server_plugin/src/correction/fix_processor.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart'
     show InconsistentAnalysisException;
@@ -45,7 +44,6 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
     required super.length,
     required super.shouldIncludeKind,
     required super.capabilities,
-    required super.analysisOptions,
     required this.triggerKind,
   });
 
@@ -87,7 +85,7 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
     RefactoringKind refactorKind, [
     Map<String, dynamic>? options,
   ]) {
-    var command = Commands.performRefactor;
+    final command = Commands.performRefactor;
     assert(
       (() => Commands.serverSupportedCommands.contains(command))(),
       'serverSupportedCommands did not contain $command',
@@ -102,7 +100,7 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
             // TODO(dantup): Change this to a single entry that is a Map once
             //  enough time has passed that old versions of Dart-Code prior to
             //  to June 2022 need not be supported against newer SDKs.
-            refactorKind.toJson(clientUriConverter: server.uriConverter),
+            refactorKind.toJson(),
             path,
             docIdentifier.version,
             offset,
@@ -120,20 +118,19 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
     }
 
     try {
-      var workspace = DartChangeWorkspace(await server.currentSessions);
+      final workspace = DartChangeWorkspace(await server.currentSessions);
       var context = DartAssistContextImpl(
         server.instrumentationService,
         workspace,
         unit,
-        server.producerGeneratorsForLintRules,
         offset,
         length,
       );
-      var processor = AssistProcessor(context);
-      var assists = await processor.compute();
+      final processor = AssistProcessor(context);
+      final assists = await processor.compute();
 
       return assists.map((assist) {
-        var action =
+        final action =
             createAssistAction(assist.change, unit.path, unit.lineInfo);
         return (action: action, priority: assist.kind.priority);
       }).toList();
@@ -152,12 +149,13 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
       return [];
     }
 
-    var lineInfo = unit.lineInfo;
-    var codeActions = <CodeActionWithPriority>[];
+    final lineInfo = unit.lineInfo;
+    final codeActions = <CodeActionWithPriority>[];
+    final fixContributor = DartFixContributor();
 
     try {
-      var workspace = DartChangeWorkspace(await server.currentSessions);
-      for (var error in unit.errors) {
+      final workspace = DartChangeWorkspace(await server.currentSessions);
+      for (final error in unit.errors) {
         // Return fixes for any part of the line where a diagnostic is.
         // If a diagnostic spans multiple lines, the fix will be included for
         // all of those lines.
@@ -169,16 +167,12 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
             range.start.line > errorEndLine) {
           continue;
         }
-        var context = DartFixContext(
-          instrumentationService: server.instrumentationService,
-          workspace: workspace,
-          resolvedResult: unit,
-          error: error,
-        );
-        var fixes = await computeFixes(context);
+        var context = DartFixContextImpl(
+            server.instrumentationService, workspace, unit, error);
+        final fixes = await fixContributor.computeFixes(context);
         if (fixes.isNotEmpty) {
-          var diagnostic = toDiagnostic(
-            server.uriConverter,
+          final diagnostic = toDiagnostic(
+            server.pathContext,
             unit,
             error,
             supportedTags: supportedDiagnosticTags,
@@ -186,7 +180,7 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
           );
           codeActions.addAll(
             fixes.map((fix) {
-              var action =
+              final action =
                   createFixAction(fix.change, diagnostic, path, lineInfo);
               return (action: action, priority: fix.kind.priority);
             }),
@@ -211,11 +205,11 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
       return const [];
     }
 
-    var refactorActions = <Either2<CodeAction, Command>>[];
+    final refactorActions = <Either2<CodeAction, Command>>[];
 
     try {
       // New interactive refactors.
-      var context = RefactoringContext(
+      final context = RefactoringContext(
         server: server,
         startSessions: await server.currentSessions,
         resolvedLibraryResult: library,
@@ -225,8 +219,8 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
         includeExperimental:
             server.lspClientConfiguration.global.experimentalRefactors,
       );
-      var processor = RefactoringProcessor(context);
-      var actions = await processor.compute();
+      final processor = RefactoringProcessor(context);
+      final actions = await processor.compute();
       refactorActions.addAll(actions.map(Either2<CodeAction, Command>.t1));
 
       // Extracts
@@ -273,8 +267,8 @@ class DartCodeActionsProducer extends AbstractCodeActionsProducer {
 
       // Converts/Rewrites
       if (shouldIncludeKind(CodeActionKind.RefactorRewrite)) {
-        var node = NodeLocator(offset).searchWithin(unit.unit);
-        var element = server.getElementOfNode(node);
+        final node = NodeLocator(offset).searchWithin(unit.unit);
+        final element = server.getElementOfNode(node);
 
         // Getter to Method
         if (element is PropertyAccessorElement &&

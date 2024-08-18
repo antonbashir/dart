@@ -21,7 +21,6 @@ import 'src/commands/compilation_server.dart';
 import 'src/commands/compile.dart';
 import 'src/commands/create.dart';
 import 'src/commands/debug_adapter.dart';
-import 'src/commands/development_service.dart';
 import 'src/commands/devtools.dart';
 import 'src/commands/doc.dart';
 import 'src/commands/fix.dart';
@@ -29,7 +28,6 @@ import 'src/commands/info.dart';
 import 'src/commands/language_server.dart';
 import 'src/commands/run.dart';
 import 'src/commands/test.dart';
-import 'src/commands/tooling_daemon.dart';
 import 'src/core.dart';
 import 'src/experiments.dart';
 import 'src/unified_analytics.dart';
@@ -42,7 +40,19 @@ Future<void> runDartdev(List<String> args, SendPort? port) async {
   int? exitCode = 1;
   try {
     VmInteropHandler.initialize(port);
-    // Call the runner to execute the command; see DartdevRunner.
+    if (args.contains('run')) {
+      // These flags have a format that can't be handled by package:args, so while
+      // they are valid flags we'll assume the VM has verified them by this point.
+      args = args
+          .where(
+            (element) => !(element.contains('--observe') ||
+                element.contains('--enable-vm-service') ||
+                element.contains('--devtools')),
+          )
+          .toList();
+    }
+
+    // Finally, call the runner to execute the command; see DartdevRunner.
     final runner = DartdevRunner(args, vmArgs: io.Platform.executableArguments);
     exitCode = await runner.run(args);
   } on UsageException catch (e) {
@@ -71,7 +81,7 @@ class DartdevRunner extends CommandRunner<int> {
       'A command-line utility for Dart development';
 
   @override
-  final ArgParser argParser;
+  late final ArgParser argParser;
 
   final bool verbose;
 
@@ -92,8 +102,6 @@ class DartdevRunner extends CommandRunner<int> {
         _unifiedAnalytics = analyticsOverride,
         _isAnalyticsTest = isAnalyticsTest,
         super('dart', '$dartdevDescription.') {
-    // The list of commands should be kept in sync with
-    // `DartDevIsolate::ShouldParseCommand` in `runtime/bin/dartdev_isolate.cc`.
     addCommand(AnalyzeCommand(verbose: verbose));
     addCommand(CompilationServerCommand(verbose: verbose));
     final nativeAssetsExperimentEnabled =
@@ -107,14 +115,20 @@ class DartdevRunner extends CommandRunner<int> {
     ));
     addCommand(CreateCommand(verbose: verbose));
     addCommand(DebugAdapterCommand(verbose: verbose));
-    addCommand(DevelopmentServiceCommand(verbose: verbose));
     addCommand(DevToolsCommand(verbose: verbose));
     addCommand(DocCommand(verbose: verbose));
     addCommand(FixCommand(verbose: verbose));
     addCommand(FormatCommand(verbose: verbose));
     addCommand(InfoCommand(verbose: verbose));
     addCommand(LanguageServerCommand(verbose: verbose));
-    addCommand(pubCommand(isVerbose: () => verbose));
+    addCommand(
+      pubCommand(
+        analytics: PubAnalytics(
+          () => unifiedAnalytics,
+        ),
+        isVerbose: () => verbose,
+      ),
+    );
     addCommand(RunCommand(
       verbose: verbose,
       nativeAssetsExperimentEnabled: nativeAssetsExperimentEnabled,
@@ -122,7 +136,6 @@ class DartdevRunner extends CommandRunner<int> {
     addCommand(TestCommand(
       nativeAssetsExperimentEnabled: nativeAssetsExperimentEnabled,
     ));
-    addCommand(ToolingDaemonCommand(verbose: verbose));
   }
 
   @visibleForTesting
@@ -143,8 +156,8 @@ class DartdevRunner extends CommandRunner<int> {
     // We don't want to run analytics when we're running in a CI environment
     // unless we're explicitly testing analytics for dartdev.
     final implicitlySuppressAnalytics = isBot() && !_isAnalyticsTest;
-    bool suppressAnalytics = !topLevelResults.flag('analytics') ||
-        topLevelResults.flag('suppress-analytics') ||
+    bool suppressAnalytics = !topLevelResults['analytics'] ||
+        topLevelResults['suppress-analytics'] ||
         implicitlySuppressAnalytics;
 
     if (topLevelResults.wasParsed('analytics')) {
@@ -152,8 +165,8 @@ class DartdevRunner extends CommandRunner<int> {
           '`--[no-]analytics` is deprecated.  Use `--suppress-analytics` '
           'to disable analytics for one run instead.');
     }
-    final enableAnalytics = topLevelResults.flag('enable-analytics');
-    final disableAnalytics = topLevelResults.flag('disable-analytics');
+    final enableAnalytics = topLevelResults['enable-analytics'];
+    final disableAnalytics = topLevelResults['disable-analytics'];
 
     if (!implicitlySuppressAnalytics &&
         suppressAnalytics &&
@@ -215,7 +228,7 @@ class DartdevRunner extends CommandRunner<int> {
       }
     }
 
-    if (topLevelResults.flag('diagnostics')) {
+    if (topLevelResults['diagnostics']) {
       log = Logger.verbose(ansi: ansi);
     }
 

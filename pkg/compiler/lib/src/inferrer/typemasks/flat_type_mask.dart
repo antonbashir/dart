@@ -462,42 +462,43 @@ class FlatTypeMask extends TypeMask {
     SubclassResult result = domain._closedWorld.classHierarchy.commonSubclasses(
         base!, _classQuery, otherBase!, flatOther._classQuery);
 
-    switch (result) {
-      case SimpleSubclassResult.empty:
+    switch (result.kind) {
+      case SubclassResultKind.EMPTY:
         return includeNull
             ? TypeMask.empty(hasLateSentinel: includeLateSentinel)
             : TypeMask.nonNullEmpty(hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.exact1:
+      case SubclassResultKind.EXACT1:
         assert(isExact);
         return withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.exact2:
+      case SubclassResultKind.EXACT2:
         assert(other.isExact);
         return other.withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.subclass1:
+      case SubclassResultKind.SUBCLASS1:
         assert(isSubclass);
         return withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.subclass2:
+      case SubclassResultKind.SUBCLASS2:
         assert(flatOther.isSubclass);
         return other.withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.subtype1:
+      case SubclassResultKind.SUBTYPE1:
         assert(isSubtype);
         return withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SimpleSubclassResult.subtype2:
+      case SubclassResultKind.SUBTYPE2:
         assert(flatOther.isSubtype);
         return other.withFlags(
             isNullable: includeNull, hasLateSentinel: includeLateSentinel);
-      case SetSubclassResult(:final classes):
-        if (classes.isEmpty) {
+      case SubclassResultKind.SET:
+      default:
+        if (result.classes.isEmpty) {
           return includeNull
               ? TypeMask.empty(hasLateSentinel: includeLateSentinel)
               : TypeMask.nonNullEmpty(hasLateSentinel: includeLateSentinel);
-        } else if (classes.length == 1) {
-          ClassEntity cls = classes.first;
+        } else if (result.classes.length == 1) {
+          ClassEntity cls = result.classes.first;
           return includeNull
               ? TypeMask.subclass(cls, domain._closedWorld,
                   hasLateSentinel: includeLateSentinel)
@@ -505,8 +506,9 @@ class FlatTypeMask extends TypeMask {
                   hasLateSentinel: includeLateSentinel);
         }
 
-        List<FlatTypeMask> masks = List.from(classes.map((ClassEntity cls) =>
-            TypeMask.nonNullSubclass(cls, domain._closedWorld)));
+        List<FlatTypeMask> masks = List.from(result.classes.map(
+            (ClassEntity cls) =>
+                TypeMask.nonNullSubclass(cls, domain._closedWorld)));
         if (masks.length > UnionTypeMask.MAX_UNION_LENGTH) {
           return UnionTypeMask.flatten(masks, domain,
               includeNull: includeNull,

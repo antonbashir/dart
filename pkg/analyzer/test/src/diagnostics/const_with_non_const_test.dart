@@ -95,22 +95,22 @@ void f() {
       error(CompileTimeErrorCode.CONST_WITH_NON_CONST, 57, 5),
     ]);
 
-    var node = findNode.singleInstanceCreationExpression;
+    final node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: const
   constructorName: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
-    staticElement: <testLibraryFragment>::@class::A::@constructor::new
+    staticElement: self::@class::A::@constructor::new
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+        parameter: self::@class::A::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
   staticType: A
@@ -130,22 +130,22 @@ void f() {
       error(CompileTimeErrorCode.CONST_WITH_NON_CONST, 38, 5),
     ]);
 
-    var node = findNode.singleInstanceCreationExpression;
+    final node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: const
   constructorName: ConstructorName
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
-    staticElement: <testLibraryFragment>::@class::A::@constructor::new
+    staticElement: self::@class::A::@constructor::new
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+        parameter: self::@class::A::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
   staticType: A

@@ -4,13 +4,9 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/dart/element/element.dart';
-import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Always override `hashCode` if overriding `==`.';
 
@@ -54,15 +50,19 @@ class Better {
 ''';
 
 class HashAndEquals extends LintRule {
+  static const LintCode code = LintCode(
+      'hash_and_equals', "Missing a corresponding override of '{0}'.",
+      correctionMessage: "Try overriding '{0}' or removing '{1}'.");
+
   HashAndEquals()
       : super(
             name: 'hash_and_equals',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.hash_and_equals;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -79,43 +79,30 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
+    _check(node.members);
+  }
+
+  void _check(NodeList<ClassMember> members) {
     MethodDeclaration? eq;
     ClassMember? hash;
-    for (var member in node.members) {
+    for (var member in members) {
       if (isEquals(member)) {
         eq = member as MethodDeclaration;
       } else if (isHashCode(member)) {
         hash = member;
       }
     }
-    if (eq == null && hash == null) return;
 
-    if (eq == null) {
-      if (!node.hasMethod('==')) {
-        if (hash is MethodDeclaration) {
-          rule.reportLintForToken(hash.name, arguments: ['==', 'hashCode']);
-        } else if (hash is FieldDeclaration) {
-          rule.reportLintForToken(getFieldName(hash, 'hashCode'),
-              arguments: ['==', 'hashCode']);
-        }
-      }
+    if (eq != null && hash == null) {
+      rule.reportLintForToken(eq.name, arguments: ['hashCode', '==']);
     }
-
-    if (hash == null) {
-      if (!node.hasField('hashCode') && !node.hasMethod('hashCode')) {
-        rule.reportLintForToken(eq!.name, arguments: ['hashCode', '==']);
+    if (hash != null && eq == null) {
+      if (hash is MethodDeclaration) {
+        rule.reportLintForToken(hash.name, arguments: ['==', 'hashCode']);
+      } else if (hash is FieldDeclaration) {
+        rule.reportLintForToken(getFieldName(hash, 'hashCode'),
+            arguments: ['==', 'hashCode']);
       }
     }
   }
-}
-
-extension on ClassDeclaration {
-  bool hasField(String name) =>
-      declaredElement?.allFields.namedOrNull(name) != null;
-  bool hasMethod(String name) =>
-      declaredElement?.allMethods.namedOrNull(name) != null;
-}
-
-extension<E extends ClassMemberElement> on List<E> {
-  E? namedOrNull(String name) => firstWhereOrNull((e) => e.name == name);
 }

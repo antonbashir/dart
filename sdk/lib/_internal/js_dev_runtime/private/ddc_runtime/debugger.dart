@@ -96,8 +96,7 @@ List<String> getLibraryMetadata(@notNull String libraryUri) {
 /// ```
 /// TODO(annagrin): remove when debugger reads symbols.
 /// Issue: https://github.com/dart-lang/sdk/issues/40273
-Object? getClassMetadata(@notNull String libraryUri, @notNull String name,
-    {Object? objectInstance}) {
+Object? getClassMetadata(@notNull String libraryUri, @notNull String name) {
   var library = getLibrary('$libraryUri');
   if (library == null) throw 'cannot find library for $libraryUri';
 
@@ -109,7 +108,6 @@ Object? getClassMetadata(@notNull String libraryUri, @notNull String name,
   _collectFieldDescriptors(
     fieldDescriptors,
     getFields(cls),
-    objectInstance: objectInstance,
   );
   _collectFieldDescriptorsFromNames(
     fieldDescriptors,
@@ -224,19 +222,17 @@ void _collectFieldDescriptors(
   @notNull Map<String, dynamic> fieldDescriptors,
   Object? fields, {
   bool isStatic = false,
-  Object? objectInstance,
 }) {
   if (fields == null) return;
 
   for (var symbol in getOwnNamesAndSymbols(fields)) {
     var fieldInfo = _get<Object>(fields, symbol);
-    // An object instance is required to resolve the type of a field.
-    var typeSignature = _get(fieldInfo, 'type');
-    var typeRti = rtiFromSignature(objectInstance, typeSignature);
-    var className = typeRti == null ? '?' : typeName(typeRti);
+    var type = _get(fieldInfo, 'type');
     var isConst = _get(fieldInfo, 'isConst');
     var isFinal = _get(fieldInfo, 'isFinal');
     var libraryId = _get(fieldInfo, 'libraryUri');
+
+    var className = typeName(type);
     var name = _getDartSymbolName(symbol);
     if (name == null) continue;
 
@@ -291,27 +287,24 @@ Object getObjectMetadata(@notNull Object object) {
   if (cls != null) {
     libraryId = getLibraryUri(cls);
   }
+  var length = _get(object, 'length');
   var result = _createJsObject({
     'className': className,
     'libraryId': libraryId,
     'runtimeKind': RuntimeObjectKind.object,
+    if (length != null) 'length': length,
   });
 
-  if (object is String) {
-    _set(result, 'length', _get(object, 'length'));
-  } else if (object is List) {
+  if (object is List) {
     _set(result, 'runtimeKind', RuntimeObjectKind.list);
-    _set(result, 'length', _get(object, 'length'));
   } else if (object is Map) {
     _set(result, 'runtimeKind', RuntimeObjectKind.map);
-    _set(result, 'length', _get(object, 'length'));
   } else if (object is Set) {
     _set(result, 'runtimeKind', RuntimeObjectKind.set);
-    _set(result, 'length', _get(object, 'length'));
   } else if (object is Function) {
     _set(result, 'runtimeKind', RuntimeObjectKind.function);
   } else if (object is RecordImpl) {
-    var shape = JS<Shape>('!', '#[#]', object, shapeProperty);
+    var shape = object.shape;
     var positionalCount = shape.positionals;
     var namedCount = shape.named?.length ?? 0;
     var length = positionalCount + namedCount;
@@ -323,8 +316,8 @@ Object getObjectMetadata(@notNull Object object) {
     if (_isRecordType(object)) {
       var elements = _recordTypeElementTypes(object);
       var length = _get(elements, 'length');
-      _set(result, 'libraryId', 'dart:core');
-      _set(result, 'className', 'Type');
+      _set(result, 'libraryId', 'dart:_runtime');
+      _set(result, 'className', 'RecordType');
       _set(result, 'runtimeKind', RuntimeObjectKind.recordType);
       _set(result, 'length', length);
     } else {
@@ -350,10 +343,6 @@ Object getObjectMetadata(@notNull Object object) {
     // Plain object with no constructor on the object.
     // Return empty metadata so the object is not displayed in the debugger.
     return _createEmptyJsObject();
-  } else {
-    // The debug spec specifies that plain objects should have a 'length' field
-    // which is the number of non-static fields on the object.
-    _set(result, 'length', getObjectFieldNames(object).length);
   }
   return result;
 }
@@ -463,10 +452,10 @@ Object getTypeFields(@notNull Type type) {
 /// ```
 @notNull
 Object getRecordFields(@notNull RecordImpl record) {
-  var shape = JS<Shape>('!', '#[#]', record, shapeProperty);
+  var shape = record.shape;
   var positionalCount = shape.positionals;
   var named = shape.named?.toList();
-  var values = JS('!', '#[#]', record, valuesProperty);
+  var values = record.values;
 
   return _createJsObject({
     'positionalCount': positionalCount,
@@ -520,26 +509,52 @@ Object getSubRange(@notNull Object object, int offset, int count) {
 }
 
 @notNull
-bool _isDartClassObject(@notNull Object object) =>
-    _get(object, rti.interfaceTypeRecipePropertyName) != null;
-
-@notNull
-String _dartClassName(@notNull Object cls) {
-  String recipe = _get(cls, rti.interfaceTypeRecipePropertyName);
-  return recipe.split('|').last;
+bool _isDartClassObject(@notNull Object object) {
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    return _get(object, rti.interfaceTypeRecipePropertyName) != null;
+  } else {
+    return isType(object);
+  }
 }
 
 @notNull
-bool _isRecordType(@notNull Type type) => rti.isRecordType(type);
+String _dartClassName(@notNull Object cls) {
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    var recipe = _get(cls, rti.interfaceTypeRecipePropertyName);
+    return recipe.split('|').last;
+  } else {
+    return typeName(cls);
+  }
+}
 
 @notNull
-List _recordTypeElementTypes(@notNull Type type) =>
-    rti.getRecordTypeElementTypes(type);
+bool _isRecordType(@notNull Type type) {
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    return rti.isRecordType(type);
+  } else {
+    return isRecordType(type);
+  }
+}
+
+@notNull
+List _recordTypeElementTypes(@notNull Type type) {
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    return rti.getRecordTypeElementTypes(type);
+  } else {
+    var impl = recordTypeImpl(type);
+    return impl.types.map(wrapType).toList();
+  }
+}
 
 @notNull
 Shape _recordTypeShape(@notNull Type type) {
-  var shapeKey = rti.getRecordTypeShapeKey(type);
-  return _getValue<Shape>(shapes, shapeKey);
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    var shapeKey = rti.getRecordTypeShapeKey(type);
+    return _getValue<Shape>(shapes, shapeKey);
+  } else {
+    var impl = recordTypeImpl(type);
+    return impl.shape;
+  }
 }
 
 @notNull

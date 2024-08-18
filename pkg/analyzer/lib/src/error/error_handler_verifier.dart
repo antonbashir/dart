@@ -178,10 +178,10 @@ class ErrorHandlerVerifier {
       FunctionType expressionType, DartType expectedFunctionReturnType,
       {bool checkFirstParameterType = true}) {
     void report() {
-      _errorReporter.atNode(
-        expression,
+      _errorReporter.reportErrorForNode(
         WarningCode.ARGUMENT_TYPE_NOT_ASSIGNABLE_TO_ERROR_HANDLER,
-        arguments: [expressionType, expectedFunctionReturnType],
+        expression,
+        [expressionType, expectedFunctionReturnType],
       );
     }
 
@@ -248,10 +248,10 @@ class ErrorHandlerVerifier {
       DartType expectedType, DartType functionReturnType, Expression callback) {
     if (!_typeSystem.isAssignableTo(functionReturnType, expectedType,
         strictCasts: _strictCasts)) {
-      _errorReporter.atNode(
-        callback,
+      _errorReporter.reportErrorForNode(
         WarningCode.RETURN_TYPE_INVALID_FOR_CATCH_ERROR,
-        arguments: [functionReturnType, expectedType],
+        callback,
+        [functionReturnType, expectedType],
       );
     }
   }

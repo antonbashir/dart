@@ -22,7 +22,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    final node = findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -37,13 +37,13 @@ FieldFormalParameter
     parameter: SimpleFormalParameter
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: a
-      declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f::@parameter::a
+      declaredElement: self::@class::A::@constructor::new::@parameter::f::@parameter::a
         type: int
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+  declaredElement: self::@class::A::@constructor::new::@parameter::f
     type: void Function(int)
 ''');
   }
@@ -58,7 +58,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    final node = findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -83,10 +83,10 @@ FieldFormalParameter
         element: U@45
         type: U
       name: a
-      declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f::@parameter::a
+      declaredElement: self::@class::A::@constructor::new::@parameter::f::@parameter::a
         type: U
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+  declaredElement: self::@class::A::@constructor::new::@parameter::f
     type: U Function<U>(U)
 ''');
   }
@@ -99,7 +99,7 @@ class A<V> {
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    final node = findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -127,7 +127,7 @@ FieldFormalParameter
         element: U@57
         type: U
       name: a
-      declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f::@parameter::a
+      declaredElement: self::@class::A::@constructor::new::@parameter::f::@parameter::a
         type: U
     parameter: SimpleFormalParameter
       type: NamedType
@@ -135,10 +135,10 @@ FieldFormalParameter
         element: V@8
         type: V
       name: b
-      declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f::@parameter::b
+      declaredElement: self::@class::A::@constructor::new::@parameter::f::@parameter::b
         type: V
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+  declaredElement: self::@class::A::@constructor::new::@parameter::f
     type: T Function<T, U>(U, V)
 ''');
   }
@@ -151,13 +151,13 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    final node = findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   thisKeyword: this
   period: .
   name: f
-  declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+  declaredElement: self::@class::A::@constructor::new::@parameter::f
     type: int
 ''');
   }
@@ -170,17 +170,17 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    final node = findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   thisKeyword: this
   period: .
   name: f
-  declaredElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+  declaredElement: self::@class::A::@constructor::new::@parameter::f
     type: int
 ''');
   }
@@ -194,13 +194,13 @@ enum E {
 }
 ''');
 
-    var node = findNode.fieldFormalParameter('this.f');
+    final node = findNode.fieldFormalParameter('this.f');
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   thisKeyword: this
   period: .
   name: f
-  declaredElement: <testLibraryFragment>::@enum::E::@constructor::new::@parameter::f
+  declaredElement: self::@enum::E::@constructor::new::@parameter::f
     type: int
 ''');
   }

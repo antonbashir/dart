@@ -75,8 +75,7 @@ void DisassembleToMemory::ConsumeInstruction(char* hex_buffer,
 
   // TODO(compiler): Update assembler tests for other architectures so there is
   // coverage of encodings, not just mnemonics.
-#if defined(TARGET_ARCH_RISCV32) || defined(TARGET_ARCH_RISCV64) ||            \
-    defined(TARGET_ARCH_ARM)
+#if defined(TARGET_ARCH_RISCV32) || defined(TARGET_ARCH_RISCV64)
   len = strlen(hex_buffer);
   if (remaining_ < len + 100) {
     *buffer_++ = '.';
@@ -456,10 +455,6 @@ void Disassembler::DisassembleCode(const Function& function,
   if (code.IsUnknownDartCode()) {
     return;
   }
-  if (Log::Current() == Log::NoOpLog()) {
-    // Output for this isolate will be shallowed, so don't bother generating it.
-    return;
-  }
   TextBuffer buffer(128);
   const char* function_fullname = function.ToFullyQualifiedCString();
   buffer.Printf("%s", Function::KindToCString(function.kind()));
@@ -474,10 +469,6 @@ void Disassembler::DisassembleCode(const Function& function,
 }
 
 void Disassembler::DisassembleStub(const char* name, const Code& code) {
-  if (Log::Current() == Log::NoOpLog()) {
-    // Output for this isolate will be shallowed, so don't bother generating it.
-    return;
-  }
   LogBlock lb;
   THR_Print("Code for stub '%s': {\n", name);
   DisassembleToStdout formatter;

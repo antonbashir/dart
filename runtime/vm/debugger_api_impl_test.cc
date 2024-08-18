@@ -147,24 +147,14 @@ Dart_Handle Dart_SetBreakpoint(Dart_Handle script_url_in,
     UNWRAP_AND_CHECK_PARAM(String, script_url, script_url_in);
 
     Debugger* debugger = I->debugger();
-    const Error& error = Error::Handle(
-        debugger->SetBreakpointAtLineCol(script_url, line_number, -1, &bpt));
-    if (!error.IsNull() || bpt == nullptr) {
+    bpt = debugger->SetBreakpointAtLineCol(script_url, line_number, -1);
+    if (bpt == nullptr) {
       return Api::NewError("%s: could not set breakpoint at line %" Pd
                            " in '%s'",
                            CURRENT_FUNC, line_number, script_url.ToCString());
     }
   }
   return Dart_NewInteger(bpt->id());
-}
-
-Dart_Handle Dart_RemoveBreakpoint(Dart_Handle breakpoint_id_in) {
-  DARTSCOPE(Thread::Current());
-  Isolate* I = T->isolate();
-  CHECK_DEBUGGER(I);
-  UNWRAP_AND_CHECK_PARAM(Integer, breakpoint_id, breakpoint_id_in);
-  I->debugger()->RemoveBreakpoint(breakpoint_id.AsInt64Value());
-  return Api::Success();
 }
 
 Dart_Handle Dart_EvaluateStaticExpr(Dart_Handle lib_handle,

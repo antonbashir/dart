@@ -92,7 +92,7 @@ class _TypePromotionDataInterpreter implements DataInterpreter<DartType> {
 
   @override
   String getText(DartType actualData, [String? indentation]) {
-    return actualData.getDisplayString();
+    return actualData.getDisplayString(withNullability: true);
   }
 
   @override

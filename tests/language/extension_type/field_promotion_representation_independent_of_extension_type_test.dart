@@ -7,6 +7,7 @@
 // is an extension type, and its representation variable is `_f`, null checks
 // and `is` tests applied to `e` should not affect the type of `e._f`.
 //
+// SharedOptions=--enable-experiment=inline-class
 
 import '../static_type_helper.dart';
 

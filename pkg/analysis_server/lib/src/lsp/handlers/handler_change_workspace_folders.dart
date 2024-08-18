@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
 
@@ -32,8 +31,8 @@ class ChangeWorkspaceFoldersHandler
       return success(null);
     }
 
-    var added = _convertWorkspaceFolders(params.event.added);
-    var removed = _convertWorkspaceFolders(params.event.removed);
+    final added = _convertWorkspaceFolders(params.event.added);
+    final removed = _convertWorkspaceFolders(params.event.removed);
 
     server.analyticsManager
         .changedWorkspaceFolders(added: added, removed: removed);
@@ -48,7 +47,7 @@ class ChangeWorkspaceFoldersHandler
   List<String> _convertWorkspaceFolders(List<WorkspaceFolder> folders) {
     return folders
         .where((wf) => wf.uri.isScheme('file'))
-        .map((wf) => uriConverter.fromClientUri(wf.uri))
+        .map((wf) => pathContext.fromUri(wf.uri))
         .toList();
   }
 }

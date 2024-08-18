@@ -32,12 +32,12 @@ class AnalysisOptionsCompletionTest extends AbstractLspAnalysisServerTest
   }
 
   Future<void> test_nested() async {
-    var content = '''
+    final content = '''
 linter:
   rules:
     - ^''';
 
-    var expected = '''
+    final expected = '''
 linter:
   rules:
     - annotate_overrides''';
@@ -55,12 +55,12 @@ linter:
   }
 
   Future<void> test_nested_prefix() async {
-    var content = '''
+    final content = '''
 linter:
   rules:
     - ann^''';
 
-    var expected = '''
+    final expected = '''
 linter:
   rules:
     - annotate_overrides''';
@@ -75,9 +75,9 @@ linter:
   }
 
   Future<void> test_topLevel() async {
-    var content = '''
+    final content = '''
 ^''';
-    var expected = '''
+    final expected = '''
 linter: ''';
 
     await verifyCompletions(
@@ -90,9 +90,9 @@ linter: ''';
   }
 
   Future<void> test_topLevel_prefix() async {
-    var content = '''
+    final content = '''
 li^''';
-    var expected = '''
+    final expected = '''
 linter: ''';
 
     await verifyCompletions(
@@ -117,12 +117,12 @@ class FixDataCompletionTest extends AbstractLspAnalysisServerTest
   }
 
   Future<void> test_nested() async {
-    var content = '''
+    final content = '''
 version: 1.0.0
 transforms:
   - changes:
     - ^''';
-    var expected = '''
+    final expected = '''
 version: 1.0.0
 transforms:
   - changes:
@@ -138,12 +138,12 @@ transforms:
   }
 
   Future<void> test_nested_prefix() async {
-    var content = '''
+    final content = '''
 version: 1.0.0
 transforms:
   - changes:
     - ki^''';
-    var expected = '''
+    final expected = '''
 version: 1.0.0
 transforms:
   - changes:
@@ -159,10 +159,10 @@ transforms:
   }
 
   Future<void> test_topLevel() async {
-    var content = '''
+    final content = '''
 version: 1.0.0
 ^''';
-    var expected = '''
+    final expected = '''
 version: 1.0.0
 transforms:''';
 
@@ -176,9 +176,9 @@ transforms:''';
   }
 
   Future<void> test_topLevel_prefix() async {
-    var content = '''
+    final content = '''
 tra^''';
-    var expected = '''
+    final expected = '''
 transforms:''';
 
     await verifyCompletions(
@@ -222,21 +222,21 @@ class PubspecCompletionTest extends AbstractLspAnalysisServerTest
   }
 
   Future<void> test_insertReplaceRanges() async {
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 environment:
   s^dk
 ''';
-    var expectedReplaced = '''
+    final expectedReplaced = '''
 name: foo
 version: 1.0.0
 
 environment:
   sdk: 
 ''';
-    var expectedInserted = '''
+    final expectedInserted = '''
 name: foo
 version: 1.0.0
 
@@ -256,14 +256,14 @@ environment:
   }
 
   Future<void> test_nested() async {
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 environment:
   ^''';
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -280,7 +280,7 @@ environment:
   }
 
   Future<void> test_nested_afterString() async {
-    var content = '''
+    final content = '''
 name: foo
   ^''';
 
@@ -292,14 +292,14 @@ name: foo
   }
 
   Future<void> test_nested_prefix() async {
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 environment:
   sd^''';
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -326,13 +326,13 @@ environment:
       }
     };
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   ^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(pubspecFileUri, code.code);
@@ -340,7 +340,7 @@ dependencies:
 
     // Descriptions are included in the documentation field that is only added
     // when completions are resolved.
-    var completion = await getResolvedCompletion(
+    final completion = await getResolvedCompletion(
       pubspecFileUri,
       code.position.position,
       'one: ',
@@ -360,14 +360,14 @@ dependencies:
       }
     };
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   ^''';
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -394,15 +394,15 @@ dependencies:
       }
     };
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   ^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -414,7 +414,7 @@ dependencies:
 
     // Versions are currently only available if we've previously resolved on the
     // package name, so first complete/resolve that.
-    var newContent = (await verifyCompletions(
+    final newContent = (await verifyCompletions(
       pubspecFileUri,
       content,
       expectCompletions: ['one: '],
@@ -436,7 +436,7 @@ dependencies:
   }
 
   Future<void> test_package_versions_fromPubOutdated() async {
-    var json = r'''
+    final json = r'''
     {
       "packages": [
         {
@@ -450,15 +450,15 @@ dependencies:
     processRunner.startHandler =
         (executable, args, {dir, env}) => MockProcess(1, 0, json, '');
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   one: ^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -480,7 +480,7 @@ dependencies:
   }
 
   Future<void> test_package_versions_fromPubOutdated_afterChange() async {
-    var initialJson = r'''
+    final initialJson = r'''
     {
       "packages": [
         {
@@ -491,7 +491,7 @@ dependencies:
       ]
     }
     ''';
-    var updatedJson = r'''
+    final updatedJson = r'''
     {
       "packages": [
         {
@@ -505,15 +505,15 @@ dependencies:
     processRunner.startHandler =
         (executable, args, {dir, env}) => MockProcess(1, 0, initialJson, '');
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   one: ^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
-    var expected = '''
+    final expected = '''
 name: foo
 version: 1.0.0
 
@@ -553,7 +553,7 @@ dependencies:
   }
 
   Future<void> test_package_versions_fromPubOutdated_afterDelete() async {
-    var initialJson = r'''
+    final initialJson = r'''
     {
       "packages": [
         {
@@ -567,13 +567,13 @@ dependencies:
     processRunner.startHandler =
         (executable, args, {dir, env}) => MockProcess(1, 0, initialJson, '');
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   one: ^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     newFile(pubspecFilePath, content);
     await initialize();
@@ -604,13 +604,13 @@ dependencies:
       }
     };
 
-    var content = '''
+    final content = '''
 name: foo
 version: 1.0.0
 
 dependencies:
   on^''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(pubspecFileUri, content);
@@ -623,10 +623,10 @@ dependencies:
   }
 
   Future<void> test_topLevel() async {
-    var content = '''
+    final content = '''
 version: 1.0.0
 ^''';
-    var expected = '''
+    final expected = '''
 version: 1.0.0
 name: ''';
 
@@ -640,9 +640,9 @@ name: ''';
   }
 
   Future<void> test_topLevel_prefix() async {
-    var content = '''
+    final content = '''
 na^''';
-    var expected = '''
+    final expected = '''
 name: ''';
 
     await verifyCompletions(

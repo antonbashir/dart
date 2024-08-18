@@ -80,6 +80,7 @@ enum NullValues implements NullValue<Object> {
   ShowClause,
   StringLiteral,
   StructuralVariables,
+  SwitchScope,
   Token,
   Type,
   TypeArguments,
@@ -129,8 +130,7 @@ abstract class StackListener extends Listener with StackChecker {
   @override
   Uri get uri;
 
-  /// Returns `true` if the current file is part of a `dart:` library.
-  bool get isDartLibrary;
+  Uri get importUri;
 
   void discard(int n) {
     for (int i = 0; i < n; i++) {
@@ -195,7 +195,7 @@ abstract class StackListener extends Listener with StackChecker {
   }
 
   @override
-  void endInitializer(Token endToken) {
+  void endInitializer(Token token) {
     debugEvent("endInitializer");
   }
 
@@ -210,9 +210,9 @@ abstract class StackListener extends Listener with StackChecker {
   }
 
   @override
-  void endTopLevelDeclaration(Token endToken) {
+  void endTopLevelDeclaration(Token nextToken) {
     debugEvent("TopLevelDeclaration");
-    checkEmpty(endToken.charOffset);
+    checkEmpty(nextToken.charOffset);
   }
 
   @override
@@ -402,7 +402,8 @@ abstract class StackListener extends Listener with StackChecker {
       // Ignored. This error is handled by the BodyBuilder.
       return true;
     } else if (code == codeBuiltInIdentifierInDeclaration) {
-      if (isDartLibrary) return true;
+      if (importUri.isScheme("dart")) return true;
+      if (uri.isScheme("org-dartlang-sdk")) return true;
       return false;
     } else {
       return false;
@@ -421,16 +422,16 @@ abstract class StackListener extends Listener with StackChecker {
 
 abstract class Stack {
   /// Pops [count] elements from the stack and puts it into [list].
-  /// Returns `null` if a [ParserRecovery] value is found, or [list] otherwise.
+  /// Returns [null] if a [ParserRecovery] value is found, or [list] otherwise.
   List<T?>? popList<T>(int count, List<T?> list, NullValue? nullValue);
 
   /// Pops [count] elements from the stack and puts it into [list].
-  /// Returns `null` if a [ParserRecovery] value is found, or [list] otherwise.
+  /// Returns [null] if a [ParserRecovery] value is found, or [list] otherwise.
   List<T>? popNonNullableList<T>(int count, List<T> list);
 
   void push(Object value);
 
-  /// Will return `null` instead of [NullValue].
+  /// Will return [null] instead of [NullValue].
   Object? get last;
 
   bool get isNotEmpty;
@@ -441,7 +442,7 @@ abstract class Stack {
 
   int get length;
 
-  /// Raw, i.e. [NullValue]s will be returned instead of `null`.
+  /// Raw, i.e. [NullValue]s will be returned instead of [null].
   Object? operator [](int index);
 }
 

@@ -5,5 +5,4 @@ class A<T> {
 }
 
 var t1 = <A<int>>[new A(1)];
-
 main() {}

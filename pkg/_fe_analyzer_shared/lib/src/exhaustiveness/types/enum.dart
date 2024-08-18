@@ -73,7 +73,7 @@ class EnumInfo<Type extends Object, EnumClass extends Object,
 }
 
 /// [StaticType] for an instantiation of an enum that support access to the
-/// enum values that populate its type through the [getSubtypes] getter.
+/// enum values that populate its type through the [subtypes] property.
 class EnumStaticType<Type extends Object, EnumElement extends Object>
     extends TypeBasedStaticType<Type> {
   final EnumInfo<Type, Object, EnumElement, Object> _enumInfo;

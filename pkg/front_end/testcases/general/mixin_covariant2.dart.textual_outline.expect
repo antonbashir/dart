@@ -15,7 +15,5 @@ mixin Mixin {
 class Class extends Superclass with Mixin {}
 
 main() {}
-
 void expect(expected, actual) {}
-
 void throws(void Function() f) {}

@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Only use double quotes for strings containing single quotes.';
 
@@ -18,7 +17,7 @@ apostrophe isn't escaped (note: we don't lint the other way around, ie, a single
 quoted string with an escaped apostrophe is not flagged).
 
 It's also rare, but possible, to have strings within string interpolations.  In
-this case, it's much more readable to use a double quote somewhere.  So double
+this case, its much more readable to use a double quote somewhere.  So double
 quotes are allowed either within, or containing, an interpolated string literal.
 Arguably strings within string interpolations should be its own type of lint.
 
@@ -44,18 +43,23 @@ useStrings(
 ''';
 
 class PreferSingleQuotes extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_single_quotes', 'Unnecessary use of double quotes.',
+      correctionMessage:
+          'Try using single quotes unless the string contains single quotes.');
+
   PreferSingleQuotes()
       : super(
             name: 'prefer_single_quotes',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
   List<String> get incompatibleRules => const ['prefer_double_quotes'];
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_single_quotes;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

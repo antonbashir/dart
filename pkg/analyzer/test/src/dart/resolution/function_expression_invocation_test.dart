@@ -10,7 +10,106 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(FunctionExpressionInvocationTest);
+    defineReflectiveTests(
+        FunctionExpressionInvocationResolutionTest_WithoutNullSafety);
   });
+}
+
+@reflectiveTest
+class FunctionExpressionInvocationResolutionTest_WithoutNullSafety
+    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
+  test_dynamic_withoutTypeArguments() async {
+    await assertNoErrorsInCode(r'''
+main() {
+  (main as dynamic)(0);
+}
+''');
+
+    final node = findNode.functionExpressionInvocation('(0)');
+    assertResolvedNodeText(node, r'''
+FunctionExpressionInvocation
+  function: ParenthesizedExpression
+    leftParenthesis: (
+    expression: AsExpression
+      expression: SimpleIdentifier
+        token: main
+        staticElement: self::@function::main
+        staticType: dynamic Function()*
+      asOperator: as
+      type: NamedType
+        name: dynamic
+        element: dynamic@-1
+        type: dynamic
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: <null>
+        staticType: int*
+    rightParenthesis: )
+  staticElement: <null>
+  staticInvokeType: dynamic
+  staticType: dynamic
+''');
+  }
+
+  test_dynamic_withTypeArguments() async {
+    await assertNoErrorsInCode(r'''
+main() {
+  (main as dynamic)<bool, int>(0);
+}
+''');
+
+    final node = findNode.functionExpressionInvocation('(0)');
+    assertResolvedNodeText(node, r'''
+FunctionExpressionInvocation
+  function: ParenthesizedExpression
+    leftParenthesis: (
+    expression: AsExpression
+      expression: SimpleIdentifier
+        token: main
+        staticElement: self::@function::main
+        staticType: dynamic Function()*
+      asOperator: as
+      type: NamedType
+        name: dynamic
+        element: dynamic@-1
+        type: dynamic
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: bool
+        element: dart:core::@class::bool
+        type: bool*
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int*
+    rightBracket: >
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: <null>
+        staticType: int*
+    rightParenthesis: )
+  staticElement: <null>
+  staticInvokeType: dynamic
+  staticType: dynamic
+  typeArgumentTypes
+    bool*
+    int*
+''');
+  }
 }
 
 @reflectiveTest
@@ -26,12 +125,12 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a(0)');
+    final node = findNode.functionExpressionInvocation('a(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: A
   argumentList: ArgumentList
     leftParenthesis: (
@@ -39,11 +138,11 @@ FunctionExpressionInvocation
       IntegerLiteral
         literal: 0
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::A::@method::call::@parameter::t
+          base: root::@parameter::t
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@method::call
+  staticElement: self::@class::A::@method::call
   staticInvokeType: void Function(int)
   staticType: void
   typeArgumentTypes
@@ -64,12 +163,12 @@ main(A a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a([');
+    final node = findNode.functionExpressionInvocation('a([');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::main::@parameter::a
+    staticElement: self::@function::main::@parameter::a
     staticType: A
   argumentList: ArgumentList
     leftParenthesis: (
@@ -82,11 +181,11 @@ FunctionExpressionInvocation
             staticType: int
         rightBracket: ]
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::A::@method::call::@parameter::_
+          base: root::@parameter::_
           substitution: {T: int}
         staticType: List<int>
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@method::call
+  staticElement: self::@class::A::@method::call
   staticInvokeType: List<int> Function(List<int>)
   staticType: List<int>
   typeArgumentTypes
@@ -107,17 +206,17 @@ void f(A a, int context) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a()');
+    final node = findNode.functionExpressionInvocation('a()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: A
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@method::call
+  staticElement: self::@class::A::@method::call
   staticInvokeType: int Function()
   staticType: int
   typeArgumentTypes
@@ -138,121 +237,28 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a<int>()');
+    final node = findNode.functionExpressionInvocation('a<int>()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: A
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@method::call
+  staticElement: self::@class::A::@method::call
   staticInvokeType: int Function()
   staticType: int
   typeArgumentTypes
-    int
-''');
-  }
-
-  test_dynamic_withoutTypeArguments() async {
-    await assertNoErrorsInCode(r'''
-main() {
-  (main as dynamic)(0);
-}
-''');
-
-    var node = findNode.functionExpressionInvocation('(0)');
-    assertResolvedNodeText(node, r'''
-FunctionExpressionInvocation
-  function: ParenthesizedExpression
-    leftParenthesis: (
-    expression: AsExpression
-      expression: SimpleIdentifier
-        token: main
-        staticElement: <testLibraryFragment>::@function::main
-        staticType: dynamic Function()
-      asOperator: as
-      type: NamedType
-        name: dynamic
-        element: dynamic@-1
-        type: dynamic
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  argumentList: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 0
-        parameter: <null>
-        staticType: int
-    rightParenthesis: )
-  staticElement: <null>
-  staticInvokeType: dynamic
-  staticType: dynamic
-''');
-  }
-
-  test_dynamic_withTypeArguments() async {
-    await assertNoErrorsInCode(r'''
-main() {
-  (main as dynamic)<bool, int>(0);
-}
-''');
-
-    var node = findNode.functionExpressionInvocation('(0)');
-    assertResolvedNodeText(node, r'''
-FunctionExpressionInvocation
-  function: ParenthesizedExpression
-    leftParenthesis: (
-    expression: AsExpression
-      expression: SimpleIdentifier
-        token: main
-        staticElement: <testLibraryFragment>::@function::main
-        staticType: dynamic Function()
-      asOperator: as
-      type: NamedType
-        name: dynamic
-        element: dynamic@-1
-        type: dynamic
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  typeArguments: TypeArgumentList
-    leftBracket: <
-    arguments
-      NamedType
-        name: bool
-        element: dart:core::<fragment>::@class::bool
-        type: bool
-      NamedType
-        name: int
-        element: dart:core::<fragment>::@class::int
-        type: int
-    rightBracket: >
-  argumentList: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 0
-        parameter: <null>
-        staticType: int
-    rightParenthesis: )
-  staticElement: <null>
-  staticInvokeType: dynamic
-  staticType: dynamic
-  typeArgumentTypes
-    bool
     int
 ''');
   }
@@ -267,17 +273,17 @@ extension on int? {
   int call() => 0;
 }
 ''');
-    var node = findNode.functionExpressionInvocation('();');
+    final node = findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: int?
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::0::@method::call
+  staticElement: self::@extension::0::@method::call
   staticInvokeType: int Function()
   staticType: int
 ''');
@@ -293,17 +299,17 @@ extension on (String,) {
   int call() => 0;
 }
 ''');
-    var node = findNode.functionExpressionInvocation('();');
+    final node = findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: (String,)
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::0::@method::call
+  staticElement: self::@extension::0::@method::call
   staticInvokeType: int Function()
   staticType: int
 ''');
@@ -317,12 +323,12 @@ void f((String,) a) {
 ''', [
       error(CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION_EXPRESSION, 24, 1),
     ]);
-    var node = findNode.functionExpressionInvocation('();');
+    final node = findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: (String,)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -345,7 +351,7 @@ void f(T Function<T>(T a) g) {
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: g
-    staticElement: <testLibraryFragment>::@function::f::@parameter::g
+    staticElement: self::@function::f::@parameter::g
     staticType: T Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -374,14 +380,14 @@ void f(F<int> a) {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    final node = findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: int Function<T>(T)
-      alias: <testLibraryFragment>::@typeAlias::F
+      alias: self::@typeAlias::F
         typeArguments
           int
   typeArguments: TypeArgumentList
@@ -389,7 +395,7 @@ FunctionExpressionInvocation
     arguments
       NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
     rightBracket: >
   argumentList: ArgumentList
@@ -420,7 +426,7 @@ void f(int Function() g, int a) {
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: g
-    staticElement: <testLibraryFragment>::@function::f::@parameter::g
+    staticElement: self::@function::f::@parameter::g
     staticType: int Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -428,7 +434,7 @@ FunctionExpressionInvocation
       SimpleIdentifier
         token: a
         parameter: <null>
-        staticElement: <testLibraryFragment>::@function::f::@parameter::a
+        staticElement: self::@function::f::@parameter::a
         staticType: int
     rightParenthesis: )
   staticElement: <null>
@@ -455,9 +461,9 @@ class A {
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: String Function(int, {int b})
-      alias: <testLibraryFragment>::@typeAlias::F
+      alias: self::@typeAlias::F
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
@@ -479,38 +485,8 @@ FunctionExpressionInvocation
     rightParenthesis: )
   staticElement: <null>
   staticInvokeType: String Function(int, {int b})
-    alias: <testLibraryFragment>::@typeAlias::F
+    alias: self::@typeAlias::F
   staticType: String
-''');
-  }
-
-  test_getter_functionTyped_withSetterDeclaredLocally() async {
-    await assertNoErrorsInCode('''
-class A {
-  Function get foo => () {};
-}
-class B extends A {
-  set foo(Function _) {}
-
-  void f() {
-    foo();
-  }
-}
-''');
-
-    var node = findNode.singleFunctionExpressionInvocation;
-    assertResolvedNodeText(node, r'''
-FunctionExpressionInvocation
-  function: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
-    staticType: Function
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticElement: <null>
-  staticInvokeType: dynamic
-  staticType: dynamic
 ''');
   }
 
@@ -530,20 +506,20 @@ const c = id(a, b);
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: id
-    staticElement: <testLibraryFragment>::@getter::id
+    staticElement: self::@getter::id
     staticType: bool Function(Object?, Object?)
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       SimpleIdentifier
         token: a
-        parameter: dart:core::<fragment>::@function::identical::@parameter::a
-        staticElement: <testLibraryFragment>::@getter::a
+        parameter: dart:core::@function::identical::@parameter::a
+        staticElement: self::@getter::a
         staticType: int
       SimpleIdentifier
         token: b
-        parameter: dart:core::<fragment>::@function::identical::@parameter::b
-        staticElement: <testLibraryFragment>::@getter::b
+        parameter: dart:core::@function::identical::@parameter::b
+        staticElement: self::@getter::b
         staticType: int
     rightParenthesis: )
   staticElement: <null>
@@ -562,19 +538,19 @@ void f(Never x) {
       error(WarningCode.DEAD_CODE, 26, 8),
     ]);
 
-    var node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
+    final node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -587,10 +563,10 @@ FunctionExpressionInvocation
         operator: +
         rightOperand: IntegerLiteral
           literal: 2
-          parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+          parameter: dart:core::@class::num::@method::+::@parameter::other
           staticType: int
         parameter: <null>
-        staticElement: dart:core::<fragment>::@class::num::@method::+
+        staticElement: dart:core::@class::num::@method::+
         staticInvokeType: num Function(num)
         staticType: int
     rightParenthesis: )
@@ -611,19 +587,19 @@ void f(Never? x) {
       error(CompileTimeErrorCode.UNCHECKED_INVOCATION_OF_NULLABLE_VALUE, 21, 1),
     ]);
 
-    var node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
+    final node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Never?
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -636,10 +612,10 @@ FunctionExpressionInvocation
         operator: +
         rightOperand: IntegerLiteral
           literal: 2
-          parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+          parameter: dart:core::@class::num::@method::+::@parameter::other
           staticType: int
         parameter: <null>
-        staticElement: dart:core::<fragment>::@class::num::@method::+
+        staticElement: dart:core::@class::num::@method::+
         staticInvokeType: num Function(num)
         staticType: int
     rightParenthesis: )
@@ -664,18 +640,18 @@ class B {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a?.foo()');
+    final node = findNode.functionExpressionInvocation('a?.foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: PropertyAccess
     target: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@class::B::@method::bar::@parameter::a
+      staticElement: self::@class::B::@method::bar::@parameter::a
       staticType: A?
     operator: ?.
     propertyName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: int Function()
     staticType: int Function()
   argumentList: ArgumentList
@@ -707,12 +683,12 @@ PropertyAccess
     function: PropertyAccess
       target: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@method::bar::@parameter::a
+        staticElement: self::@class::B::@method::bar::@parameter::a
         staticType: A?
       operator: ?.
       propertyName: SimpleIdentifier
         token: foo
-        staticElement: <testLibraryFragment>::@class::A::@getter::foo
+        staticElement: self::@class::A::@getter::foo
         staticType: int Function()
       staticType: int Function()
     argumentList: ArgumentList
@@ -724,7 +700,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: isEven
-    staticElement: dart:core::<fragment>::@class::int::@getter::isEven
+    staticElement: dart:core::@class::int::@getter::isEven
     staticType: bool
   staticType: bool?
 ''');
@@ -741,7 +717,7 @@ void f(Object? x) {
 void foo() {}
 ''');
 
-    var node = findNode.functionExpressionInvocation('}()');
+    final node = findNode.functionExpressionInvocation('}()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SwitchExpression
@@ -749,7 +725,7 @@ FunctionExpressionInvocation
     leftParenthesis: (
     expression: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Object?
     rightParenthesis: )
     leftBracket: {
@@ -762,7 +738,7 @@ FunctionExpressionInvocation
         arrow: =>
         expression: SimpleIdentifier
           token: foo
-          staticElement: <testLibraryFragment>::@function::foo
+          staticElement: self::@function::foo
           staticType: void Function()
     rightBracket: }
     staticType: void Function()
@@ -782,13 +758,13 @@ void f(({void Function(int) foo}) r) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    final node = findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: PropertyAccess
     target: SimpleIdentifier
       token: r
-      staticElement: <testLibraryFragment>::@function::f::@parameter::r
+      staticElement: self::@function::f::@parameter::r
       staticType: ({void Function(int) foo})
     operator: .
     propertyName: SimpleIdentifier
@@ -817,13 +793,13 @@ void f((void Function(int),) r) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    final node = findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: PropertyAccess
     target: SimpleIdentifier
       token: r
-      staticElement: <testLibraryFragment>::@function::f::@parameter::r
+      staticElement: self::@function::f::@parameter::r
       staticType: (void Function(int),)
     operator: .
     propertyName: SimpleIdentifier
@@ -852,7 +828,7 @@ void f((void Function(int),) r) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    final node = findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: ParenthesizedExpression
@@ -860,7 +836,7 @@ FunctionExpressionInvocation
     expression: PropertyAccess
       target: SimpleIdentifier
         token: r
-        staticElement: <testLibraryFragment>::@function::f::@parameter::r
+        staticElement: self::@function::f::@parameter::r
         staticType: (void Function(int),)
       operator: .
       propertyName: SimpleIdentifier

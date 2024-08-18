@@ -5,5 +5,4 @@ class C {
 }
 
 const v = C.f;
-
 main() {}

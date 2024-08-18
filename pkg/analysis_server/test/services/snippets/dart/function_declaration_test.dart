@@ -28,12 +28,12 @@ class FunctionDeclarationTest extends DartSnippetProducerTest {
   String get prefix => FunctionDeclaration.prefix;
 
   Future<void> test_classMethod() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 class A {
   ^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));
@@ -76,12 +76,12 @@ class A {
   }
 
   Future<void> test_nested() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void a() {
   ^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));
@@ -124,14 +124,14 @@ void a() {
   }
 
   Future<void> test_topLevel() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 class A {}
   
 ^
 
 class B {}
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

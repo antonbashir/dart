@@ -20,26 +20,26 @@ void main() {
 class DocumentSymbolsTest extends AbstractLspAnalysisServerTest {
   Future<void> test_enumMember_notSupported() async {
     const content = '''
-enum Theme {
-  light,
-}
-''';
+    enum Theme {
+      light,
+    }
+    ''';
     newFile(mainFilePath, content);
     await initialize();
 
-    var result = await getDocumentSymbols(mainFileUri);
-    var symbols = result.map(
+    final result = await getDocumentSymbols(mainFileUri);
+    final symbols = result.map(
       (docsymbols) => throw 'Expected SymbolInformations, got DocumentSymbols',
       (symbolInfos) => symbolInfos,
     );
     expect(symbols, hasLength(2));
 
-    var themeEnum = symbols[0];
+    final themeEnum = symbols[0];
     expect(themeEnum.name, equals('Theme'));
     expect(themeEnum.kind, equals(SymbolKind.Enum));
     expect(themeEnum.containerName, isNull);
 
-    var enumValue = symbols[1];
+    final enumValue = symbols[1];
     expect(enumValue.name, equals('light'));
     // EnumMember is not in the original LSP list, so unless the client explicitly
     // advertises support, we will fall back to Enum.
@@ -51,26 +51,26 @@ enum Theme {
     setDocumentSymbolKinds([SymbolKind.Enum, SymbolKind.EnumMember]);
 
     const content = '''
-enum Theme {
-  light,
-}
-''';
+    enum Theme {
+      light,
+    }
+    ''';
     newFile(mainFilePath, content);
     await initialize();
 
-    var result = await getDocumentSymbols(mainFileUri);
-    var symbols = result.map(
+    final result = await getDocumentSymbols(mainFileUri);
+    final symbols = result.map(
       (docsymbols) => throw 'Expected SymbolInformations, got DocumentSymbols',
       (symbolInfos) => symbolInfos,
     );
     expect(symbols, hasLength(2));
 
-    var themeEnum = symbols[0];
+    final themeEnum = symbols[0];
     expect(themeEnum.name, equals('Theme'));
     expect(themeEnum.kind, equals(SymbolKind.Enum));
     expect(themeEnum.containerName, isNull);
 
-    var enumValue = symbols[1];
+    final enumValue = symbols[1];
     expect(enumValue.name, equals('light'));
     expect(enumValue.kind, equals(SymbolKind.EnumMember));
     expect(enumValue.containerName, 'Theme');
@@ -78,66 +78,66 @@ enum Theme {
 
   Future<void> test_flat() async {
     const content = '''
-String topLevel = '';
-class MyClass {
-  int myField;
-  MyClass(this.myField);
-  myMethod() {}
-}
-extension StringExtensions on String {}
-extension on String {}
-extension type A(int i) {
-  static const int foo = 0;
-}
-''';
+    String topLevel = '';
+    class MyClass {
+      int myField;
+      MyClass(this.myField);
+      myMethod() {}
+    }
+    extension StringExtensions on String {}
+    extension on String {}
+    extension type A(int i) {
+      static const int foo = 0;
+    }
+    ''';
     newFile(mainFilePath, content);
     await initialize();
 
-    var result = await getDocumentSymbols(mainFileUri);
-    var symbols = result.map(
+    final result = await getDocumentSymbols(mainFileUri);
+    final symbols = result.map(
       (docsymbols) => throw 'Expected SymbolInformations, got DocumentSymbols',
       (symbolInfos) => symbolInfos,
     );
     expect(symbols, hasLength(9));
 
-    var topLevel = symbols[0];
+    final topLevel = symbols[0];
     expect(topLevel.name, equals('topLevel'));
     expect(topLevel.kind, equals(SymbolKind.Variable));
     expect(topLevel.containerName, isNull);
 
-    var myClass = symbols[1];
+    final myClass = symbols[1];
     expect(myClass.name, equals('MyClass'));
     expect(myClass.kind, equals(SymbolKind.Class));
     expect(myClass.containerName, isNull);
 
-    var field = symbols[2];
+    final field = symbols[2];
     expect(field.name, equals('myField'));
     expect(field.kind, equals(SymbolKind.Field));
     expect(field.containerName, equals(myClass.name));
 
-    var constructor = symbols[3];
+    final constructor = symbols[3];
     expect(constructor.name, equals('MyClass'));
     expect(constructor.kind, equals(SymbolKind.Constructor));
     expect(constructor.containerName, equals(myClass.name));
 
-    var method = symbols[4];
+    final method = symbols[4];
     expect(method.name, equals('myMethod'));
     expect(method.kind, equals(SymbolKind.Method));
     expect(method.containerName, equals(myClass.name));
 
-    var namedExtension = symbols[5];
+    final namedExtension = symbols[5];
     expect(namedExtension.name, equals('StringExtensions'));
     expect(namedExtension.containerName, isNull);
 
-    var unnamedExtension = symbols[6];
+    final unnamedExtension = symbols[6];
     expect(unnamedExtension.name, equals('<unnamed extension>'));
     expect(unnamedExtension.containerName, isNull);
 
-    var extensionTypeA = symbols[7];
+    final extensionTypeA = symbols[7];
     expect(extensionTypeA.name, equals('A'));
     expect(extensionTypeA.containerName, isNull);
 
-    var foo = symbols[8];
+    final foo = symbols[8];
     expect(foo.name, equals('foo'));
     expect(foo.containerName, equals('A'));
     expect(foo.kind, equals(SymbolKind.Field));
@@ -147,75 +147,44 @@ extension type A(int i) {
     setHierarchicalDocumentSymbolSupport();
 
     const content = '''
-String topLevel = '';
-class MyClass {
-  int myField;
-  MyClass(this.myField);
-  myMethod() {}
-}
-''';
+    String topLevel = '';
+    class MyClass {
+      int myField;
+      MyClass(this.myField);
+      myMethod() {}
+    }
+    ''';
     newFile(mainFilePath, content);
     await initialize();
 
-    var result = await getDocumentSymbols(mainFileUri);
-    var symbols = result.map(
+    final result = await getDocumentSymbols(mainFileUri);
+    final symbols = result.map(
       (docsymbols) => docsymbols,
       (symbolInfos) => throw 'Expected DocumentSymbols, got SymbolInformations',
     );
 
     expect(symbols, hasLength(2));
 
-    var topLevel = symbols[0];
+    final topLevel = symbols[0];
     expect(topLevel.name, equals('topLevel'));
     expect(topLevel.kind, equals(SymbolKind.Variable));
 
-    var myClass = symbols[1];
+    final myClass = symbols[1];
     expect(myClass.name, equals('MyClass'));
     expect(myClass.kind, equals(SymbolKind.Class));
     expect(myClass.children, hasLength(3));
 
-    var field = myClass.children![0];
+    final field = myClass.children![0];
     expect(field.name, equals('myField'));
     expect(field.kind, equals(SymbolKind.Field));
 
-    var constructor = myClass.children![1];
+    final constructor = myClass.children![1];
     expect(constructor.name, equals('MyClass'));
     expect(constructor.kind, equals(SymbolKind.Constructor));
 
-    var method = myClass.children![2];
+    final method = myClass.children![2];
     expect(method.name, equals('myMethod'));
     expect(method.kind, equals(SymbolKind.Method));
-  }
-
-  Future<void> test_macroGenerated() async {
-    setDartTextDocumentContentProviderSupport();
-    addMacros([declareInTypeMacro()]);
-
-    const content = '''
-import 'macros.dart';
-
-@DeclareInType('void f() {}')
-class A {}
-''';
-    newFile(mainFilePath, content);
-    await initialize();
-
-    var result = await getDocumentSymbols(mainFileMacroUri);
-    var symbols = result.map(
-      (docsymbols) => throw 'Expected SymbolInformations, got DocumentSymbols',
-      (symbolInfos) => symbolInfos,
-    );
-    expect(symbols, hasLength(2));
-
-    var topLevel = symbols[0];
-    expect(topLevel.name, equals('A'));
-    expect(topLevel.kind, equals(SymbolKind.Class));
-    expect(topLevel.containerName, isNull);
-
-    var myClass = symbols[1];
-    expect(myClass.name, equals('f'));
-    expect(myClass.kind, equals(SymbolKind.Method));
-    expect(myClass.containerName, equals('A'));
   }
 
   Future<void> test_noAnalysisRoot_openedFile() async {
@@ -226,14 +195,14 @@ class A {}
     await initialize(allowEmptyRootUri: true);
     await openFile(mainFileUri, content);
 
-    var result = await getDocumentSymbols(mainFileUri);
-    var symbols = result.map(
+    final result = await getDocumentSymbols(mainFileUri);
+    final symbols = result.map(
       (docsymbols) => throw 'Expected SymbolInformations, got DocumentSymbols',
       (symbolInfos) => symbolInfos,
     );
     expect(symbols, hasLength(1));
 
-    var myClass = symbols[0];
+    final myClass = symbols[0];
     expect(myClass.name, equals('MyClass'));
     expect(myClass.kind, equals(SymbolKind.Class));
     expect(myClass.containerName, isNull);
@@ -256,10 +225,10 @@ class A {}
     newFile(pubspecFilePath, simplePubspecContent);
     await initialize();
 
-    var result = await getDocumentSymbols(pubspecFileUri);
+    final result = await getDocumentSymbols(pubspecFileUri);
     // Since the list is empty, it will deserialize into whatever the first
     // type is, so just accept both types.
-    var symbols = result.map(
+    final symbols = result.map(
       (docsymbols) => docsymbols,
       (symbolInfos) => symbolInfos,
     );

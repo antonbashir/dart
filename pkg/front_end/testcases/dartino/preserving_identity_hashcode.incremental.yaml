@@ -9,8 +9,8 @@ main.dart.patch: |
     var bar;
   >>>>
   }
-  late Foo foo;
-  late int firstHashCode;
+  Foo foo;
+  int firstHashCode;
   main() {
   <<<<
     foo = new Foo();

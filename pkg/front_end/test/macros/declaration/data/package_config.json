@@ -10,12 +10,8 @@
       "rootUri": "pkgs/precompiled_macro/lib/"
     },
     {
-      "name": "macros",
-      "rootUri": "../../../../../macros/lib/"
-    },
-    {
-      "name": "_macros",
-      "rootUri": "../../../../../_macros/lib/"
+      "name": "_fe_analyzer_shared",
+      "rootUri": "../../../../../_fe_analyzer_shared/lib/"
     }
   ]
 }

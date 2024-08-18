@@ -32,12 +32,13 @@ suggestions
 
   Future<void> test_afterHide_beforeSemicolon() async {
     newFile('$testPackageLibPath/ab.dart', '''
+library libAB;
 part "ab_part.dart";
 class A0 {}
 class B0 {}
 ''');
     newFile('$testPackageLibPath/ab_part.dart', '''
-part of 'ab.dart';
+part of libAB;
 var T1;
 P0 F1() => new P0();
 class P0 {}
@@ -61,10 +62,10 @@ suggestions
     kind: class
   B0
     kind: class
-  P0
-    kind: class
   F1
     kind: function
+  P0
+    kind: class
   T1
     kind: topLevelVariable
 ''');
@@ -116,6 +117,8 @@ suggestions
     kind: import
   dart:convert
     kind: import
+  dart:core
+    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -123,10 +126,6 @@ suggestions
   dart:io
     kind: import
   dart:isolate
-    kind: import
-  dart:js
-    kind: import
-  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -137,8 +136,6 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
-    kind: import
-  dart:core
     kind: import
 ''');
   }
@@ -244,17 +241,20 @@ import "foo" d^ hide foo;
 replacement
   left: 1
 suggestions
+  as
+    kind: keyword
   deferred as
     kind: keyword
   hide
+    kind: keyword
+  show
     kind: keyword
 ''');
   }
 
   Future<void> test_afterUri_beforeImport_partial_d() async {
     await computeSuggestions('''
-import "foo" d^
-import
+import "foo" d^ import
 ''');
     assertResponse(r'''
 replacement
@@ -267,9 +267,7 @@ suggestions
 
   Future<void> test_afterUri_beforeImport_partial_sh() async {
     await computeSuggestions('''
-import "foo" sh^
-import "bar";
-import "baz";
+import "foo" sh^ import "bar"; import "baz";
 ''');
     assertResponse(r'''
 replacement
@@ -318,9 +316,13 @@ import "foo" d^ show foo;
 replacement
   left: 1
 suggestions
+  as
+    kind: keyword
   deferred as
     kind: keyword
   hide
+    kind: keyword
+  show
     kind: keyword
 ''');
   }
@@ -343,6 +345,7 @@ suggestions
 
   Future<void> test_afterShow_beforeSemicolon() async {
     newFile('$testPackageLibPath/ab.dart', '''
+library libAB;
 part "ab_part.dart";
 class A0 {}
 class B0 {}
@@ -350,7 +353,7 @@ class _A1 {}
 void f(_A1 a) {}
 ''');
     newFile('$testPackageLibPath/ab_part.dart', '''
-part of 'ab.dart';
+part of libAB;
 var T1;
 P1 F1() => new P1();
 typedef P1 F2(int blat);
@@ -377,14 +380,14 @@ suggestions
     kind: class
   C1
     kind: class
-  P1
-    kind: class
-  T1
-    kind: topLevelVariable
   F1
     kind: function
   F2
     kind: typeAlias
+  P1
+    kind: class
+  T1
+    kind: topLevelVariable
 ''');
   }
 

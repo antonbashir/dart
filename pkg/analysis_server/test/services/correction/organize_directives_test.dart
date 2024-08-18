@@ -912,7 +912,7 @@ import 'annotations.dart'; // used
   }
 
   Future<void> _addAnnotationsFile() async {
-    var annotationsFile = convertPath('$testPackageLibPath/annotations.dart');
+    final annotationsFile = convertPath('$testPackageLibPath/annotations.dart');
     const annotationsContent = '''
 import 'package:meta/meta_meta.dart';
 

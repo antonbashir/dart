@@ -10,7 +10,6 @@ import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/dart/analysis/experiments_impl.dart';
 import 'package:analyzer/src/dart/analysis/feature_set_provider.dart';
 import 'package:analyzer/src/dart/sdk/sdk.dart';
-import 'package:analyzer/src/file_system/file_system.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/source/package_map_resolver.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
@@ -29,8 +28,6 @@ main() {
 class FeatureSetProviderTest with ResourceProviderMixin {
   late SourceFactory sourceFactory;
   late FeatureSetProvider provider;
-
-  final latestLanguageVersionFeatures = FeatureSet.latestLanguageVersion();
 
   Folder get sdkRoot => newFolder('/sdk');
 
@@ -101,16 +98,13 @@ class FeatureSetProviderTest with ResourceProviderMixin {
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: packages,
+        packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
       );
 
       void assertHasFeature(String path, bool expected) {
-        _assertHasFeatureForPath(
-          path,
-          feature_a,
-          expected,
-          contextFeatures: ExperimentStatus(),
-          nonPackageFeatureSet: ExperimentStatus(),
-        );
+        _assertHasFeatureForPath(path, feature_a, expected);
       }
 
       assertHasFeature('/packages/aaa/lib/a.dart', true);
@@ -162,19 +156,16 @@ class FeatureSetProviderTest with ResourceProviderMixin {
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: packages,
+        packageDefaultFeatureSet: FeatureSet.fromEnableFlags2(
+          sdkLanguageVersion: Version.parse('2.12.0'),
+          flags: [feature_a.enableString],
+        ),
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
       );
 
       void assertHasFeature(String path, bool expected) {
-        _assertHasFeatureForPath(
-          path,
-          feature_a,
-          expected,
-          contextFeatures: FeatureSet.fromEnableFlags2(
-            sdkLanguageVersion: Version.parse('2.12.0'),
-            flags: [feature_a.enableString],
-          ),
-          nonPackageFeatureSet: latestLanguageVersionFeatures,
-        );
+        _assertHasFeatureForPath(path, feature_a, expected);
       }
 
       assertHasFeature('/packages/aaa/a.dart', true);
@@ -224,16 +215,13 @@ class FeatureSetProviderTest with ResourceProviderMixin {
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: packages,
+        packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
       );
 
       void assertHasFeature(String path, bool expected) {
-        _assertHasFeatureForPath(
-          path,
-          feature_a,
-          expected,
-          contextFeatures: ExperimentStatus(),
-          nonPackageFeatureSet: ExperimentStatus(),
-        );
+        _assertHasFeatureForPath(path, feature_a, expected);
       }
 
       assertHasFeature('/packages/aaa/a.dart', false);
@@ -274,6 +262,9 @@ class FeatureSetProviderTest with ResourceProviderMixin {
       sourceFactory: sourceFactory,
       resourceProvider: resourceProvider,
       packages: packages,
+      packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+      nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+      nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
     );
 
     void check({
@@ -284,8 +275,7 @@ class FeatureSetProviderTest with ResourceProviderMixin {
       var uri = Uri.parse(uriStr);
       var path = convertPath(posixPath);
       expect(
-        provider.getLanguageVersion(path, uri,
-            nonPackageLanguageVersion: ExperimentStatus.currentVersion),
+        provider.getLanguageVersion(path, uri),
         expected,
       );
     }
@@ -351,20 +341,15 @@ class FeatureSetProviderTest with ResourceProviderMixin {
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: findPackagesFrom(resourceProvider, getFolder('/test')),
+        packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
       );
 
-      var core_featureSet = _getSdkFeatureSet(
-        'dart:core',
-        contextFeatures: latestLanguageVersionFeatures,
-        nonPackageFeatureSet: latestLanguageVersionFeatures,
-      );
+      var core_featureSet = _getSdkFeatureSet('dart:core');
       expect(core_featureSet.isEnabled(feature_a), isTrue);
 
-      var math_featureSet = _getSdkFeatureSet(
-        'dart:math',
-        contextFeatures: latestLanguageVersionFeatures,
-        nonPackageFeatureSet: latestLanguageVersionFeatures,
-      );
+      var math_featureSet = _getSdkFeatureSet('dart:math');
       expect(math_featureSet.isEnabled(feature_a), isTrue);
     });
   }
@@ -405,20 +390,15 @@ class FeatureSetProviderTest with ResourceProviderMixin {
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: findPackagesFrom(resourceProvider, getFolder('/test')),
+        packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
       );
 
-      var core_featureSet = _getSdkFeatureSet(
-        'dart:core',
-        contextFeatures: latestLanguageVersionFeatures,
-        nonPackageFeatureSet: latestLanguageVersionFeatures,
-      );
+      var core_featureSet = _getSdkFeatureSet('dart:core');
       expect(core_featureSet.isEnabled(feature_a), isFalse);
 
-      var math_featureSet = _getSdkFeatureSet(
-        'dart:math',
-        contextFeatures: latestLanguageVersionFeatures,
-        nonPackageFeatureSet: latestLanguageVersionFeatures,
-      );
+      var math_featureSet = _getSdkFeatureSet('dart:math');
       expect(math_featureSet.isEnabled(feature_a), isTrue);
     });
   }
@@ -428,28 +408,17 @@ class FeatureSetProviderTest with ResourceProviderMixin {
       sourceFactory: sourceFactory,
       resourceProvider: resourceProvider,
       packages: findPackagesFrom(resourceProvider, getFolder('/test')),
+      packageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
+      nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+      nonPackageDefaultFeatureSet: FeatureSet.latestLanguageVersion(),
     );
 
-    var featureSet = _getSdkFeatureSet(
-      'dart:math',
-      contextFeatures: latestLanguageVersionFeatures,
-      nonPackageFeatureSet: latestLanguageVersionFeatures,
-    );
+    var featureSet = _getSdkFeatureSet('dart:math');
     expect(featureSet.isEnabled(Feature.non_nullable), isTrue);
   }
 
-  _assertHasFeatureForPath(
-    String path,
-    Feature feature,
-    bool expected, {
-    required FeatureSet contextFeatures,
-    required FeatureSet nonPackageFeatureSet,
-  }) {
-    var featureSet = _getPathFeatureSet(
-      path,
-      contextFeatures: contextFeatures,
-      nonPackageFeatureSet: nonPackageFeatureSet,
-    );
+  _assertHasFeatureForPath(String path, Feature feature, bool expected) {
+    var featureSet = _getPathFeatureSet(path);
     expect(featureSet.isEnabled(feature), expected);
   }
 
@@ -475,31 +444,16 @@ class FeatureSetProviderTest with ResourceProviderMixin {
     sourceFactory = SourceFactoryImpl(resolvers);
   }
 
-  FeatureSet _getPathFeatureSet(
-    String path, {
-    required FeatureSet contextFeatures,
-    required FeatureSet nonPackageFeatureSet,
-  }) {
+  FeatureSet _getPathFeatureSet(String path) {
     path = convertPath(path);
     var uri = sourceFactory.pathToUri(path)!;
-    return provider.getFeatureSet(
-      path,
-      uri,
-      contextFeatures: contextFeatures,
-      nonPackageFeatureSet: nonPackageFeatureSet,
-    );
+    return provider.getFeatureSet(path, uri);
   }
 
-  FeatureSet _getSdkFeatureSet(
-    String uriStr, {
-    required FeatureSet contextFeatures,
-    required FeatureSet nonPackageFeatureSet,
-  }) {
+  FeatureSet _getSdkFeatureSet(String uriStr) {
     var uri = Uri.parse(uriStr);
     var path = sourceFactory.forUri2(uri)!.fullName;
-    return provider.getFeatureSet(path, uri,
-        contextFeatures: contextFeatures,
-        nonPackageFeatureSet: nonPackageFeatureSet);
+    return provider.getFeatureSet(path, uri);
   }
 
   void _newSdkExperimentsFile(String content) {

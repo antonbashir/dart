@@ -9,5 +9,4 @@ class D<T> {
 }
 
 main() {}
-
 typedef void F<V>(V v);

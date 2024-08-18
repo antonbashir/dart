@@ -97,6 +97,19 @@ class TrivialRuntimeTypesChecksBuilder implements RuntimeTypesChecksBuilder {
     TypeChecks typeChecks = _substitutions._computeChecks(classUseMap);
     return TrivialTypesChecks(typeChecks);
   }
+
+  Set<ClassEntity> computeCheckedClasses(
+      CodegenWorldBuilder codegenWorldBuilder, Set<DartType> implicitIsChecks) {
+    return _closedWorld.classHierarchy
+        .getClassSet(_closedWorld.commonElements.objectClass)
+        .subtypes()
+        .toSet();
+  }
+
+  Set<FunctionType> computeCheckedFunctions(
+      CodegenWorldBuilder codegenWorldBuilder, Set<DartType> implicitIsChecks) {
+    return {};
+  }
 }
 
 mixin RuntimeTypesSubstitutionsMixin implements RuntimeTypesSubstitutions {
@@ -929,8 +942,7 @@ class _TypeVisitor extends DartTypeVisitor<void, TypeVisitorState> {
   }
 
   @override
-  void visitFunctionTypeVariable(
-      FunctionTypeVariable type, TypeVisitorState state) {
+  visitFunctionTypeVariable(FunctionTypeVariable type, TypeVisitorState state) {
     if (_visitedFunctionTypeVariables.add(type)) {
       visitType(type.bound, state);
     }

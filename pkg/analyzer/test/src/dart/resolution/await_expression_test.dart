@@ -11,33 +11,12 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AwaitExpressionResolutionTest);
+    defineReflectiveTests(AwaitExpressionResolutionWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
 class AwaitExpressionResolutionTest extends PubPackageResolutionTest {
-  test_future() async {
-    await assertNoErrorsInCode(r'''
-f(Future<int> a) async {
-  await a;
-}
-''');
-
-    assertType(findNode.awaitExpression('await a'), 'int');
-  }
-
-  test_futureOr() async {
-    await assertNoErrorsInCode(r'''
-import 'dart:async';
-
-f(FutureOr<int> a) async {
-  await a;
-}
-''');
-
-    assertType(findNode.awaitExpression('await a'), 'int');
-  }
-
   test_futureOrQ() async {
     await assertNoErrorsInCode(r'''
 import 'dart:async';
@@ -71,7 +50,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 39, 5),
     ]);
 
-    var node = findNode.singleAwaitExpression;
+    final node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -91,7 +70,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleAwaitExpression;
+    final node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -102,7 +81,7 @@ AwaitExpression
     operator: .
     propertyName: SimpleIdentifier
       token: hashCode
-      staticElement: dart:core::<fragment>::@class::Object::@getter::hashCode
+      staticElement: dart:core::@class::Object::@getter::hashCode
       staticType: int
     staticType: int
   staticType: int
@@ -118,7 +97,7 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 25, 10),
     ]);
 
-    var node = findNode.singleAwaitExpression;
+    final node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -141,14 +120,14 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_PREFIXED_NAME, 63, 10),
     ]);
 
-    var node = findNode.singleAwaitExpression;
+    final node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
   expression: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
@@ -170,7 +149,7 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 34, 10),
     ]);
 
-    var node = findNode.singleAwaitExpression;
+    final node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -182,7 +161,7 @@ AwaitExpression
       operator: .
       propertyName: SimpleIdentifier
         token: isEven
-        staticElement: dart:core::<fragment>::@class::int::@getter::isEven
+        staticElement: dart:core::@class::int::@getter::isEven
         staticType: bool
       staticType: bool
     operator: .
@@ -193,5 +172,31 @@ AwaitExpression
     staticType: InvalidType
   staticType: InvalidType
 ''');
+  }
+}
+
+@reflectiveTest
+class AwaitExpressionResolutionWithoutNullSafetyTest
+    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
+  test_future() async {
+    await assertNoErrorsInCode(r'''
+f(Future<int> a) async {
+  await a;
+}
+''');
+
+    assertType(findNode.awaitExpression('await a'), 'int');
+  }
+
+  test_futureOr() async {
+    await assertNoErrorsInCode(r'''
+import 'dart:async';
+
+f(FutureOr<int> a) async {
+  await a;
+}
+''');
+
+    assertType(findNode.awaitExpression('await a'), 'int');
   }
 }

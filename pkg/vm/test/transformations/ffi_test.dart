@@ -12,10 +12,9 @@ import 'package:kernel/target/targets.dart';
 import 'package:kernel/verifier.dart';
 import 'package:test/test.dart';
 import 'package:vm/kernel_front_end.dart'
-    show runGlobalTransformations, ErrorDetector, KernelCompilationArguments;
-import 'package:vm/modular/target/vm.dart' show VmTarget;
-import 'package:vm/modular/transformations/ffi/native.dart'
-    show transformLibraries;
+    show runGlobalTransformations, ErrorDetector;
+import 'package:vm/target/vm.dart' show VmTarget;
+import 'package:vm/transformations/ffi/native.dart' show transformLibraries;
 
 import '../common_test_utils.dart';
 
@@ -57,17 +56,19 @@ runTestCaseAot(Uri source) async {
   Component component = await compileTestCaseToKernelProgram(source,
       target: target, experimentalFlags: []);
 
+  const bool useGlobalTypeFlowAnalysis = true;
+  const bool enableAsserts = false;
+  const bool useProtobufAwareTreeShakerV2 = true;
   final nopErrorDetector = ErrorDetector();
   runGlobalTransformations(
-      target,
-      component,
-      nopErrorDetector,
-      KernelCompilationArguments(
-        useGlobalTypeFlowAnalysis: true,
-        enableAsserts: false,
-        useProtobufTreeShakerV2: true,
-        treeShakeWriteOnlyFields: true,
-      ));
+    target,
+    component,
+    useGlobalTypeFlowAnalysis,
+    enableAsserts,
+    useProtobufAwareTreeShakerV2,
+    nopErrorDetector,
+    treeShakeWriteOnlyFields: true,
+  );
 
   verifyComponent(
       target, VerificationStage.afterGlobalTransformations, component);

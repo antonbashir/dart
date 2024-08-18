@@ -2,8 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -17,11 +18,11 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 import 'package:collection/collection.dart';
 
 class AddKeyToConstructors extends ResolvedCorrectionProducer {
-  AddKeyToConstructors({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_KEY_TO_CONSTRUCTORS;
@@ -71,6 +72,11 @@ class AddKeyToConstructors extends ResolvedCorrectionProducer {
   /// The lint is on the name of the class when there are no constructors.
   Future<void> _computeClassDeclaration(
       ChangeBuilder builder, ClassDeclaration node) async {
+    var targetLocation = utils.prepareNewConstructorLocation(
+        unitResult.session, node, unitResult.file);
+    if (targetLocation == null) {
+      return;
+    }
     var keyType = await _getKeyType();
     if (keyType == null) {
       return;
@@ -83,9 +89,8 @@ class AddKeyToConstructors extends ResolvedCorrectionProducer {
 
     var canBeConst = _canBeConst(node, constructors);
     await builder.addDartFileEdit(file, (builder) {
-      builder.insertConstructor(node, (builder) {
-        // TODO(srawlins): Replace this block with `writeConstructorDeclaration`
-        // and `parameterWriter`.
+      builder.addInsertion(targetLocation.offset, (builder) {
+        builder.write(targetLocation.prefix);
         if (canBeConst) {
           builder.write('const ');
         }
@@ -97,12 +102,13 @@ class AddKeyToConstructors extends ResolvedCorrectionProducer {
           builder.writeType(keyType);
           builder.write(' key}) : super(key: key);');
         }
+        builder.write(targetLocation.suffix);
       });
     });
   }
 
-  /// The lint is reported on a constructor when that constructor doesn't have a
-  /// `key` parameter.
+  /// The lint is on a constructor when that constructor doesn't have a `key`
+  /// parameter.
   Future<void> _computeConstructorDeclaration(
       ChangeBuilder builder, ConstructorDeclaration node) async {
     var keyType = await _getKeyType();
@@ -160,13 +166,16 @@ class AddKeyToConstructors extends ResolvedCorrectionProducer {
 
   /// Return the type for the class `Key`.
   Future<DartType?> _getKeyType() async {
-    var keyClass = await sessionHelper.getFlutterClass('Key');
+    var keyClass = await sessionHelper.getClass(Flutter.widgetsUri, 'Key');
     if (keyClass == null) {
       return null;
     }
+    var isNonNullable =
+        unitResult.libraryElement.featureSet.isEnabled(Feature.non_nullable);
     return keyClass.instantiate(
       typeArguments: const [],
-      nullabilitySuffix: NullabilitySuffix.question,
+      nullabilitySuffix:
+          isNonNullable ? NullabilitySuffix.question : NullabilitySuffix.star,
     );
   }
 
@@ -191,7 +200,7 @@ class AddKeyToConstructors extends ResolvedCorrectionProducer {
     }
     if (superParameters) {
       if (invocation != null && invocation.argumentList.arguments.isEmpty) {
-        var invocationIndex = initializers.indexOf(invocation);
+        final invocationIndex = initializers.indexOf(invocation);
         if (initializers.length == 1) {
           builder.addDeletion(
             range.endStart(

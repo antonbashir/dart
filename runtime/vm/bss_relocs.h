@@ -16,6 +16,7 @@ class BSS : public AllStatic {
   // portion of the BSS segment, so just the indices are shared, not the values
   // stored at the index.
   enum class Relocation : intptr_t {
+    InstructionsRelocatedAddress,
     DRT_GetFfiCallbackMetadata,  // TODO(https://dartbug.com/52579): Remove.
     DRT_ExitTemporaryIsolate,    // TODO(https://dartbug.com/52579): Remove.
     EndOfVmEntries,

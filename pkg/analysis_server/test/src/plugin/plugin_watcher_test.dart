@@ -8,6 +8,8 @@ import 'package:analysis_server/src/plugin/plugin_locator.dart';
 import 'package:analysis_server/src/plugin/plugin_manager.dart';
 import 'package:analysis_server/src/plugin/plugin_watcher.dart';
 import 'package:analyzer/dart/analysis/context_root.dart';
+import 'package:analyzer/src/dart/analysis/driver.dart';
+import 'package:analyzer/src/generated/engine.dart' show AnalysisOptionsImpl;
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -46,8 +48,7 @@ class PluginWatcherTest extends AbstractContextTest {
     );
 
     var driver = driverFor(testFile);
-    // TODO(pq): stop modifying options objects (https://github.com/dart-lang/sdk/issues/54045)
-    driver.getAnalysisOptionsForFile(testFile).enabledPluginNames = ['foo'];
+    _analysisOptionsImpl(driver).enabledPluginNames = ['foo'];
 
     expect(manager.addedContextRoots, isEmpty);
     watcher.addedDriver(driver);
@@ -70,10 +71,7 @@ class PluginWatcherTest extends AbstractContextTest {
 
   Future<void> test_addedDriver_missingPackage() async {
     var driver = driverFor(testFile);
-    // TODO(pq): stop modifying options objects (https://github.com/dart-lang/sdk/issues/54045)
-    driver.getAnalysisOptionsForFile(testFile).enabledPluginNames = [
-      'noSuchPackage'
-    ];
+    _analysisOptionsImpl(driver).enabledPluginNames = ['noSuchPackage'];
 
     watcher.addedDriver(driver);
     expect(manager.addedContextRoots, isEmpty);
@@ -93,6 +91,10 @@ class PluginWatcherTest extends AbstractContextTest {
     watcher.addedDriver(driver);
     watcher.removedDriver(driver);
     expect(manager.removedContextRoots, equals([contextRoot]));
+  }
+
+  AnalysisOptionsImpl _analysisOptionsImpl(AnalysisDriver driver) {
+    return driver.getAnalysisOptionsForFile(testFile) as AnalysisOptionsImpl;
   }
 
   /// Wait until the timer associated with the driver's FileSystemState is
@@ -117,6 +119,9 @@ class TestPluginManager implements PluginManager {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  void recordPluginFailure(String hostPackageName, String message) {}
 
   @override
   void removedContextRoot(ContextRoot contextRoot) {

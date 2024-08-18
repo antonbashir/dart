@@ -4,6 +4,8 @@
 
 import 'dart:async';
 
+import 'package:expect/expect.dart';
+
 late StreamSubscription sub;
 
 main() async {

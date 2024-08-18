@@ -4,6 +4,8 @@
 
 // ignore_for_file: omit_local_variable_types
 
+library js_ast.template;
+
 import 'nodes.dart';
 
 class TemplateManager {

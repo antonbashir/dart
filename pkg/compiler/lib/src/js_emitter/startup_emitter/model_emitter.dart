@@ -6,8 +6,6 @@ library dart2js.js_emitter.startup_emitter.model_emitter;
 
 import 'dart:convert' show JsonEncoder;
 
-import 'package:js_runtime/synced/array_flags.dart' show ArrayFlags;
-
 import 'package:js_runtime/synced/embedded_names.dart'
     show
         DEFERRED_INITIALIZED,
@@ -37,8 +35,6 @@ import 'package:js_shared/synced/embedded_names.dart'
         RTI_UNIVERSE,
         RtiUniverseFieldNames,
         TYPES;
-
-import 'package:js_shared/variance.dart';
 
 import 'package:js_ast/src/precedence.dart' as js_precedence;
 
@@ -351,7 +347,7 @@ class ModelEmitter {
     });
 
     if (_closedWorld.backendUsage.requiresPreamble &&
-        _options.compileForServer) {
+        !_closedWorld.backendUsage.isHtmlLoaded) {
       _reporter.reportHintMessage(NO_LOCATION_SPANNABLE, MessageKind.PREAMBLE);
     }
 
@@ -621,7 +617,8 @@ var ${startupMetricsGlobal} =
         });
     output.add('\n');
     output.add(js
-        .createCodeBuffer(epilogue, _options, _sourceInformationStrategy)
+        .createCodeBuffer(epilogue, _options,
+            _sourceInformationStrategy as JavaScriptSourceInformationStrategy)
         .getText());
     // Add semi-colon to separate from other fragments in the same part.
     output.add(';');

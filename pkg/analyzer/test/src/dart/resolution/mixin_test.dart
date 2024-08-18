@@ -22,14 +22,14 @@ mixin M {}
 class A extends Object with M {}
 ''');
 
-    var node = findNode.singleWithClause;
+    final node = findNode.singleWithClause;
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
   mixinTypes
     NamedType
       name: M
-      element: <testLibraryFragment>::@mixin::M
+      element: self::@mixin::M
       type: M
 ''');
   }
@@ -40,14 +40,14 @@ mixin M {}
 class A = Object with M;
 ''');
 
-    var node = findNode.singleWithClause;
+    final node = findNode.singleWithClause;
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
   mixinTypes
     NamedType
       name: M
-      element: <testLibraryFragment>::@mixin::M
+      element: self::@mixin::M
       type: M
 ''');
   }
@@ -132,7 +132,7 @@ mixin M<T> {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    final node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -144,7 +144,7 @@ FieldDeclaration
     variables
       VariableDeclaration
         name: f
-        declaredElement: <testLibraryFragment>::@mixin::M::@field::f
+        declaredElement: self::@mixin::M::@field::f
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -157,12 +157,12 @@ mixin M {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    final node = findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   propertyKeyword: get
   name: foo
@@ -172,7 +172,7 @@ MethodDeclaration
       literal: 0
       staticType: int
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@mixin::M::@getter::foo
+  declaredElement: self::@mixin::M::@getter::foo
     type: int Function()
 ''');
   }
@@ -185,18 +185,18 @@ class B {}
 mixin M implements A, B {}
 ''');
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: B
-      element: <testLibraryFragment>::@class::B
+      element: self::@class::B
       type: B
 ''');
   }
@@ -262,7 +262,7 @@ mixin M {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    final node = findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -277,7 +277,7 @@ MethodDeclaration
     block: Block
       leftBracket: {
       rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M::@method::foo
+  declaredElement: self::@mixin::M::@method::foo
     type: void Function()
 ''');
   }
@@ -292,15 +292,15 @@ class C<T> {}
 
 mixin M<T> on C<T> {}
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 26, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 26, 1),
     ]);
 
-    var node = findNode.functionExpressionInvocation('f()');
+    final node = findNode.functionExpressionInvocation('f()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: M<T> Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -321,20 +321,46 @@ class B {}
 mixin M on A, B {}
 ''');
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     NamedType
       name: B
-      element: <testLibraryFragment>::@class::B
+      element: self::@class::B
       type: B
 ''');
+  }
+
+  test_recursiveInterfaceInheritance_implements() async {
+    await assertErrorsInCode(r'''
+mixin A implements B {}
+mixin B implements A {}''', [
+      error(CompileTimeErrorCode.RECURSIVE_INTERFACE_INHERITANCE, 6, 1),
+      error(CompileTimeErrorCode.RECURSIVE_INTERFACE_INHERITANCE, 30, 1),
+    ]);
+  }
+
+  test_recursiveInterfaceInheritance_on() async {
+    await assertErrorsInCode(r'''
+mixin A on B {}
+mixin B on A {}''', [
+      error(CompileTimeErrorCode.RECURSIVE_INTERFACE_INHERITANCE, 6, 1),
+      error(CompileTimeErrorCode.RECURSIVE_INTERFACE_INHERITANCE, 22, 1),
+    ]);
+  }
+
+  test_recursiveInterfaceInheritanceOn() async {
+    await assertErrorsInCode(r'''
+mixin A on A {}
+''', [
+      error(CompileTimeErrorCode.RECURSIVE_INTERFACE_INHERITANCE_ON, 6, 1),
+    ]);
   }
 
   test_setter() async {
@@ -344,7 +370,7 @@ mixin M {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    final node = findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -358,17 +384,17 @@ MethodDeclaration
     parameter: SimpleFormalParameter
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: _
-      declaredElement: <testLibraryFragment>::@mixin::M::@setter::foo::@parameter::_
+      declaredElement: self::@mixin::M::@setter::foo::@parameter::_
         type: int
     rightParenthesis: )
   body: BlockFunctionBody
     block: Block
       leftBracket: {
       rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M::@setter::foo
+  declaredElement: self::@mixin::M::@setter::foo
     type: void Function(int)
 ''');
   }
@@ -408,7 +434,7 @@ mixin M on A {
 class X extends A with M {}
 ''');
 
-    var node = findNode.methodInvocation('foo(42)');
+    final node = findNode.methodInvocation('foo(42)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   target: SuperExpression
@@ -417,14 +443,14 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@method::foo::@parameter::x
+        parameter: self::@class::A::@method::foo::@parameter::x
         staticType: int
     rightParenthesis: )
   staticInvokeType: void Function(int)
@@ -463,11 +489,11 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@class::A::@setter::foo::@parameter::_
+    parameter: self::@class::A::@setter::foo::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::foo
+  writeElement: self::@class::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int

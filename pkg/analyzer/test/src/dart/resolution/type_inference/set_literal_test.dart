@@ -73,24 +73,36 @@ FutureOr<Set<int>> f() {
   }
 
   test_context_noTypeArgs_noElements_typeParameter() async {
+    var expectedErrors = expectedErrorsByNullability(
+      nullable: [
+        error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 38, 2),
+      ],
+      legacy: [
+        error(CompileTimeErrorCode.INVALID_CAST_LITERAL_SET, 38, 2),
+      ],
+    );
     await assertErrorsInCode('''
 class A<E extends Set<int>> {
   E a = {};
 }
-''', [
-      error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 38, 2),
-    ]);
+''', expectedErrors);
     assertType(setLiteral('{}'), 'Set<dynamic>');
   }
 
   test_context_noTypeArgs_noElements_typeParameter_dynamic() async {
+    var expectedErrors = expectedErrorsByNullability(
+      nullable: [
+        error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 42, 2),
+      ],
+      legacy: [
+        error(CompileTimeErrorCode.INVALID_CAST_LITERAL_SET, 42, 2),
+      ],
+    );
     await assertErrorsInCode('''
 class A<E extends Set<dynamic>> {
   E a = {};
 }
-''', [
-      error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 42, 2),
-    ]);
+''', expectedErrors);
     assertType(setLiteral('{}'), 'Set<dynamic>');
   }
 

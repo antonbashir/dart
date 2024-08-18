@@ -1,26 +1,24 @@
+// @dart = 2.9
 library test;
 
-T f<T>() => throw '';
+T f<T>() => null;
 
 class A {}
 
 class B extends A {
-  B operator *(B v) => throw '';
-  B operator +(C v) => throw '';
-  B operator -(int i) => throw '';
-  C operator &(A v) => throw '';
+  A operator +(C v) => null;
+  B operator *(B v) => null;
+  B operator -(int i) => null;
+  C operator &(A v) => null;
 }
 
 class Base {
-  B? member2;
   B member;
-  Base(this.member);
 }
 
 class C extends B {}
 
 class Test extends Base {
-  Test(B member) : super(member);
   void test() {}
 }
 

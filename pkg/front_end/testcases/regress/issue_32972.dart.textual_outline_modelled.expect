@@ -6,5 +6,4 @@ class Foo {
 }
 
 main() {}
-
 void foo<X>(X i) {}

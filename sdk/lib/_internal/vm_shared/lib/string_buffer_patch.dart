@@ -61,16 +61,12 @@ class StringBuffer {
   @patch
   int get length => _partsCodeUnits + _bufferPosition;
 
-  void _writeString(String str) {
-    _consumeBuffer();
-    _addPart(str);
-  }
-
   @patch
   void write(Object? obj) {
-    String str = obj.toString();
+    String str = "$obj";
     if (str.isEmpty) return;
-    _writeString(str);
+    _consumeBuffer();
+    _addPart(str);
   }
 
   @patch
@@ -116,7 +112,7 @@ class StringBuffer {
   @patch
   void writeln([Object? obj = ""]) {
     write(obj);
-    _writeString("\n");
+    write("\n");
   }
 
   /** Makes the buffer empty. */

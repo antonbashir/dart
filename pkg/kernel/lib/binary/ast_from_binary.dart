@@ -141,10 +141,6 @@ class BinaryBuilder {
   List<Uri> _sourceUriTable = const [];
   List<Constant> _constantTable = const <Constant>[];
   late List<CanonicalName> _linkTable;
-
-  /// Advanced use only. Coordinate with the kernel team.
-  List<CanonicalName> get linkTable => _linkTable;
-
   late Map<int, DartType?> _cachedSimpleInterfaceTypes;
   List<FunctionType?> _voidFunctionFunctionTypesCache = [
     null,
@@ -511,8 +507,7 @@ class BinaryBuilder {
   }
 
   Constant _readTypedefTearOffConstant() {
-    final List<StructuralParameter> parameters =
-        readAndPushStructuralParameterList();
+    final List<TypeParameter> parameters = readAndPushTypeParameterList();
     final TearOffConstant tearOffConstant =
         readConstantReference() as TearOffConstant;
     final List<DartType> types = readDartTypeList();
@@ -581,6 +576,17 @@ class BinaryBuilder {
     }
     return new List<String>.generate(length, (_) => readStringReference(),
         growable: useGrowableLists);
+  }
+
+  List<Reference> readNonNullReferenceList(List<Reference> result) {
+    int length = readUInt30();
+    if (!useGrowableLists && length == 0) {
+      return emptyListOfReference;
+    }
+    for (int i = 0; i < length; ++i) {
+      result.add(readNonNullMemberReference());
+    }
+    return result;
   }
 
   String? readStringOrNullIfEmpty() {
@@ -658,28 +664,6 @@ class BinaryBuilder {
     }
   }
 
-  /// Splits the input into views of the sub-components.
-  ///
-  /// Note that the result will not have the libraries filled out.
-  static List<SubComponentView> index(Uint8List bytes) {
-    BinaryBuilder bb = new BinaryBuilder(bytes);
-    bb._verifyComponentInitialBytes(resetOffset: true);
-    List<int> componentFileSizes = bb._indexComponents();
-    int componentFileIndex = 0;
-    List<SubComponentView> views = [];
-    while (bb._byteOffset < bb._bytes.length) {
-      int componentStartOffset = bb._byteOffset;
-      int componentFileSize = componentFileSizes[componentFileIndex];
-      bb._verifyComponentInitialBytes(resetOffset: true);
-      views.add(new SubComponentView(
-          const [], componentStartOffset, componentFileSize));
-
-      bb._byteOffset = componentStartOffset + componentFileSize;
-      ++componentFileIndex;
-    }
-    return views;
-  }
-
   /// Deserializes a kernel component and stores it in [component].
   ///
   /// When linking with a non-empty component, canonical names must have been
@@ -694,8 +678,23 @@ class BinaryBuilder {
       {bool checkCanonicalNames = false, bool createView = false}) {
     return Timeline.timeSync<List<SubComponentView>?>(
         "BinaryBuilder.readComponent", () {
-      _verifyComponentInitialBytes(resetOffset: true);
+      _checkEmptyInput();
 
+      // Check that we have a .dill file and it has the correct version before
+      // we start decoding it.  Otherwise we will fail for cryptic reasons.
+      int offset = _byteOffset;
+      int magic = readUint32();
+      if (magic != Tag.ComponentFile) {
+        throw ArgumentError('Not a .dill file (wrong magic number).');
+      }
+      int version = readUint32();
+      if (version != Tag.BinaryFormatVersion) {
+        throw InvalidKernelVersionError(filename, version);
+      }
+
+      _readAndVerifySdkHash();
+
+      _byteOffset = offset;
       List<int> componentFileSizes = _indexComponents();
       if (componentFileSizes.length > 1) {
         _disableLazyReading = true;
@@ -835,7 +834,18 @@ class BinaryBuilder {
 
   void _readOneComponentSource(Component component, int componentFileSize) {
     _componentStartOffset = _byteOffset;
-    _verifyComponentInitialBytes(resetOffset: false);
+
+    final int magic = readUint32();
+    if (magic != Tag.ComponentFile) {
+      throw ArgumentError('Not a .dill file (wrong magic number).');
+    }
+
+    final int formatVersion = readUint32();
+    if (formatVersion != Tag.BinaryFormatVersion) {
+      throw InvalidKernelVersionError(filename, formatVersion);
+    }
+
+    _readAndVerifySdkHash();
 
     // Read component index from the end of this ComponentFiles serialized data.
     _ComponentIndex index = _readComponentIndex(componentFileSize);
@@ -847,42 +857,22 @@ class BinaryBuilder {
     _byteOffset = _componentStartOffset + componentFileSize;
   }
 
-  /// Verify the initial bytes could correspond to a valid component.
-  ///
-  /// * Checks we have non-empty input.
-  /// * Verifies that the magic number is correct.
-  /// * Verifies the binary format version.
-  /// * Verifies the sdk hash.
-  ///
-  /// If [resetOffset] is true the [_byteOffset] will be reset to match what it
-  /// was before this method was called. If false it will be so we read passed
-  /// the sdk hash.
-  void _verifyComponentInitialBytes({required bool resetOffset}) {
-    // Check that we have a .dill file and it has the correct version before
-    // we start decoding it.  Otherwise we will fail for cryptic reasons.
-    _checkEmptyInput();
-    int offset = _byteOffset;
-    int magic = readUint32();
-    if (magic != Tag.ComponentFile) {
-      throw ArgumentError('Not a .dill file (wrong magic number).');
-    }
-    int version = readUint32();
-    if (version != Tag.BinaryFormatVersion) {
-      throw InvalidKernelVersionError(filename, version);
-    }
-
-    _readAndVerifySdkHash();
-
-    if (resetOffset) {
-      _byteOffset = offset;
-    }
-  }
-
   SubComponentView? _readOneComponent(
       Component component, int componentFileSize,
       {bool createView = false}) {
     _componentStartOffset = _byteOffset;
-    _verifyComponentInitialBytes(resetOffset: false);
+
+    final int magic = readUint32();
+    if (magic != Tag.ComponentFile) {
+      throw ArgumentError('Not a .dill file (wrong magic number).');
+    }
+
+    final int formatVersion = readUint32();
+    if (formatVersion != Tag.BinaryFormatVersion) {
+      throw InvalidKernelVersionError(filename, formatVersion);
+    }
+
+    _readAndVerifySdkHash();
 
     List<String>? problemsAsJson = readListOfStrings();
     if (problemsAsJson != null) {
@@ -1096,6 +1086,11 @@ class BinaryBuilder {
     return _currentLibrary!.dependencies[index];
   }
 
+  Reference? readNullableClassReference() {
+    CanonicalName? name = readNullableCanonicalNameReference();
+    return name?.reference;
+  }
+
   Reference readNonNullClassReference() {
     CanonicalName? name = readNullableCanonicalNameReference();
     if (name == null) {
@@ -1130,6 +1125,12 @@ class BinaryBuilder {
     return name.reference;
   }
 
+  Reference? readNullableInstanceMemberReference() {
+    Reference? reference = readNullableMemberReference();
+    readNullableMemberReference(); // Skip origin
+    return reference;
+  }
+
   Reference readNonNullInstanceMemberReference() {
     Reference reference = readNonNullMemberReference();
     readNullableMemberReference(); // Skip origin
@@ -1138,6 +1139,10 @@ class BinaryBuilder {
 
   Reference? getNullableMemberReferenceFromInt(int index) {
     return getNullableCanonicalNameReferenceFromInt(index)?.reference;
+  }
+
+  Reference? readNullableTypedefReference() {
+    return readNullableCanonicalNameReference()?.reference;
   }
 
   Reference readNonNullTypedefReference() {
@@ -2050,7 +2055,7 @@ class BinaryBuilder {
         returnType: returnType,
         asyncMarker: asyncMarker,
         dartAsyncMarker: dartAsyncMarker,
-        emittedValueType: futureValueType)
+        futureValueType: futureValueType)
       ..fileOffset = offset
       ..fileEndOffset = endOffset
       ..redirectingFactoryTarget = redirectingFactoryTarget;
@@ -2490,12 +2495,11 @@ class BinaryBuilder {
 
   Expression _readTypedefTearOff() {
     int offset = readOffset();
-    List<StructuralParameter> structuralParameters =
-        readAndPushStructuralParameterList();
+    List<TypeParameter> typeParameters = readAndPushTypeParameterList();
     Expression expression = readExpression();
     List<DartType> typeArguments = readDartTypeList();
-    typeParameterStack.length -= structuralParameters.length;
-    return new TypedefTearOff(structuralParameters, expression, typeArguments)
+    typeParameterStack.length -= typeParameters.length;
+    return new TypedefTearOff(typeParameters, expression, typeArguments)
       ..fileOffset = offset;
   }
 
@@ -2553,12 +2557,10 @@ class BinaryBuilder {
 
   Expression _readDynamicInvocation() {
     DynamicAccessKind kind = DynamicAccessKind.values[readByte()];
-    int flags = readByte();
     int offset = readOffset();
     return new DynamicInvocation(
         kind, readExpression(), readName(), readArguments())
-      ..fileOffset = offset
-      ..flags = flags;
+      ..fileOffset = offset;
   }
 
   Expression _readFunctionInvocation() {
@@ -2745,8 +2747,10 @@ class BinaryBuilder {
 
   Expression _readIsExpression() {
     int offset = readOffset();
+    int flags = readByte();
     return new IsExpression(readExpression(), readDartType())
-      ..fileOffset = offset;
+      ..fileOffset = offset
+      ..flags = flags;
   }
 
   Expression _readAsExpression() {
@@ -2826,10 +2830,7 @@ class BinaryBuilder {
 
   Expression _readThrow() {
     int offset = readOffset();
-    int flags = readByte();
-    return new Throw(readExpression())
-      ..fileOffset = offset
-      ..flags = flags;
+    return new Throw(readExpression())..fileOffset = offset;
   }
 
   Expression _readListLiteral() {
@@ -3435,6 +3436,17 @@ class BinaryBuilder {
     caseNode.isDefault = (flags & 0x1) != 0;
     caseNode.hasLabel = (flags & 0x2) != 0;
     caseNode.body = readStatement()..parent = caseNode;
+  }
+
+  List<Statement> readStatementList() {
+    int length = readUInt30();
+    if (!useGrowableLists && length == 0) {
+      // When lists don't have to be growable anyway, we might as well use an
+      // almost constant one for the empty list.
+      return emptyListOfStatement;
+    }
+    return new List<Statement>.generate(length, (_) => readStatement(),
+        growable: useGrowableLists);
   }
 
   List<Statement> readStatementListAlwaysGrowable() {
@@ -4054,7 +4066,7 @@ class BinaryBuilder {
     if (variance == TypeParameter.legacyCovariantSerializationMarker) {
       node.variance = null;
     } else {
-      node.variance = new Variance.fromEncoding(variance);
+      node.variance = variance;
     }
     node.name = readStringOrNullIfEmpty();
     node.bound = readDartType();
@@ -4073,7 +4085,7 @@ class BinaryBuilder {
     if (variance == TypeParameter.legacyCovariantSerializationMarker) {
       node.variance = null;
     } else {
-      node.variance = new Variance.fromEncoding(variance);
+      node.variance = variance;
     }
     node.name = readStringOrNullIfEmpty();
     node.bound = readDartType();
@@ -4224,6 +4236,20 @@ class BinaryBuilderWithMetadata extends BinaryBuilder implements BinarySource {
 
     _byteOffset = savedOffset;
     return metadata;
+  }
+
+  @override
+  void enterScope({List<TypeParameter>? typeParameters}) {
+    if (typeParameters != null) {
+      typeParameterStack.addAll(typeParameters);
+    }
+  }
+
+  @override
+  void leaveScope({List<TypeParameter>? typeParameters}) {
+    if (typeParameters != null) {
+      typeParameterStack.length -= typeParameters.length;
+    }
   }
 
   @override
@@ -4408,6 +4434,12 @@ class BinaryBuilderWithMetadata extends BinaryBuilder implements BinarySource {
     final Name result = super.readName();
     return _associateMetadata(result, nodeOffset);
   }
+
+  @override
+  int get currentOffset => _byteOffset;
+
+  @override
+  List<int> get bytes => _bytes;
 }
 
 /// Deserialized MetadataMapping corresponding to the given metadata repository.
@@ -4436,5 +4468,14 @@ NonNullableByDefaultCompiledMode mergeCompilationModeOrThrow(
     return b;
   }
 
+  if (a == NonNullableByDefaultCompiledMode.Agnostic) {
+    return b;
+  }
+  if (b == NonNullableByDefaultCompiledMode.Agnostic) {
+    // Keep as-is.
+    return a;
+  }
+
+  // Mixed mode where agnostic isn't involved.
   throw new CompilationModeError("Mixed compilation mode found: $a and $b");
 }

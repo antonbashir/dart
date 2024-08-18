@@ -54,7 +54,10 @@ _convertJsonToDart(json, reviver(Object? key, Object? value)) {
       return e;
     }
 
-    if (JS<bool>('bool', 'Array.isArray(#)', e)) {
+    // This test is needed to avoid identifying '{"__proto__":[]}' as an Array.
+    // TODO(sra): Replace this test with cheaper '#.constructor === Array' when
+    // bug 621 below is fixed.
+    if (JS<bool>('bool', 'Object.getPrototypeOf(#) === Array.prototype', e)) {
       // In-place update of the elements since JS Array is a Dart List.
       for (int i = 0; i < JS<int>('int', '#.length', e); i++) {
         // Use JS indexing to avoid range checks.  We know this is the only
@@ -96,7 +99,11 @@ _convertJsonToDartLazy(object) {
     return object;
   }
 
-  if (JS<bool>('bool', '!Array.isArray(#)', object)) {
+  // This test is needed to avoid identifying '{"__proto__":[]}' as an array.
+  // TODO(sra): Replace this test with cheaper '#.constructor === Array' when
+  // bug https://code.google.com/p/v8/issues/detail?id=621 is fixed.
+  if (JS<bool>(
+      'bool', 'Object.getPrototypeOf(#) !== Array.prototype', object)) {
     return _JsonMap(object);
   }
 
@@ -263,7 +270,7 @@ class _JsonMap extends MapBase<String, dynamic> {
     assert(!_isUpgraded);
     List? keys = _data;
     if (keys == null) {
-      keys = _data = JSArray<String>.typed(_getPropertyNames(_original));
+      keys = _data = new JSArray<String>.typed(_getPropertyNames(_original));
     }
     return JS('JSExtendableArray', '#', keys);
   }

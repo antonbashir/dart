@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -12,15 +12,8 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 class CreateFunction extends ResolvedCorrectionProducer {
   String _functionName = '';
 
-  CreateFunction({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_functionName];
+  List<Object> get fixArguments => [_functionName];
 
   @override
   FixKind get fixKind => DartFixKind.CREATE_FUNCTION;
@@ -48,7 +41,8 @@ class CreateFunction extends ResolvedCorrectionProducer {
     }
     insertOffset = enclosingMember.end;
     sourcePrefix = '$eol$eol';
-    // Build method source.
+    utils.targetClassElement = null;
+    // build method source
     await builder.addDartFileEdit(file, (builder) {
       builder.addInsertion(insertOffset, (builder) {
         builder.write(sourcePrefix);

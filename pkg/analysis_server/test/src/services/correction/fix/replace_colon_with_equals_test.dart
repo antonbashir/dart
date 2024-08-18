@@ -21,7 +21,7 @@ class ReplaceColonWithEqualsDeprecatedTest extends FixProcessorTest {
   FixKind get kind => DartFixKind.REPLACE_COLON_WITH_EQUALS;
 
   @override
-  String get testPackageLanguageVersion => '2.19';
+  String get latestLanguageVersion => '2.19';
 
   Future<void> test_defaultFormalParameter() async {
     await resolveTestCode('''
@@ -50,15 +50,6 @@ class A {
 class B extends A {
   B({super.a = ''});
 }
-''');
-  }
-
-  Future<void> test_wrongSeparatorForPositionalParameter() async {
-    await resolveTestCode('''
-void f(int a, [int b : 0]) {}
-''');
-    await assertHasFix('''
-void f(int a, [int b = 0]) {}
 ''');
   }
 }

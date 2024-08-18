@@ -14,7 +14,7 @@ import '../testing.dart' show Chain;
 
 import 'analyze.dart' show Analyze;
 
-import 'suite.dart' show Suite;
+import 'suite.dart' show Dart, Suite;
 
 /// Records properties of a test root. The information is read from a JSON file.
 ///
@@ -52,6 +52,12 @@ class TestRoot {
   Analyze get analyze => suites.last as Analyze;
 
   List<Uri> get urisToAnalyze => analyze.uris;
+
+  List<RegExp> get excludedFromAnalysis => analyze.exclude;
+
+  Iterable<Dart> get dartSuites {
+    return List<Dart>.from(suites.whereType<Dart>());
+  }
 
   Iterable<Chain> get toolChains {
     return List<Chain>.from(suites.whereType<Chain>());

@@ -13,7 +13,5 @@ class Baz {
 }
 
 const int foo = 42;
-
 main() {}
-
 typedef hest_t({@foo named});

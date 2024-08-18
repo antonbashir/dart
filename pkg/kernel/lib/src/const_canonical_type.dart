@@ -9,23 +9,25 @@ import 'replacement_visitor.dart';
 
 class _ConstCanonicalTypeVisitor extends ReplacementVisitor {
   final CoreTypes coreTypes;
+  final bool isNonNullableByDefault;
 
-  _ConstCanonicalTypeVisitor(this.coreTypes);
+  _ConstCanonicalTypeVisitor(this.coreTypes,
+      {required this.isNonNullableByDefault});
 
   @override
-  DartType? visitDynamicType(DynamicType node, Variance variance) {
+  DartType? visitDynamicType(DynamicType node, int variance) {
     // CONST_CANONICAL_TYPE(T) = T if T is dynamic, void, Null
     return null;
   }
 
   @override
-  DartType? visitVoidType(VoidType node, Variance variance) {
+  DartType? visitVoidType(VoidType node, int variance) {
     // CONST_CANONICAL_TYPE(T) = T if T is dynamic, void, Null
     return null;
   }
 
   @override
-  DartType? visitNullType(NullType node, Variance variance) {
+  DartType? visitNullType(NullType node, int variance) {
     // CONST_CANONICAL_TYPE(T) = T if T is dynamic, void, Null
     return null;
   }
@@ -49,7 +51,10 @@ class _ConstCanonicalTypeVisitor extends ReplacementVisitor {
 ///
 /// The algorithm is specified at
 /// https://github.com/dart-lang/language/blob/master/accepted/future-releases/nnbd/feature-specification.md#constant-instances
-DartType? computeConstCanonicalType(DartType type, CoreTypes coreTypes) {
+DartType? computeConstCanonicalType(DartType type, CoreTypes coreTypes,
+    {required bool isNonNullableByDefault}) {
   return type.accept1(
-      new _ConstCanonicalTypeVisitor(coreTypes), Variance.covariant);
+      new _ConstCanonicalTypeVisitor(coreTypes,
+          isNonNullableByDefault: isNonNullableByDefault),
+      Variance.covariant);
 }

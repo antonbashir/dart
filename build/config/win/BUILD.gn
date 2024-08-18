@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/win/visual_studio_version.gni")
-import("//build/toolchain/rbe.gni")
 
 # Compiler setup for the Windows SDK. Applied to all targets.
 config("sdk") {
@@ -102,8 +101,17 @@ config("common_linker_setup") {
 # Subsystem -------------------------------------------------------------------
 
 # This is appended to the subsystem to specify a minimum version.
-if (current_cpu == "x86" || current_cpu == "x64" || current_cpu == "arm" ||
-    current_cpu == "arm64") {
+if (current_cpu == "x86") {
+  # 5.01 = Windows XP.
+  subsystem_version_suffix = ",5.01"
+} else if (current_cpu == "x64") {
+  # The number after the comma is the minimum required OS version.
+  # 5.02 = Windows Server 2003.
+  subsystem_version_suffix = ",5.02"
+} else if (current_cpu == "arm") {
+  subsystem_version_suffix = ",6.02"
+} else if (current_cpu == "arm64") {
+  # Windows ARM64 requires Windows 10.
   subsystem_version_suffix = ",10.0"
 } else {
   assert(false, "Unknown current_cpu: $current_cpu")
@@ -180,72 +188,4 @@ config("lean_and_mean") {
 
 config("nominmax") {
   defines = [ "NOMINMAX" ]
-}
-
-# Relative paths --------------------------------------------------------------
-
-config("relative_paths") {
-  # Make builds independent of absolute file path.  The file names
-  # embedded in debugging information will be expressed as relative to
-  # the build directory, e.g. "../.." for an "out/subdir" under //.
-  # This is consistent with the file names in __FILE__ expansions
-  # (e.g. in assertion messages), which the compiler doesn't provide a
-  # way to remap.  That way source file names in logging and
-  # symbolization can all be treated the same way.  This won't go well
-  # if root_build_dir is not a subdirectory //, but there isn't a better
-  # option to keep all source file name references uniformly relative to
-  # a single root.
-  if (use_rbe) {
-    absolute_path = "/b/f/w/"
-  } else {
-    absolute_path = rebase_path("//")
-  }
-  relative_path = ""
-  cflags = [
-    # This makes sure that debug information uses relative paths.
-    "-fdebug-prefix-map=$absolute_path=$relative_path",
-
-    # Remove absolute paths from the debug information.
-    "-fdebug-compilation-dir=",
-    "-fcoverage-compilation-dir=",
-
-    # This makes sure that include directories in the toolchain are
-    # represented as relative to the build directory (because that's how
-    # we invoke the compiler), rather than absolute.  This can affect
-    # __FILE__ expansions (e.g. assertions in system headers).  We
-    # normally run a compiler that's someplace within the source tree
-    # (//buildtools/...), so its absolute installation path will have a
-    # prefix matching absolute_path and hence be mapped to relative_path
-    # in the debugging information, so this should actually be
-    # superfluous for purposes of the debugging information.
-    "-no-canonical-prefixes",
-  ]
-}
-
-if (is_clang) {
-  build_timestamp =
-      exec_script("//tools/make_coff_timestamp.py", [], "trim string")
-}
-
-config("deterministic_builds") {
-  if (is_clang) {
-    # /Brepro lets the compiler not write the mtime field in the .obj output.
-    # link.exe /incremental relies on this field to work correctly, but lld
-    # never looks at this timestamp, so it's safe to pass this flag with
-    # lld and get more deterministic compiler output in return.
-    # In LTO builds, the compiler doesn't write .obj files containing mtimes,
-    # so /Brepro is ignored there.
-    cflags = [ "/Brepro" ]
-
-    # lld defaults to writing the current time in the pe/coff header.
-    # For build reproducibility, pass an explicit timestamp. See
-    # build/compute_build_timestamp.py for how the timestamp is chosen.
-    # (link.exe also writes the current time, but it doesn't have a flag to
-    # override that behavior.)
-    ldflags = [ "/TIMESTAMP:" + build_timestamp ]
-
-    # Use a fake fixed base directory for paths in the pdb to make the pdb
-    # output fully deterministic and independent of the build directory.
-    ldflags += [ "/PDBSourcePath:o:\fake\prefix" ]
-  }
 }

@@ -238,6 +238,8 @@ intptr_t SocketBase::GetStdioHandle(intptr_t num) {
   }
   StdHandle* std_handle = StdHandle::Stdin(handle);
   std_handle->Retain();
+  std_handle->MarkDoesNotSupportOverlappedIO();
+  std_handle->EnsureInitialized(EventHandler::delegate());
   return reinterpret_cast<intptr_t>(std_handle);
 }
 
@@ -305,12 +307,12 @@ bool SocketBase::ReverseLookup(const RawAddr& addr,
 
 bool SocketBase::ParseAddress(int type, const char* address, RawAddr* addr) {
   int result;
-  const auto system_address = Utf8ToWideChar(address);
+  Utf8ToWideScope system_address(address);
   if (type == SocketAddress::TYPE_IPV4) {
-    result = InetPton(AF_INET, system_address.get(), &addr->in.sin_addr);
+    result = InetPton(AF_INET, system_address.wide(), &addr->in.sin_addr);
   } else {
     ASSERT(type == SocketAddress::TYPE_IPV6);
-    result = InetPton(AF_INET6, system_address.get(), &addr->in6.sin6_addr);
+    result = InetPton(AF_INET6, system_address.wide(), &addr->in6.sin6_addr);
   }
   return result == 1;
 }

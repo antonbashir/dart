@@ -169,7 +169,7 @@ class ModifyParameters extends Change<_Data> {
       var argumentValue = parameter.argumentValue;
       if (argumentValue != null) {
         switch (parameter.reference) {
-          case NamedFormalParameterReference(:var name):
+          case NamedFormalParameterReference(:final name):
             builder.write(name);
             builder.write(': ');
           case PositionalFormalParameterReference():

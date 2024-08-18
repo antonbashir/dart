@@ -20,5 +20,4 @@ class B<E> extends A<E> implements M {
 }
 
 foo() {}
-
 main() {}

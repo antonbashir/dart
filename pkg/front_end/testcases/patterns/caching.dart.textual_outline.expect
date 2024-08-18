@@ -6,15 +6,9 @@ class Class {
 }
 
 int ifCase(o) {}
-
 int ifCaseElse(o) {}
-
 int switchStatement(o) {}
-
 int switchExpression(o) {}
-
 test(expected, value) {}
-
 main() {}
-
 expect(expected, actual) {}

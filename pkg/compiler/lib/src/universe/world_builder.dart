@@ -8,11 +8,12 @@ import '../common/elements.dart';
 import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart';
-import '../js_backend/native_data.dart';
+import '../ir/static_type.dart';
+import '../js_backend/native_data.dart' show NativeBasicData;
 import '../world.dart' show World;
-import 'resolution_world_builder.dart' show ResolutionWorldBuilder;
 import 'selector.dart' show Selector;
 import 'use.dart' show DynamicUse, StaticUse;
+import 'resolution_world_builder.dart' show ResolutionWorldBuilder;
 
 /// The combined constraints on receivers all the dynamic call sites of the same
 /// selector.
@@ -84,16 +85,6 @@ abstract class SelectorConstraintsStrategy {
   bool appliedUnnamed(DynamicUse dynamicUse, MemberEntity member, World world);
 }
 
-ClassEntity defaultReceiverClass(CommonElements commonElements,
-    NativeBasicData nativeBasicData, ClassEntity cls) {
-  if (nativeBasicData.isJsInteropClass(cls)) {
-    // We can not tell js-interop classes apart, so we just assume the
-    // receiver could be any js-interop class.
-    return commonElements.jsLegacyJavaScriptObjectClass;
-  }
-  return cls;
-}
-
 /// Open world strategy that constrains instance member access to subtypes of
 /// the static type of the receiver.
 ///
@@ -103,81 +94,49 @@ class StrongModeWorldStrategy implements SelectorConstraintsStrategy {
 
   @override
   StrongModeWorldConstraints createSelectorConstraints(
-      Selector selector, covariant ClassEntity? initialConstraint) {
+      Selector selector, Object? initialConstraint) {
     return StrongModeWorldConstraints()
-      ..addReceiverConstraint(initialConstraint);
+      ..addReceiverConstraint(initialConstraint as StrongModeConstraint?);
   }
 
   @override
   bool appliedUnnamed(DynamicUse dynamicUse, MemberEntity member,
       covariant ResolutionWorldBuilder world) {
     Selector selector = dynamicUse.selector;
-    final constraint = dynamicUse.receiverConstraint as ClassEntity?;
+    final constraint = dynamicUse.receiverConstraint as StrongModeConstraint?;
     return selector.appliesUnnamed(member) &&
         (constraint == null ||
-            world.isInheritedInClass(member.enclosingClass!, constraint));
+            constraint.canHit(member, selector.memberName, world));
   }
 }
 
 class StrongModeWorldConstraints extends UniverseSelectorConstraints {
   bool isAll = false;
-  late Set<ClassEntity> _constraints = {};
-
-  late final Set<ClassEntity> _canHitSet = {};
+  late Set<StrongModeConstraint> _constraints = {};
 
   @override
-  bool canHit(
-      MemberEntity member, Name name, covariant ResolutionWorldBuilder world) {
+  bool canHit(MemberEntity element, Name name, World world) {
     if (isAll) return true;
-    final memberClass = member.enclosingClass!;
-
-    // If memberClass has no subclasses (and no mixin applications) then
-    // member is not inherited into any other class. Therefore we can just check
-    // if memberClass itself is in one of the _constraints subtype cones.
-    if (world.classHierarchyBuilder.hasNoSubclasses(memberClass)) {
-      final cachedResult = _canHitSet.contains(memberClass);
-      if (cachedResult) return true;
-
-      // If memberClass isn't instantiated then member isn't live and can't hit.
-      if (!world.classHierarchyBuilder.isInstantiated(memberClass)) {
-        return false;
-      }
-
-      // Check if memberClass itself is in the constraint set.
-      if (_constraints.contains(memberClass)) {
-        _canHitSet.add(memberClass);
-        return true;
-      }
-
-      // Check if memberClass is included in the constraint set via one of its
-      // supertypes. (i.e. it's in a type cone contained in _constraints).
-      bool anyHit = false;
-      world.elementEnvironment.forEachSupertype(memberClass, (interfaceType) {
-        anyHit |= _constraints.contains(interfaceType.element);
-      });
-
-      if (anyHit) _canHitSet.add(memberClass);
-      return anyHit;
-    }
-
-    return _constraints
-        .any((constraint) => world.isInheritedIn(member, constraint));
+    return _constraints.any((constraint) =>
+        constraint.canHit(element, name, world as ResolutionWorldBuilder));
   }
 
   @override
   bool needsNoSuchMethodHandling(Selector selector, World world) {
-    return isAll || _constraints.isNotEmpty;
+    if (isAll) return true;
+    return _constraints.any(
+        (constraint) => constraint.needsNoSuchMethodHandling(selector, world));
   }
 
   @override
-  bool addReceiverConstraint(ClassEntity? constraint) {
+  bool addReceiverConstraint(StrongModeConstraint? constraint) {
     if (isAll) return false;
-    if (constraint == null) {
+    if (constraint?.cls == null) {
       isAll = true;
       _constraints = const {};
       return true;
     }
-    return _constraints.add(constraint);
+    return _constraints.add(constraint!);
   }
 
   @override
@@ -187,9 +146,54 @@ class StrongModeWorldConstraints extends UniverseSelectorConstraints {
     } else if (_constraints.isEmpty) {
       return '<none>';
     } else {
-      return '<${_constraints.join(',')}>';
+      return '<${_constraints.map((c) => c.cls).join(',')}>';
     }
   }
+}
+
+class StrongModeConstraint {
+  final ClassEntity cls;
+  final ClassRelation relation;
+
+  factory StrongModeConstraint(CommonElements commonElements,
+      NativeBasicData nativeBasicData, ClassEntity cls,
+      [ClassRelation relation = ClassRelation.subtype]) {
+    if (nativeBasicData.isJsInteropClass(cls)) {
+      // We can not tell js-interop classes apart, so we just assume the
+      // receiver could be any js-interop class.
+      cls = commonElements.jsLegacyJavaScriptObjectClass;
+      relation = ClassRelation.subtype;
+    }
+    return StrongModeConstraint.internal(cls, relation);
+  }
+
+  const StrongModeConstraint.internal(this.cls, this.relation);
+
+  bool needsNoSuchMethodHandling(Selector selector, World world) => true;
+
+  bool canHit(MemberEntity element, Name name, ResolutionWorldBuilder world) {
+    return world.isInheritedIn(element, cls, relation);
+  }
+
+  bool get isExact => relation == ClassRelation.exact;
+
+  bool get isThis => relation == ClassRelation.thisExpression;
+
+  String get className => cls.name;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StrongModeConstraint &&
+        cls == other.cls &&
+        relation == other.relation;
+  }
+
+  @override
+  int get hashCode => cls.hashCode * 13;
+
+  @override
+  String toString() => 'StrongModeConstraint($cls,$relation)';
 }
 
 abstract class WorldBuilder {

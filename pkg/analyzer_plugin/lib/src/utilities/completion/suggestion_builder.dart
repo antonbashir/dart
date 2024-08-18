@@ -105,7 +105,7 @@ class SuggestionBuilderImpl implements SuggestionBuilder {
           .toList();
       suggestion.parameterTypes =
           element.parameters.map((ParameterElement parameter) {
-        return parameter.type.getDisplayString();
+        return parameter.type.getDisplayString(withNullability: false);
       }).toList();
 
       var requiredParameters = element.parameters
@@ -128,16 +128,16 @@ class SuggestionBuilderImpl implements SuggestionBuilder {
       if (element.kind == ElementKind.SETTER) {
         return null;
       } else {
-        return element.returnType.getDisplayString();
+        return element.returnType.getDisplayString(withNullability: false);
       }
     } else if (element is VariableElement) {
       var type = element.type;
-      return type.getDisplayString();
+      return type.getDisplayString(withNullability: false);
     } else if (element is TypeAliasElement) {
       var aliasedElement = element.aliasedElement;
       if (aliasedElement is GenericFunctionTypeElement) {
         var returnType = aliasedElement.returnType;
-        return returnType.getDisplayString();
+        return returnType.getDisplayString(withNullability: false);
       } else {
         return null;
       }

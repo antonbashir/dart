@@ -21,5 +21,4 @@ extension Extension1<X extends A<X>?> on A<X> {
 extension ext2<X extends A<Null>?> on A<X> {}
 
 main() {}
-
 test() {}

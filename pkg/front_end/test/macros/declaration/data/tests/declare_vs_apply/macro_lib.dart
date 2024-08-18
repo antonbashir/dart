@@ -7,7 +7,7 @@
  macrosAreAvailable
 */
 
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 import 'macro_lib_dep.dart';
 
 macro class Macro1 extends MacroBase implements Macro {

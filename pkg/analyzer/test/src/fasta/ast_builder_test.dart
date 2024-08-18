@@ -17,56 +17,6 @@ main() {
 
 @reflectiveTest
 class AstBuilderTest extends ParserDiagnosticsTest {
-  void test_class_abstract_final_base() {
-    var parseResult = parseStringWithErrors(r'''
-/// text
-abstract final base class A {}
-''');
-    parseResult.assertErrors([
-      error(ParserErrorCode.ABSTRACT_FINAL_BASE_CLASS, 18, 10),
-    ]);
-
-    var node = parseResult.findNode.classDeclaration('class A {}');
-    assertParsedNodeText(node, r'''
-ClassDeclaration
-  documentationComment: Comment
-    tokens
-      /// text
-  abstractKeyword: abstract
-  baseKeyword: base
-  finalKeyword: final
-  classKeyword: class
-  name: A
-  leftBracket: {
-  rightBracket: }
-''');
-  }
-
-  void test_class_abstract_final_interface() {
-    var parseResult = parseStringWithErrors(r'''
-/// text
-abstract final interface class A {}
-''');
-    parseResult.assertErrors([
-      error(ParserErrorCode.ABSTRACT_FINAL_INTERFACE_CLASS, 18, 15),
-    ]);
-
-    var node = parseResult.findNode.classDeclaration('class A {}');
-    assertParsedNodeText(node, r'''
-ClassDeclaration
-  documentationComment: Comment
-    tokens
-      /// text
-  abstractKeyword: abstract
-  interfaceKeyword: interface
-  finalKeyword: final
-  classKeyword: class
-  name: A
-  leftBracket: {
-  rightBracket: }
-''');
-  }
-
   void test_class_abstract_sealed() {
     var parseResult = parseStringWithErrors(r'''
 /// text
@@ -118,7 +68,7 @@ ClassDeclaration
 ''');
     parseResult.assertNoErrors();
 
-    var node = parseResult.findNode.classDeclaration('class A');
+    final node = parseResult.findNode.classDeclaration('class A');
     assertParsedNodeText(
         node,
         r'''
@@ -149,7 +99,7 @@ abstract class A {}
 ''');
     parseResult.assertNoErrors();
 
-    var node = parseResult.findNode.classDeclaration('class A');
+    final node = parseResult.findNode.classDeclaration('class A');
     assertParsedNodeText(
         node,
         r'''
@@ -199,7 +149,7 @@ abstract class A {}
 ''');
     parseResult.assertNoErrors();
 
-    var node = parseResult.findNode.classDeclaration('class A');
+    final node = parseResult.findNode.classDeclaration('class A');
     assertParsedNodeText(
         node,
         r'''
@@ -234,7 +184,6 @@ ClassDeclaration
     codeBlocks
       MdCodeBlock
         infoString: <empty>
-        type: CodeBlockType.fenced
         lines
           MdCodeBlockLine
             offset: 178
@@ -311,7 +260,7 @@ class C extends (int, int) {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_EXTENDS, 16, 10),
     ]);
 
-    var node = parseResult.findNode.classDeclaration('class C');
+    final node = parseResult.findNode.classDeclaration('class C');
     assertParsedNodeText(
         node,
         r'''
@@ -373,7 +322,7 @@ class C implements A, (int, int), B {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_IMPLEMENTS, 22, 10),
     ]);
 
-    var node = parseResult.findNode.classDeclaration('class C');
+    final node = parseResult.findNode.classDeclaration('class C');
     assertParsedNodeText(
         node,
         r'''
@@ -549,7 +498,7 @@ class C with A, (int, int), B {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_WITH, 16, 10),
     ]);
 
-    var node = parseResult.findNode.classDeclaration('class C');
+    final node = parseResult.findNode.classDeclaration('class C');
     assertParsedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -714,7 +663,7 @@ mixin M {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_IMPLEMENTS, 38, 10),
     ]);
 
-    var node = parseResult.findNode.classTypeAlias('class C');
+    final node = parseResult.findNode.classTypeAlias('class C');
     assertParsedNodeText(
         node,
         r'''
@@ -807,7 +756,7 @@ class C = Object with A, (int, int), B;
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_WITH, 25, 10),
     ]);
 
-    var node = parseResult.findNode.classTypeAlias('class C');
+    final node = parseResult.findNode.classTypeAlias('class C');
     assertParsedNodeText(
         node,
         r'''
@@ -1257,25 +1206,24 @@ extension E on (int, int) {}
 ''');
     parseResult.assertNoErrors();
 
-    var node = parseResult.findNode.extensionDeclaration('extension E');
+    final node = parseResult.findNode.extensionDeclaration('extension E');
     assertParsedNodeText(
         node,
         r'''
 ExtensionDeclaration
   extensionKeyword: extension @0
   name: E @10
-  onClause: ExtensionOnClause
-    onKeyword: on @12
-    extendedType: RecordTypeAnnotation
-      leftParenthesis: ( @15
-      positionalFields
-        RecordTypeAnnotationPositionalField
-          type: NamedType
-            name: int @16
-        RecordTypeAnnotationPositionalField
-          type: NamedType
-            name: int @21
-      rightParenthesis: ) @24
+  onKeyword: on @12
+  extendedType: RecordTypeAnnotation
+    leftParenthesis: ( @15
+    positionalFields
+      RecordTypeAnnotationPositionalField
+        type: NamedType
+          name: int @16
+      RecordTypeAnnotationPositionalField
+        type: NamedType
+          name: int @21
+    rightParenthesis: ) @24
   leftBracket: { @26
   rightBracket: } @27
 ''',
@@ -1302,6 +1250,23 @@ MethodDeclaration
     expression: IntegerLiteral
       literal: 0
     semicolon: ;
+''');
+  }
+
+  void test_library_augment() {
+    var parseResult = parseStringWithErrors(r'''
+library augment 'a.dart';
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.libraryAugmentation('library');
+    assertParsedNodeText(node, r'''
+LibraryAugmentationDirective
+  libraryKeyword: library
+  augmentKeyword: augment
+  uri: SimpleStringLiteral
+    literal: 'a.dart'
+  semicolon: ;
 ''');
   }
 
@@ -1348,7 +1313,7 @@ base mixin M {}
 ''');
     parseResult.assertNoErrors();
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(node, r'''
 MixinDeclaration
   documentationComment: Comment
@@ -1370,7 +1335,7 @@ final mixin M {}
       error(ParserErrorCode.FINAL_MIXIN, 0, 5),
     ]);
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
@@ -1389,14 +1354,14 @@ mixin M on C implements A, (int, int), B {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_IMPLEMENTS, 38, 10),
     ]);
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(
         node,
         r'''
 MixinDeclaration
   mixinKeyword: mixin @11
   name: M @17
-  onClause: MixinOnClause
+  onClause: OnClause
     onKeyword: on @19
     superclassConstraints
       NamedType
@@ -1422,7 +1387,7 @@ interface mixin M {}
       error(ParserErrorCode.INTERFACE_MIXIN, 0, 9),
     ]);
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
@@ -1440,14 +1405,14 @@ mixin M on A, (int, int), B {}
       error(ParserErrorCode.EXPECTED_NAMED_TYPE_ON, 14, 10),
     ]);
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(
         node,
         r'''
 MixinDeclaration
   mixinKeyword: mixin @0
   name: M @6
-  onClause: MixinOnClause
+  onClause: OnClause
     onKeyword: on @8
     superclassConstraints
       NamedType
@@ -1468,7 +1433,7 @@ sealed mixin M {}
       error(ParserErrorCode.SEALED_MIXIN, 0, 6),
     ]);
 
-    var node = parseResult.findNode.mixinDeclaration('mixin M');
+    final node = parseResult.findNode.mixinDeclaration('mixin M');
     assertParsedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin

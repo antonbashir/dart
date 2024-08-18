@@ -7,10 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_provider.dart';
+// ignore: implementation_imports
+import 'package:analyzer/src/dart/element/type.dart' show InvalidTypeImpl;
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use collection literals when possible.';
 
@@ -58,15 +59,19 @@ void printHashMap(LinkedHashMap map) => printMap(map);
 ''';
 
 class PreferCollectionLiterals extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_collection_literals', 'Unnecessary constructor invocation.',
+      correctionMessage: 'Try using a collection literal.');
+
   PreferCollectionLiterals()
       : super(
             name: 'prefer_collection_literals',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_collection_literals;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -93,7 +98,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     // Maps.
     if (node.isHashMap) {
-      var approximateContextType = node.approximateContextType;
+      var approximateContextType = _approximateContextType(node);
       if (approximateContextType is InvalidType) return;
       if (approximateContextType.isTypeHashMap) return;
     }
@@ -106,7 +111,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     // Sets.
     if (node.isHashSet) {
-      var approximateContextType = node.approximateContextType;
+      var approximateContextType = _approximateContextType(node);
       if (approximateContextType is InvalidType) return;
       if (approximateContextType.isTypeHashSet) return;
     }
@@ -137,6 +142,131 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (node.target is ListLiteral) {
       rule.reportLint(node);
     }
+  }
+
+  /// A very, very rough approximation of the context type of [node].
+  ///
+  /// This approximation will never be accurate for some expressions.
+  DartType? _approximateContextType(Expression node) {
+    var ancestor = node.parent;
+    var ancestorChild = node;
+    while (ancestor != null) {
+      if (ancestor is ParenthesizedExpression) {
+        ancestorChild = ancestor;
+        ancestor = ancestor.parent;
+      } else if (ancestor is CascadeExpression &&
+          ancestorChild == ancestor.target) {
+        ancestorChild = ancestor;
+        ancestor = ancestor.parent;
+      } else {
+        break;
+      }
+    }
+
+    switch (ancestor) {
+      // TODO(srawlins): Handle [AwaitExpression], [BinaryExpression],
+      // [CascadeExpression], [SwitchExpressionCase], likely others. Or move
+      // everything here to an analysis phase which has the actual context type.
+      case ArgumentList():
+        // Allow `function(LinkedHashSet())` for `function(LinkedHashSet mySet)`
+        // and `function(LinkedHashMap())` for `function(LinkedHashMap myMap)`.
+        return node.staticParameterElement?.type ?? InvalidTypeImpl.instance;
+      case AssignmentExpression():
+        // Allow `x = LinkedHashMap()`.
+        return ancestor.staticType;
+      case ConditionalExpression():
+        return ancestor.staticType;
+      case ConstructorFieldInitializer():
+        var fieldElement = ancestor.fieldName.staticElement;
+        return (fieldElement is VariableElement) ? fieldElement.type : null;
+      case ExpressionFunctionBody(parent: var function)
+          when function is FunctionExpression:
+        // Allow `<int, LinkedHashSet>{}.putIfAbsent(3, () => LinkedHashSet())`
+        // and `<int, LinkedHashMap>{}.putIfAbsent(3, () => LinkedHashMap())`.
+        var functionParent = function.parent;
+        if (functionParent is FunctionDeclaration) {
+          return functionParent.returnType?.type;
+        }
+        var functionType = _approximateContextType(function);
+        return functionType is FunctionType ? functionType.returnType : null;
+      case ExpressionFunctionBody(parent: var function)
+          when function is FunctionDeclaration:
+        return function.returnType?.type;
+      case ExpressionFunctionBody(parent: var function)
+          when function is MethodDeclaration:
+        return function.returnType?.type;
+      case NamedExpression():
+        // Allow `void f({required LinkedHashSet<Foo> s})`.
+        return ancestor.staticParameterElement?.type ??
+            InvalidTypeImpl.instance;
+      case ReturnStatement():
+        return _expectedReturnType(
+          ancestor.thisOrAncestorOfType<FunctionBody>(),
+        );
+      case VariableDeclaration(parent: VariableDeclarationList(:var type)):
+        // Allow `LinkedHashSet<int> s = node` and
+        // `LinkedHashMap<int> s = node`.
+        return type?.type;
+      case YieldStatement():
+        return _expectedReturnType(
+          ancestor.thisOrAncestorOfType<FunctionBody>(),
+        );
+    }
+
+    return null;
+  }
+
+  /// Extracts the expected type for return statements or yield statements.
+  ///
+  /// For example, for an asynchronous [body] in a function with a declared
+  /// [returnType] of `Future<int>`, this returns `int`. (Note: it would be more
+  /// accurate to use `FutureOr<int>` and an assignability check, but `int` is
+  /// an approximation that works for now; this should probably be revisited.)
+  DartType? _expectedReturnableOrYieldableType(
+    DartType? returnType,
+    FunctionBody body,
+  ) {
+    if (returnType == null || returnType is InvalidType) return null;
+    if (body.isAsynchronous) {
+      if (!body.isGenerator && returnType.isDartAsyncFuture) {
+        var typeArgs = (returnType as InterfaceType).typeArguments;
+        return typeArgs.isEmpty ? null : typeArgs.first;
+      }
+      if (body.isGenerator && returnType.isDartAsyncStream) {
+        var typeArgs = (returnType as InterfaceType).typeArguments;
+        return typeArgs.isEmpty ? null : typeArgs.first;
+      }
+    } else {
+      if (body.isGenerator && returnType.isDartCoreIterable) {
+        var typeArgs = (returnType as InterfaceType).typeArguments;
+        return typeArgs.isEmpty ? null : typeArgs.first;
+      }
+    }
+    return returnType;
+  }
+
+  /// Attempts to calculate the expected return type of the function represented
+  /// by [body], accounting for an approximation of the function's context type,
+  /// in the case of a function literal.
+  DartType? _expectedReturnType(FunctionBody? body) {
+    if (body == null) return null;
+    var parent = body.parent;
+    if (parent is FunctionExpression) {
+      var grandparent = parent.parent;
+      if (grandparent is FunctionDeclaration) {
+        var returnType = grandparent.declaredElement?.returnType;
+        return _expectedReturnableOrYieldableType(returnType, body);
+      }
+      var functionType = _approximateContextType(parent);
+      if (functionType is! FunctionType) return null;
+      var returnType = functionType.returnType;
+      return _expectedReturnableOrYieldableType(returnType, body);
+    }
+    if (parent is MethodDeclaration) {
+      var returnType = parent.declaredElement?.returnType;
+      return _expectedReturnableOrYieldableType(returnType, body);
+    }
+    return null;
   }
 }
 

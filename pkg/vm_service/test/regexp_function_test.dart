@@ -62,6 +62,8 @@ final tests = <IsolateTest>[
         case {
           '_oneByteFunction': {'type': '@Function'},
           '_twoByteFunction': {'type': '@Function'},
+          '_externalOneByteFunction': {'type': '@Function'},
+          '_externalTwoByteFunction': {'type': '@Function'},
         }) {
       // Running with compiled regexp.
     } else {

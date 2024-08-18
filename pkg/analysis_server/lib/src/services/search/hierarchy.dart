@@ -80,55 +80,29 @@ List<Element> getExtensionMembers(ExtensionElement extension, [String? name]) {
   return members;
 }
 
-/// Return all implementations of the given [member], including in its
-/// superclasses and their subclasses.
-///
-/// If [includeParametersForFields] is true and [member] is a [FieldElement],
-/// any [FieldFormalParameterElement]s for the member will also be provided
-/// (otherwise, the parameter set will be empty in the result).
+/// Return all implementations of the given [member], its superclasses, and
+/// their subclasses.
 Future<Set<ClassMemberElement>> getHierarchyMembers(
-  SearchEngine searchEngine,
-  ClassMemberElement member, {
-  OperationPerformanceImpl? performance,
-}) async {
-  var (members, _) = await getHierarchyMembersAndParameters(
-      searchEngine, member,
-      performance: performance);
-  return members;
-}
-
-/// Return all implementations of the given [member], including in its
-/// superclasses and their subclasses.
-///
-/// If [includeParametersForFields] is true and [member] is a [FieldElement],
-/// any [FieldFormalParameterElement]s for the member will also be provided
-/// (otherwise, the parameter set will be empty in the result).
-Future<(Set<ClassMemberElement>, Set<ParameterElement>)>
-    getHierarchyMembersAndParameters(
-  SearchEngine searchEngine,
-  ClassMemberElement member, {
-  OperationPerformanceImpl? performance,
-  bool includeParametersForFields = false,
-}) async {
+    SearchEngine searchEngine, ClassMemberElement member,
+    {OperationPerformanceImpl? performance}) async {
   performance ??= OperationPerformanceImpl('<root>');
-  Set<ClassMemberElement> members = HashSet<ClassMemberElement>();
-  Set<ParameterElement> parameters = HashSet<ParameterElement>();
+  Set<ClassMemberElement> result = HashSet<ClassMemberElement>();
   // extension member
   var enclosingElement = member.enclosingElement;
   if (enclosingElement is ExtensionElement) {
-    members.add(member);
-    return (members, parameters);
+    result.add(member);
+    return Future.value(result);
   }
   // static elements
   if (member.isStatic || member is ConstructorElement) {
-    members.add(member);
-    return (members, parameters);
+    result.add(member);
+    return result;
   }
   // method, field, etc
   if (enclosingElement is InterfaceElement) {
     var name = member.displayName;
 
-    var superElementsToSearch = enclosingElement.allSupertypes
+    final superElementsToSearch = enclosingElement.allSupertypes
         .map((superType) => superType.element)
         .where((interface) {
       return member.isPublic || interface.library == member.library;
@@ -159,25 +133,13 @@ Future<(Set<ClassMemberElement>, Set<ParameterElement>)>
       var subClassMembers = getChildren(subClass, name);
       for (var member in subClassMembers) {
         if (member is ClassMemberElement) {
-          members.add(member);
-        }
-      }
-
-      if (includeParametersForFields && member is FieldElement) {
-        for (var constructor in subClass.constructors) {
-          for (var parameter in constructor.parameters) {
-            if (parameter is FieldFormalParameterElement &&
-                parameter.field == member) {
-              parameters.add(parameter);
-            }
-          }
+          result.add(member);
         }
       }
     }
-    return (members, parameters);
   }
 
-  return (members, parameters);
+  return result;
 }
 
 /// If the [element] is a named parameter in a [MethodElement], return all
@@ -229,7 +191,7 @@ List<Element> getMembers(InterfaceElement clazz) {
 Element getSyntheticAccessorVariable(Element element) {
   if (element is PropertyAccessorElement) {
     if (element.isSynthetic) {
-      return element.variable2 ?? element;
+      return element.variable;
     }
   }
   return element;

@@ -17,8 +17,6 @@ abstract class Section implements Serializable {
       serializeContents(contents);
       s.writeByte(id);
       s.writeUnsigned(contents.data.length);
-      s.sourceMapSerializer
-          .copyMappings(contents.sourceMapSerializer, s.offset);
       s.writeData(contents, watchPoints);
     }
   }
@@ -35,43 +33,34 @@ class TypeSection extends Section {
 
   TypeSection(this.types, super.watchPoints);
 
-  List<List<ir.DefType>> get recursionGroups => types.recursionGroups;
+  List<ir.DefType> get defTypes => types.defined;
 
   @override
   int get id => 1;
 
   @override
-  bool get isNotEmpty => recursionGroups.isNotEmpty;
+  bool get isNotEmpty => defTypes.isNotEmpty;
 
   @override
   void serializeContents(Serializer s) {
-    s.writeUnsigned(types.recursionGroups.length);
+    s.writeUnsigned(types.recursionGroupSplits.length + 1);
     int typeIndex = 0;
-
-    // Set all the indices first since types can be referenced before they are
-    // serialized.
-    for (final group in recursionGroups) {
-      assert(group.isNotEmpty, 'Empty groups are not allowed.');
-
-      for (final type in group) {
-        type.index = typeIndex++;
-      }
-    }
-    for (final group in recursionGroups) {
+    for (int split
+        in types.recursionGroupSplits.followedBy([defTypes.length])) {
       s.writeByte(0x4E); // -0x32
-      s.writeUnsigned(group.length);
-      for (final type in group) {
+      s.writeUnsigned(split - typeIndex);
+      for (; typeIndex < split; typeIndex++) {
+        ir.DefType defType = defTypes[typeIndex];
+        assert(defType.superType == null || defType.superType!.index < split,
+            "Type '$defType' has a supertype in a later recursion group");
         assert(
-            type.superType == null || type.superType!.index <= group.last.index,
-            "Type '$type' has a supertype in a later recursion group");
-        assert(
-            type.constituentTypes
+            defType.constituentTypes
                 .whereType<ir.RefType>()
                 .map((t) => t.heapType)
                 .whereType<ir.DefType>()
-                .every((d) => d.index <= group.last.index),
-            "Type '$type' depends on a type in a later recursion group");
-        type.serializeDefinition(s);
+                .every((d) => d.index < split),
+            "Type '$defType' depends on a type in a later recursion group");
+        defType.serializeDefinition(s);
       }
     }
   }
@@ -149,7 +138,7 @@ class MemorySection extends Section {
 }
 
 class TagSection extends Section {
-  final List<ir.DefinedTag> tags;
+  final List<ir.Tag> tags;
 
   TagSection(this.tags, super.watchPoints);
 
@@ -245,25 +234,23 @@ class _Element implements Serializable {
 }
 
 class ElementSection extends Section {
-  final List<ir.DefinedTable> definedTables;
-  final List<ir.ImportedTable> importedTables;
+  final List<ir.DefinedTable> tables;
 
-  ElementSection(this.definedTables, this.importedTables, super.watchPoints);
+  ElementSection(this.tables, super.watchPoints);
 
   @override
   int get id => 9;
 
   @override
   bool get isNotEmpty =>
-      definedTables.any((table) => table.elements.any((e) => e != null)) ||
-      importedTables.any((table) => table.setElements.isNotEmpty);
+      tables.any((table) => table.elements.any((e) => e != null));
 
   @override
   void serializeContents(Serializer s) {
     // Group nonempty element entries into contiguous stretches and serialize
     // each stretch as an element.
     List<_Element> elements = [];
-    for (final table in definedTables) {
+    for (final table in tables) {
       _Element? current;
       for (int i = 0; i < table.elements.length; i++) {
         ir.BaseFunction? function = table.elements[i];
@@ -276,23 +263,6 @@ class ElementSection extends Section {
         } else {
           current = null;
         }
-      }
-    }
-    for (final table in importedTables) {
-      final entries = [...table.setElements.entries]
-        ..sort((a, b) => a.value.compareTo(b.value));
-
-      _Element? current;
-      int lastIndex = -2;
-      for (final entry in entries) {
-        final function = entry.key;
-        final index = entry.value;
-        if (index != lastIndex + 1) {
-          current = _Element(table, index);
-          elements.add(current);
-        }
-        current!.entries.add(function);
-        lastIndex = index;
       }
     }
     s.writeList(elements);
@@ -360,15 +330,11 @@ abstract class CustomSection extends Section {
 class NameSection extends CustomSection {
   final List<ir.BaseFunction> functions;
   final List<ir.DefType> types;
-  final List<ir.Global> globals;
   final int functionNameCount;
   final int typeNameCount;
-  final int globalNameCount;
 
-  NameSection(this.functions, this.types, this.globals, super.watchPoints,
-      {required this.functionNameCount,
-      required this.typeNameCount,
-      required this.globalNameCount});
+  NameSection(this.functions, this.types, super.watchPoints,
+      {required this.functionNameCount, required this.typeNameCount});
 
   @override
   bool get isNotEmpty => functionNameCount > 0 || typeNameCount > 0;
@@ -397,41 +363,11 @@ class NameSection extends CustomSection {
       }
     }
 
-    final globalNameSubsection = Serializer();
-    globalNameSubsection.writeUnsigned(globalNameCount);
-    for (int i = 0; i < globals.length; i++) {
-      final globalName = globals[i].globalName;
-      if (globalName != null) {
-        globalNameSubsection.writeUnsigned(i);
-        globalNameSubsection.writeName(globalName);
-      }
-    }
-
     s.writeByte(1); // Function names subsection
     s.writeUnsigned(functionNameSubsection.data.length);
     s.writeData(functionNameSubsection);
-
     s.writeByte(4); // Type names subsection
     s.writeUnsigned(typeNameSubsection.data.length);
     s.writeData(typeNameSubsection);
-
-    s.writeByte(7); // Global names subsection
-    s.writeUnsigned(globalNameSubsection.data.length);
-    s.writeData(globalNameSubsection);
-  }
-}
-
-class SourceMapSection extends CustomSection {
-  final String url;
-
-  SourceMapSection(this.url) : super([]);
-
-  @override
-  bool get isNotEmpty => true;
-
-  @override
-  void serializeContents(Serializer s) {
-    s.writeName("sourceMappingURL");
-    s.writeName(url);
   }
 }

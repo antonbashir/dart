@@ -7,7 +7,5 @@ class Class {
 }
 
 test(o) {}
-
 main() {}
-
 expect(expected, actual) {}

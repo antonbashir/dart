@@ -8,8 +8,7 @@ part of "core_patch.dart";
 /// forwarder and returns the index of the value of that named parameter.
 /// Returns `null` if the name is not in the list.
 @pragma("wasm:entry-point")
-int? _getNamedParameterIndex(
-    WasmArray<Object?> namedArguments, Symbol paramName) {
+int? _getNamedParameterIndex(List<Object?> namedArguments, Symbol paramName) {
   for (int i = 0; i < namedArguments.length; i += 2) {
     if (identical(namedArguments[i], paramName)) {
       return i + 1;
@@ -18,32 +17,10 @@ int? _getNamedParameterIndex(
   return null;
 }
 
-/// Converts type arguments passed to a dynamic forwarder to a
-/// list that can be passed to `Invocation` constructors.
-@pragma("wasm:entry-point")
-List<_Type?> _typeArgumentsToList(WasmArray<_Type> typeArgs) {
-  final result = <_Type>[];
-  for (int i = 0; i < typeArgs.length; ++i) {
-    result.add(typeArgs[i]);
-  }
-  return result;
-}
-
-/// Converts a positional parameter list passed to a dynamic forwarder to a
-/// list that can be passed to `Invocation` constructors.
-@pragma("wasm:entry-point")
-List<Object?> _positionalParametersToList(WasmArray<Object?> positional) {
-  final result = <Object?>[];
-  for (int i = 0; i < positional.length; ++i) {
-    result.add(positional[i]);
-  }
-  return result;
-}
-
 /// Converts a named parameter list passed to a dynamic forwarder to a map that
 /// can be passed to `Invocation` constructors.
 @pragma("wasm:entry-point")
-Map<Symbol, Object?> _namedParametersToMap(WasmArray<Object?> namedArguments) {
+Map<Symbol, Object?> _namedParameterListToMap(List<Object?> namedArguments) {
   final Map<Symbol, Object?> map = {};
   for (int i = 0; i < namedArguments.length; i += 2) {
     map[namedArguments[i] as Symbol] = namedArguments[i + 1];
@@ -56,10 +33,9 @@ Map<Symbol, Object?> _namedParametersToMap(WasmArray<Object?> namedArguments) {
 ///
 /// This is the opposite of [_namedParameterListToMap].
 @pragma("wasm:entry-point")
-WasmArray<Object?> _namedParameterMapToArray(
-    Map<Symbol, Object?>? namedArguments) {
+List<Object?> _namedParameterMapToList(Map<Symbol, Object?>? namedArguments) {
   if (namedArguments == null || namedArguments.isEmpty) {
-    return const WasmArray.literal([]);
+    return const [];
   }
 
   final List<MapEntry<Symbol, Object?>> entries = namedArguments.entries
@@ -67,12 +43,12 @@ WasmArray<Object?> _namedParameterMapToArray(
     ..sort((entry1, entry2) =>
         _symbolToString(entry1.key).compareTo(_symbolToString(entry2.key)));
 
-  final WasmArray<Object?> result = WasmArray<Object?>(2 * entries.length);
+  final List<Object?> list = [];
 
-  for (int i = 0; i < entries.length; ++i) {
-    result[2 * i] = entries[i].key;
-    result[2 * i + 1] = entries[i].value;
+  for (final entry in entries) {
+    list.add(entry.key);
+    list.add(entry.value);
   }
 
-  return result;
+  return list;
 }

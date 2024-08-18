@@ -13,32 +13,32 @@ import "dart:typed_data" show TypedData;
 class Isolate {
   @patch
   static Isolate get current {
-    throw UnsupportedError("Isolate.current");
+    throw new UnsupportedError("Isolate.current");
   }
 
   @patch
   String? get debugName {
-    throw UnsupportedError("Isolate.debugName");
+    throw new UnsupportedError("Isolate.debugName");
   }
 
   @patch
   static Future<Uri?> get packageConfig {
-    throw UnsupportedError("Isolate.packageConfig");
+    throw new UnsupportedError("Isolate.packageConfig");
   }
 
   @patch
   static Uri? get packageConfigSync {
-    throw UnsupportedError("Isolate.packageConfigSync");
+    throw new UnsupportedError("Isolate.packageConfigSync");
   }
 
   @patch
   static Future<Uri?> resolvePackageUri(Uri packageUri) {
-    throw UnsupportedError("Isolate.resolvePackageUri");
+    throw new UnsupportedError("Isolate.resolvePackageUri");
   }
 
   @patch
   static Uri? resolvePackageUriSync(Uri packageUri) {
-    throw UnsupportedError("Isolate.resolvePackageUriSync");
+    throw new UnsupportedError("Isolate.resolvePackageUriSync");
   }
 
   @patch
@@ -48,7 +48,7 @@ class Isolate {
       SendPort? onExit,
       SendPort? onError,
       String? debugName}) {
-    throw UnsupportedError("Isolate.spawn");
+    throw new UnsupportedError("Isolate.spawn");
   }
 
   @patch
@@ -63,58 +63,58 @@ class Isolate {
       Uri? packageConfig,
       bool automaticPackageResolution = false,
       String? debugName}) {
-    throw UnsupportedError("Isolate.spawnUri");
+    throw new UnsupportedError("Isolate.spawnUri");
   }
 
   @patch
   void _pause(Capability resumeCapability) {
-    throw UnsupportedError("Isolate._pause");
+    throw new UnsupportedError("Isolate._pause");
   }
 
   @patch
   void resume(Capability resumeCapability) {
-    throw UnsupportedError("Isolate.resume");
+    throw new UnsupportedError("Isolate.resume");
   }
 
   @patch
   void addOnExitListener(SendPort responsePort, {Object? response}) {
-    throw UnsupportedError("Isolate.addOnExitListener");
+    throw new UnsupportedError("Isolate.addOnExitListener");
   }
 
   @patch
   void removeOnExitListener(SendPort responsePort) {
-    throw UnsupportedError("Isolate.removeOnExitListener");
+    throw new UnsupportedError("Isolate.removeOnExitListener");
   }
 
   @patch
   void setErrorsFatal(bool errorsAreFatal) {
-    throw UnsupportedError("Isolate.setErrorsFatal");
+    throw new UnsupportedError("Isolate.setErrorsFatal");
   }
 
   @patch
   void kill({int priority = beforeNextEvent}) {
-    throw UnsupportedError("Isolate.kill");
+    throw new UnsupportedError("Isolate.kill");
   }
 
   @patch
   void ping(SendPort responsePort,
       {Object? response, int priority = immediate}) {
-    throw UnsupportedError("Isolate.ping");
+    throw new UnsupportedError("Isolate.ping");
   }
 
   @patch
   void addErrorListener(SendPort port) {
-    throw UnsupportedError("Isolate.addErrorListener");
+    throw new UnsupportedError("Isolate.addErrorListener");
   }
 
   @patch
   void removeErrorListener(SendPort port) {
-    throw UnsupportedError("Isolate.removeErrorListener");
+    throw new UnsupportedError("Isolate.removeErrorListener");
   }
 
   @patch
   static Never exit([SendPort? finalMessagePort, Object? message]) {
-    throw UnsupportedError("Isolate.exit");
+    throw new UnsupportedError("Isolate.exit");
   }
 }
 
@@ -125,7 +125,7 @@ class ReceivePort {
 
   @patch
   factory ReceivePort.fromRawReceivePort(RawReceivePort rawPort) {
-    throw UnsupportedError('new ReceivePort.fromRawReceivePort');
+    throw new UnsupportedError('new ReceivePort.fromRawReceivePort');
   }
 }
 
@@ -136,19 +136,19 @@ class _ReceivePortImpl extends Stream implements ReceivePort {
       {Function? onError,
       void Function()? onDone,
       bool? cancelOnError = true}) {
-    throw UnsupportedError("ReceivePort.listen");
+    throw new UnsupportedError("ReceivePort.listen");
   }
 
   void close() {}
 
-  SendPort get sendPort => throw UnsupportedError("ReceivePort.sendPort");
+  SendPort get sendPort => throw new UnsupportedError("ReceivePort.sendPort");
 }
 
 @patch
 class RawReceivePort {
   @patch
   factory RawReceivePort([Function? handler, String debugName = '']) {
-    throw UnsupportedError('new RawReceivePort');
+    throw new UnsupportedError('new RawReceivePort');
   }
 }
 
@@ -156,7 +156,7 @@ class RawReceivePort {
 class Capability {
   @patch
   factory Capability() {
-    throw UnsupportedError('new Capability');
+    throw new UnsupportedError('new Capability');
   }
 }
 
@@ -164,6 +164,6 @@ class Capability {
 abstract class TransferableTypedData {
   @patch
   factory TransferableTypedData.fromList(List<TypedData> list) {
-    throw UnsupportedError('TransferableTypedData.fromList');
+    throw new UnsupportedError('TransferableTypedData.fromList');
   }
 }

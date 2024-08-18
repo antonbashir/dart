@@ -3,11 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-
 import 'package:kernel/ast.dart' as ir;
 import 'package:kernel/binary/ast_from_binary.dart' as ir;
 import 'package:kernel/binary/ast_to_binary.dart' as ir;
-
 import '../../compiler_api.dart' as api;
 import '../commandline_options.dart' show Flags;
 import '../common/codegen.dart';
@@ -23,8 +21,8 @@ import '../inferrer/types.dart';
 import '../io/source_information.dart';
 import '../js_backend/codegen_inputs.dart';
 import '../js_backend/inferred_data.dart';
-import '../js_model/js_strategy.dart';
 import '../js_model/js_world.dart';
+import '../js_model/js_strategy.dart';
 import '../js_model/locals.dart';
 import '../options.dart';
 import 'deferrable.dart';
@@ -72,7 +70,7 @@ class SerializationTask extends CompilerTask {
   Future<ir.Component> deserializeComponent() async {
     return measureIoSubtask('deserialize dill', () async {
       _reporter.log('Reading dill from ${_options.inputDillUri}');
-      final dillInput = await _provider.readFromUri(_options.inputDillUri,
+      final dillInput = await _provider.readFromUri(_options.inputDillUri!,
           inputKind: api.InputKind.binary);
       ir.Component component = ir.Component();
       // Not using growable lists saves memory.
@@ -112,7 +110,8 @@ class SerializationTask extends CompilerTask {
   void serializeClosedWorld(
       JClosedWorld closedWorld, SerializationIndices indices) {
     measureSubtask('serialize closed world', () {
-      final outputUri = _options.dataUriForStage(CompilerStage.closedWorld);
+      final outputUri =
+          _options.dataOutputUriForStage(Dart2JSStage.closedWorld);
       _reporter.log('Writing closed world to $outputUri');
       api.BinaryOutputSink dataOutput =
           _outputProvider.createBinarySink(outputUri);
@@ -128,7 +127,7 @@ class SerializationTask extends CompilerTask {
       bool useDeferredSourceReads,
       SerializationIndices indices) async {
     return await measureIoSubtask('deserialize closed world', () async {
-      final uri = _options.dataUriForStage(CompilerStage.closedWorld);
+      final uri = _options.dataInputUriForStage(Dart2JSStage.closedWorld);
       _reporter.log('Reading data from $uri');
       api.Input<List<int>> dataInput =
           await _provider.readFromUri(uri, inputKind: api.InputKind.binary);
@@ -147,7 +146,8 @@ class SerializationTask extends CompilerTask {
   void serializeGlobalTypeInference(
       GlobalTypeInferenceResults results, SerializationIndices indices) {
     measureSubtask('serialize data', () {
-      final outputUri = _options.dataUriForStage(CompilerStage.globalInference);
+      final outputUri =
+          _options.dataOutputUriForStage(Dart2JSStage.globalInference);
       _reporter.log('Writing data to $outputUri');
       api.BinaryOutputSink dataOutput =
           _outputProvider.createBinarySink(outputUri);
@@ -165,7 +165,7 @@ class SerializationTask extends CompilerTask {
       bool useDeferredSourceReads,
       SerializationIndices indices) async {
     return await measureIoSubtask('deserialize data', () async {
-      final uri = _options.dataUriForStage(CompilerStage.globalInference);
+      final uri = _options.dataInputUriForStage(Dart2JSStage.globalInference);
       _reporter.log('Reading data from $uri');
       api.Input<List<int>> dataInput =
           await _provider.readFromUri(uri, inputKind: api.InputKind.binary);
@@ -198,14 +198,14 @@ class SerializationTask extends CompilerTask {
     final lazyMemberBodies =
         backendStrategy.forEachCodegenMember((MemberEntity member) {
       if (index % shards == shard) {
-        final (result: codegenResult, isGenerated: _) =
-            codegenResults.getCodegenResults(member);
+        CodegenResult codegenResult = codegenResults.getCodegenResults(member);
         results[member] = codegenResult;
       }
       index++;
     });
     measureSubtask('serialize codegen', () {
-      final outputUri = _options.dataUriForStage(CompilerStage.codegenSharded);
+      final outputUri =
+          _options.dataOutputUriForStage(Dart2JSStage.codegenSharded);
       Uri uri = Uri.parse('$outputUri$shard');
       api.BinaryOutputSink dataOutput = _outputProvider.createBinarySink(uri);
       DataSinkWriter sink =
@@ -231,7 +231,7 @@ class SerializationTask extends CompilerTask {
     Map<MemberEntity, Deferrable<CodegenResult>> results = {};
     for (int shard = 0; shard < shards; shard++) {
       Uri uri = Uri.parse(
-          '${_options.dataUriForStage(CompilerStage.codegenSharded)}$shard');
+          '${_options.dataInputUriForStage(Dart2JSStage.codegenSharded)}$shard');
       await measureIoSubtask('deserialize codegen', () async {
         _reporter.log('Reading data from ${uri}');
         api.Input<List<int>> dataInput =
@@ -243,8 +243,8 @@ class SerializationTask extends CompilerTask {
         dataInput.release();
       });
     }
-    return DeserializedCodegenResults(codegenInputs,
-        DeferrableValueMap(results), backendStrategy.functionCompiler);
+    return DeserializedCodegenResults(
+        codegenInputs, DeferrableValueMap(results));
   }
 
   void _deserializeCodegenInput(
@@ -276,22 +276,17 @@ class SerializationTask extends CompilerTask {
     results.addAll(codegenResults);
   }
 
-  DataSinkWriter dataSinkWriterForDumpInfo(
-      AbstractValueDomain abstractValueDomain, SerializationIndices indices) {
-    final outputUri = _options.dataUriForStage(CompilerStage.dumpInfo);
+  void serializeDumpInfoProgramData(
+      JsBackendStrategy backendStrategy,
+      DumpInfoProgramData dumpInfoProgramData,
+      AbstractValueDomain abstractValueDomain,
+      SerializationIndices indices) {
+    final outputUri = _options.dumpInfoWriteUri!;
     api.BinaryOutputSink dataOutput =
         _outputProvider.createBinarySink(outputUri);
     final sink = DataSinkWriter(BinaryDataSink(dataOutput), _options, indices);
     sink.registerAbstractValueDomain(abstractValueDomain);
-    return sink;
-  }
-
-  void serializeDumpInfoProgramData(
-      DataSinkWriter sink,
-      JsBackendStrategy backendStrategy,
-      DumpInfoProgramData dumpInfoProgramData,
-      DumpInfoJsAstRegistry dumpInfoRegistry) {
-    dumpInfoProgramData.writeToDataSink(sink, dumpInfoRegistry);
+    dumpInfoProgramData.writeToDataSink(sink);
     sink.close();
   }
 
@@ -300,19 +295,16 @@ class SerializationTask extends CompilerTask {
       AbstractValueDomain abstractValueDomain,
       OutputUnitData outputUnitData,
       SerializationIndices indices) async {
-    final inputUri = _options.dataUriForStage(CompilerStage.dumpInfo);
+    final inputUri = _options.dumpInfoReadUri!;
     final dataInput =
         await _provider.readFromUri(inputUri, inputKind: api.InputKind.binary);
     final source = DataSourceReader(
         BinaryDataSource(dataInput.data, stringInterner: _stringInterner),
         _options,
-        indices,
-        // This must use a deferred strategy so that we can delay reading the
-        // registered impacts until we are able to read the count of them.
-        useDeferredStrategy: true);
+        indices);
     backendStrategy.prepareCodegenReader(source);
     source.registerAbstractValueDomain(abstractValueDomain);
-    return DumpInfoProgramData.readFromDataSource(source,
+    return DumpInfoProgramData.readFromDataSource(source, outputUnitData,
         includeCodeText: !_options.useDumpInfoBinaryFormat);
   }
 }

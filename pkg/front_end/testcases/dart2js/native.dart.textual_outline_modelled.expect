@@ -1,3 +1,4 @@
+// @dart = 2.7
 import 'dart:_js_helper';
 
 class Class {
@@ -11,7 +12,7 @@ class Class {
   external static externalStaticMethod();
   external static get externalStaticGetter;
   external static set externalStaticSetter(_);
-  factory Class.fact() => null as dynamic;
+  factory Class.fact() => null;
   factory Class.nativeFact() native;
   get instanceGetter => null;
   get nativeInstanceGetter native;
@@ -41,7 +42,7 @@ class NativeClass {
   external static externalStaticMethod();
   external static get externalStaticGetter;
   external static set externalStaticSetter(_);
-  factory NativeClass.fact() => null as dynamic;
+  factory NativeClass.fact() => null;
   factory NativeClass.nativeFact() native;
   get instanceGetter => null;
   get nativeInstanceGetter native;
@@ -61,23 +62,13 @@ class NativeClass {
 }
 
 external externalTopLevelFunction();
-
 external get externalTopLevelGetter;
-
 external set externalTopLevelSetter(_);
-
 get nativeTopLevelGetter native;
-
 get topLevelGetter => null;
-
 main() {}
-
 nativeTopLevelFunction() native;
-
 set nativeTopLevelSetter(_) native;
-
 set topLevelSetter(_) {}
-
 topLevelFunction() {}
-
 var topLevelField;

@@ -2,10 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
+
 forInDynamicList(dynamic list) {
   /*current: dynamic*/
   for (var e in
-      /*as: Iterable<dynamic>!*/
+      /*cfe.as: Iterable<dynamic>*/
+      /*cfe:nnbd.as: Iterable<dynamic>!*/
       /*dynamic*/ list) {
     /*dynamic*/ e;
   }
@@ -14,28 +18,32 @@ forInDynamicList(dynamic list) {
 forInDynamic(List<dynamic> list) {
   /*current: dynamic*/
   for (var e in
-      /*List<dynamic>!*/
-      list) {
+      /*cfe.List<dynamic>*/
+      /*cfe:nnbd.List<dynamic>!*/ list) {
     /*dynamic*/ e;
   }
 }
 
 forInInt(List<int> list) {
-  /*current: int!*/
+  /*cfe.current: int*/
+  /*cfe:nnbd.current: int!*/
   for (var e in
-      /*List<int!>!*/
-      list) {
-    /*int!*/
+      /*cfe.List<int>*/
+      /*cfe:nnbd.List<int!>!*/ list) {
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     e;
   }
 }
 
 forInIntToNum(List<int> list) {
-  /*current: int!*/
+  /*cfe.current: int*/
+  /*cfe:nnbd.current: int!*/
   for (num e in
-      /*List<int!>!*/
-      list) {
-    /*num!*/
+      /*cfe.List<int>*/
+      /*cfe:nnbd.List<int!>!*/ list) {
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
@@ -44,7 +52,8 @@ forInIntToNum(List<int> list) {
 asyncForInDynamicStream(dynamic stream) async {
   /*current: dynamic*/
   await for (var e in
-      /*as: Stream<dynamic>!*/
+      /*cfe.as: Stream<dynamic>*/
+      /*cfe:nnbd.as: Stream<dynamic>!*/
       /*dynamic*/ stream) {
     /*dynamic*/ e;
   }
@@ -54,7 +63,8 @@ asyncForInDynamicStream(dynamic stream) async {
 asyncForInDynamic(Stream<dynamic> stream) async {
   /*current: dynamic*/
   await for (var e in
-      /*Stream<dynamic>!*/
+      /*cfe.Stream<dynamic>*/
+      /*cfe:nnbd.Stream<dynamic>!*/
       stream) {
     /*dynamic*/ e;
   }
@@ -62,22 +72,28 @@ asyncForInDynamic(Stream<dynamic> stream) async {
 
 /*member: asyncForInInt:futureValueType=dynamic*/
 asyncForInInt(Stream<int> stream) async {
-  /*current: int!*/
+  /*cfe.current: int*/
+  /*cfe:nnbd.current: int!*/
   await for (var e in
-      /*Stream<int!>!*/
+      /*cfe.Stream<int>*/
+      /*cfe:nnbd.Stream<int!>!*/
       stream) {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     e;
   }
 }
 
 /*member: asyncForInIntToNum:futureValueType=dynamic*/
 asyncForInIntToNum(Stream<int> stream) async {
-  /*current: int!*/
+  /*cfe.current: int*/
+  /*cfe:nnbd.current: int!*/
   await for (num e in
-      /*Stream<int!>!*/
+      /*cfe.Stream<int>*/
+      /*cfe:nnbd.Stream<int!>!*/
       stream) {
-    /*num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
@@ -87,11 +103,14 @@ abstract class CustomIterable implements Iterable<num> {
 }
 
 customIterable(CustomIterable iterable) {
-  /*current: num!*/
+  /*cfe.current: num*/
+  /*cfe:nnbd.current: num!*/
   for (var e in
-      /*CustomIterable!*/
+      /*cfe.CustomIterable*/
+      /*cfe:nnbd.CustomIterable!*/
       iterable) {
-    /*num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
@@ -102,11 +121,14 @@ abstract class CustomStream implements Stream<num> {
 
 /*member: customStream:futureValueType=dynamic*/
 customStream(CustomStream stream) async {
-  /*current: num!*/
+  /*cfe.current: num*/
+  /*cfe:nnbd.current: num!*/
   await for (var e in
-      /*CustomStream!*/
+      /*cfe.CustomStream*/
+      /*cfe:nnbd.CustomStream!*/
       stream) {
-    /*num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
@@ -120,11 +142,14 @@ abstract class CustomIterator implements Iterator<num> {
 }
 
 customIterableIterator(IterableWithCustomIterator iterable) {
-  /*current: num!*/
+  /*cfe.current: num*/
+  /*cfe:nnbd.current: num!*/
   for (var e in
-      /*IterableWithCustomIterator!*/
+      /*cfe.IterableWithCustomIterator*/
+      /*cfe:nnbd.IterableWithCustomIterator!*/
       iterable) {
-    /*num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
@@ -135,30 +160,37 @@ abstract class StreamWithCustomIterator implements Stream<num> {
 
 /*member: customStreamIterator:futureValueType=dynamic*/
 customStreamIterator(StreamWithCustomIterator stream) async {
-  /*current: num!*/
+  /*cfe.current: num*/
+  /*cfe:nnbd.current: num!*/
   await for (var e in
-      /*StreamWithCustomIterator!*/
+      /*cfe.StreamWithCustomIterator*/
+      /*cfe:nnbd.StreamWithCustomIterator!*/
       stream) {
-    /*num!*/
+    /*cfe.num*/
+    /*cfe:nnbd.num!*/
     e;
   }
 }
 
 void genericIterable<T extends Iterable<T>>(T x) {
-  /*current: T!*/
+  /*cfe.current: T*/
+  /*cfe:nnbd.current: T!*/
   for (var y in
-      /*T!*/
+      /*cfe.T*/
+      /*cfe:nnbd.T!*/
       x) {
-    /*T!*/ y;
+    /*cfe.T*/ /*cfe:nnbd.T!*/ y;
   }
 }
 
 /*member: genericStream:futureValueType=void*/
 void genericStream<T extends Stream<T>>(T x) async {
-  /*current: T!*/
+  /*cfe.current: T*/
+  /*cfe:nnbd.current: T!*/
   await for (var y in
-      /*T!*/
+      /*cfe.T*/
+      /*cfe:nnbd.T!*/
       x) {
-    /*T!*/ y;
+    /*cfe.T*/ /*cfe:nnbd.T!*/ y;
   }
 }

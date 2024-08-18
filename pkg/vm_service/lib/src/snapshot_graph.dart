@@ -3,10 +3,97 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
-import '_stream_helpers.dart';
-import 'vm_service.dart';
+import '../vm_service.dart';
+
+class _ReadStream {
+  final List<ByteData> _chunks;
+  int _chunkIndex = 0;
+  int _byteIndex = 0;
+
+  _ReadStream(this._chunks);
+
+  bool get atEnd => ((_byteIndex >= _chunks[_chunkIndex].lengthInBytes) &&
+      (_chunkIndex + 1 >= _chunks.length));
+
+  int readByte() {
+    while (_byteIndex >= _chunks[_chunkIndex].lengthInBytes) {
+      _chunkIndex++;
+      _byteIndex = 0;
+    }
+    return _chunks[_chunkIndex].getUint8(_byteIndex++);
+  }
+
+  /// Read one ULEB128 number.
+  int readUnsigned() {
+    int result = 0;
+    int shift = 0;
+    for (;;) {
+      int part = readByte();
+      result |= (part & 0x7F) << shift;
+      if ((part & 0x80) == 0) {
+        break;
+      }
+      shift += 7;
+    }
+    return result;
+  }
+
+  /// Read one SLEB128 number.
+  int readSigned() {
+    int result = 0;
+    int shift = 0;
+    for (;;) {
+      int part = readByte();
+      result |= (part & 0x7F) << shift;
+      shift += 7;
+      if ((part & 0x80) == 0) {
+        if ((part & 0x40) != 0) {
+          result |= (-1 << shift);
+        }
+        break;
+      }
+    }
+    return result;
+  }
+
+  double readFloat64() {
+    final bytes = Uint8List(8);
+    for (int i = 0; i < 8; i++) {
+      bytes[i] = readByte();
+    }
+    return Float64List.view(bytes.buffer)[0];
+  }
+
+  String readUtf8() {
+    int len = readUnsigned();
+    final bytes = Uint8List(len);
+    for (int i = 0; i < len; i++) {
+      bytes[i] = readByte();
+    }
+    return Utf8Codec(allowMalformed: true).decode(bytes);
+  }
+
+  String readLatin1() {
+    int len = readUnsigned();
+    final codeUnits = Uint8List(len);
+    for (int i = 0; i < len; i++) {
+      codeUnits[i] = readByte();
+    }
+    return String.fromCharCodes(codeUnits);
+  }
+
+  String readUtf16() {
+    int len = readUnsigned();
+    final codeUnits = Uint16List(len);
+    for (int i = 0; i < len; i++) {
+      codeUnits[i] = readByte() | (readByte() << 8);
+    }
+    return String.fromCharCodes(codeUnits);
+  }
+}
 
 /// A representation of a field captured in a memory snapshot.
 class HeapSnapshotField {
@@ -19,26 +106,15 @@ class HeapSnapshotField {
   int _index = -1;
   String _name = '';
 
-  HeapSnapshotField._read(ReadStream reader) {
+  HeapSnapshotField._read(_ReadStream reader) {
     // flags (reserved)
-    reader.readInteger();
+    reader.readUnsigned();
 
-    _index = reader.readInteger();
+    _index = reader.readUnsigned();
     _name = reader.readUtf8();
 
     // reserved
     reader.readUtf8();
-  }
-
-  void _write(WriteStream writer) {
-    // flags (reserved)
-    writer.writeInteger(0);
-
-    writer.writeInteger(_index);
-    writer.writeUtf8(_name);
-
-    // reserved
-    writer.writeUtf8('');
   }
 }
 
@@ -65,9 +141,9 @@ class HeapSnapshotClass {
   late final Uri _libraryUri;
   final List<HeapSnapshotField> _fields = <HeapSnapshotField>[];
 
-  HeapSnapshotClass._read(this._classId, ReadStream reader) {
+  HeapSnapshotClass._read(this._classId, _ReadStream reader) {
     // flags (reserved).
-    reader.readInteger();
+    reader.readUnsigned();
 
     _name = reader.readUtf8();
     _libraryName = reader.readUtf8();
@@ -76,21 +152,7 @@ class HeapSnapshotClass {
     // reserved
     reader.readUtf8();
 
-    _readFields(reader);
-  }
-
-  void _write(WriteStream writer) {
-    // flags (reserved).
-    writer.writeInteger(0);
-
-    writer.writeUtf8(_name);
-    writer.writeUtf8(_libraryName);
-    writer.writeUtf8(_libraryUri.toString());
-
-    // something reserved
-    writer.writeInteger(0);
-
-    _writeFields(writer);
+    _populateFields(reader);
   }
 
   HeapSnapshotClass._root()
@@ -105,17 +167,10 @@ class HeapSnapshotClass {
         _libraryName = '',
         _libraryUri = Uri();
 
-  void _readFields(ReadStream reader) {
-    final fieldCount = reader.readInteger();
+  void _populateFields(_ReadStream reader) {
+    final fieldCount = reader.readUnsigned();
     for (int i = 0; i < fieldCount; ++i) {
       _fields.add(HeapSnapshotField._read(reader));
-    }
-  }
-
-  void _writeFields(WriteStream writer) {
-    writer.writeInteger(_fields.length);
-    for (int i = 0; i < _fields.length; ++i) {
-      _fields[i]._write(writer);
     }
   }
 }
@@ -144,18 +199,8 @@ class HeapSnapshotObject {
       _graph._firstSuccessors[_oid], _graph._firstSuccessors[_oid + 1]);
 
   /// A list of indices into [HeapSnapshotGraph.objects].
-  Uint32List get referrers {
-    final referrers = _graph._referrers;
-    final firstReferrers = _graph._firstReferrers;
-
-    if (referrers == null || firstReferrers == null) {
-      throw StateError('Referrers are not available in this snapshot. Pass'
-          ' `calculateReferrers: true` when taking snapshot to calculate referrers.');
-    }
-
-    return Uint32List.sublistView(
-        referrers, firstReferrers[_oid], firstReferrers[_oid + 1]);
-  }
+  Uint32List get referrers => Uint32List.sublistView(_graph._predecessors,
+      _graph._firstPredecessors[_oid], _graph._firstPredecessors[_oid + 1]);
 
   /// The identity hash code of this object.
   ///
@@ -186,51 +231,24 @@ class HeapSnapshotObject {
   HeapSnapshotObject._sentinel(this._graph)
       : _oid = 0,
         _data = HeapSnapshotObjectNoData() {
-    _graph._firstSuccessors[_oid] = _graph._nextSuccessor;
+    _graph._firstSuccessors[_oid] = _graph._eid;
   }
 
-  HeapSnapshotObject._read(
-    this._graph,
-    this._oid,
-    ReadStream reader, {
-    required bool decodeObjectData,
-  }) {
-    _classId = reader.readInteger();
-    _shallowSize = reader.readInteger();
-    final data = _getNonReferenceData(reader);
-    _data = decodeObjectData ? data : HeapSnapshotObjectNoData();
-    _readReferences(reader);
+  HeapSnapshotObject._read(this._graph, this._oid, _ReadStream reader) {
+    _classId = reader.readUnsigned();
+    _shallowSize = reader.readUnsigned();
+    _data = _getNonReferenceData(reader);
+    _populateReferences(reader);
   }
 
-  void _write(WriteStream writer) {
-    writer.writeInteger(_classId);
-    writer.writeInteger(_shallowSize);
-    _writeNonReferenceData(writer, _data);
-    _writeReferences(writer);
-  }
-
-  void _readReferences(ReadStream reader) {
-    _graph._firstSuccessors[_oid] = _graph._nextSuccessor;
-    final referencesCount = reader.readInteger();
+  void _populateReferences(_ReadStream reader) {
+    _graph._firstSuccessors[_oid] = _graph._eid;
+    final referencesCount = reader.readUnsigned();
     for (int i = 0; i < referencesCount; ++i) {
-      final currentOid = _graph._nextSuccessor++;
-      final childOid = reader.readInteger();
+      final currentOid = _graph._eid++;
+      final childOid = reader.readUnsigned();
       _graph._successors[currentOid] = childOid;
-      _graph._referrerCounts[childOid]++;
-    }
-  }
-
-  void _writeReferences(WriteStream writer) {
-    final refStart = _graph._firstSuccessors[_oid];
-    final refEnd = _oid + 1 < _graph._firstSuccessors.length
-        ? _graph._firstSuccessors[_oid + 1]
-        : _graph._nextSuccessor;
-    final referencesCount = refEnd - refStart;
-
-    writer.writeInteger(referencesCount);
-    for (int i = refStart; i < refEnd; ++i) {
-      final childOid = _graph._successors[i];
-      writer.writeInteger(childOid);
+      _graph._predecessorCounts[childOid]++;
     }
   }
 }
@@ -246,16 +264,10 @@ class HeapSnapshotExternalProperty {
   /// The name of the external property.
   final String name;
 
-  HeapSnapshotExternalProperty._read(ReadStream reader)
-      : object = reader.readInteger(),
-        externalSize = reader.readInteger(),
+  HeapSnapshotExternalProperty._read(_ReadStream reader)
+      : object = reader.readUnsigned(),
+        externalSize = reader.readUnsigned(),
         name = reader.readUtf8();
-
-  void _write(WriteStream writer) {
-    writer.writeInteger(object);
-    writer.writeInteger(externalSize);
-    writer.writeUtf8(name);
-  }
 }
 
 /// A graph representation of a heap snapshot.
@@ -300,45 +312,23 @@ class HeapSnapshotGraph {
   final List<HeapSnapshotExternalProperty> _externalProperties =
       <HeapSnapshotExternalProperty>[];
 
-  /// Contains the successors (references) of each object.
-  ///
-  /// The array consists of blocks of successors, one block for each object.
-  /// [_firstSuccessors] contains the start indexes of each block.
-  ///
-  /// Cells, not used yet start at index [_nextSuccessor].
+  late Uint32List _predecessorCounts;
+
+  late final Uint32List _firstSuccessors;
   late final Uint32List _successors;
 
-  /// See [_successors].
-  late final Uint32List _firstSuccessors;
+  late final Uint32List _firstPredecessors;
+  late final Uint32List _predecessors;
 
-  /// See [_successors].
-  int _nextSuccessor = 0;
-
-  late Uint32List _referrerCounts;
-  Uint32List? _firstReferrers;
-  Uint32List? _referrers;
+  int _eid = 0;
 
   /// Requests a heap snapshot for a given isolate and builds a
   /// [HeapSnapshotGraph].
   ///
   /// Note: this method calls [VmService.streamListen] and
   /// [VmService.streamCancel] on [EventStreams.kHeapSnapshot].
-  ///
-  /// Set flags to false to save processing time and memory footprint
-  /// by skipping decoding or calculation of certain data:
-  ///
-  /// - [calculateReferrers] for [HeapSnapshotObject.referrers]
-  /// - [decodeObjectData] for [HeapSnapshotObject.data]
-  /// - [decodeExternalProperties] for [HeapSnapshotGraph.externalProperties]
-  /// - [decodeIdentityHashCodes] for [HeapSnapshotObject.identityHashCode]
   static Future<HeapSnapshotGraph> getSnapshot(
-    VmService service,
-    IsolateRef isolate, {
-    bool calculateReferrers = true,
-    bool decodeObjectData = true,
-    bool decodeExternalProperties = true,
-    bool decodeIdentityHashCodes = true,
-  }) async {
+      VmService service, IsolateRef isolate) async {
     await service.streamListen(EventStreams.kHeapSnapshot);
 
     final completer = Completer<HeapSnapshotGraph>();
@@ -349,13 +339,7 @@ class HeapSnapshotGraph {
       if (e.last!) {
         await service.streamCancel(EventStreams.kHeapSnapshot);
         await streamSubscription.cancel();
-        completer.complete(HeapSnapshotGraph.fromChunks(
-          chunks,
-          calculateReferrers: calculateReferrers,
-          decodeObjectData: decodeObjectData,
-          decodeExternalProperties: decodeExternalProperties,
-          decodeIdentityHashCodes: decodeIdentityHashCodes,
-        ));
+        completer.complete(HeapSnapshotGraph.fromChunks(chunks));
       }
     });
 
@@ -363,79 +347,31 @@ class HeapSnapshotGraph {
     return completer.future;
   }
 
-  static const _magicHeader = 'dartheap';
-
   /// Populates the [HeapSnapshotGraph] by parsing the events from the
   /// `HeapSnapshot` stream.
-  ///
-  /// Set flags to false to save processing time and memory footprint
-  /// by skipping decoding or calculation of certain data:
-  ///
-  /// - [calculateReferrers] for [HeapSnapshotObject.referrers]
-  /// - [decodeObjectData] for [HeapSnapshotObject.data]
-  /// - [decodeExternalProperties] for [HeapSnapshotGraph.externalProperties]
-  /// - [decodeIdentityHashCodes] for [HeapSnapshotObject.identityHashCode]
-  HeapSnapshotGraph.fromChunks(
-    List<ByteData> chunks, {
-    bool calculateReferrers = true,
-    bool decodeObjectData = true,
-    bool decodeExternalProperties = true,
-    bool decodeIdentityHashCodes = true,
-  }) {
-    final reader = ReadStream(chunks);
+  HeapSnapshotGraph.fromChunks(List<ByteData> chunks) {
+    final reader = _ReadStream(chunks);
 
     // Skip magic header
-    for (int i = 0; i < _magicHeader.length; ++i) {
+    for (int i = 0; i < 8; ++i) {
       reader.readByte();
     }
 
-    _flags = reader.readInteger();
-
+    _flags = reader.readUnsigned();
     _name = reader.readUtf8();
-    _shallowSize = reader.readInteger();
-    _capacity = reader.readInteger();
-    _externalSize = reader.readInteger();
+    _shallowSize = reader.readUnsigned();
+    _capacity = reader.readUnsigned();
+    _externalSize = reader.readUnsigned();
+    _populateClasses(reader);
+    _populateObjects(reader);
+    _populateExternalProperties(reader);
+    _populateIdentityHashCodes(reader);
 
-    _readClasses(reader);
-    _readObjects(reader, decodeObjectData: decodeObjectData);
-
-    if (decodeExternalProperties || decodeIdentityHashCodes) {
-      _readExternalProperties(
-        reader,
-        decodeExternalProperties: decodeExternalProperties,
-      );
-    }
-
-    if (decodeIdentityHashCodes) {
-      _readIdentityHashCodes(reader);
-    }
-
-    if (calculateReferrers) _calculateReferrers();
+    _calculatePredecessors();
   }
 
-  List<ByteData> toChunks() {
-    final writer = WriteStream();
-
-    for (int i = 0; i < _magicHeader.length; ++i) {
-      writer.writeByte(_magicHeader.codeUnitAt(i));
-    }
-
-    writer.writeInteger(_flags);
-    writer.writeUtf8(_name);
-    writer.writeInteger(_shallowSize);
-    writer.writeInteger(_capacity);
-    writer.writeInteger(_externalSize);
-
-    _writeClasses(writer);
-    _writeObjects(writer);
-    _writeExternalProperties(writer);
-    _writeIdentityHashCodes(writer);
-
-    return writer.chunks;
-  }
-
-  void _readClasses(ReadStream reader) {
-    final classCount = reader.readInteger();
+  void _populateClasses(_ReadStream reader) {
+    final classCount = reader.readUnsigned();
     _classes.add(HeapSnapshotClass._root());
     for (int i = 1; i <= classCount; ++i) {
       final klass = HeapSnapshotClass._read(i, reader);
@@ -443,59 +379,39 @@ class HeapSnapshotGraph {
     }
   }
 
-  void _writeClasses(WriteStream writer) {
-    writer.writeInteger(_classes.length - 1);
-    for (int i = 1; i < _classes.length; ++i) {
-      _classes[i]._write(writer);
-    }
-  }
-
-  void _readObjects(ReadStream reader, {required bool decodeObjectData}) {
-    _referenceCount = reader.readInteger();
-    final objectCount = reader.readInteger();
+  void _populateObjects(_ReadStream reader) {
+    _referenceCount = reader.readUnsigned();
+    final objectCount = reader.readUnsigned();
 
     _firstSuccessors = _newUint32Array(objectCount + 2);
     _successors = _newUint32Array(_referenceCount);
-    _referrerCounts = _newUint32Array(objectCount + 2);
+    _predecessorCounts = _newUint32Array(objectCount + 2);
+
     _objects.add(HeapSnapshotObject._sentinel(this));
     for (int i = 1; i <= objectCount; ++i) {
-      _objects.add(HeapSnapshotObject._read(
-        this,
-        i,
-        reader,
-        decodeObjectData: decodeObjectData,
-      ));
+      _objects.add(HeapSnapshotObject._read(this, i, reader));
     }
-    _firstSuccessors[objectCount + 1] = _nextSuccessor;
+    _firstSuccessors[objectCount + 1] = _eid;
   }
 
-  void _writeObjects(WriteStream writer) {
-    writer.writeInteger(_referenceCount);
-    writer.writeInteger(_objects.length - 1);
-
-    for (int i = 1; i < _objects.length; ++i) {
-      _objects[i]._write(writer);
-    }
-  }
-
-  void _calculateReferrers() {
+  void _calculatePredecessors() {
     final objectCount = _objects.length - 1;
 
-    _firstReferrers = _newUint32Array(objectCount + 2);
-    _referrers = _newUint32Array(_referenceCount);
+    _firstPredecessors = _newUint32Array(objectCount + 2);
+    _predecessors = _newUint32Array(_referenceCount);
 
-    _firstReferrers![objectCount + 1] = _nextSuccessor;
+    _firstPredecessors[objectCount + 1] = _eid;
 
     // We reuse the [_predecessorCounts] array and turn it into the
     // write cursor array.
-    final predecessorCounts = _referrerCounts;
-    _referrerCounts = Uint32List(0);
+    final predecessorCounts = _predecessorCounts;
+    _predecessorCounts = Uint32List(0);
     int sum = 0;
     int totalCount = _referenceCount;
     for (int i = objectCount; i >= 0; --i) {
       sum += predecessorCounts[i];
       final firstPredecessor = totalCount - sum;
-      _firstReferrers![i] = predecessorCounts[i] = firstPredecessor;
+      _firstPredecessors[i] = predecessorCounts[i] = firstPredecessor;
     }
 
     final predecessorWriteCursor = predecessorCounts;
@@ -504,45 +420,26 @@ class HeapSnapshotGraph {
       final to = _firstSuccessors[i + 1];
       for (int j = from; j < to; ++j) {
         final cursor = predecessorWriteCursor[_successors[j]]++;
-        _referrers![cursor] = i;
+        _predecessors[cursor] = i;
       }
     }
   }
 
-  void _readExternalProperties(
-    ReadStream reader, {
-    required bool decodeExternalProperties,
-  }) {
-    final propertiesCount = reader.readInteger();
+  void _populateExternalProperties(_ReadStream reader) {
+    final propertiesCount = reader.readUnsigned();
     for (int i = 0; i < propertiesCount; ++i) {
-      final property = HeapSnapshotExternalProperty._read(reader);
-      if (decodeExternalProperties) {
-        _externalProperties.add(property);
-      }
+      _externalProperties.add(HeapSnapshotExternalProperty._read(reader));
     }
   }
 
-  void _writeExternalProperties(WriteStream writer) {
-    writer.writeInteger(_externalProperties.length);
-    for (int i = 0; i < _externalProperties.length; ++i) {
-      _externalProperties[i]._write(writer);
-    }
-  }
-
-  void _readIdentityHashCodes(ReadStream reader) {
+  void _populateIdentityHashCodes(_ReadStream reader) {
     if (reader.atEnd) {
       // Older VMs don't include identity hash codes.
       return;
     }
     final objectCount = _objects.length;
     for (int i = 1; i < objectCount; ++i) {
-      _objects[i]._identityHashCode = reader.readInteger();
-    }
-  }
-
-  void _writeIdentityHashCodes(WriteStream writer) {
-    for (int i = 1; i < _objects.length; ++i) {
-      writer.writeInteger(_objects[i]._identityHashCode);
+      _objects[i]._identityHashCode = reader.readUnsigned();
     }
   }
 
@@ -569,46 +466,8 @@ const _kUtf16Data = 6;
 const _kLengthData = 7;
 const _kNameData = 8;
 
-void _writeNonReferenceData(WriteStream writer, dynamic data) {
-  if (data is HeapSnapshotObjectNoData) {
-    writer.writeInteger(_kNoData);
-    return;
-  }
-  if (data is HeapSnapshotObjectNullData) {
-    writer.writeInteger(_kNullData);
-    return;
-  }
-  if (data is bool) {
-    writer.writeInteger(_kBoolData);
-    writer.writeByte(data ? 1 : 0);
-    return;
-  }
-  if (data is int) {
-    writer.writeInteger(_kIntData);
-    writer.writeInteger(data);
-    return;
-  }
-  if (data is double) {
-    writer.writeInteger(_kDoubleData);
-    writer.writeFloat64(data);
-    return;
-  }
-  if (data is HeapSnapshotObjectLengthData) {
-    writer.writeInteger(_kLengthData);
-    writer.writeInteger(data.length);
-    return;
-  }
-  if (data is String) {
-    // We use _kNameData for any string, because long strings are already cut with `...`.
-    writer.writeInteger(_kNameData);
-    writer.writeUtf8(data);
-    return;
-  }
-  throw 'Not expected type: ${data.runtimeType}';
-}
-
-dynamic _getNonReferenceData(ReadStream reader) {
-  final tag = reader.readInteger();
+dynamic _getNonReferenceData(_ReadStream reader) {
+  final tag = reader.readUnsigned();
   switch (tag) {
     case _kNoData:
       return const HeapSnapshotObjectNoData();
@@ -617,19 +476,19 @@ dynamic _getNonReferenceData(ReadStream reader) {
     case _kBoolData:
       return (reader.readByte() == 1);
     case _kIntData:
-      return reader.readInteger();
+      return reader.readUnsigned();
     case _kDoubleData:
       return reader.readFloat64();
     case _kLatin1Data:
-      final len = reader.readInteger();
+      final len = reader.readUnsigned();
       final str = reader.readLatin1();
       return (str.length < len) ? '$str...' : str;
     case _kUtf16Data:
-      final len = reader.readInteger();
+      final len = reader.readUnsigned();
       final str = reader.readUtf16();
       return (str.length < len) ? '$str...' : str;
     case _kLengthData:
-      return HeapSnapshotObjectLengthData(reader.readInteger());
+      return HeapSnapshotObjectLengthData(reader.readUnsigned());
     case _kNameData:
       return reader.readUtf8();
     default:

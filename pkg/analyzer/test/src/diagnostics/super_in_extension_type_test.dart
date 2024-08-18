@@ -9,12 +9,12 @@ import '../dart/resolution/context_collection_resolution.dart';
 
 main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(SuperInExtensionTypeTest);
+    defineReflectiveTests(SuperInExtensionTest);
   });
 }
 
 @reflectiveTest
-class SuperInExtensionTypeTest extends PubPackageResolutionTest {
+class SuperInExtensionTest extends PubPackageResolutionTest {
   test_binaryOperator() async {
     await assertErrorsInCode('''
 extension type A(int it) {
@@ -26,7 +26,7 @@ extension type A(int it) {
       error(CompileTimeErrorCode.SUPER_IN_EXTENSION_TYPE, 44, 5),
     ]);
 
-    var node = findNode.singleBinaryExpression;
+    final node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SuperExpression
@@ -54,7 +54,7 @@ extension type A(int it) {
       error(CompileTimeErrorCode.SUPER_IN_EXTENSION_TYPE, 44, 5),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   target: SuperExpression
@@ -84,7 +84,7 @@ extension type A(int it) {
       error(CompileTimeErrorCode.SUPER_IN_EXTENSION_TYPE, 44, 5),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression

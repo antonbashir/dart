@@ -13,5 +13,4 @@ class A implements B {
 }
 
 dynamic f() => null;
-
 main() {}

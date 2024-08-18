@@ -17,29 +17,16 @@ class UseFullHexValuesForFlutterColorsTest extends LintRuleTest {
   @override
   String get lintRule => 'use_full_hex_values_for_flutter_colors';
 
-  test_decimal() async {
-    await assertDiagnostics(r'''
-library dart.ui;
-
-var c = Color(1);
-
-class Color {
-  Color(int v);
-}
-''', [
-      lint(32, 1),
-    ]);
-  }
-
   test_dynamicArgument() async {
     await assertNoDiagnostics(r'''
 library dart.ui;
 
-dynamic a = 1;
-var c = Color(a);
-
 class Color {
   Color(int v);
+}
+
+void f(dynamic a) {
+  Color(a);
 }
 ''');
   }
@@ -48,10 +35,12 @@ class Color {
     await assertNoDiagnostics(r'''
 library dart.ui;
 
-var c = Color(0x00000000);
-
 class Color {
   Color(int v);
+}
+
+void f() {
+  Color(0x00000000);
 }
 ''');
   }
@@ -60,25 +49,45 @@ class Color {
     await assertNoDiagnostics(r'''
 library dart.ui;
 
-var c = Color(0X00000000);
+class Color {
+  Color(int v);
+}
+
+void f() {
+  Color(0X00000000);
+}
+''');
+  }
+
+  test_nonHex() async {
+    await assertDiagnostics(r'''
+library dart.ui;
 
 class Color {
   Color(int v);
 }
-''');
+
+void f() {
+  Color(1);
+}
+''', [
+      lint(70, 1),
+    ]);
   }
 
   test_sixDigitHex_lower() async {
     await assertDiagnostics(r'''
 library dart.ui;
 
-var c = Color(0x000000);
-
 class Color {
   Color(int v);
 }
+
+void f() {
+  Color(0x000000);
+}
 ''', [
-      lint(32, 8),
+      lint(70, 8),
     ]);
   }
 
@@ -86,27 +95,15 @@ class Color {
     await assertDiagnostics(r'''
 library dart.ui;
 
-var c = Color(0X000000);
-
 class Color {
   Color(int v);
 }
-''', [
-      lint(32, 8),
-    ]);
-  }
 
-  test_sixDigitHex_withSeparators() async {
-    await assertDiagnostics(r'''
-library dart.ui;
-
-var c = Color(0x00_00_00);
-
-class Color {
-  Color(int v);
+void f() {
+  Color(0X000000);
 }
 ''', [
-      lint(32, 10),
+      lint(70, 8),
     ]);
   }
 }

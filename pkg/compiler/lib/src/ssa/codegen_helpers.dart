@@ -228,20 +228,20 @@ class SsaInstructionSelection extends HBaseVisitor<HInstruction?>
       .isPotentiallyTrue;
 
   @override
-  HBinaryBitOp visitBinaryBitOp(HBinaryBitOp node) {
+  visitBinaryBitOp(HBinaryBitOp node) {
     node.requiresUintConversion = _requiresUintConversion(node);
     return node;
   }
 
   @override
-  HShiftRight visitShiftRight(HShiftRight node) {
+  visitShiftRight(HShiftRight node) {
     // HShiftRight is JavaScript's `>>>` operation so result is always unsigned.
     node.requiresUintConversion = false;
     return node;
   }
 
   @override
-  HBitNot visitBitNot(HBitNot node) {
+  visitBitNot(HBitNot node) {
     node.requiresUintConversion = _requiresUintConversion(node);
     return node;
   }
@@ -450,7 +450,7 @@ class SsaInstructionSelection extends HBaseVisitor<HInstruction?>
   }
 
   @override
-  HIf visitIf(HIf node) {
+  visitIf(HIf node) {
     if (!_options.experimentToBoolean) return node;
     HInstruction condition = node.inputs.single;
     // if (x != null) --> if (x)
@@ -983,78 +983,6 @@ class SsaInstructionMerger extends HBaseVisitor<void> implements CodegenPhase {
     assert(false);
   }
 
-  @override
-  void visitReadModifyWrite(HReadModifyWrite instruction) {
-    if (instruction.isPreOp || instruction.isPostOp) {
-      analyzeInputs(instruction, 0);
-      return;
-    }
-    assert(instruction.isAssignOp);
-    // Generate-at-use is valid for the value operand (t1) if the expression
-    // tree for t1 does not change the order of effects or exceptions with
-    // respect to reading the field of the receiver (t2).
-    //
-    //     t1 = foo();
-    //     t2 = ...
-    //     t2.field += t1;
-    //
-    // 1. If the read of `t2.field` can throw, we can't move `t1` into the
-    //    use-site if some part of the expression tree for `t1` can throw.
-    //
-    // 2. If the expression for `t1` potentially modifies `t2.field`, we can't
-    //    move `t1` past the load `t2.field`.
-    //
-    // TODO(48243): If instruction merging was smarter about effects and was
-    // able to change the order of instructions that read non-aliased fields
-    // this analysis could probably be folded into the normal algorithm by
-    // having HReadModifyWrite have two SideEffects to model the read
-    // indepentently of the write.
-
-    bool throwCheck = instruction.canThrow(_abstractValueDomain);
-
-    bool isSafeSubexpression(HInstruction expression) {
-      // If an expression value is used in more than one place it will be
-      // assigned to a JavaScript variable.
-      if (expression.usedBy.length > 1) return true;
-
-      // Expressions that are generated as JavaScript statements have their
-      // value stored in a variable.
-      if (expression.isJsStatement()) return true;
-
-      // Condition 1.
-      if (throwCheck && expression.canThrow(_abstractValueDomain)) return false;
-
-      // Condition 2.
-      if (expression.sideEffects.changesInstanceProperty()) return false;
-
-      // Many phis end up as JavaScript variables, which would be just fine as
-      // part of the value expression. Since SsaConditionMerger is a separate
-      // pass we can't tell if this phi will become a generate-at-use expression
-      // that is invalid as a subexpression of the value expression.
-      if (expression is HPhi) return false;
-
-      return expression.inputs.every(isSafeSubexpression);
-    }
-
-    if (isSafeSubexpression(instruction.value)) {
-      analyzeInputs(instruction, 0);
-    }
-  }
-
-  @override
-  void visitArrayFlagsSet(HArrayFlagsSet instruction) {
-    // Cannot generate-at-use the array input, it is an alias for the value of
-    // this instruction and need to be allocated to a variable.
-    analyzeInputs(instruction, 1);
-  }
-
-  @override
-  void visitArrayFlagsCheck(HArrayFlagsCheck instruction) {
-    // Cannot generate-at-use the array input, it is an alias for the value of
-    // this instruction and need to be allocated to a variable.
-    analyzeInputs(instruction, 1);
-  }
-
   void tryGenerateAtUseSite(HInstruction instruction) {
     if (instruction.isControlFlow()) return;
     markAsGenerateAtUseSite(instruction);
@@ -1257,12 +1185,6 @@ class SsaConditionMerger extends HGraphVisitor implements CodegenPhase {
     // A [HCheck] instruction with control flow uses its input
     // multiple times, so we avoid generating it at use site.
     if (user is HCheck && user.isControlFlow()) return false;
-
-    // A read-modify-write like `o.field += value` reads the field before
-    // evaluating the value, so if we generate [input] at the value, the order
-    // of field reads may be changed.
-    if (user is HReadModifyWrite && input == user.inputs.last) return false;
-
     // Avoid code motion into a loop.
     return user.hasSameLoopHeaderAs(input);
   }
@@ -1307,7 +1229,7 @@ class SsaConditionMerger extends HGraphVisitor implements CodegenPhase {
     HBasicBlock elseBlock = startIf.elseBlock;
 
     if (!identical(end.predecessors[1], elseBlock)) return;
-    final phi = end.phis.first!;
+    HPhi phi = end.phis.first as HPhi;
     // This useless phi should have been removed.  Do not generate-at-use if
     // there is no use. See #48383.
     if (phi.usedBy.isEmpty) return;
@@ -1338,7 +1260,7 @@ class SsaConditionMerger extends HGraphVisitor implements CodegenPhase {
         if (otherJoin.successors[0] != end) return;
         if (otherJoin.phis.isEmpty) return;
         if (!identical(otherJoin.phis.first, otherJoin.phis.last)) return;
-        final otherPhi = otherJoin.phis.first!;
+        HPhi otherPhi = otherJoin.phis.first as HPhi;
         if (thenInput != otherPhi) return;
         if (elseInput != otherPhi.inputs[1]) return;
       }
@@ -1382,166 +1304,6 @@ class SsaConditionMerger extends HGraphVisitor implements CodegenPhase {
   }
 }
 
-/// 'Condition' phis by hoisting common constants to before the control flow.
-/// The default pattern is to assign to a variable on all edges into a phi.
-///
-///     if (condition1) {
-///       if (condition2) {
-///         ...
-///         t1 = ...;
-///       } else
-///         t1 = false;
-///     } else
-///       t1 = false;
-///
-/// Hoisting `t1 = false` is smaller due to not needing `else`:
-///
-///     t1 = false;
-///     if (condition1) {
-///       if (condition1) {
-///         ...
-///         t1 = ...;
-///       }
-///     }
-///
-/// This transformation introduces partial redundancy, and increases live-ranges
-/// and may require more temporary variables.
-class SsaPhiConditioning extends HGraphVisitor implements CodegenPhase {
-  @override
-  String get name => 'SsaPhiConditioning';
-
-  final Set<HInstruction> generateAtUseSite;
-  final Set<HIf> controlFlowOperators;
-
-  final Set<HPhi> _handled = {};
-
-  SsaPhiConditioning(this.generateAtUseSite, this.controlFlowOperators);
-
-  @override
-  void visitGraph(HGraph graph) {
-    visitPostDominatorTree(graph);
-  }
-
-  @override
-  void visitBasicBlock(HBasicBlock block) {
-    final dominator = block.dominator;
-    if (dominator == null) return; // Entry block.
-
-    // The algorithm scans backwards, inspecting the tree of phi nodes rooted at
-    // this block, stopping at this block's dominator. The dominator is a place
-    // to which the assignment can legally be hoisted and used by the phi nodes.
-    // The nodes of the tree are marked as handled. If we don't find an
-    // optimization opportunity in the phi tree, there won't be an opportunity
-    // in the smaller subtree, and re-scanning subtrees could be non-linear.
-
-    // If this region of the CFG is a control-flow operation (&&, ?:, etc),
-    // the inputs of the participating phi nodes must not be changed.
-    if (controlFlowOperators.contains(dominator.last)) {
-      for (var phi = block.phis.firstPhi; phi != null; phi = phi.nextPhi) {
-        _markHandled(phi, dominator);
-      }
-      return;
-    }
-
-    for (var phi = block.phis.firstPhi; phi != null; phi = phi.nextPhi) {
-      if (_handled.contains(phi)) continue;
-      handlePhi(block, dominator, phi);
-    }
-  }
-
-  void handlePhi(HBasicBlock block, HBasicBlock dominator, HPhi root) {
-    final Map<HInstruction, List<(HPhi, int)>> phiTreeInputs = {};
-    final List<HPhi> phiTreeNodes = [];
-
-    void collect(HPhi phi) {
-      if (dominator == phi.block) return;
-      if (!dominator.dominates(phi.block!)) return;
-      if (generateAtUseSite.contains(phi)) return;
-      phiTreeNodes.add(phi);
-      for (int i = 0; i < phi.inputs.length; i++) {
-        final input = phi.inputs[i];
-        if (input is HPhi) {
-          // Ignore back-edges.
-          if (input.block!.id >= phi.block!.id) continue;
-
-          // Ignore subtrees from control flow operators.
-          final dom = input.block!.dominator!;
-          if (controlFlowOperators.contains(dom.last)) continue;
-          collect(input);
-        } else if (input is HConstant) {
-          // UnreachableConstantValue means that this 'phi' input corresponds to
-          // dead control flow.
-          if (input.constant is UnreachableConstantValue) continue;
-
-          // Only primitives are cheap enough to add the partial redundancy.
-          if (input.isConstantBoolean() ||
-              input.isConstantNull() ||
-              input.isConstantString() ||
-              input.isConstantNumber()) {
-            (phiTreeInputs[input] ??= []).add((phi, i));
-          }
-        }
-      }
-    }
-
-    collect(root);
-
-    late HInstruction best;
-    List<(HPhi, int)> bestReferences = const [];
-    for (final MapEntry(key: instruction, value: references)
-        in phiTreeInputs.entries) {
-      if (references.length > bestReferences.length) {
-        bestReferences = references;
-        best = instruction;
-      }
-    }
-
-    // At least two paths with the same constant.
-    if (bestReferences.length >= 2) {
-      final value = HLateValue(best);
-      value.sourceElement = root.sourceElement;
-
-      // To minimize the live range, [value] should be inserted at the common
-      // dominator of all the references. This is usually just [dominator], so
-      // it is faster on average to search down the successors than to compute
-      // the common dominator.
-
-      SINK_DOMINATOR:
-      while (true) {
-        BLOCKS:
-        for (final HBasicBlock block in dominator.successors) {
-          if (block.id < dominator.id) continue;
-          for (final (phi, _) in bestReferences) {
-            if (!block.dominates(phi.block!)) continue BLOCKS;
-            // Insertion point can't be the phi block since phis come first.
-            if (block == phi.block) continue BLOCKS;
-          }
-          dominator = block;
-          continue SINK_DOMINATOR;
-        }
-        break;
-      }
-
-      dominator.addBefore(dominator.last, value);
-
-      for (final (phi, index) in bestReferences) {
-        phi.replaceInput(index, value);
-      }
-    }
-
-    _handled.addAll(phiTreeNodes);
-  }
-
-  void _markHandled(HPhi phi, HBasicBlock dominator) {
-    if (_handled.add(phi)) {
-      for (final input in phi.inputs) {
-        if (input is HPhi && dominator.dominates(input.block!))
-          _markHandled(input, dominator);
-      }
-    }
-  }
-}
-
 /// Insert 'caches' for whole-function region-constants when the local minified
 /// name would be shorter than repeated references.  These are caches for 'this'
 /// and constant values.
@@ -1581,7 +1343,7 @@ class SsaShareRegionConstants extends HBaseVisitor<void>
   }
 
   // Replace cacheable uses with a reference to a HLateValue node.
-  void _cache(
+  _cache(
       HInstruction node, bool Function(HInstruction) cacheable, String name) {
     var users = node.usedBy.toList();
     var reference = HLateValue(node);
@@ -1651,7 +1413,6 @@ class SsaShareRegionConstants extends HBaseVisitor<void>
       if (instruction is HCreate) return true;
       if (instruction is HReturn) return true;
       if (instruction is HPhi) return true;
-      if (instruction is HLateValue) return true;
 
       // JavaScript `x == null` is more efficient than `x == _null`.
       if (instruction is HIdentity) return false;
@@ -1677,7 +1438,6 @@ class SsaShareRegionConstants extends HBaseVisitor<void>
       if (instruction is HCreate) return true;
       if (instruction is HReturn) return true;
       if (instruction is HPhi) return true;
-      if (instruction is HLateValue) return true;
 
       // JavaScript `x === 5` is more efficient than `x === _5`.
       if (instruction is HIdentity) return false;
@@ -1711,7 +1471,6 @@ class SsaShareRegionConstants extends HBaseVisitor<void>
       if (instruction is HCreate) return true;
       if (instruction is HReturn) return true;
       if (instruction is HPhi) return true;
-      if (instruction is HLateValue) return true;
 
       // TODO(sra): Check if a.x="s" can avoid or specialize a write barrier.
       if (instruction is HFieldSet) return true;

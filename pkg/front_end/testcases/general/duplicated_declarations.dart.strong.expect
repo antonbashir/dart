@@ -80,12 +80,30 @@ library;
 // class C {
 //       ^
 //
+// pkg/front_end/testcases/general/duplicated_declarations.dart:79:3: Error: Name of enum constant 'Enum' can't be the same as the enum's own name.
+//   Enum,
+//   ^^^^
+//
+// pkg/front_end/testcases/general/duplicated_declarations.dart:81:3: Error: 'a' is already declared in this scope.
+//   a,
+//   ^
+// pkg/front_end/testcases/general/duplicated_declarations.dart:80:3: Context: Previous declaration of 'a'.
+//   a,
+//   ^
+//
 // pkg/front_end/testcases/general/duplicated_declarations.dart:85:6: Error: 'Enum' is already declared in this scope.
 // enum Enum {
 //      ^^^^
 // pkg/front_end/testcases/general/duplicated_declarations.dart:78:6: Context: Previous declaration of 'Enum'.
 // enum Enum {
 //      ^^^^
+//
+// pkg/front_end/testcases/general/duplicated_declarations.dart:98:3: Error: 'values' is already declared in this scope.
+//   values,
+//   ^^^^^^
+// pkg/front_end/testcases/general/duplicated_declarations.dart:91:6: Context: Previous declaration of 'values' is implied by this definition.
+// enum AnotherEnum {
+//      ^^^^^^^^^^^
 //
 // pkg/front_end/testcases/general/duplicated_declarations_part.dart:13:9: Error: 'Typedef' is already declared in this scope.
 // typedef Typedef = void Function();
@@ -228,6 +246,17 @@ library;
 // class C {
 //       ^
 //
+// pkg/front_end/testcases/general/duplicated_declarations_part.dart:76:3: Error: Name of enum constant 'Enum' can't be the same as the enum's own name.
+//   Enum,
+//   ^^^^
+//
+// pkg/front_end/testcases/general/duplicated_declarations_part.dart:78:3: Error: 'a' is already declared in this scope.
+//   a,
+//   ^
+// pkg/front_end/testcases/general/duplicated_declarations_part.dart:77:3: Context: Previous declaration of 'a'.
+//   a,
+//   ^
+//
 // pkg/front_end/testcases/general/duplicated_declarations_part.dart:82:6: Error: 'Enum' is already declared in this scope.
 // enum Enum {
 //      ^^^^
@@ -241,35 +270,6 @@ library;
 // pkg/front_end/testcases/general/duplicated_declarations_part.dart:82:6: Context: Previous declaration of 'Enum'.
 // enum Enum {
 //      ^^^^
-//
-// pkg/front_end/testcases/general/duplicated_declarations.dart:70:4: Error: Name of enum constant 'Enum' can't be the same as the enum's own name.
-//   Sub() : super(null);
-//    ^^^^
-//
-// pkg/front_end/testcases/general/duplicated_declarations.dart:70:17: Error: 'a' is already declared in this scope.
-//   Sub() : super(null);
-//                 ^
-// pkg/front_end/testcases/general/duplicated_declarations.dart:70:12: Context: Previous declaration of 'a'.
-//   Sub() : super(null);
-//            ^
-//
-// pkg/front_end/testcases/general/duplicated_declarations.dart:79:3: Error: Name of enum constant 'Enum' can't be the same as the enum's own name.
-//   Enum,
-//   ^^^^
-//
-// pkg/front_end/testcases/general/duplicated_declarations.dart:81:3: Error: 'a' is already declared in this scope.
-//   a,
-//   ^
-// pkg/front_end/testcases/general/duplicated_declarations.dart:80:3: Context: Previous declaration of 'a'.
-//   a,
-//   ^
-//
-// pkg/front_end/testcases/general/duplicated_declarations.dart:98:3: Error: 'values' is already declared in this scope.
-//   values,
-//   ^^^^^^
-// pkg/front_end/testcases/general/duplicated_declarations.dart:91:6: Context: Previous declaration of 'values' is implied by this definition.
-// enum AnotherEnum {
-//      ^^^^^^^^^^^
 //
 // pkg/front_end/testcases/general/duplicated_declarations.dart:9:46: Error: 'Typedef' is already declared in this scope.
 // import 'duplicated_declarations_lib.dart' as Typedef;
@@ -288,14 +288,14 @@ library;
 // pkg/front_end/testcases/general/duplicated_declarations.dart:96:3: Error: Can't declare a member that conflicts with an inherited one.
 //   index,
 //   ^^^^^
-// sdk/lib/core/enum.dart:*: Context: This is the inherited member.
+// sdk/lib/core/enum.dart:101:13: Context: This is the inherited member.
 //   final int index;
 //             ^^^^^
 //
 // pkg/front_end/testcases/general/duplicated_declarations.dart:97:3: Error: Can't declare a member that conflicts with an inherited one.
 //   toString,
 //   ^^^^^^^^
-// sdk/lib/core/enum.dart:*: Context: This is the inherited member.
+// sdk/lib/core/enum.dart:113:10: Context: This is the inherited member.
 //   String toString() => _enumToString();
 //          ^^^^^^^^
 //
@@ -495,7 +495,7 @@ static method main() → dynamic {
 static method foo() → dynamic {
   invalid-expression "pkg/front_end/testcases/general/duplicated_declarations.dart:36:3: Error: Can't use 'main' because it is declared more than once.
   main();
-  ^"{dynamic}();
+  ^"{dynamic}.call();
   core::print(invalid-expression "pkg/front_end/testcases/general/duplicated_declarations.dart:37:9: Error: Can't use 'field' because it is declared more than once.
   print(field);
         ^");

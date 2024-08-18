@@ -25,14 +25,14 @@ class RenameTypeParameterRefactoringImpl extends RenameRefactoringImpl {
 
   @override
   Future<RefactoringStatus> checkFinalConditions() async {
-    var result = RefactoringStatus();
+    final result = RefactoringStatus();
 
-    var enclosing = element.enclosingElement;
+    final enclosing = element.enclosingElement;
     if (enclosing is TypeParameterizedElement) {
-      for (var sibling in enclosing.typeParameters) {
+      for (final sibling in enclosing.typeParameters) {
         if (sibling.name == newName) {
-          var nodeKind = sibling.kind.displayName;
-          var message = "Duplicate $nodeKind '$newName'.";
+          final nodeKind = sibling.kind.displayName;
+          final message = "Duplicate $nodeKind '$newName'.";
           result.addError(message, newLocation_fromElement(sibling));
         }
       }
@@ -43,17 +43,18 @@ class RenameTypeParameterRefactoringImpl extends RenameRefactoringImpl {
 
   @override
   RefactoringStatus checkNewName() {
-    var result = super.checkNewName();
+    final result = super.checkNewName();
     result.addStatus(validateTypeParameter(newName));
     return result;
   }
 
   @override
   Future<void> fillChange() async {
-    var processor = RenameProcessor(workspace, sessionHelper, change, newName);
+    final processor =
+        RenameProcessor(workspace, sessionHelper, change, newName);
     processor.addDeclarationEdit(element);
 
-    var references = await searchEngine.searchReferences(element);
+    final references = await searchEngine.searchReferences(element);
     processor.addReferenceEdits(references);
   }
 }

@@ -7,5 +7,4 @@ typedef F<X extends Class<X>> = X;
 class G<X extends Class<X>> {}
 
 test() {}
-
 main() {}

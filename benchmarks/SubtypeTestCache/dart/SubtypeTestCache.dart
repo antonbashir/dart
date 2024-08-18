@@ -3897,7 +3897,6 @@ class STCSame1000 extends STCBenchmarkBase {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:never-inline')
 void check<S>(dynamic s) => s as C<S> Function();
 

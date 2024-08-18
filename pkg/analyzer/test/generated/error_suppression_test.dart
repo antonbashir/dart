@@ -48,9 +48,10 @@ int _y = 0; //INVALID_ASSIGNMENT
 // ignore: unnecessary_cast
 int x = (0 as int);
 // ... but no ignore here ...
-var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
+const y = x; //CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 ''', [
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 90, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 88,
+          1),
     ]);
   }
 
@@ -58,19 +59,21 @@ var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
     await assertErrorsInCode('''
 int x = (0 as int); // ignore: unnecessary_cast
 // ... but no ignore here ...
-var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
+const y = x; //CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 ''', [
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 90, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 88,
+          1),
     ]);
   }
 
   test_ignore_for_file() async {
     await assertErrorsInCode('''
 int x = (0 as int); //UNNECESSARY_CAST
-var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
+const y = x; //CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 // ignore_for_file: unnecessary_cast
 ''', [
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 51, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 49,
+          1),
     ]);
   }
 
@@ -131,21 +134,23 @@ int x = (0 as int); // ignore: UNNECESSARY_CAST
     await assertErrorsInCode('''
 // ignore: right_format_wrong_code
 int x = '';
-var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
+const y = x; //CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 ''', [
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 43, 2),
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 59, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 57,
+          1),
     ]);
   }
 
   test_missing_error_codes() async {
     await assertErrorsInCode('''
-int x = 3;
+    int x = 3;
 // ignore:
-String y = x + ''; //INVALID_ASSIGNMENT, ARGUMENT_TYPE_NOT_ASSIGNABLE
+const String y = x; //INVALID_ASSIGNMENT, CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 ''', [
-      error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 33, 6),
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 37, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 43,
+          1),
+      error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 43, 1),
     ]);
   }
 
@@ -191,13 +196,38 @@ int _y = x as int; // ignore: unnecessary_cast, $ignoredCode
 ''');
   }
 
+  test_multiple_ignores_whitespace_variant_1() async {
+    await assertNoErrorsInCode('''
+int x = 3;
+//ignore:unnecessary_cast,$ignoredCode
+int _y = x as int; //UNNECESSARY_CAST, UNUSED_ELEMENT
+''');
+  }
+
+  test_multiple_ignores_whitespace_variant_2() async {
+    await assertNoErrorsInCode('''
+int x = 3;
+//ignore: unnecessary_cast,$ignoredCode
+int _y = x as int; //UNNECESSARY_CAST, UNUSED_ELEMENT
+''');
+  }
+
+  test_multiple_ignores_whitespace_variant_3() async {
+    await assertNoErrorsInCode('''
+int x = 3;
+// ignore: unnecessary_cast,$ignoredCode
+int _y = x as int; //UNNECESSARY_CAST, UNUSED_ELEMENT
+''');
+  }
+
   test_no_ignores() async {
     await assertErrorsInCode('''
 int x = ''; //INVALID_ASSIGNMENT
-var y = x + ''; //ARGUMENT_TYPE_NOT_ASSIGNABLE
+const y = x; //CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
 ''', [
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 8, 2),
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 45, 2),
+      error(CompileTimeErrorCode.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE, 43,
+          1),
     ]);
   }
 
@@ -226,7 +256,7 @@ void f(arg1(int)) {} // AVOID_TYPES_AS_PARAMETER_NAMES
 ''');
   }
 
-  test_type_ignore_mismatch_lintVsWarning() async {
+  test_type_ignore_mismatch() async {
     await assertErrorsInCode('''
 // ignore: type=lint
 int _x = 1;
@@ -235,7 +265,7 @@ int _x = 1;
     ]);
   }
 
-  test_type_ignoreForFile_match_lint() async {
+  test_type_ignoreForFile_match() async {
     await assertNoErrorsInCode('''
 // ignore_for_file: type=lint
 void f(arg1(int)) {} // AVOID_TYPES_AS_PARAMETER_NAMES
@@ -249,16 +279,14 @@ void f(arg1(int)) {} // AVOID_TYPES_AS_PARAMETER_NAMES
 ''');
   }
 
-  test_type_ignoreForFile_match_warning() async {
+  test_type_ignoreForFile_match_withWhitespace() async {
     await assertNoErrorsInCode('''
-// ignore_for_file: type=warning
-void f() {
-  var x = 1;
-}
+// ignore_for_file: type = lint
+void f(arg1(int)) {} // AVOID_TYPES_AS_PARAMETER_NAMES
 ''');
   }
 
-  test_type_ignoreForFile_mismatch_lintVsWarning() async {
+  test_type_ignoreForFile_mismatch() async {
     await assertErrorsInCode('''
 // ignore_for_file: type=lint
 int a = 0;

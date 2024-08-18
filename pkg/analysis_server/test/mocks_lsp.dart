@@ -37,7 +37,7 @@ class MockLspServerChannel implements LspServerCommunicationChannel {
     _serverToClient.stream.listen((message) {
       if (message is lsp.NotificationMessage &&
           message.method == lsp.Method.window_showMessage) {
-        var params = message.params;
+        final params = message.params;
         if (params is lsp.ShowMessageParams) {
           if (params.type == lsp.MessageType.Error) {
             shownErrors.add(params);
@@ -97,7 +97,8 @@ class MockLspServerChannel implements LspServerCommunicationChannel {
 
     notification = _convertJson(notification, lsp.NotificationMessage.fromJson);
 
-    _clientToServer.add(notification);
+    // Wrap send request in future to simulate WebSocket.
+    Future(() => _clientToServer.add(notification));
   }
 
   @override
@@ -123,7 +124,8 @@ class MockLspServerChannel implements LspServerCommunicationChannel {
 
     request = _convertJson(request, lsp.RequestMessage.fromJson);
 
-    _clientToServer.add(request);
+    // Wrap send request in future to simulate WebSocket.
+    Future(() => _clientToServer.add(request));
     return waitForResponse(request);
   }
 
@@ -136,7 +138,8 @@ class MockLspServerChannel implements LspServerCommunicationChannel {
 
     response = _convertJson(response, lsp.ResponseMessage.fromJson);
 
-    _serverToClient.add(response);
+    // Wrap send response in future to simulate WebSocket.
+    Future(() => _serverToClient.add(response));
   }
 
   void sendResponseToServer(lsp.ResponseMessage response) {
@@ -159,7 +162,7 @@ class MockLspServerChannel implements LspServerCommunicationChannel {
   /// already been sent to the server.
   Future<lsp.ResponseMessage> waitForResponse(
       lsp.RequestMessage request) async {
-    var response = await _serverToClient.stream.firstWhere((message) =>
+    final response = await _serverToClient.stream.firstWhere((message) =>
         message is lsp.ResponseMessage && message.id == request.id);
 
     return response as lsp.ResponseMessage;

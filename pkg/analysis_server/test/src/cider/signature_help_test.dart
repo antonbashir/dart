@@ -34,13 +34,13 @@ final a = A(^);
   }
 
   void test_params_multipleNamed() async {
-    var content = '''
+    final content = '''
 /// Does foo.
 foo(String s, {bool b = true, bool a}) {
   foo(^);
 }
 ''';
-    var expectedLabel = 'foo(String s, {bool b = true, bool a})';
+    final expectedLabel = 'foo(String s, {bool b = true, bool a})';
 
     await testSignature(
         content,
@@ -55,14 +55,14 @@ foo(String s, {bool b = true, bool a}) {
   }
 
   void test_params_multipleOptional() async {
-    var content = '''
+    final content = '''
 /// Does foo.
 foo(String s, [bool b = true, bool a]) {
   foo(^);
 }
 ''';
 
-    var expectedLabel = 'foo(String s, [bool b = true, bool a])';
+    final expectedLabel = 'foo(String s, [bool b = true, bool a])';
     await testSignature(
         content,
         expectedLabel,
@@ -76,13 +76,13 @@ foo(String s, [bool b = true, bool a]) {
   }
 
   void test_retrigger_validLocation() async {
-    var content = '''
+    final content = '''
 /// Does foo.
 foo(String s, {bool b = true, bool a}) {
   foo('ssss',^);
 }
 ''';
-    var expectedLabel = 'foo(String s, {bool b = true, bool a})';
+    final expectedLabel = 'foo(String s, {bool b = true, bool a})';
 
     await testSignature(
         content,
@@ -97,13 +97,13 @@ foo(String s, {bool b = true, bool a}) {
   }
 
   void test_simple() async {
-    var content = '''
+    final content = '''
 /// Does foo.
 foo(String s, int i) {
   foo(^);
 }
 ''';
-    var expectedLabel = 'foo(String s, int i)';
+    final expectedLabel = 'foo(String s, int i)';
     await testSignature(
         content,
         expectedLabel,
@@ -116,14 +116,14 @@ foo(String s, int i) {
   }
 
   void test_triggerCharacter_validLocation() async {
-    var content = '''
+    final content = '''
 /// Does foo.
 foo(String s, int i) {
   foo(^
 }
 ''';
 
-    var expectedLabel = 'foo(String s, int i)';
+    final expectedLabel = 'foo(String s, int i)';
     await testSignature(
         content,
         expectedLabel,
@@ -136,7 +136,7 @@ foo(String s, int i) {
   }
 
   void test_typeParams_class() async {
-    var content = '''
+    final content = '''
 /// My Foo.
 class Foo<T1, T2 extends String> {}
 
@@ -155,7 +155,7 @@ class Bar extends Foo<^> {}
   }
 
   void test_typeParams_function() async {
-    var content = '''
+    final content = '''
 /// My Foo.
 void foo<T1, T2 extends String>() {
   foo<^>();
@@ -174,7 +174,7 @@ void foo<T1, T2 extends String>() {
   }
 
   void test_typeParams_method() async {
-    var content = '''
+    final content = '''
 class Foo {
   /// My Foo.
   void foo<T1, T2 extends String>() {
@@ -202,7 +202,8 @@ class Foo {
       CharacterLocation leftParenLocation) async {
     var result = await _compute(content);
     var signature = result!.signatureHelp.signatures.first;
-    var expected = MarkupContent(kind: MarkupKind.Markdown, value: expectedDoc);
+    final expected =
+        MarkupContent(kind: MarkupKind.Markdown, value: expectedDoc);
     expect(signature.label, expectedLabel);
     expect(signature.documentation!.valueEquals(expected), isTrue);
     expect(ListEquality().equals(expectedParameters, signature.parameters),

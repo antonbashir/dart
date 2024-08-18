@@ -21,13 +21,13 @@ void f(x) {
   if (x case int _ && double _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 LogicalAndPattern
   leftOperand: WildcardPattern
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     name: _
     matchedValueType: dynamic
@@ -35,7 +35,7 @@ LogicalAndPattern
   rightOperand: WildcardPattern
     type: NamedType
       name: double
-      element: dart:core::<fragment>::@class::double
+      element: dart:core::@class::double
       type: double
     name: _
     matchedValueType: int
@@ -52,13 +52,13 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 LogicalAndPattern
   leftOperand: WildcardPattern
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     name: _
     matchedValueType: dynamic
@@ -66,7 +66,7 @@ LogicalAndPattern
   rightOperand: WildcardPattern
     type: NamedType
       name: double
-      element: dart:core::<fragment>::@class::double
+      element: dart:core::@class::double
       type: double
     name: _
     matchedValueType: int
@@ -80,10 +80,10 @@ void f() {
   var (a && b) = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 23, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 18, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 23, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration

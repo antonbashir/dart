@@ -96,12 +96,10 @@ class _AsyncStarStreamController<T> {
 
     isAdding = true;
     final whenDoneAdding = controller.addStream(stream, cancelOnError: false);
-    @pragma('vm:awaiter-link')
-    final self = this;
     whenDoneAdding.then((_) {
-      self.isAdding = false;
-      self.scheduleGenerator();
-      if (!self.isScheduled) self.isSuspendedAtYield = true;
+      isAdding = false;
+      scheduleGenerator();
+      if (!isScheduled) isSuspendedAtYield = true;
     });
 
     return false;

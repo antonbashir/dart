@@ -11,7 +11,6 @@ import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer_plugin/protocol/protocol.dart' as plugin;
 import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
 import 'package:analyzer_plugin/src/protocol/protocol_internal.dart' as plugin;
-import 'package:collection/collection.dart';
 
 /// Produces [CodeAction]s from Plugin fixes and assists.
 class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
@@ -25,7 +24,6 @@ class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
     required super.length,
     required super.shouldIncludeKind,
     required super.capabilities,
-    required super.analysisOptions,
   }) : driver = server.getAnalysisDriver(file.path);
 
   @override
@@ -38,8 +36,8 @@ class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
       return [];
     }
 
-    var requestParams = plugin.EditGetAssistsParams(path, offset, length);
-    var responses = await _sendPluginRequest(requestParams);
+    final requestParams = plugin.EditGetAssistsParams(path, offset, length);
+    final responses = await _sendPluginRequest(requestParams);
 
     return responses
         .map((response) => plugin.EditGetAssistsResult.fromResponse(response))
@@ -55,14 +53,15 @@ class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
       return [];
     }
 
-    var requestParams = plugin.EditGetFixesParams(path, offset);
-    var responses = await _sendPluginRequest(requestParams);
+    final requestParams = plugin.EditGetFixesParams(path, offset);
+    final responses = await _sendPluginRequest(requestParams);
 
     return responses
         .map((response) => plugin.EditGetFixesResult.fromResponse(response))
         .expand((response) => response.fixes)
         .map(_convertFixes)
-        .flattenedToList;
+        .expand((fix) => fix)
+        .toList();
   }
 
   @override
@@ -80,8 +79,8 @@ class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
 
   Iterable<CodeActionWithPriority> _convertFixes(
       plugin.AnalysisErrorFixes fixes) {
-    var diagnostic = pluginToDiagnostic(
-      server.uriConverter,
+    final diagnostic = pluginToDiagnostic(
+      server.pathContext,
       (_) => lineInfo,
       fixes.error,
       supportedTags: supportedDiagnosticTags,
@@ -97,7 +96,7 @@ class PluginCodeActionsProducer extends AbstractCodeActionsProducer {
 
   Future<List<plugin.Response>> _sendPluginRequest(
       plugin.RequestParams requestParams) async {
-    var driver = this.driver;
+    final driver = this.driver;
     if (driver == null) {
       return [];
     }

@@ -9,7 +9,6 @@ abstract class Interface2 {
 mixin A implements Interface {
   String method(num i, {String s = "hello"}) => s;
 }
-
 mixin B implements Interface {
   String method(num i);
 }

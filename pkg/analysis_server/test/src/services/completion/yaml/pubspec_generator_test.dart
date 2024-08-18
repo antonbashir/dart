@@ -55,8 +55,6 @@ class PubspecGeneratorTest extends YamlGeneratorTest {
     assertSuggestion('flutter: ');
     assertSuggestion('name: ');
     assertSuggestion('topics: ');
-    assertSuggestion('workspace:');
-    assertSuggestion('resolution: ');
   }
 
   void test_emptyPreviousSibling() {
@@ -350,7 +348,7 @@ dependencies:
   }
 
   void test_packageVersion() async {
-    var json = r'''
+    final json = r'''
     {
       "packages": [
         {
@@ -408,15 +406,5 @@ screenshots:
     ^
 ''');
     assertSuggestion('path: ');
-  }
-
-  void test_workspace_resolution() {
-    getCompletions('''
-resolution: ^
-''');
-    expect(results.length, 3);
-    assertSuggestion('workspace');
-    assertSuggestion('local');
-    assertSuggestion('external');
   }
 }

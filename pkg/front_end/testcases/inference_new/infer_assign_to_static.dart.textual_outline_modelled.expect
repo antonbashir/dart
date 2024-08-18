@@ -1,26 +1,21 @@
+// @dart = 2.9
 library test;
 
-B? topLevelVariable2;
-
-B topLevelVariable = throw '';
-
-T f<T>() => throw '';
+B topLevelVariable;
+T f<T>() => null;
 
 class A {}
 
 class B extends A {
-  B operator *(B v) => throw '';
-  B operator +(C v) => throw '';
-  B operator -(int i) => throw '';
-  C operator &(A v) => throw '';
-  static B? staticVariable2;
-  static B staticVariable = throw '';
+  A operator +(C v) => null;
+  B operator *(B v) => null;
+  B operator -(int i) => null;
+  C operator &(A v) => null;
+  static B staticVariable;
 }
 
 class C extends B {}
 
 main() {}
-
 void test_staticVariable() {}
-
 void test_topLevelVariable() {}

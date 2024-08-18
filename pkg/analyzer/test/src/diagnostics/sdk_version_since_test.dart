@@ -467,19 +467,19 @@ void f(A a) {
       error(WarningCode.SDK_VERSION_SINCE, 38, 3),
     ]);
 
-    var node = findNode.prefixed('.foo');
+    final node = findNode.prefixed('.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: A
   period: .
   identifier: SimpleIdentifier
     token: foo
-    staticElement: dart:foo::<fragment>::@class::A::@method::foo
+    staticElement: dart:foo::@class::A::@method::foo
     staticType: void Function()
-  staticElement: dart:foo::<fragment>::@class::A::@method::foo
+  staticElement: dart:foo::@class::A::@method::foo
   staticType: void Function()
 ''');
   }
@@ -504,21 +504,21 @@ void f(A a) {
       error(WarningCode.SDK_VERSION_SINCE, 40, 3),
     ]);
 
-    var node = findNode.propertyAccess('.foo');
+    final node = findNode.propertyAccess('.foo');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: dart:foo::<fragment>::@class::A::@method::foo
+    staticElement: dart:foo::@class::A::@method::foo
     staticType: void Function()
   staticType: void Function()
 ''');

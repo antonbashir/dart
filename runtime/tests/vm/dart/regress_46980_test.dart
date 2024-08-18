@@ -8,6 +8,7 @@
 // Program generated as:
 //   dart dartfuzz.dart --seed 929450448 --no-fp --no-ffi --no-flat
 
+import 'dart:collection';
 import 'dart:typed_data';
 
 MapEntry<List<int>, Map<String, String>>? var0 =

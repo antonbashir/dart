@@ -118,7 +118,7 @@ class PatternGreatestClosureHelper extends ReplacementVisitor {
 
   @override
   DartType? visitTypeParameterType(TypeParameterType type) {
-    var replacement = _isCovariant ? topType : bottomType;
+    final replacement = _isCovariant ? topType : bottomType;
     return replacement.withNullability(
       uniteNullabilities(
         replacement.nullabilitySuffix,

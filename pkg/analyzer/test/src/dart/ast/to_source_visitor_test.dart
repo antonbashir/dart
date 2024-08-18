@@ -22,8 +22,8 @@ main() {
 @reflectiveTest
 class ToSourceVisitorTest extends ParserDiagnosticsTest {
   void test_representationDeclaration() {
-    var code = '(@foo int it)';
-    var findNode = _parseStringToFindNode('''
+    final code = '(@foo int it)';
+    final findNode = _parseStringToFindNode('''
 extension type E$code {}
 ''');
     _assertSource(code, findNode.singleRepresentationDeclaration);
@@ -40,8 +40,8 @@ var v = 'a' 'b';
   }
 
   void test_visitAnnotation_constant() {
-    var code = '@A';
-    var findNode = _parseStringToFindNode('''
+    final code = '@A';
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -49,8 +49,8 @@ void f() {}
   }
 
   void test_visitAnnotation_constructor() {
-    var code = '@A.foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = '@A.foo()';
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -58,8 +58,8 @@ void f() {}
   }
 
   void test_visitAnnotation_constructor_generic() {
-    var code = '@A<int>.foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = '@A<int>.foo()';
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -67,8 +67,8 @@ void f() {}
   }
 
   void test_visitArgumentList() {
-    var code = '(0, 1)';
-    var findNode = _parseStringToFindNode('''
+    final code = '(0, 1)';
+    final findNode = _parseStringToFindNode('''
 final x = f$code;
 ''');
     _assertSource(code, findNode.argumentList(code));
@@ -118,8 +118,8 @@ void f(int foo) {
   }
 
   void test_visitAssignmentExpression() {
-    var code = 'a = b';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a = b';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -168,72 +168,72 @@ var v = a * (b + c);
   }
 
   void test_visitBlock_empty() {
-    var code = '{}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.block(code));
   }
 
   void test_visitBlock_nonEmpty() {
-    var code = '{foo(); bar();}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{foo(); bar();}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.block(code));
   }
 
   void test_visitBlockFunctionBody_async() {
-    var code = 'async {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'async {}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.blockFunctionBody(code));
   }
 
   void test_visitBlockFunctionBody_async_star() {
-    var code = 'async* {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'async* {}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.blockFunctionBody(code));
   }
 
   void test_visitBlockFunctionBody_simple() {
-    var code = '{}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.blockFunctionBody(code));
   }
 
   void test_visitBlockFunctionBody_sync_star() {
-    var code = 'sync* {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'sync* {}';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.blockFunctionBody(code));
   }
 
   void test_visitBooleanLiteral_false() {
-    var code = 'false';
-    var findNode = _parseStringToFindNode('''
+    final code = 'false';
+    final findNode = _parseStringToFindNode('''
 final v = $code;
 ''');
     _assertSource(code, findNode.booleanLiteral(code));
   }
 
   void test_visitBooleanLiteral_true() {
-    var code = 'true';
-    var findNode = _parseStringToFindNode('''
+    final code = 'true';
+    final findNode = _parseStringToFindNode('''
 final v = $code;
 ''');
     _assertSource(code, findNode.booleanLiteral(code));
   }
 
   void test_visitBreakStatement_label() {
-    var code = 'break L;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'break L;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   L: while (true) {
     $code
@@ -244,8 +244,8 @@ void f() {
   }
 
   void test_visitBreakStatement_noLabel() {
-    var code = 'break;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'break;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   while (true) {
     $code
@@ -256,8 +256,8 @@ void f() {
   }
 
   void test_visitCascadeExpression_field() {
-    var code = 'a..b..c';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a..b..c';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -266,8 +266,8 @@ void f() {
   }
 
   void test_visitCascadeExpression_index() {
-    var code = 'a..[0]..[1]';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a..[0]..[1]';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -276,8 +276,8 @@ void f() {
   }
 
   void test_visitCascadeExpression_method() {
-    var code = 'a..b()..c()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a..b()..c()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -301,8 +301,8 @@ void f(x) {
   }
 
   void test_visitCatchClause_catch_noStack() {
-    var code = 'catch (e) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'catch (e) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   try {}
   $code
@@ -312,8 +312,8 @@ void f() {
   }
 
   void test_visitCatchClause_catch_stack() {
-    var code = 'catch (e, s) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'catch (e, s) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   try {}
   $code
@@ -323,8 +323,8 @@ void f() {
   }
 
   void test_visitCatchClause_on() {
-    var code = 'on E {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'on E {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   try {}
   $code
@@ -334,8 +334,8 @@ void f() {
   }
 
   void test_visitCatchClause_on_catch() {
-    var code = 'on E catch (e) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'on E catch (e) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   try {}
   $code
@@ -345,26 +345,26 @@ void f() {
   }
 
   void test_visitClassDeclaration_abstract() {
-    var code = 'abstract class C {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'abstract class C {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_abstractMacro() {
-    var code = 'abstract macro class C {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'abstract macro class C {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_augment() {
-    var code = 'augment class A {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'augment class A {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.singleClassDeclaration);
   }
 
   void test_visitClassDeclaration_augment_abstract() {
-    var code = 'augment abstract class C {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'augment abstract class C {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.singleClassDeclaration);
   }
 
@@ -379,30 +379,30 @@ base class A {}
   }
 
   void test_visitClassDeclaration_empty() {
-    var code = 'class C {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'class C {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_extends() {
-    var code = 'class C extends A {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C extends A {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_extends_implements() {
-    var code = 'class C extends A implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C extends A implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_extends_with() {
-    var code = 'class C extends A with M {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C extends A with M {}';
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -410,8 +410,8 @@ void f() {}
   }
 
   void test_visitClassDeclaration_extends_with_implements() {
-    var code = 'class C extends A with M implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C extends A with M implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -429,8 +429,8 @@ final class A {}
   }
 
   void test_visitClassDeclaration_implements() {
-    var code = 'class C implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
@@ -467,54 +467,54 @@ mixin class A {}
   }
 
   void test_visitClassDeclaration_multipleMember() {
-    var code = 'class C {var a; var b;}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C {var a; var b;}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters() {
-    var code = 'class C<E> {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'class C<E> {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters_extends() {
-    var code = 'class C<E> extends A {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> extends A {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters_extends_implements() {
-    var code = 'class C<E> extends A implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> extends A implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters_extends_with() {
-    var code = 'class C<E> extends A with M {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> extends A with M {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters_extends_with_implements() {
-    var code = 'class C<E> extends A with M implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> extends A with M implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_parameters_implements() {
-    var code = 'class C<E> implements B {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> implements B {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classDeclaration(code));
@@ -531,28 +531,28 @@ sealed class A {}
   }
 
   void test_visitClassDeclaration_singleMember() {
-    var code = 'class C {var a;}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'class C {var a;}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassDeclaration_withMetadata() {
-    var code = '@deprecated class C {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated class C {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classDeclaration(code));
   }
 
   void test_visitClassTypeAlias_abstract() {
-    var code = 'abstract class C = S with M;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract class C = S with M;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
   }
 
   void test_visitClassTypeAlias_abstract_implements() {
-    var code = 'abstract class C = S with M implements I;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract class C = S with M implements I;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
@@ -560,16 +560,16 @@ $code
 
   void test_visitClassTypeAlias_abstractAugment() {
     // TODO(scheglov): Is this the right order of modifiers?
-    var code = 'augment abstract class C = S with M;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'augment abstract class C = S with M;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias('class C'));
   }
 
   void test_visitClassTypeAlias_abstractMacro() {
-    var code = 'abstract macro class C = S with M;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract macro class C = S with M;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
@@ -606,16 +606,16 @@ final class A = S with M;
   }
 
   void test_visitClassTypeAlias_generic() {
-    var code = 'class C<E> = S<E> with M<E>;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> = S<E> with M<E>;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
   }
 
   void test_visitClassTypeAlias_implements() {
-    var code = 'class C = S with M implements I;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C = S with M implements I;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
@@ -642,8 +642,8 @@ macro class A = S with M;
   }
 
   void test_visitClassTypeAlias_minimal() {
-    var code = 'class C = S with M;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C = S with M;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
@@ -660,24 +660,24 @@ mixin class A = S with M;
   }
 
   void test_visitClassTypeAlias_parameters_abstract() {
-    var code = 'abstract class C<E> = S with M;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract class C<E> = S with M;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
   }
 
   void test_visitClassTypeAlias_parameters_abstract_implements() {
-    var code = 'abstract class C<E> = S with M implements I;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract class C<E> = S with M implements I;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
   }
 
   void test_visitClassTypeAlias_parameters_implements() {
-    var code = 'class C<E> = S with M implements I;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'class C<E> = S with M implements I;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.classTypeAlias(code));
@@ -694,17 +694,17 @@ sealed class A = S with M;
   }
 
   void test_visitClassTypeAlias_withMetadata() {
-    var code = '@deprecated class A = S with M;';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated class A = S with M;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.classTypeAlias(code));
   }
 
   void test_visitComment() {
-    var code = r'''
+    final code = r'''
 /// foo
 /// bar
 ''';
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 $code
 void f() {}
 ''');
@@ -712,8 +712,8 @@ void f() {}
   }
 
   void test_visitCommentReference() {
-    var code = 'x';
-    var findNode = _parseStringToFindNode('''
+    final code = 'x';
+    final findNode = _parseStringToFindNode('''
 /// [$code]
 void f() {}
 ''');
@@ -721,44 +721,44 @@ void f() {}
   }
 
   void test_visitCompilationUnit_declaration() {
-    var code = 'var a;';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'var a;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.unit);
   }
 
   void test_visitCompilationUnit_directive() {
-    var code = 'library my;';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'library my;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.unit);
   }
 
   void test_visitCompilationUnit_directive_declaration() {
-    var code = 'library my; var a;';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'library my; var a;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.unit);
   }
 
   void test_visitCompilationUnit_empty() {
-    var code = '';
-    var findNode = _parseStringToFindNode(code);
+    final code = '';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.unit);
   }
 
   void test_visitCompilationUnit_libraryWithoutName() {
-    var code = 'library ;';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'library ;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.unit);
   }
 
   void test_visitCompilationUnit_script() {
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 #!/bin/dartvm
 ''');
     _assertSource('#!/bin/dartvm', findNode.unit);
   }
 
   void test_visitCompilationUnit_script_declaration() {
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 #!/bin/dartvm
 var a;
 ''');
@@ -766,7 +766,7 @@ var a;
   }
 
   void test_visitCompilationUnit_script_directive() {
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 #!/bin/dartvm
 library my;
 ''');
@@ -774,7 +774,7 @@ library my;
   }
 
   void test_visitCompilationUnit_script_directives_declarations() {
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 #!/bin/dartvm
 library my;
 var a;
@@ -783,8 +783,8 @@ var a;
   }
 
   void test_visitConditionalExpression() {
-    var code = 'a ? b : c';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a ? b : c';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -805,8 +805,8 @@ void f(x) {
   }
 
   void test_visitConstructorDeclaration_const() {
-    var code = 'const A();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const A();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -815,8 +815,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_external() {
-    var code = 'external A();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'external A();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -825,8 +825,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_minimal() {
-    var code = 'A();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -835,8 +835,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_multipleInitializers() {
-    var code = 'A() : a = b, c = d {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A() : a = b, c = d {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -845,8 +845,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_multipleParameters() {
-    var code = 'A(int a, double b);';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A(int a, double b);';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -855,8 +855,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_named() {
-    var code = 'A.foo();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A.foo();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -865,8 +865,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_singleInitializer() {
-    var code = 'A() : a = b;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A() : a = b;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -875,8 +875,8 @@ class A {
   }
 
   void test_visitConstructorDeclaration_withMetadata() {
-    var code = '@deprecated C() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated C() {}';
+    final findNode = _parseStringToFindNode('''
 class C {
   $code
 }
@@ -885,8 +885,8 @@ class C {
   }
 
   void test_visitConstructorFieldInitializer_withoutThis() {
-    var code = 'a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a = 0';
+    final findNode = _parseStringToFindNode('''
 class C {
   C() : $code;
 }
@@ -895,8 +895,8 @@ class C {
   }
 
   void test_visitConstructorFieldInitializer_withThis() {
-    var code = 'this.a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'this.a = 0';
+    final findNode = _parseStringToFindNode('''
 class C {
   C() : $code;
 }
@@ -905,32 +905,32 @@ class C {
   }
 
   void test_visitConstructorName_named_prefix() {
-    var code = 'prefix.A.foo';
-    var findNode = _parseStringToFindNode('''
+    final code = 'prefix.A.foo';
+    final findNode = _parseStringToFindNode('''
 final x = new $code();
 ''');
     _assertSource(code, findNode.constructorName(code));
   }
 
   void test_visitConstructorName_unnamed_noPrefix() {
-    var code = 'A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A';
+    final findNode = _parseStringToFindNode('''
 final x = new $code();
 ''');
     _assertSource(code, findNode.constructorName(code));
   }
 
   void test_visitConstructorName_unnamed_prefix() {
-    var code = 'prefix.A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'prefix.A';
+    final findNode = _parseStringToFindNode('''
 final x = new $code();
 ''');
     _assertSource(code, findNode.constructorName(code));
   }
 
   void test_visitContinueStatement_label() {
-    var code = 'continue L;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'continue L;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   L: while (true) {
     $code
@@ -941,8 +941,8 @@ void f() {
   }
 
   void test_visitContinueStatement_noLabel() {
-    var code = 'continue;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'continue;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   while (true) {
     $code
@@ -968,48 +968,48 @@ void f(x) {
   }
 
   void test_visitDefaultFormalParameter_annotation() {
-    var code = '@deprecated p = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated p = 0';
+    final findNode = _parseStringToFindNode('''
 void f([$code]) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitDefaultFormalParameter_named_noValue() {
-    var code = 'int? a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int? a';
+    final findNode = _parseStringToFindNode('''
 void f({$code}) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitDefaultFormalParameter_named_value() {
-    var code = 'int? a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int? a = 0';
+    final findNode = _parseStringToFindNode('''
 void f({$code}) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitDefaultFormalParameter_positional_noValue() {
-    var code = 'int? a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int? a';
+    final findNode = _parseStringToFindNode('''
 void f([$code]) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitDefaultFormalParameter_positional_value() {
-    var code = 'int? a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int? a = 0';
+    final findNode = _parseStringToFindNode('''
 void f([$code]) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitDoStatement() {
-    var code = 'do {} while (true);';
-    var findNode = _parseStringToFindNode('''
+    final code = 'do {} while (true);';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1018,16 +1018,16 @@ void f () {
   }
 
   void test_visitDoubleLiteral() {
-    var code = '3.14';
-    var findNode = _parseStringToFindNode('''
+    final code = '3.14';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.doubleLiteral(code));
   }
 
   void test_visitEmptyFunctionBody() {
-    var code = ';';
-    var findNode = _parseStringToFindNode('''
+    final code = ';';
+    final findNode = _parseStringToFindNode('''
 void f() {
   ;
 }
@@ -1036,8 +1036,8 @@ void f() {
   }
 
   void test_visitEmptyStatement() {
-    var code = ';';
-    var findNode = _parseStringToFindNode('''
+    final code = ';';
+    final findNode = _parseStringToFindNode('''
 abstract class A {
   void foo();
 }
@@ -1128,23 +1128,23 @@ enum E<T> with M1, M2 implements I1, I2 {one, two}
   }
 
   void test_visitExportDirective_combinator() {
-    var code = "export 'a.dart' show A;";
-    var findNode = _parseStringToFindNode('''
+    final code = "export 'a.dart' show A;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.export(code));
   }
 
   void test_visitExportDirective_combinators() {
-    var code = "export 'a.dart' show A hide B;";
-    var findNode = _parseStringToFindNode('''
+    final code = "export 'a.dart' show A hide B;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.export(code));
   }
 
   void test_visitExportDirective_configurations() {
-    var unit = _parseStringToFindNode(r'''
+    var unit = parseString(content: r'''
 export 'foo.dart'
   if (dart.library.io) 'foo_io.dart'
   if (dart.library.html) 'foo_html.dart';
@@ -1159,45 +1159,45 @@ export 'foo.dart'
   }
 
   void test_visitExportDirective_minimal() {
-    var code = "export 'a.dart';";
-    var findNode = _parseStringToFindNode(code);
+    final code = "export 'a.dart';";
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.export(code));
   }
 
   void test_visitExportDirective_withMetadata() {
-    var code = '@deprecated export "a.dart";';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated export "a.dart";';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.export(code));
   }
 
   void test_visitExpressionFunctionBody_async() {
-    var code = 'async => 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'async => 0;';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.expressionFunctionBody(code));
   }
 
   void test_visitExpressionFunctionBody_async_star() {
-    var code = 'async* => 0;';
-    var parseResult = parseStringWithErrors('''
+    final code = 'async* => 0;';
+    final parseResult = parseStringWithErrors('''
 void f() $code
 ''');
-    var node = parseResult.findNode.expressionFunctionBody(code);
+    final node = parseResult.findNode.expressionFunctionBody(code);
     _assertSource(code, node);
   }
 
   void test_visitExpressionFunctionBody_simple() {
-    var code = '=> 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = '=> 0;';
+    final findNode = _parseStringToFindNode('''
 void f() $code
 ''');
     _assertSource(code, findNode.expressionFunctionBody(code));
   }
 
   void test_visitExpressionStatement() {
-    var code = '1 + 2;';
-    var findNode = _parseStringToFindNode('''
+    final code = '1 + 2;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -1206,48 +1206,40 @@ void f() {
   }
 
   void test_visitExtendsClause() {
-    var code = 'extends A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extends A';
+    final findNode = _parseStringToFindNode('''
 class C $code {}
 ''');
     _assertSource(code, findNode.extendsClause(code));
   }
 
-  void test_visitExtensionDeclaration_augment() {
-    var code = 'augment extension E {}';
-    var findNode = _parseStringToFindNode('''
-$code
-''');
-    _assertSource(code, findNode.extensionDeclaration(code));
-  }
-
   void test_visitExtensionDeclaration_empty() {
-    var code = 'extension E on C {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension E on C {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.extensionDeclaration(code));
   }
 
   void test_visitExtensionDeclaration_multipleMember() {
-    var code = 'extension E on C {static var a; static var b;}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension E on C {static var a; static var b;}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.extensionDeclaration(code));
   }
 
   void test_visitExtensionDeclaration_parameters() {
-    var code = 'extension E<T> on C {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension E<T> on C {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.extensionDeclaration(code));
   }
 
   void test_visitExtensionDeclaration_singleMember() {
-    var code = 'extension E on C {static var a;}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension E on C {static var a;}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.extensionDeclaration(code));
@@ -1298,32 +1290,32 @@ $code
   }
 
   void test_visitExtensionType() {
-    var code = 'extension type E(int it) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension type E(int it) {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.singleExtensionTypeDeclaration);
   }
 
   void test_visitExtensionType_implements() {
-    var code = 'extension type E(int it) implements num {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension type E(int it) implements num {}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.singleExtensionTypeDeclaration);
   }
 
   void test_visitExtensionType_method() {
-    var code = 'extension type E(int it) {void foo() {}}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'extension type E(int it) {void foo() {}}';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.singleExtensionTypeDeclaration);
   }
 
   void test_visitFieldDeclaration_abstract() {
-    var code = 'abstract var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'abstract var a;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -1331,19 +1323,9 @@ class A {
     _assertSource(code, findNode.fieldDeclaration(code));
   }
 
-  void test_visitFieldDeclaration_augment() {
-    var code = 'augment var a = 0;';
-    var findNode = _parseStringToFindNode('''
-augment class A {
-  $code
-}
-''');
-    _assertSource(code, findNode.fieldDeclaration(code));
-  }
-
   void test_visitFieldDeclaration_external() {
-    var code = 'external var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'external var a;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -1352,8 +1334,8 @@ class A {
   }
 
   void test_visitFieldDeclaration_instance() {
-    var code = 'var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -1362,8 +1344,8 @@ class A {
   }
 
   void test_visitFieldDeclaration_static() {
-    var code = 'static var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'static var a;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -1372,8 +1354,8 @@ class A {
   }
 
   void test_visitFieldDeclaration_withMetadata() {
-    var code = '@deprecated var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated var a;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -1382,8 +1364,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_annotation() {
-    var code = '@deprecated this.foo';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated this.foo';
+    final findNode = _parseStringToFindNode('''
 class A {
   final int foo;
   A($code);
@@ -1393,8 +1375,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_functionTyped() {
-    var code = 'A this.a(b)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A this.a(b)';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1403,8 +1385,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_functionTyped_typeParameters() {
-    var code = 'A this.a<E, F>(b)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A this.a<E, F>(b)';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1413,8 +1395,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_keyword() {
-    var code = 'var this.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var this.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1423,8 +1405,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_keywordAndType() {
-    var code = 'final A this.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'final A this.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1433,8 +1415,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_type() {
-    var code = 'A this.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'A this.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1443,8 +1425,8 @@ class A {
   }
 
   void test_visitFieldFormalParameter_type_covariant() {
-    var code = 'covariant A this.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'covariant A this.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -1453,8 +1435,8 @@ class A {
   }
 
   void test_visitForEachPartsWithIdentifier() {
-    var code = 'e in []';
-    var findNode = _parseStringToFindNode('''
+    final code = 'e in []';
+    final findNode = _parseStringToFindNode('''
 void f() {
   for ($code) {}
 }
@@ -1462,19 +1444,15 @@ void f() {
     _assertSource(code, findNode.forEachPartsWithIdentifier(code));
   }
 
+  @failingTest
   void test_visitForEachPartsWithPattern() {
-    var code = 'final (a, b) in c';
-    var findNode = _parseStringToFindNode('''
-void f () {
-  for ($code) {}
-}
-''');
-    _assertSource(code, findNode.forEachPartsWithPattern(code));
+    // TODO(brianwilkerson): Test this when the parser allows.
+    fail('Unable to parse patterns');
   }
 
   void test_visitForEachStatement_declared() {
-    var code = 'for (final a in b) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (final a in b) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1483,8 +1461,8 @@ void f () {
   }
 
   void test_visitForEachStatement_variable() {
-    var code = 'for (a in b) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (a in b) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1493,8 +1471,8 @@ void f () {
   }
 
   void test_visitForEachStatement_variable_await() {
-    var code = 'await for (final a in b) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'await for (final a in b) {}';
+    final findNode = _parseStringToFindNode('''
 void f() async {
   $code
 }
@@ -1503,144 +1481,144 @@ void f() async {
   }
 
   void test_visitForElement() {
-    var code = 'for (e in []) 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (e in []) 0';
+    final findNode = _parseStringToFindNode('''
 final v = [ $code ];
 ''');
     _assertSource(code, findNode.forElement(code));
   }
 
   void test_visitFormalParameterList_empty() {
-    var code = '()';
-    var findNode = _parseStringToFindNode('''
+    final code = '()';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_n() {
-    var code = '({a = 0})';
-    var findNode = _parseStringToFindNode('''
+    final code = '({a = 0})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_namedRequired() {
-    var code = '({required a, required int b})';
-    var findNode = _parseStringToFindNode('''
+    final code = '({required a, required int b})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_nn() {
-    var code = '({int a = 0, b = 1})';
-    var findNode = _parseStringToFindNode('''
+    final code = '({int a = 0, b = 1})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_p() {
-    var code = '([a = 0])';
-    var findNode = _parseStringToFindNode('''
+    final code = '([a = 0])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_pp() {
-    var code = '([a = 0, b = 1])';
-    var findNode = _parseStringToFindNode('''
+    final code = '([a = 0, b = 1])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_r() {
-    var code = '(int a)';
-    var findNode = _parseStringToFindNode('''
+    final code = '(int a)';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rn() {
-    var code = '(a, {b = 1})';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, {b = 1})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rnn() {
-    var code = '(a, {b = 1, c = 2})';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, {b = 1, c = 2})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rp() {
-    var code = '(a, [b = 1])';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, [b = 1])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rpp() {
-    var code = '(a, [b = 1, c = 2])';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, [b = 1, c = 2])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rr() {
-    var code = '(int a, int b)';
-    var findNode = _parseStringToFindNode('''
+    final code = '(int a, int b)';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rrn() {
-    var code = '(a, b, {c = 2})';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, b, {c = 2})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rrnn() {
-    var code = '(a, b, {c = 2, d = 3})';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, b, {c = 2, d = 3})';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rrp() {
-    var code = '(a, b, [c = 2])';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, b, [c = 2])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitFormalParameterList_rrpp() {
-    var code = '(a, b, [c = 2, d = 3])';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a, b, [c = 2, d = 3])';
+    final findNode = _parseStringToFindNode('''
 void f$code {}
 ''');
     _assertSource(code, findNode.formalParameterList(code));
   }
 
   void test_visitForPartsWithDeclarations() {
-    var code = 'var v = 0; v < 10; v++';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var v = 0; v < 10; v++';
+    final findNode = _parseStringToFindNode('''
 void f() {
   for ($code) {}
 }
@@ -1649,8 +1627,8 @@ void f() {
   }
 
   void test_visitForPartsWithExpression() {
-    var code = 'v = 0; v < 10; v++';
-    var findNode = _parseStringToFindNode('''
+    final code = 'v = 0; v < 10; v++';
+    final findNode = _parseStringToFindNode('''
 void f() {
   for ($code) {}
 }
@@ -1665,8 +1643,8 @@ void f() {
   }
 
   void test_visitForStatement() {
-    var code = 'for (var v in [0]) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (var v in [0]) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -1675,8 +1653,8 @@ void f() {
   }
 
   void test_visitForStatement_c() {
-    var code = 'for (; c;) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (; c;) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1685,8 +1663,8 @@ void f () {
   }
 
   void test_visitForStatement_cu() {
-    var code = 'for (; c; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (; c; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1695,8 +1673,8 @@ void f () {
   }
 
   void test_visitForStatement_e() {
-    var code = 'for (e;;) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (e;;) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1705,8 +1683,8 @@ void f () {
   }
 
   void test_visitForStatement_ec() {
-    var code = 'for (e; c;) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (e; c;) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1715,8 +1693,8 @@ void f () {
   }
 
   void test_visitForStatement_ecu() {
-    var code = 'for (e; c; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (e; c; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1725,8 +1703,8 @@ void f () {
   }
 
   void test_visitForStatement_eu() {
-    var code = 'for (e;; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (e;; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1735,8 +1713,8 @@ void f () {
   }
 
   void test_visitForStatement_i() {
-    var code = 'for (var i;;) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (var i;;) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1745,8 +1723,8 @@ void f () {
   }
 
   void test_visitForStatement_ic() {
-    var code = 'for (var i; c;) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (var i; c;) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1755,8 +1733,8 @@ void f () {
   }
 
   void test_visitForStatement_icu() {
-    var code = 'for (var i; c; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (var i; c; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1765,8 +1743,8 @@ void f () {
   }
 
   void test_visitForStatement_iu() {
-    var code = 'for (var i;; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (var i;; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1775,8 +1753,8 @@ void f () {
   }
 
   void test_visitForStatement_u() {
-    var code = 'for (;; u) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'for (;; u) {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -1785,20 +1763,20 @@ void f () {
   }
 
   void test_visitFunctionDeclaration_external() {
-    var code = 'external void f();';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'external void f();';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclaration_getter() {
-    var code = 'get foo {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'get foo {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclaration_local_blockBody() {
-    var code = 'void foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'void foo() {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -1807,8 +1785,8 @@ void f() {
   }
 
   void test_visitFunctionDeclaration_local_expressionBody() {
-    var code = 'int foo() => 42;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int foo() => 42;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -1817,32 +1795,32 @@ void f() {
   }
 
   void test_visitFunctionDeclaration_normal() {
-    var code = 'void foo() {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'void foo() {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclaration_setter() {
-    var code = 'set foo(int _) {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'set foo(int _) {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclaration_typeParameters() {
-    var code = 'void foo<T>() {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = 'void foo<T>() {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclaration_withMetadata() {
-    var code = '@deprecated void f() {}';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated void f() {}';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionDeclaration(code));
   }
 
   void test_visitFunctionDeclarationStatement() {
-    var code = 'void foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'void foo() {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -1851,24 +1829,24 @@ void f() {
   }
 
   void test_visitFunctionExpression() {
-    var code = '() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = '() {}';
+    final findNode = _parseStringToFindNode('''
 final f = $code;
 ''');
     _assertSource(code, findNode.functionExpression(code));
   }
 
   void test_visitFunctionExpression_typeParameters() {
-    var code = '<T>() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = '<T>() {}';
+    final findNode = _parseStringToFindNode('''
 final f = $code;
 ''');
     _assertSource(code, findNode.functionExpression(code));
   }
 
   void test_visitFunctionExpressionInvocation_minimal() {
-    var code = '(a)()';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a)()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -1877,8 +1855,8 @@ void f() {
   }
 
   void test_visitFunctionExpressionInvocation_typeArguments() {
-    var code = '(a)<int>()';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a)<int>()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -1887,62 +1865,62 @@ void f() {
   }
 
   void test_visitFunctionTypeAlias_generic() {
-    var code = 'typedef A F<B>();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'typedef A F<B>();';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.functionTypeAlias(code));
   }
 
   void test_visitFunctionTypeAlias_nonGeneric() {
-    var code = 'typedef A F();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'typedef A F();';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.functionTypeAlias(code));
   }
 
   void test_visitFunctionTypeAlias_withMetadata() {
-    var code = '@deprecated typedef void F();';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated typedef void F();';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.functionTypeAlias(code));
   }
 
   void test_visitFunctionTypedFormalParameter_annotation() {
-    var code = '@deprecated g()';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated g()';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.functionTypedFormalParameter(code));
   }
 
   void test_visitFunctionTypedFormalParameter_noType() {
-    var code = 'int f()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int f()';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.functionTypedFormalParameter(code));
   }
 
   void test_visitFunctionTypedFormalParameter_nullable() {
-    var code = 'T f()?';
-    var findNode = _parseStringToFindNode('''
+    final code = 'T f()?';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.functionTypedFormalParameter(code));
   }
 
   void test_visitFunctionTypedFormalParameter_type() {
-    var code = 'T f()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'T f()';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.functionTypedFormalParameter(code));
   }
 
   void test_visitFunctionTypedFormalParameter_type_covariant() {
-    var code = 'covariant T f()?';
-    var findNode = _parseStringToFindNode('''
+    final code = 'covariant T f()?';
+    final findNode = _parseStringToFindNode('''
 class A {
   void foo($code) {}
 }
@@ -1951,64 +1929,56 @@ class A {
   }
 
   void test_visitFunctionTypedFormalParameter_typeParameters() {
-    var code = 'T f<E>()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'T f<E>()';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.functionTypedFormalParameter(code));
   }
 
   void test_visitGenericFunctionType() {
-    var code = 'int Function<T>(T)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int Function<T>(T)';
+    final findNode = _parseStringToFindNode('''
 void f($code x) {}
 ''');
     _assertSource(code, findNode.genericFunctionType(code));
   }
 
   void test_visitGenericFunctionType_withQuestion() {
-    var code = 'int Function<T>(T)?';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int Function<T>(T)?';
+    final findNode = _parseStringToFindNode('''
 void f($code x) {}
 ''');
     _assertSource(code, findNode.genericFunctionType(code));
   }
 
   void test_visitGenericTypeAlias() {
-    var code = 'typedef X<S> = S Function<T>(T);';
-    var findNode = _parseStringToFindNode('''
-$code
-''');
-    _assertSource(code, findNode.genericTypeAlias(code));
-  }
-
-  void test_visitGenericTypeAlias_augment() {
-    var code = 'augment typedef A = int;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'typedef X<S> = S Function<T>(T);';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.genericTypeAlias(code));
   }
 
   void test_visitIfElement_else() {
-    var code = 'if (b) 1 else 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'if (b) 1 else 0';
+    final findNode = _parseStringToFindNode('''
 final v = [ $code ];
 ''');
     _assertSource(code, findNode.ifElement(code));
   }
 
   void test_visitIfElement_then() {
-    var code = 'if (b) 1';
-    var findNode = _parseStringToFindNode('''
+    final code = 'if (b) 1';
+    final findNode = _parseStringToFindNode('''
 final v = [ $code ];
 ''');
     _assertSource(code, findNode.ifElement(code));
   }
 
   void test_visitIfStatement_withElse() {
-    var code = 'if (c) {} else {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'if (c) {} else {}';
+    final findNode = _parseStringToFindNode('''
 void f () {
   $code
 }
@@ -2017,8 +1987,8 @@ void f () {
   }
 
   void test_visitIfStatement_withoutElse() {
-    var code = 'if (c) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'if (c) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -2027,39 +1997,39 @@ void f() {
   }
 
   void test_visitImplementsClause_multiple() {
-    var code = 'implements A, B';
-    var findNode = _parseStringToFindNode('''
+    final code = 'implements A, B';
+    final findNode = _parseStringToFindNode('''
 class C $code {}
 ''');
     _assertSource(code, findNode.implementsClause(code));
   }
 
   void test_visitImplementsClause_single() {
-    var code = 'implements A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'implements A';
+    final findNode = _parseStringToFindNode('''
 class C $code {}
 ''');
     _assertSource(code, findNode.implementsClause(code));
   }
 
   void test_visitImportDirective_combinator() {
-    var code = "import 'a.dart' show A;";
-    var findNode = _parseStringToFindNode('''
+    final code = "import 'a.dart' show A;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_combinators() {
-    var code = "import 'a.dart' show A hide B;";
-    var findNode = _parseStringToFindNode('''
+    final code = "import 'a.dart' show A hide B;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_configurations() {
-    var unit = _parseStringToFindNode(r'''
+    var unit = parseString(content: r'''
 import 'foo.dart'
   if (dart.library.io) 'foo_io.dart'
   if (dart.library.html) 'foo_html.dart';
@@ -2074,160 +2044,160 @@ import 'foo.dart'
   }
 
   void test_visitImportDirective_deferred() {
-    var code = "import 'a.dart' deferred as p;";
-    var findNode = _parseStringToFindNode(code);
+    final code = "import 'a.dart' deferred as p;";
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_minimal() {
-    var code = "import 'a.dart';";
-    var findNode = _parseStringToFindNode(code);
+    final code = "import 'a.dart';";
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_prefix() {
-    var code = "import 'a.dart' as p;";
-    var findNode = _parseStringToFindNode(code);
+    final code = "import 'a.dart' as p;";
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_prefix_combinator() {
-    var code = "import 'a.dart' as p show A;";
-    var findNode = _parseStringToFindNode('''
+    final code = "import 'a.dart' as p show A;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_prefix_combinators() {
-    var code = "import 'a.dart' as p show A hide B;";
-    var findNode = _parseStringToFindNode('''
+    final code = "import 'a.dart' as p show A hide B;";
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportDirective_withMetadata() {
-    var code = '@deprecated import "a.dart";';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated import "a.dart";';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.import(code));
   }
 
   void test_visitImportHideCombinator_multiple() {
-    var code = 'hide A, B';
-    var findNode = _parseStringToFindNode('''
+    final code = 'hide A, B';
+    final findNode = _parseStringToFindNode('''
 import 'a.dart' $code;
 ''');
     _assertSource(code, findNode.hideCombinator(code));
   }
 
   void test_visitImportHideCombinator_single() {
-    var code = 'hide A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'hide A';
+    final findNode = _parseStringToFindNode('''
 import 'a.dart' $code;
 ''');
     _assertSource(code, findNode.hideCombinator(code));
   }
 
   void test_visitImportShowCombinator_multiple() {
-    var code = 'show A, B';
-    var findNode = _parseStringToFindNode('''
+    final code = 'show A, B';
+    final findNode = _parseStringToFindNode('''
 import 'a.dart' $code;
 ''');
     _assertSource(code, findNode.showCombinator(code));
   }
 
   void test_visitImportShowCombinator_single() {
-    var code = 'show A';
-    var findNode = _parseStringToFindNode('''
+    final code = 'show A';
+    final findNode = _parseStringToFindNode('''
 import 'a.dart' $code;
 ''');
     _assertSource(code, findNode.showCombinator(code));
   }
 
   void test_visitIndexExpression() {
-    var code = 'a[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a[0]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.index(code));
   }
 
   void test_visitInstanceCreationExpression_const() {
-    var code = 'const A()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const A()';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.instanceCreation(code));
   }
 
   void test_visitInstanceCreationExpression_named() {
-    var code = 'new A.foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'new A.foo()';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.instanceCreation(code));
   }
 
   void test_visitInstanceCreationExpression_unnamed() {
-    var code = 'new A()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'new A()';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.instanceCreation(code));
   }
 
   void test_visitIntegerLiteral() {
-    var code = '42';
-    var findNode = _parseStringToFindNode('''
+    final code = '42';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.integerLiteral(code));
   }
 
   void test_visitInterpolationExpression_expression() {
-    var code = r'${foo}';
-    var findNode = _parseStringToFindNode('''
+    final code = r'${foo}';
+    final findNode = _parseStringToFindNode('''
 final x = "$code";
 ''');
     _assertSource(code, findNode.interpolationExpression(code));
   }
 
   void test_visitInterpolationExpression_identifier() {
-    var code = r'$foo';
-    var findNode = _parseStringToFindNode('''
+    final code = r'$foo';
+    final findNode = _parseStringToFindNode('''
 final x = "$code";
 ''');
     _assertSource(code, findNode.interpolationExpression(code));
   }
 
   void test_visitInterpolationString() {
-    var code = "ccc'";
-    var findNode = _parseStringToFindNode('''
+    final code = "ccc'";
+    final findNode = _parseStringToFindNode('''
 final x = 'a\${bb}$code;
 ''');
     _assertSource(code, findNode.interpolationString(code));
   }
 
   void test_visitIsExpression_negated() {
-    var code = 'a is! int';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a is! int';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.isExpression(code));
   }
 
   void test_visitIsExpression_normal() {
-    var code = 'a is int';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a is int';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.isExpression(code));
   }
 
   void test_visitLabel() {
-    var code = 'myLabel:';
-    var findNode = _parseStringToFindNode('''
+    final code = 'myLabel:';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code for (final x in []) {}
 }
@@ -2236,8 +2206,8 @@ void f() {
   }
 
   void test_visitLabeledStatement_multiple() {
-    var code = 'a: b: return;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a: b: return;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -2246,8 +2216,8 @@ void f() {
   }
 
   void test_visitLabeledStatement_single() {
-    var code = 'a: return;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a: return;';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -2257,10 +2227,10 @@ void f() {
 
   void test_visitLibraryAugmentationDirective() {
     var findNode = _parseStringToFindNode(r'''
-augment library 'a.dart';
+library augment 'a.dart';
 ''');
     _assertSource(
-      "augment library 'a.dart';",
+      "library augment 'a.dart';",
       findNode.libraryAugmentation('library'),
     );
   }
@@ -2274,8 +2244,8 @@ $code
   }
 
   void test_visitLibraryDirective_withMetadata() {
-    var code = '@deprecated library my;';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated library my;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.library(code));
   }
 
@@ -2296,64 +2266,64 @@ library $code;
   }
 
   void test_visitListLiteral_complex() {
-    var code = '<int>[0, for (e in []) 0, if (b) 1, ...[0]]';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int>[0, for (e in []) 0, if (b) 1, ...[0]]';
+    final findNode = _parseStringToFindNode('''
 final v = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_const() {
-    var code = 'const []';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const []';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_empty() {
-    var code = '[]';
-    var findNode = _parseStringToFindNode('''
+    final code = '[]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_nonEmpty() {
-    var code = '[0, 1, 2]';
-    var findNode = _parseStringToFindNode('''
+    final code = '[0, 1, 2]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_withConst_withoutTypeArgs() {
-    var code = 'const [0]';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const [0]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_withConst_withTypeArgs() {
-    var code = 'const <int>[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const <int>[0]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_withoutConst_withoutTypeArgs() {
-    var code = '[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = '[0]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
   }
 
   void test_visitListLiteral_withoutConst_withTypeArgs() {
-    var code = '<int>[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int>[0]';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.listLiteral(code));
@@ -2435,32 +2405,32 @@ void f(x) {
   }
 
   void test_visitMapLiteral_const() {
-    var code = 'const {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const {}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitMapLiteral_empty() {
-    var code = '{}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitMapLiteral_nonEmpty() {
-    var code = '{0 : a, 1 : b, 2 : c}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{0 : a, 1 : b, 2 : c}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitMapLiteralEntry() {
-    var code = '0 : a';
-    var findNode = _parseStringToFindNode('''
+    final code = '0 : a';
+    final findNode = _parseStringToFindNode('''
 final x = {$code};
 ''');
     _assertSource(code, findNode.mapLiteralEntry(code));
@@ -2527,8 +2497,8 @@ void f(x) {
   }
 
   void test_visitMethodDeclaration_augment() {
-    var code = 'augment void foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'augment void foo() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2537,8 +2507,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_external() {
-    var code = 'external foo();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'external foo();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2547,8 +2517,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_external_returnType() {
-    var code = 'external int foo();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'external int foo();';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2557,8 +2527,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_getter() {
-    var code = 'get foo => 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'get foo => 0;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2567,8 +2537,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_getter_returnType() {
-    var code = 'int get foo => 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int get foo => 0;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2577,8 +2547,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_minimal() {
-    var code = 'foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2587,8 +2557,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_multipleParameters() {
-    var code = 'void foo(int a, double b) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'void foo(int a, double b) {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2597,8 +2567,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_operator() {
-    var code = 'operator +(int other) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'operator +(int other) {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2607,8 +2577,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_operator_returnType() {
-    var code = 'int operator +(int other) => 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int operator +(int other) => 0;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2617,8 +2587,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_returnType() {
-    var code = 'int foo() => 0;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int foo() => 0;';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2627,8 +2597,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_setter() {
-    var code = 'set foo(int _) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'set foo(int _) {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2637,8 +2607,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_setter_returnType() {
-    var code = 'void set foo(int _) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'void set foo(int _) {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2647,8 +2617,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_static() {
-    var code = 'static foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'static foo() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2657,8 +2627,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_static_returnType() {
-    var code = 'static void foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'static void foo() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2667,8 +2637,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_typeParameters() {
-    var code = 'void foo<T>() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'void foo<T>() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2677,8 +2647,8 @@ class A {
   }
 
   void test_visitMethodDeclaration_withMetadata() {
-    var code = '@deprecated void foo() {}';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated void foo() {}';
+    final findNode = _parseStringToFindNode('''
 class A {
   $code
 }
@@ -2687,8 +2657,8 @@ class A {
   }
 
   void test_visitMethodInvocation_conditional() {
-    var code = 'a?.foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a?.foo()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -2697,8 +2667,8 @@ void f() {
   }
 
   void test_visitMethodInvocation_noTarget() {
-    var code = 'foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -2707,8 +2677,8 @@ void f() {
   }
 
   void test_visitMethodInvocation_target() {
-    var code = 'a.foo()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a.foo()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -2717,8 +2687,8 @@ void f() {
   }
 
   void test_visitMethodInvocation_typeArguments() {
-    var code = 'foo<int>()';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo<int>()';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -2727,7 +2697,7 @@ void f() {
   }
 
   void test_visitMixinDeclaration_augment() {
-    var code = 'augment mixin M {}';
+    final code = 'augment mixin M {}';
     var findNode = _parseStringToFindNode(code);
     _assertSource(
       code,
@@ -2736,7 +2706,7 @@ void f() {
   }
 
   void test_visitMixinDeclaration_augment_base() {
-    var code = 'augment base mixin M {}';
+    final code = 'augment base mixin M {}';
     var findNode = _parseStringToFindNode(code);
     _assertSource(
       code,
@@ -2755,8 +2725,8 @@ base mixin M {}
   }
 
   void test_visitNamedExpression() {
-    var code = 'a: 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'a: 0';
+    final findNode = _parseStringToFindNode('''
 void f() {
   foo($code);
 }
@@ -2765,80 +2735,80 @@ void f() {
   }
 
   void test_visitNamedFormalParameter() {
-    var code = 'var a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a = 0';
+    final findNode = _parseStringToFindNode('''
 void f({$code}) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitNamedType_multipleArgs() {
-    var code = 'Map<int, String>';
-    var findNode = _parseStringToFindNode('''
+    final code = 'Map<int, String>';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNamedType_nestedArg() {
-    var code = 'List<Set<int>>';
-    var findNode = _parseStringToFindNode('''
+    final code = 'List<Set<int>>';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNamedType_noArgs() {
-    var code = 'int';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNamedType_noArgs_withQuestion() {
-    var code = 'int?';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int?';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNamedType_singleArg() {
-    var code = 'Set<int>';
-    var findNode = _parseStringToFindNode('''
+    final code = 'Set<int>';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNamedType_singleArg_withQuestion() {
-    var code = 'Set<int>?';
-    var findNode = _parseStringToFindNode('''
+    final code = 'Set<int>?';
+    final findNode = _parseStringToFindNode('''
 final x = <$code>[];
 ''');
     _assertSource(code, findNode.namedType(code));
   }
 
   void test_visitNativeClause() {
-    var code = "native 'code'";
-    var findNode = _parseStringToFindNode('''
+    final code = "native 'code'";
+    final findNode = _parseStringToFindNode('''
 class A $code {}
 ''');
     _assertSource(code, findNode.nativeClause(code));
   }
 
   void test_visitNativeFunctionBody() {
-    var code = "native 'code';";
-    var findNode = _parseStringToFindNode('''
+    final code = "native 'code';";
+    final findNode = _parseStringToFindNode('''
 void foo() $code
 ''');
     _assertSource(code, findNode.nativeFunctionBody(code));
   }
 
   void test_visitNullLiteral() {
-    var code = 'null';
-    var findNode = _parseStringToFindNode('''
+    final code = 'null';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.nullLiteral(code));
@@ -2860,8 +2830,8 @@ void f(x) {
   }
 
   void test_visitParenthesizedExpression() {
-    var code = '(a)';
-    var findNode = _parseStringToFindNode('''
+    final code = '(a)';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.parenthesized(code));
@@ -2883,50 +2853,32 @@ void f(x) {
   }
 
   void test_visitPartDirective() {
-    var code = "part 'a.dart';";
-    var findNode = _parseStringToFindNode(code);
+    final code = "part 'a.dart';";
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.part(code));
   }
 
-  void test_visitPartDirective_configurations() {
-    var unit = _parseStringToFindNode(r'''
-part 'foo.dart'
-  if (dart.library.io) 'foo_io.dart'
-  if (dart.library.html) 'foo_html.dart';
-''').unit;
-    var directive = unit.directives[0] as PartDirective;
-    _assertSource(
-      "part 'foo.dart'"
-      " if (dart.library.io) 'foo_io.dart'"
-      " if (dart.library.html) 'foo_html.dart';",
-      directive,
-    );
-  }
-
   void test_visitPartDirective_withMetadata() {
-    var code = '@deprecated part "a.dart";';
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated part "a.dart";';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.part(code));
   }
 
   void test_visitPartOfDirective_name() {
-    var unit = _parseStringToFindNode(
-      'part of l;',
-      featureSet: FeatureSets.language_3_4,
-    ).unit;
+    var unit = parseString(content: 'part of l;').unit;
     var directive = unit.directives[0] as PartOfDirective;
     _assertSource("part of l;", directive);
   }
 
   void test_visitPartOfDirective_uri() {
-    var unit = _parseStringToFindNode("part of 'a.dart';").unit;
+    var unit = parseString(content: "part of 'a.dart';").unit;
     var directive = unit.directives[0] as PartOfDirective;
     _assertSource("part of 'a.dart';", directive);
   }
 
   void test_visitPartOfDirective_withMetadata() {
-    var code = "@deprecated part of 'a.dart';";
-    var findNode = _parseStringToFindNode(code);
+    final code = '@deprecated part of my.lib;';
+    final findNode = _parseStringToFindNode(code);
     _assertSource(code, findNode.partOf(code));
   }
 
@@ -3000,15 +2952,15 @@ void f(x) {
   }
 
   void test_visitPositionalFormalParameter() {
-    var code = 'var a = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a = 0';
+    final findNode = _parseStringToFindNode('''
 void f([$code]) {}
 ''');
     _assertSource(code, findNode.defaultParameter(code));
   }
 
   void test_visitPostfixExpression() {
-    var code = 'a++';
+    final code = 'a++';
     var findNode = _parseStringToFindNode('''
 int f() {
   $code;
@@ -3033,7 +2985,7 @@ void f(x) {
   }
 
   void test_visitPrefixedIdentifier() {
-    var code = 'foo.bar';
+    final code = 'foo.bar';
     var findNode = _parseStringToFindNode('''
 int f() {
   $code;
@@ -3043,7 +2995,7 @@ int f() {
   }
 
   void test_visitPrefixExpression() {
-    var code = '-foo';
+    final code = '-foo';
     var findNode = _parseStringToFindNode('''
 int f() {
   $code;
@@ -3063,23 +3015,23 @@ var v = !(a == b);
   }
 
   void test_visitPropertyAccess() {
-    var code = '(foo).bar';
-    var findNode = _parseStringToFindNode('''
+    final code = '(foo).bar';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.propertyAccess(code));
   }
 
   void test_visitPropertyAccess_conditional() {
-    var code = 'foo?.bar';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo?.bar';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.propertyAccess(code));
   }
 
   void test_visitRecordLiteral_mixed() {
-    var code = '(0, true, a: 0, b: true)';
+    final code = '(0, true, a: 0, b: true)';
     var findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
@@ -3090,7 +3042,7 @@ final x = $code;
   }
 
   void test_visitRecordLiteral_named() {
-    var code = '(a: 0, b: true)';
+    final code = '(a: 0, b: true)';
     var findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
@@ -3101,7 +3053,7 @@ final x = $code;
   }
 
   void test_visitRecordLiteral_positional() {
-    var code = '(0, true)';
+    final code = '(0, true)';
     var findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
@@ -3127,7 +3079,7 @@ void f(x) {
   }
 
   void test_visitRecordTypeAnnotation_mixed() {
-    var code = '(int, bool, {int a, bool b})';
+    final code = '(int, bool, {int a, bool b})';
     var findNode = _parseStringToFindNode('''
 $code f() {}
 ''');
@@ -3138,7 +3090,7 @@ $code f() {}
   }
 
   void test_visitRecordTypeAnnotation_named() {
-    var code = '({int a, bool b})';
+    final code = '({int a, bool b})';
     var findNode = _parseStringToFindNode('''
 $code f() {}
 ''');
@@ -3149,7 +3101,7 @@ $code f() {}
   }
 
   void test_visitRecordTypeAnnotation_positional() {
-    var code = '(int, bool)';
+    final code = '(int, bool)';
     var findNode = _parseStringToFindNode('''
 $code f() {}
 ''');
@@ -3160,7 +3112,7 @@ $code f() {}
   }
 
   void test_visitRecordTypeAnnotation_positional_nullable() {
-    var code = '(int, bool)?';
+    final code = '(int, bool)?';
     var findNode = _parseStringToFindNode('''
 $code f() {}
 ''');
@@ -3171,7 +3123,7 @@ $code f() {}
   }
 
   void test_visitRedirectingConstructorInvocation_named() {
-    var code = 'this.named()';
+    final code = 'this.named()';
     var findNode = _parseStringToFindNode('''
 class A {
   A() : $code;
@@ -3184,7 +3136,7 @@ class A {
   }
 
   void test_visitRedirectingConstructorInvocation_unnamed() {
-    var code = 'this()';
+    final code = 'this()';
     var findNode = _parseStringToFindNode('''
 class A {
   A.named() : $code;
@@ -3212,7 +3164,7 @@ void f(x) {
   }
 
   void test_visitRethrowExpression() {
-    var code = 'rethrow';
+    final code = 'rethrow';
     var findNode = _parseStringToFindNode('''
 void f() {
   try {} on int {
@@ -3224,7 +3176,7 @@ void f() {
   }
 
   void test_visitReturnStatement_expression() {
-    var code = 'return 0;';
+    final code = 'return 0;';
     var findNode = _parseStringToFindNode('''
 int f() {
   $code
@@ -3234,7 +3186,7 @@ int f() {
   }
 
   void test_visitReturnStatement_noExpression() {
-    var code = 'return;';
+    final code = 'return;';
     var findNode = _parseStringToFindNode('''
 int f() {
   $code
@@ -3244,121 +3196,121 @@ int f() {
   }
 
   void test_visitSetOrMapLiteral_map_complex() {
-    var code =
+    final code =
         "<String, String>{'a' : 'b', for (c in d) 'e' : 'f', if (g) 'h' : 'i', ...{'j' : 'k'}}";
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 final v = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_map_withConst_withoutTypeArgs() {
-    var code = 'const {0 : a}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const {0 : a}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_map_withConst_withTypeArgs() {
-    var code = 'const <int, String>{0 : a}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const <int, String>{0 : a}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_map_withoutConst_withoutTypeArgs() {
-    var code = '{0 : a}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{0 : a}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_map_withoutConst_withTypeArgs() {
-    var code = '<int, String>{0 : a}';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int, String>{0 : a}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_set_complex() {
-    var code = '<int>{0, for (e in l) 0, if (b) 1, ...[0]}';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int>{0, for (e in l) 0, if (b) 1, ...[0]}';
+    final findNode = _parseStringToFindNode('''
 final v = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_set_withConst_withoutTypeArgs() {
-    var code = 'const {0}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const {0}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_set_withConst_withTypeArgs() {
-    var code = 'const <int>{0}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const <int>{0}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_set_withoutConst_withoutTypeArgs() {
-    var code = '{0}';
-    var findNode = _parseStringToFindNode('''
+    final code = '{0}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSetOrMapLiteral_set_withoutConst_withTypeArgs() {
-    var code = '<int>{0}';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int>{0}';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.setOrMapLiteral(code));
   }
 
   void test_visitSimpleFormalParameter_annotation() {
-    var code = '@deprecated int x';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated int x';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.simpleFormalParameter(code));
   }
 
   void test_visitSimpleFormalParameter_keyword() {
-    var code = 'var a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.simpleFormalParameter(code));
   }
 
   void test_visitSimpleFormalParameter_keyword_type() {
-    var code = 'final int a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'final int a';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.simpleFormalParameter(code));
   }
 
   void test_visitSimpleFormalParameter_type() {
-    var code = 'int a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int a';
+    final findNode = _parseStringToFindNode('''
 void f($code) {}
 ''');
     _assertSource(code, findNode.simpleFormalParameter(code));
   }
 
   void test_visitSimpleFormalParameter_type_covariant() {
-    var code = 'covariant int a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'covariant int a';
+    final findNode = _parseStringToFindNode('''
 class A {
   void foo($code) {}
 }
@@ -3367,48 +3319,48 @@ class A {
   }
 
   void test_visitSimpleIdentifier() {
-    var code = 'foo';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo';
+    final findNode = _parseStringToFindNode('''
 var x = $code;
 ''');
     _assertSource(code, findNode.simple(code));
   }
 
   void test_visitSimpleStringLiteral() {
-    var code = "'str'";
-    var findNode = _parseStringToFindNode('''
+    final code = "'str'";
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.simpleStringLiteral(code));
   }
 
   void test_visitSpreadElement_nonNullable() {
-    var code = '...[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = '...[0]';
+    final findNode = _parseStringToFindNode('''
 final x = [$code];
 ''');
     _assertSource(code, findNode.spreadElement(code));
   }
 
   void test_visitSpreadElement_nullable() {
-    var code = '...?[0]';
-    var findNode = _parseStringToFindNode('''
+    final code = '...?[0]';
+    final findNode = _parseStringToFindNode('''
 final x = [$code];
 ''');
     _assertSource(code, findNode.spreadElement(code));
   }
 
   void test_visitStringInterpolation() {
-    var code = r"'a${bb}ccc'";
-    var findNode = _parseStringToFindNode('''
+    final code = r"'a${bb}ccc'";
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.stringInterpolation(code));
   }
 
   void test_visitSuperConstructorInvocation() {
-    var code = 'super(0)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'super(0)';
+    final findNode = _parseStringToFindNode('''
 class A extends B {
   A() : $code;
 }
@@ -3417,8 +3369,8 @@ class A extends B {
   }
 
   void test_visitSuperConstructorInvocation_named() {
-    var code = 'super.named(0)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'super.named(0)';
+    final findNode = _parseStringToFindNode('''
 class A extends B {
   A() : $code;
 }
@@ -3427,7 +3379,7 @@ class A extends B {
   }
 
   void test_visitSuperExpression() {
-    var findNode = _parseStringToFindNode('''
+    final findNode = _parseStringToFindNode('''
 class A {
   void foo() {
     super.foo();
@@ -3438,8 +3390,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_annotation() {
-    var code = '@deprecated super.foo';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated super.foo';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3448,8 +3400,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_functionTyped() {
-    var code = 'int super.a(b)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int super.a(b)';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3458,8 +3410,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_functionTyped_typeParameters() {
-    var code = 'int super.a<E, F>(b)';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int super.a<E, F>(b)';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3468,8 +3420,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_keyword() {
-    var code = 'final super.foo';
-    var findNode = _parseStringToFindNode('''
+    final code = 'final super.foo';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3478,8 +3430,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_keywordAndType() {
-    var code = 'final int super.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'final int super.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3488,8 +3440,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_type() {
-    var code = 'int super.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int super.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3498,8 +3450,8 @@ class A {
   }
 
   void test_visitSuperFormalParameter_type_covariant() {
-    var code = 'covariant int super.a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'covariant int super.a';
+    final findNode = _parseStringToFindNode('''
 class A {
   A($code);
 }
@@ -3508,8 +3460,8 @@ class A {
   }
 
   void test_visitSwitchCase_multipleLabels() {
-    var code = 'l1: l2: case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: l2: case a: {}';
+    final findNode = _parseStringToFindNode('''
 // @dart = 2.19
 void f() {
   switch (x) {
@@ -3521,8 +3473,8 @@ void f() {
   }
 
   void test_visitSwitchCase_multipleStatements() {
-    var code = 'case a: foo(); bar();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'case a: foo(); bar();';
+    final findNode = _parseStringToFindNode('''
 // @dart = 2.19
 void f() {
   switch (x) {
@@ -3534,8 +3486,8 @@ void f() {
   }
 
   void test_visitSwitchCase_noLabels() {
-    var code = 'case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'case a: {}';
+    final findNode = _parseStringToFindNode('''
 // @dart = 2.19
 void f() {
   switch (x) {
@@ -3547,8 +3499,8 @@ void f() {
   }
 
   void test_visitSwitchCase_singleLabel() {
-    var code = 'l1: case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: case a: {}';
+    final findNode = _parseStringToFindNode('''
 // @dart = 2.19
 void f() {
   switch (x) {
@@ -3560,8 +3512,8 @@ void f() {
   }
 
   void test_visitSwitchDefault_multipleLabels() {
-    var code = 'l1: l2: default: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: l2: default: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3572,8 +3524,8 @@ void f() {
   }
 
   void test_visitSwitchDefault_multipleStatements() {
-    var code = 'default: foo(); bar();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'default: foo(); bar();';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3584,8 +3536,8 @@ void f() {
   }
 
   void test_visitSwitchDefault_noLabels() {
-    var code = 'default: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'default: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3596,8 +3548,8 @@ void f() {
   }
 
   void test_visitSwitchDefault_singleLabel() {
-    var code = 'l1: default: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: default: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3632,8 +3584,8 @@ void f() {
   }
 
   void test_visitSwitchPatternCase_multipleLabels() {
-    var code = 'l1: l2: case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: l2: case a: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3644,8 +3596,8 @@ void f() {
   }
 
   void test_visitSwitchPatternCase_multipleStatements() {
-    var code = 'case a: foo(); bar();';
-    var findNode = _parseStringToFindNode('''
+    final code = 'case a: foo(); bar();';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3656,8 +3608,8 @@ void f() {
   }
 
   void test_visitSwitchPatternCase_noLabels() {
-    var code = 'case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'case a: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3668,8 +3620,8 @@ void f() {
   }
 
   void test_visitSwitchPatternCase_singleLabel() {
-    var code = 'l1: case a: {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'l1: case a: {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   switch (x) {
     $code
@@ -3680,8 +3632,8 @@ void f() {
   }
 
   void test_visitSwitchStatement() {
-    var code = 'switch (x) {case 0: foo(); default: bar();}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'switch (x) {case 0: foo(); default: bar();}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3690,24 +3642,24 @@ void f() {
   }
 
   void test_visitSymbolLiteral_multiple() {
-    var code = '#a.b.c';
-    var findNode = _parseStringToFindNode('''
+    final code = '#a.b.c';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.symbolLiteral(code));
   }
 
   void test_visitSymbolLiteral_single() {
-    var code = '#a';
-    var findNode = _parseStringToFindNode('''
+    final code = '#a';
+    final findNode = _parseStringToFindNode('''
 final x = $code;
 ''');
     _assertSource(code, findNode.symbolLiteral(code));
   }
 
   void test_visitThisExpression() {
-    var code = 'this';
-    var findNode = _parseStringToFindNode('''
+    final code = 'this';
+    final findNode = _parseStringToFindNode('''
 class A {
   void foo() {
     $code;
@@ -3718,8 +3670,8 @@ class A {
   }
 
   void test_visitThrowStatement() {
-    var code = 'throw 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'throw 0';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code;
 }
@@ -3727,49 +3679,41 @@ void f() {
     _assertSource(code, findNode.throw_(code));
   }
 
-  void test_visitTopLevelVariableDeclaration_augment() {
-    var code = 'augment var a = 0;';
-    var findNode = _parseStringToFindNode('''
-$code
-''');
-    _assertSource(code, findNode.topLevelVariableDeclaration(code));
-  }
-
   void test_visitTopLevelVariableDeclaration_external() {
-    var code = 'external var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'external var a;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.topLevelVariableDeclaration(code));
   }
 
   void test_visitTopLevelVariableDeclaration_multiple() {
-    var code = 'var a = 0, b = 1;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a = 0, b = 1;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.topLevelVariableDeclaration(code));
   }
 
   void test_visitTopLevelVariableDeclaration_single() {
-    var code = 'var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.topLevelVariableDeclaration(code));
   }
 
   void test_visitTopLevelVariableDeclaration_withMetadata() {
-    var code = '@deprecated var a;';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated var a;';
+    final findNode = _parseStringToFindNode('''
 $code
 ''');
     _assertSource(code, findNode.topLevelVariableDeclaration(code));
   }
 
   void test_visitTryStatement_catch() {
-    var code = 'try {} on E {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'try {} on E {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3778,8 +3722,8 @@ void f() {
   }
 
   void test_visitTryStatement_catches() {
-    var code = 'try {} on E {} on F {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'try {} on E {} on F {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3788,8 +3732,8 @@ void f() {
   }
 
   void test_visitTryStatement_catchFinally() {
-    var code = 'try {} on E {} finally {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'try {} on E {} finally {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3798,8 +3742,8 @@ void f() {
   }
 
   void test_visitTryStatement_finally() {
-    var code = 'try {} finally {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'try {} finally {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3808,148 +3752,144 @@ void f() {
   }
 
   void test_visitTypeArgumentList_multiple() {
-    var code = '<int, String>';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int, String>';
+    final findNode = _parseStringToFindNode('''
 final x = $code[];
 ''');
     _assertSource(code, findNode.typeArgumentList(code));
   }
 
   void test_visitTypeArgumentList_single() {
-    var code = '<int>';
-    var findNode = _parseStringToFindNode('''
+    final code = '<int>';
+    final findNode = _parseStringToFindNode('''
 final x = $code[];
 ''');
     _assertSource(code, findNode.typeArgumentList(code));
   }
 
   void test_visitTypeParameter_variance_contravariant() {
-    var code = 'in T';
-    var findNode = _parseStringToFindNode('''
+    final code = 'in T';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameter_variance_covariant() {
-    var code = 'out T';
-    var findNode = _parseStringToFindNode('''
+    final code = 'out T';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameter_variance_invariant() {
-    var code = 'inout T';
-    var findNode = _parseStringToFindNode('''
+    final code = 'inout T';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameter_withExtends() {
-    var code = 'T extends num';
-    var findNode = _parseStringToFindNode('''
+    final code = 'T extends num';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''');
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameter_withMetadata() {
-    var code = '@deprecated T';
-    var findNode = _parseStringToFindNode('''
+    final code = '@deprecated T';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''');
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameter_withoutExtends() {
-    var code = 'T';
-    var findNode = _parseStringToFindNode('''
+    final code = 'T';
+    final findNode = _parseStringToFindNode('''
 class A<$code> {}
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.typeParameter(code));
   }
 
   void test_visitTypeParameterList_multiple() {
-    var code = '<T, U>';
-    var findNode = _parseStringToFindNode('''
+    final code = '<T, U>';
+    final findNode = _parseStringToFindNode('''
 class A$code {}
 ''');
-    // Find from the offset after the `<` because NodeLocator usually picks
-    // the name for the offset between the name and `<`.
-    _assertSource(code, findNode.typeParameterList('T, U>'));
+    _assertSource(code, findNode.typeParameterList(code));
   }
 
   void test_visitTypeParameterList_single() {
-    var code = '<T>';
-    var findNode = _parseStringToFindNode('''
+    final code = '<T>';
+    final findNode = _parseStringToFindNode('''
 class A$code {}
 ''');
-    // Find from the offset after the `<` because NodeLocator usually picks
-    // the name for the offset between the name and `<`.
-    _assertSource(code, findNode.typeParameterList('T>'));
+    _assertSource(code, findNode.typeParameterList(code));
   }
 
   void test_visitVariableDeclaration_initialized() {
-    var code = 'foo = bar';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo = bar';
+    final findNode = _parseStringToFindNode('''
 var $code;
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.variableDeclaration(code));
   }
 
   void test_visitVariableDeclaration_uninitialized() {
-    var code = 'foo';
-    var findNode = _parseStringToFindNode('''
+    final code = 'foo';
+    final findNode = _parseStringToFindNode('''
 var $code;
 ''', featureSet: FeatureSets.latestWithVariance);
     _assertSource(code, findNode.variableDeclaration(code));
   }
 
   void test_visitVariableDeclarationList_const_type() {
-    var code = 'const int a = 0, b = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'const int a = 0, b = 0';
+    final findNode = _parseStringToFindNode('''
 $code;
 ''');
     _assertSource(code, findNode.variableDeclarationList(code));
   }
 
   void test_visitVariableDeclarationList_final_noType() {
-    var code = 'final a = 0, b = 0';
-    var findNode = _parseStringToFindNode('''
+    final code = 'final a = 0, b = 0';
+    final findNode = _parseStringToFindNode('''
 $code;
 ''');
     _assertSource(code, findNode.variableDeclarationList(code));
   }
 
   void test_visitVariableDeclarationList_type() {
-    var code = 'int a, b';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int a, b';
+    final findNode = _parseStringToFindNode('''
 $code;
 ''');
     _assertSource(code, findNode.variableDeclarationList(code));
   }
 
   void test_visitVariableDeclarationList_var() {
-    var code = 'var a, b';
-    var findNode = _parseStringToFindNode('''
+    final code = 'var a, b';
+    final findNode = _parseStringToFindNode('''
 $code;
 ''');
     _assertSource(code, findNode.variableDeclarationList(code));
   }
 
   void test_visitVariableDeclarationStatement() {
-    var code = 'int a';
-    var findNode = _parseStringToFindNode('''
+    final code = 'int a';
+    final findNode = _parseStringToFindNode('''
 $code;
 ''');
     _assertSource(code, findNode.variableDeclarationList(code));
   }
 
   void test_visitWhileStatement() {
-    var code = 'while (true) {}';
-    var findNode = _parseStringToFindNode('''
+    final code = 'while (true) {}';
+    final findNode = _parseStringToFindNode('''
 void f() {
   $code
 }
@@ -3973,24 +3913,24 @@ void f(x) {
   }
 
   void test_visitWithClause_multiple() {
-    var code = 'with A, B, C';
-    var findNode = _parseStringToFindNode('''
+    final code = 'with A, B, C';
+    final findNode = _parseStringToFindNode('''
 class X $code {}
 ''');
     _assertSource(code, findNode.withClause(code));
   }
 
   void test_visitWithClause_single() {
-    var code = 'with M';
-    var findNode = _parseStringToFindNode('''
+    final code = 'with M';
+    final findNode = _parseStringToFindNode('''
 class X $code {}
 ''');
     _assertSource(code, findNode.withClause(code));
   }
 
   void test_visitYieldStatement() {
-    var code = 'yield e;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'yield e;';
+    final findNode = _parseStringToFindNode('''
 void f() sync* {
   $code
 }
@@ -3999,8 +3939,8 @@ void f() sync* {
   }
 
   void test_visitYieldStatement_each() {
-    var code = 'yield* e;';
-    var findNode = _parseStringToFindNode('''
+    final code = 'yield* e;';
+    final findNode = _parseStringToFindNode('''
 void f() sync* {
   $code
 }

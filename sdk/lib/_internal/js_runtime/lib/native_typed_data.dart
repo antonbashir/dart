@@ -8,7 +8,7 @@ library dart.typed_data.implementation;
 
 import 'dart:collection' show ListMixin;
 import 'dart:_internal' show FixedLengthListMixin hide Symbol;
-import "dart:_internal" show UnmodifiableListMixin;
+import "dart:_internal" show UnmodifiableListBase;
 import 'dart:_interceptors'
     show JavaScriptObject, JSIndexable, JSUInt32, JSUInt31;
 import 'dart:_js_helper'
@@ -22,9 +22,7 @@ import 'dart:_js_helper'
         diagnoseIndexError,
         diagnoseRangeError,
         TrustedGetRuntimeType;
-
-import 'dart:_foreign_helper'
-    show JS, ArrayFlags, HArrayFlagsCheck, HArrayFlagsGet, HArrayFlagsSet;
+import 'dart:_foreign_helper' show JS;
 
 import 'dart:math' as Math;
 
@@ -38,32 +36,31 @@ final class NativeByteBuffer extends JavaScriptObject
 
   Type get runtimeType => ByteBuffer;
 
-  NativeUint8List asUint8List([int offsetInBytes = 0, int? length]) {
+  Uint8List asUint8List([int offsetInBytes = 0, int? length]) {
     return NativeUint8List.view(this, offsetInBytes, length);
   }
 
-  NativeInt8List asInt8List([int offsetInBytes = 0, int? length]) {
+  Int8List asInt8List([int offsetInBytes = 0, int? length]) {
     return NativeInt8List.view(this, offsetInBytes, length);
   }
 
-  NativeUint8ClampedList asUint8ClampedList(
-      [int offsetInBytes = 0, int? length]) {
+  Uint8ClampedList asUint8ClampedList([int offsetInBytes = 0, int? length]) {
     return NativeUint8ClampedList.view(this, offsetInBytes, length);
   }
 
-  NativeUint16List asUint16List([int offsetInBytes = 0, int? length]) {
+  Uint16List asUint16List([int offsetInBytes = 0, int? length]) {
     return NativeUint16List.view(this, offsetInBytes, length);
   }
 
-  NativeInt16List asInt16List([int offsetInBytes = 0, int? length]) {
+  Int16List asInt16List([int offsetInBytes = 0, int? length]) {
     return NativeInt16List.view(this, offsetInBytes, length);
   }
 
-  NativeUint32List asUint32List([int offsetInBytes = 0, int? length]) {
+  Uint32List asUint32List([int offsetInBytes = 0, int? length]) {
     return NativeUint32List.view(this, offsetInBytes, length);
   }
 
-  NativeInt32List asInt32List([int offsetInBytes = 0, int? length]) {
+  Int32List asInt32List([int offsetInBytes = 0, int? length]) {
     return NativeInt32List.view(this, offsetInBytes, length);
   }
 
@@ -75,33 +72,33 @@ final class NativeByteBuffer extends JavaScriptObject
     throw UnsupportedError('Int64List not supported by dart2js.');
   }
 
-  NativeInt32x4List asInt32x4List([int offsetInBytes = 0, int? length]) {
+  Int32x4List asInt32x4List([int offsetInBytes = 0, int? length]) {
     length ??= (lengthInBytes - offsetInBytes) ~/ Int32x4List.bytesPerElement;
     var storage = this.asInt32List(offsetInBytes, length * 4);
     return NativeInt32x4List._externalStorage(storage);
   }
 
-  NativeFloat32List asFloat32List([int offsetInBytes = 0, int? length]) {
+  Float32List asFloat32List([int offsetInBytes = 0, int? length]) {
     return NativeFloat32List.view(this, offsetInBytes, length);
   }
 
-  NativeFloat64List asFloat64List([int offsetInBytes = 0, int? length]) {
+  Float64List asFloat64List([int offsetInBytes = 0, int? length]) {
     return NativeFloat64List.view(this, offsetInBytes, length);
   }
 
-  NativeFloat32x4List asFloat32x4List([int offsetInBytes = 0, int? length]) {
+  Float32x4List asFloat32x4List([int offsetInBytes = 0, int? length]) {
     length ??= (lengthInBytes - offsetInBytes) ~/ Float32x4List.bytesPerElement;
     var storage = this.asFloat32List(offsetInBytes, length * 4);
     return NativeFloat32x4List._externalStorage(storage);
   }
 
-  NativeFloat64x2List asFloat64x2List([int offsetInBytes = 0, int? length]) {
+  Float64x2List asFloat64x2List([int offsetInBytes = 0, int? length]) {
     length ??= (lengthInBytes - offsetInBytes) ~/ Float64x2List.bytesPerElement;
     var storage = this.asFloat64List(offsetInBytes, length * 2);
     return NativeFloat64x2List._externalStorage(storage);
   }
 
-  NativeByteData asByteData([int offsetInBytes = 0, int? length]) {
+  ByteData asByteData([int offsetInBytes = 0, int? length]) {
     return NativeByteData.view(this, offsetInBytes, length);
   }
 }
@@ -112,7 +109,7 @@ final class NativeByteBuffer extends JavaScriptObject
 final class NativeFloat32x4List extends Object
     with ListMixin<Float32x4>, FixedLengthListMixin<Float32x4>
     implements Float32x4List, TrustedGetRuntimeType {
-  final NativeFloat32List _storage;
+  final Float32List _storage;
 
   /// Creates a [Float32x4List] of the specified length (in elements),
   /// all of whose elements are initially zero.
@@ -171,8 +168,7 @@ final class NativeFloat32x4List extends Object
     _storage[(index * 4) + 3] = value.w;
   }
 
-  Float32x4List asUnmodifiableView() =>
-      _UnmodifiableFloat32x4ListView(this._storage);
+  Float32x4List asUnmodifiableView() => UnmodifiableFloat32x4ListView(this);
 
   Float32x4List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
@@ -181,30 +177,19 @@ final class NativeFloat32x4List extends Object
   }
 }
 
-/// View of a [Float32x4List] that disallows modification.
-final class _UnmodifiableFloat32x4ListView extends NativeFloat32x4List
-    with UnmodifiableListMixin<Float32x4> {
-  _UnmodifiableFloat32x4ListView(super._storage) : super._externalStorage();
-
-  ByteBuffer get buffer =>
-      _UnmodifiableNativeByteBufferView(_storage._nativeBuffer);
-
-  Float32x4List asUnmodifiableView() => this;
-}
-
 /// A fixed-length list of Int32x4 numbers that is viewable as a
 /// [TypedData]. For long lists, this implementation will be considerably more
 /// space- and time-efficient than the default [List] implementation.
 final class NativeInt32x4List extends Object
     with ListMixin<Int32x4>, FixedLengthListMixin<Int32x4>
     implements Int32x4List, TrustedGetRuntimeType {
-  final NativeInt32List _storage;
+  final Int32List _storage;
 
   /// Creates a [Int32x4List] of the specified length (in elements),
   /// all of whose elements are initially zero.
   NativeInt32x4List(int length) : _storage = NativeInt32List(length * 4);
 
-  NativeInt32x4List._externalStorage(this._storage);
+  NativeInt32x4List._externalStorage(Int32List storage) : _storage = storage;
 
   NativeInt32x4List._slowFromList(List<Int32x4> list)
       : _storage = NativeInt32List(list.length * 4) {
@@ -257,7 +242,7 @@ final class NativeInt32x4List extends Object
     _storage[(index * 4) + 3] = value.w;
   }
 
-  Int32x4List asUnmodifiableView() => _UnmodifiableInt32x4ListView(_storage);
+  Int32x4List asUnmodifiableView() => UnmodifiableInt32x4ListView(this);
 
   Int32x4List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
@@ -266,24 +251,13 @@ final class NativeInt32x4List extends Object
   }
 }
 
-/// View of a [Int32x4List] that disallows modification.
-final class _UnmodifiableInt32x4ListView extends NativeInt32x4List
-    with UnmodifiableListMixin<Int32x4> {
-  _UnmodifiableInt32x4ListView(super._storage) : super._externalStorage();
-
-  ByteBuffer get buffer =>
-      _UnmodifiableNativeByteBufferView(_storage._nativeBuffer);
-
-  Int32x4List asUnmodifiableView() => this;
-}
-
 /// A fixed-length list of Float64x2 numbers that is viewable as a
 /// [TypedData]. For long lists, this implementation will be considerably more
 /// space- and time-efficient than the default [List] implementation.
 final class NativeFloat64x2List extends Object
     with ListMixin<Float64x2>, FixedLengthListMixin<Float64x2>
     implements Float64x2List, TrustedGetRuntimeType {
-  final NativeFloat64List _storage;
+  final Float64List _storage;
 
   /// Creates a [Float64x2List] of the specified length (in elements),
   /// all of whose elements are initially zero.
@@ -336,8 +310,7 @@ final class NativeFloat64x2List extends Object
     _storage[(index * 2) + 1] = value.y;
   }
 
-  Float64x2List asUnmodifiableView() =>
-      _UnmodifiableFloat64x2ListView(this._storage);
+  Float64x2List asUnmodifiableView() => UnmodifiableFloat64x2ListView(this);
 
   Float64x2List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
@@ -346,35 +319,12 @@ final class NativeFloat64x2List extends Object
   }
 }
 
-/// View of a [Float64x2List] that disallows modification.
-final class _UnmodifiableFloat64x2ListView extends NativeFloat64x2List
-    with UnmodifiableListMixin<Float64x2> {
-  _UnmodifiableFloat64x2ListView(super._storage) : super._externalStorage();
-
-  ByteBuffer get buffer =>
-      _UnmodifiableNativeByteBufferView(_storage._nativeBuffer);
-
-  Float64x2List asUnmodifiableView() => this;
-}
-
 @Native('ArrayBufferView')
 final class NativeTypedData extends JavaScriptObject implements TypedData {
   /// Returns the byte buffer associated with this object.
-  ByteBuffer get buffer {
-    if (_isUnmodifiable()) {
-      return _UnmodifiableNativeByteBufferView(_nativeBuffer);
-    } else {
-      // TODO(sra): Consider always wrapping the ArrayBuffer - this would make
-      // user-code accesses monomorphic in the ByteBuffer implementation, but
-      // might cause interop problems, e.g., with `postMessage`.
-      return _nativeBuffer;
-    }
-  }
-
   @Creates('NativeByteBuffer')
   @Returns('NativeByteBuffer')
-  @JSName('buffer')
-  NativeByteBuffer get _nativeBuffer native;
+  ByteBuffer get buffer native;
 
   /// Returns the length of this view, in bytes.
   @JSName('byteLength')
@@ -388,10 +338,6 @@ final class NativeTypedData extends JavaScriptObject implements TypedData {
   /// list.
   @JSName('BYTES_PER_ELEMENT')
   int get elementSizeInBytes native;
-
-  bool _isUnmodifiable() {
-    return HArrayFlagsGet(this) & ArrayFlags.unmodifiableCheck != 0;
-  }
 
   void _invalidPosition(int position, int length, String name) {
     if (position is! int) {
@@ -407,95 +353,6 @@ final class NativeTypedData extends JavaScriptObject implements TypedData {
       // 'int' guaranteed by above test.
       _invalidPosition(position, length, name);
     }
-  }
-
-  @pragma('dart2js:prefer-inline')
-  void _checkMutable(String operation) {
-    HArrayFlagsCheck(
-        this, HArrayFlagsGet(this), ArrayFlags.unmodifiableCheck, operation);
-  }
-}
-
-/// A view of a ByteBuffer (ArrayBuffer) that yields only unmodifiable views.
-///
-/// The underlying ByteBuffer may have both modifiable and unmodifiable views.
-final class _UnmodifiableNativeByteBufferView implements ByteBuffer {
-  final NativeByteBuffer _data;
-
-  _UnmodifiableNativeByteBufferView(this._data);
-
-  int get lengthInBytes => _data.lengthInBytes;
-
-  NativeUint8List asUint8List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asUint8List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Int8List asInt8List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asInt8List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Uint8ClampedList asUint8ClampedList([int offsetInBytes = 0, int? length]) {
-    final result = _data.asUint8ClampedList(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Uint16List asUint16List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asUint16List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Int16List asInt16List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asInt16List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Uint32List asUint32List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asUint32List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Int32List asInt32List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asInt32List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Uint64List asUint64List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asUint64List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Int64List asInt64List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asInt64List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Int32x4List asInt32x4List([int offsetInBytes = 0, int? length]) {
-    return _data.asInt32x4List(offsetInBytes, length).asUnmodifiableView();
-  }
-
-  Float32List asFloat32List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asFloat32List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Float64List asFloat64List([int offsetInBytes = 0, int? length]) {
-    final result = _data.asFloat64List(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
-  }
-
-  Float32x4List asFloat32x4List([int offsetInBytes = 0, int? length]) {
-    return _data.asFloat32x4List(offsetInBytes, length).asUnmodifiableView();
-  }
-
-  Float64x2List asFloat64x2List([int offsetInBytes = 0, int? length]) {
-    return _data.asFloat64x2List(offsetInBytes, length).asUnmodifiableView();
-  }
-
-  ByteData asByteData([int offsetInBytes = 0, int? length]) {
-    final result = _data.asByteData(offsetInBytes, length);
-    return HArrayFlagsSet(result, ArrayFlags.unmodifiable);
   }
 }
 
@@ -563,11 +420,7 @@ final class NativeByteData extends NativeTypedData
 
   int get elementSizeInBytes => 1;
 
-  ByteData asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, lengthInBytes),
-        ArrayFlags.unmodifiable);
-  }
+  ByteData asUnmodifiableView() => UnmodifiableByteDataView(this);
 
   /// Returns the floating point number represented by the four bytes at
   /// the specified [byteOffset] in this object, in IEEE 754
@@ -580,7 +433,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getFloat32')
   @Returns('double')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   double _getFloat32(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the floating point number represented by the eight bytes at
@@ -594,7 +446,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getFloat64')
   @Returns('double')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   double _getFloat64(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the (possibly negative) integer represented by the two bytes at
@@ -610,7 +461,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getInt16')
   @Returns('int')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   int _getInt16(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the (possibly negative) integer represented by the four bytes at
@@ -626,7 +476,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getInt32')
   @Returns('int')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   int _getInt32(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the (possibly negative) integer represented by the eight bytes at
@@ -661,7 +510,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getUint16')
   @Returns('JSUInt31')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   int _getUint16(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the positive integer represented by the four bytes starting
@@ -676,7 +524,6 @@ final class NativeByteData extends NativeTypedData
 
   @JSName('getUint32')
   @Returns('JSUInt32')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   int _getUint32(int byteOffset, [bool? littleEndian]) native;
 
   /// Returns the positive integer represented by the eight bytes starting
@@ -713,14 +560,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 4` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setFloat32(int byteOffset, num value, [Endian endian = Endian.big]) {
-    _checkMutable('setFloat32');
-    _setFloat32(byteOffset, value, Endian.little == endian);
-  }
+  void setFloat32(int byteOffset, num value, [Endian endian = Endian.big]) =>
+      _setFloat32(byteOffset, value, Endian.little == endian);
 
   @JSName('setFloat32')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setFloat32(int byteOffset, num value, [bool? littleEndian]) native;
 
   /// Sets the eight bytes starting at the specified [byteOffset] in this
@@ -729,14 +572,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 8` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setFloat64(int byteOffset, num value, [Endian endian = Endian.big]) {
-    _checkMutable('setFloat64');
-    _setFloat64(byteOffset, value, Endian.little == endian);
-  }
+  void setFloat64(int byteOffset, num value, [Endian endian = Endian.big]) =>
+      _setFloat64(byteOffset, value, Endian.little == endian);
 
   @JSName('setFloat64')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setFloat64(int byteOffset, num value, [bool? littleEndian]) native;
 
   /// Sets the two bytes starting at the specified [byteOffset] in this
@@ -746,14 +585,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 2` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setInt16(int byteOffset, int value, [Endian endian = Endian.big]) {
-    _checkMutable('setInt16');
-    _setInt16(byteOffset, value, Endian.little == endian);
-  }
+  void setInt16(int byteOffset, int value, [Endian endian = Endian.big]) =>
+      _setInt16(byteOffset, value, Endian.little == endian);
 
   @JSName('setInt16')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setInt16(int byteOffset, int value, [bool? littleEndian]) native;
 
   /// Sets the four bytes starting at the specified [byteOffset] in this
@@ -763,14 +598,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 4` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setInt32(int byteOffset, int value, [Endian endian = Endian.big]) {
-    _checkMutable('setInt32');
-    _setInt32(byteOffset, value, Endian.little == endian);
-  }
+  void setInt32(int byteOffset, int value, [Endian endian = Endian.big]) =>
+      _setInt32(byteOffset, value, Endian.little == endian);
 
   @JSName('setInt32')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setInt32(int byteOffset, int value, [bool? littleEndian]) native;
 
   /// Sets the eight bytes starting at the specified [byteOffset] in this
@@ -791,15 +622,7 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// less than the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setInt8(int byteOffset, int value) {
-    _checkMutable('setInt8');
-    _setInt8(byteOffset, value);
-  }
-
-  @JSName('setInt8')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
-  void _setInt8(int byteOffset, int value) native;
+  void setInt8(int byteOffset, int value) native;
 
   /// Sets the two bytes starting at the specified [byteOffset] in this object
   /// to the unsigned binary representation of the specified [value],
@@ -808,14 +631,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 2` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setUint16(int byteOffset, int value, [Endian endian = Endian.big]) {
-    _checkMutable('setUint16');
-    _setUint16(byteOffset, value, Endian.little == endian);
-  }
+  void setUint16(int byteOffset, int value, [Endian endian = Endian.big]) =>
+      _setUint16(byteOffset, value, Endian.little == endian);
 
   @JSName('setUint16')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setUint16(int byteOffset, int value, [bool? littleEndian]) native;
 
   /// Sets the four bytes starting at the specified [byteOffset] in this object
@@ -825,14 +644,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// `byteOffset + 4` must be less than or equal to the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setUint32(int byteOffset, int value, [Endian endian = Endian.big]) {
-    _checkMutable('setUint32');
-    _setUint32(byteOffset, value, Endian.little == endian);
-  }
+  void setUint32(int byteOffset, int value, [Endian endian = Endian.big]) =>
+      _setUint32(byteOffset, value, Endian.little == endian);
 
   @JSName('setUint32')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
   void _setUint32(int byteOffset, int value, [bool? littleEndian]) native;
 
   /// Sets the eight bytes starting at the specified [byteOffset] in this object
@@ -853,20 +668,10 @@ final class NativeByteData extends NativeTypedData
   ///
   /// The [byteOffset] must be non-negative, and
   /// less than the length of this object.
-  @pragma('dart2js:prefer-inline')
-  void setUint8(int byteOffset, int value) {
-    _checkMutable('setUint8');
-    _setUint8(byteOffset, value);
-  }
+  void setUint8(int byteOffset, int value) native;
 
-  @JSName('setUint8')
-  @pragma('dart2js:parameter:trust') // TODO(https://dartbug.com/56062): remove.
-  void _setUint8(int byteOffset, int value) native;
-
-  static NativeByteData _create1(arg) => JS(
-      'returns:NativeByteData;effects:none;depends:none;new:true',
-      'new DataView(new ArrayBuffer(#))',
-      arg);
+  static NativeByteData _create1(arg) =>
+      JS('NativeByteData', 'new DataView(new ArrayBuffer(#))', arg);
 
   static NativeByteData _create2(arg1, arg2) =>
       JS('NativeByteData', 'new DataView(#, #)', arg1, arg2);
@@ -910,14 +715,12 @@ abstract final class NativeTypedArrayOfDouble extends NativeTypedArray<double>
   }
 
   void operator []=(int index, double value) {
-    _checkMutable('[]=');
     _checkValidIndex(index, this, this.length);
     JS('void', '#[#] = #', this, index, value);
   }
 
   void setRange(int start, int end, Iterable<double> iterable,
       [int skipCount = 0]) {
-    _checkMutable('setRange');
     if (iterable is NativeTypedArrayOfDouble) {
       _setRangeFast(start, end, iterable, skipCount);
       return;
@@ -933,14 +736,12 @@ abstract final class NativeTypedArrayOfInt extends NativeTypedArray<int>
   // types
 
   void operator []=(int index, int value) {
-    _checkMutable('[]=');
     _checkValidIndex(index, this, this.length);
     JS('void', '#[#] = #', this, index, value);
   }
 
   void setRange(int start, int end, Iterable<int> iterable,
       [int skipCount = 0]) {
-    _checkMutable('setRange');
     if (iterable is NativeTypedArrayOfInt) {
       _setRangeFast(start, end, iterable, skipCount);
       return;
@@ -967,13 +768,9 @@ final class NativeFloat32List extends NativeTypedArrayOfDouble
 
   Type get runtimeType => Float32List;
 
-  Float32List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Float32List asUnmodifiableView() => UnmodifiableFloat32ListView(this);
 
-  NativeFloat32List sublist(int start, [int? end]) {
+  Float32List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeFloat32List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1009,13 +806,9 @@ final class NativeFloat64List extends NativeTypedArrayOfDouble
 
   Type get runtimeType => Float64List;
 
-  Float64List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Float64List asUnmodifiableView() => UnmodifiableFloat64ListView(this);
 
-  NativeFloat64List sublist(int start, [int? end]) {
+  Float64List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeFloat64List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1056,13 +849,9 @@ final class NativeInt16List extends NativeTypedArrayOfInt
     return JS('int', '#[#]', this, index);
   }
 
-  Int16List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Int16List asUnmodifiableView() => UnmodifiableInt16ListView(this);
 
-  NativeInt16List sublist(int start, [int? end]) {
+  Int16List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeInt16List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1103,13 +892,9 @@ final class NativeInt32List extends NativeTypedArrayOfInt
     return JS('int', '#[#]', this, index);
   }
 
-  Int32List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Int32List asUnmodifiableView() => UnmodifiableInt32ListView(this);
 
-  NativeInt32List sublist(int start, [int? end]) {
+  Int32List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeInt32List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1150,13 +935,9 @@ final class NativeInt8List extends NativeTypedArrayOfInt
     return JS('int', '#[#]', this, index);
   }
 
-  Int8List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Int8List asUnmodifiableView() => UnmodifiableInt8ListView(this);
 
-  NativeInt8List sublist(int start, [int? end]) {
+  Int8List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeInt8List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1200,13 +981,9 @@ final class NativeUint16List extends NativeTypedArrayOfInt
     return JS('JSUInt31', '#[#]', this, index);
   }
 
-  Uint16List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Uint16List asUnmodifiableView() => UnmodifiableUint16ListView(this);
 
-  NativeUint16List sublist(int start, [int? end]) {
+  Uint16List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeUint16List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1247,13 +1024,9 @@ final class NativeUint32List extends NativeTypedArrayOfInt
     return JS('JSUInt32', '#[#]', this, index);
   }
 
-  Uint32List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Uint32List asUnmodifiableView() => UnmodifiableUint32ListView(this);
 
-  NativeUint32List sublist(int start, [int? end]) {
+  Uint32List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeUint32List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1297,13 +1070,10 @@ final class NativeUint8ClampedList extends NativeTypedArrayOfInt
     return JS('JSUInt31', '#[#]', this, index);
   }
 
-  Uint8ClampedList asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Uint8ClampedList asUnmodifiableView() =>
+      UnmodifiableUint8ClampedListView(this);
 
-  NativeUint8ClampedList sublist(int start, [int? end]) {
+  Uint8ClampedList sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source =
         JS('NativeUint8ClampedList', '#.subarray(#, #)', this, start, stop);
@@ -1358,13 +1128,9 @@ final class NativeUint8List extends NativeTypedArrayOfInt
     return JS('JSUInt31', '#[#]', this, index);
   }
 
-  Uint8List asUnmodifiableView() {
-    if (_isUnmodifiable()) return this;
-    return HArrayFlagsSet(_create3(_nativeBuffer, offsetInBytes, length),
-        ArrayFlags.unmodifiable);
-  }
+  Uint8List asUnmodifiableView() => UnmodifiableUint8ListView(this);
 
-  NativeUint8List sublist(int start, [int? end]) {
+  Uint8List sublist(int start, [int? end]) {
     var stop = _checkValidRange(start, end, this.length);
     var source = JS('NativeUint8List', '#.subarray(#, #)', this, start, stop);
     return _create1(source);
@@ -1551,7 +1317,7 @@ final class NativeFloat32x4 implements Float32x4 {
         _cx ? -1 : 0, _cy ? -1 : 0, _cz ? -1 : 0, _cw ? -1 : 0);
   }
 
-  /// Returns a copy of this [Float32x4] each lane being scaled by [s].
+  /// Returns a copy of [this] each lane being scaled by [s].
   Float32x4 scale(double s) {
     double _x = s * x;
     double _y = s * y;
@@ -1569,7 +1335,7 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Clamps this [Float32x4] to be in the range [lowerLimit]-[upperLimit].
+  /// Clamps [this] to be in the range [lowerLimit]-[upperLimit].
   Float32x4 clamp(Float32x4 lowerLimit, Float32x4 upperLimit) {
     double _lx = lowerLimit.x;
     double _ly = lowerLimit.y;
@@ -1628,9 +1394,9 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Shuffle the lane values in this [Float32x4] and [other]. The returned
-  /// Float32x4 will have XY lanes from this [Float32x4] and ZW lanes from
-  /// [other]. Uses the same [mask] as [shuffle].
+  /// Shuffle the lane values in [this] and [other]. The returned
+  /// Float32x4 will have XY lanes from [this] and ZW lanes from [other].
+  /// Uses the same [mask] as [shuffle].
   Float32x4 shuffleMix(Float32x4 other, int mask) {
     if ((mask < 0) || (mask > 255)) {
       throw RangeError.range(mask, 0, 255, 'mask');
@@ -1651,31 +1417,31 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Copy this [Float32x4] and replace the [x] lane.
+  /// Copy [this] and replace the [x] lane.
   Float32x4 withX(double newX) {
     double _newX = _truncate(checkNum(newX));
     return NativeFloat32x4._truncated(_newX, y, z, w);
   }
 
-  /// Copy this [Float32x4] and replace the [y] lane.
+  /// Copy [this] and replace the [y] lane.
   Float32x4 withY(double newY) {
     double _newY = _truncate(checkNum(newY));
     return NativeFloat32x4._truncated(x, _newY, z, w);
   }
 
-  /// Copy this [Float32x4] and replace the [z] lane.
+  /// Copy [this] and replace the [z] lane.
   Float32x4 withZ(double newZ) {
     double _newZ = _truncate(checkNum(newZ));
     return NativeFloat32x4._truncated(x, y, _newZ, w);
   }
 
-  /// Copy this [Float32x4] and replace the [w] lane.
+  /// Copy [this] and replace the [w] lane.
   Float32x4 withW(double newW) {
     double _newW = _truncate(checkNum(newW));
     return NativeFloat32x4._truncated(x, y, z, _newW);
   }
 
-  /// Returns the lane-wise minimum value in this [Float32x4] or [other].
+  /// Returns the lane-wise minimum value in [this] or [other].
   Float32x4 min(Float32x4 other) {
     double _x = x < other.x ? x : other.x;
     double _y = y < other.y ? y : other.y;
@@ -1684,7 +1450,7 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Returns the lane-wise maximum value in this [Float32x4] or [other].
+  /// Returns the lane-wise maximum value in [this] or [other].
   Float32x4 max(Float32x4 other) {
     double _x = x > other.x ? x : other.x;
     double _y = y > other.y ? y : other.y;
@@ -1693,7 +1459,7 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Returns the square root of this [Float32x4].
+  /// Returns the square root of [this].
   Float32x4 sqrt() {
     double _x = Math.sqrt(x);
     double _y = Math.sqrt(y);
@@ -1702,7 +1468,7 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._doubles(_x, _y, _z, _w);
   }
 
-  /// Returns the reciprocal of this [Float32x4].
+  /// Returns the reciprocal of [this].
   Float32x4 reciprocal() {
     double _x = 1.0 / x;
     double _y = 1.0 / y;
@@ -1711,7 +1477,7 @@ final class NativeFloat32x4 implements Float32x4 {
     return NativeFloat32x4._doubles(_x, _y, _z, _w);
   }
 
-  /// Returns the square root of the reciprocal of this [Float32x4].
+  /// Returns the square root of the reciprocal of [this].
   Float32x4 reciprocalSqrt() {
     double _x = Math.sqrt(1.0 / x);
     double _y = Math.sqrt(1.0 / y);
@@ -1854,8 +1620,8 @@ final class NativeInt32x4 implements Int32x4 {
     return NativeInt32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Shuffle the lane values in this [Int32x4] and [other]. The returned
-  /// Int32x4 will have XY lanes from this [Int32x4] and ZW lanes from [other].
+  /// Shuffle the lane values in [this] and [other]. The returned
+  /// Int32x4 will have XY lanes from [this] and ZW lanes from [other].
   /// Uses the same [mask] as [shuffle].
   Int32x4 shuffleMix(Int32x4 other, int mask) {
     if ((mask < 0) || (mask > 255)) {
@@ -1877,25 +1643,25 @@ final class NativeInt32x4 implements Int32x4 {
     return NativeInt32x4._truncated(_x, _y, _z, _w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new x value.
+  /// Returns a new [Int32x4] copied from [this] with a new x value.
   Int32x4 withX(int x) {
     int _x = _truncate(checkNum(x));
     return NativeInt32x4._truncated(_x, y, z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new y value.
+  /// Returns a new [Int32x4] copied from [this] with a new y value.
   Int32x4 withY(int y) {
     int _y = _truncate(checkNum(y));
     return NativeInt32x4._truncated(x, _y, z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new z value.
+  /// Returns a new [Int32x4] copied from [this] with a new z value.
   Int32x4 withZ(int z) {
     int _z = _truncate(checkNum(z));
     return NativeInt32x4._truncated(x, y, _z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new w value.
+  /// Returns a new [Int32x4] copied from [this] with a new w value.
   Int32x4 withW(int w) {
     int _w = _truncate(checkNum(w));
     return NativeInt32x4._truncated(x, y, z, _w);
@@ -1913,33 +1679,33 @@ final class NativeInt32x4 implements Int32x4 {
   /// Extracted w value. Returns `false` for 0, `true` for any other value.
   bool get flagW => w != 0;
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new x value.
+  /// Returns a new [Int32x4] copied from [this] with a new x value.
   Int32x4 withFlagX(bool flagX) {
     int _x = flagX ? -1 : 0;
     return NativeInt32x4._truncated(_x, y, z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new y value.
+  /// Returns a new [Int32x4] copied from [this] with a new y value.
   Int32x4 withFlagY(bool flagY) {
     int _y = flagY ? -1 : 0;
     return NativeInt32x4._truncated(x, _y, z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new z value.
+  /// Returns a new [Int32x4] copied from [this] with a new z value.
   Int32x4 withFlagZ(bool flagZ) {
     int _z = flagZ ? -1 : 0;
     return NativeInt32x4._truncated(x, y, _z, w);
   }
 
-  /// Returns a new [Int32x4] copied from this [Int32x4] with a new w value.
+  /// Returns a new [Int32x4] copied from [this] with a new w value.
   Int32x4 withFlagW(bool flagW) {
     int _w = flagW ? -1 : 0;
     return NativeInt32x4._truncated(x, y, z, _w);
   }
 
-  /// Merge [trueValue] and [falseValue] based on this [Int32x4] bit mask:
-  /// Select bit from [trueValue] when bit in this [Int32x4] is on.
-  /// Select bit from [falseValue] when bit in this [Int32x4] is off.
+  /// Merge [trueValue] and [falseValue] based on [this]' bit mask:
+  /// Select bit from [trueValue] when bit in [this] is on.
+  /// Select bit from [falseValue] when bit in [this] is off.
   Float32x4 select(Float32x4 trueValue, Float32x4 falseValue) {
     var floatList = NativeFloat32x4._list;
     var intView = NativeFloat32x4._uint32view;
@@ -2022,7 +1788,7 @@ final class NativeFloat64x2 implements Float64x2 {
     return NativeFloat64x2._doubles(x / other.x, y / other.y);
   }
 
-  /// Returns a copy of this [Float64x2] each lane being scaled by [s].
+  /// Returns a copy of [this] each lane being scaled by [s].
   Float64x2 scale(double s) {
     return NativeFloat64x2._doubles(x * s, y * s);
   }
@@ -2032,7 +1798,7 @@ final class NativeFloat64x2 implements Float64x2 {
     return NativeFloat64x2._doubles(x.abs(), y.abs());
   }
 
-  /// Clamps this [Float64x2] to be in the range [lowerLimit]-[upperLimit].
+  /// Clamps [this] to be in the range [lowerLimit]-[upperLimit].
   Float64x2 clamp(Float64x2 lowerLimit, Float64x2 upperLimit) {
     double _lx = lowerLimit.x;
     double _ly = lowerLimit.y;
@@ -2058,33 +1824,31 @@ final class NativeFloat64x2 implements Float64x2 {
     return mx | my << 1;
   }
 
-  /// Returns a new [Float64x2] copied from this [Float64x2] with a new x
-  /// value.
+  /// Returns a new [Float64x2] copied from [this] with a new x value.
   Float64x2 withX(double x) {
     if (x is! num) throw ArgumentError(x);
     return NativeFloat64x2._doubles(x, y);
   }
 
-  /// Returns a new [Float64x2] copied from this [Float64x2] with a new y
-  /// value.
+  /// Returns a new [Float64x2] copied from [this] with a new y value.
   Float64x2 withY(double y) {
     if (y is! num) throw ArgumentError(y);
     return NativeFloat64x2._doubles(x, y);
   }
 
-  /// Returns the lane-wise minimum value in this [Float64x2] or [other].
+  /// Returns the lane-wise minimum value in [this] or [other].
   Float64x2 min(Float64x2 other) {
     return NativeFloat64x2._doubles(
         x < other.x ? x : other.x, y < other.y ? y : other.y);
   }
 
-  /// Returns the lane-wise maximum value in this [Float64x2] or [other].
+  /// Returns the lane-wise maximum value in [this] or [other].
   Float64x2 max(Float64x2 other) {
     return NativeFloat64x2._doubles(
         x > other.x ? x : other.x, y > other.y ? y : other.y);
   }
 
-  /// Returns the lane-wise square root of this [Float64x2].
+  /// Returns the lane-wise square root of [this].
   Float64x2 sqrt() {
     return NativeFloat64x2._doubles(Math.sqrt(x), Math.sqrt(y));
   }

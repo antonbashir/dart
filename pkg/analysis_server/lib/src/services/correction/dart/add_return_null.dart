@@ -2,18 +2,18 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class AddReturnNull extends ResolvedCorrectionProducer {
-  AddReturnNull({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_RETURN_NULL;
@@ -25,7 +25,7 @@ class AddReturnNull extends ResolvedCorrectionProducer {
   Future<void> compute(ChangeBuilder builder) async {
     Block block;
 
-    var node = this.node;
+    final node = this.node;
     if (node is Block) {
       block = node;
     } else if (node is FunctionDeclaration) {
@@ -50,7 +50,8 @@ class AddReturnNull extends ResolvedCorrectionProducer {
     if (block.statements.isEmpty) {
       position = block.offset + 1;
       var prefix = utils.getLinePrefix(block.offset);
-      returnStatement = '$eol$prefix${utils.oneIndent}return null;$eol$prefix';
+      returnStatement =
+          '$eol$prefix${utils.getIndent(1)}return null;$eol$prefix';
     } else {
       var lastStatement = block.statements.last;
       position = lastStatement.offset + lastStatement.length;

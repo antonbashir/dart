@@ -5,7 +5,7 @@
 emptyBool(bool b) {
   return /*
    checkingOrder={bool,true,false},
-   error=non-exhaustive:true;false,
+   error=non-exhaustive:true,
    subtypes={true,false},
    type=bool
   */
@@ -17,7 +17,7 @@ emptyBool(bool b) {
 emptyNum(num n) {
   return /*
    checkingOrder={num,double,int},
-   error=non-exhaustive:double();int(),
+   error=non-exhaustive:double(),
    subtypes={double,int},
    type=num
   */
@@ -41,7 +41,7 @@ enum E { a, b }
 emptyEnum(E e) {
   return /*
    checkingOrder={E,E.a,E.b},
-   error=non-exhaustive:E.a;E.b,
+   error=non-exhaustive:E.a,
    subtypes={E.a,E.b},
    type=E
   */

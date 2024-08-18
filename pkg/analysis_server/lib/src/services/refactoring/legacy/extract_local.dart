@@ -13,7 +13,6 @@ import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring_internal.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analysis_server/src/utilities/strings.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
 import 'package:analyzer/dart/analysis/code_style_options.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -86,7 +85,8 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
     String? typeString;
     if (codeStyleOptions.specifyTypes) {
       typeString = singleExpression != null
-          ? singleExpression?.staticType?.getDisplayString()
+          ? singleExpression?.staticType
+              ?.getDisplayString(withNullability: unit.isNonNullableByDefault)
           : stringLiteralPart != null
               ? 'String'
               : null;
@@ -121,7 +121,7 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
     _prepareOffsetsLengths();
     // names
     excludedVariableNames =
-        unit.findPossibleLocalVariableConflicts(selectionOffset);
+        utils.findPossibleLocalVariableConflicts(selectionOffset);
     _prepareNames();
     // done
     return Future.value(result);
@@ -142,7 +142,7 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
   Future<SourceChange> createChange() {
     var change = SourceChange(refactoringName);
     // prepare occurrences
-    late List<SourceRange> occurrences;
+    late final List<SourceRange> occurrences;
     if (extractAll) {
       occurrences = this.occurrences;
     } else {
@@ -151,7 +151,7 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
     occurrences.sort((a, b) => a.offset - b.offset);
     // If the whole expression of a statement is selected, like '1 + 2',
     // then convert it into a variable declaration statement.
-    var singleExpression = this.singleExpression;
+    final singleExpression = this.singleExpression;
     if (singleExpression != null &&
         singleExpression.parent is ExpressionStatement &&
         occurrences.length == 1) {
@@ -193,7 +193,7 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
         occurrencesShift = edit.replacement.length;
       } else if (target is ExpressionFunctionBody) {
         var prefix = utils.getNodePrefix(target.parent!);
-        var indent = utils.oneIndent;
+        var indent = utils.getIndent(1);
         var expr = target.expression;
         {
           var code = '{$eol$prefix$indent';
@@ -491,8 +491,8 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
 
   void _prepareNames() {
     names.clear();
-    var stringLiteralPart = this.stringLiteralPart;
-    var singleExpression = this.singleExpression;
+    final stringLiteralPart = this.stringLiteralPart;
+    final singleExpression = this.singleExpression;
     if (stringLiteralPart != null) {
       names.addAll(getVariableNameSuggestionsForText(
           stringLiteralPart, excludedVariableNames));
@@ -512,9 +512,9 @@ class ExtractLocalRefactoringImpl extends RefactoringImpl
 
     // prepare selection
     String? selectionSource;
-    var singleExpression = this.singleExpression;
+    final singleExpression = this.singleExpression;
     if (singleExpression != null) {
-      var tokens = singleExpression.tokens;
+      var tokens = TokenUtils.getNodeTokens(singleExpression);
       selectionSource = _encodeExpressionTokens(singleExpression, tokens);
     }
     // visit function
@@ -587,7 +587,8 @@ class _OccurrencesVisitor extends GeneralizingAstVisitor<void> {
   }
 
   void _tryToFindOccurrence(Expression node) {
-    var nodeSource = ref._encodeExpressionTokens(node, node.tokens);
+    var nodeTokens = TokenUtils.getNodeTokens(node);
+    var nodeSource = ref._encodeExpressionTokens(node, nodeTokens);
     if (nodeSource == selectionSource) {
       _addOccurrence(range.node(node));
     }

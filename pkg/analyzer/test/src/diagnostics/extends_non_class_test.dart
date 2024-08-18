@@ -22,7 +22,7 @@ class A extends dynamic {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 16, 7),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -41,13 +41,13 @@ class A extends E {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 31, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
   superclass: NamedType
     name: E
-    element: <testLibraryFragment>::@enum::E
+    element: self::@enum::E
     type: E
 ''');
   }
@@ -60,13 +60,13 @@ class B extends A {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 44, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
   superclass: NamedType
     name: A
-    element: <testLibraryFragment>::@extensionType::A
+    element: self::@extensionType::A
     type: A
 ''');
   }
@@ -79,13 +79,13 @@ class A extends M {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 27, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
   superclass: NamedType
     name: M
-    element: <testLibraryFragment>::@mixin::M
+    element: self::@mixin::M
     type: M
 ''');
   }
@@ -98,13 +98,13 @@ class A extends v {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 27, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
   superclass: NamedType
     name: v
-    element: <testLibraryFragment>::@getter::v
+    element: self::@getter::v
     type: InvalidType
 ''');
   }
@@ -117,7 +117,7 @@ class A extends v<int> {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 27, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -128,10 +128,10 @@ ExtendsClause
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@getter::v
+    element: self::@getter::v
     type: InvalidType
 ''');
   }
@@ -143,7 +143,7 @@ class A extends Never {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 16, 5),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -161,7 +161,7 @@ class C extends A {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 16, 1),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -181,7 +181,7 @@ class C extends p.A {}
       error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 7, 8),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -189,7 +189,7 @@ ExtendsClause
     importPrefix: ImportPrefixReference
       name: p
       period: .
-      element: <testLibraryFragment>::@prefix::p
+      element: self::@prefix::p
     name: A
     element: <null>
     type: InvalidType
@@ -283,7 +283,7 @@ class C extends p.A {}
       error(CompileTimeErrorCode.EXTENDS_NON_CLASS, 42, 3),
     ]);
 
-    var node = findNode.singleExtendsClause;
+    final node = findNode.singleExtendsClause;
     assertResolvedNodeText(node, r'''
 ExtendsClause
   extendsKeyword: extends
@@ -291,7 +291,7 @@ ExtendsClause
     importPrefix: ImportPrefixReference
       name: p
       period: .
-      element: <testLibraryFragment>::@prefix::p
+      element: self::@prefix::p
     name: A
     element: <null>
     type: InvalidType

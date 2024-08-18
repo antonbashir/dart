@@ -47,9 +47,6 @@ final standaloneExtensionExe = (Platform.isWindows ? '.exe' : '');
 final genKernelUri =
     sdkUriAbsolute.resolve('pkg/vm/tool/gen_kernel$standaloneExtension');
 
-final protobufAwareTreeshakerUri =
-    sdkUriAbsolute.resolve('pkg/vm/bin/protobuf_aware_treeshaker.dart');
-
 final genSnapshotUri =
     buildUriAbsolute.resolve('gen_snapshot$standaloneExtensionExe');
 
@@ -83,8 +80,6 @@ Future<void> withTempDir(
     if (!Platform.environment.containsKey(keepTempKey) ||
         Platform.environment[keepTempKey]!.isEmpty) {
       await tempDirResolved.delete(recursive: true);
-    } else {
-      print('Keeping $tempDirResolved');
     }
   }
 }
@@ -119,20 +114,9 @@ stderr     : ${result.stderr}''';
   }
 }
 
-enum KernelCombine {
-  source,
-  concatenation,
-}
-
 enum Runtime {
   aot,
-  appjit,
   jit,
-}
-
-enum AotCompile {
-  assembly,
-  elf,
 }
 
 Future<void> runGenKernel({
@@ -165,125 +149,27 @@ Future<void> createDillFile({
   required Uri dartProgramUri,
   required Uri nativeAssetsUri,
   required Runtime runtime,
-  required KernelCombine kernelCombine,
-  required bool protobufAwareTreeshaking,
-}) async {
-  final preTreeshakenDill = tempUri.resolve('pre_treeshaken.dill');
-
-  switch (kernelCombine) {
-    case KernelCombine.source:
-      await runGenKernel(
-        runtime: runtime,
-        outputUri: protobufAwareTreeshaking ? preTreeshakenDill : outputUri,
-        inputUri: dartProgramUri,
-        nativeAssetsUri: nativeAssetsUri,
-      );
-    case KernelCombine.concatenation:
-      final programDillUri = tempUri.resolve('program.dill');
-      final nativeAssetsDillUri = tempUri.resolve('native_assets.dill');
-      await Future.wait([
-        runGenKernel(
-          runtime: runtime,
-          outputUri: programDillUri,
-          inputUri: dartProgramUri,
-        ),
-        runGenKernel(
-          runtime: runtime,
-          outputUri: nativeAssetsDillUri,
-          nativeAssetsUri: nativeAssetsUri,
-        ),
-      ]);
-      final programKernelBytes =
-          await File.fromUri(programDillUri).readAsBytes();
-      final nativeAssetKernelBytes =
-          await File.fromUri(nativeAssetsDillUri).readAsBytes();
-      await File.fromUri(
-        protobufAwareTreeshaking ? preTreeshakenDill : outputUri,
-      ).writeAsBytes(
-        [
-          ...programKernelBytes,
-          ...nativeAssetKernelBytes,
-        ],
-        flush: true,
-      );
-  }
-
-  if (protobufAwareTreeshaking) {
-    await runDart(
-      scriptUri: protobufAwareTreeshakerUri,
-      arguments: [
-        if (runtime == Runtime.aot) '--aot',
-        /*<input.dill>*/ preTreeshakenDill.toFilePath(),
-        /*<output.dill>*/ outputUri.toFilePath(),
-      ],
+}) =>
+    runGenKernel(
+      runtime: runtime,
+      outputUri: outputUri,
+      inputUri: dartProgramUri,
+      nativeAssetsUri: nativeAssetsUri,
     );
-  }
-}
 
 Future<void> runGenSnapshot({
-  required Uri tempUri,
   required Uri dillUri,
   required Uri outputUri,
-  required AotCompile aotCompile,
-}) async {
-  switch (aotCompile) {
-    case AotCompile.elf:
-      await runProcess(
-        executable: genSnapshotUri.toFilePath(),
-        arguments: [
-          '--snapshot-kind=app-aot-elf',
-          '--elf=${outputUri.toFilePath()}',
-          '--strip',
-          dillUri.toFilePath(),
-        ],
-      );
-    case AotCompile.assembly:
-      if (!(Platform.isLinux || Platform.isMacOS)) {
-        // Windows doesn't support assembly snapshots.
-        throw UnsupportedError('Not yet implemented for MSVC');
-      }
-      final assemblyUri = tempUri.resolve('out.S');
-      await runProcess(
-        executable: genSnapshotUri.toFilePath(),
-        arguments: [
-          '--snapshot-kind=app-aot-assembly',
-          '--assembly=${assemblyUri.toFilePath()}',
-          dillUri.toFilePath(),
-        ],
-      );
-      if (!await File.fromUri(assemblyUri).exists()) {
-        throw Error();
-      }
-
-      // Executables and arguments taken from
-      // pkg/test_runner/lib/src/compiler_configuration.dart
-      // `computeAssembleCommand`.
-      if (Platform.isMacOS) {
-        await runProcess(
-          executable: 'clang',
-          arguments: [
-            '-Wl,-undefined,error',
-            '-Wl,-no_compact_unwind',
-            '-dynamiclib',
-            '-o',
-            outputUri.toFilePath(),
-            assemblyUri.toFilePath(),
-          ],
-        );
-      } else if (Platform.isLinux) {
-        await runProcess(
-          executable: 'gcc',
-          arguments: [
-            '-shared',
-            '-Wl,--no-undefined',
-            '-o',
-            outputUri.toFilePath(),
-            assemblyUri.toFilePath(),
-          ],
-        );
-      }
-  }
-}
+}) =>
+    runProcess(
+      executable: genSnapshotUri.toFilePath(),
+      arguments: [
+        '--snapshot-kind=app-aot-elf',
+        '--elf=${outputUri.toFilePath()}',
+        '--strip',
+        dillUri.toFilePath(),
+      ],
+    );
 
 Future<void> runDart({
   required Uri scriptUri,
@@ -355,11 +241,7 @@ Future<void> compileAndRun({
   required Uri dartProgramUri,
   required String nativeAssetsYaml,
   required Runtime runtime,
-  required KernelCombine kernelCombine,
-  required bool protobufAwareTreeshaking,
-  AotCompile aotCompile = AotCompile.elf,
   required List<String> runArguments,
-  bool useSymlink = false,
 }) async {
   final nativeAssetsUri = tempUri.resolve('native_assets.yaml');
   await File(nativeAssetsUri.toFilePath()).writeAsString(nativeAssetsYaml);
@@ -371,75 +253,15 @@ Future<void> compileAndRun({
     dartProgramUri: dartProgramUri,
     nativeAssetsUri: nativeAssetsUri,
     runtime: runtime,
-    kernelCombine: kernelCombine,
-    protobufAwareTreeshaking: protobufAwareTreeshaking,
   );
 
-  switch (runtime) {
-    case Runtime.aot:
-      final snapshotUri = tempUri.resolve('out.snapshot');
-      await runGenSnapshot(
-        tempUri: tempUri,
-        dillUri: outDillUri,
-        outputUri: snapshotUri,
-        aotCompile: aotCompile,
-      );
-      if (useSymlink) {
-        await withTempDir(prefix: 'link dir', (tempDir) async {
-          final link = Link.fromUri(tempDir.resolve('my_link'));
-          await link.create(snapshotUri.toFilePath());
-          await runDartAotRuntime(
-            aotSnapshotUri: link.uri,
-            arguments: runArguments,
-          );
-        });
-      } else {
-        await runDartAotRuntime(
-          aotSnapshotUri: snapshotUri,
-          arguments: runArguments,
-        );
-      }
-    case Runtime.appjit:
-      final outJitUri = tempUri.resolve('out.jit');
-      await runDart(
-        toolArgs: [
-          '--snapshot-kind=app-jit',
-          '--snapshot=${outJitUri.toFilePath()}',
-        ],
-        scriptUri: outDillUri,
-        arguments: runArguments,
-      );
-      if (useSymlink) {
-        await withTempDir(prefix: 'link dir', (tempDir) async {
-          final link = Link.fromUri(tempDir.resolve('my_link'));
-          await link.create(outDillUri.toFilePath());
-          await runDart(
-            scriptUri: link.uri,
-            arguments: runArguments,
-          );
-        });
-      } else {
-        await runDart(
-          scriptUri: outJitUri,
-          arguments: runArguments,
-        );
-      }
-    case Runtime.jit:
-      if (useSymlink) {
-        await withTempDir(prefix: 'link dir', (tempDir) async {
-          final link = Link.fromUri(tempDir.resolve('my_link'));
-          await link.create(outDillUri.toFilePath());
-          await runDart(
-            scriptUri: link.uri,
-            arguments: runArguments,
-          );
-        });
-      } else {
-        await runDart(
-          scriptUri: outDillUri,
-          arguments: runArguments,
-        );
-      }
+  if (runtime == Runtime.jit) {
+    await runDart(scriptUri: outDillUri, arguments: runArguments);
+  } else {
+    final snapshotUri = tempUri.resolve('out.snapshot');
+    await runGenSnapshot(dillUri: outDillUri, outputUri: snapshotUri);
+    await runDartAotRuntime(
+        aotSnapshotUri: snapshotUri, arguments: runArguments);
   }
 }
 
@@ -473,9 +295,6 @@ Future<void> invokeSelf({
   required List<String> arguments,
   required String nativeAssetsYaml,
   Runtime runtime = Runtime.jit,
-  KernelCombine kernelCombine = KernelCombine.source,
-  AotCompile aotCompile = AotCompile.elf,
-  bool protobufAwareTreeshaking = false,
 }) async {
   await withTempDir((Uri tempUri) async {
     await compileAndRun(
@@ -483,9 +302,6 @@ Future<void> invokeSelf({
       dartProgramUri: selfSourceUri,
       nativeAssetsYaml: nativeAssetsYaml,
       runtime: runtime,
-      kernelCombine: kernelCombine,
-      protobufAwareTreeshaking: protobufAwareTreeshaking,
-      aotCompile: aotCompile,
       runArguments: arguments,
     );
     print([selfSourceUri.toFilePath(), runtime.name, 'done'].join(' '));

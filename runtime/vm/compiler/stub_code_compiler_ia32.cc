@@ -40,7 +40,7 @@ void StubCodeCompiler::EnsureIsNewOrRemembered() {
   // Page's TLAB use is always ascending.
   Label done;
   __ AndImmediate(ECX, EAX, target::kPageMask);
-  __ LoadFromOffset(ECX, ECX, target::Page::original_top_offset());
+  __ LoadFromOffset(ECX, Address(ECX, target::Page::original_top_offset()));
   __ CompareRegisters(EAX, ECX);
   __ BranchIf(UNSIGNED_GREATER_EQUAL, &done);
 
@@ -105,7 +105,9 @@ void StubCodeCompiler::GenerateCallToRuntimeStub() {
   }
 
   // Pass NativeArguments structure by value and call runtime.
-  __ movl(Address(ESP, thread_offset), THR);    // Set thread in NativeArgs.
+  __ movl(Address(ESP, thread_offset), THR);  // Set thread in NativeArgs.
+  // There are no runtime calls to closures, so we do not need to set the tag
+  // bits kClosureFunctionBit and kInstanceFunctionBit in argc_tag_.
   __ movl(Address(ESP, argc_tag_offset), EDX);  // Set argc in NativeArguments.
   // Compute argv.
   __ leal(EAX,
@@ -544,9 +546,9 @@ void StubCodeCompiler::GenerateCallBootstrapNativeStub() {
 void StubCodeCompiler::GenerateCallStaticFunctionStub() {
   __ EnterStubFrame();
   __ pushl(ARGS_DESC_REG);  // Preserve arguments descriptor array.
-  __ pushl(Immediate(0));   // Setup space on stack for return value.
+  __ pushl(Immediate(0));  // Setup space on stack for return value.
   __ CallRuntime(kPatchStaticCallRuntimeEntry, 0);
-  __ popl(EAX);            // Get Code object result.
+  __ popl(EAX);  // Get Code object result.
   __ popl(ARGS_DESC_REG);  // Restore arguments descriptor array.
   // Remove the stub frame as we are about to jump to the dart function.
   __ LeaveFrame();
@@ -564,9 +566,9 @@ void StubCodeCompiler::GenerateFixCallersTargetStub() {
   // This was a static call.
   __ EnterStubFrame();
   __ pushl(ARGS_DESC_REG);  // Preserve arguments descriptor array.
-  __ pushl(Immediate(0));   // Setup space on stack for return value.
+  __ pushl(Immediate(0));  // Setup space on stack for return value.
   __ CallRuntime(kFixCallersTargetRuntimeEntry, 0);
-  __ popl(EAX);            // Get Code object.
+  __ popl(EAX);  // Get Code object.
   __ popl(ARGS_DESC_REG);  // Restore arguments descriptor array.
   __ movl(EAX, FieldAddress(EAX, target::Code::entry_point_offset()));
   __ LeaveFrame();
@@ -777,8 +779,6 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
   if (kind == kLazyDeoptFromReturn) {
     __ pushl(EBX);  // Preserve result, it will be GC-d here.
   } else if (kind == kLazyDeoptFromThrow) {
-    // Preserve CODE_REG for one more runtime call.
-    __ pushl(CODE_REG);
     __ pushl(EBX);  // Preserve exception, it will be GC-d here.
     __ pushl(ECX);  // Preserve stacktrace, it will be GC-d here.
   }
@@ -791,9 +791,8 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
   if (kind == kLazyDeoptFromReturn) {
     __ popl(EAX);  // Restore result.
   } else if (kind == kLazyDeoptFromThrow) {
-    __ popl(EDX);  // Restore stacktrace.
-    __ popl(EAX);  // Restore exception.
-    __ popl(CODE_REG);
+    __ popl(EDX);  // Restore exception.
+    __ popl(EAX);  // Restore stacktrace.
   }
   __ LeaveStubFrame();
 
@@ -801,19 +800,6 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
   __ addl(ESP, EBX);  // Remove materialization arguments.
   __ pushl(ECX);      // Push return address.
   // The caller is responsible for emitting the return instruction.
-
-  if (kind == kLazyDeoptFromThrow) {
-    // Unoptimized frame is now ready to accept the exception. Rethrow it to
-    // find the right handler. Ask rethrow machinery to bypass debugger it
-    // was already notified about this exception.
-    __ EnterStubFrame();
-    __ pushl(Immediate(target::ToRawSmi(0)));  // Space for the result.
-    __ pushl(EAX);                             // Exception
-    __ pushl(EDX);                             // Stacktrace
-    __ pushl(Immediate(target::ToRawSmi(1)));  // Bypass debugger.
-    __ CallRuntime(kReThrowRuntimeEntry, 3);
-    __ LeaveStubFrame();
-  }
 }
 
 // EAX: result, must be preserved
@@ -871,6 +857,17 @@ static void GenerateNoSuchMethodDispatcherCode(Assembler* assembler) {
   __ popl(EAX);  // Return value.
   __ LeaveFrame();
   __ ret();
+}
+
+static void GenerateDispatcherCode(Assembler* assembler,
+                                   Label* call_target_function) {
+  __ Comment("NoSuchMethodDispatch");
+  // When lazily generated invocation dispatchers are disabled, the
+  // miss-handler may return null.
+  const Immediate& raw_null = Immediate(target::ToRawPointer(NullObject()));
+  __ cmpl(EAX, raw_null);
+  __ j(NOT_EQUAL, call_target_function);
+  GenerateNoSuchMethodDispatcherCode(assembler);
 }
 
 void StubCodeCompiler::GenerateNoSuchMethodDispatcherStub() {
@@ -997,8 +994,8 @@ void StubCodeCompiler::GenerateAllocateArrayStub() {
     for (intptr_t offset = 0; offset < target::kObjectAlignment;
          offset += target::kWordSize) {
       // No generational barrier needed, since we are storing null.
-      __ StoreObjectIntoObjectNoBarrier(AllocateArrayABI::kResultReg,
-                                        Address(EDI, offset), NullObject());
+      __ StoreIntoObjectNoBarrier(AllocateArrayABI::kResultReg,
+                                  Address(EDI, offset), NullObject());
     }
     // Safe to only check every kObjectAlignment bytes instead of each word.
     ASSERT(kAllocationRedZoneSize >= target::kObjectAlignment);
@@ -1161,137 +1158,6 @@ void StubCodeCompiler::GenerateInvokeDartCodeStub() {
   __ ret();
 }
 
-// Called when invoking compiled Dart code from interpreted Dart code.
-// Input parameters:
-//   ESP : points to return address.
-//   ESP + 4 : code object of the dart function to call.
-//   ESP + 8 : arguments descriptor array.
-//   ESP + 12: address of first argument.
-//   ESP + 16 : current thread.
-void StubCodeCompiler::GenerateInvokeDartCodeFromBytecodeStub() {
-#if defined(DART_DYNAMIC_MODULES)
-  const intptr_t kTargetCodeOffset = 2 * target::kWordSize;
-  const intptr_t kArgumentsDescOffset = 3 * target::kWordSize;
-  const intptr_t kArgumentsOffset = 4 * target::kWordSize;
-  const intptr_t kThreadOffset = 5 * target::kWordSize;
-  __ EnterFrame(0);
-
-  // Push code object to PC marker slot.
-  __ movl(EAX, Address(EBP, kThreadOffset));
-  __ pushl(Address(EAX, target::Thread::invoke_dart_code_stub_offset()));
-
-  // Save C++ ABI callee-saved registers.
-  __ pushl(EBX);
-  __ pushl(ESI);
-  __ pushl(EDI);
-
-  // Set up THR, which caches the current thread in Dart code.
-  __ movl(THR, EAX);
-
-#if defined(USING_SHADOW_CALL_STACK)
-#error Unimplemented
-#endif
-
-  // Save the current VMTag on the stack.
-  __ movl(ECX, Assembler::VMTagAddress());
-  __ pushl(ECX);
-
-  // Save top resource and top exit frame info. Use EDX as a temporary register.
-  // StackFrameIterator reads the top exit frame info saved in this frame.
-  __ movl(EDX, Address(THR, target::Thread::top_resource_offset()));
-  __ pushl(EDX);
-  __ movl(Address(THR, target::Thread::top_resource_offset()), Immediate(0));
-  __ movl(EAX, Address(THR, target::Thread::exit_through_ffi_offset()));
-  __ pushl(EAX);
-  __ movl(Address(THR, target::Thread::exit_through_ffi_offset()),
-          Immediate(0));
-  // The constant target::frame_layout.exit_link_slot_from_entry_fp must be
-  // kept in sync with the code below.
-  ASSERT(target::frame_layout.exit_link_slot_from_entry_fp == -8);
-  __ movl(EDX, Address(THR, target::Thread::top_exit_frame_info_offset()));
-  __ pushl(EDX);
-  __ movl(Address(THR, target::Thread::top_exit_frame_info_offset()),
-          Immediate(0));
-
-  // In debug mode, verify that we've pushed the top exit frame info at the
-  // correct offset from FP.
-  __ EmitEntryFrameVerification();
-
-  // Mark that the thread is executing Dart code. Do this after initializing the
-  // exit link for the profiler.
-  __ movl(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
-
-  // Load arguments descriptor array into EDX.
-  __ movl(EDX, Address(EBP, kArgumentsDescOffset));
-
-  // Load number of arguments into EBX and adjust count for type arguments.
-  __ movl(EBX, FieldAddress(EDX, target::ArgumentsDescriptor::count_offset()));
-  __ cmpl(
-      FieldAddress(EDX, target::ArgumentsDescriptor::type_args_len_offset()),
-      Immediate(0));
-  Label args_count_ok;
-  __ j(EQUAL, &args_count_ok, Assembler::kNearJump);
-  __ addl(EBX, Immediate(target::ToRawSmi(1)));  // Include the type arguments.
-  __ Bind(&args_count_ok);
-  // Save number of arguments as Smi on stack, replacing ArgumentsDesc.
-  __ movl(Address(EBP, kArgumentsDescOffset), EBX);
-  __ SmiUntag(EBX);
-
-  // Set up arguments for the dart call.
-  Label push_arguments;
-  Label done_push_arguments;
-  __ testl(EBX, EBX);  // check if there are arguments.
-  __ j(ZERO, &done_push_arguments, Assembler::kNearJump);
-  __ movl(EAX, Immediate(0));
-
-  // Compute address of 'arguments array' data area into EDI.
-  __ movl(EDI, Address(EBP, kArgumentsOffset));
-
-  __ Bind(&push_arguments);
-  __ movl(ECX, Address(EDI, EAX, TIMES_4, 0));
-  __ pushl(ECX);
-  __ incl(EAX);
-  __ cmpl(EAX, EBX);
-  __ j(LESS, &push_arguments, Assembler::kNearJump);
-  __ Bind(&done_push_arguments);
-
-  // Call the dart code entrypoint.
-  __ movl(EAX, Address(EBP, kTargetCodeOffset));
-  __ call(FieldAddress(EAX, target::Code::entry_point_offset()));
-
-  // Read the saved number of passed arguments as Smi.
-  __ movl(EDX, Address(EBP, kArgumentsDescOffset));
-  // Get rid of arguments pushed on the stack.
-  __ leal(ESP, Address(ESP, EDX, TIMES_2, 0));  // EDX is a Smi.
-
-  // Restore the saved top exit frame info and top resource back into the
-  // Isolate structure.
-  __ popl(Address(THR, target::Thread::top_exit_frame_info_offset()));
-  __ popl(Address(THR, target::Thread::exit_through_ffi_offset()));
-  __ popl(Address(THR, target::Thread::top_resource_offset()));
-
-  // Restore the current VMTag from the stack.
-  __ popl(Assembler::VMTagAddress());
-
-#if defined(USING_SHADOW_CALL_STACK)
-#error Unimplemented
-#endif
-
-  // Restore C++ ABI callee-saved registers.
-  __ popl(EDI);
-  __ popl(ESI);
-  __ popl(EBX);
-
-  // Restore the frame pointer.
-  __ LeaveFrame();
-
-  __ ret();
-
-#else
-  __ Stop("Not using Dart dynamic modules");
-#endif  // defined(DART_DYNAMIC_MODULES)
-}
-
 // Helper to generate space allocation of context stub.
 // This does not initialise the fields of the context.
 // Input:
@@ -1389,7 +1255,7 @@ void StubCodeCompiler::GenerateAllocateContextStub() {
     // EAX: new object.
     // EDX: number of context variables.
     // No generational barrier needed, since we are storing null.
-    __ StoreObjectIntoObjectNoBarrier(
+    __ StoreIntoObjectNoBarrier(
         EAX, FieldAddress(EAX, target::Context::parent_offset()), NullObject());
 
     // Initialize the context variables.
@@ -1403,8 +1269,8 @@ void StubCodeCompiler::GenerateAllocateContextStub() {
       __ Bind(&loop);
       __ decl(EDX);
       // No generational barrier needed, since we are storing null.
-      __ StoreObjectIntoObjectNoBarrier(EAX, Address(EBX, EDX, TIMES_4, 0),
-                                        NullObject());
+      __ StoreIntoObjectNoBarrier(EAX, Address(EBX, EDX, TIMES_4, 0),
+                                  NullObject());
       __ Bind(&entry);
       __ cmpl(EDX, Immediate(0));
       __ j(NOT_EQUAL, &loop, Assembler::kNearJump);
@@ -1552,7 +1418,7 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
 
   {
     // Atomically clear kNotMarkedBit.
-    Label retry, is_new, done;
+    Label retry, done;
     __ movl(EAX, FieldAddress(EBX, target::Object::tags_offset()));
     __ Bind(&retry);
     __ movl(ECX, EAX);
@@ -1564,37 +1430,23 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
     __ LockCmpxchgl(FieldAddress(EBX, target::Object::tags_offset()), ECX);
     __ j(NOT_EQUAL, &retry, Assembler::kNearJump);
 
-    __ testl(EBX,
-             Immediate(1 << target::ObjectAlignment::kNewObjectBitPosition));
-    __ j(NOT_ZERO, &is_new);
+    __ movl(EAX, Address(THR, target::Thread::marking_stack_block_offset()));
+    __ movl(ECX, Address(EAX, target::MarkingStackBlock::top_offset()));
+    __ movl(Address(EAX, ECX, TIMES_4,
+                    target::MarkingStackBlock::pointers_offset()),
+            EBX);
+    __ incl(ECX);
+    __ movl(Address(EAX, target::MarkingStackBlock::top_offset()), ECX);
+    __ cmpl(ECX, Immediate(target::MarkingStackBlock::kSize));
+    __ j(NOT_EQUAL, &done);
 
-    auto mark_stack_push = [&](intptr_t offset, const RuntimeEntry& entry) {
-      __ movl(EAX, Address(THR, offset));
-      __ movl(ECX, Address(EAX, target::MarkingStackBlock::top_offset()));
-      __ movl(Address(EAX, ECX, TIMES_4,
-                      target::MarkingStackBlock::pointers_offset()),
-              EBX);
-      __ incl(ECX);
-      __ movl(Address(EAX, target::MarkingStackBlock::top_offset()), ECX);
-      __ cmpl(ECX, Immediate(target::MarkingStackBlock::kSize));
-      __ j(NOT_EQUAL, &done);
-
-      {
-        LeafRuntimeScope rt(assembler,
-                            /*frame_size=*/1 * target::kWordSize,
-                            /*preserve_registers=*/true);
-        __ movl(Address(ESP, 0), THR);  // Push the thread as the only argument.
-        rt.Call(entry, 1);
-      }
-    };
-
-    mark_stack_push(target::Thread::old_marking_stack_block_offset(),
-                    kOldMarkingStackBlockProcessRuntimeEntry);
-    __ jmp(&done);
-
-    __ Bind(&is_new);
-    mark_stack_push(target::Thread::new_marking_stack_block_offset(),
-                    kNewMarkingStackBlockProcessRuntimeEntry);
+    {
+      LeafRuntimeScope rt(assembler,
+                          /*frame_size=*/1 * target::kWordSize,
+                          /*preserve_registers=*/true);
+      __ movl(Address(ESP, 0), THR);  // Push the thread as the only argument.
+      rt.Call(kMarkingStackBlockProcessRuntimeEntry, 1);
+    }
 
     __ Bind(&done);
   }
@@ -1679,12 +1531,13 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
 
     // Get card table.
     __ Bind(&remember_card);
-    __ movl(EAX, EDX);                           // Object.
-    __ andl(EAX, Immediate(target::kPageMask));  // Page.
+    __ movl(EAX, EDX);                              // Object.
+    __ andl(EAX, Immediate(target::kPageMask));     // Page.
     __ cmpl(Address(EAX, target::Page::card_table_offset()), Immediate(0));
     __ j(EQUAL, &remember_card_slow, Assembler::kNearJump);
 
-    // Atomically dirty the card.
+    // Dirty the card. Not atomic: we assume mutable arrays are not shared
+    // between threads.
     __ pushl(EBX);
     __ subl(EDI, EAX);  // Offset in page.
     __ movl(EAX,
@@ -1696,7 +1549,6 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
     __ shrl(ECX, Immediate(target::Page::kBytesPerCardLog2));
     __ movl(EBX, Immediate(1));
     __ shll(EBX, ECX);  // Bit mask. (Shift amount is mod 32.)
-    __ lock();
     __ orl(Address(EAX, EDI, TIMES_4, 0), EBX);
     __ popl(EBX);
     __ popl(ECX);
@@ -1812,7 +1664,7 @@ void StubCodeCompiler::GenerateAllocationStubForClass(
       for (intptr_t current_offset = target::Instance::first_field_offset();
            current_offset < instance_size;
            current_offset += target::kWordSize) {
-        __ StoreObjectIntoObjectNoBarrier(
+        __ StoreIntoObjectNoBarrier(
             AllocateObjectABI::kResultReg,
             FieldAddress(AllocateObjectABI::kResultReg, current_offset),
             NullObject());
@@ -1830,8 +1682,8 @@ void StubCodeCompiler::GenerateAllocationStubForClass(
       __ Bind(&loop);
       for (intptr_t offset = 0; offset < target::kObjectAlignment;
            offset += target::kWordSize) {
-        __ StoreObjectIntoObjectNoBarrier(AllocateObjectABI::kResultReg,
-                                          Address(ECX, offset), NullObject());
+        __ StoreIntoObjectNoBarrier(AllocateObjectABI::kResultReg,
+                                    Address(ECX, offset), NullObject());
       }
       // Safe to only check every kObjectAlignment bytes instead of each word.
       ASSERT(kAllocationRedZoneSize >= target::kObjectAlignment);
@@ -2199,8 +2051,8 @@ void StubCodeCompiler::GenerateNArgsCheckInlineCacheStubForEntryKind(
   // calling into the runtime.
   __ EnterStubFrame();
   __ pushl(ARGS_DESC_REG);  // Preserve arguments descriptor array.
-  __ pushl(ECX);            // Preserve IC data object.
-  __ pushl(Immediate(0));   // Result slot.
+  __ pushl(ECX);           // Preserve IC data object.
+  __ pushl(Immediate(0));  // Result slot.
   // Push call arguments.
   for (intptr_t i = 0; i < num_args; i++) {
     __ movl(EBX, Address(EAX, -target::kWordSize * i));
@@ -2212,13 +2064,16 @@ void StubCodeCompiler::GenerateNArgsCheckInlineCacheStubForEntryKind(
   for (intptr_t i = 0; i < num_args + 1; i++) {
     __ popl(EAX);
   }
-  __ popl(FUNCTION_REG);   // Pop returned function object into EAX.
-  __ popl(ECX);            // Restore IC data array.
+  __ popl(FUNCTION_REG);  // Pop returned function object into EAX.
+  __ popl(ECX);  // Restore IC data array.
   __ popl(ARGS_DESC_REG);  // Restore arguments descriptor array.
   __ LeaveFrame();
   Label call_target_function;
-  ASSERT(!FLAG_precompiled_mode);
-  __ jmp(&call_target_function);
+  if (!FLAG_lazy_dispatchers) {
+    GenerateDispatcherCode(assembler, &call_target_function);
+  } else {
+    __ jmp(&call_target_function);
+  }
 
   __ Bind(&found);
   // EBX: Pointer to an IC data check group.
@@ -2496,86 +2351,6 @@ void StubCodeCompiler::GenerateLazyCompileStub() {
   __ jmp(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
 }
 
-// Stub for interpreting a function call.
-// EDX: Arguments descriptor.
-// EAX: Function.
-void StubCodeCompiler::GenerateInterpretCallStub() {
-#if defined(DART_DYNAMIC_MODULES)
-
-  __ EnterStubFrame();
-
-#if defined(DEBUG)
-  {
-    Label ok;
-    // Check that we are always entering from Dart code.
-    __ cmpl(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
-    __ j(EQUAL, &ok, Assembler::kNearJump);
-    __ Stop("Not coming from Dart code.");
-    __ Bind(&ok);
-  }
-#endif
-
-  // Adjust arguments count for type arguments vector.
-  __ movl(ECX, FieldAddress(EDX, target::ArgumentsDescriptor::count_offset()));
-  __ SmiUntag(ECX);
-  __ cmpl(
-      FieldAddress(EDX, target::ArgumentsDescriptor::type_args_len_offset()),
-      Immediate(0));
-  Label args_count_ok;
-  __ j(EQUAL, &args_count_ok, Assembler::kNearJump);
-  __ incl(ECX);
-  __ Bind(&args_count_ok);
-
-  // Compute argv.
-  __ leal(EBX,
-          Address(EBP, ECX, TIMES_4,
-                  target::frame_layout.param_end_from_fp * target::kWordSize));
-
-  // Indicate decreasing memory addresses of arguments with negative argc.
-  __ negl(ECX);
-
-  __ pushl(THR);  // Arg 4: Thread.
-  __ pushl(EBX);  // Arg 3: Argv.
-  __ pushl(ECX);  // Arg 2: Negative argc.
-  __ pushl(EDX);  // Arg 1: Arguments descriptor
-  __ pushl(EAX);  // Arg 0: Function
-
-  // Save exit frame information to enable stack walking as we are about
-  // to transition to Dart VM C++ code.
-  __ movl(Address(THR, target::Thread::top_exit_frame_info_offset()), EBP);
-
-  // Mark that the thread exited generated code through a runtime call.
-  __ movl(Address(THR, target::Thread::exit_through_ffi_offset()),
-          Immediate(target::Thread::exit_through_runtime_call()));
-
-  // Mark that the thread is executing VM code.
-  __ movl(EAX,
-          Address(THR, target::Thread::interpret_call_entry_point_offset()));
-  __ movl(Assembler::VMTagAddress(), EAX);
-
-  __ call(EAX);
-
-  __ Drop(5);
-
-  // Mark that the thread is executing Dart code.
-  __ movl(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
-
-  // Mark that the thread has not exited generated Dart code.
-  __ movl(Address(THR, target::Thread::exit_through_ffi_offset()),
-          Immediate(0));
-
-  // Reset exit frame information in Isolate's mutator thread structure.
-  __ movl(Address(THR, target::Thread::top_exit_frame_info_offset()),
-          Immediate(0));
-
-  __ LeaveFrame();
-  __ ret();
-
-#else
-  __ Stop("Not using Dart dynamic modules");
-#endif  // defined(DART_DYNAMIC_MODULES)
-}
-
 // ECX: Contains an ICData.
 void StubCodeCompiler::GenerateICCallBreakpointStub() {
 #if defined(PRODUCT)
@@ -2694,7 +2469,7 @@ static void GenerateSubtypeTestCacheLoop(
     __ CompareToStack(src, original_tos_offset + depth);
   };
 
-  __ LoadAcquireCompressedFromOffset(
+  __ LoadAcquireCompressed(
       STCInternal::kScratchReg, STCInternal::kCacheArrayReg,
       target::kCompressedWordSize *
           target::SubtypeTestCache::kInstanceCidOrSignature);
@@ -3054,7 +2829,7 @@ void StubCodeCompiler::GenerateOptimizeFunctionStub() {
   __ pushl(Immediate(0));  // Setup space on stack for return value.
   __ pushl(EBX);
   __ CallRuntime(kOptimizeInvokedFunctionRuntimeEntry, 1);
-  __ popl(EAX);            // Discard argument.
+  __ popl(EAX);  // Discard argument.
   __ popl(FUNCTION_REG);   // Get Function object
   __ popl(ARGS_DESC_REG);  // Restore argument descriptor.
   __ LeaveFrame();

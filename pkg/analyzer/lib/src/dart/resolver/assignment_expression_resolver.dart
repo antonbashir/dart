@@ -12,8 +12,8 @@ import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
+import 'package:analyzer/src/dart/resolver/invocation_inference_helper.dart';
 import 'package:analyzer/src/dart/resolver/type_property_resolver.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:analyzer/src/generated/resolver.dart';
@@ -22,23 +22,30 @@ import 'package:analyzer/src/generated/resolver.dart';
 class AssignmentExpressionResolver {
   final ResolverVisitor _resolver;
   final TypePropertyResolver _typePropertyResolver;
+  final InvocationInferenceHelper _inferenceHelper;
   final AssignmentExpressionShared _assignmentShared;
 
   AssignmentExpressionResolver({
     required ResolverVisitor resolver,
   })  : _resolver = resolver,
         _typePropertyResolver = resolver.typePropertyResolver,
+        _inferenceHelper = resolver.inferenceHelper,
         _assignmentShared = AssignmentExpressionShared(
           resolver: resolver,
         );
 
   ErrorReporter get _errorReporter => _resolver.errorReporter;
 
+  bool get _isNonNullableByDefault => _typeSystem.isNonNullableByDefault;
+
   TypeProvider get _typeProvider => _resolver.typeProvider;
 
   TypeSystemImpl get _typeSystem => _resolver.typeSystem;
 
-  void resolve(AssignmentExpressionImpl node, {required DartType contextType}) {
+  void resolve(
+    AssignmentExpressionImpl node, {
+    required DartType? contextType,
+  }) {
     var operator = node.operator.type;
     var hasRead = operator != TokenType.EQ;
     var isIfNull = operator == TokenType.QUESTION_QUESTION_EQ;
@@ -61,7 +68,7 @@ class AssignmentExpressionResolver {
         atDynamicTarget: leftResolution.atDynamicTarget,
       );
       {
-        var recordField = leftResolution.recordField;
+        final recordField = leftResolution.recordField;
         if (recordField != null) {
           node.readType = recordField.type;
         }
@@ -77,10 +84,12 @@ class AssignmentExpressionResolver {
     // TODO(scheglov): Use VariableElement and do in resolveForWrite() ?
     _assignmentShared.checkFinalAlreadyAssigned(left);
 
-    DartType rhsContext;
+    DartType? rhsContext;
     {
       var leftType = node.writeType;
-      if (writeElement is VariableElement) {
+      if (writeElement is VariableElement &&
+          !_resolver.definingLibrary.featureSet
+              .isEnabled(Feature.inference_update_3)) {
         leftType = _resolver.localVariableTypeProvider
             .getType(left as SimpleIdentifier, isRead: false);
       }
@@ -135,20 +144,20 @@ class AssignmentExpressionResolver {
       var field = writeType.positionalFields.first;
       if (_typeSystem.isAssignableTo(field.type, rightType,
           strictCasts: strictCasts)) {
-        _errorReporter.atNode(
+        _errorReporter.reportErrorForNode(
+          WarningCode.RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA,
           right,
-          CompileTimeErrorCode.RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA,
+          [],
         );
         return;
       }
     }
 
-    _errorReporter.atNode(
-      right,
+    _errorReporter.reportErrorForNode(
       CompileTimeErrorCode.INVALID_ASSIGNMENT,
-      arguments: [rightType, writeType],
-      contextMessages: _resolver.computeWhyNotPromotedMessages(
-          right, whyNotPromoted?.call()),
+      right,
+      [rightType, writeType],
+      _resolver.computeWhyNotPromotedMessages(right, whyNotPromoted?.call()),
     );
   }
 
@@ -165,21 +174,17 @@ class AssignmentExpressionResolver {
 
     if (expression is MethodInvocation) {
       SimpleIdentifier methodName = expression.methodName;
-      _errorReporter.atNode(
-        methodName,
-        CompileTimeErrorCode.USE_OF_VOID_RESULT,
-      );
+      _errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.USE_OF_VOID_RESULT, methodName, []);
     } else {
-      _errorReporter.atNode(
-        expression,
-        CompileTimeErrorCode.USE_OF_VOID_RESULT,
-      );
+      _errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.USE_OF_VOID_RESULT, expression, []);
     }
 
     return true;
   }
 
-  DartType _computeRhsContext(AssignmentExpressionImpl node, DartType leftType,
+  DartType? _computeRhsContext(AssignmentExpressionImpl node, DartType leftType,
       TokenType operator, Expression right) {
     switch (operator) {
       case TokenType.EQ:
@@ -197,7 +202,7 @@ class AssignmentExpressionResolver {
                 leftType, method, leftType, parameters[0].type);
           }
         }
-        return UnknownInferredType.instance;
+        return null;
     }
   }
 
@@ -215,9 +220,9 @@ class AssignmentExpressionResolver {
     // Example: `y += 0`, is not allowed.
     if (operatorType != TokenType.EQ) {
       if (leftType is VoidType) {
-        _errorReporter.atToken(
-          operator,
+        _errorReporter.reportErrorForToken(
           CompileTimeErrorCode.USE_OF_VOID_RESULT,
+          operator,
         );
         return;
       }
@@ -245,17 +250,17 @@ class AssignmentExpressionResolver {
     );
     node.staticElement = result.getter as MethodElement?;
     if (result.needsGetterError) {
-      _errorReporter.atToken(
-        operator,
+      _errorReporter.reportErrorForToken(
         CompileTimeErrorCode.UNDEFINED_OPERATOR,
-        arguments: [methodName, leftType],
+        operator,
+        [methodName, leftType],
       );
     }
   }
 
   void _resolveTypes(AssignmentExpressionImpl node,
       {required Map<DartType, NonPromotionReason> Function()? whyNotPromoted,
-      required DartType contextType}) {
+      required DartType? contextType}) {
     DartType assignedType;
 
     var rightHandSide = node.rightHandSide;
@@ -288,41 +293,18 @@ class AssignmentExpressionResolver {
 
     DartType nodeType;
     if (operator == TokenType.QUESTION_QUESTION_EQ) {
-      // - An if-null assignment `E` of the form `lvalue ??= e` with context type
-      //   `K` is analyzed as follows:
-      //
-      //   - Let `T1` be the read type the lvalue.
-      var t1 = node.readType!;
-      //   - Let `T2` be the type of `e` inferred with context type `T1`.
-      var t2 = assignedType;
-      //   - Let `T` be `UP(NonNull(T1), T2)`.
-      var nonNullT1 = _typeSystem.promoteToNonNull(t1);
-      var t = _typeSystem.leastUpperBound(nonNullT1, t2);
-      //   - Let `S` be the greatest closure of `K`.
-      var s = _typeSystem.greatestClosureOfSchema(contextType);
-      // If `inferenceUpdate3` is not enabled, then the type of `E` is `T`.
-      if (!_resolver.definingLibrary.featureSet
-          .isEnabled(Feature.inference_update_3)) {
-        nodeType = t;
-      } else
-      //   - If `T <: S`, then the type of `E` is `T`.
-      if (_typeSystem.isSubtypeOf(t, s)) {
-        nodeType = t;
-      } else
-      //   - Otherwise, if `NonNull(T1) <: S` and `T2 <: S`, then the type of
-      //     `E` is `S`.
-      if (_typeSystem.isSubtypeOf(nonNullT1, s) &&
-          _typeSystem.isSubtypeOf(t2, s)) {
-        nodeType = s;
-      } else
-      //   - Otherwise, the type of `E` is `T`.
-      {
-        nodeType = t;
+      var leftType = node.readType!;
+
+      // The LHS value will be used only if it is non-null.
+      if (_isNonNullableByDefault) {
+        leftType = _typeSystem.promoteToNonNull(leftType);
       }
+
+      nodeType = _typeSystem.leastUpperBound(leftType, assignedType);
     } else {
       nodeType = assignedType;
     }
-    node.recordStaticType(nodeType, resolver: _resolver);
+    _inferenceHelper.recordStaticType(node, nodeType, contextType: contextType);
 
     // TODO(scheglov): Remove from ErrorVerifier?
     _checkForInvalidAssignment(
@@ -364,17 +346,17 @@ class AssignmentExpressionShared {
         if (element.isFinal) {
           if (element.isLate) {
             if (isForEachIdentifier || assigned) {
-              _errorReporter.atNode(
-                left,
+              _errorReporter.reportErrorForNode(
                 CompileTimeErrorCode.LATE_FINAL_LOCAL_ALREADY_ASSIGNED,
+                left,
               );
             }
           } else {
             if (isForEachIdentifier || !unassigned) {
-              _errorReporter.atNode(
-                left,
+              _errorReporter.reportErrorForNode(
                 CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_LOCAL,
-                arguments: [element.name],
+                left,
+                [element.name],
               );
             }
           }

@@ -6,6 +6,7 @@ import 'package:_fe_analyzer_shared/src/messages/severity.dart' show Severity;
 import 'package:_fe_analyzer_shared/src/testing/id.dart'
     show ActualData, DataRegistry, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
+import 'package:front_end/src/base/nnbd_mode.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/target/targets.dart';
 
@@ -16,19 +17,35 @@ import '../api_prototype/experimental_flags.dart'
 import '../api_prototype/terminal_color_support.dart'
     show printDiagnosticMessage;
 import '../base/common.dart';
-import '../base/messages.dart' show FormattedMessage;
-import '../base/nnbd_mode.dart';
+import '../fasta/messages.dart' show FormattedMessage;
 import '../kernel_generator_impl.dart' show InternalCompilerResult;
 import 'compiler_common.dart' show compileScript, toTestUri;
 import 'id_extractor.dart' show DataExtractor;
 import 'kernel_id_testing.dart';
 
-export '../base/compiler_context.dart' show CompilerContext;
-export '../base/messages.dart' show FormattedMessage;
+export '../fasta/compiler_context.dart' show CompilerContext;
+export '../fasta/messages.dart' show FormattedMessage;
 export '../kernel_generator_impl.dart' show InternalCompilerResult;
 
 /// Test configuration used for testing CFE in its default state.
 const CfeTestConfig defaultCfeConfig = const CfeTestConfig(cfeMarker, 'cfe');
+
+/// Test configuration used for testing CFE without nnbd in addition to the
+/// default state.
+const CfeTestConfig cfeNoNonNullableConfig = const CfeTestConfig(
+    cfeMarker, 'cfe without nnbd',
+    explicitExperimentalFlags: const {ExperimentalFlag.nonNullable: false});
+
+/// Test configuration used for testing CFE with nnbd in addition to the
+/// default state.
+const CfeTestConfig cfeNonNullableConfig = const CfeTestConfig(
+    cfeWithNnbdMarker, 'cfe with nnbd',
+    explicitExperimentalFlags: const {ExperimentalFlag.nonNullable: true});
+
+/// Test configuration used for testing CFE with nnbd as the default state.
+const CfeTestConfig cfeNonNullableOnlyConfig = const CfeTestConfig(
+    cfeMarker, 'cfe with nnbd',
+    explicitExperimentalFlags: const {ExperimentalFlag.nonNullable: true});
 
 class CfeTestConfig extends TestConfig {
   final Map<ExperimentalFlag, bool> explicitExperimentalFlags;
@@ -48,7 +65,7 @@ class CfeTestConfig extends TestConfig {
       this.packageConfigUri,
       this.compileSdk = false,
       this.targetFlags = const TestTargetFlags(),
-      this.nnbdMode = NnbdMode.Strong});
+      this.nnbdMode = NnbdMode.Weak});
 
   /// Called before running test on [testData].
   ///
@@ -61,8 +78,8 @@ class CfeTestConfig extends TestConfig {
 
   /// Called after running test on [testData] with the resulting
   /// [testResultData].
-  void onCompilationResult(MarkerOptions markerOptions, TestData testData,
-      CfeTestResultData testResultData) {}
+  void onCompilationResult(
+      TestData testData, CfeTestResultData testResultData) {}
 }
 
 abstract class CfeDataComputer<T> extends DataComputer<T, CfeTestConfig,
@@ -229,7 +246,7 @@ Future<TestResult<T>> runTestForConfig<T>(MarkerOptions markerOptions,
 
   CfeTestResultData testResultData =
       new CfeTestResultData(config, customData, compilerResult);
-  config.onCompilationResult(markerOptions, testData, testResultData);
+  config.onCompilationResult(testData, testResultData);
   return processCompiledResult(
       markerOptions, testData, dataComputer, testResultData, errors,
       fatalErrors: fatalErrors,

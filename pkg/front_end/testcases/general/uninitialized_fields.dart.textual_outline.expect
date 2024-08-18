@@ -20,7 +20,5 @@ class Forwarding {
 }
 
 int? uninitializedTopLevel;
-
 int? initializedTopLevel = 4;
-
 main() {}

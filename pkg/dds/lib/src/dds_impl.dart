@@ -9,8 +9,6 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:devtools_shared/devtools_extensions_io.dart';
-import 'package:devtools_shared/devtools_shared.dart' show DTDConnectionInfo;
 import 'package:json_rpc_2/json_rpc_2.dart' as json_rpc;
 import 'package:meta/meta.dart';
 import 'package:shelf/shelf.dart';
@@ -26,7 +24,6 @@ import 'client.dart';
 import 'client_manager.dart';
 import 'constants.dart';
 import 'dap_handler.dart';
-import 'devtools/dtd.dart';
 import 'devtools/handler.dart';
 import 'expression_evaluator.dart';
 import 'isolate_manager.dart';
@@ -81,12 +78,6 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
     // TODO(bkonyi): throw if we've already shutdown.
     // Establish the connection to the VM service.
     _vmServiceSocket = webSocketBuilder(remoteVmServiceWsUri);
-    try {
-      await _vmServiceSocket.ready;
-    } on WebSocketChannelException catch (e) {
-      throw DartDevelopmentServiceException.connectionIssue(e.toString());
-    }
-
     vmServiceClient = await peerBuilder(_vmServiceSocket, _streamManager);
     // Setup the JSON RPC client with the VM service.
     unawaited(
@@ -116,45 +107,28 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
         },
       ),
     );
-    // Run in an error Zone to ensure that asynchronous exceptions encountered
-    // during request handling are handled, as exceptions thrown during request
-    // handling shouldn't take down the entire service.
-    await runZonedGuarded(
-      () async {
-        try {
-          // Setup stream event handling.
-          await streamManager.listen();
 
-          // Populate initial isolate state.
-          await _isolateManager.initialize();
+    try {
+      // Setup stream event handling.
+      await streamManager.listen();
 
-          // Once we have a connection to the VM service, we're ready to spawn
-          // the intermediary.
-          await _startDDSServer();
-          _initializationComplete = true;
-        } on StateError {
-          // Handle json-rpc state errors.
-          //
-          // It's possible that ordering of events on the event queue can
-          // result in the cleanup code above being called after this function
-          // has returned,
-          // resulting in an invalid DDS instance being released into the wild.
-          //
-          // If initialization hasn't completed and the error hasn't already
-          // been set, set it now.
-          error ??= DartDevelopmentServiceException.failedToStart();
-        } on DartDevelopmentServiceException catch (e) {
-          // Forward any DartDevelopmentServiceExceptions thrown when starting
-          // the server.
-          error = e;
-        }
-      },
-      (error, stack) {
-        if (shouldLogRequests) {
-          print('Asynchronous error: $error\n$stack');
-        }
-      },
-    );
+      // Populate initial isolate state.
+      await _isolateManager.initialize();
+
+      // Once we have a connection to the VM service, we're ready to spawn the intermediary.
+      await _startDDSServer();
+      _initializationComplete = true;
+    } on StateError {
+      // Handle json-rpc state errors.
+      //
+      // It's possible that ordering of events on the event queue can result in
+      // the cleanup code above being called after this function has returned,
+      // resulting in an invalid DDS instance being released into the wild.
+      //
+      // If initialization hasn't completed and the error hasn't already been
+      // set, set it now.
+      error ??= DartDevelopmentServiceException.failedToStart();
+    }
 
     // Check if we encountered any errors during startup, cleanup, and throw.
     if (error != null) {
@@ -180,41 +154,39 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
       );
     }
     pipeline = pipeline.addMiddleware(_authCodeMiddleware);
-
-    if (_devToolsConfiguration?.enable ?? false) {
-      // If we are enabling DevTools in DDS, then we also need to start the Dart
-      // tooling daemon, since this is usually the responsibility of the
-      // DevTools server when a DTD uri is not already passed to the DevTools
-      // server on start.
-      _hostedDartToolingDaemon = await startDtd(
-        machineMode: false,
-        printDtdUri: false,
-      );
-    }
-
     final handler = pipeline.addHandler(_handlers().handler);
-    // Start the DDS server.
+    // Start the DDS server. Run in an error Zone to ensure that asynchronous
+    // exceptions encountered during request handling are handled, as exceptions
+    // thrown during request handling shouldn't take down the entire service.
     late String errorMessage;
-    Future<HttpServer?> startServer() async {
-      try {
-        return await io.serve(handler, host, port);
-      } on SocketException catch (e) {
-        if (_enableServicePortFallback && port != 0) {
-          // Try again, this time with a random port.
-          port = 0;
-          return await startServer();
+    final tmpServer = await runZonedGuarded(
+      () async {
+        Future<HttpServer?> startServer() async {
+          try {
+            return await io.serve(handler, host, port);
+          } on SocketException catch (e) {
+            if (_enableServicePortFallback && port != 0) {
+              // Try again, this time with a random port.
+              port = 0;
+              return await startServer();
+            }
+            errorMessage = e.message;
+            if (e.osError != null) {
+              errorMessage += ' (${e.osError!.message})';
+            }
+            errorMessage += ': ${e.address?.host}:${e.port}';
+            return null;
+          }
         }
-        errorMessage = e.message;
-        if (e.osError != null) {
-          errorMessage += ' (${e.osError!.message})';
+
+        return await startServer();
+      },
+      (error, stack) {
+        if (shouldLogRequests) {
+          print('Asynchronous error: $error\n$stack');
         }
-        errorMessage += ': ${e.address?.host}:${e.port}';
-        return null;
-      }
-    }
-
-    final tmpServer = await startServer();
-
+      },
+    );
     if (tmpServer == null) {
       throw DartDevelopmentServiceException.connectionIssue(errorMessage);
     }
@@ -347,8 +319,8 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
   Handler _sseHandler() {
     final handler = SseHandler(
       authCodesEnabled
-          ? Uri.parse('/$authCode/$kSseHandlerPath')
-          : Uri.parse('/$kSseHandlerPath'),
+          ? Uri.parse('/$authCode/$_kSseHandlerPath')
+          : Uri.parse('/$_kSseHandlerPath'),
       keepAlive: sseKeepAlive,
     );
 
@@ -367,28 +339,16 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
   Handler _httpHandler() {
     final notFoundHandler = proxyHandler(remoteVmServiceUri);
 
-    if (_devToolsConfiguration?.enable ?? false) {
-      final existingDevToolsAddress =
-          _devToolsConfiguration!.devToolsServerAddress;
-      if (existingDevToolsAddress == null) {
-        // If DDS is serving DevTools, install the DevTools handlers and
-        // forward any unhandled HTTP requests to the VM service.
-        final String buildDir =
-            _devToolsConfiguration!.customBuildDirectoryPath.toFilePath();
-        return defaultHandler(
-          dds: this,
-          buildDir: buildDir,
-          notFoundHandler: notFoundHandler,
-          dtd: (
-            uri: _hostedDartToolingDaemon?.uri,
-            secret: _hostedDartToolingDaemon?.secret
-          ),
-          devtoolsExtensionsManager: ExtensionsManager(),
-        ) as FutureOr<Response> Function(Request);
-      }
-      // Otherwise, set the DevTools URI to point to the externally hosted
-      // DevTools instance.
-      _devToolsUri = existingDevToolsAddress;
+    // If DDS is serving DevTools, install the DevTools handlers and forward
+    // any unhandled HTTP requests to the VM service.
+    if (_devToolsConfiguration != null && _devToolsConfiguration!.enable) {
+      final String buildDir =
+          _devToolsConfiguration!.customBuildDirectoryPath.toFilePath();
+      return defaultHandler(
+        dds: this,
+        buildDir: buildDir,
+        notFoundHandler: notFoundHandler,
+      ) as FutureOr<Response> Function(Request);
     }
 
     // Otherwise, DevTools may be served externally, or not at all.
@@ -441,7 +401,7 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
       return null;
     }
     final pathSegments = _cleanupPathSegments(uri);
-    pathSegments.add(kSseHandlerPath);
+    pathSegments.add(_kSseHandlerPath);
     return uri.replace(scheme: 'sse', pathSegments: pathSegments);
   }
 
@@ -456,9 +416,6 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
           (e) => e.isNotEmpty,
         ),
         'devtools',
-        // Includes a trailing slash by adding an empty string to the end of the
-        // path segments list.
-        '',
       ],
       query: 'uri=$wsUri',
     );
@@ -500,21 +457,15 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
     return _devToolsUri;
   }
 
-  Uri? _devToolsUri;
-
   @override
   void setExternalDevToolsUri(Uri uri) {
-    if ((_devToolsConfiguration?.enable ?? false) &&
-        _devToolsConfiguration?.devToolsServerAddress != null) {
+    if (_devToolsConfiguration?.enable ?? false) {
       throw StateError('A hosted DevTools instance is already being served.');
     }
     _devToolsUri = uri;
   }
 
-  @override
-  DTDConnectionInfo? get hostedDartToolingDaemon => _hostedDartToolingDaemon;
-
-  DTDConnectionInfo? _hostedDartToolingDaemon;
+  Uri? _devToolsUri;
 
   final bool _ipv6;
 
@@ -552,7 +503,7 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
   StreamManager get streamManager => _streamManager;
   late StreamManager _streamManager;
 
-  static const kSseHandlerPath = '\$debugHandler';
+  static const _kSseHandlerPath = '\$debugHandler';
 
   late json_rpc.Peer vmServiceClient;
   late WebSocketChannel _vmServiceSocket;

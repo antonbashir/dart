@@ -379,6 +379,7 @@ class C {
     assertNoErrors();
     var declaration = unit.declarations[0] as ClassDeclaration;
     Comment comment = declaration.documentationComment!;
+    expect(comment.isDocumentation, isTrue);
     expect(comment.tokens, hasLength(1));
     expect(comment.tokens[0].lexeme, '/** 2 */');
     expect(declaration.metadata, hasLength(1));
@@ -686,6 +687,9 @@ class C {}
     Comment comment = unit.declarations[0].documentationComment!;
     expectNotNullIfNoErrors(comment);
     assertNoErrors();
+    expect(comment.isBlock, isFalse);
+    expect(comment.isDocumentation, isTrue);
+    expect(comment.isEndOfLine, isFalse);
   }
 
   void test_parseDocumentationComment_block_withReference() {
@@ -694,6 +698,9 @@ class C {}
     Comment comment = unit.declarations[0].documentationComment!;
     expectNotNullIfNoErrors(comment);
     assertNoErrors();
+    expect(comment.isBlock, isFalse);
+    expect(comment.isDocumentation, isTrue);
+    expect(comment.isEndOfLine, isFalse);
     NodeList<CommentReference> references = comment.references;
     expect(references, hasLength(1));
     CommentReference reference = references[0];
@@ -707,6 +714,9 @@ class C {}
     Comment comment = unit.declarations[0].documentationComment!;
     expectNotNullIfNoErrors(comment);
     assertNoErrors();
+    expect(comment.isBlock, isFalse);
+    expect(comment.isDocumentation, isTrue);
+    expect(comment.isEndOfLine, isFalse);
   }
 
   void test_parseExtendsClause() {

@@ -11,5 +11,4 @@ class C extends B {
 }
 
 foo() {}
-
 main() {}

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:kernel/ast.dart' as ir;
-import 'package:kernel/type_environment.dart' as ir;
 import 'package:front_end/src/api_prototype/static_weak_references.dart' as ir
     show StaticWeakReferences;
 
@@ -18,6 +17,7 @@ import '../elements/types.dart';
 import '../inferrer/abstract_value_domain.dart';
 import '../inferrer/types.dart';
 import '../ir/constants.dart';
+import '../ir/static_type_provider.dart';
 import '../ir/util.dart';
 import '../js_backend/field_analysis.dart';
 import '../js_model/element_map.dart';
@@ -120,6 +120,8 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   final Set<Local> _capturedVariables = Set<Local>();
   final Map<Local, FieldEntity> _capturedAndBoxed;
 
+  final StaticTypeProvider _staticTypeProvider;
+
   /// Whether we currently taken the boolean result of is-checks or null-checks
   /// into account in the local state.
   bool _accumulateIsChecks = false;
@@ -131,7 +133,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
       this._analyzedMember,
       this._analyzedNode,
       this._localsMap,
-      this._staticTypeContext,
+      this._staticTypeProvider,
       this._memberHierarchyBuilder,
       [LocalState? previousState,
       Map<Local, FieldEntity>? capturedAndBoxed])
@@ -155,12 +157,8 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
 
   ClosureData get _closureDataLookup => _closedWorld.closureDataLookup;
 
-  // Null for members without an associated Kernel node. No static types should
-  // be queried for these members.
-  final ir.StaticTypeContext? _staticTypeContext;
-
   DartType _getStaticType(ir.Expression node) {
-    return _elementMap.getDartType(node.getStaticType(_staticTypeContext!));
+    return _elementMap.getDartType(_staticTypeProvider.getStaticType(node));
   }
 
   int _loopLevel = 0;
@@ -241,6 +239,16 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     }
 
     return visit(_analyzedNode)!;
+  }
+
+  bool isIncompatibleInvoke(FunctionEntity function, ArgumentsTypes arguments) {
+    ParameterStructure parameterStructure = function.parameterStructure;
+
+    return arguments.positional.length <
+            parameterStructure.requiredPositionalParameters ||
+        arguments.positional.length > parameterStructure.positionalParameters ||
+        arguments.named.keys
+            .any((name) => !parameterStructure.namedParameters.contains(name));
   }
 
   void recordReturnType(TypeInformation type) {
@@ -335,7 +343,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitFieldInitializer(ir.FieldInitializer node) {
+  visitFieldInitializer(ir.FieldInitializer node) {
     final rhsType = visit(node.value)!;
     FieldEntity field = _elementMap.getField(node.field);
     _state.updateField(field, rhsType);
@@ -344,7 +352,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitSuperInitializer(ir.SuperInitializer node) {
+  visitSuperInitializer(ir.SuperInitializer node) {
     ConstructorEntity constructor = _elementMap.getConstructor(node.target);
     ArgumentsTypes arguments = analyzeArguments(node.arguments);
     Selector selector = Selector(SelectorKind.CALL, constructor.memberName,
@@ -360,7 +368,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitRedirectingInitializer(ir.RedirectingInitializer node) {
+  visitRedirectingInitializer(ir.RedirectingInitializer node) {
     ConstructorEntity constructor = _elementMap.getConstructor(node.target);
     ArgumentsTypes arguments = analyzeArguments(node.arguments);
     Selector selector = Selector(SelectorKind.CALL, constructor.memberName,
@@ -376,7 +384,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitLocalInitializer(ir.LocalInitializer node) {
+  visitLocalInitializer(ir.LocalInitializer node) {
     visit(node.variable);
     return null;
   }
@@ -461,7 +469,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Never defaultStatement(ir.Statement node) {
+  defaultStatement(ir.Statement node) {
     throw UnimplementedError(
         'Unhandled statement: ${node} (${node.runtimeType})');
   }
@@ -476,7 +484,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitBlock(ir.Block block) {
+  visitBlock(ir.Block block) {
     for (ir.Statement statement in block.statements) {
       visit(statement);
       if (_state.aborts) break;
@@ -485,13 +493,13 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitExpressionStatement(ir.ExpressionStatement node) {
+  visitExpressionStatement(ir.ExpressionStatement node) {
     visit(node.expression);
     return null;
   }
 
   @override
-  Null visitEmptyStatement(ir.EmptyStatement node) {
+  visitEmptyStatement(ir.EmptyStatement node) {
     // Nothing to do.
     return null;
   }
@@ -516,19 +524,19 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitAssertInitializer(ir.AssertInitializer node) {
+  visitAssertInitializer(ir.AssertInitializer node) {
     _handleAssertStatement(node.statement);
     return null;
   }
 
   @override
-  Null visitAssertStatement(ir.AssertStatement node) {
+  visitAssertStatement(ir.AssertStatement node) {
     _handleAssertStatement(node);
     return null;
   }
 
   @override
-  Null visitBreakStatement(ir.BreakStatement node) {
+  visitBreakStatement(ir.BreakStatement node) {
     JumpTarget target = _localsMap.getJumpTargetForBreak(node);
     _state.seenBreakOrContinue = true;
     // Do a deep-copy of the locals, because the code following the
@@ -542,7 +550,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitLabeledStatement(ir.LabeledStatement node) {
+  visitLabeledStatement(ir.LabeledStatement node) {
     ir.Statement body = node.body;
     if (JumpVisitor.canBeBreakTarget(body)) {
       // Loops and switches handle their own labels.
@@ -561,7 +569,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitSwitchStatement(ir.SwitchStatement node) {
+  visitSwitchStatement(ir.SwitchStatement node) {
     visit(node.expression);
 
     final jumpTarget = _localsMap.getJumpTargetForSwitch(node);
@@ -620,7 +628,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     return null;
   }
 
-  void _visitCasesForSwitch(ir.SwitchStatement node, LocalState stateBefore) {
+  _visitCasesForSwitch(ir.SwitchStatement node, LocalState stateBefore) {
     for (ir.SwitchCase switchCase in node.cases) {
       _state = LocalState.childPath(stateBefore);
       visit(switchCase);
@@ -628,13 +636,13 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitSwitchCase(ir.SwitchCase node) {
+  visitSwitchCase(ir.SwitchCase node) {
     visit(node.body);
     return null;
   }
 
   @override
-  Null visitContinueSwitchStatement(ir.ContinueSwitchStatement node) {
+  visitContinueSwitchStatement(ir.ContinueSwitchStatement node) {
     JumpTarget target = _localsMap.getJumpTargetForContinueSwitch(node);
     _state.seenBreakOrContinue = true;
     // Do a deep-copy of the locals, because the code following the
@@ -705,16 +713,12 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   TypeInformation visitMapLiteral(ir.MapLiteral node) {
     return createMapTypeInformation(
         node, node.entries.map((e) => Pair(visit(e.key)!, visit(e.value)!)),
-        isConst: node.isConst,
-        keyStaticType: _elementMap.getDartType(node.keyType),
-        valueStaticType: _elementMap.getDartType(node.valueType));
+        isConst: node.isConst);
   }
 
   TypeInformation createMapTypeInformation(ir.TreeNode node,
       Iterable<Pair<TypeInformation, TypeInformation>> entryTypes,
-      {required bool isConst,
-      required DartType keyStaticType,
-      required DartType valueStaticType}) {
+      {required bool isConst}) {
     return _inferrer.concreteTypes.putIfAbsent(node, () {
       List<TypeInformation> keyTypes = [];
       List<TypeInformation> valueTypes = [];
@@ -725,8 +729,8 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
       }
 
       final type = isConst ? _types.constMapType : _types.mapType;
-      return _types.allocateMap(type, node, _analyzedMember, keyTypes,
-          valueTypes, keyStaticType, valueStaticType);
+      return _types.allocateMap(
+          type, node, _analyzedMember, keyTypes, valueTypes);
     });
   }
 
@@ -930,6 +934,10 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     ClosureRepresentationInfo info =
         _closureDataLookup.getClosureInfo(function);
     final callMethod = info.callMethod!;
+    if (isIncompatibleInvoke(callMethod, argumentsTypes)) {
+      return _types.dynamicType;
+    }
+
     TypeInformation type =
         handleStaticInvoke(node, selector, callMethod, argumentsTypes);
     FunctionType functionType =
@@ -1251,7 +1259,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     return list..addAll(_continuesFor[target]!);
   }
 
-  Null handleLoop(ir.Node node, JumpTarget? target, void logic()) {
+  TypeInformation? handleLoop(ir.Node node, JumpTarget? target, void logic()) {
     _loopLevel++;
     bool changed = false;
     final stateBefore = _state;
@@ -1598,7 +1606,8 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
 
   @override
   TypeInformation visitLoadLibrary(ir.LoadLibrary node) {
-    return _types.asyncFutureType;
+    // TODO(johnniwinther): Improve this by returning a Future type instead.
+    return _types.dynamicType;
   }
 
   @override
@@ -1675,9 +1684,9 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   TypeInformation _handleRecordFieldGet(
       ir.Expression node, ir.Expression receiver, String fieldName) {
     final receiverType = visit(receiver)!;
-    _typeOfReceiver(node, receiver);
-    return _types.allocateRecordFieldGet(
-        node, fieldName, receiverType, _analyzedMember);
+    (_memberData as KernelGlobalTypeInferenceElementData)
+        .setReceiverTypeMask(node, receiverType.type);
+    return _types.allocateRecordFieldGet(node, fieldName, receiverType);
   }
 
   @override
@@ -1959,7 +1968,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
         callMethod,
         functionNode,
         _localsMap,
-        _staticTypeContext,
+        _staticTypeProvider,
         _memberHierarchyBuilder,
         closureState,
         _capturedAndBoxed);
@@ -1980,7 +1989,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitWhileStatement(ir.WhileStatement node) {
+  visitWhileStatement(ir.WhileStatement node) {
     return handleLoop(node, _localsMap.getJumpTargetForWhile(node), () {
       handleCondition(node.condition);
       _state = LocalState.childPath(_stateAfterWhenTrue);
@@ -1989,7 +1998,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitDoStatement(ir.DoStatement node) {
+  visitDoStatement(ir.DoStatement node) {
     return handleLoop(node, _localsMap.getJumpTargetForDo(node), () {
       visit(node.body);
       handleCondition(node.condition);
@@ -2002,7 +2011,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitForStatement(ir.ForStatement node) {
+  visitForStatement(ir.ForStatement node) {
     for (ir.VariableDeclaration variable in node.variables) {
       visit(variable);
     }
@@ -2017,7 +2026,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitTryCatch(ir.TryCatch node) {
+  visitTryCatch(ir.TryCatch node) {
     final stateBefore = _state;
     _state = LocalState.tryBlock(stateBefore, node);
     _state.markInitializationAsIndefinite();
@@ -2061,7 +2070,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitTryFinally(ir.TryFinally node) {
+  visitTryFinally(ir.TryFinally node) {
     final stateBefore = _state;
     _state = LocalState.tryBlock(stateBefore, node);
     _state.markInitializationAsIndefinite();
@@ -2096,7 +2105,7 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   }
 
   @override
-  Null visitCatch(ir.Catch node) {
+  visitCatch(ir.Catch node) {
     final exception = node.exception;
     if (exception != null) {
       TypeInformation mask;
@@ -2138,6 +2147,15 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     return _types.nonNullEmpty();
   }
 
+  TypeInformation handleSuperNoSuchMethod(
+      ir.Node node, Selector selector, ArgumentsTypes? arguments) {
+    // Ensure we create a node, to make explicit the call to the
+    // `noSuchMethod` handler.
+    FunctionEntity noSuchMethod =
+        _elementMap.getSuperNoSuchMethod(_analyzedMember.enclosingClass!);
+    return handleStaticInvoke(node, selector, noSuchMethod, arguments);
+  }
+
   @override
   TypeInformation visitSuperPropertyGet(ir.SuperPropertyGet node) {
     // TODO(herhut): We could do better here if we knew what we
@@ -2146,6 +2164,13 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
 
     final target = getEffectiveSuperTarget(node.interfaceTarget);
     Selector selector = Selector.getter(_elementMap.getName(node.name));
+    if (target == null) {
+      // TODO(johnniwinther): Remove this when the CFE checks for missing
+      //  concrete super targets.
+      // TODO(48820): If this path is infeasible, update types on
+      //  getEffectiveSuperTarget.
+      return handleSuperNoSuchMethod(node, selector, null);
+    }
     MemberEntity member = _elementMap.getMember(target);
     TypeInformation type = handleStaticInvoke(node, selector, member, null);
     if (member.isGetter) {
@@ -2177,6 +2202,11 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     final target = getEffectiveSuperTarget(node.interfaceTarget);
     Selector selector = Selector.setter(_elementMap.getName(node.name));
     ArgumentsTypes arguments = ArgumentsTypes([rhsType], null);
+    if (target == null) {
+      // TODO(johnniwinther): Remove this when the CFE checks for missing
+      //  concrete super targets.
+      return handleSuperNoSuchMethod(node, selector, arguments);
+    }
     final member = _elementMap.getMember(target);
     handleStaticInvoke(node, selector, member, arguments);
     return rhsType;
@@ -2191,19 +2221,27 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
     final target = getEffectiveSuperTarget(node.interfaceTarget);
     ArgumentsTypes arguments = analyzeArguments(node.arguments);
     Selector selector = _elementMap.getSelector(node);
+    if (target == null) {
+      // TODO(johnniwinther): Remove this when the CFE checks for missing
+      //  concrete super targets.
+      return handleSuperNoSuchMethod(node, selector, arguments);
+    }
     MemberEntity member = _elementMap.getMember(target);
     assert(member.isFunction, "Unexpected super invocation target: $member");
-    member as FunctionEntity;
-    TypeInformation type =
-        handleStaticInvoke(node, selector, member, arguments);
-    FunctionType functionType =
-        _elementMap.elementEnvironment.getFunctionType(member);
-    if (functionType.returnType.containsFreeTypeVariables) {
-      // The return type varies with the call site so we narrow the static
-      // return type.
-      type = _types.narrowType(type, _getStaticType(node));
+    if (isIncompatibleInvoke(member as FunctionEntity, arguments)) {
+      return handleSuperNoSuchMethod(node, selector, arguments);
+    } else {
+      TypeInformation type =
+          handleStaticInvoke(node, selector, member, arguments);
+      FunctionType functionType =
+          _elementMap.elementEnvironment.getFunctionType(member);
+      if (functionType.returnType.containsFreeTypeVariables) {
+        // The return type varies with the call site so we narrow the static
+        // return type.
+        type = _types.narrowType(type, _getStaticType(node));
+      }
+      return type;
     }
-    return type;
   }
 
   @override
@@ -2245,11 +2283,6 @@ class KernelTypeGraphBuilder extends ir.VisitorDefault<TypeInformation?>
   TypeInformation visitConstantExpression(ir.ConstantExpression node) {
     return TypeInformationConstantVisitor(this, node)
         .visitConstant(node.constant);
-  }
-
-  @override
-  TypeInformation visitFileUriExpression(ir.FileUriExpression node) {
-    return visit(node.expression)!;
   }
 }
 
@@ -2301,9 +2334,7 @@ class TypeInformationConstantVisitor
         ConstantReference(expression, node),
         node.entries
             .map((e) => Pair(visitConstant(e.key), visitConstant(e.value))),
-        isConst: true,
-        keyStaticType: builder._elementMap.getDartType(node.keyType),
-        valueStaticType: builder._elementMap.getDartType(node.valueType));
+        isConst: true);
   }
 
   @override
@@ -2471,9 +2502,9 @@ class LocalState {
       Local local,
       TypeInformation type,
       DartType staticType,
-      {bool isCast = true,
-      bool excludeNull = false,
-      bool excludeLateSentinel = false}) {
+      {isCast = true,
+      excludeNull = false,
+      excludeLateSentinel = false}) {
     setLocal(
         inferrer,
         capturedAndBoxed,

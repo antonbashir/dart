@@ -13,15 +13,16 @@ import 'package:analysis_server/src/protocol_server.dart' as protocol
 import 'package:analysis_server/src/services/completion/dart/relevance_tables.g.dart';
 import 'package:analysis_server/src/utilities/extensions/element.dart';
 import 'package:analysis_server/src/utilities/extensions/numeric.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_provider.dart';
 import 'package:analyzer/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
+import 'package:analyzer/src/dart/resolver/body_inference_context.dart';
 import 'package:analyzer/src/utilities/extensions/object.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
@@ -172,7 +173,7 @@ class FeatureComputer {
   /// offset is within the given [node], or `null` if the context does not
   /// impose any type.
   DartType? computeContextType(AstNode node, int offset) {
-    var contextType = node.accept(
+    final contextType = node.accept(
       _ContextTypeVisitor(typeProvider, offset),
     );
     if (contextType == null || contextType is DynamicType) {
@@ -198,11 +199,7 @@ class FeatureComputer {
     } else if (element is FieldElement && element.isEnumConstant) {
       return protocol.ElementKind.ENUM_CONSTANT;
     } else if (element is PropertyAccessorElement) {
-      var variable = element.variable2;
-      if (variable == null) {
-        return protocol.ElementKind.UNKNOWN;
-      }
-      element = variable;
+      element = element.variable;
     }
     var kind = element.kind;
     if (kind == ElementKind.CONSTRUCTOR) {
@@ -260,15 +257,6 @@ class FeatureComputer {
     }
   }
 
-  /// Convert a [distance] to a percentage value and return the percentage. If
-  /// the [distance] is negative, return `0.0`.
-  double distanceToPercent(int distance) {
-    if (distance < 0) {
-      return 0.0;
-    }
-    return math.pow(0.9, distance) as double;
-  }
-
   /// Return the value of the _element kind_ feature for the [element] when
   /// completing at the given [completionLocation]. If a [distance] is given it
   /// will be used to provide finer-grained relevance scores.
@@ -315,7 +303,7 @@ class FeatureComputer {
   double inheritanceDistanceFeature(
       InterfaceElement subclass, InterfaceElement superclass) {
     var distance = _inheritanceDistance(subclass, superclass, {});
-    return distanceToPercent(distance);
+    return _distanceToPercent(distance);
   }
 
   /// Return the value of the _is constant_ feature for the given [element].
@@ -326,11 +314,11 @@ class FeatureComputer {
       return 1.0;
     } else if (element is TopLevelVariableElement && element.isConst) {
       return 1.0;
-    } else if (element is PropertyAccessorElement && element.isSynthetic) {
-      var variable = element.variable2;
-      if (variable != null && variable.isStatic && variable.isConst) {
-        return 1.0;
-      }
+    } else if (element is PropertyAccessorElement &&
+        element.isSynthetic &&
+        element.variable.isStatic &&
+        element.variable.isConst) {
+      return 1.0;
     }
     return 0.0;
   }
@@ -380,6 +368,87 @@ class FeatureComputer {
     return range.upper;
   }
 
+  /// Return the distance between the [reference] and the referenced local
+  /// [variable], where the distance is defined to be the number of variable
+  /// declarations between the local variable and the reference.
+  int localVariableDistance(AstNode reference, LocalVariableElement variable) {
+    var distance = 0;
+    AstNode? node = reference;
+    while (node != null) {
+      if (node is ForStatement || node is ForElement) {
+        var loopParts = node is ForStatement
+            ? node.forLoopParts
+            : (node as ForElement).forLoopParts;
+        if (loopParts is ForPartsWithDeclarations) {
+          for (var declaredVariable in loopParts.variables.variables.reversed) {
+            if (declaredVariable.declaredElement == variable) {
+              return distance;
+            }
+            distance++;
+          }
+        } else if (loopParts is ForEachPartsWithDeclaration) {
+          if (loopParts.loopVariable.declaredElement == variable) {
+            return distance;
+          }
+          distance++;
+        }
+      } else if (node is VariableDeclaration) {
+        var parent = node.parent;
+        if (parent is VariableDeclarationList) {
+          var variables = parent.variables;
+          var index = variables.indexOf(node);
+          for (var i = index - 1; i >= 0; i--) {
+            var declaredVariable = variables[i];
+            if (declaredVariable.declaredElement == variable) {
+              return distance;
+            }
+            distance++;
+          }
+        }
+      } else if (node is CatchClause) {
+        if (node.exceptionParameter?.declaredElement == variable ||
+            node.stackTraceParameter?.declaredElement == variable) {
+          return distance;
+        }
+      }
+      if (node is Statement) {
+        var parent = node.parent;
+        var statements = const <Statement>[];
+        if (parent is Block) {
+          statements = parent.statements;
+        } else if (parent is SwitchCase) {
+          statements = parent.statements;
+        } else if (parent is SwitchDefault) {
+          statements = parent.statements;
+        }
+        var index = statements.indexOf(node);
+        for (var i = index - 1; i >= 0; i--) {
+          var statement = statements[i];
+          if (statement is VariableDeclarationStatement) {
+            for (var declaredVariable
+                in statement.variables.variables.reversed) {
+              if (declaredVariable.declaredElement == variable) {
+                return distance;
+              }
+              distance++;
+            }
+          }
+        }
+      }
+      node = node.parent;
+    }
+    return -1;
+  }
+
+  /// Return the value of the _local variable distance_ feature for a local
+  /// variable whose declaration is separated from the completion location by
+  /// [distance] other variable declarations.
+  double localVariableDistanceFeature(
+      AstNode reference, LocalVariableElement variable) {
+    var distance = localVariableDistance(reference, variable);
+    return _distanceToPercent(distance);
+  }
+
   /// Return the value of the _starts with dollar_ feature.
   double startsWithDollarFeature(String name) {
     return name.startsWith('\$') ? -1.0 : 0.0;
@@ -391,6 +460,15 @@ class FeatureComputer {
       containingMethodName == null
           ? 0.0
           : (proposedMemberName == containingMethodName ? 1.0 : 0.0);
+
+  /// Convert a [distance] to a percentage value and return the percentage. If
+  /// the [distance] is negative, return `0.0`.
+  double _distanceToPercent(int distance) {
+    if (distance < 0) {
+      return 0.0;
+    }
+    return math.pow(0.9, distance) as double;
+  }
 
   /// Return the inheritance distance between the [subclass] and the
   /// [superclass]. The set of [visited] elements is used to guard against
@@ -456,7 +534,7 @@ class _ContextTypeVisitor extends SimpleAstVisitor<DartType> {
     if (range
         .endStart(node.leftParenthesis, node.rightParenthesis)
         .contains(offset)) {
-      var parameters = node.functionType?.parameters;
+      final parameters = node.functionType?.parameters;
       if (parameters == null) {
         return null;
       }
@@ -623,16 +701,21 @@ class _ContextTypeVisitor extends SimpleAstVisitor<DartType> {
   DartType? visitExpressionFunctionBody(ExpressionFunctionBody node) {
     if (range.endEnd(node.functionDefinition, node).contains(offset)) {
       var parent = node.parent;
-      if (parent is MethodDeclarationImpl) {
-        return parent.body.bodyContext?.contextType;
-      } else if (parent is FunctionExpressionImpl) {
-        // If the surrounding function has a context type, use it.
-        var functionContextType = parent.body.bodyContext?.contextType;
-        if (functionContextType != null) {
-          return functionContextType;
-        } else if (parent.parent is FunctionDeclaration) {
-          // Don't walk up past the function declaration.
-          return null;
+      if (parent is MethodDeclaration) {
+        var bodyContext = BodyInferenceContext.of(parent.body);
+        // TODO(scheglov): https://github.com/dart-lang/sdk/issues/45429
+        if (bodyContext == null) {
+          throw StateError('''
+Expected body context.
+Method: $parent
+Class: ${parent.parent}
+''');
+        }
+        return bodyContext.contextType;
+      } else if (parent is FunctionExpression) {
+        var grandparent = parent.parent;
+        if (grandparent is FunctionDeclaration) {
+          return BodyInferenceContext.of(parent.body)?.contextType;
         }
         return _visitParent(parent);
       }
@@ -778,7 +861,7 @@ class _ContextTypeVisitor extends SimpleAstVisitor<DartType> {
   @override
   DartType? visitListLiteral(ListLiteral node) {
     if (range.endStart(node.leftBracket, node.rightBracket).contains(offset)) {
-      var type = node.staticType;
+      final type = node.staticType;
       // TODO(scheglov): https://github.com/dart-lang/sdk/issues/48965
       if (type == null) {
         throw '''
@@ -797,7 +880,7 @@ parent3: ${node.parent?.parent?.parent}
   @override
   DartType? visitListPattern(ListPattern node) {
     if (range.endStart(node.leftBracket, node.rightBracket).contains(offset)) {
-      var type = node.requiredType;
+      final type = node.requiredType;
       if (type == null) {
         throw '''
 No required type.
@@ -875,7 +958,7 @@ parent3: ${node.parent?.parent?.parent}
 
   @override
   DartType? visitParenthesizedExpression(ParenthesizedExpression node) {
-    var type = _visitParent(node);
+    final type = _visitParent(node);
 
     // `RecordType := (^)` without any fields.
     if (type is RecordType) {
@@ -934,7 +1017,7 @@ parent3: ${node.parent?.parent?.parent}
 
   @override
   DartType? visitRecordLiteral(RecordLiteral node) {
-    var type = node.parent?.accept(this);
+    final type = node.parent?.accept(this);
     if (type is! RecordType) {
       return null;
     }
@@ -948,14 +1031,14 @@ parent3: ${node.parent?.parent?.parent}
       return null;
     }
 
-    for (var argument in node.fields) {
+    for (final argument in node.fields) {
       if (argument is NamedExpression) {
         if (offset <= argument.offset) {
           return typeOfIndexPositionalField();
         }
         if (argument.contains(offset)) {
           if (offset >= argument.name.colon.end) {
-            var name = argument.name.label.name;
+            final name = argument.name.label.name;
             return type.namedField(name)?.type;
           }
           return null;
@@ -993,9 +1076,9 @@ parent3: ${node.parent?.parent?.parent}
   @override
   DartType? visitReturnStatement(ReturnStatement node) {
     if (node.returnKeyword.end < offset) {
-      var functionBody = node.thisOrAncestorOfType<FunctionBodyImpl>();
+      var functionBody = node.thisOrAncestorOfType<FunctionBody>();
       if (functionBody != null) {
-        return functionBody.bodyContext?.contextType;
+        return BodyInferenceContext.of(functionBody)?.contextType;
       }
     }
     return null;
@@ -1108,9 +1191,9 @@ parent3: ${node.parent?.parent?.parent}
   @override
   DartType? visitYieldStatement(YieldStatement node) {
     if (range.endStart(node.yieldKeyword, node.semicolon).contains(offset)) {
-      var functionBody = node.thisOrAncestorOfType<FunctionBodyImpl>();
+      var functionBody = node.thisOrAncestorOfType<FunctionBody>();
       if (functionBody != null) {
-        return functionBody.bodyContext?.contextType;
+        return BodyInferenceContext.of(functionBody)?.contextType;
       }
     }
     return null;
@@ -1254,7 +1337,7 @@ extension on AstNode {
 extension on ArgumentList {
   /// Return the [FunctionType], if there is one, for this [ArgumentList].
   FunctionType? get functionType {
-    var parent = this.parent;
+    final parent = this.parent;
     if (parent is InstanceCreationExpression) {
       return parent.constructorName.staticElement?.type;
     } else if (parent is MethodInvocation) {

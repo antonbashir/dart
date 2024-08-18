@@ -14,11 +14,7 @@
 
 namespace dart {
 
-#ifdef DART_TARGET_OS_WINDOWS
-const char* pointer_prefix = "0x";
-#else
-const char* pointer_prefix = "";
-#endif
+extern const char* pointer_prefix;
 
 static constexpr intptr_t kMemoryTestLength = 1024;
 static constexpr uint8_t kUnInitialized = 0xFE;
@@ -154,7 +150,7 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
   OS::Print("&ptr %p &ptr2 %p\n", ptr, ptr2);
 
   // clang-format off
-  CStringUniquePtr kScript(OS::SCreate(nullptr, R"(
+  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
     import 'dart:ffi';
 
     void copyConst() {
@@ -182,7 +178,7 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
                       int length) {}
   )", pointer_prefix, ptr, pointer_prefix, ptr2,
       pointer_prefix, ptr, pointer_prefix, ptr2,
-      src_start, dest_start, length));
+      src_start, dest_start, length), std::free);
   // clang-format on
 
   const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
@@ -209,11 +205,8 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
 
       EXPECT(cursor.TryMatch({
           kMoveGlob,
-          kMatchAndMoveRecordCoverage,
           {kMatchAndMoveStaticCall, &pointer},
-          kMatchAndMoveRecordCoverage,
           {kMatchAndMoveStaticCall, &pointer2},
-          kMatchAndMoveRecordCoverage,
           {kMatchAndMoveStaticCall, &another_function_call},
       }));
     }
@@ -246,11 +239,8 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
       ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
       EXPECT(cursor.TryMatch({
           kMoveGlob,
-          kMatchAndMoveRecordCoverage,
           kMatchAndMoveStaticCall,
-          kMatchAndMoveRecordCoverage,
           kMatchAndMoveStaticCall,
-          kMatchAndMoveRecordCoverage,
           kMatchAndMoveMemoryCopy,
       }));
     }
@@ -272,8 +262,6 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
           kMoveGlob,
           {kMatchAndMoveMemoryCopy, &memory_copy},
       }));
-      EXPECT_EQ(kUntagged, memory_copy->src()->definition()->representation());
-      EXPECT_EQ(kUntagged, memory_copy->dest()->definition()->representation());
       EXPECT(memory_copy->src_start()->BindsToConstant());
       EXPECT(memory_copy->dest_start()->BindsToConstant());
       EXPECT(memory_copy->length()->BindsToConstant());
@@ -317,13 +305,13 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
     auto* const param_length = initial_defs->At(4)->AsParameter();
     EXPECT(param_length != nullptr);
 
-    DartReturnInstr* return_instr;
+    ReturnInstr* return_instr;
     {
       ILMatcher cursor(flow_graph, entry_instr);
 
       EXPECT(cursor.TryMatch({
           kMoveGlob,
-          {kMatchDartReturn, &return_instr},
+          {kMatchReturn, &return_instr},
       }));
     }
 
@@ -372,13 +360,13 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
             kMatchAndMoveUnbox,
             kMatchAndMoveUnbox,
             kMatchAndMoveMemoryCopy,
-            kMatchDartReturn,
+            kMatchReturn,
         }));
       } else {
         EXPECT(cursor.TryMatch({
             kMoveGlob,
             kMatchAndMoveMemoryCopy,
-            kMatchDartReturn,
+            kMatchReturn,
         }));
       }
     }
@@ -400,8 +388,6 @@ static void RunMemoryCopyInstrTest(intptr_t src_start,
           kMoveGlob,
           {kMatchAndMoveMemoryCopy, &memory_copy},
       }));
-      EXPECT_EQ(kUntagged, memory_copy->src()->definition()->representation());
-      EXPECT_EQ(kUntagged, memory_copy->dest()->definition()->representation());
       EXPECT(!memory_copy->src_start()->BindsToConstant());
       EXPECT(!memory_copy->dest_start()->BindsToConstant());
       EXPECT(!memory_copy->length()->BindsToConstant());

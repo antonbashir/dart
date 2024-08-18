@@ -6,7 +6,6 @@ class A {
 }
 
 typedef B = A;
-
 foo(int x, int y, {required int z}) {}
 
 extension E on A {

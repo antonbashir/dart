@@ -1,3 +1,4 @@
+// @dart = 2.9
 library test;
 
 class B {}
@@ -7,5 +8,4 @@ class C extends B {
 }
 
 void test(B x) {}
-
 main() {}

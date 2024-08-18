@@ -9,21 +9,13 @@ import '../context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(LocalVariableTest);
+    defineReflectiveTests(LocalVariableWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
-class LocalVariableTest extends PubPackageResolutionTest {
-  test_int() async {
-    await resolveTestCode('''
-void f() {
-  var v = 0;
-  v;
-}
-''');
-    _assertTypeOfV('int');
-  }
-
+class LocalVariableTest extends PubPackageResolutionTest
+    with LocalVariableTestCases {
   test_Never() async {
     await resolveTestCode('''
 void f(Never a) {
@@ -32,6 +24,18 @@ void f(Never a) {
 }
 ''');
     _assertTypeOfV('Never');
+  }
+}
+
+mixin LocalVariableTestCases on PubPackageResolutionTest {
+  test_int() async {
+    await resolveTestCode('''
+void f() {
+  var v = 0;
+  v;
+}
+''');
+    _assertTypeOfV('int');
   }
 
   test_null() async {
@@ -49,3 +53,7 @@ void f() {
     assertType(findNode.simple('v;'), expected);
   }
 }
+
+@reflectiveTest
+class LocalVariableWithoutNullSafetyTest extends PubPackageResolutionTest
+    with LocalVariableTestCases, WithoutNullSafetyMixin {}

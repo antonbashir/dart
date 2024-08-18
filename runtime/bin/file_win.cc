@@ -7,20 +7,17 @@
 
 #include <functional>
 #include <memory>
-#include <utility>
+#include <string>
 
-// clang-format off
-#include <Shlwapi.h>    // NOLINT
-#include <fcntl.h>      // NOLINT
-#include <io.h>         // NOLINT
-#include <pathcch.h>    // NOLINT
-#include <winioctl.h>   // NOLINT
-#undef StrDup           // defined in Shlwapi.h as StrDupW
-#include <stdio.h>      // NOLINT
-#include <string.h>     // NOLINT
-#include <sys/stat.h>   // NOLINT
+#include <Shlwapi.h>  // NOLINT
+#include <fcntl.h>     // NOLINT
+#include <io.h>        // NOLINT
+#include <winioctl.h>  // NOLINT
+#undef StrDup          // defined in Shlwapi.h as StrDupW
+#include <stdio.h>     // NOLINT
+#include <string.h>    // NOLINT
+#include <sys/stat.h>  // NOLINT
 #include <sys/utime.h>  // NOLINT
-// clang-format on
 
 #include "bin/builtin.h"
 #include "bin/crypto.h"
@@ -324,109 +321,173 @@ File* File::OpenFD(int fd) {
   return new File(new FileHandle(fd));
 }
 
-static std::unique_ptr<wchar_t[]> ConvertToAbsolutePath(
-    const std::unique_ptr<wchar_t[]>& path) {
-  // Initial buffer size is selected to avoid overallocating too much
-  // memory.
-  int buffer_size = 1024;
-  do {
-    auto buffer = std::make_unique<wchar_t[]>(buffer_size);
-    int full_path_length =
-        GetFullPathNameW(path.get(), buffer_size, buffer.get(),
-                         /*lpFilePart=*/nullptr);
-    if (full_path_length == 0) {
-      return nullptr;
-    }
-
-    // Note: when sucessful full_path_length does *not* include terminating
-    // NUL character, but on failure it *does* include it when returning
-    // the size of buffer which we need. Hence comparison here is `<`, rather
-    // than `<=`.
-    if (full_path_length < buffer_size) {
-      return buffer;
-    }
-
-    buffer_size = full_path_length;
-  } while (true);
-}
-
-static bool IsAbsolutePath(const wchar_t* pathname) {
-  if (pathname == nullptr) return false;
-  char first = pathname[0];
-  char second = pathname[1];
-  if (first == L'\\' && second == L'\\') return true;
-  if (second != L':') return false;
-  first |= 0x20;
-  char third = pathname[2];
-  return (first >= L'a') && (first <= L'z') &&
-         (third == L'\\' || third == L'/');
-}
-
-const wchar_t* kLongPathPrefix = L"\\\\?\\";
-const int kLongPathPrefixLength = 4;
-
-// `\\.\` is a device namespace prefix somewhat similar to `\\?\`.
-// We should preserve it at the start of the file names.
-const wchar_t* kDeviceNamespacePrefix = L"\\\\.\\";
-const int kDeviceNamespacePrefixLength = 4;
-
-static bool IsLongPathPrefixed(const std::unique_ptr<wchar_t[]>& path) {
-  return wcsncmp(path.get(), kLongPathPrefix, kLongPathPrefixLength) == 0;
-}
-
-static bool IsDeviceNamespacePrefixed(const std::unique_ptr<wchar_t[]>& path) {
-  return wcsncmp(path.get(), kDeviceNamespacePrefix,
-                 kDeviceNamespacePrefixLength) == 0;
-}
-
-// Converts the given UTF8 path to wide char '\\?\'-prefix absolute path.
-//
-// Note that some WinAPI functions (like SetCurrentDirectoryW) are always
-// limited to MAX_PATH long paths and converting to `\\?\`-prefixed form does
-// not remove this limitation. Always check Win API documentation.
-std::unique_ptr<wchar_t[]> ToWinAPIPath(const char* utf8_path) {
-  auto path = Utf8ToWideChar(utf8_path);
-  // Among other things ConvertToAbsolutePath replaces '/' with '\',
-  // which PathAllocCanonicalize won't do.
-  auto abs_path = ConvertToAbsolutePath(path);
-  if (abs_path.get() == nullptr) {
-    return std::unique_ptr<wchar_t[]>(nullptr);
+class StringRAII {
+ public:
+  explicit StringRAII(StringRAII& origin) {  // NOLINT
+    own_ = origin.own_;
+    s_ = origin.release();
   }
 
-  PWSTR canonical_path;
-  if (PathAllocCanonicalize(abs_path.get(),
-                            PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH,
-                            &canonical_path) != S_OK) {
-    return std::unique_ptr<wchar_t[]>(nullptr);
+  explicit StringRAII(const char* s) : own_(false), s_(s) {}
+  explicit StringRAII(char* s) : own_(true), s_(s) {}
+  ~StringRAII() {
+    if (own_) {
+      free(const_cast<char*>(s_));
+    }
   }
-  auto result = std::unique_ptr<wchar_t[]>(wcsdup(canonical_path));
-  LocalFree(canonical_path);
-  return result;
+  const char* str() const { return s_; }
+  const char* release() {
+    own_ = false;
+    return s_;
+  }
+
+ private:
+  bool own_;
+  const char* s_;
+};
+
+class Wchart {
+ public:
+  explicit Wchart(int size) {
+    buf_ = reinterpret_cast<wchar_t*>(malloc(size * sizeof(wchar_t)));
+  }
+  ~Wchart() { free(buf_); }
+  wchar_t* buf() const { return buf_; }
+
+ private:
+  wchar_t* buf_;
+};
+
+static StringRAII ConvertToAbsolutePath(const char* path,
+                                        bool* p_has_converted_successfully) {
+  const int kPathLength = 16384;
+  Wchart buffer(kPathLength);  // use some reasonably large initial buffer
+  Utf8ToWideScope path_utf8_to_wide(path);
+  *p_has_converted_successfully = true;
+  int full_path_length =
+      GetFullPathNameW(path_utf8_to_wide.wide(), kPathLength, buffer.buf(),
+                       /*lpFilePart=*/nullptr);
+  if (full_path_length == 0) {
+    *p_has_converted_successfully = false;
+    // GetFullPathNameW failed
+    return StringRAII(path);
+  }
+  if (full_path_length < kPathLength) {
+    WideToUtf8Scope scope(buffer.buf());
+    return StringRAII(Utils::StrDup(scope.utf8()));
+  }
+
+  // Try again with bigger buffer.
+  Wchart bigger_buffer(full_path_length);
+  if (GetFullPathNameW(path_utf8_to_wide.wide(), full_path_length,
+                       bigger_buffer.buf(),
+                       /*lpFilePart=*/nullptr) == 0) {
+    *p_has_converted_successfully = false;
+    // GetFullPathNameW failed
+    return StringRAII(path);
+  }
+  WideToUtf8Scope scope(bigger_buffer.buf());
+  return StringRAII(Utils::StrDup(scope.utf8()));
 }
 
-File* File::Open(Namespace* namespc, const char* name, FileOpenMode mode) {
-  const auto path = ToWinAPIPath(name);
-  File* file = FileOpenW(path.get(), mode);
+static StringRAII PrefixLongPathIfExceedLimit(
+    const char* path,
+    bool is_file,
+    std::function<char*(int)> allocate) {
+  // File name and Directory name have different size limit.
+  // Reference: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
+  const int path_short_limit = is_file ? MAX_PATH : MAX_DIRECTORY_PATH;
+
+  const char* kLongPathPrefix = "\\\\?\\";
+  const int kLongPathPrefixLength = 4;
+
+  // if absolute path is short or already prefixed, just return it.
+  if ((File::IsAbsolutePath(path) && strlen(path) < path_short_limit) ||
+      strncmp(path, kLongPathPrefix, kLongPathPrefixLength) == 0) {
+    return StringRAII(path);
+  }
+
+  // Long relative path have to be converted to absolute path before prefixing.
+  bool is_ok = true;
+  StringRAII absolute_path_raii(
+      File::IsAbsolutePath(path)
+          ? StringRAII(path)
+          : StringRAII(ConvertToAbsolutePath(path, &is_ok)));
+  if (!is_ok) {
+    return StringRAII(path);
+  }
+  const char* absolute_path = absolute_path_raii.str();
+  int length = strlen(absolute_path);
+  if (length < path_short_limit) {
+    // No need for a prefix if absolute path is short
+    return StringRAII(path);
+  }
+  if (strncmp(absolute_path, kLongPathPrefix, kLongPathPrefixLength) == 0) {
+    // Relative path converted to absolute could get a prefix.
+    return StringRAII(absolute_path);
+  }
+
+  // Add prefix and replace forward slashes with backward slashes.
+  char* result = allocate((kLongPathPrefixLength + length + 1) * sizeof(char));
+  strncpy(result, kLongPathPrefix, kLongPathPrefixLength);
+  for (int i = 0; i < length; i++) {
+    result[kLongPathPrefixLength + i] =
+        absolute_path[i] == '/' ? '\\' : absolute_path[i];
+  }
+  result[length + kLongPathPrefixLength] = '\0';
+  return StringRAII(result);
+}
+
+static const char* PrefixLongFilePath(const char* path) {
+  return PrefixLongPathIfExceedLimit(
+             path, /*is_file=*/true,
+             [](int size) {
+               return reinterpret_cast<char*>(Dart_ScopeAllocate(size));
+             })
+      .release();
+}
+
+static StringRAII PrefixLongFilePathNoScope(const char* path) {
+  return PrefixLongPathIfExceedLimit(path, /*is_file=*/true, [](int size) {
+    return reinterpret_cast<char*>(malloc(size));
+  });
+}
+
+const char* PrefixLongDirectoryPath(const char* path) {
+  return PrefixLongPathIfExceedLimit(
+             path, /*is_file=*/false,
+             [](int size) {
+               return reinterpret_cast<char*>(Dart_ScopeAllocate(size));
+             })
+      .release();
+}
+
+File* File::Open(Namespace* namespc, const char* path, FileOpenMode mode) {
+  // File::Open can be called without scope(when launching isolate),
+  // so it mallocs prefixed path
+  StringRAII string_raii = PrefixLongFilePathNoScope(path);
+  Utf8ToWideScope system_name(string_raii.str());
+  File* file = FileOpenW(system_name.wide(), mode);
   return file;
 }
 
-CStringUniquePtr File::UriToPath(const char* uri) {
+Utils::CStringUniquePtr File::UriToPath(const char* uri) {
   UriDecoder uri_decoder(uri);
   if (uri_decoder.decoded() == nullptr) {
     SetLastError(ERROR_INVALID_NAME);
-    return CStringUniquePtr(nullptr);
+    return Utils::CreateCStringUniquePtr(nullptr);
   }
 
-  const auto uri_w = Utf8ToWideChar(uri_decoder.decoded());
-  if (!UrlIsFileUrlW(uri_w.get())) {
-    return CStringUniquePtr(Utils::StrDup(uri_decoder.decoded()));
+  Utf8ToWideScope uri_w(uri_decoder.decoded());
+  if (!UrlIsFileUrlW(uri_w.wide())) {
+    return Utils::CreateCStringUniquePtr(Utils::StrDup(uri_decoder.decoded()));
   }
   wchar_t filename_w[MAX_PATH];
   DWORD filename_len = MAX_PATH;
-  HRESULT result = PathCreateFromUrlW(uri_w.get(), filename_w, &filename_len,
+  HRESULT result = PathCreateFromUrlW(uri_w.wide(), filename_w, &filename_len,
                                       /* dwFlags= */ 0);
   if (result != S_OK) {
-    return CStringUniquePtr(nullptr);
+    return Utils::CreateCStringUniquePtr(nullptr);
   }
 
   WideToUtf8Scope utf8_path(filename_w);
@@ -457,7 +518,7 @@ File* File::OpenStdio(int fd) {
   return new File(new FileHandle(stdio_fd));
 }
 
-static bool StatHelper(const wchar_t* path, struct __stat64* st) {
+static bool StatHelper(wchar_t* path, struct __stat64* st) {
   int stat_status = _wstat64(path, st);
   if (stat_status != 0) {
     return false;
@@ -469,14 +530,11 @@ static bool StatHelper(const wchar_t* path, struct __stat64* st) {
   return true;
 }
 
-static bool FileExists(const wchar_t* path) {
-  struct __stat64 st;
-  return StatHelper(path, &st);
-}
-
 bool File::Exists(Namespace* namespc, const char* name) {
-  const auto path = ToWinAPIPath(name);
-  return FileExists(path.get());
+  StringRAII string_raii = PrefixLongFilePathNoScope(name);
+  Utf8ToWideScope system_name(string_raii.str());
+  struct __stat64 st;
+  return StatHelper(system_name.wide(), &st);
 }
 
 bool File::ExistsUri(Namespace* namespc, const char* uri) {
@@ -489,12 +547,12 @@ bool File::ExistsUri(Namespace* namespc, const char* uri) {
 }
 
 bool File::Create(Namespace* namespc, const char* name, bool exclusive) {
-  const auto path = ToWinAPIPath(name);
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
   int flags = O_RDONLY | O_CREAT;
   if (exclusive) {
     flags |= O_EXCL;
   }
-  int fd = _wopen(path.get(), flags, 0666);
+  int fd = _wopen(system_name.wide(), flags, 0666);
   if (fd < 0) {
     return false;
   }
@@ -531,82 +589,30 @@ typedef struct _REPARSE_DATA_BUFFER {
   };
 } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 
+static constexpr int kReparseDataHeaderSize =
+    sizeof(ULONG) + 2 * sizeof(USHORT);
+static constexpr int kMountPointHeaderSize = 4 * sizeof(USHORT);
+
 bool File::CreateLink(Namespace* namespc,
                       const char* utf8_name,
                       const char* utf8_target) {
-  const auto name = ToWinAPIPath(utf8_name);
-
-  std::unique_ptr<wchar_t[]> target;
-  bool target_is_directory;
-  if (File::IsAbsolutePath(utf8_target)) {
-    target = ToWinAPIPath(utf8_target);
-    target_is_directory =
-        File::GetType(target.get(), /*follow_links=*/true) == kIsDirectory;
-  } else {
-    // The path of `target` is relative to `name`.
-    //
-    // To determine if `target` is a file or directory, we need to calculate
-    // either its absolute path or its path relative to the current working
-    // directory.
-    //
-    // For example:
-    //
-    // name=           C:\A\B\Link      ..\..\Link      ..\..\Link
-    // target=         MyFile           MyFile          ..\Dir\MyFile
-    // --------------------------------------------------------------------
-    // target_path=    C:\A\B\MyFile    ..\..\MyFile    ..\..\..\Dir\MyFile
-    //
-    // The transformation steps are:
-    // 1. target_path := name                           ..\..\Link
-    // 2. target_path := remove_file(target_path)       ..\..\
-    // 3. target_path := combine(target_path, target)   ..\..\..\Dir\MyFile
-    target = Utf8ToWideChar(utf8_target);
-
-    // 1. target_path := name
-    intptr_t target_path_max_length =
-        wcslen(name.get()) + wcslen(target.get()) + 2;
-    auto target_path = std::make_unique<wchar_t[]>(target_path_max_length);
-    wcscpy_s(target_path.get(), target_path_max_length, name.get());
-
-    // 2. target_path := remove_file(target_path)
-    HRESULT remove_result =
-        PathCchRemoveFileSpec(target_path.get(), target_path_max_length);
-    if (remove_result == S_FALSE) {
-      // If the file component could not be removed, then `name` is
-      // top-level, like "C:\" or "/". Attempts to create files at those paths
-      // will fail with ERROR_ACCESS_DENIED.
-      SetLastError(ERROR_ACCESS_DENIED);
-      return false;
-    } else if (remove_result != S_OK) {
-      SetLastError(remove_result);
-      return false;
-    }
-
-    // 3. target_path := combine(target_path, target)
-    HRESULT combine_result = PathCchCombineEx(
-        target_path.get(), target_path_max_length, target_path.get(),
-        target.get(), PATHCCH_ALLOW_LONG_PATHS);
-    if (combine_result != S_OK) {
-      SetLastError(combine_result);
-      return false;
-    }
-
-    target_is_directory =
-        File::GetType(target_path.get(), /*follow_links=*/true) == kIsDirectory;
-  }
-
+  Utf8ToWideScope name(PrefixLongFilePath(utf8_name));
+  Utf8ToWideScope target(PrefixLongFilePath(utf8_target));
   DWORD flags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-  if (target_is_directory) {
+
+  File::Type type = File::GetType(namespc, utf8_target, true);
+  if (type == kIsDirectory) {
     flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
   }
-  int create_status = CreateSymbolicLinkW(name.get(), target.get(), flags);
+
+  int create_status = CreateSymbolicLinkW(name.wide(), target.wide(), flags);
 
   // If running on a Windows 10 build older than 14972, an invalid parameter
   // error will be returned when trying to use the
   // SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE flag. Retry without the flag.
   if ((create_status == 0) && (GetLastError() == ERROR_INVALID_PARAMETER)) {
     flags &= ~SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-    create_status = CreateSymbolicLinkW(name.get(), target.get(), flags);
+    create_status = CreateSymbolicLinkW(name.wide(), target.wide(), flags);
   }
 
   return (create_status != 0);
@@ -624,14 +630,15 @@ bool File::CreatePipe(Namespace* namespc, File** readPipe, File** writePipe) {
 }
 
 bool File::Delete(Namespace* namespc, const char* name) {
-  const auto path = ToWinAPIPath(name);
-  int status = _wremove(path.get());
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  int status = _wremove(system_name.wide());
   return status != -1;
 }
 
-static bool DeleteLinkHelper(const wchar_t* path) {
+bool File::DeleteLink(Namespace* namespc, const char* name) {
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
   bool result = false;
-  DWORD attributes = GetFileAttributesW(path);
+  DWORD attributes = GetFileAttributesW(system_name.wide());
   if ((attributes == INVALID_FILE_ATTRIBUTES) ||
       ((attributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0)) {
     SetLastError(ERROR_NOT_A_REPARSE_POINT);
@@ -640,179 +647,207 @@ static bool DeleteLinkHelper(const wchar_t* path) {
   if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
     // It's a junction, which is a special type of directory, or a symbolic
     // link to a directory. Remove the directory.
-    result = (RemoveDirectoryW(path) != 0);
+    result = (RemoveDirectoryW(system_name.wide()) != 0);
   } else {
     // Symbolic link to a file. Remove the file.
-    result = (DeleteFileW(path) != 0);
+    result = (DeleteFileW(system_name.wide()) != 0);
   }
   return result;
 }
 
-bool File::DeleteLink(Namespace* namespc, const char* name) {
-  const auto path = ToWinAPIPath(name);
-  return DeleteLinkHelper(path.get());
-}
-
-static bool RenameHelper(File::Type expected,
-                         const char* old_name,
-                         const char* new_name) {
-  const auto old_path = ToWinAPIPath(old_name);
-  File::Type type = File::GetType(old_path.get(), /*follow_links=*/false);
-  if (type != expected) {
+bool File::Rename(Namespace* namespc,
+                  const char* old_path,
+                  const char* new_path) {
+  const char* prefixed_old_path = PrefixLongFilePath(old_path);
+  File::Type type = GetType(namespc, prefixed_old_path, false);
+  if (type != kIsFile) {
     SetLastError(ERROR_FILE_NOT_FOUND);
     return false;
   }
-  const auto new_path = ToWinAPIPath(new_name);
+  const char* prefixed_new_path = PrefixLongFilePath(new_path);
+  Utf8ToWideScope system_old_path(prefixed_old_path);
+  Utf8ToWideScope system_new_path(prefixed_new_path);
   DWORD flags = MOVEFILE_WRITE_THROUGH | MOVEFILE_REPLACE_EXISTING;
 
   // Symbolic links (e.g. produced by Link.create) to directories on Windows
   // appear as special directories. MoveFileExW's MOVEFILE_REPLACE_EXISTING
   // does not allow for replacement of directories, so we need to remove it
   // before renaming.
-  if ((Directory::Exists(new_path.get()) == Directory::EXISTS) &&
-      (File::GetType(new_path.get(), /*follow_links=*/false) ==
-       File::kIsLink)) {
+  if ((Directory::Exists(namespc, prefixed_new_path) == Directory::EXISTS) &&
+      (GetType(namespc, prefixed_new_path, false) == kIsLink)) {
     // Bail out if the DeleteLink call fails.
-    if (!DeleteLinkHelper(new_path.get())) {
+    if (!DeleteLink(namespc, prefixed_new_path)) {
       return false;
     }
   }
-  int move_status = MoveFileExW(old_path.get(), new_path.get(), flags);
+  int move_status =
+      MoveFileExW(system_old_path.wide(), system_new_path.wide(), flags);
   return (move_status != 0);
 }
 
-bool File::Rename(Namespace* namespc,
-                  const char* old_name,
-                  const char* new_name) {
-  return RenameHelper(File::kIsFile, old_name, new_name);
-}
-
 bool File::RenameLink(Namespace* namespc,
-                      const char* old_name,
-                      const char* new_name) {
-  return RenameHelper(File::kIsLink, old_name, new_name);
-}
+                      const char* old_path,
+                      const char* new_path) {
+  const char* prefixed_old_path = PrefixLongFilePath(old_path);
+  File::Type type = GetType(namespc, prefixed_old_path, false);
+  if (type != kIsLink) {
+    SetLastError(ERROR_FILE_NOT_FOUND);
+    return false;
+  }
+  Utf8ToWideScope system_old_path(prefixed_old_path);
+  const char* prefixed_new_path = PrefixLongFilePath(new_path);
+  Utf8ToWideScope system_new_path(prefixed_new_path);
+  DWORD flags = MOVEFILE_WRITE_THROUGH | MOVEFILE_REPLACE_EXISTING;
 
-static std::unique_ptr<wchar_t[]> GetDirectoryPath(
-    const std::unique_ptr<wchar_t[]>& path) {
-  for (intptr_t i = wcslen(path.get()) - 1; i >= 0; --i) {
-    if (path.get()[i] == '\\' || path.get()[i] == '/') {
-      // Note: we need to copy the trailing directory separator so we need to
-      // copy i + 1 characters (plus trailing '\0').
-      auto result = std::make_unique<wchar_t[]>(i + 2);
-      wcsncpy(result.get(), path.get(), i + 1);
-      return result;
+  // Symbolic links (e.g. produced by Link.create) to directories on Windows
+  // appear as special directories. MoveFileExW's MOVEFILE_REPLACE_EXISTING
+  // does not allow for replacement of directories, so we need to remove it
+  // before renaming.
+  if ((Directory::Exists(namespc, prefixed_new_path) == Directory::EXISTS) &&
+      (GetType(namespc, prefixed_new_path, false) == kIsLink)) {
+    // Bail out if the DeleteLink call fails.
+    if (!DeleteLink(namespc, prefixed_new_path)) {
+      return false;
     }
   }
-  return nullptr;
+  int move_status =
+      MoveFileExW(system_old_path.wide(), system_new_path.wide(), flags);
+  return (move_status != 0);
 }
 
-static void FreeUUID(wchar_t* ptr) {
-  RpcStringFreeW(&ptr);
+static wchar_t* CopyToDartScopeString(wchar_t* string) {
+  wchar_t* wide_path = reinterpret_cast<wchar_t*>(
+      Dart_ScopeAllocate(MAX_PATH * sizeof(wchar_t) + 1));
+  wcscpy(wide_path, string);
+  return wide_path;
 }
 
-static std::unique_ptr<wchar_t, decltype(FreeUUID)*> GenerateUUIDString() {
-  UUID uuid;
-  RPC_STATUS status = UuidCreateSequential(&uuid);
-  if ((status != RPC_S_OK) && (status != RPC_S_UUID_LOCAL_ONLY)) {
-    return {nullptr, nullptr};
+static wchar_t* CopyIntoTempFile(const char* src, const char* dest) {
+  // This function will copy the file to a temp file in the destination
+  // directory and return the path of temp file.
+  // Creating temp file name has the same logic as Directory::CreateTemp(),
+  // which tries with the rng and falls back to a uuid if it failed.
+  const char* last_back_slash = strrchr(dest, '\\');
+  // It is possible the path uses forwardslash as path separator.
+  const char* last_forward_slash = strrchr(dest, '/');
+  const char* last_path_separator = nullptr;
+  if (last_back_slash == nullptr && last_forward_slash == nullptr) {
+    return nullptr;
+  } else if (last_forward_slash != nullptr && last_forward_slash != nullptr) {
+    // If both types occur in the path, use the one closer to the end.
+    if (last_back_slash - dest > last_forward_slash - dest) {
+      last_path_separator = last_back_slash;
+    } else {
+      last_path_separator = last_forward_slash;
+    }
+  } else {
+    last_path_separator =
+        (last_forward_slash == nullptr) ? last_back_slash : last_forward_slash;
   }
-  wchar_t* uuid_string;
-  status = UuidToStringW(&uuid, &uuid_string);
-  if (status != RPC_S_OK) {
-    return {nullptr, nullptr};
-  }
-
-  return {uuid_string, &FreeUUID};
-}
-
-// This function will copy the |src| file to a temporary file in the
-// directory where |dest| resides and returns the path of temp file.
-static std::unique_ptr<wchar_t[]> CopyIntoTempFile(
-    const std::unique_ptr<wchar_t[]>& src,
-    const std::unique_ptr<wchar_t[]>& dest) {
-  const auto dir = GetDirectoryPath(dest);
-  if (dir == nullptr) {
+  int length_of_parent_dir = last_path_separator - dest + 1;
+  if (length_of_parent_dir + 8 > MAX_PATH) {
     return nullptr;
   }
-
   uint32_t suffix_bytes = 0;
   const int kSuffixSize = sizeof(suffix_bytes);
   if (Crypto::GetRandomBytes(kSuffixSize,
                              reinterpret_cast<uint8_t*>(&suffix_bytes))) {
-    const size_t file_path_buf_size = wcslen(dir.get()) + 8 + 1;
-    auto file_path = std::make_unique<wchar_t[]>(file_path_buf_size);
-    swprintf(file_path.get(), file_path_buf_size, L"%s%x", dir.get(),
-             suffix_bytes);
-
-    if (CopyFileExW(src.get(), file_path.get(), nullptr, nullptr, nullptr, 0) !=
-        0) {
-      return file_path;
+    PathBuffer buffer;
+    char* dir = reinterpret_cast<char*>(
+        Dart_ScopeAllocate(1 + sizeof(char) * length_of_parent_dir));
+    memmove(dir, dest, length_of_parent_dir);
+    dir[length_of_parent_dir] = '\0';
+    if (!buffer.Add(dir)) {
+      return nullptr;
     }
 
+    char suffix[8 + 1];
+    Utils::SNPrint(suffix, sizeof(suffix), "%x", suffix_bytes);
+    Utf8ToWideScope source_path(src);
+    if (!buffer.Add(suffix)) {
+      return nullptr;
+    }
+    if (CopyFileExW(source_path.wide(), buffer.AsStringW(), nullptr, nullptr,
+                    nullptr, 0) != 0) {
+      return CopyToDartScopeString(buffer.AsStringW());
+    }
     // If CopyFileExW() fails to copy to a temp file with random hex, fall
     // back to copy to a uuid temp file.
   }
-
-  const auto uuid_str = GenerateUUIDString();
-  if (uuid_str == nullptr) {
+  // UUID has a total of 36 characters in the form of
+  // xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx.
+  if (length_of_parent_dir + 36 > MAX_PATH) {
+    return nullptr;
+  }
+  UUID uuid;
+  RPC_STATUS status = UuidCreateSequential(&uuid);
+  if ((status != RPC_S_OK) && (status != RPC_S_UUID_LOCAL_ONLY)) {
+    return nullptr;
+  }
+  RPC_WSTR uuid_string;
+  status = UuidToStringW(&uuid, &uuid_string);
+  if (status != RPC_S_OK) {
+    return nullptr;
+  }
+  PathBuffer buffer;
+  char* dir = reinterpret_cast<char*>(
+      Dart_ScopeAllocate(1 + sizeof(char) * length_of_parent_dir));
+  memmove(dir, dest, length_of_parent_dir);
+  dir[length_of_parent_dir] = '\0';
+  Utf8ToWideScope dest_path(dir);
+  if (!buffer.AddW(dest_path.wide()) ||
+      !buffer.AddW(reinterpret_cast<wchar_t*>(uuid_string))) {
     return nullptr;
   }
 
-  const size_t file_path_buf_size =
-      wcslen(dir.get()) + wcslen(uuid_str.get()) + 1;
-  auto file_path = std::make_unique<wchar_t[]>(file_path_buf_size);
-  swprintf(file_path.get(), file_path_buf_size, L"%s%s", dir.get(),
-           uuid_str.get());
-
-  if (CopyFileExW(src.get(), file_path.get(), nullptr, nullptr, nullptr, 0) !=
-      0) {
-    return file_path;
+  RpcStringFreeW(&uuid_string);
+  Utf8ToWideScope source_path(src);
+  if (CopyFileExW(source_path.wide(), buffer.AsStringW(), nullptr, nullptr,
+                  nullptr, 0) != 0) {
+    return CopyToDartScopeString(buffer.AsStringW());
   }
-
   return nullptr;
 }
 
 bool File::Copy(Namespace* namespc,
-                const char* old_name,
-                const char* new_name) {
-  // We are going to concatenate new path with temporary file names in
-  // CopyIntoTempFile so we force long prefix no matter what.
-  const auto old_path = ToWinAPIPath(old_name);
-  const auto new_path = ToWinAPIPath(new_name);
-
-  File::Type type = GetType(old_path.get(), /*follow_links=*/false);
+                const char* old_path,
+                const char* new_path) {
+  const char* prefixed_old_path = PrefixLongFilePath(old_path);
+  const char* prefixed_new_path = PrefixLongFilePath(new_path);
+  File::Type type = GetType(namespc, prefixed_old_path, false);
   if (type != kIsFile) {
     SetLastError(ERROR_FILE_NOT_FOUND);
     return false;
   }
 
-  const auto temp_file = CopyIntoTempFile(old_path, new_path);
+  wchar_t* temp_file = CopyIntoTempFile(prefixed_old_path, prefixed_new_path);
   if (temp_file == nullptr) {
     // If temp file creation fails, fall back on doing a direct copy.
-    return CopyFileExW(old_path.get(), new_path.get(), nullptr, nullptr,
-                       nullptr, 0) != 0;
+    Utf8ToWideScope system_old_path(prefixed_old_path);
+    Utf8ToWideScope system_new_path(prefixed_new_path);
+    return CopyFileExW(system_old_path.wide(), system_new_path.wide(), nullptr,
+                       nullptr, nullptr, 0) != 0;
   }
+  Utf8ToWideScope system_new_dest(prefixed_new_path);
 
   // Remove the existing file. Otherwise, renaming will fail.
-  if (FileExists(new_path.get())) {
-    DeleteFileW(new_path.get());
+  if (Exists(namespc, prefixed_new_path)) {
+    DeleteFileW(system_new_dest.wide());
   }
 
-  if (!MoveFileW(temp_file.get(), new_path.get())) {
+  if (!MoveFileW(temp_file, system_new_dest.wide())) {
     DWORD error = GetLastError();
-    DeleteFileW(temp_file.get());
+    DeleteFileW(temp_file);
     SetLastError(error);
     return false;
   }
-
   return true;
 }
 
 int64_t File::LengthFromPath(Namespace* namespc, const char* name) {
   struct __stat64 st;
-  const auto path = ToWinAPIPath(name);
-  if (!StatHelper(path.get(), &st)) {
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  if (!StatHelper(system_name.wide(), &st)) {
     return -1;
   }
   return st.st_size;
@@ -822,9 +857,10 @@ const char* File::LinkTarget(Namespace* namespc,
                              const char* pathname,
                              char* dest,
                              int dest_size) {
-  const auto path = ToWinAPIPath(pathname);
+  const wchar_t* name =
+      StringUtilsWin::Utf8ToWide(PrefixLongFilePath(pathname));
   HANDLE dir_handle = CreateFileW(
-      path.get(), GENERIC_READ,
+      name, GENERIC_READ,
       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
       OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
       nullptr);
@@ -909,12 +945,13 @@ const char* File::LinkTarget(Namespace* namespc,
 }
 
 void File::Stat(Namespace* namespc, const char* name, int64_t* data) {
-  const auto path = ToWinAPIPath(name);
-  File::Type type = GetType(path.get(), /*follow_links=*/true);
+  const char* prefixed_name = PrefixLongFilePath(name);
+  File::Type type = GetType(namespc, prefixed_name, true);
   data[kType] = type;
   if (type != kDoesNotExist) {
     struct _stat64 st;
-    int stat_status = _wstat64(path.get(), &st);
+    Utf8ToWideScope system_name(prefixed_name);
+    int stat_status = _wstat64(system_name.wide(), &st);
     if (stat_status == 0) {
       data[kCreatedTime] = st.st_ctime * 1000;
       data[kModifiedTime] = st.st_mtime * 1000;
@@ -929,8 +966,8 @@ void File::Stat(Namespace* namespc, const char* name, int64_t* data) {
 
 time_t File::LastAccessed(Namespace* namespc, const char* name) {
   struct __stat64 st;
-  const auto path = ToWinAPIPath(name);
-  if (!StatHelper(path.get(), &st)) {
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  if (!StatHelper(system_name.wide(), &st)) {
     return -1;
   }
   return st.st_atime;
@@ -938,8 +975,8 @@ time_t File::LastAccessed(Namespace* namespc, const char* name) {
 
 time_t File::LastModified(Namespace* namespc, const char* name) {
   struct __stat64 st;
-  const auto path = ToWinAPIPath(name);
-  if (!StatHelper(path.get(), &st)) {
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  if (!StatHelper(system_name.wide(), &st)) {
     return -1;
   }
   return st.st_mtime;
@@ -949,8 +986,8 @@ bool File::SetLastAccessed(Namespace* namespc,
                            const char* name,
                            int64_t millis) {
   struct __stat64 st;
-  const auto path = ToWinAPIPath(name);
-  if (!StatHelper(path.get(), &st)) {  // Checks that it is a file.
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  if (!StatHelper(system_name.wide(), &st)) {  // Checks that it is a file.
     return false;
   }
 
@@ -962,7 +999,7 @@ bool File::SetLastAccessed(Namespace* namespc,
   // So set the file access time directly using SetFileTime.
   FILETIME at = GetFiletimeFromMillis(millis);
   HANDLE file_handle =
-      CreateFileW(path.get(), FILE_WRITE_ATTRIBUTES,
+      CreateFileW(system_name.wide(), FILE_WRITE_ATTRIBUTES,
                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                   nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
   if (file_handle == INVALID_HANDLE_VALUE) {
@@ -978,8 +1015,8 @@ bool File::SetLastModified(Namespace* namespc,
                            int64_t millis) {
   // First get the current times.
   struct __stat64 st;
-  const auto path = ToWinAPIPath(name);
-  if (!StatHelper(path.get(), &st)) {
+  Utf8ToWideScope system_name(PrefixLongFilePath(name));
+  if (!StatHelper(system_name.wide(), &st)) {
     return false;
   }
 
@@ -987,7 +1024,7 @@ bool File::SetLastModified(Namespace* namespc,
   struct __utimbuf64 times;
   times.actime = st.st_atime;
   times.modtime = millis / kMillisecondsPerSecond;
-  return _wutime64(path.get(), &times) == 0;
+  return _wutime64(system_name.wide(), &times) == 0;
 }
 
 // Keep this function synchronized with the behavior
@@ -1007,10 +1044,10 @@ const char* File::GetCanonicalPath(Namespace* namespc,
                                    const char* pathname,
                                    char* dest,
                                    int dest_size) {
-  const auto path = ToWinAPIPath(pathname);
+  Utf8ToWideScope system_name(PrefixLongFilePath(pathname));
   HANDLE file_handle =
-      CreateFileW(path.get(), 0, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                  FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+      CreateFileW(system_name.wide(), 0, FILE_SHARE_READ, nullptr,
+                  OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
   if (file_handle == INVALID_HANDLE_VALUE) {
     return nullptr;
   }
@@ -1023,9 +1060,8 @@ const char* File::GetCanonicalPath(Namespace* namespc,
     SetLastError(error);
     return nullptr;
   }
-
-  const auto canonical_path = std::make_unique<wchar_t[]>(required_size);
-  int result_size = GetFinalPathNameByHandle(file_handle, canonical_path.get(),
+  auto path = std::unique_ptr<wchar_t[]>(new wchar_t[required_size]);
+  int result_size = GetFinalPathNameByHandle(file_handle, path.get(),
                                              required_size, VOLUME_NAME_DOS);
   ASSERT(result_size <= required_size - 1);
   CloseHandle(file_handle);
@@ -1033,18 +1069,16 @@ const char* File::GetCanonicalPath(Namespace* namespc,
   // Remove leading \\?\ since it is only to overcome MAX_PATH limitation.
   // Leave it if input used it though.
   int offset = 0;
-  if ((result_size > 4) &&
-      (wcsncmp(canonical_path.get(), L"\\\\?\\", 4) == 0) &&
+  if ((result_size > 4) && (wcsncmp(path.get(), L"\\\\?\\", 4) == 0) &&
       (strncmp(pathname, "\\\\?\\", 4) != 0)) {
-    if ((result_size > 8) &&
-        (wcsncmp(canonical_path.get(), L"\\\\?\\UNC\\", 8) == 0)) {
+    if ((result_size > 8) && (wcsncmp(path.get(), L"\\\\?\\UNC\\", 8) == 0)) {
       // Leave '\\?\UNC\' prefix intact - stripping it makes invalid UNC name.
     } else {
       offset = 4;
     }
   }
-  int utf8_size = WideCharToMultiByte(CP_UTF8, 0, canonical_path.get() + offset,
-                                      -1, nullptr, 0, nullptr, nullptr);
+  int utf8_size = WideCharToMultiByte(CP_UTF8, 0, path.get() + offset, -1,
+                                      nullptr, 0, nullptr, nullptr);
   if (dest == nullptr) {
     dest = DartUtils::ScopedCString(utf8_size);
     dest_size = utf8_size;
@@ -1052,8 +1086,8 @@ const char* File::GetCanonicalPath(Namespace* namespc,
   if (dest_size != 0) {
     ASSERT(utf8_size <= dest_size);
   }
-  if (0 == WideCharToMultiByte(CP_UTF8, 0, canonical_path.get() + offset, -1,
-                               dest, dest_size, nullptr, nullptr)) {
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, path.get() + offset, -1, dest,
+                               dest_size, nullptr, nullptr)) {
     return nullptr;
   }
   return dest;
@@ -1075,42 +1109,51 @@ File::StdioHandleType File::GetStdioHandleType(int fd) {
   return kPipe;
 }
 
-File::Type File::GetType(const wchar_t* path, bool follow_links) {
-  DWORD attributes = GetFileAttributesW(path);
+File::Type File::GetType(Namespace* namespc,
+                         const char* pathname,
+                         bool follow_links) {
+  // File::GetType can be called without scope(when launching isolate),
+  // so it mallocs prefixed path.
+  StringRAII string_raii = PrefixLongFilePathNoScope(pathname);
+  const char* prefixed_path = string_raii.str();
+
+  // Convert to wchar_t string.
+  Utf8ToWideScope name(prefixed_path);
+  DWORD attributes = GetFileAttributesW(name.wide());
+  File::Type result = kIsFile;
   if (attributes == INVALID_FILE_ATTRIBUTES) {
-    return File::kDoesNotExist;
+    result = kDoesNotExist;
   } else if ((attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) {
     if (follow_links) {
       HANDLE target_handle = CreateFileW(
-          path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-          nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+          name.wide(), 0,
+          FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+          OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
       if (target_handle == INVALID_HANDLE_VALUE) {
-        return File::kDoesNotExist;
+        DWORD last_error = GetLastError();
+        if ((last_error == ERROR_FILE_NOT_FOUND) ||
+            (last_error == ERROR_PATH_NOT_FOUND)) {
+          return kDoesNotExist;
+        }
+        result = kIsLink;
       } else {
         BY_HANDLE_FILE_INFORMATION info;
         if (!GetFileInformationByHandle(target_handle, &info)) {
           CloseHandle(target_handle);
-          return File::kDoesNotExist;
+          return File::kIsLink;
         }
         CloseHandle(target_handle);
         return ((info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
-                   ? File::kIsDirectory
-                   : File::kIsFile;
+                   ? kIsDirectory
+                   : kIsFile;
       }
     } else {
-      return File::kIsLink;
+      result = kIsLink;
     }
   } else if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-    return File::kIsDirectory;
+    result = kIsDirectory;
   }
-  return File::kIsFile;
-}
-
-File::Type File::GetType(Namespace* namespc,
-                         const char* name,
-                         bool follow_links) {
-  const auto path = ToWinAPIPath(name);
-  return GetType(path.get(), follow_links);
+  return result;
 }
 
 File::Identical File::AreIdentical(Namespace* namespc_1,
@@ -1120,11 +1163,12 @@ File::Identical File::AreIdentical(Namespace* namespc_1,
   USE(namespc_1);
   USE(namespc_2);
   BY_HANDLE_FILE_INFORMATION file_info[2];
-  const std::unique_ptr<wchar_t[]> file_names[2] = {ToWinAPIPath(file_1),
-                                                    ToWinAPIPath(file_2)};
+  const char* file_names[2] = {PrefixLongFilePath(file_1),
+                               PrefixLongFilePath(file_2)};
   for (int i = 0; i < 2; ++i) {
+    Utf8ToWideScope wide_name(file_names[i]);
     HANDLE file_handle = CreateFileW(
-        file_names[i].get(), 0,
+        wide_name.wide(), 0,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);

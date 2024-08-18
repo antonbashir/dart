@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/simple_edit_handler.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/progress.dart';
@@ -48,7 +47,7 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
   ) async {
     switch (kind) {
       case RefactoringKind.EXTRACT_METHOD:
-        var refactor = ExtractMethodRefactoring(
+        final refactor = ExtractMethodRefactoring(
             server.searchEngine, result, offset, length);
 
         var preferredName = options != null ? options['name'] as String : null;
@@ -67,7 +66,7 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
         return success(refactor);
 
       case RefactoringKind.EXTRACT_LOCAL_VARIABLE:
-        var refactor = ExtractLocalRefactoring(result, offset, length);
+        final refactor = ExtractLocalRefactoring(result, offset, length);
 
         var preferredName = options != null ? options['name'] as String : null;
         // checkInitialConditions will populate names with suggestions.
@@ -85,7 +84,7 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
         return success(refactor);
 
       case RefactoringKind.EXTRACT_WIDGET:
-        var refactor = ExtractWidgetRefactoring(
+        final refactor = ExtractWidgetRefactoring(
             server.searchEngine, result, offset, length);
         // Provide a default name for clients that do not have any custom
         // handling.
@@ -98,21 +97,21 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
         return success(refactor);
 
       case RefactoringKind.INLINE_LOCAL_VARIABLE:
-        var refactor =
+        final refactor =
             InlineLocalRefactoring(server.searchEngine, result, offset);
         return success(refactor);
 
       case RefactoringKind.INLINE_METHOD:
-        var refactor =
+        final refactor =
             InlineMethodRefactoring(server.searchEngine, result, offset);
         return success(refactor);
 
       case RefactoringKind.CONVERT_GETTER_TO_METHOD:
-        var node = NodeLocator(offset).searchWithin(result.unit);
-        var element = server.getElementOfNode(node);
+        final node = NodeLocator(offset).searchWithin(result.unit);
+        final element = server.getElementOfNode(node);
         if (element != null) {
           if (element is PropertyAccessorElement) {
-            var refactor = ConvertGetterToMethodRefactoring(
+            final refactor = ConvertGetterToMethodRefactoring(
                 server.refactoringWorkspace, result.session, element);
             return success(refactor);
           }
@@ -121,11 +120,11 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
             'Location supplied to $commandName $kind is not longer valid');
 
       case RefactoringKind.CONVERT_METHOD_TO_GETTER:
-        var node = NodeLocator(offset).searchWithin(result.unit);
-        var element = server.getElementOfNode(node);
+        final node = NodeLocator(offset).searchWithin(result.unit);
+        final element = server.getElementOfNode(node);
         if (element != null) {
           if (element is ExecutableElement) {
-            var refactor = ConvertMethodToGetterRefactoring(
+            final refactor = ConvertMethodToGetterRefactoring(
                 server.refactoringWorkspace, result.session, element);
             return success(refactor);
           }
@@ -164,12 +163,12 @@ abstract class AbstractRefactorCommandHandler extends SimpleEditCommandHandler
       ));
     }
 
-    var kind = parameters['kind'] as String;
-    var path = parameters['path'] as String;
-    var docVersion = parameters['docVersion'] as int?;
-    var offset = parameters['offset'] as int;
-    var length = parameters['length'] as int;
-    var options = parameters['options'] as Map<String, Object?>?;
+    final kind = parameters['kind'] as String;
+    final path = parameters['path'] as String;
+    final docVersion = parameters['docVersion'] as int?;
+    final offset = parameters['offset'] as int;
+    final length = parameters['length'] as int;
+    final options = parameters['options'] as Map<String, Object?>?;
 
     return execute(path, kind, offset, length, options, cancellationToken,
         progress, docVersion);

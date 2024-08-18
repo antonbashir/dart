@@ -8,5 +8,4 @@ extension Ops on Object {
 }
 
 void expect(String expect, Object value, String expectSet) {}
-
 void main() {}

@@ -19,7 +19,7 @@
 /// After every asyncStart() called is matched with a corresponding
 /// asyncEnd() or asyncSuccess(_) call, the testing driver will be notified that
 /// the tests is done.
-library;
+library async_helper;
 
 import 'dart:async';
 
@@ -141,17 +141,4 @@ Future<T> asyncExpectThrows<T extends Object>(Future<void> result,
     asyncEnd();
     return error;
   });
-}
-
-/// Checks that the asynchronous [result] throws a [T] if and only if
-/// [condition] is `true`.
-///
-/// When [condition] is `false`, [result] is expected to complete without
-/// errors.
-Future<T?> asyncExpectThrowsWhen<T extends Object>(
-    bool condition, Future<void> result,
-    [String reason = ""]) {
-  return condition
-      ? asyncExpectThrows<T>(result, reason)
-      : result.then<T?>((_) => null);
 }

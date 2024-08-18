@@ -94,8 +94,7 @@ abstract class CommonInputConverter extends Converter<String, Operation?> {
       // Track overlays in parallel with the analysis server
       // so that when an overlay is removed, the file can be updated on disk
       var request = Request.fromJson(json)!;
-      var params = AnalysisUpdateContentParams.fromRequest(request,
-          clientUriConverter: null);
+      var params = AnalysisUpdateContentParams.fromRequest(request);
       params.files.forEach((String filePath, change) {
         if (change is AddContentOverlay) {
           var content = change.content;

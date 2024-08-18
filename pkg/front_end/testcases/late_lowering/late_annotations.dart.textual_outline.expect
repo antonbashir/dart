@@ -4,10 +4,8 @@ class Annotation {
 
 @Annotation()
 late int topLevelField;
-
 @Annotation()
 late final int finalTopLevelField;
-
 @Annotation()
 late final int finalTopLevelFieldWithInitializer = 0;
 

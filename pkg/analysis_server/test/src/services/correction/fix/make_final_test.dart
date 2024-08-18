@@ -287,19 +287,6 @@ class PreferFinalLocalsBulkTest extends BulkFixProcessorTest {
   @override
   String get lintCode => LintNames.prefer_final_locals;
 
-  Future<void> test_recordPattern_forLoop() async {
-    await resolveTestCode('''
-void f() {
-  for (var (a, b) in [(0, 1)]) {}
-}
-''');
-    await assertHasFix('''
-void f() {
-  for (final (a, b) in [(0, 1)]) {}
-}
-''');
-  }
-
   Future<void> test_singleFile() async {
     await resolveTestCode('''
 f() {
@@ -417,15 +404,17 @@ List<(int, int)> g((int, int) Function() f) {
 
   Future<void> test_recordPattern_forLoop() async {
     await resolveTestCode(r'''
-void f() {
-  // ignore:unused_local_variable
-  for (var (a,) in [(0,)]) {}
+f() {
+  for (var (a) in [(1)]) {
+    print('$a');
+  }
 }
 ''');
     await assertHasFix(r'''
-void f() {
-  // ignore:unused_local_variable
-  for (final (a,) in [(0,)]) {}
+f() {
+  for (final (a) in [(1)]) {
+    print('$a');
+  }
 }
 ''');
   }

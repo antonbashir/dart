@@ -13,25 +13,41 @@ String quoteStringForRegExp(String string) =>
     // This method is optimized to test before replacement, which should be
     // much faster. This might be worth measuring in real world use cases
     // though.
-    jsStringToDartString(JSStringImpl(JS<WasmExternRef>(r"""s => {
-      if (/[[\]{}()*+?.\\^$|]/.test(s)) {
-          s = s.replace(/[[\]{}()*+?.\\^$|]/g, '\\$&');
+    JS<String>(r"""s => {
+      let jsString = stringFromDartString(s);
+      if (/[[\]{}()*+?.\\^$|]/.test(jsString)) {
+          jsString = jsString.replace(/[[\]{}()*+?.\\^$|]/g, '\\$&');
       }
-      return s;
-    }""", jsStringFromDartString(string).toExternRef)));
+      return stringToDartString(jsString);
+    }""", string);
 
 // TODO(srujzs): Add this to `JSObject`.
 @js.JS('Object.keys')
 external JSArray objectKeys(JSObject o);
 
-extension type JSNativeMatch._(JSArray _) implements JSArray {
+// TODO(srujzs): Convert these to extension types and have `JSNativeMatch`
+// subtype `JSArray`.
+@js.JS()
+@js.staticInterop
+class JSNativeMatch {
+  // This constructor exists just to avoid the `no unnamed constructor` error.
+  external factory JSNativeMatch();
+}
+
+extension JSNativeMatchExtension on JSNativeMatch {
   external JSString get input;
   external JSNumber get index;
   external JSObject? get groups;
+  external JSNumber get length;
   external JSAny? pop();
+  external JSAny? operator [](JSNumber index);
 }
 
-extension type JSNativeRegExp._(JSObject _) implements JSObject {
+@js.JS()
+@js.staticInterop
+class JSNativeRegExp {}
+
+extension JSNativeRegExpExtension on JSNativeRegExp {
   external JSNativeMatch? exec(JSString string);
   external JSBoolean test(JSString string);
   external JSString get flags;
@@ -91,7 +107,7 @@ class JSSyntaxRegExp implements RegExp {
     String modifiers = '$m$i$u$s$g';
     // The call to create the regexp is wrapped in a try catch so we can
     // reformat the exception if need be.
-    final result = JS<WasmExternRef?>("""(s, m) => {
+    WasmExternRef? result = JS<WasmExternRef?>("""(s, m) => {
           try {
             return new RegExp(s, m);
           } catch (e) {
@@ -101,7 +117,7 @@ class JSSyntaxRegExp implements RegExp {
     if (isJSRegExp(result)) return JSValue(result!) as JSNativeRegExp;
     // The returned value is the stringified JavaScript exception. Turn it into
     // a Dart exception.
-    String errorMessage = jsStringToDartString(JSStringImpl(result!));
+    String errorMessage = jsStringToDartString(result);
     throw new FormatException('Illegal RegExp pattern ($errorMessage)', source);
   }
 
@@ -121,17 +137,16 @@ class JSSyntaxRegExp implements RegExp {
   }
 
   Iterable<RegExpMatch> allMatches(String string, [int start = 0]) {
-    // start < 0 || start > string.length
-    if (start.gtU(string.length)) {
+    if (start < 0 || start > string.length) {
       throw new RangeError.range(start, 0, string.length);
     }
     return _AllMatchesIterable(this, string, start);
   }
 
-  RegExpMatch? _execGlobal(JSString string, int start) {
+  RegExpMatch? _execGlobal(String string, int start) {
     JSNativeRegExp regexp = _nativeGlobalVersion;
     regexp.lastIndex = start.toJS;
-    JSNativeMatch? match = regexp.exec(string);
+    JSNativeMatch? match = regexp.exec(string.toJS);
     return match == null ? null : new _MatchImplementation(this, match);
   }
 
@@ -147,8 +162,7 @@ class JSSyntaxRegExp implements RegExp {
   }
 
   RegExpMatch? matchAsPrefix(String string, [int start = 0]) {
-    // start < 0 || start > string.length
-    if (start.gtU(string.length)) {
+    if (start < 0 || start > string.length) {
       throw new RangeError.range(start, 0, string.length);
     }
     return _execAnchored(string, start);
@@ -170,19 +184,18 @@ class _MatchImplementation implements RegExpMatch {
 
   int get start => _match.index.toDartInt;
 
-  int get end => (start + (_match[0].toString()).length);
+  int get end => (start + (_match[0.toJS].toString()).length);
 
   String? group(int index) {
-    // index < 0 || index >= _match.length
-    if (index.geU(_match.length)) {
+    if (index < 0 || index >= _match.length.toDartInt) {
       throw RangeError("Index $index is out of range ${_match.length}");
     }
-    return _match[index]?.toString();
+    return _match[index.toJS]?.toString();
   }
 
   String? operator [](int index) => group(index);
 
-  int get groupCount => _match.length - 1;
+  int get groupCount => _match.length.toDartInt - 1;
 
   List<String?> groups(List<int> groups) {
     List<String?> out = [];
@@ -227,7 +240,6 @@ class _AllMatchesIterable extends Iterable<RegExpMatch> {
 class _AllMatchesIterator implements Iterator<RegExpMatch> {
   final JSSyntaxRegExp _regExp;
   String? _string;
-  JSString? _jsString;
   int _nextIndex;
   RegExpMatch? _current;
 
@@ -246,13 +258,8 @@ class _AllMatchesIterator implements Iterator<RegExpMatch> {
   bool moveNext() {
     var string = _string;
     if (string == null) return false;
-
-    JSString? jsString = _jsString;
-    if (jsString == null) {
-      jsString = _jsString = _string!.toJS;
-    }
     if (_nextIndex <= string.length) {
-      RegExpMatch? match = _regExp._execGlobal(jsString, _nextIndex);
+      RegExpMatch? match = _regExp._execGlobal(string, _nextIndex);
       if (match != null) {
         _current = match;
         int nextIndex = match.end;
@@ -292,7 +299,7 @@ JSNativeRegExp regExpGetGlobalNative(JSSyntaxRegExp regexp) {
 }
 
 RegExpMatch? regExpExecGlobal(
-        JSSyntaxRegExp regexp, JSString str, int startIndex) =>
+        JSSyntaxRegExp regexp, String str, int startIndex) =>
     regexp._execGlobal(str, startIndex);
 
 JSNativeRegExp regExpGetNative(JSSyntaxRegExp regexp) => regexp._nativeRegExp;
@@ -310,11 +317,10 @@ int regExpCaptureCount(JSSyntaxRegExp regexp) {
   final match = nativeAnchoredRegExp.exec(''.toJS)!;
   // The native-anchored regexp always have one capture more than the original,
   // and always matches the empty string.
-  return match.length - 2;
+  return match.length.toDartInt - 2;
 }
 
 /// Find the first match of [regExp] in [string] at or after [start].
-RegExpMatch? firstMatchAfter(
-    JSSyntaxRegExp regExp, JSString string, int start) {
+RegExpMatch? firstMatchAfter(JSSyntaxRegExp regExp, String string, int start) {
   return regExp._execGlobal(string, start);
 }

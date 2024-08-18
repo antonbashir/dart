@@ -35,12 +35,15 @@ class PluginIsolateChannelTest {
     channel.close();
   }
 
+  @failingTest
   Future<void> test_close() async {
     var done = false;
     channel.listen((Request request) {}, onDone: () {
       done = true;
     });
     channel.close();
+    // TODO(brianwilkerson): Figure out how to wait until the handler has been
+    // called.
     await _pumpEventQueue();
     expect(done, isTrue);
   }

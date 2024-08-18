@@ -834,11 +834,7 @@ abstract class FileSystemEntity {
     // TODO(40614): Remove once non-nullability is sound.
     ArgumentError.checkNotNull(path, "path");
     if (Platform.isWindows) {
-      // "C:" and "C:\" are semantically different on Windows and only "C:\" is an
-      // absolute path.
-      // See https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats
-      final minimumCharToNotTrim = _isAbsolute(path) ? 3 : 1;
-      while (path.length > minimumCharToNotTrim &&
+      while (path.length > 1 &&
           (path.endsWith(Platform.pathSeparator) || path.endsWith('/'))) {
         path = path.substring(0, path.length - 1);
       }
@@ -897,13 +893,11 @@ sealed class FileSystemEvent {
   /// relative.
   final String path;
 
-  /// Whether the event target is a directory.
+  /// Is `true` if the event target was a directory.
   ///
-  /// The value will always be `false` for [FileSystemDeleteEvent].
-  ///
-  /// On Windows, the value may also be `false` for a create, move or
-  /// modify event on a directory, if that directory was deleted
-  /// soon after this create, modify or move event occured.
+  /// Note that if the file has been deleted by the time the event has arrived,
+  /// this will always be `false` on Windows. In particular, it will always be
+  /// `false` for `delete` events.
   final bool isDirectory;
 
   FileSystemEvent._(this.type, this.path, this.isDirectory);
@@ -938,15 +932,10 @@ final class FileSystemModifyEvent extends FileSystemEvent {
 final class FileSystemDeleteEvent extends FileSystemEvent {
   /// Constructs a new [FileSystemDeleteEvent].
   FileSystemDeleteEvent(String path, bool isDirectory)
-      : super._(FileSystemEvent.delete, path, false);
+      : super._(FileSystemEvent.delete, path, isDirectory);
 
-  String toString() => "FileSystemDeleteEvent('$path')";
-
-  /// Whether the file system object was a directory.
-  ///
-  /// The value will always be `false` for [FileSystemDeleteEvent].
-  @Deprecated('always false for FileSystemDeleteEvent')
-  bool get isDirectory => false;
+  String toString() =>
+      "FileSystemDeleteEvent('$path', isDirectory=$isDirectory)";
 }
 
 /// File system event for moving of file system objects.

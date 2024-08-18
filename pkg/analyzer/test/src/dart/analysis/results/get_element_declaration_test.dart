@@ -273,16 +273,6 @@ typedef F = void Function();
     expect(result, isNull);
   }
 
-  test_genericTypeAlias() async {
-    await resolveTestCode(r'''
-typedef A = List<int>;
-''');
-    var element = findNode.genericTypeAlias('A').declaredElement!;
-    var result = await getElementDeclaration(element);
-    var node = result!.node as GenericTypeAlias;
-    expect(node.name.lexeme, 'A');
-  }
-
   test_getter_class() async {
     await resolveTestCode(r'''
 class A {
@@ -443,9 +433,9 @@ class GetElementDeclarationParsedTest extends PubPackageResolutionTest
   @override
   Future<ElementDeclarationResult?> getElementDeclaration(
       Element element) async {
-    var path = element.library!.source.fullName;
-    var file = getFile(path);
-    var library = await _getParsedLibrary(file);
+    final path = element.library!.source.fullName;
+    final file = getFile(path);
+    final library = await _getParsedLibrary(file);
     return library.getElementDeclaration(element);
   }
 
@@ -461,9 +451,9 @@ class GetElementDeclarationResolvedTest extends PubPackageResolutionTest
   @override
   Future<ElementDeclarationResult?> getElementDeclaration(
       Element element) async {
-    var path = element.library!.source.fullName;
-    var file = getFile(path);
-    var library = await _getResolvedLibrary(file);
+    final path = element.library!.source.fullName;
+    final file = getFile(path);
+    final library = await _getResolvedLibrary(file);
     return library.getElementDeclaration(element);
   }
 

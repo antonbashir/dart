@@ -30,7 +30,7 @@ class ^A {}
 
   /// Replaces the "Save URI" argument in [action].
   void replaceSaveUriArgument(CodeAction action, Uri newFileUri) {
-    var arguments = getRefactorCommandArguments(action);
+    final arguments = getRefactorCommandArguments(action);
     // The filename is the first item we prompt for so is first in the
     // arguments.
     arguments[0] = newFileUri.toString();
@@ -117,7 +117,7 @@ class B {}
     addTestSource(simpleClassContent);
 
     /// Existing new file contents where 'ClassToMove' will be moved to.
-    var newFilePath = join(projectFolderPath, 'lib', 'a.dart');
+    final newFilePath = join(projectFolderPath, 'lib', 'a.dart');
     newFile(newFilePath, '''
 int? a;
 ''');
@@ -132,7 +132,7 @@ class A {}
 ''';
 
     await initializeServer();
-    var action = await expectCodeAction(simpleClassRefactorTitle);
+    final action = await expectCodeAction(simpleClassRefactorTitle);
     await verifyCommandEdits(action.command!, expected);
   }
 
@@ -140,7 +140,7 @@ class A {}
     addTestSource(simpleClassContent);
 
     /// Existing new file contents where 'ClassToMove' will be moved to.
-    var newFilePath = join(projectFolderPath, 'lib', 'a.dart');
+    final newFilePath = join(projectFolderPath, 'lib', 'a.dart');
     newFile(newFilePath, '''
 // This is a file header
 
@@ -159,7 +159,7 @@ class A {}
 ''';
 
     await initializeServer();
-    var action = await expectCodeAction(simpleClassRefactorTitle);
+    final action = await expectCodeAction(simpleClassRefactorTitle);
     await verifyCommandEdits(action.command!, expected);
   }
 
@@ -167,7 +167,7 @@ class A {}
     addTestSource(simpleClassContent);
 
     /// Existing new file contents where 'ClassToMove' will be moved to.
-    var newFilePath = join(projectFolderPath, 'lib', 'a.dart');
+    final newFilePath = join(projectFolderPath, 'lib', 'a.dart');
     newFile(newFilePath, '''
 import 'dart:async';
 
@@ -186,7 +186,7 @@ class A {}
 ''';
 
     await initializeServer();
-    var action = await expectCodeAction(simpleClassRefactorTitle);
+    final action = await expectCodeAction(simpleClassRefactorTitle);
     await verifyCommandEdits(action.command!, expected);
   }
 
@@ -954,6 +954,7 @@ import 'package:test/a.dart';
 
 A? staying;
 >>>>>>>>>> lib/moving.dart
+import 'package:test/a.dart' hide A;
 import 'package:test/a.dart';
 
 A? moving;
@@ -992,7 +993,8 @@ import 'package:test/a.dart' show A;
 
 A? staying;
 >>>>>>>>>> lib/moving.dart
-import 'package:test/a.dart';
+import 'package:test/a.dart' hide A;
+import 'package:test/a.dart' show A;
 
 A? moving;
 ''';
@@ -1060,39 +1062,6 @@ class B {}
     );
   }
 
-  Future<void> test_kind_class_referencedInMacro() async {
-    addMacros([declareInTypeMacro()]);
-
-    var originalSource = '''
-import 'macros.dart';
-
-class ClassToMove^ {}
-
-@DeclareInType('  ClassToMove? c;')
-class A {}
-''';
-    var declarationName = 'ClassToMove';
-
-    // Verify that `main.macro.dart` is unmodified.
-    var expected = '''
->>>>>>>>>> lib/class_to_move.dart created
-class ClassToMove {}
->>>>>>>>>> lib/main.dart
-import 'package:test/class_to_move.dart';
-
-import 'macros.dart';
-
-@DeclareInType('  ClassToMove? c;')
-class A {}
-''';
-
-    await _singleDeclaration(
-      originalSource: originalSource,
-      expected: expected,
-      declarationName: declarationName,
-    );
-  }
-
   Future<void> test_kind_extensionType() async {
     var originalSource = '''
 class A {}
@@ -1121,7 +1090,7 @@ class B {}
   Future<void> test_logsAction() async {
     addTestSource(simpleClassContent);
     await initializeServer();
-    var action = await expectCodeAction(simpleClassRefactorTitle);
+    final action = await expectCodeAction(simpleClassRefactorTitle);
     await executeRefactor(action);
 
     expectCommandLogged('dart.refactor.move_top_level_to_file');
@@ -1152,34 +1121,6 @@ class B {}
       originalSource: originalSource,
       expected: expected,
       count: 2,
-    );
-  }
-
-  Future<void> test_multiple_withUnnamedExtension() async {
-    var originalSource = '''
-class A {}
-
-[!class ClassToMove1 {}
-extension on Int {}
-class ClassToMove2 {}!]
-
-class B {}
-''';
-
-    var expected = '''
->>>>>>>>>> lib/class_to_move1.dart created
-class ClassToMove1 {}
-extension on Int {}
-class ClassToMove2 {}
->>>>>>>>>> lib/main.dart
-class A {}
-
-class B {}
-''';
-    await _multipleDeclarations(
-      originalSource: originalSource,
-      expected: expected,
-      count: 3,
     );
   }
 
@@ -1270,8 +1211,8 @@ import 'package:test/setter.dart';
     addTestSource(simpleClassContent);
 
     /// Filename to inject to replace default.
-    var newFilePath = join(projectFolderPath, 'lib', 'my_new_class.dart');
-    var newFileUri = Uri.file(newFilePath);
+    final newFilePath = join(projectFolderPath, 'lib', 'my_new_class.dart');
+    final newFileUri = Uri.file(newFilePath);
 
     /// Expected new file content.
     const expected = '''
@@ -1281,7 +1222,7 @@ class A {}
 ''';
 
     await initializeServer();
-    var action = await expectCodeAction(simpleClassRefactorTitle);
+    final action = await expectCodeAction(simpleClassRefactorTitle);
     // Replace the file URI argument with our custom path.
     replaceSaveUriArgument(action, newFileUri);
     await verifyCommandEdits(action.command!, expected);
@@ -1831,7 +1772,7 @@ class B {}
     }
 
     await initializeServer();
-    var action = await expectCodeAction(actionTitle);
+    final action = await expectCodeAction(actionTitle);
     await verifyCommandEdits(action.command!, expected);
   }
 
@@ -1867,7 +1808,7 @@ class B {}
     var originalSource = '''
 import 'package:test/other.dart' as other;
 
-${code.markedCode}
+${code.rawCode}
 ''';
 
     var expected = '''

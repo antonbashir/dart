@@ -7,7 +7,5 @@ extension on C {
 }
 
 main() {}
-
 void testExternalFieldInClass(C c) {}
-
 void testExternalFieldInExtension(C c) {}

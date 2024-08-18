@@ -65,7 +65,7 @@ m() {
   for (var y in x) {}
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 27, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 27, 1),
       error(CompileTimeErrorCode.INVALID_USE_OF_NULL_VALUE, 32, 1),
     ]);
   }
@@ -214,18 +214,6 @@ extension E on A? {
       error(CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
           84, 3),
     ]);
-  }
-
-  test_methodInvocation_nuverNullable_extensionMethod() async {
-    await assertNoErrorsInCode(r'''
-extension<X> on X {
-  X m() => this;
-}
-
-Future<void> f(Never? x) async {
-  (await x).m();
-}
-''');
   }
 
   test_prefixExpression_minus_nonNullable() async {
@@ -439,20 +427,21 @@ m(B b) {
           104, 1),
     ]);
 
-    assertResolvedNodeText(findNode.assignment('x = 1'), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('x = 1'), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A?
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A?
     operator: ?.
     propertyName: SimpleIdentifier
@@ -463,30 +452,34 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@class::A::@setter::x::@parameter::_x
+    parameter: self::@class::A::@setter::x::@parameter::_x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::x
+  writeElement: self::@class::A::@setter::x
   writeType: int
   staticElement: <null>
   staticType: int?
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('x = 1'), r'''''');
+    }
 
-    assertResolvedNodeText(findNode.assignment('x = 2'), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('x = 2'), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A?
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A?
     operator: .
     propertyName: SimpleIdentifier
@@ -497,15 +490,18 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::A::@setter::x::@parameter::_x
+    parameter: self::@class::A::@setter::x::@parameter::_x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::x
+  writeElement: self::@class::A::@setter::x
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('x = 2'), r'''''');
+    }
   }
 
   test_assignment_eq_simpleIdentifier() async {
@@ -516,11 +512,12 @@ m(int x, int? y) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.assignment('x ='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('x ='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::m::@parameter::x
+    staticElement: self::@function::m::@parameter::x
     staticType: null
   operator: =
   rightHandSide: IntegerLiteral
@@ -529,17 +526,21 @@ AssignmentExpression
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@function::m::@parameter::x
+  writeElement: self::@function::m::@parameter::x
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('x ='), r'''''');
+    }
 
-    assertResolvedNodeText(findNode.assignment('y ='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('y ='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: y
-    staticElement: <testLibraryFragment>::@function::m::@parameter::y
+    staticElement: self::@function::m::@parameter::y
     staticType: null
   operator: =
   rightHandSide: IntegerLiteral
@@ -548,11 +549,14 @@ AssignmentExpression
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@function::m::@parameter::y
+  writeElement: self::@function::m::@parameter::y
   writeType: int?
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('y ='), r'''''');
+    }
   }
 
   test_assignment_plusEq_propertyAccess3() async {
@@ -577,20 +581,21 @@ m(B b) {
           115, 2),
     ]);
 
-    assertResolvedNodeText(findNode.assignment('x +='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('x +='), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A
     operator: .
     propertyName: SimpleIdentifier
@@ -601,30 +606,34 @@ AssignmentExpression
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@class::A::@getter::x
+  readElement: self::@class::A::@getter::x
   readType: int
-  writeElement: <testLibraryFragment>::@class::A::@setter::x
+  writeElement: self::@class::A::@setter::x
   writeType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('x +='), r'''''');
+    }
 
-    assertResolvedNodeText(findNode.assignment('y +='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('y +='), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A
     operator: .
     propertyName: SimpleIdentifier
@@ -635,15 +644,18 @@ AssignmentExpression
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@class::A::@getter::y
+  readElement: self::@class::A::@getter::y
   readType: int?
-  writeElement: <testLibraryFragment>::@class::A::@setter::y
+  writeElement: self::@class::A::@setter::y
   writeType: int?
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('y +='), r'''''');
+    }
   }
 
   test_assignment_plusEq_propertyAccess3_short1() async {
@@ -673,14 +685,14 @@ AssignmentExpression
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A?
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A?
     operator: ?.
     propertyName: SimpleIdentifier
@@ -691,13 +703,13 @@ AssignmentExpression
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@class::A::@getter::x
+  readElement: self::@class::A::@getter::x
   readType: int
-  writeElement: <testLibraryFragment>::@class::A::@setter::x
+  writeElement: self::@class::A::@setter::x
   writeType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int?
 ''');
 
@@ -707,14 +719,14 @@ AssignmentExpression
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: b
-        staticElement: <testLibraryFragment>::@function::m::@parameter::b
+        staticElement: self::@function::m::@parameter::b
         staticType: B
       period: .
       identifier: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@class::B::@getter::a
+        staticElement: self::@class::B::@getter::a
         staticType: A?
-      staticElement: <testLibraryFragment>::@class::B::@getter::a
+      staticElement: self::@class::B::@getter::a
       staticType: A?
     operator: .
     propertyName: SimpleIdentifier
@@ -725,13 +737,13 @@ AssignmentExpression
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 2
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@class::A::@getter::x
+  readElement: self::@class::A::@getter::x
   readType: int
-  writeElement: <testLibraryFragment>::@class::A::@setter::x
+  writeElement: self::@class::A::@setter::x
   writeType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
   }
@@ -747,43 +759,51 @@ m(int x, int? y) {
           33, 2),
     ]);
 
-    assertResolvedNodeText(findNode.assignment('x +='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('x +='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::m::@parameter::x
+    staticElement: self::@function::m::@parameter::x
     staticType: null
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@function::m::@parameter::x
+  readElement: self::@function::m::@parameter::x
   readType: int
-  writeElement: <testLibraryFragment>::@function::m::@parameter::x
+  writeElement: self::@function::m::@parameter::x
   writeType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('x +='), r'''''');
+    }
 
-    assertResolvedNodeText(findNode.assignment('y +='), r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(findNode.assignment('y +='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: y
-    staticElement: <testLibraryFragment>::@function::m::@parameter::y
+    staticElement: self::@function::m::@parameter::y
     staticType: null
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+    parameter: dart:core::@class::num::@method::+::@parameter::other
     staticType: int
-  readElement: <testLibraryFragment>::@function::m::@parameter::y
+  readElement: self::@function::m::@parameter::y
   readType: int?
-  writeElement: <testLibraryFragment>::@function::m::@parameter::y
+  writeElement: self::@function::m::@parameter::y
   writeType: int?
-  staticElement: dart:core::<fragment>::@class::num::@method::+
+  staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(findNode.assignment('y +='), r'''''');
+    }
   }
 
   test_await_nonNullable() async {
@@ -889,7 +909,7 @@ m() {
   for (var y in x) {}
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 32, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 32, 1),
     ]);
   }
 
@@ -900,22 +920,9 @@ m() {
   for (var y in x) {}
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 28, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 28, 1),
       error(CompileTimeErrorCode.UNCHECKED_USE_OF_NULLABLE_VALUE_AS_ITERATOR,
           33, 1),
-    ]);
-  }
-
-  test_forLoop_pattern_nullable() async {
-    await assertErrorsInCode(r'''
-m() {
-  List? x;
-  for (var (y) in x) {}
-}
-''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 29, 1),
-      error(CompileTimeErrorCode.UNCHECKED_USE_OF_NULLABLE_VALUE_AS_ITERATOR,
-          35, 1),
     ]);
   }
 
@@ -1083,11 +1090,11 @@ m() {
           20, 6),
     ]);
 
-    var node = findNode.simple('isEven');
+    final node = findNode.simple('isEven');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: isEven
-  staticElement: dart:core::<fragment>::@class::int::@getter::isEven
+  staticElement: dart:core::@class::int::@getter::isEven
   staticType: bool
 ''');
   }
@@ -1246,7 +1253,7 @@ m() {
   x -= 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 12, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 12, 1),
     ]);
   }
 
@@ -1257,7 +1264,7 @@ m() {
   x -= 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 13, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 13, 1),
       error(CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
           20, 2),
     ]);
@@ -1378,7 +1385,7 @@ m() {
   x--;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 12, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 12, 1),
     ]);
   }
 
@@ -1389,7 +1396,7 @@ m() {
   x--;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 13, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 13, 1),
       error(CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
           19, 2),
     ]);
@@ -1438,7 +1445,7 @@ m() {
   --x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 12, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 12, 1),
     ]);
   }
 
@@ -1449,7 +1456,7 @@ m() {
   --x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 13, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 13, 1),
       error(CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
           18, 2),
     ]);
@@ -1481,7 +1488,7 @@ m() {
   -x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 12, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 12, 1),
     ]);
   }
 
@@ -1492,7 +1499,7 @@ m() {
   -x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 13, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 13, 1),
       error(CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
           18, 1),
     ]);

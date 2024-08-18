@@ -2,8 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../../../../src/utilities/mock_packages.dart';
 import 'completion_relevance.dart';
 
 void main() {
@@ -19,7 +21,12 @@ class NamedArgumentTest extends CompletionRelevanceTest
 mixin NamedArgumentTestCases on CompletionRelevanceTest {
   @override
   Future<void> setUp() async {
-    writeTestPackageConfig(meta: true);
+    var metaLibFolder = MockPackages.instance.addMeta(resourceProvider);
+
+    writeTestPackageConfig(
+      config: PackageConfigFileBuilder()
+        ..add(name: 'meta', rootPath: metaLibFolder.parent.path),
+    );
 
     await super.setUp();
   }

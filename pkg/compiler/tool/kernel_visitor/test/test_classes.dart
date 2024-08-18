@@ -8,7 +8,7 @@ library info_visitor_test_classes;
 class A {
   A();
 
-  String getValue() {
+  getValue() {
     return "Value";
   }
 }
@@ -17,7 +17,7 @@ class A {
 class B extends A {
   B();
 
-  String testSuper() {
+  testSuper() {
     return super.getValue();
   }
 }
@@ -27,7 +27,7 @@ class C extends B {
   C();
 
   @override
-  String getValue() {
+  getValue() {
     return "Value";
   }
 }
@@ -50,7 +50,7 @@ class E implements A {
   E();
 
   @override
-  String getValue() {
+  getValue() {
     return "E Value";
   }
 }

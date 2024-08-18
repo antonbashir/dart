@@ -9,11 +9,12 @@ import 'dart:async';
 import 'dart:io' show File, IOSink;
 
 import 'package:args/args.dart' show ArgParser, ArgResults;
+
 import 'package:build_integration/file_system/multi_root.dart'
     show MultiRootFileSystem, MultiRootFileSystemEntity;
+
 import 'package:crypto/crypto.dart';
-import 'package:front_end/src/api_prototype/macros.dart' as macros
-    show isMacroLibraryUri;
+
 import 'package:front_end/src/api_unstable/vm.dart'
     show
         CompilerContext,
@@ -24,6 +25,7 @@ import 'package:front_end/src/api_unstable/vm.dart'
         DiagnosticMessageHandler,
         FileSystem,
         FileSystemEntity,
+        NnbdMode,
         ProcessedOptions,
         Severity,
         StandardFileSystem,
@@ -34,39 +36,37 @@ import 'package:front_end/src/api_unstable/vm.dart'
         parseExperimentalFlags,
         printDiagnosticMessage,
         resolveInputUri;
+
+import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
 import 'package:kernel/ast.dart'
     show Component, Library, NonNullableByDefaultCompiledMode;
 import 'package:kernel/binary/ast_to_binary.dart' show BinaryPrinter;
-import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
 import 'package:kernel/core_types.dart' show CoreTypes;
 import 'package:kernel/kernel.dart' show loadComponentFromBinary;
 import 'package:kernel/target/targets.dart' show Target, TargetFlags, getTarget;
 import 'package:package_config/package_config.dart' show loadPackageConfigUri;
 
 import 'http_filesystem.dart' show HttpAwareFileSystem;
-import 'modular/target/install.dart' show installAdditionalTargets;
-import 'modular/transformations/call_site_annotator.dart'
-    as call_site_annotator;
-import 'native_assets/synthesizer.dart';
 import 'target_os.dart';
-import 'transformations/deferred_loading.dart' as deferred_loading;
+import 'native_assets/synthesizer.dart';
+import 'target/install.dart' show installAdditionalTargets;
 import 'transformations/devirtualization.dart' as devirtualization
     show transformComponent;
-import 'transformations/dynamic_interface_annotator.dart'
-    as dynamic_interface_annotator show annotateComponent;
 import 'transformations/mixin_deduplication.dart' as mixin_deduplication
     show transformComponent;
 import 'transformations/no_dynamic_invocations_annotator.dart'
     as no_dynamic_invocations_annotator show transformComponent;
-import 'transformations/obfuscation_prohibitions_annotator.dart'
-    as obfuscationProhibitions;
-import 'transformations/resource_identifier.dart' as resource_identifier;
-import 'transformations/to_string_transformer.dart' as to_string_transformer;
 import 'transformations/type_flow/transformer.dart' as globalTypeFlow
     show transformComponent;
+import 'transformations/obfuscation_prohibitions_annotator.dart'
+    as obfuscationProhibitions;
+import 'transformations/call_site_annotator.dart' as call_site_annotator;
 import 'transformations/unreachable_code_elimination.dart'
     as unreachable_code_elimination;
 import 'transformations/vm_constant_evaluator.dart' as vm_constant_evaluator;
+import 'transformations/deferred_loading.dart' as deferred_loading;
+import 'transformations/resource_identifier.dart' as resource_identifier;
+import 'transformations/to_string_transformer.dart' as to_string_transformer;
 
 /// Declare options consumed by [runCompiler].
 void declareCompilerOptions(ArgParser args) {
@@ -86,11 +86,6 @@ void declareCompilerOptions(ArgParser args) {
       defaultsTo: null);
   args.addFlag('compact-async', help: 'Obsolete, ignored.', hide: true);
   args.addOption('depfile', help: 'Path to output Ninja depfile');
-  args.addOption(
-    'depfile-target',
-    help: 'Override the target in the generated depfile',
-    hide: true,
-  );
   args.addOption('from-dill',
       help: 'Read existing dill file instead of compiling from sources',
       defaultsTo: null);
@@ -139,9 +134,7 @@ void declareCompilerOptions(ArgParser args) {
   args.addFlag('enable-asserts',
       help: 'Whether asserts will be enabled.', defaultsTo: false);
   args.addFlag('sound-null-safety',
-      help: 'Respect the nullability of types at runtime.',
-      defaultsTo: true,
-      hide: true);
+      help: 'Respect the nullability of types at runtime.', defaultsTo: true);
   args.addFlag('split-output-by-packages',
       help:
           'Split resulting kernel file into multiple files (one per package).',
@@ -150,8 +143,6 @@ void declareCompilerOptions(ArgParser args) {
       help: 'Name of the Fuchsia component', defaultsTo: null);
   args.addOption('data-dir',
       help: 'Name of the subdirectory of //data for output files');
-  args.addOption('dynamic-interface',
-      help: 'Path to dynamic module interface yaml file.');
   args.addOption('manifest', help: 'Path to output Fuchsia package manifest');
   args.addMultiOption('enable-experiment',
       help: 'Comma separated list of experimental features to enable.');
@@ -205,20 +196,17 @@ Future<int> runCompiler(ArgResults options, String usage) async {
 
   final String? nativeAssetsPath = options['native-assets'];
   final String? resourcesFilePath = options['resources-file'];
-  final bool splitOutputByPackages = options['split-output-by-packages'];
-  final String? input = options.rest.singleOrNull;
-  if ((input == null && (nativeAssetsPath == null || splitOutputByPackages)) ||
-      (platformKernel == null)) {
+  if ((options.rest.length != 1) || (platformKernel == null)) {
     print(usage);
     return badUsageExitCode;
   }
 
+  final String input = options.rest.single;
   final String outputFileName = options['output'] ?? "$input.dill";
   final String? packages = options['packages'];
   final String targetName = options['target'];
   final String? fileSystemScheme = options['filesystem-scheme'];
   final String? depfile = options['depfile'];
-  final String? depfileTarget = options['depfile-target'];
   final String? fromDillFile = options['from-dill'];
   final List<String>? fileSystemRoots = options['filesystem-root'];
   final String? targetOS = options['target-os'];
@@ -228,7 +216,9 @@ Future<int> runCompiler(ArgResults options, String usage) async {
   final bool linkPlatform = options['link-platform'];
   final bool embedSources = options['embed-sources'];
   final bool enableAsserts = options['enable-asserts'];
+  final bool soundNullSafety = options['sound-null-safety'];
   final bool useProtobufTreeShakerV2 = options['protobuf-tree-shaker-v2'];
+  final bool splitOutputByPackages = options['split-output-by-packages'];
   final String? manifestFilename = options['manifest'];
   final String? dataDir = options['component-name'] ?? options['data-dir'];
   final bool? supportMirrors = options['support-mirrors'];
@@ -240,12 +230,6 @@ Future<int> runCompiler(ArgResults options, String usage) async {
   final List<String> sources = options['source'];
 
   if (!parseCommandLineDefines(options['define'], environmentDefines, usage)) {
-    return badUsageExitCode;
-  }
-
-  final bool soundNullSafety = options['sound-null-safety'];
-  if (!soundNullSafety) {
-    print('Error: --no-sound-null-safety is not supported.');
     return badUsageExitCode;
   }
 
@@ -295,17 +279,9 @@ Future<int> runCompiler(ArgResults options, String usage) async {
   final Uri? resourcesFileUri =
       resourcesFilePath == null ? null : resolveInputUri(resourcesFilePath);
 
-  final String? dynamicInterfaceFilePath = options['dynamic-interface'];
-  final Uri? dynamicInterfaceUri = dynamicInterfaceFilePath == null
-      ? null
-      : resolveInputUri(dynamicInterfaceFilePath);
-
-  Uri? mainUri;
-  if (input != null) {
-    mainUri = resolveInputUri(input);
-    if (packagesUri != null) {
-      mainUri = await convertToPackageUri(fileSystem, mainUri, packagesUri);
-    }
+  Uri mainUri = resolveInputUri(input);
+  if (packagesUri != null) {
+    mainUri = await convertToPackageUri(fileSystem, mainUri, packagesUri);
   }
 
   final List<Uri> additionalSources = sources.map(resolveInputUri).toList();
@@ -318,6 +294,7 @@ Future<int> runCompiler(ArgResults options, String usage) async {
     ..explicitExperimentalFlags = parseExperimentalFlags(
         parseExperimentalArguments(experimentalFlags),
         onError: print)
+    ..nnbdMode = soundNullSafety ? NnbdMode.Strong : NnbdMode.Weak
     ..onDiagnostic = (DiagnosticMessage m) {
       errorDetector(m);
     }
@@ -328,22 +305,20 @@ Future<int> runCompiler(ArgResults options, String usage) async {
 
   compilerOptions.target = createFrontEndTarget(targetName,
       trackWidgetCreation: options['track-widget-creation'],
+      soundNullSafety: compilerOptions.nnbdMode == NnbdMode.Strong,
       supportMirrors: supportMirrors ?? !(aot || minimalKernel));
   if (compilerOptions.target == null) {
     print('Failed to create front-end target $targetName.');
     return badUsageExitCode;
   }
 
-  final results = await compileToKernel(KernelCompilationArguments(
-      source: mainUri,
-      options: compilerOptions,
+  final results = await compileToKernel(mainUri, compilerOptions,
       additionalSources: additionalSources,
       nativeAssets: nativeAssetsUri,
       resourcesFile: resourcesFileUri,
       includePlatform: additionalDills.isNotEmpty,
       deleteToStringPackageUris: options['delete-tostring-package-uri'],
       keepClassNamesImplementing: options['keep-class-names-implementing'],
-      dynamicInterface: dynamicInterfaceUri,
       aot: aot,
       useGlobalTypeFlowAnalysis: tfa,
       useRapidTypeAnalysis: rta,
@@ -353,7 +328,7 @@ Future<int> runCompiler(ArgResults options, String usage) async {
       minimalKernel: minimalKernel,
       treeShakeWriteOnlyFields: treeShakeWriteOnlyFields,
       targetOS: targetOS,
-      fromDillFile: fromDillFile));
+      fromDillFile: fromDillFile);
 
   errorPrinter.printCompilationMessages();
 
@@ -384,23 +359,19 @@ Future<int> runCompiler(ArgResults options, String usage) async {
     final BinaryPrinter printer = new BinaryPrinter(sink);
     printer.writeComponentFile(Component(
       libraries: [nativeAssetsLibrary],
-      mode: NonNullableByDefaultCompiledMode.Strong,
+      mode: nativeAssetsLibrary.nonNullableByDefaultCompiledMode,
     ));
   }
   await sink.close();
 
   if (depfile != null) {
     await writeDepfile(
-      fileSystem,
-      results.compiledSources!,
-      depfileTarget ?? outputFileName,
-      depfile,
-    );
+        fileSystem, results.compiledSources!, outputFileName, depfile);
   }
 
   if (splitOutputByPackages) {
     await writeOutputSplitByPackages(
-      mainUri!,
+      mainUri,
       compilerOptions,
       results,
       outputFileName,
@@ -442,61 +413,32 @@ class KernelCompilationResults {
   });
 }
 
-// Arguments for [compileToKernel].
-class KernelCompilationArguments {
-  final Uri? source;
-  final CompilerOptions? options;
-  final List<Uri> additionalSources;
-  final Uri? nativeAssets;
-  final Uri? resourcesFile;
-  final bool includePlatform;
-  final List<String> deleteToStringPackageUris;
-  final List<String> keepClassNamesImplementing;
-  final bool aot;
-  final Uri? dynamicInterface;
-  final Map<String, String> environmentDefines; // Should be mutable.
-  final bool enableAsserts;
-  final bool useGlobalTypeFlowAnalysis;
-  final bool useRapidTypeAnalysis;
-  final bool treeShakeWriteOnlyFields;
-  final bool useProtobufTreeShakerV2;
-  final bool minimalKernel;
-  final String? targetOS;
-  final String? fromDillFile;
-
-  KernelCompilationArguments({
-    this.source,
-    this.options,
-    this.additionalSources = const <Uri>[],
-    this.nativeAssets,
-    this.resourcesFile,
-    this.includePlatform = false,
-    this.deleteToStringPackageUris = const <String>[],
-    this.keepClassNamesImplementing = const <String>[],
-    this.aot = false,
-    this.dynamicInterface,
-    Map<String, String>? environmentDefines,
-    this.enableAsserts = true,
-    this.useGlobalTypeFlowAnalysis = false,
-    this.useRapidTypeAnalysis = true,
-    this.treeShakeWriteOnlyFields = false,
-    this.useProtobufTreeShakerV2 = false,
-    this.minimalKernel = false,
-    this.targetOS,
-    this.fromDillFile,
-  }) : environmentDefines = environmentDefines ?? {};
-}
-
 /// Generates a kernel representation of the program whose main library is in
-/// the given [args.source]. Intended for whole program (non-modular) compilation.
+/// the given [source]. Intended for whole program (non-modular) compilation.
 ///
 /// VM-specific replacement of [kernelForProgram].
 ///
-/// Either [arg.source], or [args.nativeAssets], or both must be non-null.
+/// Either [source], or [nativeAssets], or both must be non-null.
 Future<KernelCompilationResults> compileToKernel(
-    KernelCompilationArguments args) async {
-  final options = args.options!;
-
+  Uri? source,
+  CompilerOptions options, {
+  List<Uri> additionalSources = const <Uri>[],
+  Uri? nativeAssets,
+  Uri? resourcesFile,
+  bool includePlatform = false,
+  List<String> deleteToStringPackageUris = const <String>[],
+  List<String> keepClassNamesImplementing = const <String>[],
+  bool aot = false,
+  bool useGlobalTypeFlowAnalysis = false,
+  bool useRapidTypeAnalysis = true,
+  required Map<String, String> environmentDefines,
+  bool enableAsserts = true,
+  bool useProtobufTreeShakerV2 = false,
+  bool minimalKernel = false,
+  bool treeShakeWriteOnlyFields = false,
+  String? targetOS = null,
+  String? fromDillFile = null,
+}) async {
   // Replace error handler to detect if there are compilation errors.
   final errorDetector =
       new ErrorDetector(previousErrorHandler: options.onDiagnostic);
@@ -504,8 +446,13 @@ Future<KernelCompilationResults> compileToKernel(
 
   final nativeAssetsLibrary =
       await NativeAssetsSynthesizer.synthesizeLibraryFromYamlFile(
-          args.nativeAssets, errorDetector);
-  if (args.source == null) {
+    nativeAssets,
+    errorDetector,
+    nonNullableByDefaultCompiledMode: options.nnbdMode == NnbdMode.Strong
+        ? NonNullableByDefaultCompiledMode.Strong
+        : NonNullableByDefaultCompiledMode.Weak,
+  );
+  if (source == null) {
     return KernelCompilationResults.named(
       nativeAssetsLibrary: nativeAssetsLibrary,
     );
@@ -513,37 +460,42 @@ Future<KernelCompilationResults> compileToKernel(
 
   final target = options.target!;
   options.environmentDefines =
-      target.updateEnvironmentDefines(args.environmentDefines);
+      target.updateEnvironmentDefines(environmentDefines);
 
   CompilerResult? compilerResult;
-  final fromDillFile = args.fromDillFile;
   if (fromDillFile != null) {
     compilerResult =
         await loadKernel(options.fileSystem, resolveInputUri(fromDillFile));
   } else {
-    compilerResult = await kernelForProgram(args.source!, options,
-        additionalSources: args.additionalSources);
+    compilerResult = await kernelForProgram(source, options,
+        additionalSources: additionalSources);
   }
   final Component? component = compilerResult?.component;
-
-  // TODO(https://dartbug.com/55246): track macro deps when available.
-  Iterable<Uri>? compiledSources = component?.uriToSource.keys
-      .where((uri) => !macros.isMacroLibraryUri(uri));
+  Iterable<Uri>? compiledSources = component?.uriToSource.keys;
 
   Set<Library> loadedLibraries = createLoadedLibrariesSet(
       compilerResult?.loadedComponents, compilerResult?.sdkComponent,
-      includePlatform: args.includePlatform);
+      includePlatform: includePlatform);
 
-  if (args.deleteToStringPackageUris.isNotEmpty && component != null) {
+  if (deleteToStringPackageUris.isNotEmpty && component != null) {
     to_string_transformer.transformComponent(
-        component, args.deleteToStringPackageUris);
+        component, deleteToStringPackageUris);
   }
 
   // Run global transformations only if component is correct.
-  if ((args.aot || args.minimalKernel) && component != null) {
-    await runGlobalTransformations(target, component, errorDetector, args);
+  if ((aot || minimalKernel) && component != null) {
+    await runGlobalTransformations(target, component, useGlobalTypeFlowAnalysis,
+        enableAsserts, useProtobufTreeShakerV2, errorDetector,
+        environmentDefines: options.environmentDefines,
+        nnbdMode: options.nnbdMode,
+        targetOS: targetOS,
+        minimalKernel: minimalKernel,
+        treeShakeWriteOnlyFields: treeShakeWriteOnlyFields,
+        useRapidTypeAnalysis: useRapidTypeAnalysis,
+        keepClassNamesImplementing: keepClassNamesImplementing,
+        resourcesFile: resourcesFile);
 
-    if (args.minimalKernel) {
+    if (minimalKernel) {
       // compiledSources is component.uriToSource.keys.
       // Make a copy of compiledSources to detach it from
       // component.uriToSource which is cleared below.
@@ -592,21 +544,25 @@ Set<Library> createLoadedLibrariesSet(
   return loadedLibraries;
 }
 
-Future runGlobalTransformations(Target target, Component component,
-    ErrorDetector errorDetector, KernelCompilationArguments args) async {
+Future runGlobalTransformations(
+    Target target,
+    Component component,
+    bool useGlobalTypeFlowAnalysis,
+    bool enableAsserts,
+    bool useProtobufTreeShakerV2,
+    ErrorDetector errorDetector,
+    {bool minimalKernel = false,
+    bool treeShakeWriteOnlyFields = false,
+    bool useRapidTypeAnalysis = true,
+    NnbdMode nnbdMode = NnbdMode.Weak,
+    Map<String, String>? environmentDefines,
+    List<String>? keepClassNamesImplementing,
+    String? targetOS,
+    Uri? resourcesFile}) async {
   assert(!target.flags.supportMirrors);
   if (errorDetector.hasCompilationErrors) return;
 
   final coreTypes = new CoreTypes(component);
-
-  final dynamicInterface = args.dynamicInterface;
-  if (dynamicInterface != null) {
-    dynamic_interface_annotator.annotateComponent(
-        File(dynamicInterface.toFilePath()).readAsStringSync(),
-        dynamicInterface,
-        component,
-        coreTypes);
-  }
 
   // TODO(alexmarkov,cstefantsova): Consider doing canonicalization of
   // identical mixin applications when creating mixin applications in frontend,
@@ -618,22 +574,19 @@ Future runGlobalTransformations(Target target, Component component,
 
   // Perform unreachable code elimination, which should be performed before
   // type flow analysis so TFA won't take unreachable code into account.
-  final targetOS = args.targetOS;
   final os = targetOS != null ? TargetOS.fromString(targetOS)! : null;
   final evaluator = vm_constant_evaluator.VMConstantEvaluator.create(
-      target, component, os,
-      enableAsserts: args.enableAsserts,
-      environmentDefines: args.environmentDefines,
-      coreTypes: coreTypes);
+      target, component, os, nnbdMode,
+      environmentDefines: environmentDefines, coreTypes: coreTypes);
   unreachable_code_elimination.transformComponent(
-      target, component, evaluator, args.enableAsserts);
+      target, component, evaluator, enableAsserts);
 
-  if (args.useGlobalTypeFlowAnalysis) {
+  if (useGlobalTypeFlowAnalysis) {
     globalTypeFlow.transformComponent(target, coreTypes, component,
-        treeShakeSignatures: !args.minimalKernel,
-        treeShakeWriteOnlyFields: args.treeShakeWriteOnlyFields,
-        treeShakeProtobufs: args.useProtobufTreeShakerV2,
-        useRapidTypeAnalysis: args.useRapidTypeAnalysis);
+        treeShakeSignatures: !minimalKernel,
+        treeShakeWriteOnlyFields: treeShakeWriteOnlyFields,
+        treeShakeProtobufs: useProtobufTreeShakerV2,
+        useRapidTypeAnalysis: useRapidTypeAnalysis);
   } else {
     devirtualization.transformComponent(coreTypes, component);
     no_dynamic_invocations_annotator.transformComponent(component);
@@ -649,11 +602,10 @@ Future runGlobalTransformations(Target target, Component component,
   // We don't know yet whether gen_snapshot will want to do obfuscation, but if
   // it does it will need the obfuscation prohibitions.
   obfuscationProhibitions.transformComponent(
-      component, coreTypes, target, hierarchy, args.keepClassNamesImplementing);
+      component, coreTypes, target, hierarchy, keepClassNamesImplementing);
 
   deferred_loading.transformComponent(component, coreTypes, target);
 
-  final resourcesFile = args.resourcesFile;
   if (resourcesFile != null) {
     resource_identifier.transformComponent(component, resourcesFile);
   }
@@ -754,12 +706,16 @@ bool parseCommandLineDefines(
 
 /// Create front-end target with given name.
 Target? createFrontEndTarget(String targetName,
-    {bool trackWidgetCreation = false, bool supportMirrors = true}) {
+    {bool trackWidgetCreation = false,
+    bool soundNullSafety = true,
+    bool supportMirrors = true}) {
   // Make sure VM-specific targets are available.
   installAdditionalTargets();
 
   final TargetFlags targetFlags = new TargetFlags(
-      trackWidgetCreation: trackWidgetCreation, supportMirrors: supportMirrors);
+      trackWidgetCreation: trackWidgetCreation,
+      soundNullSafety: soundNullSafety,
+      supportMirrors: supportMirrors);
   return getTarget(targetName, targetFlags);
 }
 
@@ -924,8 +880,6 @@ Future<void> writeDepfile(FileSystem fileSystem, Iterable<Uri> compiledSources,
   final IOSink file = new File(depfile).openWrite();
   file.write(_escapePath(output));
   file.write(':');
-
-  // TODO(https://dartbug.com/55246): track macro deps when available.
   for (Uri dep in compiledSources) {
     // Skip corelib dependencies.
     if (dep.scheme == 'org-dartlang-sdk') continue;
@@ -995,6 +949,9 @@ class CompilerResultLoadedFromKernel implements CompilerResult {
 
   @override
   List<Component> get loadedComponents => const <Component>[];
+
+  @override
+  List<Uri> get deps => const <Uri>[];
 
   @override
   CoreTypes? get coreTypes => null;

@@ -79,9 +79,9 @@ class A {
 ''', target: a);
   }
 
-  Future<void> test_inPart_partOfUri_noLibrary() async {
+  Future<void> test_inPart_partOfName_noLibrary() async {
     await resolveTestCode('''
-part of 'a.dart';
+part of my_lib;
 
 class A {}
 

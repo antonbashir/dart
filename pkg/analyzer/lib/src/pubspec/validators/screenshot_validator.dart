@@ -11,23 +11,23 @@ import 'package:yaml/yaml.dart';
 /// Validate screenshots.
 void screenshotsValidator(PubspecValidationContext ctx) {
   bool fileExistsAtPath(String filePath) {
-    var context = ctx.provider.pathContext;
-    var normalizedEntry = context.joinAll(p.posix.split(filePath));
-    var directoryRoot = context.dirname(ctx.source.fullName);
-    var fullPath = context.join(directoryRoot, normalizedEntry);
-    var file = ctx.provider.getFile(fullPath);
+    final context = ctx.provider.pathContext;
+    final normalizedEntry = context.joinAll(p.posix.split(filePath));
+    final directoryRoot = context.dirname(ctx.source.fullName);
+    final fullPath = context.join(directoryRoot, normalizedEntry);
+    final file = ctx.provider.getFile(fullPath);
     return file.exists;
   }
 
-  var contents = ctx.contents;
+  final contents = ctx.contents;
   if (contents is! YamlMap) return;
-  var screenshots = contents[PubspecField.SCREENSHOTS_FIELD];
+  final screenshots = contents[PubspecField.SCREENSHOTS_FIELD];
   if (screenshots is! YamlList) return;
-  for (var entry in screenshots) {
+  for (final entry in screenshots) {
     if (entry is! YamlMap) continue;
-    var entryValue = entry.valueAt(PubspecField.PATH_FIELD);
+    final entryValue = entry.valueAt(PubspecField.PATH_FIELD);
     if (entryValue is! YamlScalar) continue;
-    var path = entryValue.value;
+    final path = entryValue.value;
     if (path is String && !fileExistsAtPath(path)) {
       ctx.reportErrorForNode(
         entryValue,

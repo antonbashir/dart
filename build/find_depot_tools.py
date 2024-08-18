@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-# Copyright 2011 The Chromium Authors
+# Copyright (c) 2011 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+#
+# For Dart/Flutter developers:
+# This file is copied from Chromium:
+#   https://cs.chromium.org/chromium/src/build/find_depot_tools.py
+# When updating replace reference to python on the first line with python3.
+#
 """Small utility function to find depot_tools and add it to the python path.
 
 Will throw an ImportError exception if depot_tools can't be found since it
@@ -11,6 +17,7 @@ This can also be used as a standalone script to print out the depot_tools
 directory location.
 """
 
+from __future__ import print_function
 
 import os
 import sys

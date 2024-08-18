@@ -37,11 +37,21 @@ class Assumptions {
     _addStructuralParameterAssumption(a, b);
   }
 
+  void _removeAssumption(TypeParameter a, TypeParameter b) {
+    TypeParameter? assumption = _assumptionMap.remove(a);
+    assert(identical(assumption, b));
+  }
+
   void _removeStructuralParameterAssumption(
       StructuralParameter a, StructuralParameter b) {
     StructuralParameter? assumption =
         _structuralParameterAssumptionMap.remove(a);
     assert(identical(assumption, b));
+  }
+
+  /// Remove the assumption that [a] and [b] are equivalent.
+  void forget(TypeParameter a, TypeParameter b) {
+    _removeAssumption(a, b);
   }
 
   /// Remove the assumption that [a] and [b] are equivalent.

@@ -20,9 +20,9 @@ class SearchFindElementReferencesHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var searchEngine = server.searchEngine;
-    var params = protocol.SearchFindElementReferencesParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    final searchEngine = server.searchEngine;
+    var params =
+        protocol.SearchFindElementReferencesParams.fromRequest(request);
     var file = params.file;
     // prepare element
     var element = await server.getElementAtOffset(file, params.offset);
@@ -33,14 +33,16 @@ class SearchFindElementReferencesHandler extends LegacyHandler {
       element = element.field;
     }
     if (element is PropertyAccessorElement) {
-      element = element.variable2;
+      element = element.variable;
     }
     // respond
     var searchId = (server.nextSearchId++).toString();
     var result = protocol.SearchFindElementReferencesResult();
     if (element != null) {
       result.id = searchId;
-      result.element = protocol.convertElement(element);
+      var withNullability = element.library?.isNonNullableByDefault ?? false;
+      result.element =
+          protocol.convertElement(element, withNullability: withNullability);
     }
     sendResult(result);
     // search elements

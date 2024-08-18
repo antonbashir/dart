@@ -4,7 +4,6 @@
 
 library sourcemap.js_tracer;
 
-import 'package:compiler/src/io/code_output.dart';
 import 'package:compiler/src/io/source_information.dart';
 import 'package:compiler/src/io/position_information.dart';
 import 'package:compiler/src/js/js.dart' as js;
@@ -16,20 +15,13 @@ import 'trace_graph.dart';
 TraceGraph createTraceGraph(SourceMapInfo info, Coverage coverage) {
   TraceGraph graph = TraceGraph();
   TraceListener listener = StepTraceListener(graph);
-  final outBuffer = NoopCodeOutput();
-  SourceInformationProcessor sourceInformationProcessor =
-      HelperOnlinePositionSourceInformationStrategy([
-    CoverageListener(coverage, const SourceInformationReader()),
-    listener
-  ]).createProcessor(
-          SourceMapperProviderImpl(outBuffer), const SourceInformationReader());
-
-  js.Dart2JSJavaScriptPrintingContext context =
-      js.Dart2JSJavaScriptPrintingContext(null, outBuffer,
-          sourceInformationProcessor, const js.JavaScriptAnnotationMonitor());
-  js.Printer printer =
-      js.Printer(const js.JavaScriptPrintingOptions(), context);
-  printer.visit(info.node);
+  CodePositionMap codePositions =
+      CodePositionCoverage(info.jsCodePositions, coverage);
+  JavaScriptTracer tracer = JavaScriptTracer(
+      codePositions,
+      const SourceInformationReader(),
+      [CoverageListener(coverage, const SourceInformationReader()), listener]);
+  info.node.accept(tracer);
   return graph;
 }
 

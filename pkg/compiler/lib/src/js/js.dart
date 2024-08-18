@@ -13,8 +13,7 @@ import '../js_backend/string_reference.dart';
 import '../js_backend/type_reference.dart';
 import '../options.dart';
 import '../dump_info.dart' show DumpInfoJsAstRegistry;
-import '../io/code_output.dart'
-    show AbstractCodeOutput, CodeBuffer, CodeOutputListener;
+import '../io/code_output.dart' show CodeBuffer, CodeOutputListener;
 import '../serialization/deferrable.dart';
 import '../serialization/serialization.dart';
 import 'js_source_mapping.dart';
@@ -109,7 +108,7 @@ class JavaScriptAnnotationMonitor {
 
 class Dart2JSJavaScriptPrintingContext implements JavaScriptPrintingContext {
   final DumpInfoJsAstRegistry? monitor;
-  final AbstractCodeOutput outBuffer;
+  final CodeBuffer outBuffer;
   final CodePositionListener codePositionListener;
   final JavaScriptAnnotationMonitor annotationMonitor;
 

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/g3/fixes.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/services/linter/lint_names.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
@@ -24,7 +23,6 @@ class G3FixesTest with ResourceProviderMixin {
 
   void setUp() {
     registerLintRules();
-    registerBuiltInProducers();
     createMockSdk(
       resourceProvider: resourceProvider,
       root: sdkRoot,

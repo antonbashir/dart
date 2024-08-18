@@ -10,12 +10,25 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(NotMapSpreadTest);
+    defineReflectiveTests(NotMapSpreadWithoutNullSafetyTest);
     defineReflectiveTests(NotMapSpreadWithStrictCastsTest);
   });
 }
 
 @reflectiveTest
-class NotMapSpreadTest extends PubPackageResolutionTest {
+class NotMapSpreadTest extends PubPackageResolutionTest
+    with NotMapSpreadTestCases {
+  test_map_typeParameter_bound_mapQuestion() async {
+    await assertNoErrorsInCode('''
+void f<T extends Map<int, String>?>(T a) {
+  var v = <int, String>{...?a};
+  v;
+}
+''');
+  }
+}
+
+mixin NotMapSpreadTestCases on PubPackageResolutionTest {
   test_map() async {
     await assertNoErrorsInCode('''
 var a = {0: 0};
@@ -38,15 +51,6 @@ void f<T extends Map<int, String>>(T a) {
 ''');
   }
 
-  test_map_typeParameter_bound_mapQuestion() async {
-    await assertNoErrorsInCode('''
-void f<T extends Map<int, String>?>(T a) {
-  var v = <int, String>{...?a};
-  v;
-}
-''');
-  }
-
   test_notMap_direct() async {
     await assertErrorsInCode('''
 var a = 0;
@@ -61,7 +65,7 @@ var v = <int, int>{...a};
 var a = 0;
 var v = <int, int>{for (var i in []) ...a};
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 39, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 39, 1),
       error(CompileTimeErrorCode.NOT_MAP_SPREAD, 51, 1),
     ]);
   }
@@ -95,6 +99,10 @@ void f<T extends num>(T a) {
     ]);
   }
 }
+
+@reflectiveTest
+class NotMapSpreadWithoutNullSafetyTest extends PubPackageResolutionTest
+    with NotMapSpreadTestCases, WithoutNullSafetyMixin {}
 
 @reflectiveTest
 class NotMapSpreadWithStrictCastsTest extends PubPackageResolutionTest

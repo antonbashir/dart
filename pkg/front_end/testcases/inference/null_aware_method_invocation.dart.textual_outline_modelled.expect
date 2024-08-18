@@ -5,5 +5,4 @@ class C {
 }
 
 g(C? c) {}
-
 main() {}

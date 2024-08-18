@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/source_edits.dart';
@@ -36,14 +35,14 @@ abstract class SimpleEditCommandHandler
       return success(null);
     }
 
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return serverNotInitializedError;
     }
 
-    var lineInfo = unit.lineInfo;
-    var workspaceEdit = toWorkspaceEdit(
+    final lineInfo = unit.lineInfo;
+    final workspaceEdit = toWorkspaceEdit(
       clientCapabilities,
       [
         FileEditInformation(
@@ -65,7 +64,7 @@ abstract class SimpleEditCommandHandler
       WorkspaceEdit workspaceEdit) async {
     // Send the edit to the client via a applyEdit request (this is a request
     // from server -> client and the client will provide a response).
-    var editResponse = await server.sendRequest(Method.workspace_applyEdit,
+    final editResponse = await server.sendRequest(Method.workspace_applyEdit,
         ApplyWorkspaceEditParams(label: commandName, edit: workspaceEdit));
 
     if (editResponse.error != null) {
@@ -81,21 +80,15 @@ abstract class SimpleEditCommandHandler
     // sent - and may have failed to apply - was related to this command
     // execution).
     // We need to fromJson to convert the JSON map to the real types.
-    var editResponseResult = ApplyWorkspaceEditResult.fromJson(
+    final editResponseResult = ApplyWorkspaceEditResult.fromJson(
         editResponse.result as Map<String, Object?>);
-    var ApplyWorkspaceEditResult(:applied, :failureReason) = editResponseResult;
-    if (applied) {
-      return success(null);
-    } else if (failureReason == null) {
-      // If the user cancels a previewed refactoring, we will get applied=false
-      // but no failure reason. In this case, we do not want to reject this as
-      // an error.
+    if (editResponseResult.applied) {
       return success(null);
     } else {
       return error(
         ServerErrorCodes.ClientFailedToApplyEdit,
         'Client failed to apply workspace edit for $commandName '
-        '(reason: $failureReason)',
+        '(reason: ${editResponseResult.failureReason ?? 'Client did not provide a reason'})',
         workspaceEdit.toString(),
       );
     }

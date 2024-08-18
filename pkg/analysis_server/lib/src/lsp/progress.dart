@@ -82,9 +82,9 @@ class _ServerCreatedProgressReporter extends _TokenProgressReporter {
     // Only end the token after both create/begin have completed, and return
     // a Future to indicate that has happened to callers know when it's safe
     // to re-use the token identifier.
-    var beginRequest = _tokenBeginRequest;
+    final beginRequest = _tokenBeginRequest;
     if (beginRequest != null) {
-      var didBegin = await beginRequest;
+      final didBegin = await beginRequest;
       if (didBegin) {
         super.end(message);
       }
@@ -93,8 +93,8 @@ class _ServerCreatedProgressReporter extends _TokenProgressReporter {
   }
 
   static String _randomTokenIdentifier() {
-    var millisecondsSinceEpoch = DateTime.now().millisecondsSinceEpoch;
-    var random = _random.nextInt(0x3fffffff);
+    final millisecondsSinceEpoch = DateTime.now().millisecondsSinceEpoch;
+    final random = _random.nextInt(0x3fffffff);
     return '$millisecondsSinceEpoch$random';
   }
 }
@@ -121,7 +121,7 @@ class _TokenProgressReporter extends ProgressReporter {
   }
 
   void _sendNotification(ToJsonable value) async {
-    _server.sendLspNotification(NotificationMessage(
+    _server.sendNotification(NotificationMessage(
         method: Method.progress,
         params: ProgressParams(
           token: _token,

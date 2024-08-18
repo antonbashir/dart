@@ -8,7 +8,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/ascii_utils.dart';
 
 const _desc = r'Avoid leading underscores for local identifiers.';
@@ -51,16 +50,21 @@ void print(String name) {
 ''';
 
 class NoLeadingUnderscoresForLocalIdentifiers extends LintRule {
+  static const LintCode code = LintCode(
+      'no_leading_underscores_for_local_identifiers',
+      "The local variable '{0}' starts with an underscore.",
+      correctionMessage:
+          'Try renaming the variable to not start with an underscore.');
+
   NoLeadingUnderscoresForLocalIdentifiers()
       : super(
             name: 'no_leading_underscores_for_local_identifiers',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.no_leading_underscores_for_local_identifiers;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

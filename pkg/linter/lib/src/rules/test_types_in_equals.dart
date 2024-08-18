@@ -6,14 +6,13 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Test type of argument in `operator ==(Object other)`.';
+const _desc = r'Test type arguments in operator ==(Object other).';
 
 const _details = r'''
-**DO** test type of argument in `operator ==(Object other)`.
+**DO** test type arguments in operator ==(Object other).
 
-Not testing the type might result in runtime type errors which will be
+Not testing types might result in null pointer exceptions which will be
 unexpected for consumers of your class.
 
 **BAD:**
@@ -69,15 +68,19 @@ class Good {
 ''';
 
 class TestTypesInEquals extends LintRule {
+  static const LintCode code = LintCode(
+      'test_types_in_equals', "Missing type test for '{0}' in '=='.",
+      correctionMessage: "Try testing the type of '{0}'.");
+
   TestTypesInEquals()
       : super(
             name: 'test_types_in_equals',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.test_types_in_equals;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -117,9 +120,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     } else if (parent is MixinDeclaration) {
       return parent.name.lexeme;
     } else if (parent is ExtensionDeclaration) {
-      if (parent.onClause case var onClause?) {
-        return onClause.extendedType.toSource();
-      }
+      return parent.extendedType.toSource();
     }
     return 'unknown';
   }

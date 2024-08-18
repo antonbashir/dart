@@ -19,7 +19,6 @@ class D<S extends num, T extends S> {
 @C<String>()
 @D<int, num>()
 test() {}
-
 @A()
 @A<int>()
 @B()

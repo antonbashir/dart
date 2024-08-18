@@ -10,5 +10,4 @@ class MyFuture<T> implements Future<T> {
 }
 
 void test(Future f) {}
-
 main() {}

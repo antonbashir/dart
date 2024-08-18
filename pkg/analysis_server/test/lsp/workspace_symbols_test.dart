@@ -23,29 +23,29 @@ class WorkspaceSymbolsTest extends AbstractLspAnalysisServerTest {
     const content = '''
 void f() {}
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbolsRequest1 = makeRequest(
+    final symbolsRequest1 = makeRequest(
       Method.workspace_symbol,
       WorkspaceSymbolParams(query: 'f'),
     );
-    var symbolsCancellation1 = makeNotification(
+    final symbolsCancellation1 = makeNotification(
         Method.cancelRequest, CancelParams(id: symbolsRequest1.id));
-    var symbolsRequest2 = makeRequest(
+    final symbolsRequest2 = makeRequest(
       Method.workspace_symbol,
       WorkspaceSymbolParams(query: 'f'),
     );
 
-    var responses = await Future.wait([
+    final responses = await Future.wait([
       sendRequestToServer(symbolsRequest1),
       sendNotificationToServer(symbolsCancellation1),
       sendRequestToServer(symbolsRequest2),
     ]);
 
     // Expect the first response was cancelled.
-    var symbolsResponse1 = responses[0] as ResponseMessage;
+    final symbolsResponse1 = responses[0] as ResponseMessage;
     expect(symbolsResponse1.result, isNull);
     expect(symbolsResponse1.error, isNotNull);
     expect(
@@ -54,7 +54,7 @@ void f() {}
     );
 
     // But second to complete normally.
-    var symbolsResponse2 = responses[2] as ResponseMessage;
+    final symbolsResponse2 = responses[2] as ResponseMessage;
     expect(symbolsResponse2.result, hasLength(greaterThanOrEqualTo(1)));
     expect(symbolsResponse2.error, isNull);
   }
@@ -98,13 +98,13 @@ void f() {}
 extension StringExtensions on String {}
 extension on String {}
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbols = await getWorkspaceSymbols('S');
+    final symbols = await getWorkspaceSymbols('S');
 
-    var namedExtensions =
+    final namedExtensions =
         symbols.firstWhere((s) => s.name == 'StringExtensions');
     expect(namedExtensions.kind, equals(SymbolKind.Class));
     expect(namedExtensions.containerName, isNull);
@@ -116,13 +116,13 @@ extension on String {}
     const content = r'''
 extension type MyExtensionType(int it) {}
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbols = await getWorkspaceSymbols('MyExt');
+    final symbols = await getWorkspaceSymbols('MyExt');
 
-    var namedExtensions =
+    final namedExtensions =
         symbols.firstWhere((s) => s.name == 'MyExtensionType');
     expect(namedExtensions.kind, equals(SymbolKind.Class));
     expect(namedExtensions.containerName, isNull);
@@ -134,13 +134,13 @@ extension type E(int it) {
   void foo() {}
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbols = await getWorkspaceSymbols('foo');
+    final symbols = await getWorkspaceSymbols('foo');
 
-    var namedExtensions =
+    final namedExtensions =
         symbols.firstWhere((s) => s.name == 'foo()' && s.containerName == 'E');
     expect(namedExtensions.kind, equals(SymbolKind.Method));
     expect(namedExtensions.containerName, 'E');
@@ -155,13 +155,13 @@ class MyClass {
   myMethod() {}
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbols = await getWorkspaceSymbols('topLevel');
+    final symbols = await getWorkspaceSymbols('topLevel');
 
-    var topLevel = symbols.firstWhere((s) => s.name == 'topLevel');
+    final topLevel = symbols.firstWhere((s) => s.name == 'topLevel');
     expect(topLevel.kind, equals(SymbolKind.Variable));
     expect(topLevel.containerName, isNull);
     expect(topLevel.location.uri, equals(mainFileUri));
@@ -181,14 +181,14 @@ class MyClass {
   myMethod() {}
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
     // meld should match myField
-    var symbols = await getWorkspaceSymbols('meld');
+    final symbols = await getWorkspaceSymbols('meld');
 
-    var field = symbols.firstWhere((s) => s.name == 'myField');
+    final field = symbols.firstWhere((s) => s.name == 'myField');
     expect(field.kind, equals(SymbolKind.Field));
     expect(field.containerName, equals('MyClass'));
     expect(field.location.uri, equals(mainFileUri));
@@ -203,15 +203,15 @@ class MyClass {
     await initialize();
 
     // Create a request that doesn't supply the query param.
-    var request = RequestMessage(
+    final request = RequestMessage(
       id: Either2<int, String>.t1(1),
       method: Method.workspace_symbol,
       params: <String, dynamic>{},
       jsonrpc: jsonRpcVersion,
     );
 
-    var response = await sendRequestToServer(request);
-    var error = response.error!;
+    final response = await sendRequestToServer(request);
+    final error = response.error!;
     expect(error.code, equals(ErrorCodes.InvalidParams));
     // Ensure the error is useful to the client.
     expect(
@@ -229,7 +229,7 @@ class MyClass {
     // Project 1
     newFile(mainFilePath, content);
     // Project 2
-    var otherFilePath = convertPath('/home/otherProject/foo.dart');
+    final otherFilePath = convertPath('/home/otherProject/foo.dart');
     newFile(otherFilePath, content);
 
     // Initialize with both projects as roots.
@@ -240,7 +240,7 @@ class MyClass {
 
     // Search for something in the SDK that's referenced by both projects and
     // expect it only shows up once.
-    var symbols = await getWorkspaceSymbols('Duration');
+    final symbols = await getWorkspaceSymbols('Duration');
     expect(symbols.where((s) => s.name == 'Duration'), hasLength(1));
   }
 
@@ -254,34 +254,34 @@ class MyClass {
   /*[2*/myMethodWithArgs(int a) {}/*2]*/
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var symbols = await getWorkspaceSymbols('my');
-    var ranges = code.ranges.ranges;
-    var fieldRange = ranges[0];
-    var methodRange = ranges[1];
-    var methodWithArgsRange = ranges[2];
+    final symbols = await getWorkspaceSymbols('my');
+    final ranges = code.ranges.ranges;
+    final fieldRange = ranges[0];
+    final methodRange = ranges[1];
+    final methodWithArgsRange = ranges[2];
 
-    var field = symbols.firstWhere((s) => s.name == 'myField');
+    final field = symbols.firstWhere((s) => s.name == 'myField');
     expect(field.kind, equals(SymbolKind.Field));
     expect(field.containerName, equals('MyClass'));
     expect(field.location.uri, equals(mainFileUri));
     expect(field.location.range, equals(fieldRange));
 
-    var klass = symbols.firstWhere((s) => s.name == 'MyClass');
+    final klass = symbols.firstWhere((s) => s.name == 'MyClass');
     expect(klass.kind, equals(SymbolKind.Class));
     expect(klass.containerName, isNull);
     expect(klass.location.uri, equals(mainFileUri));
 
-    var method = symbols.firstWhere((s) => s.name == 'myMethod()');
+    final method = symbols.firstWhere((s) => s.name == 'myMethod()');
     expect(method.kind, equals(SymbolKind.Method));
     expect(method.containerName, equals('MyClass'));
     expect(method.location.uri, equals(mainFileUri));
     expect(method.location.range, equals(methodRange));
 
-    var methodWithArgs =
+    final methodWithArgs =
         symbols.firstWhere((s) => s.name == 'myMethodWithArgs(…)');
     expect(methodWithArgs.kind, equals(SymbolKind.Method));
     expect(methodWithArgs.containerName, equals('MyClass'));

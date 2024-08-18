@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /// Converts a multi-test to a test using the new static error test framework
-/// (see https://github.com/dart-lang/sdk/tree/main/docs/Testing.md#static-error-tests)
+/// (see https://github.com/dart-lang/sdk/wiki/Testing#static-error-tests)
 /// and a copy of the '/none' test.
 library;
 
@@ -154,7 +154,7 @@ Future<void> convertFile(String testFilePath, bool writeToFile, bool verbose,
   // Read test file and setup output directory.
   var suiteDirectory = Path.raw(Uri.base.path);
   var content = await testFile.readAsString();
-  var test = TestFile.read(suiteDirectory, testFilePath);
+  var test = TestFile.parse(suiteDirectory, testFilePath, content);
   if (!content.contains(multitestMarker)) {
     print("Test ${test.path.toNativePath()} is not a multi-test.");
     exitCode = 1;
@@ -210,7 +210,7 @@ Future<void> convertFile(String testFilePath, bool writeToFile, bool verbose,
     // Insert the error message annotations for the static testing framework
     // and output the result.
     var annotatedContent =
-        updateErrorExpectations(testFilePath, contentWithoutMarkers, errors[0]);
+        updateErrorExpectations(contentWithoutMarkers, errors[0]);
     if (writeToFile) {
       await testFile.writeAsString(annotatedContent);
       print("Converted test '${test.path.toNativePath()}'.");

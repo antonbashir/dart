@@ -109,3 +109,10 @@ class TestDriver {
     options.errors.clear();
   }
 }
+
+class NullSafetyTestOption {
+  final String description;
+  final bool soundNullSafety;
+
+  NullSafetyTestOption(this.description, this.soundNullSafety);
+}

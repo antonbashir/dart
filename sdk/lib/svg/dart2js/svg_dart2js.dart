@@ -1,16 +1,11 @@
 /// Scalable Vector Graphics:
 /// Two-dimensional vector graphics with support for events and animation.
 ///
-/// > [!Note]
-/// > New projects should prefer to use
-/// > [package:web](https://pub.dev/packages/web). For existing projects, see
-/// > our [migration guide](https://dart.dev/go/package-web).
-///
 /// For details about the features and syntax of SVG, a W3C standard,
 /// refer to the
 /// [Scalable Vector Graphics Specification](http://www.w3.org/TR/SVG/).
 ///
-/// {@category Web (Legacy)}
+/// {@category Web}
 library dart.dom.svg;
 
 import 'dart:async';
@@ -2065,7 +2060,7 @@ class LengthList extends JavaScriptObject
   // -- start List<Length> mixins.
   // Length is the element type.
 
-  set length(int newLength) {
+  set length(int value) {
     throw new UnsupportedError("Cannot resize immutable List.");
   }
 
@@ -2390,7 +2385,7 @@ class NumberList extends JavaScriptObject
   // -- start List<Number> mixins.
   // Number is the element type.
 
-  set length(int newLength) {
+  set length(int value) {
     throw new UnsupportedError("Cannot resize immutable List.");
   }
 
@@ -2873,7 +2868,7 @@ class StringList extends JavaScriptObject
   // -- start List<String> mixins.
   // String is the element type.
 
-  set length(int newLength) {
+  set length(int value) {
     throw new UnsupportedError("Cannot resize immutable List.");
   }
 
@@ -3862,7 +3857,7 @@ class TransformList extends JavaScriptObject
   // -- start List<Transform> mixins.
   // Transform is the element type.
 
-  set length(int newLength) {
+  set length(int value) {
     throw new UnsupportedError("Cannot resize immutable List.");
   }
 

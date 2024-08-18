@@ -41,6 +41,10 @@ FlowGraphCompiler::~FlowGraphCompiler() {
   }
 }
 
+bool FlowGraphCompiler::SupportsUnboxedDoubles() {
+  return true;
+}
+
 bool FlowGraphCompiler::SupportsUnboxedSimd128() {
   return FLAG_enable_simd_inline;
 }
@@ -278,15 +282,22 @@ void FlowGraphCompiler::GenerateAssertAssignable(
   if (dst_type.IsNull()) {
     __ Comment("AssertAssignable for runtime type");
     // kDstTypeReg should already contain the destination type.
-    GenerateNonLazyDeoptableStubCall(source,
-                                     StubCode::TypeIsTopTypeForSubtyping(),
-                                     UntaggedPcDescriptors::kOther, locs);
+    const bool null_safety =
+        IsolateGroup::Current()->use_strict_null_safety_checks();
+    GenerateNonLazyDeoptableStubCall(
+        source,
+        null_safety ? StubCode::TypeIsTopTypeForSubtypingNullSafe()
+                    : StubCode::TypeIsTopTypeForSubtyping(),
+        UntaggedPcDescriptors::kOther, locs);
     // TypeTestABI::kSubtypeTestCacheReg is 0 if the type is a top type.
     __ BranchIfZero(TypeTestABI::kSubtypeTestCacheReg, &is_assignable,
                     compiler::Assembler::kNearJump);
 
-    GenerateNonLazyDeoptableStubCall(source, StubCode::NullIsAssignableToType(),
-                                     UntaggedPcDescriptors::kOther, locs);
+    GenerateNonLazyDeoptableStubCall(
+        source,
+        null_safety ? StubCode::NullIsAssignableToTypeNullSafe()
+                    : StubCode::NullIsAssignableToType(),
+        UntaggedPcDescriptors::kOther, locs);
     // TypeTestABI::kSubtypeTestCacheReg is 0 if the object is null and is
     // assignable.
     __ BranchIfZero(TypeTestABI::kSubtypeTestCacheReg, &is_assignable,

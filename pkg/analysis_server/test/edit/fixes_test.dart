@@ -5,7 +5,6 @@
 import 'package:analysis_server/protocol/protocol_generated.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/plugin/plugin_manager.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/instrumentation/service.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
@@ -29,20 +28,19 @@ class FixesTest extends PubPackageAnalysisServerTest {
   @override
   Future<void> setUp() async {
     super.setUp();
-    registerBuiltInProducers();
     await setRoots(included: [workspaceRootPath], excluded: []);
   }
 
   Future<void> test_fileOutsideRoot() async {
-    var outsideFile = '/foo/test.dart';
+    final outsideFile = '/foo/test.dart';
     newFile(outsideFile, 'bad code to create error');
 
     // Set up the original project, as the code fix code won't run at all
     // if there are no contexts.
     await waitForTasksFinished();
 
-    var request = EditGetFixesParams(convertPath(outsideFile), 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request =
+        EditGetFixesParams(convertPath(outsideFile), 0).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -103,20 +101,19 @@ bar() {
     {
       var errorFixes = await _getFixesAt(testFile, 'print(1)');
       expect(errorFixes, hasLength(1));
-      _isSyntacticErrorWithMultiFix(errorFixes[0]);
+      _isSyntacticErrorWithSingleFix(errorFixes[0]);
     }
     // print(10)
     {
       var errorFixes = await _getFixesAt(testFile, 'print(10)');
       expect(errorFixes, hasLength(2));
-      _isSyntacticErrorWithMultiFix(errorFixes[0]);
-      _isSyntacticErrorWithMultiFix(errorFixes[0]);
+      _isSyntacticErrorWithSingleFix(errorFixes[0]);
+      _isSyntacticErrorWithSingleFix(errorFixes[1]);
     }
   }
 
   Future<void> test_invalidFilePathFormat_notAbsolute() async {
-    var request = EditGetFixesParams('test.dart', 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditGetFixesParams('test.dart', 0).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -127,7 +124,7 @@ bar() {
 
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var request = EditGetFixesParams(convertPath('/foo/../bar/test.dart'), 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -153,18 +150,23 @@ print(1)
   }
 
   Future<void> test_suggestImportFromDifferentAnalysisRoot() async {
-    writePackageConfig(
-      convertPath('$workspaceRootPath/aaa'),
-      config: (PackageConfigFileBuilder()
-        ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb')),
+    newPackageConfigJsonFile(
+      '$workspaceRootPath/aaa',
+      (PackageConfigFileBuilder()
+            ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa')
+            ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'))
+          .toContent(toUriStr: toUriStr),
     );
     newPubspecYamlFile('$workspaceRootPath/aaa', r'''
 dependencies:
   bbb: any
 ''');
 
-    writePackageConfig(
-      convertPath('$workspaceRootPath/bbb'),
+    newPackageConfigJsonFile(
+      '$workspaceRootPath/bbb',
+      (PackageConfigFileBuilder()
+            ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'))
+          .toContent(toUriStr: toUriStr),
     );
     newFile('$workspaceRootPath/bbb/lib/target.dart', 'class Foo() {}');
     newFile(
@@ -173,7 +175,7 @@ dependencies:
         '$workspaceRootPath/bbb/lib/target.template.dart', 'class Foo() {}');
 
     // Configure the test file.
-    var file =
+    final file =
         newFile('$workspaceRootPath/aaa/main.dart', 'void f() { Foo(); }');
 
     await waitForTasksFinished();
@@ -196,16 +198,14 @@ dependencies:
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         name: AddContentOverlay(contents),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
   }
 
   Future<List<AnalysisErrorFixes>> _getFixes(File file, int offset) async {
-    var request = EditGetFixesParams(file.path, offset)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditGetFixesParams(file.path, offset).toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = EditGetFixesResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = EditGetFixesResult.fromResponse(response);
     return result.fixes;
   }
 
@@ -214,19 +214,10 @@ dependencies:
     return await _getFixes(file, offset);
   }
 
-  void _isSyntacticError(AnalysisErrorFixes fixes) {
+  void _isSyntacticErrorWithSingleFix(AnalysisErrorFixes fixes) {
     var error = fixes.error;
     expect(error.severity, AnalysisErrorSeverity.ERROR);
     expect(error.type, AnalysisErrorType.SYNTACTIC_ERROR);
-  }
-
-  void _isSyntacticErrorWithMultiFix(AnalysisErrorFixes fixes) {
-    _isSyntacticError(fixes);
-    expect(fixes.fixes.length, greaterThan(1));
-  }
-
-  void _isSyntacticErrorWithSingleFix(AnalysisErrorFixes fixes) {
-    _isSyntacticError(fixes);
     expect(fixes.fixes, hasLength(1));
   }
 }

@@ -24,7 +24,5 @@ class F implements otherLib.C {
 }
 
 void acceptsInt(int x) {}
-
 void testConflictsWithNoSuchMethodForwarder(C c) {}
-
 void testNoConflictWithNoSuchMethodForwarderForDifferentLib(C c) {}

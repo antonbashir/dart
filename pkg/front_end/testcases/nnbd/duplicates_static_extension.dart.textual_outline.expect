@@ -34,9 +34,6 @@ extension Extension on int {
 }
 
 test() {}
-
 main() {}
-
 expect(expected, actual) {}
-
 throws(dynamic Function() f) {}

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "vm/closure_functions_cache.h"
-#include "vm/compiler/backend/flow_graph_compiler.h"
 #include "vm/compiler/backend/il_printer.h"
 #include "vm/compiler/backend/il_test_helper.h"
 #include "vm/compiler/call_specializer.h"
@@ -40,25 +39,43 @@ ISOLATE_UNIT_TEST_CASE(IRTest_TypedDataAOT_Inlining) {
   auto entry = flow_graph->graph_entry()->normal_entry();
   EXPECT(entry != nullptr);
 
+  CheckNullInstr* check_null = nullptr;
   LoadFieldInstr* load_field = nullptr;
   GenericCheckBoundInstr* bounds_check = nullptr;
   LoadFieldInstr* load_untagged = nullptr;
   LoadIndexedInstr* load_indexed = nullptr;
 
   ILMatcher cursor(flow_graph, entry);
-  RELEASE_ASSERT(cursor.TryMatch({
-      kMoveGlob,
-      {kMatchAndMoveLoadField, &load_field},
-      kMoveGlob,
-      kMatchAndMoveBranchTrue,
-      kMoveGlob,
-      {kMatchAndMoveGenericCheckBound, &bounds_check},
-      {kMatchAndMoveLoadField, &load_untagged},
-      kMoveParallelMoves,
-      {kMatchAndMoveLoadIndexed, &load_indexed},
-      kMoveGlob,
-      kMatchDartReturn,
-  }));
+  if (IsolateGroup::Current()->null_safety()) {
+    RELEASE_ASSERT(cursor.TryMatch({
+        kMoveGlob,
+        {kMatchAndMoveLoadField, &load_field},
+        kMoveGlob,
+        kMatchAndMoveBranchTrue,
+        kMoveGlob,
+        {kMatchAndMoveGenericCheckBound, &bounds_check},
+        {kMatchAndMoveLoadField, &load_untagged},
+        kMoveParallelMoves,
+        {kMatchAndMoveLoadIndexed, &load_indexed},
+        kMoveGlob,
+        kMatchReturn,
+    }));
+  } else {
+    RELEASE_ASSERT(cursor.TryMatch({
+        kMoveGlob,
+        {kMatchAndMoveCheckNull, &check_null},
+        {kMatchAndMoveLoadField, &load_field},
+        kMoveGlob,
+        kMatchAndMoveBranchTrue,
+        kMoveGlob,
+        {kMatchAndMoveGenericCheckBound, &bounds_check},
+        {kMatchAndMoveLoadField, &load_untagged},
+        kMoveParallelMoves,
+        {kMatchAndMoveLoadIndexed, &load_indexed},
+        kMoveGlob,
+        kMatchReturn,
+    }));
+  }
 
   EXPECT(load_field->InputAt(0)->definition()->IsParameter());
   EXPECT(bounds_check->length()
@@ -110,48 +127,94 @@ ISOLATE_UNIT_TEST_CASE(IRTest_TypedDataAOT_FunctionalGetSet) {
 
     // Ensure the IL matches what we expect.
     ILMatcher cursor(flow_graph, entry);
-    EXPECT(cursor.TryMatch({
-        // Before loop
-        kMoveGlob,
-        kMatchAndMoveLoadField,
-        kMoveGlob,
-        kMatchAndMoveBranchTrue,
+    if (IsolateGroup::Current()->null_safety()) {
+      EXPECT(cursor.TryMatch({
+          // Before loop
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveGlob,
+          kMatchAndMoveBranchTrue,
 
-        // Loop
-        kMoveGlob,
-        // Load 1
-        kMatchAndMoveGenericCheckBound,
-        kMoveGlob,
-        kMatchAndMoveLoadField,
-        kMoveParallelMoves,
-        kMatchAndMoveLoadIndexed,
-        kMoveGlob,
-        // Load 2
-        kMatchAndMoveGenericCheckBound,
-        kMoveGlob,
-        kMatchAndMoveLoadField,
-        kMoveParallelMoves,
-        kMatchAndMoveLoadIndexed,
-        kMoveGlob,
-        // Store 1
-        kMatchAndMoveCheckWritable,
-        kMoveParallelMoves,
-        kMatchAndMoveLoadField,
-        kMoveParallelMoves,
-        kMatchAndMoveStoreIndexed,
-        kMoveGlob,
-        // Store 2
-        kMoveParallelMoves,
-        kMatchAndMoveLoadField,
-        kMoveParallelMoves,
-        kMatchAndMoveStoreIndexed,
-        kMoveGlob,
+          // Loop
+          kMoveGlob,
+          // Load 1
+          kMatchAndMoveGenericCheckBound,
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadIndexed,
+          kMoveGlob,
+          // Load 2
+          kMatchAndMoveGenericCheckBound,
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadIndexed,
+          kMoveGlob,
+          // Store 1
+          kMatchAndMoveCheckWritable,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
+          kMoveGlob,
+          // Store 2
+          kMoveParallelMoves,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
+          kMoveGlob,
 
-        // Exit the loop.
-        kMatchAndMoveBranchFalse,
-        kMoveGlob,
-        kMatchDartReturn,
-    }));
+          // Exit the loop.
+          kMatchAndMoveBranchFalse,
+          kMoveGlob,
+          kMatchReturn,
+      }));
+    } else {
+      EXPECT(cursor.TryMatch({
+          // Before loop
+          kMoveGlob,
+          kMatchAndMoveCheckNull,
+          kMatchAndMoveLoadField,
+          kMoveGlob,
+          kMatchAndMoveBranchTrue,
+
+          // Loop
+          kMoveGlob,
+          // Load 1
+          kMatchAndMoveGenericCheckBound,
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadIndexed,
+          kMoveGlob,
+          // Load 2
+          kMatchAndMoveGenericCheckBound,
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadIndexed,
+          kMoveGlob,
+          // Store 1
+          kMatchAndMoveCheckWritable,
+          kMoveParallelMoves,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
+          kMoveGlob,
+          // Store 2
+          kMoveParallelMoves,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
+          kMoveGlob,
+
+          // Exit the loop.
+          kMatchAndMoveBranchFalse,
+          kMoveGlob,
+          kMatchReturn,
+      }));
+    }
   };
 
   check_il("Uint8List");
@@ -165,11 +228,6 @@ ISOLATE_UNIT_TEST_CASE(IRTest_TypedDataAOT_FunctionalGetSet) {
   check_il("Uint64List");
   check_il("Float32List");
   check_il("Float64List");
-  if (FlowGraphCompiler::SupportsUnboxedSimd128()) {
-    check_il("Int32x4List");
-    check_il("Float32x4List");
-    check_il("Float64x2List");
-  }
 }
 
 // This test asserts that we get errors if receiver, index or value are null.
@@ -212,27 +270,63 @@ ISOLATE_UNIT_TEST_CASE(IRTest_TypedDataAOT_FunctionalIndexError) {
 
     // Ensure the IL matches what we expect.
     ILMatcher cursor(flow_graph, entry, /*trace=*/true);
-    EXPECT(cursor.TryMatch({
-        // LoadField length
-        kMoveGlob,
-        kMatchAndMoveLoadField,
+    if (IsolateGroup::Current()->null_safety()) {
+      EXPECT(cursor.TryMatch({
+          // LoadField length
+          kMoveGlob,
+          kMatchAndMoveLoadField,
 
-        // Bounds check
-        kMoveGlob,
-        kMatchAndMoveGenericCheckBound,
+          // Bounds check
+          kMoveGlob,
+          kMatchAndMoveGenericCheckBound,
 
-        // Store value.
-        kMoveGlob,
-        kMatchAndMoveLoadField,
-        kMoveParallelMoves,
-        kMatchAndMoveOptionalUnbox,
-        kMoveParallelMoves,
-        kMatchAndMoveStoreIndexed,
+          // Store value.
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveOptionalUnbox,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
 
-        // Return
-        kMoveGlob,
-        kMatchDartReturn,
-    }));
+          // Return
+          kMoveGlob,
+          kMatchReturn,
+      }));
+    } else {
+      EXPECT(cursor.TryMatch({
+          // Receiver null check
+          kMoveGlob,
+          kMatchAndMoveCheckNull,
+
+          // Index null check
+          kMoveGlob,
+          kMatchAndMoveCheckNull,
+
+          // Value null check
+          kMoveGlob,
+          kMatchAndMoveCheckNull,
+
+          // LoadField length
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+
+          // Bounds check
+          kMoveGlob,
+          kMatchAndMoveGenericCheckBound,
+
+          // Store value.
+          kMoveGlob,
+          kMatchAndMoveLoadField,
+          kMoveParallelMoves,
+          kMatchAndMoveOptionalUnbox,
+          kMoveParallelMoves,
+          kMatchAndMoveStoreIndexed,
+
+          // Return
+          kMoveGlob,
+          kMatchReturn,
+      }));
+    }
 
     // Compile the graph and attach the code.
     pipeline.CompileGraphAndAttachFunction();
@@ -283,7 +377,8 @@ ISOLATE_UNIT_TEST_CASE(IRTest_TypedDataAOT_FunctionalIndexError) {
   const auto& float_value = Double::Handle(Double::New(4.2));
   // With null safety nulls cannot be passed as non-nullable arguments, so
   // skip all error stages and only run the last stage.
-  const intptr_t first_stage = kLastStage;
+  const intptr_t first_stage =
+      IsolateGroup::Current()->null_safety() ? kLastStage : 0;
   for (intptr_t stage = first_stage; stage <= kLastStage; ++stage) {
     run_test("Uint8List", "int", int8_list, int_value, stage);
     run_test("Int8List", "int", uint8_list, int_value, stage);

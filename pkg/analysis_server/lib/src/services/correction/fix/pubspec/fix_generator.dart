@@ -3,10 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/scanner/characters.dart';
+import 'package:analysis_server/plugin/edit/fix/fix_core.dart';
 import 'package:analysis_server/src/services/correction/fix/pubspec/fix_kind.dart';
 import 'package:analysis_server/src/utilities/yaml_node_locator.dart';
-import 'package:analysis_server_plugin/edit/fix/fix.dart';
-import 'package:analysis_server_plugin/src/correction/change_workspace.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/file_system.dart';
@@ -17,6 +16,7 @@ import 'package:analyzer/src/pubspec/pubspec_warning_code.dart';
 import 'package:analyzer/src/pubspec/validators/missing_dependency_validator.dart';
 import 'package:analyzer/src/util/yaml.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_workspace.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:yaml/yaml.dart';
 
@@ -147,32 +147,32 @@ class PubspecFixGenerator {
     }
     change.id = kind.id;
     change.message = formatList(kind.message, null);
-    fixes.add(Fix(kind: kind, change: change));
+    fixes.add(Fix(kind, change));
   }
 
   Future<void> _addMissingDependency(ErrorCode errorCode) async {
-    var node = this.node;
+    final node = this.node;
     if (node is! YamlMap) {
       return;
     }
     var builder = ChangeBuilder(
         workspace: _NonDartChangeWorkspace(resourceProvider), eol: endOfLine);
 
-    var data = error.data as MissingDependencyData;
+    final data = error.data as MissingDependencyData;
     var addDeps = data.addDeps;
     var addDevDeps = data.addDevDeps;
     var removeDevDeps = data.removeDevDeps;
 
     if (addDeps.isNotEmpty) {
       var (text, offset) = _getTextAndOffset(node, 'dependencies', addDeps);
-      await builder.addYamlFileEdit(file, (builder) {
+      await builder.addGenericFileEdit(file, (builder) {
         builder.addSimpleInsertion(offset, text);
       });
     }
     if (addDevDeps.isNotEmpty) {
       var (text, offset) =
           _getTextAndOffset(node, 'dev_dependencies', addDevDeps);
-      await builder.addYamlFileEdit(file, (builder) {
+      await builder.addGenericFileEdit(file, (builder) {
         builder.addSimpleInsertion(offset, text);
       });
     }
@@ -191,7 +191,7 @@ class PubspecFixGenerator {
         if (currentEntry != null && prevEntry != null) {
           var startOffset = prevEntry.value.span.end.offset;
           var endOffset = currentEntry.value.span.end.offset;
-          await builder.addYamlFileEdit(file, (builder) {
+          await builder.addGenericFileEdit(file, (builder) {
             builder
                 .addDeletion(SourceRange(startOffset, endOffset - startOffset));
           });
@@ -202,14 +202,13 @@ class PubspecFixGenerator {
         // Go through entries and remove each one.
         for (var dep in removeDevDeps) {
           MapEntry<dynamic, YamlNode>? currentEntry, nextEntry, prevEntry;
-          var length = section.nodes.entries.length;
-          for (int i = 0; i < length; i++) {
-            var entry = section.nodes.entries.elementAt(i);
+          for (var entry in section.nodes.entries) {
             if (entry.key.value == dep) {
               currentEntry = entry;
-              if (i + 1 < length) {
-                nextEntry = section.nodes.entries.elementAt(i + 1);
-              }
+              continue;
+            }
+            if (currentEntry != null) {
+              nextEntry = entry;
               break;
             }
             prevEntry = entry;
@@ -241,17 +240,7 @@ class PubspecFixGenerator {
             var endOffset = nextEntry == null
                 ? currentEntry.value.span.end.offset
                 : (nextEntry.key as YamlNode).span.start.offset;
-            // If entry in the middle of two other entries that are not to be
-            // removed, delete the line.
-            if (prevEntry != null &&
-                nextEntry != null &&
-                !removeDevDeps.contains(prevEntry.key.value) &&
-                !removeDevDeps.contains(nextEntry.key.value)) {
-              var line = (currentEntry.key as YamlNode).span.start.line;
-              startOffset = lineInfo.lineStarts[line];
-              var nextLine = (nextEntry.key as YamlNode).span.start.line;
-              endOffset = lineInfo.lineStarts[nextLine];
-            }
+
             if (edit == null) {
               edit = _Range(startOffset, endOffset);
             } else if (edit.endOffset > startOffset) {
@@ -259,7 +248,7 @@ class PubspecFixGenerator {
               edit = _Range(edit.startOffset, endOffset);
             } else {
               // Edits don't conflict, add previously computed edit to builder.
-              await builder.addYamlFileEdit(file, (builder) {
+              await builder.addGenericFileEdit(file, (builder) {
                 builder.addDeletion(SourceRange(
                     edit!.startOffset, edit.endOffset - edit.startOffset));
               });
@@ -270,7 +259,7 @@ class PubspecFixGenerator {
         // Iterated through all the entries to be removed, add the last computed
         // edit to builder.
         if (edit != null) {
-          await builder.addYamlFileEdit(file, (builder) {
+          await builder.addGenericFileEdit(file, (builder) {
             builder.addDeletion(SourceRange(
                 edit!.startOffset, edit.endOffset - edit.startOffset));
           });
@@ -291,7 +280,7 @@ class PubspecFixGenerator {
       // map.
       return;
     }
-    await builder.addYamlFileEdit(file, (builder) {
+    await builder.addGenericFileEdit(file, (builder) {
       // TODO(brianwilkerson): Generalize this to add a key to any map by
       //  inserting the indentation of the line containing `firstOffset` after
       //  the end-of-line marker.

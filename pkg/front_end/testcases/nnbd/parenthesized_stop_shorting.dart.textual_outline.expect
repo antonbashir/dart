@@ -3,7 +3,5 @@ class A {
 }
 
 bar(int x) {}
-
 test(A? a) {}
-
 main() {}

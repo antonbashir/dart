@@ -1,5 +1,0 @@
-expectThrows<Exception>(void Function() f) {}
-
-main() {}
-
-test(dynamic x, dynamic list) {}

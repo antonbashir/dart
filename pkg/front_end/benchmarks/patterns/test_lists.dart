@@ -13,44 +13,40 @@ class InputOutputData<T> {
   const InputOutputData(this.input, this.output);
 }
 
-const Strategy simpleAddStrategy =
-    Strategy('simpleAddStrategy', 'simple-add', '''
+const Strategy simpleAddStrategy = Strategy('simple-add', '''
 Add entries to a list one at a time.''');
 
-const Strategy spreadStrategy = Strategy('spreadStrategy', 'spread', '''
+const Strategy spreadStrategy = Strategy('spread', '''
 Create the list via spreads.''');
 
 const Strategy listGenerateGrowableStrategy =
-    Strategy('listGenerateGrowableStrategy', 'list-generate-growable', '''
+    Strategy('list-generate-growable', '''
 Create list via List.generate with growable = true.''');
 
-const Strategy listGenerateNotGrowableStrategy = Strategy(
-    'listGenerateNotGrowableStrategy', 'list-generate-not-growable', '''
+const Strategy listGenerateNotGrowableStrategy =
+    Strategy('list-generate-not-growable', '''
 Create list via List.generate with growable = false.''');
 
-const Strategy listFilledGrowableStrategy =
-    Strategy('listFilledGrowableStrategy', 'list-filled-growable', '''
+const Strategy listFilledGrowableStrategy = Strategy('list-filled-growable', '''
 Create list via List.generate with growable = true.''');
 
 const Strategy listFilledNotGrowableStrategy =
-    Strategy('listFilledNotGrowableStrategy', 'list-filled-not-growable', '''
+    Strategy('list-filled-not-growable', '''
 Create list via List.generate with growable = false.''');
 
-const Strategy listFilledAlternativeGrowableStrategy = Strategy(
-    'listFilledAlternativeGrowableStrategy', 'list-filled-alt-growable', '''
+const Strategy listFilledAlternativeGrowableStrategy =
+    Strategy('list-filled-alt-growable', '''
 Create list via List.generate with growable = true in an alternative way.''');
 
-const Strategy listFilledAlternativeNotGrowableStrategy = Strategy(
-    'listFilledAlternativeNotGrowableStrategy',
-    'list-filled-alt-not-growable', '''
+const Strategy listFilledAlternativeNotGrowableStrategy =
+    Strategy('list-filled-alt-not-growable', '''
 Create list via List.generate with growable = false in an alternative way.''');
 
-const Scenario emptyScenario = Scenario('emptyScenario', 'empty', '''
+const Scenario emptyScenario = Scenario('empty', '''
 The input and output is empty.''');
-const Scenario oneEntryScenario = Scenario('oneEntryScenario', 'one', '''
+const Scenario oneEntryScenario = Scenario('one', '''
 The input is one entry.''');
-const Scenario severalEntriesScenario =
-    Scenario('severalEntriesScenario', 'several', '''
+const Scenario severalEntriesScenario = Scenario('several', '''
 The input has several entries.''');
 
 Map<Scenario, InputOutputData<String>> scenarios = {
@@ -265,7 +261,7 @@ void main() {
   SeriesSet seriesSet = registry.generateSeriesSet();
   print('== Raw data ==');
   for (Scenario scenario in scenarios.keys) {
-    print(seriesSet.getFullSpreadByScenarioTable(scenario));
+    print(seriesSet.getFullSpreadByScenario(scenario));
   }
   print('== Reduced averages ==');
   SeriesSet reducedSeriesSet = seriesSet.filter((list) => removeMax(list, 3));

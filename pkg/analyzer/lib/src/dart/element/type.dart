@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
@@ -22,17 +21,16 @@ import 'package:collection/collection.dart';
 /// Returns a [List] of fixed length with given types.
 List<DartType> fixedTypeList(DartType e1, [DartType? e2]) {
   if (e2 != null) {
-    var result = List<DartType>.filled(2, e1);
+    final result = List<DartType>.filled(2, e1, growable: false);
     result[1] = e2;
     return result;
   } else {
-    return List<DartType>.filled(1, e1);
+    return List<DartType>.filled(1, e1, growable: false);
   }
 }
 
 /// The [Type] representing the type `dynamic`.
-class DynamicTypeImpl extends TypeImpl
-    implements DynamicType, SharedDynamicType<DartType> {
+class DynamicTypeImpl extends TypeImpl implements DynamicType {
   /// The unique instance of this class.
   static final DynamicTypeImpl instance = DynamicTypeImpl._();
 
@@ -120,8 +118,8 @@ class FunctionTypeImpl extends TypeImpl implements FunctionType {
   @override
   int get hashCode {
     // Reference the arrays of parameters
-    var normalParameterTypes = this.normalParameterTypes;
-    var optionalParameterTypes = this.optionalParameterTypes;
+    final normalParameterTypes = this.normalParameterTypes;
+    final optionalParameterTypes = this.optionalParameterTypes;
     var namedParameterTypes = this.namedParameterTypes.values;
     // Generate the hashCode
     var code = returnType.hashCode;
@@ -477,7 +475,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
     required this.nullabilitySuffix,
     super.alias,
   }) {
-    if (element.augmentationTarget != null) {
+    if (element.isAugmentation) {
       throw ArgumentError(
         'InterfaceType(s) can only be created for declarations',
       );
@@ -564,7 +562,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
 
   @override
   bool get isDartCoreEnum {
-    var element = this.element;
+    final element = this.element;
     return element is ClassElement && element.isDartCoreEnum;
   }
 
@@ -659,8 +657,8 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   /// The instantiated representation type, if [element] is an extension type.
   DartType? get representationType {
     if (element case ExtensionTypeElement element) {
-      var substitution = Substitution.fromInterfaceType(this);
-      var representationType = element.representation.type;
+      final substitution = Substitution.fromInterfaceType(this);
+      final representationType = element.representation.type;
       return substitution.substituteType(representationType);
     }
     return null;
@@ -680,10 +678,9 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
 
   @override
   List<InterfaceType> get superclassConstraints {
-    var element = this.element;
-    var augmented = element.augmented;
-    if (augmented is AugmentedMixinElement) {
-      var constraints = augmented.superclassConstraints;
+    final element = this.element;
+    if (element is MixinElement) {
+      final constraints = element.superclassConstraints;
       return _instantiateSuperTypes(constraints);
     } else {
       return [];
@@ -699,13 +696,11 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
       return true;
     }
     if (other is InterfaceTypeImpl) {
-      if (!identical(other.element, element)) {
-        return false;
-      }
       if (other.nullabilitySuffix != nullabilitySuffix) {
         return false;
       }
-      return TypeImpl.equalArrays(other.typeArguments, typeArguments);
+      return other.element == element &&
+          TypeImpl.equalArrays(other.typeArguments, typeArguments);
     }
     return false;
   }
@@ -759,14 +754,12 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   @override
   ConstructorElement? lookUpConstructor(
       String? constructorName, LibraryElement library) {
-    var augmented = element.augmented;
-
     // prepare base ConstructorElement
     ConstructorElement? constructorElement;
     if (constructorName == null) {
-      constructorElement = augmented.unnamedConstructor;
+      constructorElement = element.unnamedConstructor;
     } else {
-      constructorElement = augmented.getNamedConstructor(constructorName);
+      constructorElement = element.getNamedConstructor(constructorName);
     }
     // not found or not accessible
     if (constructorElement == null ||
@@ -809,7 +802,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
     }
 
     if (recoveryStatic) {
-      var element = this.element as InterfaceElementImpl;
+      final element = this.element as InterfaceElementImpl;
       return element.lookupStaticGetter(name, library);
     }
 
@@ -848,7 +841,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
     }
 
     if (recoveryStatic) {
-      var element = this.element as InterfaceElementImpl;
+      final element = this.element as InterfaceElementImpl;
       return element.lookupStaticMethod(name, library);
     }
 
@@ -887,7 +880,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
     }
 
     if (recoveryStatic) {
-      var element = this.element as InterfaceElementImpl;
+      final element = this.element as InterfaceElementImpl;
       return element.lookupStaticSetter(name, library);
     }
 
@@ -922,8 +915,8 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
       substitution = Substitution.fromInterfaceType(this);
     }
 
-    List<InterfaceTypeImpl> results = [];
-    for (var definedType in definedTypes) {
+    final List<InterfaceTypeImpl> results = [];
+    for (final definedType in definedTypes) {
       var result = substitution != null
           ? substitution.substituteType(definedType)
           : definedType;
@@ -935,8 +928,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   }
 }
 
-class InvalidTypeImpl extends TypeImpl
-    implements InvalidType, SharedInvalidType<DartType> {
+class InvalidTypeImpl extends TypeImpl implements InvalidType {
   /// The unique instance of this class.
   static final InvalidTypeImpl instance = InvalidTypeImpl._();
 
@@ -994,8 +986,24 @@ class InvalidTypeImpl extends TypeImpl
 /// The type `Never` represents the uninhabited bottom type.
 class NeverTypeImpl extends TypeImpl implements NeverType {
   /// The unique instance of this class, nullable.
+  ///
+  /// This behaves equivalently to the `Null` type, but we distinguish it for
+  /// two reasons: (1) there are circumstances where we need access to this
+  /// type, but we don't have access to the type provider, so using `Never?` is
+  /// a convenient solution.  (2) we may decide that the distinction is
+  /// convenient in diagnostic messages (this is TBD).
   static final NeverTypeImpl instanceNullable =
       NeverTypeImpl._(NullabilitySuffix.question);
+
+  /// The unique instance of this class, starred.
+  ///
+  /// This behaves like a version of the Null* type that could be conceivably
+  /// migrated to be of type Never. Therefore, it's the bottom of all legacy
+  /// types, and also assignable to the true bottom. Note that Never? and Never*
+  /// are not the same type, as Never* is a subtype of Never, while Never? is
+  /// not.
+  static final NeverTypeImpl instanceLegacy =
+      NeverTypeImpl._(NullabilitySuffix.star);
 
   /// The unique instance of this class, non-nullable.
   static final NeverTypeImpl instance = NeverTypeImpl._(NullabilitySuffix.none);
@@ -1056,8 +1064,7 @@ class NeverTypeImpl extends TypeImpl implements NeverType {
       case NullabilitySuffix.question:
         return instanceNullable;
       case NullabilitySuffix.star:
-        // TODO(scheglov): remove together with `star`
-        return instanceNullable;
+        return instanceLegacy;
       case NullabilitySuffix.none:
         return instance;
     }
@@ -1083,11 +1090,6 @@ class RecordTypeImpl extends TypeImpl implements RecordType {
   @override
   final NullabilitySuffix nullabilitySuffix;
 
-  @override
-  late final List<DartType> positionalTypes = [
-    for (var field in positionalFields) field.type
-  ];
-
   RecordTypeImpl({
     required this.positionalFields,
     required List<RecordTypeNamedFieldImpl> namedFields,
@@ -1102,10 +1104,11 @@ class RecordTypeImpl extends TypeImpl implements RecordType {
   }) {
     return RecordTypeImpl(
       positionalFields: [
-        for (var type in positional) RecordTypePositionalFieldImpl(type: type),
+        for (final type in positional)
+          RecordTypePositionalFieldImpl(type: type),
       ],
       namedFields: [
-        for (var entry in named.entries)
+        for (final entry in named.entries)
           RecordTypeNamedFieldImpl(name: entry.key, type: entry.value),
       ],
       nullabilitySuffix: nullabilitySuffix,
@@ -1132,9 +1135,6 @@ class RecordTypeImpl extends TypeImpl implements RecordType {
   String? get name => null;
 
   @override
-  List<SharedNamedType<DartType>> get namedTypes => namedFields;
-
-  @override
   bool operator ==(Object other) {
     if (identical(other, this)) {
       return true;
@@ -1148,27 +1148,27 @@ class RecordTypeImpl extends TypeImpl implements RecordType {
       return false;
     }
 
-    var thisPositional = positionalFields;
-    var otherPositional = other.positionalFields;
+    final thisPositional = positionalFields;
+    final otherPositional = other.positionalFields;
     if (thisPositional.length != otherPositional.length) {
       return false;
     }
     for (var i = 0; i < thisPositional.length; i++) {
-      var thisField = thisPositional[i];
-      var otherField = otherPositional[i];
+      final thisField = thisPositional[i];
+      final otherField = otherPositional[i];
       if (thisField.type != otherField.type) {
         return false;
       }
     }
 
-    var thisNamed = namedFields;
-    var otherNamed = other.namedFields;
+    final thisNamed = namedFields;
+    final otherNamed = other.namedFields;
     if (thisNamed.length != otherNamed.length) {
       return false;
     }
     for (var i = 0; i < thisNamed.length; i++) {
-      var thisField = thisNamed[i];
-      var otherField = otherNamed[i];
+      final thisField = thisNamed[i];
+      final otherField = otherNamed[i];
       if (thisField.name != otherField.name ||
           thisField.type != otherField.type) {
         return false;
@@ -1214,8 +1214,8 @@ class RecordTypeImpl extends TypeImpl implements RecordType {
   ) {
     var isSorted = true;
     String? lastName;
-    for (var field in fields) {
-      var name = field.name;
+    for (final field in fields) {
+      final name = field.name;
       if (lastName != null && lastName.compareTo(name) > 0) {
         isSorted = false;
         break;
@@ -1253,10 +1253,10 @@ class RecordTypePositionalFieldImpl extends RecordTypeFieldImpl
 /// representing the declared type of elements in the element model.
 abstract class TypeImpl implements DartType {
   @override
-  final InstantiatedTypeAliasElement? alias;
+  InstantiatedTypeAliasElement? alias;
 
   /// Initialize a newly created type.
-  const TypeImpl({this.alias});
+  TypeImpl({this.alias});
 
   @override
   DartType get extensionTypeErasure {
@@ -1341,21 +1341,14 @@ abstract class TypeImpl implements DartType {
 
   @override
   String getDisplayString({
-    @Deprecated('Only non-nullable by default mode is supported')
-    bool withNullability = true,
-    bool preferTypeAlias = false,
+    required bool withNullability,
   }) {
     var builder = ElementDisplayStringBuilder(
-      // ignore:deprecated_member_use_from_same_package
       withNullability: withNullability,
-      preferTypeAlias: preferTypeAlias,
     );
     appendTo(builder);
     return builder.toString();
   }
-
-  @override
-  bool isStructurallyEqualTo(SharedType other) => this == other;
 
   /// Returns true if this type references any of the [parameters].
   bool referencesAny(Set<TypeParameterElement> parameters) {
@@ -1368,7 +1361,7 @@ abstract class TypeImpl implements DartType {
 
   @override
   String toString() {
-    return getDisplayString();
+    return getDisplayString(withNullability: true);
   }
 
   /// Return the same type, but with the given [nullabilitySuffix].
@@ -1443,9 +1436,6 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
     Set<TypeParameterElement> seenTypes = {};
     TypeParameterType type = this;
     while (seenTypes.add(type.element)) {
-      if (type.nullabilitySuffix == NullabilitySuffix.question) {
-        return false;
-      }
       var bound = type.bound;
       if (bound is TypeParameterType) {
         type = bound;
@@ -1515,7 +1505,7 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
   @Deprecated('Use TypeSystem.resolveToBound() instead')
   @override
   DartType resolveToBound(DartType objectType) {
-    var promotedBound = this.promotedBound;
+    final promotedBound = this.promotedBound;
     if (promotedBound != null) {
       return promotedBound.resolveToBound(objectType);
     }
@@ -1529,6 +1519,9 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
     if (nullabilitySuffix == NullabilitySuffix.question ||
         bound.nullabilitySuffix == NullabilitySuffix.question) {
       newNullabilitySuffix = NullabilitySuffix.question;
+    } else if (nullabilitySuffix == NullabilitySuffix.star ||
+        bound.nullabilitySuffix == NullabilitySuffix.star) {
+      newNullabilitySuffix = NullabilitySuffix.star;
     } else {
       newNullabilitySuffix = NullabilitySuffix.none;
     }
@@ -1549,8 +1542,7 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
 }
 
 /// A concrete implementation of a [VoidType].
-class VoidTypeImpl extends TypeImpl
-    implements VoidType, SharedVoidType<DartType> {
+class VoidTypeImpl extends TypeImpl implements VoidType {
   /// The unique instance of this class, with indeterminate nullability.
   static final VoidTypeImpl instance = VoidTypeImpl._();
 

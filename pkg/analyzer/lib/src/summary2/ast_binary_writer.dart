@@ -93,22 +93,6 @@ class AstBinaryWriter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitAugmentedExpression(AugmentedExpression node) {
-    _writeByte(Tag.AugmentedExpression);
-    _sink.writeElement(node.element);
-    _storeExpression(node);
-  }
-
-  @override
-  void visitAugmentedInvocation(AugmentedInvocation node) {
-    _writeByte(Tag.AugmentedInvocation);
-    _writeOptionalNode(node.typeArguments);
-    _writeNode(node.arguments);
-    _sink.writeElement(node.element);
-    _storeExpression(node);
-  }
-
-  @override
   void visitAwaitExpression(AwaitExpression node) {
     _writeByte(Tag.AwaitExpression);
 
@@ -502,11 +486,7 @@ class AstBinaryWriter extends ThrowingAstVisitor<void> {
   @override
   void visitMapLiteralEntry(MapLiteralEntry node) {
     _writeByte(Tag.MapLiteralEntry);
-    _writeByte(AstBinaryFlags.encode(
-        hasQuestion: node.keyQuestion?.type == TokenType.QUESTION));
     _writeNode(node.key);
-    _writeByte(AstBinaryFlags.encode(
-        hasQuestion: node.valueQuestion?.type == TokenType.QUESTION));
     _writeNode(node.value);
   }
 
@@ -558,12 +538,6 @@ class AstBinaryWriter extends ThrowingAstVisitor<void> {
 
     _sink.writeElement(node.element);
     _sink.writeType(node.type);
-  }
-
-  @override
-  void visitNullAwareElement(NullAwareElement node) {
-    _writeByte(Tag.NullAwareElement);
-    _writeNode(node.value);
   }
 
   @override
@@ -962,7 +936,7 @@ class AstBinaryWriter extends ThrowingAstVisitor<void> {
     _writeStringReference(token.lexeme);
   }
 
-  void _writeDouble(double value) {
+  _writeDouble(double value) {
     _sink.addDouble(value);
   }
 

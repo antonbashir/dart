@@ -2,113 +2,153 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
+
 main() {
   // ignore: unused_local_variable
   var a0 =
-      /*Map<dynamic,dynamic>!*/
+      /*cfe.Map<dynamic,dynamic>*/
+      /*cfe:nnbd.Map<dynamic,dynamic>!*/
       {};
 
   // ignore: unused_local_variable
   var a1 =
-      /*Map<int!,double!>!*/
+      /*cfe.Map<int,double>*/
+      /*cfe:nnbd.Map<int!,double!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5
   };
 
   // ignore: unused_local_variable
   var a2 =
-      /*Map<double!,int!>!*/
+      /*cfe.Map<double,int>*/
+      /*cfe:nnbd.Map<double!,int!>!*/
       {
-    /*double!*/
+    /*cfe.double*/
+    /*cfe:nnbd.double!*/
     0.5:
-        /*int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         0
   };
 
   // ignore: unused_local_variable
   var a3 =
-      /*Map<int!,num!>!*/
+      /*cfe.Map<int,num>*/
+      /*cfe:nnbd.Map<int!,num!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     1:
-        /*int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         2
   };
 
   // ignore: unused_local_variable
   var a4 =
-      /*Map<num!,double!>!*/
+      /*cfe.Map<num,double>*/
+      /*cfe:nnbd.Map<num!,double!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*double!*/
+    /*cfe.double*/
+    /*cfe:nnbd.double!*/
     0.5:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5
   };
 
   // ignore: unused_local_variable
   var a5 =
-      /*Map<num!,num!>!*/
+      /*cfe.Map<num,num>*/
+      /*cfe:nnbd.Map<num!,num!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*double!*/
+    /*cfe.double*/
+    /*cfe:nnbd.double!*/
     0.5:
-        /*int!*/
+        /*cfe.int*/
+        /*cfe:nnbd.int!*/
         0
   };
 
   // ignore: unused_local_variable
   var a6 =
-      /*Map<int!,Object!>!*/
+      /*cfe.Map<int,Object>*/
+      /*cfe:nnbd.Map<int!,Object!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     1:
-        /*String!*/
+        /*cfe.String*/
+        /*cfe:nnbd.String!*/
         ''
   };
 
   // ignore: unused_local_variable
   var a7 =
-      /*Map<Object!,double!>!*/
+      /*cfe.Map<Object,double>*/
+      /*cfe:nnbd.Map<Object!,double!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*String!*/
+    /*cfe.String*/
+    /*cfe:nnbd.String!*/
     '':
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5
   };
 
   // ignore: unused_local_variable
   var a8 =
-      /*Map<Object!,Object!>!*/
+      /*cfe.Map<Object,Object>*/
+      /*cfe:nnbd.Map<Object!,Object!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0:
-        /*double!*/
+        /*cfe.double*/
+        /*cfe:nnbd.double!*/
         0.5,
-    /*String!*/
+    /*cfe.String*/
+    /*cfe:nnbd.String!*/
     '':
-        /*String!*/
+        /*cfe.String*/
+        /*cfe:nnbd.String!*/
         ''
   };
 }

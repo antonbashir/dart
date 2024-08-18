@@ -3,10 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Invocation of `Iterable<E>.contains` with references of'
-    r' unrelated types.';
+const _desc = r'Invocation of Iterable<E>.contains with references of unrelated'
+    r' types.';
 
 const _details = r'''
 NOTE: This rule is removed in Dart 3.3.0; it is no longer functional.
@@ -120,15 +119,18 @@ class DerivedClass3 extends ClassBase implements Mixin {}
 ''';
 
 class IterableContainsUnrelatedType extends LintRule {
+  static const LintCode code = LintCode('iterable_contains_unrelated_type',
+      "The argument type '{0}' isn't related to '{1}'.");
+
   IterableContainsUnrelatedType()
       : super(
           name: 'iterable_contains_unrelated_type',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.errors},
+          group: Group.errors,
           state: State.removed(since: dart3_3),
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.removed_lint;
+  LintCode get lintCode => code;
 }

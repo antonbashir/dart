@@ -2,19 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:dart2wasm/class_info.dart';
+import 'package:dart2wasm/closures.dart';
+import 'package:dart2wasm/dispatch_table.dart';
+import 'package:dart2wasm/reference_extensions.dart';
+import 'package:dart2wasm/translator.dart';
+
 import 'package:kernel/ast.dart';
+
 import 'package:wasm_builder/wasm_builder.dart' as w;
 
-import 'class_info.dart';
-import 'closures.dart';
-import 'code_generator.dart';
-import 'dispatch_table.dart';
-import 'reference_extensions.dart';
-import 'translator.dart';
-
 /// This class is responsible for collecting import and export annotations.
-/// It also creates Wasm functions for Dart members and manages the compilation
-/// queue used to achieve tree shaking.
+/// It also creates Wasm functions for Dart members and manages the worklist
+/// used to achieve tree shaking.
 class FunctionCollector {
   final Translator translator;
 
@@ -22,12 +22,12 @@ class FunctionCollector {
   final Map<Reference, w.BaseFunction> _functions = {};
   // Names of exported functions
   final Map<Reference, String> _exports = {};
-  // Selector IDs that are invoked via GDT.
-  final Set<int> _calledSelectors = {};
+  // Functions for which code has not yet been generated
+  final List<Reference> _worklist = [];
   // Class IDs for classes that are allocated somewhere in the program
   final Set<int> _allocatedClasses = {};
-  // For each class ID, which functions should be added to the compilation queue
-  // if an allocation of that class is encountered
+  // For each class ID, which functions should be added to the worklist if an
+  // allocation of that class is encountered
   final Map<int, List<Reference>> _pendingAllocation = {};
 
   FunctionCollector(this.translator);
@@ -44,6 +44,10 @@ class FunctionCollector {
     }
   }
 
+  bool isWorkListEmpty() => _worklist.isEmpty;
+
+  Reference popWorkList() => _worklist.removeLast();
+
   void _importOrExport(Member member) {
     String? importName =
         translator.getPragma(member, "wasm:import", member.name.text);
@@ -54,9 +58,14 @@ class FunctionCollector {
         String module = importName.substring(0, dot);
         String name = importName.substring(dot + 1);
         if (member is Procedure) {
+          // Define the function type in a singular recursion group to enable it
+          // to be unified with function types defined in FFI modules or using
+          // `WebAssembly.Function`.
+          m.types.splitRecursionGroup();
           w.FunctionType ftype = _makeFunctionType(
-              translator, member.reference, null,
+              translator, member.reference, [member.function.returnType], null,
               isImportOrExport: true);
+          m.types.splitRecursionGroup();
           _functions[member.reference] =
               m.functions.import(module, name, ftype, "$importName (import)");
         }
@@ -66,8 +75,16 @@ class FunctionCollector {
         translator.getPragma(member, "wasm:export", member.name.text);
     if (exportName != null) {
       if (member is Procedure) {
-        _makeFunctionType(translator, member.reference, null,
+        // Although we don't need type unification for the types of exported
+        // functions, we still place these types in singleton recursion groups,
+        // since Binaryen's `--closed-world` optimization mode requires all
+        // publicly exposed types to be defined in separate recursion groups
+        // from GC types.
+        m.types.splitRecursionGroup();
+        _makeFunctionType(
+            translator, member.reference, [member.function.returnType], null,
             isImportOrExport: true);
+        m.types.splitRecursionGroup();
       }
       addExport(member.reference, exportName);
     }
@@ -80,20 +97,20 @@ class FunctionCollector {
   String? getExport(Reference target) => _exports[target];
 
   void initialize() {
-    // Add exports to the module and add exported functions to the compilationQueue
+    // Add exports to the module and add exported functions to the worklist
     for (var export in _exports.entries) {
       Reference target = export.key;
       Member node = target.asMember;
       if (node is Procedure) {
+        _worklist.add(target);
         assert(!node.isInstanceMember);
         assert(!node.isGetter);
-        w.FunctionType ftype =
-            _makeFunctionType(translator, target, null, isImportOrExport: true);
-        w.FunctionBuilder function = m.functions.define(ftype, "$node");
+        w.FunctionType ftype = _makeFunctionType(
+            translator, target, [node.function.returnType], null,
+            isImportOrExport: true);
+        w.BaseFunction function = m.functions.define(ftype, "$node");
         _functions[target] = function;
         m.exports.export(export.value, function);
-        translator.compilationQueue.add(AstCompilationTask(function,
-            getMemberCodeGenerator(translator, function, target), target));
       } else if (node is Field) {
         w.Table? table = translator.getTable(node);
         if (table != null) {
@@ -103,12 +120,9 @@ class FunctionCollector {
     }
 
     // Value classes are always implicitly allocated.
-    recordClassAllocation(
-        translator.classInfo[translator.boxedBoolClass]!.classId);
-    recordClassAllocation(
-        translator.classInfo[translator.boxedIntClass]!.classId);
-    recordClassAllocation(
-        translator.classInfo[translator.boxedDoubleClass]!.classId);
+    allocateClass(translator.classInfo[translator.boxedBoolClass]!.classId);
+    allocateClass(translator.classInfo[translator.boxedIntClass]!.classId);
+    allocateClass(translator.classInfo[translator.boxedDoubleClass]!.classId);
   }
 
   w.BaseFunction? getExistingFunction(Reference target) {
@@ -117,94 +131,61 @@ class FunctionCollector {
 
   w.BaseFunction getFunction(Reference target) {
     return _functions.putIfAbsent(target, () {
-      final function = m.functions.define(
-          translator.signatureForDirectCall(target), getFunctionName(target));
-      translator.compilationQueue.add(AstCompilationTask(function,
-          getMemberCodeGenerator(translator, function, target), target));
-      return function;
+      _worklist.add(target);
+      return _getFunctionTypeAndName(target, m.functions.define);
     });
   }
 
   w.FunctionType getFunctionType(Reference target) {
-    // We first try to get the function type by seeing if we already
-    // compiled the [target] function.
-    //
-    // We do that because [target] may refer to a imported/exported function
-    // which get their function type translated differently (it would be
-    // incorrect to use [_getFunctionType]).
-    final existingFunction = getExistingFunction(target);
-    if (existingFunction != null) return existingFunction.type;
-
-    return _getFunctionType(target);
+    return _getFunctionTypeAndName(target, (ftype, name) => ftype);
   }
 
-  w.FunctionType _getFunctionType(Reference target) {
-    final Member member = target.asMember;
+  T _getFunctionTypeAndName<T>(
+      Reference target, T Function(w.FunctionType, String) action) {
     if (target.isTypeCheckerReference) {
+      Member member = target.asMember;
       if (member is Field || (member is Procedure && member.isSetter)) {
-        return translator.dynamicSetForwarderFunctionType;
+        return action(translator.dynamicSetForwarderFunctionType,
+            '${target.asMember} setter type checker');
       } else {
-        return translator.dynamicInvocationForwarderFunctionType;
+        return action(translator.dynamicInvocationForwarderFunctionType,
+            '${target.asMember} invocation type checker');
       }
     }
 
     if (target.isTearOffReference) {
-      assert(!translator.dispatchTable
-          .selectorForTarget(target)
-          .targetSet
-          .contains(target));
-      return translator.signatureForDirectCall(target);
+      return action(
+          translator.dispatchTable.selectorForTarget(target).signature,
+          "${target.asMember} tear-off");
     }
 
-    return member.accept1(_FunctionTypeGenerator(translator), target);
-  }
-
-  String getFunctionName(Reference target) {
-    if (target.isTearOffReference) {
-      return "${target.asMember} tear-off";
-    }
-
-    final Member member = target.asMember;
-    String memberName = member.toString();
-    if (memberName.endsWith('.')) {
-      memberName = memberName.substring(0, memberName.length - 1);
-    }
-    if (target.isTypeCheckerReference) {
-      if (member is Field || (member is Procedure && member.isSetter)) {
-        return '$memberName setter type checker';
-      } else {
-        return '$memberName invocation type checker';
-      }
-    }
+    Member member = target.asMember;
+    final ftype = member.accept1(_FunctionTypeGenerator(translator), target);
 
     if (target.isInitializerReference) {
-      return 'new $memberName (initializer)';
+      return action(ftype, '${member} initializer');
     } else if (target.isConstructorBodyReference) {
-      return 'new $memberName (constructor body)';
-    } else if (member is Procedure && member.isFactory) {
-      return 'new $memberName';
-    } else {
-      return memberName;
+      return action(ftype, '${member} constructor body');
     }
+
+    return action(ftype, "${target.asMember}");
   }
 
-  void recordSelectorUse(SelectorInfo selector) {
-    if (_calledSelectors.add(selector.id)) {
-      for (final (:range, :target) in selector.targetRanges) {
-        for (int classId = range.start; classId <= range.end; ++classId) {
-          if (_allocatedClasses.contains(classId)) {
-            // Class declaring or inheriting member is allocated somewhere.
-            getFunction(target);
-          } else {
-            // Remember the member in case an allocation is encountered later.
-            _pendingAllocation.putIfAbsent(classId, () => []).add(target);
-          }
+  void activateSelector(SelectorInfo selector) {
+    selector.targets.forEach((classId, target) {
+      if (!target.asMember.isAbstract) {
+        if (_allocatedClasses.contains(classId)) {
+          // Class declaring or inheriting member is allocated somewhere.
+          getFunction(target);
+        } else {
+          // Remember the member in case an allocation is encountered later.
+          _pendingAllocation.putIfAbsent(classId, () => []).add(target);
         }
       }
-    }
+    });
   }
 
-  void recordClassAllocation(int classId) {
+  void allocateClass(int classId) {
     if (_allocatedClasses.add(classId)) {
       // Schedule all members that were pending allocation of this class.
       for (Reference target in _pendingAllocation[classId] ?? const []) {
@@ -228,38 +209,21 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
     if (!node.isInstanceMember) {
       if (target == node.fieldReference) {
         // Static field initializer function
-        return _makeFunctionType(translator, target, null);
+        return _makeFunctionType(translator, target, [node.type], null);
       }
       String kind = target == node.setterReference ? "setter" : "getter";
       throw "No implicit $kind function for static field: $node";
     }
-    assert(!translator.dispatchTable
-        .selectorForTarget(target)
-        .targetSet
-        .contains(target));
-
-    final receiverType = target.asMember.enclosingClass!
-        .getThisType(translator.coreTypes, Nullability.nonNullable);
-    return _makeFunctionType(
-        translator, target, translator.translateType(receiverType));
+    return translator.dispatchTable.selectorForTarget(target).signature;
   }
 
   @override
   w.FunctionType visitProcedure(Procedure node, Reference target) {
     assert(!node.isAbstract);
-    if (!node.isInstanceMember) {
-      return _makeFunctionType(translator, target, null);
-    }
-
-    assert(!translator.dispatchTable
-        .selectorForTarget(target)
-        .targetSet
-        .contains(target));
-
-    final receiverType = target.asMember.enclosingClass!
-        .getThisType(translator.coreTypes, Nullability.nonNullable);
-    return _makeFunctionType(
-        translator, target, translator.translateType(receiverType));
+    return node.isInstanceMember
+        ? translator.dispatchTable.selectorForTarget(node.reference).signature
+        : _makeFunctionType(
+            translator, target, [node.function.returnType], null);
   }
 
   @override
@@ -313,8 +277,8 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
 
         if (supersupertype != null) {
           ClassInfo superInfo = info.superInfo!;
-          w.FunctionType superInitializer = translator
-              .signatureForDirectCall(initializer.target.initializerReference);
+          w.FunctionType superInitializer = translator.functions
+              .getFunctionType(initializer.target.initializerReference);
 
           final int numSuperclassFields = superInfo.getClassFieldTypes().length;
           final int numSuperContextAndConstructorArgs =
@@ -329,8 +293,8 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
         Supertype? supersupertype = initializer.target.enclosingClass.supertype;
 
         if (supersupertype != null) {
-          w.FunctionType redirectedInitializer = translator
-              .signatureForDirectCall(initializer.target.initializerReference);
+          w.FunctionType redirectedInitializer = translator.functions
+              .getFunctionType(initializer.target.initializerReference);
 
           final int numClassFields = info.getClassFieldTypes().length;
           final int numRedirectedContextAndConstructorArgs =
@@ -350,7 +314,7 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
     // Add nullable context reference for when the constructor has a non-empty
     // context
     Context? context = closures.contexts[node];
-    w.ValueType? contextRef;
+    w.ValueType? contextRef = null;
 
     if (context != null) {
       assert(!context.isEmpty);
@@ -396,7 +360,8 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
 
         if (supersupertype != null) {
           w.FunctionType superOrRedirectedConstructorBodyType = translator
-              .signatureForDirectCall(target.constructorBodyReference);
+              .functions
+              .getFunctionType(target.constructorBodyReference);
 
           // drop receiver param
           inputs += superOrRedirectedConstructorBodyType.inputs.sublist(1);
@@ -427,17 +392,14 @@ List<w.ValueType> _getInputTypes(
         .length;
     List<String> names = [for (var p in function.namedParameters) p.name!]
       ..sort();
-    final typeForParam = translator.typeOfParameterVariable;
     Map<String, DartType> nameTypes = {
-      for (var p in function.namedParameters)
-        p.name!: typeForParam(p, p.isRequired)
+      for (var p in function.namedParameters) p.name!: p.type
     };
-    final positionals = function.positionalParameters;
     params = [
-      for (int i = 0; i < positionals.length; ++i)
-        typeForParam(positionals[i], i < function.requiredParameterCount),
+      for (var p in function.positionalParameters) p.type,
       for (String name in names) nameTypes[name]!
     ];
+    function.positionalParameters.map((p) => p.type);
   }
 
   final List<w.ValueType> typeParameters = List.filled(
@@ -458,8 +420,8 @@ List<w.ValueType> _getInputTypes(
   return inputs;
 }
 
-w.FunctionType _makeFunctionType(
-    Translator translator, Reference target, w.ValueType? receiverType,
+w.FunctionType _makeFunctionType(Translator translator, Reference target,
+    List<DartType> returnTypes, w.ValueType? receiverType,
     {bool isImportOrExport = false}) {
   Member member = target.asMember;
 
@@ -471,21 +433,20 @@ w.FunctionType _makeFunctionType(
   final List<w.ValueType> inputs = _getInputTypes(
       translator, target, receiverType, isImportOrExport, translateType);
 
-  final bool emptyOutputList =
-      (member is Field && member.setterReference == target) ||
-          (member is Procedure && member.isSetter);
+  // Mutable fields have initializer setters with a non-empty output list,
+  // so check that the member is a Procedure
+  final bool emptyOutputList = member is Procedure && member.isSetter;
 
   bool isVoidType(DartType t) =>
       (isImportOrExport && t is VoidType) ||
       (t is InterfaceType && t.classNode == translator.wasmVoidClass);
 
-  final List<w.ValueType> outputs;
-  if (emptyOutputList) {
-    outputs = const [];
-  } else {
-    final DartType returnType = translator.typeOfReturnValue(member);
-    outputs = !isVoidType(returnType) ? [translateType(returnType)] : const [];
-  }
+  final List<w.ValueType> outputs = emptyOutputList
+      ? const []
+      : returnTypes
+          .where((t) => !isVoidType(t))
+          .map((t) => translateType(t))
+          .toList();
 
   return translator.m.types.defineFunction(inputs, outputs);
 }

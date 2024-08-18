@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
 import 'package:meta/meta.dart';
 
+import '../field_promotability.dart';
 import '../type_inference/assigned_variables.dart';
 import '../type_inference/promotion_key_store.dart';
-import 'flow_analysis_operations.dart';
+import '../type_inference/type_operations.dart';
 import 'flow_link.dart';
 
 /// [PropertyTarget] representing an implicit reference to the target of the
@@ -150,7 +150,7 @@ class ExpressionPropertyTarget<Expression extends Object>
 /// while visiting the code for type inference.
 abstract class FlowAnalysis<Node extends Object, Statement extends Node,
     Expression extends Node, Variable extends Object, Type extends Object> {
-  factory FlowAnalysis(FlowAnalysisOperations<Variable, Type> operations,
+  factory FlowAnalysis(Operations<Variable, Type> operations,
       AssignedVariables<Node, Variable> assignedVariables,
       {required bool respectImplicitlyTypedVarInitializers,
       required bool fieldPromotionEnabled}) {
@@ -160,14 +160,14 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
         fieldPromotionEnabled: fieldPromotionEnabled);
   }
 
-  factory FlowAnalysis.legacy(FlowAnalysisOperations<Variable, Type> operations,
+  factory FlowAnalysis.legacy(Operations<Variable, Type> operations,
           AssignedVariables<Node, Variable> assignedVariables) =
       _LegacyTypePromotion<Node, Statement, Expression, Variable, Type>;
 
   /// Return `true` if the current state is reachable.
   bool get isReachable;
 
-  FlowAnalysisOperations<Variable, Type> get operations;
+  TypeOperations<Type> get operations;
 
   /// Call this method after visiting an "as" expression.
   ///
@@ -284,14 +284,12 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// be the pattern's constant expression, and [type] should be its static
   /// type.
   ///
-  /// [matchedValueType] should be the type returned by [getMatchedValueType].
-  ///
   /// If [patternsEnabled] is `true`, pattern support is enabled and this is an
   /// ordinary constant pattern.  if [patternsEnabled] is `false`, pattern
   /// support is disabled and this constant pattern is one of the cases of a
   /// legacy switch statement.
   void constantPattern_end(Expression expression, Type type,
-      {required bool patternsEnabled, required Type matchedValueType});
+      {required bool patternsEnabled});
 
   /// Copy promotion data associated with one promotion key to another.  This
   /// is used after analyzing a branch of a logical-or pattern, to move the
@@ -379,10 +377,8 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// equality operator (either `==` or `!=`).  [operand] should be the operand
   /// to the right of the operator, [operandType] should be its static type, and
   /// [notEqual] should be `true` iff the operator was `!=`.
-  ///
-  /// [matchedValueType] should be the type returned by [getMatchedValueType].
   void equalityRelationalPattern_end(Expression operand, Type operandType,
-      {bool notEqual = false, required Type matchedValueType});
+      {bool notEqual = false});
 
   /// Retrieves the [ExpressionInfo] associated with [target], if known.  Will
   /// return `null` if (a) no info is associated with [target], or (b) another
@@ -654,7 +650,7 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
 
   /// Call this method after visiting the LHS of a logical binary operation
   /// ("||" or "&&").
-  /// [leftOperand] should be the LHS.  [isAnd] should indicate whether the
+  /// [rightOperand] should be the LHS.  [isAnd] should indicate whether the
   /// logical operator is "&&" or "||".  [wholeExpression] should be the whole
   /// logical binary expression.
   void logicalBinaryOp_rightBegin(Expression leftOperand, Node wholeExpression,
@@ -706,10 +702,7 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// Call this method before visiting the subpattern of a null-check or a
   /// null-assert pattern. [isAssert] indicates whether the pattern is a
   /// null-check or a null-assert pattern.
-  ///
-  /// [matchedValueType] should be the type returned by [getMatchedValueType].
-  bool nullCheckOrAssertPattern_begin(
-      {required bool isAssert, required Type matchedValueType});
+  bool nullCheckOrAssertPattern_begin({required bool isAssert});
 
   /// Call this method after visiting the subpattern of a null-check or a
   /// null-assert pattern.
@@ -778,9 +771,13 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// [propertyMember] should be whatever data structure the client uses to keep
   /// track of the field or property being accessed.  If not `null`, and field
   /// promotion is enabled for the current library,
-  /// [FlowAnalysisOperations.isPropertyPromotable] will be consulted to find
-  /// out whether the property is promotable.  [unpromotedType] should be the
-  /// static type of the value returned by the property get.
+  /// [Operations.isPropertyPromotable] will be consulted to find out whether
+  /// the property is promotable.  [unpromotedType] should be the static type of
+  /// the value returned by the property get.
+  ///
+  /// [isSuperAccess] indicates whether the property in question is being
+  /// accessed through `super.`. If [target] is non-null, the caller should pass
+  /// `false` for [isSuperAccess].
   ///
   /// Note: although only fields can be promoted, this method uses the
   /// nomenclature "property" rather than "field", to highlight the fact that
@@ -846,9 +843,9 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// [propertyMember] should be whatever data structure the client uses to keep
   /// track of the field or property being accessed.  If not `null`, and field
   /// promotion is enabled for the current library,
-  /// [FlowAnalysisOperations.isPropertyPromotable] will be consulted to find
-  /// out whether the property is promotable.  In the event of non-promotion of
-  /// a property get, this value can be retrieved from
+  /// [Operations.isPropertyPromotable] will be consulted to find out whether
+  /// the property is promotable.  In the event of non-promotion of a property
+  /// get, this value can be retrieved from
   /// [PropertyNotPromoted.propertyMember].
   ///
   /// If the property's type is currently promoted, the promoted type is
@@ -1139,8 +1136,9 @@ abstract class FlowAnalysis<Node extends Object, Statement extends Node,
   /// source code (this happens, for example, with compound assignments and with
   /// for-each loops).
   ///
-  /// This method should not be used for the implicit write to a non-final
-  /// variable in its initializer; in that case, use [initialize] instead.
+  /// This should also be used for the implicit write to a non-final variable in
+  /// its initializer, to ensure that the type is promoted to non-nullable if
+  /// necessary; in this case, [viaInitializer] should be `true`.
   void write(Node node, Variable variable, Type writtenType,
       Expression? writtenExpression);
 
@@ -1162,7 +1160,7 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
 
   bool _exceptionOccurred = false;
 
-  factory FlowAnalysisDebug(FlowAnalysisOperations<Variable, Type> operations,
+  factory FlowAnalysisDebug(Operations<Variable, Type> operations,
       AssignedVariables<Node, Variable> assignedVariables,
       {required bool respectImplicitlyTypedVarInitializers,
       required bool fieldPromotionEnabled}) {
@@ -1174,8 +1172,7 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
         fieldPromotionEnabled: fieldPromotionEnabled));
   }
 
-  factory FlowAnalysisDebug.legacy(
-      FlowAnalysisOperations<Variable, Type> operations,
+  factory FlowAnalysisDebug.legacy(Operations<Variable, Type> operations,
       AssignedVariables<Node, Variable> assignedVariables) {
     print('FlowAnalysisDebug.legacy()');
     return new FlowAnalysisDebug._(
@@ -1189,7 +1186,7 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
       _wrap('isReachable', () => _wrapped.isReachable, isQuery: true);
 
   @override
-  FlowAnalysisOperations<Variable, Type> get operations => _wrapped.operations;
+  TypeOperations<Type> get operations => _wrapped.operations;
 
   @override
   void asExpression_end(Expression subExpression, Type type) {
@@ -1282,14 +1279,12 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
 
   @override
   void constantPattern_end(Expression expression, Type type,
-      {required bool patternsEnabled, required Type matchedValueType}) {
+      {required bool patternsEnabled}) {
     _wrap(
         'constantPattern_end($expression, $type, '
-        'patternsEnabled: $patternsEnabled, '
-        'matchedValueType: $matchedValueType)',
+        'patternsEnabled: $patternsEnabled)',
         () => _wrapped.constantPattern_end(expression, type,
-            patternsEnabled: patternsEnabled,
-            matchedValueType: matchedValueType));
+            patternsEnabled: patternsEnabled));
   }
 
   @override
@@ -1373,12 +1368,12 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
 
   @override
   void equalityRelationalPattern_end(Expression operand, Type operandType,
-      {bool notEqual = false, required Type matchedValueType}) {
+      {bool notEqual = false}) {
     _wrap(
         'equalityRelationalPattern_end($operand, $operandType, '
-        'notEqual: $notEqual, matchedValueType: $matchedValueType)',
+        'notEqual: $notEqual)',
         () => _wrapped.equalityRelationalPattern_end(operand, operandType,
-            notEqual: notEqual, matchedValueType: matchedValueType));
+            notEqual: notEqual));
   }
 
   @override
@@ -1656,15 +1651,10 @@ class FlowAnalysisDebug<Node extends Object, Statement extends Node,
   }
 
   @override
-  bool nullCheckOrAssertPattern_begin(
-      {required bool isAssert, required Type matchedValueType}) {
-    return _wrap(
-        'nullCheckOrAssertPattern_begin(isAssert: $isAssert, '
-        'matchedValueType: $matchedValueType)',
-        () => _wrapped.nullCheckOrAssertPattern_begin(
-            isAssert: isAssert, matchedValueType: matchedValueType),
-        isQuery: true,
-        isPure: false);
+  bool nullCheckOrAssertPattern_begin({required bool isAssert}) {
+    return _wrap('nullCheckOrAssertPattern_begin(isAssert: $isAssert)',
+        () => _wrapped.nullCheckOrAssertPattern_begin(isAssert: isAssert),
+        isQuery: true, isPure: false);
   }
 
   @override
@@ -2460,7 +2450,7 @@ class FlowModel<Type extends Object> {
 
     Type previousType = reference._type;
     Type newType = helper.typeOperations.promoteToNonNull(previousType);
-    if (newType == previousType) {
+    if (helper.typeOperations.isSameType(newType, previousType)) {
       return new ExpressionInfo<Type>.trivial(
           after: this, type: helper.boolType);
     }
@@ -2491,7 +2481,8 @@ class FlowModel<Type extends Object> {
 
     Type previousType = reference._type;
     Type? newType = helper.typeOperations.tryPromoteToType(type, previousType);
-    if (newType == null || newType == previousType) {
+    if (newType == null ||
+        helper.typeOperations.isSameType(newType, previousType)) {
       return this;
     }
 
@@ -2522,7 +2513,8 @@ class FlowModel<Type extends Object> {
     FlowModel<Type> ifTrue = this;
     Type? typeIfSuccess =
         helper.typeOperations.tryPromoteToType(type, previousType);
-    if (typeIfSuccess != null && typeIfSuccess != previousType) {
+    if (typeIfSuccess != null &&
+        !helper.typeOperations.isSameType(typeIfSuccess, previousType)) {
       assert(helper.typeOperations.isSubtypeOf(typeIfSuccess, previousType),
           "Expected $typeIfSuccess to be a subtype of $previousType.");
       ifTrue = _finishTypeTest(helper, reference, info, type, typeIfSuccess);
@@ -2534,7 +2526,7 @@ class FlowModel<Type extends Object> {
       // Promoting to `Never` would mark the code as unreachable.  But it might
       // be reachable due to mixed mode unsoundness.  So don't promote.
       typeIfFalse = null;
-    } else if (factoredType == previousType) {
+    } else if (helper.typeOperations.isSameType(factoredType, previousType)) {
       // No change to the type, so don't promote.
       typeIfFalse = null;
     } else {
@@ -2563,7 +2555,7 @@ class FlowModel<Type extends Object> {
     return new FlowModel<Type>.withInfo(reachable, promotionInfo);
   }
 
-  /// Returns a new [FlowModel] where the information for [promotionKey] is
+  /// Returns a new [FlowModel] where the information for [reference] is
   /// replaced with [model].
   @visibleForTesting
   FlowModel<Type> updatePromotionInfo(FlowModelHelper<Type> helper,
@@ -2575,7 +2567,7 @@ class FlowModel<Type extends Object> {
     return new FlowModel.withInfo(reachable, newPromotionInfo);
   }
 
-  /// Updates the state to indicate that an assignment was made to [Variable],
+  /// Updates the state to indicate that an assignment was made to [variable],
   /// whose key is [variableKey].  The variable is marked as definitely
   /// assigned, and any previous type promotion is removed.
   ///
@@ -2588,7 +2580,7 @@ class FlowModel<Type extends Object> {
       int variableKey,
       Type writtenType,
       SsaNode<Type> newSsaNode,
-      FlowAnalysisOperations<Variable, Type> operations,
+      Operations<Variable, Type> operations,
       {bool promoteToTypeOfInterest = true,
       required Type unpromotedType}) {
     FlowModel<Type>? newModel;
@@ -2651,7 +2643,7 @@ class FlowModel<Type extends Object> {
   }
 
   /// Forms a new state to reflect a control flow path that might have come from
-  /// either the [first] or [second] state.
+  /// either `this` or the [other] state.
   ///
   /// The control flow path is considered reachable if either of the input
   /// states is reachable.  Variables are considered definitely assigned if they
@@ -2743,10 +2735,9 @@ mixin FlowModelHelper<Type extends Object> {
   @visibleForTesting
   PromotionKeyStore<Object> get promotionKeyStore;
 
-  /// The [FlowAnalysisTypeOperations], used to access types and check
-  /// subtyping.
+  /// The [TypeOperations], used to access types and check subtyping.
   @visibleForTesting
-  FlowAnalysisTypeOperations<Type> get typeOperations;
+  TypeOperations<Type> get typeOperations;
 }
 
 /// Documentation links that might be presented to the user to accompany a "why
@@ -2889,6 +2880,45 @@ abstract class NonPromotionReasonVisitor<R, Node extends Object,
   R visitThisNotPromoted(ThisNotPromoted reason);
 }
 
+/// Operations on types and variables, abstracted from concrete type interfaces.
+abstract class Operations<Variable extends Object, Type extends Object>
+    implements TypeOperations<Type>, VariableOperations<Variable, Type> {
+  /// Determines whether the given property can be promoted.
+  ///
+  /// [property] will correspond to a `propertyMember` value passed to
+  /// [FlowAnalysis.promotedPropertyType], [FlowAnalysis.propertyGet], or
+  /// [FlowAnalysis.pushPropertySubpattern].
+  ///
+  /// This method will not be called if field promotion is disabled for the
+  /// current library.
+  bool isPropertyPromotable(Object property);
+
+  /// Returns additional information about why a given property couldn't be
+  /// promoted. [propertyMember] will correspond to a `propertyMember` value
+  /// passed to [FlowAnalysis.promotedPropertyType], [FlowAnalysis.propertyGet],
+  /// or [FlowAnalysis.pushPropertySubpattern].
+  ///
+  /// This method is only called if a closure returned by
+  /// [FlowAnalysis.whyNotPromoted] is invoked, and the expression being queried
+  /// is a reference to a property that wasn't promoted; this typically means
+  /// that an error occurred and the client is attempting to produce a context
+  /// message to provide additional information about the error (i.e., that the
+  /// error happened due to failed promotion).
+  ///
+  /// The client should return `null` if [property] was not promotable due to a
+  /// conflict with a field, getter, or noSuchMethod forwarder elsewhere in the
+  /// library; if this happens, the closure returned by
+  /// [FlowAnalysis.whyNotPromoted] will yield an object of type
+  /// [PropertyNotPromotedForNonInherentReason] containing enough information
+  /// for the client to be able to generate the appropriate context information.
+  ///
+  /// If this method is called when analyzing a library for which field
+  /// promotion is disabled, and the property in question *would* have been
+  /// promotable if field promotion had been enabled, the client should return
+  /// `null`; otherwise it should behave as if field promotion were enabled.
+  PropertyNonPromotabilityReason? whyPropertyIsNotPromotable(Object property);
+}
+
 /// Data structure describing the relationship among variables defined by
 /// patterns in the various alternatives of a set of switch cases that share a
 /// body.
@@ -2907,9 +2937,10 @@ class PatternVariableInfo<Variable> {
 /// analysis.
 ///
 /// Each instance of [PromotionInfo] is an immutable key/value pair binding a
-/// single promotion [key] (a unique integer assigned by [PromotionKeyStore] to
-/// track a particular promotable thing) with an instance of [PromotionModel]
-/// describing the promotion state of that thing.
+/// single promotion [key] (a unique integer assigned by
+/// [_FlowAnalysisImpl._promotionKeyStore] to track a particular promotable
+/// thing) with an instance of [PromotionModel] describing the promotion state
+/// of that thing.
 ///
 /// Please see the documentation for [FlowLink] for more information about how
 /// this data structure works.
@@ -3016,8 +3047,8 @@ class PromotionModel<Type extends Object> {
   /// Returns a new [PromotionModel] in which any promotions present have been
   /// dropped, and the variable has been marked as "not unassigned".
   ///
-  /// Used by [FlowModel.conservativeJoin] to update the state of variables at
-  /// the top of loops whose bodies write to them.
+  /// Used by [conservativeJoin] to update the state of variables at the top of
+  /// loops whose bodies write to them.
   PromotionModel<Type> discardPromotionsAndMarkNotUnassigned() {
     return new PromotionModel<Type>(
         promotedTypes: null,
@@ -3061,7 +3092,7 @@ class PromotionModel<Type extends Object> {
       NonPromotionReason? nonPromotionReason,
       int variableKey,
       Type writtenType,
-      FlowAnalysisOperations<Variable, Type> operations,
+      Operations<Variable, Type> operations,
       SsaNode<Type> newSsaNode,
       {required bool promoteToTypeOfInterest,
       required Type unpromotedType}) {
@@ -3128,7 +3159,7 @@ class PromotionModel<Type extends Object> {
   /// describing the reason for the potential demotion.
   _DemotionResult<Type> _demoteViaAssignment(
       Type writtenType,
-      FlowAnalysisTypeOperations<Type> typeOperations,
+      TypeOperations<Type> typeOperations,
       NonPromotionReason? nonPromotionReason) {
     List<Type>? promotedTypes = this.promotedTypes;
     if (promotedTypes == null) {
@@ -3180,11 +3211,8 @@ class PromotionModel<Type extends Object> {
   ///
   /// Note that since promotion chains are considered immutable, if promotion
   /// is required, a new promotion chain will be created and returned.
-  List<Type>? _tryPromoteToTypeOfInterest(
-      FlowAnalysisTypeOperations<Type> typeOperations,
-      Type declaredType,
-      List<Type>? promotedTypes,
-      Type writtenType) {
+  List<Type>? _tryPromoteToTypeOfInterest(TypeOperations<Type> typeOperations,
+      Type declaredType, List<Type>? promotedTypes, Type writtenType) {
     assert(!writeCaptured);
 
     // Figure out if we have any promotion candidates (types that are a
@@ -3203,7 +3231,7 @@ class PromotionModel<Type extends Object> {
 
       // Must be more specific that the currently promoted type.
       if (currentlyPromotedType != null) {
-        if (type == currentlyPromotedType) {
+        if (typeOperations.isSameType(type, currentlyPromotedType)) {
           return;
         }
         if (!typeOperations.isSubtypeOf(type, currentlyPromotedType)) {
@@ -3212,7 +3240,7 @@ class PromotionModel<Type extends Object> {
       }
 
       // This is precisely the type we want to promote to; take it.
-      if (type == writtenType) {
+      if (typeOperations.isSameType(type, writtenType)) {
         result = _addToPromotedTypes(promotedTypes, writtenType);
       }
 
@@ -3231,7 +3259,7 @@ class PromotionModel<Type extends Object> {
     // The declared type is always a type of interest, but we never promote
     // to the declared type. So, try NonNull of it.
     Type declaredTypeNonNull = typeOperations.promoteToNonNull(declaredType);
-    if (declaredTypeNonNull != declaredType) {
+    if (!typeOperations.isSameType(declaredTypeNonNull, declaredType)) {
       handleTypeOfInterest(declaredTypeNonNull);
       if (result != null) {
         return result!;
@@ -3247,7 +3275,7 @@ class PromotionModel<Type extends Object> {
       }
 
       Type typeNonNull = typeOperations.promoteToNonNull(type);
-      if (typeNonNull != type) {
+      if (!typeOperations.isSameType(typeNonNull, type)) {
         handleTypeOfInterest(typeNonNull);
         if (result != null) {
           return result!;
@@ -3291,7 +3319,7 @@ class PromotionModel<Type extends Object> {
   /// regardless of the type of loop.
   @visibleForTesting
   static PromotionModel<Type> inheritTested<Type extends Object>(
-      FlowAnalysisTypeOperations<Type> typeOperations,
+      TypeOperations<Type> typeOperations,
       PromotionModel<Type> model,
       List<Type> tested) {
     List<Type> newTested = joinTested(tested, model.tested, typeOperations);
@@ -3324,7 +3352,7 @@ class PromotionModel<Type extends Object> {
       PromotionInfo<Type>? secondPromotionInfo,
       FlowModel<Type> newFlowModel,
       {_PropertySsaNode<Type>? propertySsaNode}) {
-    FlowAnalysisTypeOperations<Type> typeOperations = helper.typeOperations;
+    TypeOperations<Type> typeOperations = helper.typeOperations;
     List<Type>? newPromotedTypes = joinPromotedTypes(
         first.promotedTypes, second.promotedTypes, typeOperations);
     bool newAssigned = first.assigned && second.assigned;
@@ -3359,7 +3387,7 @@ class PromotionModel<Type extends Object> {
   /// ordered subsets of a global partial order.  Their intersection is a
   /// subset of each, and as such is also totally ordered.
   static List<Type>? joinPromotedTypes<Type extends Object>(List<Type>? chain1,
-      List<Type>? chain2, FlowAnalysisTypeOperations<Type> typeOperations) {
+      List<Type>? chain2, TypeOperations<Type> typeOperations) {
     if (chain1 == null) return chain1;
     if (chain2 == null) return chain2;
 
@@ -3371,7 +3399,7 @@ class PromotionModel<Type extends Object> {
     while (index1 < chain1.length && index2 < chain2.length) {
       Type type1 = chain1[index1];
       Type type2 = chain2[index2];
-      if (type1 == type2) {
+      if (typeOperations.isSameType(type1, type2)) {
         result ??= <Type>[];
         result.add(type1);
         index1++;
@@ -3399,10 +3427,11 @@ class PromotionModel<Type extends Object> {
   /// caveats:
   /// - The "sets" are represented as lists (since they are expected to be very
   ///   small in real-world cases)
-  /// - The sense of equality for the union operation is determined by `==`.
+  /// - The sense of equality for the union operation is determined by
+  ///   [TypeOperations.isSameType].
   /// - The types of interests lists are considered immutable.
   static List<Type> joinTested<Type extends Object>(List<Type> types1,
-      List<Type> types2, FlowAnalysisTypeOperations<Type> typeOperations) {
+      List<Type> types2, TypeOperations<Type> typeOperations) {
     // Ensure that types1 is the shorter list.
     if (types1.length > types2.length) {
       List<Type> tmp = types1;
@@ -3412,7 +3441,7 @@ class PromotionModel<Type extends Object> {
     // Determine the length of the common prefix the two lists share.
     int shared = 0;
     for (; shared < types1.length; shared++) {
-      if (types1[shared] != types2[shared]) break;
+      if (!typeOperations.isSameType(types1[shared], types2[shared])) break;
     }
     // Use types2 as a starting point and add any entries from types1 that are
     // not present in it.
@@ -3440,7 +3469,7 @@ class PromotionModel<Type extends Object> {
   /// [thisPromotedTypes] or [basePromotedTypes] (to make it easier for the
   /// caller to detect when data structures may be re-used).
   static List<Type>? rebasePromotedTypes<Type extends Object>(
-      FlowAnalysisTypeOperations<Type> typeOperations,
+      TypeOperations<Type> typeOperations,
       List<Type>? thisPromotedTypes,
       List<Type>? basePromotedTypes) {
     if (basePromotedTypes == null) {
@@ -3460,7 +3489,7 @@ class PromotionModel<Type extends Object> {
       for (int i = 0; i < thisPromotedTypes.length; i++) {
         Type nextType = thisPromotedTypes[i];
         if (typeOperations.isSubtypeOf(nextType, otherPromotedType) &&
-            nextType != otherPromotedType) {
+            !typeOperations.isSameType(nextType, otherPromotedType)) {
           newPromotedTypes = basePromotedTypes.toList()
             ..addAll(thisPromotedTypes.skip(i));
           break;
@@ -3476,8 +3505,8 @@ class PromotionModel<Type extends Object> {
           ? [promoted]
           : (promotedTypes.toList()..add(promoted));
 
-  static List<Type> _addTypeToUniqueList<Type extends Object>(List<Type> types,
-      Type newType, FlowAnalysisTypeOperations<Type> typeOperations) {
+  static List<Type> _addTypeToUniqueList<Type extends Object>(
+      List<Type> types, Type newType, TypeOperations<Type> typeOperations) {
     if (_typeListContains(typeOperations, types, newType)) return types;
     return new List<Type>.of(types)..add(newType);
   }
@@ -3515,11 +3544,9 @@ class PromotionModel<Type extends Object> {
   }
 
   static bool _typeListContains<Type extends Object>(
-      FlowAnalysisTypeOperations<Type> typeOperations,
-      List<Type> list,
-      Type searchType) {
+      TypeOperations<Type> typeOperations, List<Type> list, Type searchType) {
     for (Type type in list) {
-      if (type == searchType) return true;
+      if (typeOperations.isSameType(type, searchType)) return true;
     }
     return false;
   }
@@ -3763,7 +3790,8 @@ class SsaNode<Type extends Object> {
   /// used in a control flow construct.
   ///
   /// We don't bother storing flow analysis information if it's trivial (see
-  /// [ExpressionInfo]) because such information does not lead to promotions.
+  /// [_TrivialExpressionInfo]) because such information does not lead to
+  /// promotions.
   @visibleForTesting
   final ExpressionInfo<Type>? expressionInfo;
 
@@ -4064,8 +4092,8 @@ class TrivialVariableReference<Type extends Object> extends _Reference<Type> {
   /// and `x` has been subsequently written to, then the promotion is
   /// discarded). This is done via [FlowModel.rebaseForward].
   ///
-  /// [current] should be the current flow model, and [helper] should be
-  /// the instance of [_FlowAnalysisImpl].
+  /// [current] should be the current flow model, and [typeOperations] should be
+  /// the callback object provided by the client for manipulating types.
   _Reference<Type> addPreviousInfo(ExpressionInfo<Type>? previousExpressionInfo,
       FlowModelHelper<Type> helper, FlowModel<Type> current) {
     if (previousExpressionInfo != null && previousExpressionInfo.isNonTrivial) {
@@ -4093,6 +4121,13 @@ class TrivialVariableReference<Type extends Object> extends _Reference<Type> {
   @override
   String toString() => 'TrivialVariableReference(type: $_type, after: $after, '
       'promotionKey: $promotionKey, isThisOrSuper: $isThisOrSuper)';
+}
+
+/// Operations on variables, abstracted from concrete type interfaces.
+abstract class VariableOperations<Variable extends Object,
+    Type extends Object> {
+  /// Returns the static type of the given [variable].
+  Type variableType(Variable variable);
 }
 
 class WhyNotPromotedInfo {}
@@ -4223,10 +4258,10 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
     implements
         FlowAnalysis<Node, Statement, Expression, Variable, Type>,
         _PropertyTargetHelper<Expression, Type> {
-  /// The [FlowAnalysisOperations], used to access types, check subtyping, and
-  /// query variable types.
+  /// The [Operations], used to access types, check subtyping, and query
+  /// variable types.
   @override
-  final FlowAnalysisOperations<Variable, Type> operations;
+  final Operations<Variable, Type> operations;
 
   /// Stack of [_FlowContext] objects representing the statements and
   /// expressions that are currently being visited.
@@ -4261,8 +4296,8 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   /// no such expression has been visited.
   Expression? _expressionWithReference;
 
-  /// If [_expressionWithReference] is not `null`, the reference corresponding
-  /// to it. Otherwise `null`.
+  /// If [_expressionVariable] is not `null`, the reference corresponding to it.
+  /// Otherwise `null`.
   _Reference<Type>? _expressionReference;
 
   final AssignedVariables<Node, Variable> _assignedVariables;
@@ -4308,7 +4343,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   bool get isReachable => _current.reachable.overallReachable;
 
   @override
-  FlowAnalysisTypeOperations<Type> get typeOperations => operations;
+  TypeOperations<Type> get typeOperations => operations;
 
   @override
   void asExpression_end(Expression subExpression, Type type) {
@@ -4467,11 +4502,10 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
 
   @override
   void constantPattern_end(Expression expression, Type type,
-      {required bool patternsEnabled, required Type matchedValueType}) {
+      {required bool patternsEnabled}) {
     assert(_stack.last is _PatternContext<Type>);
     if (patternsEnabled) {
-      _handleEqualityCheckPattern(expression, type,
-          notEqual: false, matchedValueType: matchedValueType);
+      _handleEqualityCheckPattern(expression, type, notEqual: false);
     } else {
       // Before pattern support was added to Dart, flow analysis didn't do any
       // promotion based on the constants in individual case clauses.  Also, it
@@ -4497,7 +4531,8 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   @override
   void declare(Variable variable, Type staticType,
       {required bool initialized, bool skipDuplicateCheck = false}) {
-    assert(staticType == operations.variableType(variable));
+    assert(
+        operations.isSameType(staticType, operations.variableType(variable)));
     assert(_debugDeclaredVariables.add(variable) || skipDuplicateCheck,
         'Variable $variable already declared');
     _current = _current.declare(
@@ -4604,9 +4639,8 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
 
   @override
   void equalityRelationalPattern_end(Expression operand, Type operandType,
-      {bool notEqual = false, required Type matchedValueType}) {
-    _handleEqualityCheckPattern(operand, operandType,
-        notEqual: notEqual, matchedValueType: matchedValueType);
+      {bool notEqual = false}) {
+    _handleEqualityCheckPattern(operand, operandType, notEqual: notEqual);
   }
 
   @override
@@ -4697,7 +4731,14 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   }
 
   @override
-  Type getMatchedValueType() => _getMatchedValueType();
+  Type getMatchedValueType() {
+    _PatternContext<Type> context = _stack.last as _PatternContext<Type>;
+    return _current.promotionInfo
+            ?.get(this, context._matchedValueInfo.promotionKey)
+            ?.promotedTypes
+            ?.last ??
+        context._matchedValueInfo._type;
+  }
 
   @override
   void handleBreak(Statement? target) {
@@ -5033,8 +5074,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   }
 
   @override
-  bool nullCheckOrAssertPattern_begin(
-      {required bool isAssert, required Type matchedValueType}) {
+  bool nullCheckOrAssertPattern_begin({required bool isAssert}) {
     if (!isAssert) {
       // Account for the possibility that the pattern might not match.  Note
       // that it's tempting to skip this step if matchedValueType is
@@ -5045,8 +5085,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
       // assume the pattern might not match regardless of matchedValueType.
       _unmatched = _join(_unmatched, _current);
     }
-    FlowModel<Type>? ifNotNull =
-        _nullCheckPattern(matchedValueType: matchedValueType);
+    FlowModel<Type>? ifNotNull = _nullCheckPattern();
     if (ifNotNull != null) {
       _current = ifNotNull;
     }
@@ -5145,7 +5184,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
       required Type knownType,
       bool matchFailsIfWrongType = true,
       bool matchMayFailEvenIfCorrectType = false}) {
-    if (knownType is SharedInvalidType) {
+    if (operations.isError(knownType)) {
       _unmatched = _join(_unmatched!, _current);
       return false;
     }
@@ -5160,9 +5199,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
     _PatternContext<Type> context = _stack.last as _PatternContext<Type>;
     _Reference<Type> matchedValueReference =
         context.createReference(matchedType, _current);
-    bool coversMatchedType = operations.isSubtypeOf(
-        operations.extensionTypeErasure(matchedType),
-        operations.extensionTypeErasure(knownType));
+    bool coversMatchedType = operations.isSubtypeOf(matchedType, knownType);
     // Promote the synthetic cache variable the pattern is being matched
     // against.
     ExpressionInfo<Type> promotionInfo =
@@ -5193,18 +5230,9 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
           .ifFalse;
     }
     _current = ifTrue;
-    if (matchFailsIfWrongType && !coversMatchedType) {
-      // There's a reachable control flow path where the match might fail due to
-      // a type mismatch. Therefore, we must update the `_unmatched` flow state
-      // based on the state of flow analysis assuming the type check failed.
-      _unmatched = _join(_unmatched!, ifFalse);
-    }
-    if (matchMayFailEvenIfCorrectType) {
-      // There's a reachable control flow path where the type might match, but
-      // the match might nonetheless fail for some other reason. Therefore, we
-      // must update the `_unmatched` flow state based on the state of flow
-      // analysis assuming the type check succeeded.
-      _unmatched = _join(_unmatched!, ifTrue);
+    if (matchMayFailEvenIfCorrectType ||
+        (matchFailsIfWrongType && !coversMatchedType)) {
+      _unmatched = _join(_unmatched!, coversMatchedType ? ifTrue : ifFalse);
     }
     return coversMatchedType;
   }
@@ -5590,7 +5618,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   }
 
   /// Analyzes an equality check between the operands described by
-  /// [lhsInfo] and [rhsInfo].
+  /// [leftOperandInfo] and [rightOperandInfo].
   _EqualityCheckResult _equalityCheck(
       ExpressionInfo<Type> lhsInfo, ExpressionInfo<Type> rhsInfo) {
     TypeClassification leftOperandTypeClassification =
@@ -5682,28 +5710,13 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
     }
   }
 
-  /// Gets the matched value type that should be used to type check the pattern
-  /// currently being analyzed.
-  ///
-  /// May only be called in the context of a pattern.
-  Type _getMatchedValueType() {
-    _PatternContext<Type> context = _stack.last as _PatternContext<Type>;
-    return _current.promotionInfo
-            ?.get(this, context._matchedValueInfo.promotionKey)
-            ?.promotedTypes
-            ?.last ??
-        context._matchedValueInfo._type;
-  }
-
   Map<Type, NonPromotionReason> Function() _getNonPromotionReasons(
       _Reference<Type> reference, PromotionModel<Type>? currentPromotionInfo) {
     if (reference is _PropertyReference<Type>) {
       Object? propertyMember = reference.propertyMember;
       if (propertyMember != null) {
         PropertyNonPromotabilityReason? whyNotPromotable =
-            reference.propertyName.startsWith('_')
-                ? operations.whyPropertyIsNotPromotable(propertyMember)
-                : PropertyNonPromotabilityReason.isNotPrivate;
+            operations.whyPropertyIsNotPromotable(propertyMember);
         _PropertySsaNode<Type>? ssaNode =
             (reference.ssaNode as _PropertySsaNode<Type>).previousSsaNode;
         List<List<Type>>? allPreviouslyPromotedTypes;
@@ -5782,11 +5795,10 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   /// equal to the operand; otherwise, it matches if the matched value is
   /// *equal* to the operand.
   void _handleEqualityCheckPattern(Expression operand, Type operandType,
-      {required bool notEqual, required Type matchedValueType}) {
-    assert(identical(matchedValueType, _getMatchedValueType()));
+      {required bool notEqual}) {
     _PatternContext<Type> context = _stack.last as _PatternContext<Type>;
     _Reference<Type> newReference = context
-        .createReference(matchedValueType, _current)
+        .createReference(getMatchedValueType(), _current)
         .addPreviousInfo(context._matchedValueInfo, this, _current);
     _EqualityCheckResult equalityCheckResult =
         _equalityCheck(newReference, equalityOperand_end(operand, operandType));
@@ -5805,7 +5817,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
         //
         // So we want to promote the type of `v` in the case where the
         // constant pattern *didn't* match.
-        ifNotNull = _nullCheckPattern(matchedValueType: matchedValueType);
+        ifNotNull = _nullCheckPattern();
         if (ifNotNull == null) {
           // `_nullCheckPattern` returns `null` in the case where the matched
           // value type is non-nullable.  In fully sound programs, this would
@@ -5947,9 +5959,9 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   /// to `null`.
   ///
   /// If the matched value's type is non-nullable, then `null` is returned.
-  FlowModel<Type>? _nullCheckPattern({required Type matchedValueType}) {
+  FlowModel<Type>? _nullCheckPattern() {
     _PatternContext<Type> context = _stack.last as _PatternContext<Type>;
-    assert(identical(matchedValueType, _getMatchedValueType()));
+    Type matchedValueType = getMatchedValueType();
     _Reference<Type> matchedValueReference =
         context.createReference(matchedValueType, _current);
     // Promote
@@ -6008,7 +6020,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
 
   /// Updates the [_stack] to reflect the fact that flow analysis is entering
   /// into a pattern or subpattern match.  [matchedValueInfo] should be the
-  /// [_Reference] representing the value being matched.
+  /// [EqualityInfo] representing the value being matched.
   void _pushPattern(_Reference<Type> matchedValueInfo) {
     _current = _current.split();
     _stack.add(new _TopPatternContext<Type>(matchedValueInfo, _unmatched));
@@ -6024,7 +6036,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   /// [allowScrutineePromotion] indicates whether pattern matches should cause
   /// the scrutinee to be promoted.
   ///
-  /// The returned value is the [_Reference] representing the value being
+  /// The returned value is the [EqualityInfo] representing the value being
   /// matched.  It should be passed to [_pushPattern].
   _Reference<Type> _pushScrutinee(Expression? scrutinee, Type scrutineeType,
       {required bool allowScrutineePromotion}) {
@@ -6054,7 +6066,7 @@ class _FlowAnalysisImpl<Node extends Object, Statement extends Node,
   }
 
   /// Associates [expression], which should be the most recently visited
-  /// expression, with the given [expressionReference] object.
+  /// expression, with the given [Reference] object.
   void _storeExpressionReference(
       Expression expression, _Reference<Type> expressionReference) {
     _expressionWithReference = expression;
@@ -6237,9 +6249,9 @@ class _LegacyExpressionInfo<Type> {
 class _LegacyTypePromotion<Node extends Object, Statement extends Node,
         Expression extends Node, Variable extends Object, Type extends Object>
     implements FlowAnalysis<Node, Statement, Expression, Variable, Type> {
-  /// The [FlowAnalysisOperations], used to access types, check subtyping, and
-  /// query variable types.
-  final FlowAnalysisOperations<Variable, Type> _operations;
+  /// The [Operations], used to access types, check subtyping, and query
+  /// variable types.
+  final Operations<Variable, Type> _operations;
 
   /// Information about variable assignments computed during the previous
   /// compilation pass.
@@ -6282,7 +6294,7 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
   bool get isReachable => true;
 
   @override
-  FlowAnalysisOperations<Variable, Type> get operations => _operations;
+  TypeOperations<Type> get operations => _operations;
 
   @override
   void asExpression_end(Expression subExpression, Type type) {}
@@ -6335,7 +6347,7 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
 
   @override
   void constantPattern_end(Expression expression, Type type,
-      {required bool patternsEnabled, required Type matchedValueType}) {}
+      {required bool patternsEnabled}) {}
 
   @override
   void copyPromotionData(
@@ -6376,7 +6388,7 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
 
   @override
   void equalityRelationalPattern_end(Expression operand, Type operandType,
-      {bool notEqual = false, required Type matchedValueType}) {}
+      {bool notEqual = false}) {}
 
   @override
   ExpressionInfo<Type>? expressionInfoForTesting(Expression target) {
@@ -6499,7 +6511,8 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
       Type currentType =
           _knownTypes[variableKey] ?? _operations.variableType(variable);
       Type? promotedType = _operations.tryPromoteToType(type, currentType);
-      if (promotedType != null && currentType != promotedType) {
+      if (promotedType != null &&
+          !_operations.isSameType(currentType, promotedType)) {
         _storeExpressionInfo(isExpression,
             new _LegacyExpressionInfo<Type>({variableKey: promotedType}));
       }
@@ -6569,7 +6582,8 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
       } else {
         Type? newShownType =
             _operations.tryPromoteToType(entry.value, previouslyShownType);
-        if (newShownType != null && previouslyShownType != newShownType) {
+        if (newShownType != null &&
+            !_operations.isSameType(previouslyShownType, newShownType)) {
           newShownTypes[entry.key] = newShownType;
         }
       }
@@ -6641,9 +6655,7 @@ class _LegacyTypePromotion<Node extends Object, Statement extends Node,
   void nullAwareAccess_rightBegin(Expression? target, Type targetType) {}
 
   @override
-  bool nullCheckOrAssertPattern_begin(
-          {required bool isAssert, required Type matchedValueType}) =>
-      false;
+  bool nullCheckOrAssertPattern_begin({required bool isAssert}) => false;
 
   @override
   void nullCheckOrAssertPattern_end() {}
@@ -7060,8 +7072,8 @@ abstract class _PropertyTargetHelper<Expression extends Object,
   /// SSA node representing the implicit variable `this`.
   SsaNode<Type> get _thisSsaNode;
 
-  /// Gets the [_Reference] associated with the [expression] (which should be
-  /// the last expression that was traversed).  If there is no [_Reference]
+  /// Gets the [Reference] associated with the [expression] (which should be the
+  /// last expression that was traversed).  If there is no [Reference]
   /// associated with the [expression], then `null` is returned.
   _Reference<Type>? _getExpressionReference(Expression? expression);
 }
@@ -7180,7 +7192,7 @@ class _SwitchAlternativesContext<Variable extends Object, Type extends Object>
 /// [_FlowContext] representing a switch statement.
 class _SwitchStatementContext<Type extends Object>
     extends _SimpleStatementContext<Type> {
-  /// [_Reference] for the value being matched.
+  /// [EqualityInfo] for the value being matched.
   final _Reference<Type> _matchedValueInfo;
 
   /// Flow state for the code path where no switch cases have matched yet.  If

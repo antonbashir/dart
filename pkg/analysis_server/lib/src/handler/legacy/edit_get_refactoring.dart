@@ -17,12 +17,11 @@ class EditGetRefactoringHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = EditGetRefactoringParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = EditGetRefactoringParams.fromRequest(request);
 
     server.analyticsManager.startedGetRefactoring(params);
 
-    var refactoringManager = server.refactoringManager;
+    final refactoringManager = server.refactoringManager;
     if (refactoringManager == null) {
       sendResponse(
           Response.unsupportedFeature(request.id, 'Search is not enabled.'));

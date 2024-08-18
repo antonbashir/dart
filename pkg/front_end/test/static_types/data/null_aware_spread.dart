@@ -2,43 +2,59 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
+
 nullAwareListSpread(List<String> list) {
-  /*update: List<String!>!*/
+  /*cfe.update: List<String>*/
+  /*cfe:nnbd.update: List<String!>!*/
   list =
-      /*List<String!>!*/
+      /*cfe.List<String>*/
+      /*cfe:nnbd.List<String!>!*/
       [
-    /*String!*/
+    /*cfe.String*/
+    /*cfe:nnbd.String!*/
     'foo',
     ...?
-    /*List<String!>!*/
+    /*cfe.List<String>*/
+    /*cfe:nnbd.List<String!>!*/
     /*invoke: void*/ list
   ];
 }
 
 nullAwareSetSpread(Set<String> set) {
-  /*update: Set<String!>!*/
+  /*cfe.update: Set<String>*/
+  /*cfe:nnbd.update: Set<String!>!*/
   set =
-      /*Set<String!>!*/
+      /*cfe.Set<String>*/
+      /*cfe:nnbd.Set<String!>!*/
       {
-    /*String!*/
+    /*cfe.String*/
+    /*cfe:nnbd.String!*/
     'foo',
     ...?
-    /*Set<String!>!*/
+    /*cfe.Set<String>*/
+    /*cfe:nnbd.Set<String!>!*/
     /*invoke: void*/ set
   };
 }
 
 nullAwareMapSpread(Map<int, String> map) {
-  /*update: Map<int!,String!>!*/
+  /*cfe.update: Map<int,String>*/
+  /*cfe:nnbd.update: Map<int!,String!>!*/
   map =
-      /*Map<int!,String!>!*/
+      /*cfe.Map<int,String>*/
+      /*cfe:nnbd.Map<int!,String!>!*/
       {
-    /*int!*/
+    /*cfe.int*/
+    /*cfe:nnbd.int!*/
     0 /*update: void*/ :
-        /*String!*/
+        /*cfe.String*/
+        /*cfe:nnbd.String!*/
         'foo',
     ...?
-    /*Map<int!,String!>!*/
+    /*cfe.Map<int,String>*/
+    /*cfe:nnbd.Map<int!,String!>!*/
     /*invoke: void*/ map
   };
 }

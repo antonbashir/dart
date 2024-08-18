@@ -8,15 +8,15 @@ part of "core_patch.dart";
 class Uri {
   @patch
   static Uri get base {
-    final currentUri = JSStringImpl(JS<WasmExternRef?>("""() => {
+    String? currentUri = JS<String?>("""() => {
       // On browsers return `globalThis.location.href`
       if (globalThis.location != null) {
-        return globalThis.location.href;
+        return stringToDartString(globalThis.location.href);
       }
       return null;
-    }"""));
+    }""");
     if (currentUri != null) {
-      return Uri.parse(jsStringToDartString(currentUri));
+      return Uri.parse(currentUri);
     }
     throw UnsupportedError("'Uri.base' is not supported");
   }
@@ -28,7 +28,7 @@ class _Uri {
   static bool get _isWindows => _isWindowsCached;
 
   static final bool _isWindowsCached = JS<bool>("""() => {
-        return typeof process != "undefined" &&
+        return typeof process != undefined &&
                Object.prototype.toString.call(process) == "[object process]" &&
                process.platform == "win32"
       }""");

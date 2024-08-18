@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -15,24 +15,17 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 class ReplaceReturnType extends ResolvedCorrectionProducer {
   String _newType = '';
 
-  ReplaceReturnType({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_newType];
+  List<Object> get fixArguments => [_newType];
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_RETURN_TYPE;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var node = this.node;
+    final node = this.node;
     if (node is Expression) {
-      var typeSystem = libraryElement.typeSystem;
+      final typeSystem = libraryElement.typeSystem;
 
       var newType = node.staticType;
 
@@ -73,7 +66,7 @@ class ReplaceReturnType extends ResolvedCorrectionProducer {
           newType = typeProvider.futureType(newType!);
         }
 
-        _newType = newType!.getDisplayString();
+        _newType = newType!.getDisplayString(withNullability: true);
 
         await builder.addDartFileEdit(file, (builder) {
           if (builder.canWriteType(newType)) {

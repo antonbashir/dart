@@ -21,9 +21,9 @@ void f(int? x) {
   if (x case var y!) {}
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 34, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 34, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 NullAssertPattern
   pattern: DeclaredVariablePattern
@@ -46,9 +46,9 @@ void f(int? x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 45, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 45, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 NullAssertPattern
   pattern: DeclaredVariablePattern
@@ -68,9 +68,9 @@ void f(int? x) {
   var (a!) = x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 24, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 24, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclaration;
+    final node = findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -89,7 +89,7 @@ PatternVariableDeclaration
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: int?
   patternTypeSchema: _
 ''');

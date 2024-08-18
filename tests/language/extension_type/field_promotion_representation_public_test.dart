@@ -5,6 +5,8 @@
 // Tests that the representation variable doesn't undergo field promotion if
 // it's public.
 
+// SharedOptions=--enable-experiment=inline-class
+
 import '../static_type_helper.dart';
 
 extension type E(Object Function() f) {

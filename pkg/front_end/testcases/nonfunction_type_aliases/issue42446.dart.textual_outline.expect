@@ -7,7 +7,5 @@ class A2<X extends A2<X>> {
 }
 
 typedef B2<X extends A2<X>> = A2<X>;
-
 foo() {}
-
 main() {}

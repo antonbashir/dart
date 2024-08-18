@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
@@ -15,6 +14,7 @@ import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
+import 'package:analyzer/src/dart/resolver/variance.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:test/test.dart';
@@ -30,6 +30,11 @@ mixin ElementsTypesMixin {
     return interfaceTypeQuestion(element);
   }
 
+  InterfaceType get boolStar {
+    var element = typeProvider.boolElement;
+    return interfaceTypeStar(element);
+  }
+
   InterfaceType get doubleNone {
     var element = typeProvider.doubleType.element;
     return interfaceTypeNone(element);
@@ -38,6 +43,11 @@ mixin ElementsTypesMixin {
   InterfaceType get doubleQuestion {
     var element = typeProvider.doubleType.element;
     return interfaceTypeQuestion(element);
+  }
+
+  InterfaceType get doubleStar {
+    var element = typeProvider.doubleType.element;
+    return interfaceTypeStar(element);
   }
 
   DartType get dynamicType => DynamicTypeImpl.instance;
@@ -52,6 +62,11 @@ mixin ElementsTypesMixin {
     return interfaceTypeQuestion(element);
   }
 
+  InterfaceType get functionStar {
+    var element = typeProvider.functionType.element;
+    return interfaceTypeStar(element);
+  }
+
   InterfaceType get intNone {
     var element = typeProvider.intType.element;
     return interfaceTypeNone(element);
@@ -62,11 +77,18 @@ mixin ElementsTypesMixin {
     return interfaceTypeQuestion(element);
   }
 
+  InterfaceType get intStar {
+    var element = typeProvider.intType.element;
+    return interfaceTypeStar(element);
+  }
+
   DartType get invalidType => InvalidTypeImpl.instance;
 
   NeverTypeImpl get neverNone => NeverTypeImpl.instance;
 
   NeverTypeImpl get neverQuestion => NeverTypeImpl.instanceNullable;
+
+  NeverTypeImpl get neverStar => NeverTypeImpl.instanceLegacy;
 
   InterfaceTypeImpl get nullNone {
     var element = typeProvider.nullType.element;
@@ -76,6 +98,11 @@ mixin ElementsTypesMixin {
   InterfaceTypeImpl get nullQuestion {
     var element = typeProvider.nullType.element;
     return interfaceTypeQuestion(element) as InterfaceTypeImpl;
+  }
+
+  InterfaceTypeImpl get nullStar {
+    var element = typeProvider.nullType.element;
+    return interfaceTypeStar(element) as InterfaceTypeImpl;
   }
 
   InterfaceType get numNone {
@@ -88,6 +115,11 @@ mixin ElementsTypesMixin {
     return interfaceTypeQuestion(element);
   }
 
+  InterfaceType get numStar {
+    var element = typeProvider.numType.element;
+    return interfaceTypeStar(element);
+  }
+
   InterfaceType get objectNone {
     var element = typeProvider.objectType.element;
     return interfaceTypeNone(element);
@@ -96,6 +128,11 @@ mixin ElementsTypesMixin {
   InterfaceType get objectQuestion {
     var element = typeProvider.objectType.element;
     return interfaceTypeQuestion(element);
+  }
+
+  InterfaceType get objectStar {
+    var element = typeProvider.objectType.element;
+    return interfaceTypeStar(element);
   }
 
   InterfaceType get recordNone {
@@ -111,6 +148,11 @@ mixin ElementsTypesMixin {
   InterfaceType get stringQuestion {
     var element = typeProvider.stringType.element;
     return interfaceTypeQuestion(element);
+  }
+
+  InterfaceType get stringStar {
+    var element = typeProvider.stringType.element;
+    return interfaceTypeStar(element);
   }
 
   LibraryElementImpl get testLibrary => throw UnimplementedError();
@@ -163,6 +205,15 @@ mixin ElementsTypesMixin {
     );
   }
 
+  InterfaceType comparableStar(DartType type) {
+    var coreLibrary = typeProvider.intElement.library;
+    var element = coreLibrary.getClass('Comparable')!;
+    return element.instantiate(
+      typeArguments: [type],
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
+  }
+
   EnumElementImpl enum_({
     required String name,
     required List<ConstFieldElementImpl> constants,
@@ -179,22 +230,6 @@ mixin ElementsTypesMixin {
     return ConstFieldElementImpl(name, 0)..isEnumConstant = true;
   }
 
-  ExtensionElementImpl extension({
-    required DartType extendedType,
-    String? name,
-    bool isAugmentation = false,
-    List<TypeParameterElement> typeParameters = const [],
-    List<MethodElementImpl> methods = const [],
-  }) {
-    var element = ExtensionElementImpl(name, 0);
-    element.augmented.extendedType = extendedType;
-    element.isAugmentation = isAugmentation;
-    element.enclosingElement = testLibrary.definingCompilationUnit;
-    element.typeParameters = typeParameters;
-    element.methods = methods;
-    return element;
-  }
-
   ExtensionTypeElementImpl extensionType(
     String name, {
     String representationName = 'it',
@@ -202,18 +237,14 @@ mixin ElementsTypesMixin {
     List<TypeParameterElement> typeParameters = const [],
     List<InterfaceType> interfaces = const [],
   }) {
-    var element = ExtensionTypeElementImpl(name, -1);
+    final element = ExtensionTypeElementImpl(name, -1);
     element.enclosingElement = testLibrary.definingCompilationUnit;
     element.typeParameters = typeParameters;
     element.interfaces = interfaces;
 
-    var field = FieldElementImpl(representationName, -1);
+    final field = FieldElementImpl(representationName, -1);
     field.type = representationType;
     element.fields = [field];
-
-    element.augmented
-      ..representation = field
-      ..typeErasure = representationType;
 
     return element;
   }
@@ -258,6 +289,19 @@ mixin ElementsTypesMixin {
     );
   }
 
+  FunctionTypeImpl functionTypeStar({
+    List<TypeParameterElement> typeFormals = const [],
+    List<ParameterElement> parameters = const [],
+    required DartType returnType,
+  }) {
+    return functionType(
+      typeFormals: typeFormals,
+      parameters: parameters,
+      returnType: returnType,
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
+  }
+
   InterfaceTypeImpl futureNone(DartType type) {
     return typeProvider.futureElement.instantiate(
       typeArguments: [type],
@@ -279,11 +323,30 @@ mixin ElementsTypesMixin {
     ) as InterfaceTypeImpl;
   }
 
+  InterfaceTypeImpl futureOrStar(DartType type) {
+    return typeProvider.futureOrElement.instantiate(
+      typeArguments: [type],
+      nullabilitySuffix: NullabilitySuffix.star,
+    ) as InterfaceTypeImpl;
+  }
+
   InterfaceTypeImpl futureQuestion(DartType type) {
     return typeProvider.futureElement.instantiate(
       typeArguments: [type],
       nullabilitySuffix: NullabilitySuffix.question,
     ) as InterfaceTypeImpl;
+  }
+
+  InterfaceTypeImpl futureStar(DartType type) {
+    return typeProvider.futureElement.instantiate(
+      typeArguments: [type],
+      nullabilitySuffix: NullabilitySuffix.star,
+    ) as InterfaceTypeImpl;
+  }
+
+  InterfaceType futureType(DartType T) {
+    var futureElement = typeProvider.futureElement;
+    return interfaceTypeStar(futureElement, typeArguments: [T]);
   }
 
   InterfaceType interfaceType(
@@ -317,6 +380,16 @@ mixin ElementsTypesMixin {
     );
   }
 
+  InterfaceType interfaceTypeStar(
+    InterfaceElement element, {
+    List<DartType> typeArguments = const [],
+  }) {
+    return element.instantiate(
+      typeArguments: typeArguments,
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
+  }
+
   InterfaceType iterableNone(DartType type) {
     return typeProvider.iterableElement.instantiate(
       typeArguments: [type],
@@ -331,6 +404,13 @@ mixin ElementsTypesMixin {
     );
   }
 
+  InterfaceType iterableStar(DartType type) {
+    return typeProvider.iterableElement.instantiate(
+      typeArguments: [type],
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
+  }
+
   LibraryElementImpl library_({
     required String uriStr,
     required TypeSystemImpl typeSystem,
@@ -340,6 +420,12 @@ mixin ElementsTypesMixin {
     var uri = Uri.parse(uriStr);
     var source = _MockSource(uri);
 
+    var definingUnit = CompilationUnitElementImpl(
+      source: source,
+      librarySource: source,
+      lineInfo: LineInfo([0]),
+    );
+
     var library = LibraryElementImpl(
       analysisContext,
       analysisSession,
@@ -348,13 +434,6 @@ mixin ElementsTypesMixin {
       0,
       FeatureSet.latestLanguageVersion(),
     );
-
-    var definingUnit = CompilationUnitElementImpl(
-      library: library,
-      source: source,
-      lineInfo: LineInfo([0]),
-    );
-
     library.definingCompilationUnit = definingUnit;
     library.typeProvider = typeSystem.typeProvider;
     library.typeSystem = typeSystem;
@@ -376,6 +455,13 @@ mixin ElementsTypesMixin {
     );
   }
 
+  InterfaceType listStar(DartType type) {
+    return typeProvider.listElement.instantiate(
+      typeArguments: [type],
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
+  }
+
   InterfaceType mapNone(DartType key, DartType value) {
     return typeProvider.mapElement.instantiate(
       typeArguments: [key, value],
@@ -387,6 +473,13 @@ mixin ElementsTypesMixin {
     return typeProvider.mapElement.instantiate(
       typeArguments: [key, value],
       nullabilitySuffix: NullabilitySuffix.question,
+    );
+  }
+
+  InterfaceType mapStar(DartType key, DartType value) {
+    return typeProvider.mapElement.instantiate(
+      typeArguments: [key, value],
+      nullabilitySuffix: NullabilitySuffix.star,
     );
   }
 
@@ -502,6 +595,17 @@ mixin ElementsTypesMixin {
     );
   }
 
+  TypeParameterTypeImpl promotedTypeParameterTypeStar(
+    TypeParameterElement element,
+    DartType promotedBound,
+  ) {
+    return promotedTypeParameterType(
+      element: element,
+      nullabilitySuffix: NullabilitySuffix.star,
+      promotedBound: promotedBound,
+    );
+  }
+
   RecordTypeImpl recordType({
     List<DartType> positionalTypes = const [],
     Map<String, DartType> namedTypes = const {},
@@ -542,6 +646,17 @@ mixin ElementsTypesMixin {
       positionalTypes: positionalTypes,
       namedTypes: namedTypes,
       nullabilitySuffix: NullabilitySuffix.question,
+    );
+  }
+
+  RecordTypeImpl recordTypeStar({
+    List<DartType> positionalTypes = const [],
+    Map<String, DartType> namedTypes = const {},
+  }) {
+    return recordType(
+      positionalTypes: positionalTypes,
+      namedTypes: namedTypes,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
   }
 
@@ -623,6 +738,17 @@ mixin ElementsTypesMixin {
       promotedBound: promotedBound,
     );
   }
+
+  TypeParameterTypeImpl typeParameterTypeStar(
+    TypeParameterElement element, {
+    DartType? promotedBound,
+  }) {
+    return typeParameterType(
+      element,
+      nullabilitySuffix: NullabilitySuffix.star,
+      promotedBound: promotedBound,
+    );
+  }
 }
 
 class _MockSource implements Source {
@@ -639,14 +765,14 @@ extension ClassElementImplExtension on ClassElementImpl {
   void addAugmentations(List<ClassElementImpl> augmentations) {
     expect(this.augmented, TypeMatcher<NotAugmentedClassElementImpl>());
 
-    var augmented = AugmentedClassElementImpl(this);
+    final augmented = AugmentedClassElementImpl(this);
     augmentedInternal = augmented;
 
     var augmentationTarget = this;
-    for (var augmentation in augmentations) {
+    for (final augmentation in augmentations) {
       expect(augmentation.isAugmentation, isTrue);
       augmentationTarget.augmentation = augmentation;
-      augmentation.augmentationTargetAny = augmentationTarget;
+      augmentation.augmentationTarget = augmentationTarget;
       augmentationTarget = augmentation;
 
       expect(augmentation.typeParameters, isEmpty,
@@ -661,14 +787,14 @@ extension MixinElementImplExtension on MixinElementImpl {
   void addAugmentations(List<MixinElementImpl> augmentations) {
     expect(this.augmented, TypeMatcher<NotAugmentedMixinElementImpl>());
 
-    var augmented = AugmentedMixinElementImpl(this);
+    final augmented = AugmentedMixinElementImpl(this);
     augmentedInternal = augmented;
 
     var augmentationTarget = this;
-    for (var augmentation in augmentations) {
+    for (final augmentation in augmentations) {
       expect(augmentation.isAugmentation, isTrue);
       augmentationTarget.augmentation = augmentation;
-      augmentation.augmentationTargetAny = augmentationTarget;
+      augmentation.augmentationTarget = augmentationTarget;
       augmentationTarget = augmentation;
 
       expect(augmentation.typeParameters, isEmpty,

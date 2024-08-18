@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,11 +16,11 @@ void main() async {
   // granularity of file stat on windows.
   // Waiting for this number of milliseconds guarantees that the files in
   // the unit tests will not be counted as modified.
-  const int statGranularity = 1100;
+  const statGranularity = 1100;
 
   group('Resident Frontend Server: invalid input: ', () {
     test('no command given', () async {
-      final String jsonResponse = await ResidentFrontendServer.handleRequest(
+      final jsonResponse = await ResidentFrontendServer.handleRequest(
           jsonEncode(<String, Object>{"no": "command"}));
       expect(
           jsonResponse,
@@ -32,7 +31,7 @@ void main() async {
     });
 
     test('invalid command', () async {
-      final String jsonResponse = await ResidentFrontendServer.handleRequest(
+      final jsonResponse = await ResidentFrontendServer.handleRequest(
           jsonEncode(<String, Object>{"command": "not a command"}));
       expect(
           jsonResponse,
@@ -43,8 +42,7 @@ void main() async {
     });
 
     test('not a JSON request', () async {
-      final String jsonResponse =
-          await ResidentFrontendServer.handleRequest("hello");
+      final jsonResponse = await ResidentFrontendServer.handleRequest("hello");
       expect(
           jsonResponse,
           equals(jsonEncode(<String, Object>{
@@ -54,15 +52,14 @@ void main() async {
     });
 
     test('missing files for compile command', () async {
-      final String jsonResponse = await ResidentFrontendServer.handleRequest(
+      final jsonResponse = await ResidentFrontendServer.handleRequest(
           jsonEncode(<String, Object>{"command": "compile"}));
       expect(
           jsonResponse,
           equals(jsonEncode(<String, Object>{
             "success": false,
             "errorMessage":
-                "compilation requests must include an executable and an "
-                    "output-dill path."
+                "compilation requests must include an executable and an output-dill path."
           })));
     });
   });
@@ -73,10 +70,10 @@ void main() async {
 
     setUp(() async {
       d = Directory.systemTemp.createTempSync();
-      executable = new File(path.join(d.path, 'src1.dart'))
+      executable = File(path.join(d.path, 'src1.dart'))
         ..createSync()
         ..writeAsStringSync('void main() {print("hello " "there");}');
-      package = new File(path.join(d.path, '.dart_tool', 'package_config.json'))
+      package = File(path.join(d.path, '.dart_tool', 'package_config.json'))
         ..createSync(recursive: true)
         ..writeAsStringSync('''
   {
@@ -90,7 +87,7 @@ void main() async {
     ]
   }
   ''');
-      cachedDill = new File(path.join(d.path, 'src1.dart.dill'));
+      cachedDill = File(path.join(d.path, 'src1.dart.dill'));
     });
 
     tearDown(() async {
@@ -99,7 +96,7 @@ void main() async {
     });
 
     test('initial compile, basic', () async {
-      final Map<String, dynamic> compileResult = jsonDecode(
+      final compileResult = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -113,7 +110,7 @@ void main() async {
 
     test('compile options', () async {
       executable.writeAsStringSync('void main() { int x = 1; }');
-      final Map<String, dynamic> compileResult1 = jsonDecode(
+      final compileResult1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -132,7 +129,7 @@ void main() async {
     });
 
     test('produces aot kernel', () async {
-      final Map<String, dynamic> compileResult1 = jsonDecode(
+      final compileResult1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -152,7 +149,7 @@ void main() async {
     });
 
     test('no package_config.json provided', () async {
-      final Map<String, dynamic> compileResult = jsonDecode(
+      final compileResult = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path, outputDill: cachedDill.path)));
@@ -163,8 +160,8 @@ void main() async {
     });
 
     test('incremental compilation', () async {
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      await Future.delayed(Duration(milliseconds: statGranularity));
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -174,7 +171,7 @@ void main() async {
       executable.writeAsStringSync(
           executable.readAsStringSync().replaceFirst('there', 'world'));
 
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -191,7 +188,7 @@ void main() async {
       expect(
           ResidentFrontendServer
               .compilers[executable.path]!.trackedSources.first,
-          equals(new Uri.file(executable.path)));
+          equals(Uri.file(executable.path)));
       expect(
           ResidentFrontendServer
               .compilers[executable.path]!.trackedSources.length,
@@ -199,16 +196,16 @@ void main() async {
     });
 
     test(
-        'compiling twice with no modifications returns cached kernel without '
-        'invoking compiler', () async {
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+        'compiling twice with no modifications returns cached kernel without invoking compiler',
+        () async {
+      await Future.delayed(Duration(milliseconds: statGranularity));
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
                   packages: package.path,
                   outputDill: cachedDill.path)));
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -224,17 +221,17 @@ void main() async {
     });
 
     test('switch entrypoints gracefully', () async {
-      final File executable2 = new File(path.join(d.path, 'src2.dart'))
+      final executable2 = File(path.join(d.path, 'src2.dart'))
         ..writeAsStringSync('void main() {}');
-      final File entryPointDill = new File(path.join(d.path, 'src2.dart.dill'));
+      final entryPointDill = File(path.join(d.path, 'src2.dart.dill'));
 
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
                   packages: package.path,
                   outputDill: cachedDill.path)));
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable2.path,
@@ -250,7 +247,7 @@ void main() async {
       expect(
           ResidentFrontendServer
               .compilers[executable.path]!.trackedSources.first,
-          equals(new Uri.file(executable.path)));
+          equals(Uri.file(executable.path)));
       expect(
           ResidentFrontendServer
               .compilers[executable2.path]!.trackedSources.length,
@@ -258,13 +255,13 @@ void main() async {
       expect(
           ResidentFrontendServer
               .compilers[executable2.path]!.trackedSources.first,
-          equals(new Uri.file(executable2.path)));
+          equals(Uri.file(executable2.path)));
       expect(ResidentFrontendServer.compilers.length, 2);
     });
 
     test('Cached kernel is removed between compilation requests', () async {
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      await Future.delayed(Duration(milliseconds: statGranularity));
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -276,7 +273,7 @@ void main() async {
       cachedDill.deleteSync();
       expect(cachedDill.existsSync(), false);
 
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -293,19 +290,19 @@ void main() async {
     });
 
     test('maintains tracked sources', () async {
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
-      final File executable2 = new File(path.join(d.path, 'src2.dart'))
+      await Future.delayed(Duration(milliseconds: statGranularity));
+      final executable2 = File(path.join(d.path, 'src2.dart'))
         ..createSync()
         ..writeAsStringSync('''
             import 'src3.dart';
             void main() {}''');
-      final File executable3 = new File(path.join(d.path, 'src3.dart'))
+      final executable3 = File(path.join(d.path, 'src3.dart'))
         ..createSync()
         ..writeAsStringSync('''
             void fn() {}''');
 
-      // adding or removing package_config.json while maintaining the same
-      // entrypoint should not alter tracked sources
+      // adding or removing package_config.json while maintaining the same entrypoint
+      // should not alter tracked sources
       await ResidentFrontendServer.handleRequest(
           ResidentFrontendServer.createCompileJSON(
               executable: executable.path, outputDill: cachedDill.path));
@@ -314,7 +311,7 @@ void main() async {
               executable: executable.path,
               packages: package.path,
               outputDill: cachedDill.path));
-      final Map<String, dynamic> compileResult1 = jsonDecode(
+      final compileResult1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path, outputDill: cachedDill.path)));
@@ -329,7 +326,7 @@ void main() async {
       expect(
           ResidentFrontendServer
               .compilers[executable.path]!.trackedSources.first,
-          equals(new Uri.file(executable.path)));
+          equals(Uri.file(executable.path)));
 
       // switching entrypoints, packages, and modifying packages
       await ResidentFrontendServer.handleRequest(
@@ -344,9 +341,9 @@ void main() async {
       package.writeAsStringSync(package.readAsStringSync());
       // Forces package to be behind the next computed kernel by 1 second
       // so that the final compilation will be incremental
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
+      await Future.delayed(Duration(milliseconds: statGranularity));
 
-      final Map<String, dynamic> compileResult2 = jsonDecode(
+      final compileResult2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable2.path,
@@ -361,14 +358,12 @@ void main() async {
           greaterThanOrEqualTo(2));
       expect(
           ResidentFrontendServer.compilers[executable2.path]!.trackedSources,
-          containsAll(<Uri>{
-            new Uri.file(executable2.path),
-            new Uri.file(executable3.path)
-          }));
+          containsAll(
+              <Uri>{Uri.file(executable2.path), Uri.file(executable3.path)}));
 
       // remove a source
       executable2.writeAsStringSync('void main() {}');
-      final Map<String, dynamic> compileResult3 = jsonDecode(
+      final compileResult3 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable2.path,
@@ -381,16 +376,16 @@ void main() async {
               .compilers[executable2.path]!.trackedSources.length,
           greaterThanOrEqualTo(1));
       expect(ResidentFrontendServer.compilers[executable2.path]!.trackedSources,
-          containsAll(<Uri>{new Uri.file(executable2.path)}));
+          containsAll(<Uri>{Uri.file(executable2.path)}));
     });
 
     test('continues to work after compiler error is produced', () async {
-      final String originalContent = executable.readAsStringSync();
-      final String newContent = originalContent.replaceAll(';', '@');
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
+      final originalContent = executable.readAsStringSync();
+      final newContent = originalContent.replaceAll(';', '@');
+      await Future.delayed(Duration(milliseconds: statGranularity));
 
       executable.writeAsStringSync(newContent);
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -398,7 +393,7 @@ void main() async {
                   outputDill: cachedDill.path)));
 
       executable.writeAsStringSync(originalContent);
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
@@ -417,22 +412,22 @@ void main() async {
       expect(
           ResidentFrontendServer
               .compilers[executable.path]!.trackedSources.first,
-          equals(new Uri.file(executable.path)));
+          equals(Uri.file(executable.path)));
     });
 
     test('using cached kernel maintains error messages', () async {
-      final String originalContent = executable.readAsStringSync();
+      final originalContent = executable.readAsStringSync();
       executable.writeAsStringSync(originalContent.replaceFirst(';', ''));
-      await new Future.delayed(const Duration(milliseconds: statGranularity));
+      await Future.delayed(Duration(milliseconds: statGranularity));
 
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
         packages: package.path,
         outputDill: cachedDill.path,
       )));
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -440,7 +435,7 @@ void main() async {
         outputDill: cachedDill.path,
       )));
       executable.writeAsStringSync(originalContent);
-      final Map<String, dynamic> compileResults3 = jsonDecode(
+      final compileResults3 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
         executable: executable.path,
@@ -460,38 +455,38 @@ void main() async {
     });
 
     test('enforces compiler limit', () async {
-      final File executable2 = new File(path.join(d.path, 'src2.dart'))
+      final executable2 = File(path.join(d.path, 'src2.dart'))
         ..createSync()
         ..writeAsStringSync('''
             import 'src3.dart';
             void main() {}''');
-      final File executable3 = new File(path.join(d.path, 'src3.dart'))
+      final executable3 = File(path.join(d.path, 'src3.dart'))
         ..createSync()
         ..writeAsStringSync('''
             void main() {}''');
-      final File executable4 = new File(path.join(d.path, 'src4.dart'))
+      final executable4 = File(path.join(d.path, 'src4.dart'))
         ..createSync()
         ..writeAsStringSync('''
             void main() {}''');
-      final Map<String, dynamic> compileResults1 = jsonDecode(
+      final compileResults1 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable.path,
                   packages: package.path,
                   outputDill: cachedDill.path)));
-      final Map<String, dynamic> compileResults2 = jsonDecode(
+      final compileResults2 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable2.path,
                   packages: package.path,
                   outputDill: cachedDill.path)));
-      final Map<String, dynamic> compileResults3 = jsonDecode(
+      final compileResults3 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable3.path,
                   packages: package.path,
                   outputDill: cachedDill.path)));
-      final Map<String, dynamic> compileResults4 = jsonDecode(
+      final compileResults4 = jsonDecode(
           await ResidentFrontendServer.handleRequest(
               ResidentFrontendServer.createCompileJSON(
                   executable: executable4.path,
@@ -516,14 +511,14 @@ void main() async {
 
     setUp(() {
       d = Directory.systemTemp.createTempSync();
-      serverInfo = new File(path.join(d.path, 'info.txt'));
+      serverInfo = File(path.join(d.path, 'info.txt'));
     });
     tearDown(() {
       d.deleteSync(recursive: true);
     });
 
     test('ServerSocket fails to bind', () async {
-      final StreamSubscription<Socket>? result = await residentListenAndCompile(
+      final result = await residentListenAndCompile(
           InternetAddress.loopbackIPv4, -1, serverInfo);
 
       expect(serverInfo.existsSync(), false);
@@ -535,12 +530,12 @@ void main() async {
           InternetAddress.loopbackIPv4, 0, serverInfo);
 
       expect(serverInfo.existsSync(), true);
-      final String info = serverInfo.readAsStringSync();
-      final InternetAddress address = new InternetAddress(
+      final info = serverInfo.readAsStringSync();
+      final address = InternetAddress(
           info.substring(info.indexOf(':') + 1, info.indexOf(' ')));
-      final int port = int.parse(info.substring(info.lastIndexOf(':') + 1));
+      final port = int.parse(info.substring(info.lastIndexOf(':') + 1));
 
-      final Map<String, dynamic> shutdownResult = await sendAndReceiveResponse(
+      final shutdownResult = await sendAndReceiveResponse(
           address, port, ResidentFrontendServer.shutdownCommand);
 
       expect(shutdownResult, equals(<String, dynamic>{"shutdown": true}));
@@ -550,31 +545,29 @@ void main() async {
     test('timed shutdown', () async {
       await residentListenAndCompile(
           InternetAddress.loopbackIPv4, 0, serverInfo,
-          inactivityTimeout: const Duration(milliseconds: 100));
+          inactivityTimeout: Duration(milliseconds: 100));
 
       expect(serverInfo.existsSync(), true);
-      final String info = serverInfo.readAsStringSync();
-      final InternetAddress address = new InternetAddress(
+      final info = serverInfo.readAsStringSync();
+      final address = InternetAddress(
           info.substring(info.indexOf(':') + 1, info.indexOf(' ')));
-      final int port = int.parse(info.substring(info.lastIndexOf(':') + 1));
+      final port = int.parse(info.substring(info.lastIndexOf(':') + 1));
 
-      await new Future.delayed(const Duration(milliseconds: 150));
+      await Future.delayed(Duration(milliseconds: 150));
       expect(serverInfo.existsSync(), false);
 
-      final Map<String, dynamic> shutdownResult = await sendAndReceiveResponse(
+      final shutdownResult = await sendAndReceiveResponse(
           address, port, ResidentFrontendServer.shutdownCommand);
       expect(shutdownResult['errorMessage'], contains('SocketException'));
     });
 
     test('concurrent startup requests', () async {
-      final StreamSubscription<Socket>? serverSubscription =
-          await residentListenAndCompile(
+      final serverSubscription = await residentListenAndCompile(
         InternetAddress.loopbackIPv4,
         0,
         serverInfo,
       );
-      final StreamSubscription<Socket>? startWhileAlreadyRunning =
-          await residentListenAndCompile(
+      final startWhileAlreadyRunning = await residentListenAndCompile(
         InternetAddress.loopbackIPv4,
         0,
         serverInfo,
@@ -584,28 +577,28 @@ void main() async {
       expect(startWhileAlreadyRunning, null);
       expect(serverInfo.existsSync(), true);
 
-      final String info = serverInfo.readAsStringSync();
-      final InternetAddress address = new InternetAddress(
+      final info = serverInfo.readAsStringSync();
+      final address = InternetAddress(
           info.substring(info.indexOf(':') + 1, info.indexOf(' ')));
-      final int port = int.parse(info.substring(info.lastIndexOf(':') + 1));
+      final port = int.parse(info.substring(info.lastIndexOf(':') + 1));
 
-      final Map<String, dynamic> shutdownResult = await sendAndReceiveResponse(
+      final shutdownResult = await sendAndReceiveResponse(
           address, port, ResidentFrontendServer.shutdownCommand);
       expect(shutdownResult, equals(<String, dynamic>{"shutdown": true}));
       expect(serverInfo.existsSync(), false);
     });
 
     test('resident server starter', () async {
-      final Future<int> returnValue =
+      final returnValue =
           starter(['--resident-info-file-name=${serverInfo.path}']);
       expect(await returnValue, 0);
       expect(serverInfo.existsSync(), true);
-      final String info = serverInfo.readAsStringSync();
-      final InternetAddress address = new InternetAddress(
+      final info = serverInfo.readAsStringSync();
+      final address = InternetAddress(
           info.substring(info.indexOf(':') + 1, info.indexOf(' ')));
-      final int port = int.parse(info.substring(info.lastIndexOf(':') + 1));
+      final port = int.parse(info.substring(info.lastIndexOf(':') + 1));
 
-      Map<String, dynamic> result = await sendAndReceiveResponse(
+      var result = await sendAndReceiveResponse(
           address, port, ResidentFrontendServer.shutdownCommand);
       expect(result, equals(<String, dynamic>{"shutdown": true}));
       expect(serverInfo.existsSync(), false);

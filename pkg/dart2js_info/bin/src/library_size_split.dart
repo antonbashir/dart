@@ -59,7 +59,7 @@
 ///```
 ///
 /// This example is very similar to [defaultGrouping].
-library;
+library dart2js_info.bin.library_size_split;
 
 import 'dart:io';
 import 'dart:math' show max;

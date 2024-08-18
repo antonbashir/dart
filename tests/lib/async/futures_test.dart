@@ -4,10 +4,9 @@
 
 library futures_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 Future testWaitEmpty() {
   final futures = <Future>[];

@@ -4,10 +4,9 @@
 
 library future_foreach_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 main() {
   asyncStart();

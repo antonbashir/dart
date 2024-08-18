@@ -26,8 +26,8 @@ class StatementCompletionTest extends PubPackageAnalysisServerTest {
   }
 
   Future<void> test_invalidFilePathFormat_notAbsolute() async {
-    var request = EditGetStatementCompletionParams('test.dart', 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request =
+        EditGetStatementCompletionParams('test.dart', 0).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -39,7 +39,7 @@ class StatementCompletionTest extends PubPackageAnalysisServerTest {
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var request = EditGetStatementCompletionParams(
             convertPath('/foo/../bar/test.dart'), 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -134,11 +134,10 @@ void f() {
   }
 
   Future<void> _prepareCompletionAt(int offset) async {
-    var request = EditGetStatementCompletionParams(testFile.path, offset)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request =
+        EditGetStatementCompletionParams(testFile.path, offset).toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = EditGetStatementCompletionResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = EditGetStatementCompletionResult.fromResponse(response);
     change = result.change;
   }
 }

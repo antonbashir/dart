@@ -314,6 +314,7 @@ void testNullCheckAlwaysMatches(Object x) {
     case _?:
       //  ^
       // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+      // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
       y = true;
   }
   y.expectStaticType<Exactly<bool?>>();
@@ -336,6 +337,7 @@ void testNullCheckSubpatternMayFailToMatch(Object x) {
     case int _?:
       //      ^
       // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+      // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
       y = true;
   }
   y.expectStaticType<Exactly<bool?>>();
@@ -368,6 +370,7 @@ void testNullAssertSubpatternMayFailToMatch(Object x) {
     case int _!:
       //      ^
       // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_ASSERT_PATTERN
+      // [cfe] The null-assert pattern will have no effect because the matched type isn't nullable.
       y = true;
   }
   y.expectStaticType<Exactly<bool?>>();
@@ -659,8 +662,8 @@ void testRelationalEqualsNullWithNullScrutinee(Null x) {
   switch (x) {
 //^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.NON_EXHAUSTIVE_SWITCH_STATEMENT
-//        ^
-// [cfe] The type 'Null' is not exhaustively matched by the switch cases since it doesn't match 'null'.
+    //    ^
+    // [cfe] The type 'Null' is not exhaustively matched by the switch cases since it doesn't match 'null'.
     case == null:
       y = true;
   }

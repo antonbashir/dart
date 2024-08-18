@@ -6,5 +6,4 @@ class Foo {
 
 @Foo(const [])
 typedef void F();
-
 main() {}

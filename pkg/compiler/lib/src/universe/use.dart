@@ -16,8 +16,6 @@
 /// program.
 library dart2js.universe.use;
 
-import 'package:kernel/ast.dart' as ir;
-
 import '../common.dart';
 import '../constants/values.dart';
 import '../elements/types.dart';
@@ -28,7 +26,7 @@ import '../js_model/closure.dart' show JContextField;
 import '../util/util.dart' show equalElements, Hashing;
 import 'call_structure.dart' show CallStructure;
 import 'selector.dart' show Selector;
-import 'world_impact.dart';
+import 'world_builder.dart';
 
 enum DynamicUseKind {
   INVOKE,
@@ -95,9 +93,14 @@ class DynamicUse {
   String get shortText {
     StringBuffer sb = StringBuffer();
     if (receiverConstraint != null) {
-      final constraint = receiverConstraint;
-      if (constraint is ClassEntity) {
-        sb.write(constraint.name);
+      var constraint = receiverConstraint;
+      if (constraint is StrongModeConstraint) {
+        if (constraint.isThis) {
+          sb.write('this:');
+        } else if (constraint.isExact) {
+          sb.write('exact:');
+        }
+        sb.write(constraint.className);
       } else {
         sb.write(constraint);
       }
@@ -331,22 +334,7 @@ class StaticUse {
       case StaticUseKind.CLOSURE:
         sb.write('def:');
         break;
-      case StaticUseKind.STATIC_TEAR_OFF:
-      case StaticUseKind.SUPER_TEAR_OFF:
-      case StaticUseKind.SUPER_GET:
-      case StaticUseKind.SUPER_INVOKE:
-      case StaticUseKind.INSTANCE_FIELD_GET:
-      case StaticUseKind.CLOSURE_CALL:
-      case StaticUseKind.CALL_METHOD:
-      case StaticUseKind.CONSTRUCTOR_INVOKE:
-      case StaticUseKind.CONST_CONSTRUCTOR_INVOKE:
-      case StaticUseKind.DIRECT_INVOKE:
-      case StaticUseKind.INLINING:
-      case StaticUseKind.STATIC_INVOKE:
-      case StaticUseKind.STATIC_GET:
-      case StaticUseKind.FIELD_CONSTANT_INIT:
-      case StaticUseKind.WEAK_STATIC_TEAR_OFF:
-        break;
+      default:
     }
     final member = element;
     if (member is MemberEntity) {
@@ -1043,47 +1031,4 @@ class ConstantUse {
 
   @override
   String toString() => 'ConstantUse(${value.toStructuredText(null)})';
-}
-
-/// Conditional impact and Kernel nodes for replacement if it isn't applied.
-///
-/// If one of [original], [replacement], or [replacementImpact] is provided, the
-/// others must also be provided.
-class ConditionalUse {
-  /// If any of the members in this list are reachable from the program then
-  /// these conditions are considered "satisfied", [original] is kept in the
-  /// Kernel tree and [impact] is applied to the world. Otherwise [original] is
-  /// replaced with [replacement] in the Kernel tree and [replacementImpact] is
-  /// instead applied to the world.
-  final List<MemberEntity> originalConditions;
-
-  /// The node to replace if [originalConditions] are not satisfied.
-  /// [impact] is the impact implied by this node.
-  final ir.TreeNode? original;
-
-  /// The node to replace [original] with is [originalConditions] are not
-  /// satisfied.
-  final ir.TreeNode? replacement;
-
-  /// The impact to apply for [original] if [originalConditions] are satisfied.
-  final WorldImpact impact;
-
-  /// The impact to apply for [replacement] if [originalConditions] are not
-  /// satisifed.
-  final WorldImpact? replacementImpact;
-
-  ConditionalUse.noReplacement(
-      {required this.impact, required this.originalConditions})
-      : original = null,
-        replacement = null,
-        replacementImpact = null,
-        assert(originalConditions.isNotEmpty);
-
-  ConditionalUse.withReplacement(
-      {required this.original,
-      required this.replacement,
-      required this.replacementImpact,
-      required this.impact,
-      required this.originalConditions})
-      : assert(originalConditions.isNotEmpty);
 }

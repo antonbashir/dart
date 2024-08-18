@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/type_inference/type_analysis_result.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/error/codes.dart';
@@ -14,7 +12,7 @@ class ListPatternResolver {
 
   ListPatternResolver(this.resolverVisitor);
 
-  PatternResult<DartType> resolve({
+  void resolve({
     required ListPatternImpl node,
     required SharedMatchContext context,
   }) {
@@ -24,15 +22,15 @@ class ListPatternResolver {
       // Check that we have exactly one type argument.
       var length = typeArguments.arguments.length;
       if (length != 1) {
-        resolverVisitor.errorReporter.atNode(
-          typeArguments,
+        resolverVisitor.errorReporter.reportErrorForNode(
           CompileTimeErrorCode.EXPECTED_ONE_LIST_PATTERN_TYPE_ARGUMENTS,
-          arguments: [length],
+          typeArguments,
+          [length],
         );
       }
     }
 
-    var result = resolverVisitor.analyzeListPattern(context, node,
+    final result = resolverVisitor.analyzeListPattern(context, node,
         elementType: typeArguments?.arguments.first.typeOrThrow,
         elements: node.elements);
     node.requiredType = result.requiredType;
@@ -41,9 +39,6 @@ class ListPatternResolver {
       context: context,
       pattern: node,
       requiredType: result.requiredType,
-      matchedValueType: result.matchedValueType,
     );
-
-    return result;
   }
 }

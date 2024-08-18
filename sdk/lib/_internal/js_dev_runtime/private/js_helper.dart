@@ -25,11 +25,8 @@ import 'dart:_runtime' as dart;
 
 part 'annotations.dart';
 part 'linked_hash_map.dart';
-part 'linked_hash_set.dart';
 part 'identity_hash_map.dart';
-part 'identity_hash_set.dart';
 part 'custom_hash_map.dart';
-part 'custom_hash_set.dart';
 part 'native_helper.dart';
 part 'regexp_helper.dart';
 part 'string_helper.dart';
@@ -206,7 +203,7 @@ class Primitives {
     return "Instance of '${dart.typeName(dart.getReifiedType(obj))}'";
   }
 
-  /// `r"$".codeUnitAt(0)`
+  /** `r"$".codeUnitAt(0)` */
   static const int DOLLAR_CHAR_VALUE = 36;
 
   static int dateNow() => JS<int>('!', r'Date.now()');
@@ -382,13 +379,9 @@ class Primitives {
     return "";
   }
 
-  static int getTimeZoneOffsetInSeconds(DateTime receiver) {
-    // Note that JavaScript's Date and and Dart's DateTime disagree on the sign
-    // of the offset. Subtract to avoid -0.0. The offset in minutes could
-    // contain 'seconds' as fractional minutes.
-    num offsetInMinutes =
-        JS('num', r'#.getTimezoneOffset()', lazyAsJsDate(receiver));
-    return (0 - offsetInMinutes * 60).toInt();
+  static int getTimeZoneOffsetInMinutes(DateTime receiver) {
+    // Note that JS and Dart disagree on the sign of the offset.
+    return -JS<int>('!', r'#.getTimezoneOffset()', lazyAsJsDate(receiver));
   }
 
   static int? valueFromDecomposedDate(
@@ -399,7 +392,6 @@ class Primitives {
       @nullCheck int minutes,
       @nullCheck int seconds,
       @nullCheck int milliseconds,
-      @nullCheck int microseconds,
       @nullCheck bool isUtc) {
     final int MAX_MILLISECONDS_SINCE_EPOCH = 8640000000000000;
     var jsMonth = month - 1;
@@ -411,11 +403,6 @@ class Primitives {
       years += 400;
       jsMonth -= 400 * 12;
     }
-    // JavaScript `Date` does not handle microseconds, so ensure the provided
-    // microseconds is in range [0..999].
-    final remainder = microseconds % 1000;
-    milliseconds += (microseconds - remainder) ~/ 1000;
-    microseconds = remainder;
     int value;
     if (isUtc) {
       value = JS<int>('!', r'Date.UTC(#, #, #, #, #, #, #)', years, jsMonth,
@@ -426,11 +413,21 @@ class Primitives {
     }
     if (value.isNaN ||
         value < -MAX_MILLISECONDS_SINCE_EPOCH ||
-        value > MAX_MILLISECONDS_SINCE_EPOCH ||
-        value == MAX_MILLISECONDS_SINCE_EPOCH && microseconds != 0) {
+        value > MAX_MILLISECONDS_SINCE_EPOCH) {
       return null;
     }
+    if (years <= 0 || years < 100) return patchUpY2K(value, years, isUtc);
     return value;
+  }
+
+  static int patchUpY2K(value, years, isUtc) {
+    var date = JS<int>('!', r'new Date(#)', value);
+    if (isUtc) {
+      JS<int>('!', r'#.setUTCFullYear(#)', date, years);
+    } else {
+      JS<int>('!', r'#.setFullYear(#)', date, years);
+    }
+    return JS<int>('!', r'#.valueOf()', date);
   }
 
   // Lazily keep a JS Date stored in the JS object.
@@ -496,6 +493,13 @@ class Primitives {
     return (weekday + 6) % 7 + 1;
   }
 
+  static num valueFromDateString(str) {
+    if (str is! String) throw argumentErrorValue(str);
+    num value = JS('!', r'Date.parse(#)', str);
+    if (value.isNaN) throw argumentErrorValue(str);
+    return value;
+  }
+
   static Object? getProperty(Object? object, Object key) {
     if (object == null || object is bool || object is num || object is String) {
       throw argumentErrorValue(object);
@@ -511,8 +515,10 @@ class Primitives {
   }
 }
 
-/// Diagnoses an indexing error. Returns the ArgumentError or RangeError that
-/// describes the problem.
+/**
+ * Diagnoses an indexing error. Returns the ArgumentError or RangeError that
+ * describes the problem.
+ */
 Error diagnoseIndexError(indexable, int index) {
   int length = indexable.length;
   // The following returns the same error that would be thrown by calling
@@ -526,8 +532,10 @@ Error diagnoseIndexError(indexable, int index) {
   return RangeError.value(index, 'index');
 }
 
-/// Diagnoses a range error. Returns the ArgumentError or RangeError that
-/// describes the problem.
+/**
+ * Diagnoses a range error. Returns the ArgumentError or RangeError that
+ * describes the problem.
+ */
 Error diagnoseRangeError(int? start, int? end, int length) {
   if (start == null) {
     return ArgumentError.value(start, 'start');
@@ -598,8 +606,10 @@ class UnknownJsTypeError extends Error {
   String toString() => _message.isEmpty ? 'Error' : 'Error: $_message';
 }
 
-/// Called by generated code to build a map literal. [keyValuePairs] is
-/// a list of key, value, key, value, ..., etc.
+/**
+ * Called by generated code to build a map literal. [keyValuePairs] is
+ * a list of key, value, key, value, ..., etc.
+ */
 fillLiteralMap(keyValuePairs, Map result) {
   // TODO(johnniwinther): Use JSArray to optimize this code instead of calling
   // [getLength] and [getIndex].
@@ -621,87 +631,95 @@ jsPropertyAccess(jsObject, String property) {
   return JS('var', r'#[#]', jsObject, property);
 }
 
-/// A metadata annotation describing the types instantiated by a native element.
-///
-/// The annotation is valid on a native method and a field of a native class.
-///
-/// By default, a field of a native class is seen as an instantiation point for
-/// all native classes that are a subtype of the field's type, and a native
-/// method is seen as an instantiation point fo all native classes that are a
-/// subtype of the method's return type, or the argument types of the declared
-/// type of the method's callback parameter.
-///
-/// An @[Creates] annotation overrides the default set of instantiated types.
-/// If one or more @[Creates] annotations are present, the type of the native
-/// element is ignored, and the union of @[Creates] annotations is used instead.
-/// The names in the strings are resolved and the program will fail to compile
-/// with dart2js if they do not name types.
-///
-/// The argument to [Creates] is a string.  The string is parsed as the names of
-/// one or more types, separated by vertical bars `|`.  There are some special
-/// names:
-///
-/// * `=Object`. This means 'exactly Object', which is a plain JavaScript object
-///   with properties and none of the subtypes of Object.
-///
-/// Example: we may know that a method always returns a specific implementation:
-///
-///     @Creates('_NodeList')
-///     List<Node> getElementsByTagName(String tag) native;
-///
-/// Useful trick: A method can be marked as not instantiating any native classes
-/// with the annotation `@Creates('Null')`.  This is useful for fields on native
-/// classes that are used only in Dart code.
-///
-///     @Creates('Null')
-///     var _cachedFoo;
+/**
+ * A metadata annotation describing the types instantiated by a native element.
+ *
+ * The annotation is valid on a native method and a field of a native class.
+ *
+ * By default, a field of a native class is seen as an instantiation point for
+ * all native classes that are a subtype of the field's type, and a native
+ * method is seen as an instantiation point fo all native classes that are a
+ * subtype of the method's return type, or the argument types of the declared
+ * type of the method's callback parameter.
+ *
+ * An @[Creates] annotation overrides the default set of instantiated types.  If
+ * one or more @[Creates] annotations are present, the type of the native
+ * element is ignored, and the union of @[Creates] annotations is used instead.
+ * The names in the strings are resolved and the program will fail to compile
+ * with dart2js if they do not name types.
+ *
+ * The argument to [Creates] is a string.  The string is parsed as the names of
+ * one or more types, separated by vertical bars `|`.  There are some special
+ * names:
+ *
+ * * `=Object`. This means 'exactly Object', which is a plain JavaScript object
+ *   with properties and none of the subtypes of Object.
+ *
+ * Example: we may know that a method always returns a specific implementation:
+ *
+ *     @Creates('_NodeList')
+ *     List<Node> getElementsByTagName(String tag) native;
+ *
+ * Useful trick: A method can be marked as not instantiating any native classes
+ * with the annotation `@Creates('Null')`.  This is useful for fields on native
+ * classes that are used only in Dart code.
+ *
+ *     @Creates('Null')
+ *     var _cachedFoo;
+ */
 class Creates {
   final String types;
   const Creates(this.types);
 }
 
-/// A metadata annotation describing the types returned or yielded by a native
-/// element.
-///
-/// The annotation is valid on a native method and a field of a native class.
-///
-/// By default, a native method or field is seen as returning or yielding all
-/// subtypes if the method return type or field type.  This annotation allows a
-/// more precise set of types to be specified.
-///
-/// See [Creates] for the syntax of the argument.
-///
-/// Example: IndexedDB keys are numbers, strings and JavaScript Arrays of keys.
-///
-///     @Returns('String|num|JSExtendableArray')
-///     dynamic key;
-///
-///     // Equivalent:
-///     @Returns('String') @Returns('num') @Returns('JSExtendableArray')
-///     dynamic key;
+/**
+ * A metadata annotation describing the types returned or yielded by a native
+ * element.
+ *
+ * The annotation is valid on a native method and a field of a native class.
+ *
+ * By default, a native method or field is seen as returning or yielding all
+ * subtypes if the method return type or field type.  This annotation allows a
+ * more precise set of types to be specified.
+ *
+ * See [Creates] for the syntax of the argument.
+ *
+ * Example: IndexedDB keys are numbers, strings and JavaScript Arrays of keys.
+ *
+ *     @Returns('String|num|JSExtendableArray')
+ *     dynamic key;
+ *
+ *     // Equivalent:
+ *     @Returns('String') @Returns('num') @Returns('JSExtendableArray')
+ *     dynamic key;
+ */
 class Returns {
   final String types;
   const Returns(this.types);
 }
 
-/// A metadata annotation placed on native methods and fields of native classes
-/// to specify the JavaScript name.
-///
-/// This example declares a Dart field + getter + setter called `$dom_title`
-/// that corresponds to the JavaScript property `title`.
-///
-///     class Document native "*Foo" {
-///       @JSName('title')
-///       String $dom_title;
-///     }
+/**
+ * A metadata annotation placed on native methods and fields of native classes
+ * to specify the JavaScript name.
+ *
+ * This example declares a Dart field + getter + setter called `$dom_title` that
+ * corresponds to the JavaScript property `title`.
+ *
+ *     class Document native "*Foo" {
+ *       @JSName('title')
+ *       String $dom_title;
+ *     }
+ */
 class JSName {
   final String name;
   const JSName(this.name);
 }
 
-/// Special interface recognized by the compiler and implemented by DOM
-/// objects that support integer indexing. This interface is not
-/// visible to anyone, and is only injected into special libraries.
+/**
+ * Special interface recognized by the compiler and implemented by DOM
+ * objects that support integer indexing. This interface is not
+ * visible to anyone, and is only injected into special libraries.
+ */
 abstract class JavaScriptIndexingBehavior<E> extends JSMutableIndexable<E> {}
 
 /// Thrown by type assertions that fail.
@@ -713,7 +731,9 @@ class TypeErrorImpl extends Error implements TypeError {
   String toString() => _message;
 }
 
-/// Error thrown when a runtime error occurs.
+/**
+ * Error thrown when a runtime error occurs.
+ */
 class RuntimeError extends Error {
   final message;
   RuntimeError(this.message);
@@ -757,9 +777,11 @@ class AssertionErrorImpl extends AssertionError {
   }
 }
 
-/// Creates a random number with 64 bits of randomness.
-///
-/// This will be truncated to the 53 bits available in a double.
+/**
+ * Creates a random number with 64 bits of randomness.
+ *
+ * This will be truncated to the 53 bits available in a double.
+ */
 int random64() {
   // TODO(lrn): Use a secure random source.
   int int32a = JS("int", "(Math.random() * 0x100000000) >>> 0");
@@ -854,16 +876,19 @@ void Function(T)? wrapZoneUnaryCallback<T>(void Function(T)? callback) {
 /// [fieldRtis] contains the Rti type objects for each field in order of
 /// positionals followed by the sorted named elements.
 Object? createRecordTypePredicate(String partialShapeTag, JSArray fieldRtis) {
-  var shapeKey =
-      JS<String>('!', '#.length + ";" + #', fieldRtis, partialShapeTag);
-  return (obj) {
-    return JS<bool>(
-            '!', '# instanceof #', obj, JS_CLASS_REF(dart.RecordImpl)) &&
-        JS<dart.Shape>('!', '#[#]', obj, dart.shapeProperty) ==
-            JS<dart.Shape?>('', '#.get(#)', dart.shapes, shapeKey) &&
-        rti.pairwiseIsTest(
-            fieldRtis, JS<JSArray>('!', '#[#]', obj, dart.valuesProperty));
-  };
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    var shapeKey =
+        JS<String>('!', '#.length + ";" + #', fieldRtis, partialShapeTag);
+    return (obj) {
+      return JS<bool>(
+              '!', '# instanceof #', obj, JS_CLASS_REF(dart.RecordImpl)) &&
+          JS<dart.RecordImpl>('!', '#', obj).shape ==
+              JS<dart.Shape?>('', '#.get(#)', dart.shapes, shapeKey) &&
+          rti.pairwiseIsTest(fieldRtis, JS<JSArray>('!', '#.values', obj));
+    };
+  } else {
+    dart.throwUnimplementedInCurrentRti();
+  }
 }
 
 /// Returns the Rti for the provided [record].
@@ -874,18 +899,20 @@ Object? createRecordTypePredicate(String partialShapeTag, JSArray fieldRtis) {
 ///
 /// Calls [rti.evaluateRtiForRecord] with components of the [record].
 rti.Rti getRtiForRecord(Object? record) {
-  var recordObj = JS<dart.RecordImpl>('!', '#', record);
-  var recipeBuffer = StringBuffer('+');
-  var shape = JS<dart.Shape>('!', '#[#]', recordObj, dart.shapeProperty);
-  var values = JS<JSArray>('!', '#[#]', recordObj, dart.valuesProperty);
-  var named = shape.named;
-  if (named != null) recipeBuffer.writeAll(named, ',');
-  recipeBuffer.write('(');
-  var elementCount = values.length;
-  recipeBuffer.writeAll([for (var i = 1; i <= elementCount; i++) i], ',');
-  recipeBuffer.write(')');
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    var recordObj = JS<dart.RecordImpl>('!', '#', record);
+    var recipeBuffer = StringBuffer('+');
+    var named = recordObj.shape.named;
+    if (named != null) recipeBuffer.writeAll(named, ',');
+    recipeBuffer.write('(');
+    var elementCount = recordObj.values.length;
+    recipeBuffer.writeAll([for (var i = 1; i <= elementCount; i++) i], ',');
+    recipeBuffer.write(')');
 
-  return rti.evaluateRtiForRecord(recipeBuffer.toString(), values);
+    return rti.evaluateRtiForRecord(recipeBuffer.toString(), recordObj.values);
+  } else {
+    dart.throwUnimplementedInCurrentRti();
+  }
 }
 
 /// A marker interface for classes with 'trustworthy' implementations of `get

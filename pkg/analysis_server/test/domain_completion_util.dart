@@ -105,11 +105,10 @@ class AbstractCompletionDomainTest extends PubPackageAnalysisServerTest {
       path,
       completionOffset,
       maxResults,
-    ).toRequest('0', clientUriConverter: server.uriConverter);
+    ).toRequest('0');
 
     var response = await handleSuccessfulRequest(request);
-    var result = CompletionGetSuggestions2Result.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = CompletionGetSuggestions2Result.fromResponse(response);
     replacementOffset = result.replacementOffset;
     replacementLength = result.replacementLength;
     suggestions = result.suggestions;

@@ -4,10 +4,9 @@
 
 library future_delayed_error_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 testImmediateError() {
   asyncStart();

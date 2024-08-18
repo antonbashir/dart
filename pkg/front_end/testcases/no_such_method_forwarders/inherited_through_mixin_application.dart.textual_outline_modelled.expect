@@ -11,9 +11,7 @@ class C implements A {
 class MA extends C with M {}
 
 expect(expected, actual) {}
-
 main() {}
-
 mixin M on A {
   noSuchMethod(Invocation i) {}
   test() {}

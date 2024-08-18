@@ -85,8 +85,7 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
                                     TokenPosition position);
   Fragment CheckStackOverflowInPrologue(const Function& dart_function);
   Fragment SetupCapturedParameters(const Function& dart_function);
-  Fragment InitSuspendableFunction(const Function& dart_function,
-                                   const AbstractType* emitted_value_type);
+  Fragment InitSuspendableFunction(const Function& dart_function);
   Fragment ShortcutForUserDefinedEquals(const Function& dart_function,
                                         LocalVariable* first_parameter);
   Fragment TypeArgumentsHandling(const Function& dart_function);
@@ -113,8 +112,6 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   intptr_t block_expression_depth();
   void block_expression_depth_inc();
   void block_expression_depth_dec();
-  void synthetic_error_handler_depth_inc();
-  void synthetic_error_handler_depth_dec();
   intptr_t CurrentTryIndex();
   intptr_t AllocateTryIndex();
   LocalVariable* CurrentException();
@@ -136,8 +133,6 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   Tag PeekArgumentsFirstPositionalTag();
   const TypeArguments& PeekArgumentsInstantiatedType(const Class& klass);
   intptr_t PeekArgumentsCount();
-
-  TokenPosition ReadPosition();
 
   // See BaseFlowGraphBuilder::MakeTemporary.
   LocalVariable* MakeTemporary(const char* suffix = nullptr);
@@ -219,9 +214,7 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
                           const Class& klass,
                           intptr_t argument_count);
   Fragment AllocateContext(const ZoneGrowableArray<const Slot*>& context_slots);
-  Fragment LoadNativeField(const Slot& field,
-                           InnerPointerAccess loads_inner_pointer =
-                               InnerPointerAccess::kNotUntagged);
+  Fragment LoadNativeField(const Slot& field);
   Fragment StoreLocal(TokenPosition position, LocalVariable* variable);
   Fragment StoreStaticField(TokenPosition position, const Field& field);
   Fragment StringInterpolate(TokenPosition position);
@@ -261,6 +254,7 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   JoinEntryInstr* BuildJoinEntry();
   JoinEntryInstr* BuildJoinEntry(intptr_t try_index);
   Fragment Goto(JoinEntryInstr* destination);
+  Fragment BuildImplicitClosureCreation(const Function& target);
   Fragment CheckBoolean(TokenPosition position);
   Fragment CheckArgumentType(LocalVariable* variable, const AbstractType& type);
   Fragment RecordCoverage(TokenPosition position);
@@ -370,8 +364,12 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   Fragment BuildTryFinally(TokenPosition* position);
   Fragment BuildYieldStatement(TokenPosition* position);
   Fragment BuildVariableDeclaration(TokenPosition* position);
-  Fragment BuildFunctionDeclaration(TokenPosition* position);
-  Fragment BuildFunctionNode(intptr_t func_decl_offset);
+  Fragment BuildFunctionDeclaration(intptr_t offset, TokenPosition* position);
+  Fragment BuildFunctionNode(TokenPosition parent_position,
+                             StringIndex name_index,
+                             bool has_valid_annotation,
+                             bool has_pragma,
+                             intptr_t func_decl_offset);
 
   // Build flow graph for '_nativeEffect'.
   Fragment BuildNativeEffect();
@@ -383,7 +381,11 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   // Build flow graph for '_loadAbiSpecificInt' and
   // '_loadAbiSpecificIntAtIndex', '_storeAbiSpecificInt', and
   // '_storeAbiSpecificIntAtIndex' call sites.
-  Fragment BuildLoadStoreAbiSpecificInt(bool is_store, bool at_index);
+  //
+  // The second argument is either offsetInBytes (at_index==false), or
+  // index (at_index==true).
+  Fragment BuildLoadAbiSpecificInt(bool at_index);
+  Fragment BuildStoreAbiSpecificInt(bool at_index);
 
   // Build FG for FFI call.
   Fragment BuildFfiCall();
@@ -455,7 +457,6 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   CallSiteAttributesMetadataHelper call_site_attributes_metadata_helper_;
   Object& closure_owner_;
   intptr_t num_ast_nodes_ = 0;
-  intptr_t synthetic_error_handler_depth_ = 0;
 
   friend class KernelLoader;
 

@@ -82,10 +82,13 @@ Future runTest(Test test, String config,
   return testStackTrace(test, config, (String input, String output) async {
     List<String> arguments = [
       '-o$output',
-      '--platform-binaries=$sdkPlatformBinariesPath',
+      // TODO(nshahan) Should change to sdkPlatformBinariesPath when testing
+      // with unsound null safety is no longer needed.
+      '--platform-binaries=$buildPlatformBinariesPath',
       '--libraries-spec=$sdkLibrariesSpecificationPath',
       '--packages=${Platform.packageConfig}',
       Flags.testMode,
+      Flags.noSoundNullSafety,
       input,
     ]..addAll(options);
     print("Compiling dart2js ${arguments.join(' ')}");

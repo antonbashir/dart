@@ -19,11 +19,11 @@ final tests = <IsolateTest>[
     // [IsolateReload] event is received.
     final completer = Completer<void>();
     late final StreamSubscription subscription;
-    subscription = service.onIsolateEvent.listen((event) async {
+    subscription = service.onIsolateEvent.listen((event) {
       if (event.kind == EventKind.kIsolateReload) {
         expect(event.isolateGroup!.id, isolateRef.isolateGroupId);
-        await subscription.cancel();
-        await service.streamCancel(EventStreams.kIsolate);
+        subscription.cancel();
+        service.streamCancel(EventStreams.kIsolate);
         completer.complete();
       }
     });

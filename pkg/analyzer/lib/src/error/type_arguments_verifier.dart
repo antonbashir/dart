@@ -76,15 +76,16 @@ class TypeArgumentsVerifier {
         continue;
       }
 
+      bound = _libraryElement.toLegacyTypeIfOptOut(bound);
       bound = substitution.substituteType(bound);
 
       if (!_typeSystem.isSubtypeOf(typeArgument, bound)) {
         var errorNode =
             i < typeArgumentListLength ? typeArgumentList.arguments[i] : node;
-        _errorReporter.atNode(
-          errorNode,
+        _errorReporter.reportErrorForNode(
           CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-          arguments: [typeArgument, typeParameter.name, bound],
+          errorNode,
+          [typeArgument, typeParameter.name, bound],
         );
       }
     }
@@ -104,10 +105,10 @@ class TypeArgumentsVerifier {
     if (typeArgumentList != null &&
         typeArgumentNodes != null &&
         typeArgumentNodes.length != typeParameters.length) {
-      _errorReporter.atNode(
-        typeArgumentList,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS_ENUM,
-        arguments: [typeParameters.length, typeArgumentNodes.length],
+        typeArgumentList,
+        [typeParameters.length, typeArgumentNodes.length],
       );
     }
 
@@ -130,11 +131,12 @@ class TypeArgumentsVerifier {
       bound = substitution.substituteType(bound);
 
       if (!_typeSystem.isSubtypeOf(typeArgument, bound)) {
-        var errorTarget = typeArgumentNodes?[i] ?? node.name;
-        _errorReporter.atEntity(
-          errorTarget,
+        final errorTarget = typeArgumentNodes?[i] ?? node.name;
+        _errorReporter.reportErrorForOffset(
           CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-          arguments: [typeArgument, typeParameter.name, bound],
+          errorTarget.offset,
+          errorTarget.length,
+          [typeArgument, typeParameter.name, bound],
         );
       }
     }
@@ -249,11 +251,8 @@ class TypeArgumentsVerifier {
         // Do not report a "Strict raw type" error in this case; too noisy.
         // See https://github.com/dart-lang/language/blob/master/resources/type-system/strict-raw-types.md#conditions-for-a-raw-type-hint
       } else {
-        _errorReporter.atNode(
-          node,
-          WarningCode.STRICT_RAW_TYPE,
-          arguments: [type],
-        );
+        _errorReporter
+            .reportErrorForNode(WarningCode.STRICT_RAW_TYPE, node, [type]);
       }
     }
   }
@@ -261,15 +260,15 @@ class TypeArgumentsVerifier {
   /// Verify that the type arguments in the given [namedType] are all within
   /// their bounds.
   void _checkForTypeArgumentNotMatchingBounds(NamedType namedType) {
-    var type = namedType.type;
+    final type = namedType.type;
     if (type == null) {
       return;
     }
 
-    List<TypeParameterElement> typeParameters;
-    String elementName;
-    List<DartType> typeArguments;
-    var alias = type.alias;
+    final List<TypeParameterElement> typeParameters;
+    final String elementName;
+    final List<DartType> typeArguments;
+    final alias = type.alias;
     if (alias != null) {
       elementName = alias.element.name;
       typeParameters = alias.element.typeParameters;
@@ -288,16 +287,16 @@ class TypeArgumentsVerifier {
 
     // Check for regular-bounded.
     List<_TypeArgumentIssue>? issues;
-    var substitution = Substitution.fromPairs(typeParameters, typeArguments);
+    final substitution = Substitution.fromPairs(typeParameters, typeArguments);
     for (var i = 0; i < typeArguments.length; i++) {
       var typeParameter = typeParameters[i];
       var typeArgument = typeArguments[i];
 
       if (typeArgument is FunctionType && typeArgument.typeFormals.isNotEmpty) {
         if (!_libraryElement.featureSet.isEnabled(Feature.generic_metadata)) {
-          _errorReporter.atNode(
-            _typeArgumentErrorNode(namedType, i),
+          _errorReporter.reportErrorForNode(
             CompileTimeErrorCode.GENERIC_FUNCTION_TYPE_CANNOT_BE_TYPE_ARGUMENT,
+            _typeArgumentErrorNode(namedType, i),
           );
           continue;
         }
@@ -308,6 +307,7 @@ class TypeArgumentsVerifier {
         continue;
       }
 
+      bound = _libraryElement.toLegacyTypeIfOptOut(bound);
       bound = substitution.substituteType(bound);
 
       if (!_typeSystem.isSubtypeOf(typeArgument, bound)) {
@@ -326,7 +326,7 @@ class TypeArgumentsVerifier {
     List<DiagnosticMessage>? buildContextMessages({
       List<DartType>? invertedTypeArguments,
     }) {
-      var messages = <DiagnosticMessage>[];
+      final messages = <DiagnosticMessage>[];
 
       void addMessage(String message) {
         messages.add(
@@ -341,7 +341,9 @@ class TypeArgumentsVerifier {
       }
 
       String typeArgumentsToString(List<DartType> typeArguments) {
-        return typeArguments.map((e) => e.getDisplayString()).join(', ');
+        return typeArguments
+            .map((e) => e.getDisplayString(withNullability: true))
+            .join(', ');
       }
 
       if (namedType.typeArguments == null) {
@@ -367,24 +369,20 @@ class TypeArgumentsVerifier {
     // If not allowed to be super-bounded, report issues.
     if (!_shouldAllowSuperBoundedTypes(namedType)) {
       for (var issue in issues) {
-        _errorReporter.atNode(
-          _typeArgumentErrorNode(namedType, issue.index),
+        _errorReporter.reportErrorForNode(
           CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-          arguments: [
-            issue.argument,
-            issue.parameter.name,
-            issue.parameterBound
-          ],
-          contextMessages: buildContextMessages(),
+          _typeArgumentErrorNode(namedType, issue.index),
+          [issue.argument, issue.parameter.name, issue.parameterBound],
+          buildContextMessages(),
         );
       }
       return;
     }
 
     // Prepare type arguments for checking for super-bounded.
-    var invertedType = _typeSystem.replaceTopAndBottom(type);
-    List<DartType> invertedTypeArguments;
-    var invertedAlias = invertedType.alias;
+    final invertedType = _typeSystem.replaceTopAndBottom(type);
+    final List<DartType> invertedTypeArguments;
+    final invertedAlias = invertedType.alias;
     if (invertedAlias != null) {
       invertedTypeArguments = invertedAlias.typeArguments;
     } else if (invertedType is InterfaceType) {
@@ -394,7 +392,7 @@ class TypeArgumentsVerifier {
     }
 
     // Check for super-bounded.
-    var invertedSubstitution = Substitution.fromPairs(
+    final invertedSubstitution = Substitution.fromPairs(
       typeParameters,
       invertedTypeArguments,
     );
@@ -407,14 +405,15 @@ class TypeArgumentsVerifier {
         continue;
       }
 
+      bound = _libraryElement.toLegacyTypeIfOptOut(bound);
       bound = invertedSubstitution.substituteType(bound);
 
       if (!_typeSystem.isSubtypeOf(typeArgument, bound)) {
-        _errorReporter.atNode(
-          _typeArgumentErrorNode(namedType, i),
+        _errorReporter.reportErrorForNode(
           CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-          arguments: [typeArgument, typeParameter.name, bound],
-          contextMessages: buildContextMessages(
+          _typeArgumentErrorNode(namedType, i),
+          [typeArgument, typeParameter.name, bound],
+          buildContextMessages(
             invertedTypeArguments: invertedTypeArguments,
           ),
         );
@@ -460,9 +459,9 @@ class TypeArgumentsVerifier {
 
       if (argType is FunctionType && argType.typeFormals.isNotEmpty) {
         if (!_libraryElement.featureSet.isEnabled(Feature.generic_metadata)) {
-          _errorReporter.atNode(
-            typeArgumentList[i],
+          _errorReporter.reportErrorForNode(
             CompileTimeErrorCode.GENERIC_FUNCTION_TYPE_CANNOT_BE_TYPE_ARGUMENT,
+            typeArgumentList[i],
           );
           continue;
         }
@@ -477,11 +476,10 @@ class TypeArgumentsVerifier {
       var substitution = Substitution.fromPairs(fnTypeParams, typeArgs);
       var bound = substitution.substituteType(rawBound);
       if (!_typeSystem.isSubtypeOf(argType, bound)) {
-        _errorReporter.atNode(
-          typeArgumentList[i],
-          CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-          arguments: [argType, fnTypeParam.name, bound],
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
+            typeArgumentList[i],
+            [argType, fnTypeParam.name, bound]);
       }
     }
   }
@@ -494,10 +492,10 @@ class TypeArgumentsVerifier {
       NodeList<TypeAnnotation> arguments, ErrorCode errorCode) {
     for (TypeAnnotation type in arguments) {
       if (type is NamedType && type.type is TypeParameterType) {
-        _errorReporter.atNode(
-          type,
+        _errorReporter.reportErrorForNode(
           errorCode,
-          arguments: [type.name2.lexeme],
+          type,
+          [type.name2.lexeme],
         );
       }
     }
@@ -513,10 +511,10 @@ class TypeArgumentsVerifier {
   ) {
     int actualCount = typeArguments.arguments.length;
     if (actualCount != expectedCount) {
-      _errorReporter.atNode(
-        typeArguments,
+      _errorReporter.reportErrorForNode(
         errorCode,
-        arguments: [actualCount],
+        typeArguments,
+        [actualCount],
       );
     }
   }
@@ -568,7 +566,7 @@ class TypeArgumentsVerifier {
       case ExtendsClause _:
       case GenericTypeAlias _:
       case ImplementsClause _:
-      case MixinOnClause _:
+      case OnClause _:
       case WithClause _:
         return false;
     }

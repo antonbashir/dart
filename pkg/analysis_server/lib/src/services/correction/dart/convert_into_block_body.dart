@@ -4,7 +4,7 @@
 
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -21,18 +21,23 @@ class ConvertIntoBlockBody extends ResolvedCorrectionProducer {
   final _CorrectionKind _correctionKind;
 
   @override
-  CorrectionApplicability applicability;
+  bool canBeAppliedInBulk;
+
+  @override
+  bool canBeAppliedToFile;
 
   /// Initialize a newly created instance that adds a function body.
-  ConvertIntoBlockBody.missingBody({required super.context})
+  ConvertIntoBlockBody.missingBody()
       : _correctionKind = _CorrectionKind.missingBody,
-        applicability = CorrectionApplicability.singleLocation;
+        canBeAppliedInBulk = false,
+        canBeAppliedToFile = false;
 
   /// Initialize a newly created instance that converts the set literal to
   /// a function body.
-  ConvertIntoBlockBody.setLiteral({required super.context})
+  ConvertIntoBlockBody.setLiteral()
       : _correctionKind = _CorrectionKind.setLiteral,
-        applicability = CorrectionApplicability.automatically;
+        canBeAppliedInBulk = true,
+        canBeAppliedToFile = true;
 
   @override
   AssistKind get assistKind => DartAssistKind.CONVERT_INTO_BLOCK_BODY;
@@ -53,7 +58,7 @@ class ConvertIntoBlockBody extends ResolvedCorrectionProducer {
   }
 
   Future<void> _computeMissingBody(ChangeBuilder builder) async {
-    var body = getEnclosingFunctionBody();
+    final body = getEnclosingFunctionBody();
     if (body == null || body.isGenerator) return;
 
     List<String>? codeLines;
@@ -67,7 +72,7 @@ class ConvertIntoBlockBody extends ResolvedCorrectionProducer {
 
     // prepare prefix
     var prefix = utils.getNodePrefix(body.parent!);
-    var indent = utils.oneIndent;
+    var indent = utils.getIndent(1);
     var sourceRange = range.endEnd(body.beginToken.previous!, body);
 
     await builder.addDartFileEdit(file, (builder) {

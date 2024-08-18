@@ -6,17 +6,16 @@
 
 import 'dart:io';
 
-import 'package:expect/config.dart';
 import 'package:native_stack_traces/native_stack_traces.dart';
 import 'package:path/path.dart' as path;
 
 import 'dwarf_stack_trace_test.dart' as dwarf_stack_trace_test;
 
-const int LINE_A = 24;
-const int LINE_B = 30;
-const int LINE_C = 37;
-const int LINE_D = 45;
-const int LINE_E = 57;
+const int LINE_A = 23;
+const int LINE_B = 29;
+const int LINE_C = 36;
+const int LINE_D = 44;
+const int LINE_E = 56;
 
 @pragma("vm:prefer-inline")
 bar() {
@@ -59,7 +58,8 @@ Future<void> main() async {
     rawStack = st.toString();
   }
 
-  if (!isVmAotConfiguration) {
+  if (path.basenameWithoutExtension(Platform.executable) !=
+      "dart_precompiled_runtime") {
     return; // Not running from an AOT compiled snapshot.
   }
 

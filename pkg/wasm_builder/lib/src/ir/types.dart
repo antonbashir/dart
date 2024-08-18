@@ -8,10 +8,13 @@ part 'type.dart';
 
 class Types {
   /// Types defined in this module.
-  final List<List<DefType>> recursionGroups;
+  final List<DefType> defined;
+
+  /// Recursion group splits.
+  final List<int> recursionGroupSplits;
 
   /// Name count.
   final int namedCount;
 
-  Types(this.recursionGroups, this.namedCount);
+  Types(this.defined, this.recursionGroupSplits, this.namedCount);
 }

@@ -18,14 +18,14 @@ void main() {
 @reflectiveTest
 class TemporaryOverlayOperationTest extends AbstractLspAnalysisServerTest {
   void expectFsStateContent(String path, String expected) {
-    var driver = server.getAnalysisDriver(path)!;
-    var actual = driver.fsState.getFileForPath(path).content;
+    final driver = server.getAnalysisDriver(path)!;
+    final actual = driver.fsState.getFileForPath(path).content;
     expect(actual, expected);
   }
 
   void expectOverlayContent(String path, String expected) {
     expect(server.resourceProvider.hasOverlay(path), isTrue);
-    var actual = server.resourceProvider.getFile(path).readAsStringSync();
+    final actual = server.resourceProvider.getFile(path).readAsStringSync();
     expect(actual, expected);
   }
 
@@ -43,65 +43,65 @@ class TemporaryOverlayOperationTest extends AbstractLspAnalysisServerTest {
     }).doWork();
 
     await pumpEventQueue(times: 5000);
-    expect(diagnostics[mainFileUri], isNull);
+    expect(diagnostics[mainFilePath], isNull);
   }
 
   Future<void> test_pausesRequestQueue() async {
     await initialize();
     await initialAnalysis;
-    await openFile(mainFileUri, '// ORIGINAL');
+    await openFile(mainFileUri, 'ORIGINAL');
 
     await _TestTemporaryOverlayOperation(server, () async {
       // Simulate changes from the client.
-      await replaceFile(2, mainFileUri, '// CHANGED');
+      await replaceFile(2, mainFileUri, 'CHANGED');
 
       // Ensure we still have the original content.
       await pumpEventQueue(times: 5000);
-      expectFsStateContent(mainFilePath, '// ORIGINAL');
-      expectOverlayContent(mainFilePath, '// ORIGINAL');
+      expectFsStateContent(mainFilePath, 'ORIGINAL');
+      expectOverlayContent(mainFilePath, 'ORIGINAL');
     }).doWork();
 
     // Ensure we processed the update afterwards.
     await pumpEventQueue(times: 5000);
-    expectFsStateContent(mainFilePath, '// CHANGED');
-    expectOverlayContent(mainFilePath, '// CHANGED');
+    expectFsStateContent(mainFilePath, 'CHANGED');
+    expectOverlayContent(mainFilePath, 'CHANGED');
   }
 
   Future<void> test_pausesWatcherEvents() async {
-    newFile(mainFilePath, '// ORIGINAL');
+    newFile(mainFilePath, 'ORIGINAL');
     await initialize();
     await initialAnalysis;
 
     await _TestTemporaryOverlayOperation(server, () async {
       // Modify the file to trigger watcher events
-      modifyFile(mainFilePath, '// CHANGED');
+      modifyFile(mainFilePath, 'CHANGED');
 
       // Ensure we still have the original content.
       await pumpEventQueue(times: 5000);
-      expectFsStateContent(mainFilePath, '// ORIGINAL');
+      expectFsStateContent(mainFilePath, 'ORIGINAL');
     }).doWork();
 
     // Ensure we processed the update afterwards.
     await pumpEventQueue(times: 5000);
-    expectFsStateContent(mainFilePath, '// CHANGED');
+    expectFsStateContent(mainFilePath, 'CHANGED');
   }
 
   Future<void> test_restoresOverlays() async {
-    newFile(mainFilePath, '// DISK');
+    newFile(mainFilePath, 'DISK');
     await initialize();
     await initialAnalysis;
-    await openFile(mainFileUri, '// ORIGINAL OVERLAY');
+    await openFile(mainFileUri, 'ORIGINAL OVERLAY');
 
     late _TestTemporaryOverlayOperation operation;
     operation = _TestTemporaryOverlayOperation(server, () async {
       operation.applyTemporaryOverlayEdits(SourceFileEdit(mainFilePath, -1,
-          edits: [SourceEdit(3, 8, 'CHANGED')]));
-      expectOverlayContent(mainFilePath, '// CHANGED OVERLAY');
+          edits: [SourceEdit(0, 8, 'CHANGED')]));
+      expectOverlayContent(mainFilePath, 'CHANGED OVERLAY');
     });
     await operation.doWork();
 
     await pumpEventQueue(times: 5000);
-    expectOverlayContent(mainFilePath, '// ORIGINAL OVERLAY');
+    expectOverlayContent(mainFilePath, 'ORIGINAL OVERLAY');
   }
 
   Future<void> test_temporarilyRemovesAddedFiles() async {

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 var myIdentical = identical;
 
@@ -11,7 +10,7 @@ main() {
   // Mint (2^63).
   Expect.isTrue(myIdentical(0x8000000000000000, 0x8000000000000000));
 
-  if (!v.jsNumbers) {
+  if (!webNumbers) {
     Expect.isFalse(myIdentical(0x8000000000000000, 0x8000000000000000 + 1));
 
     // Different types.

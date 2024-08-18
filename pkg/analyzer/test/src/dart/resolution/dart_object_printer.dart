@@ -4,10 +4,10 @@
 
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/constant/value.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:collection/collection.dart';
 
 import '../../../util/element_printer.dart';
+import '../../../util/tree_string_sink.dart';
 
 /// Prints [DartObjectImpl] as a tree, with values and fields.
 class DartObjectPrinter {
@@ -25,8 +25,8 @@ class DartObjectPrinter {
 
   void write(DartObjectImpl? object) {
     if (object != null) {
-      var type = object.type;
-      var state = object.state;
+      final type = object.type;
+      final state = object.state;
       if (object.isUnknown) {
         _sink.write('<unknown> ');
         _elementPrinter.writeType(type);
@@ -79,9 +79,9 @@ class DartObjectPrinter {
   void _writeGenericState(DartType type, GenericState state) {
     _writelnType(type);
     _sink.withIndent(() {
-      var fields = state.fields;
-      var sortedFields = fields.entries.sortedBy((e) => e.key);
-      for (var entry in sortedFields) {
+      final fields = state.fields;
+      final sortedFields = fields.entries.sortedBy((e) => e.key);
+      for (final entry in sortedFields) {
         _sink.writeIndent();
         _sink.write('${entry.key}: ');
         write(entry.value);
@@ -91,7 +91,7 @@ class DartObjectPrinter {
 
   void _writeInteger(DartObjectImpl object) {
     _sink.write('int ');
-    var intValue = object.toIntValue();
+    final intValue = object.toIntValue();
     if (_configuration.withHexIntegers && intValue != null) {
       _sink.writeln('0x${intValue.toRadixString(16)}');
     } else {
@@ -103,11 +103,11 @@ class DartObjectPrinter {
     _sink.writeln('List');
     _sink.withIndent(() {
       _elementPrinter.writeNamedType('elementType', state.elementType);
-      var elements = state.elements;
+      final elements = state.elements;
       if (elements.isNotEmpty) {
         _sink.writelnWithIndent('elements');
         _sink.withIndent(() {
-          for (var element in elements) {
+          for (final element in elements) {
             _sink.writeIndent();
             write(element);
           }
@@ -129,11 +129,11 @@ class DartObjectPrinter {
   void _writeMapState(MapState state) {
     _sink.writeln('Map');
     _sink.withIndent(() {
-      var entries = state.entries;
+      final entries = state.entries;
       if (entries.isNotEmpty) {
         _sink.writelnWithIndent('entries');
         _sink.withIndent(() {
-          for (var entry in entries.entries) {
+          for (final entry in entries.entries) {
             _sink.writelnWithIndent('entry');
             _sink.withIndent(() {
               _sink.writeIndent();
@@ -155,7 +155,7 @@ class DartObjectPrinter {
     _elementPrinter.writeType(type);
 
     _sink.withIndent(() {
-      var positionalFields = state.positionalFields;
+      final positionalFields = state.positionalFields;
       if (positionalFields.isNotEmpty) {
         _sink.writelnWithIndent('positionalFields');
         _sink.withIndent(() {
@@ -167,12 +167,12 @@ class DartObjectPrinter {
         });
       }
 
-      var namedFields = state.namedFields;
+      final namedFields = state.namedFields;
       if (namedFields.isNotEmpty) {
         _sink.writelnWithIndent('namedFields');
         _sink.withIndent(() {
-          var entries = namedFields.entries.sortedBy((entry) => entry.key);
-          for (var entry in entries) {
+          final entries = namedFields.entries.sortedBy((entry) => entry.key);
+          for (final entry in entries) {
             _sink.writeIndent();
             _sink.write('${entry.key}: ');
             write(entry.value);
@@ -185,11 +185,11 @@ class DartObjectPrinter {
   void _writeSetState(SetState state) {
     _sink.writeln('Set');
     _sink.withIndent(() {
-      var elements = state.elements;
+      final elements = state.elements;
       if (elements.isNotEmpty) {
         _sink.writelnWithIndent('elements');
         _sink.withIndent(() {
-          for (var element in elements) {
+          for (final element in elements) {
             _sink.writeIndent();
             write(element);
           }
@@ -201,7 +201,7 @@ class DartObjectPrinter {
   void _writeString(DartObjectImpl object) {
     _sink.write('String ');
 
-    var stringValue = object.toStringValue();
+    final stringValue = object.toStringValue();
     if (stringValue == null || stringValue.isEmpty) {
       _sink.writeln('<empty>');
     } else {
@@ -216,7 +216,7 @@ class DartObjectPrinter {
   }
 
   void _writeVariable(DartObjectImpl object) {
-    var variable = object.variable;
+    final variable = object.variable;
     if (variable != null) {
       _sink.withIndent(() {
         _elementPrinter.writeNamedElement('variable', variable);

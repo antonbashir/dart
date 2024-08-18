@@ -385,10 +385,11 @@ void SimulatorDebugger::PrintBacktrace() {
     } else {
       OS::PrintErr("pc=0x%" Px " fp=0x%" Px " sp=0x%" Px " %s frame",
                    frame->pc(), frame->fp(), frame->sp(),
-                   frame->IsEntryFrame()  ? "entry"
-                   : frame->IsExitFrame() ? "exit"
-                   : frame->IsStubFrame() ? "stub"
-                                          : "invalid");
+                   frame->IsEntryFrame()
+                       ? "entry"
+                       : frame->IsExitFrame()
+                             ? "exit"
+                             : frame->IsStubFrame() ? "stub" : "invalid");
 #if defined(DART_PRECOMPILED_RUNTIME)
       intptr_t offset;
       auto const symbol_name = ImageName(vm_instructions, isolate_instructions,
@@ -1219,10 +1220,6 @@ intptr_t Simulator::WriteExclusiveX(uword addr, intptr_t value, Instr* instr) {
   int64_t old_value = exclusive_access_value_;
   ClearExclusive();
 
-  if ((random_.NextUInt32() % 16) == 0) {
-    return 1;  // Suprious failure.
-  }
-
   auto atomic_addr = reinterpret_cast<RelaxedAtomic<int64_t>*>(addr);
   if (atomic_addr->compare_exchange_weak(old_value, value)) {
     return 0;  // Success.
@@ -1240,10 +1237,6 @@ intptr_t Simulator::WriteExclusiveW(uword addr, intptr_t value, Instr* instr) {
 
   int32_t old_value = static_cast<uint32_t>(exclusive_access_value_);
   ClearExclusive();
-
-  if ((random_.NextUInt32() % 16) == 0) {
-    return 1;  // Spurious failure.
-  }
 
   auto atomic_addr = reinterpret_cast<RelaxedAtomic<int32_t>*>(addr);
   if (atomic_addr->compare_exchange_weak(old_value, value)) {
@@ -1727,7 +1720,7 @@ void Simulator::DoRedirectedCall(Instr* instr) {
       const int64_t res =
           InvokeLeafRuntime(target, r0, r1, r2, r3, r4, r5, r6, r7);
       ClobberVolatileRegisters();
-      set_register(instr, R0, res);  // Set returned result from function.
+      set_register(instr, R0, res);      // Set returned result from function.
     } else if (redirection->call_kind() == kLeafFloatRuntimeCall) {
       ASSERT((0 <= redirection->argument_count()) &&
              (redirection->argument_count() <= 8));
@@ -1771,7 +1764,7 @@ void Simulator::ClobberVolatileRegisters() {
 
   for (intptr_t i = 0; i < kNumberOfCpuRegisters; i++) {
     if ((kAbiVolatileCpuRegs & (1 << i)) != 0) {
-      registers_[i] = random_.NextUInt64();
+      registers_[i] = icount_;
     }
   }
 
@@ -2314,21 +2307,21 @@ void Simulator::DecodeLoadStoreExclusive(Instr* instr) {
       const int64_t addr = get_register(rn, R31IsSP);
       const intptr_t value =
           (size == 3) ? ReadAcquire(addr, instr) : ReadAcquireW(addr, instr);
-      set_register(instr, rt, value, R31IsZR);
+      set_register(instr, rt, value, R31IsSP);
     } else {
       ASSERT(rs == R31);  // Should-Be-One
       // Format(instr, "ldxr 'rt, 'rn");
       const int64_t addr = get_register(rn, R31IsSP);
       const intptr_t value = (size == 3) ? ReadExclusiveX(addr, instr)
                                          : ReadExclusiveW(addr, instr);
-      set_register(instr, rt, value, R31IsZR);
+      set_register(instr, rt, value, R31IsSP);
     }
   } else {
     const bool is_store_release = !is_exclusive && is_ordered;
     if (is_store_release) {
       ASSERT(rs == R31);  // Should-Be-One
       // Format(instr, "stlr 'rt, 'rn");
-      const uword value = get_register(rt, R31IsZR);
+      const uword value = get_register(rt, R31IsSP);
       const uword addr = get_register(rn, R31IsSP);
       if (size == 3) {
         WriteRelease(addr, value, instr);
@@ -2337,7 +2330,7 @@ void Simulator::DecodeLoadStoreExclusive(Instr* instr) {
       }
     } else {
       // Format(instr, "stxr 'rs, 'rt, 'rn");
-      const uword value = get_register(rt, R31IsZR);
+      const uword value = get_register(rt, R31IsSP);
       const uword addr = get_register(rn, R31IsSP);
       const intptr_t status =
           (size == 3)

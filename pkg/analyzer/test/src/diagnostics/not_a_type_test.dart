@@ -45,11 +45,11 @@ extension E on int {}
 E a;
 ''', [error(CompileTimeErrorCode.NOT_A_TYPE, 22, 1)]);
 
-    var node = findNode.namedType('E a;');
+    final node = findNode.namedType('E a;');
     assertResolvedNodeText(node, r'''
 NamedType
   name: E
-  element: <testLibraryFragment>::@extension::E
+  element: self::@extension::E
   type: InvalidType
 ''');
   }
@@ -61,7 +61,7 @@ main() {
   f v = null;
 }''', [
       error(CompileTimeErrorCode.NOT_A_TYPE, 18, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 20, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 20, 1),
     ]);
   }
 }

@@ -40,8 +40,7 @@ class SocketServerTest {
     expect(channel2.responsesReceived[0].error!.code,
         equals(RequestErrorCode.SERVER_ALREADY_STARTED));
     channel2
-        .simulateRequestFromClient(
-            ServerShutdownParams().toRequest('0', clientUriConverter: null))
+        .simulateRequestFromClient(ServerShutdownParams().toRequest('0'))
         .then((Response response) {
       expect(response.id, equals('0'));
       var error = response.error!;
@@ -57,8 +56,7 @@ class SocketServerTest {
     expect(
         channel.notificationsReceived[0].event, SERVER_NOTIFICATION_CONNECTED);
     return channel
-        .simulateRequestFromClient(
-            ServerShutdownParams().toRequest('0', clientUriConverter: null))
+        .simulateRequestFromClient(ServerShutdownParams().toRequest('0'))
         .then((Response response) {
       expect(response.id, equals('0'));
       expect(response.error, isNull);
@@ -67,8 +65,8 @@ class SocketServerTest {
   }
 
   static SocketServer _createSocketServer(MockServerChannel channel) {
-    var errorNotifier = ErrorNotifier();
-    var server = SocketServer(
+    final errorNotifier = ErrorNotifier();
+    final server = SocketServer(
         AnalysisServerOptions(),
         DartSdkManager(''),
         CrashReportingAttachmentsBuilder.empty,

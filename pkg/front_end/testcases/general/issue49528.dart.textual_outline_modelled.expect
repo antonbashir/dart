@@ -1,5 +1,4 @@
 bool any_bool = true;
-
 final foo = () {
   if (any_bool) {
     return 0;
@@ -7,7 +6,5 @@ final foo = () {
     throw Exception();
   }
 }();
-
 final int bar = foo;
-
 void main() {}

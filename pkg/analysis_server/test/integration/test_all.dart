@@ -5,6 +5,7 @@
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'analysis/test_all.dart' as analysis;
+import 'analytics/test_all.dart' as analytics;
 import 'completion/test_all.dart' as completion;
 import 'coverage_test.dart' as coverage_test;
 import 'diagnostic/test_all.dart' as diagnostic;
@@ -19,6 +20,7 @@ import 'server/test_all.dart' as server;
 void main() {
   defineReflectiveSuite(() {
     analysis.main();
+    analytics.main();
     completion.main();
     coverage_test.main();
     diagnostic.main();

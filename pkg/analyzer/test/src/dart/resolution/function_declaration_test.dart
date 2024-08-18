@@ -27,7 +27,7 @@ Stream<int> f() async* {
       error(CompileTimeErrorCode.RETURN_IN_GENERATOR, 49, 6),
     ]);
 
-    var node = findNode.singleFunctionDeclaration;
+    final node = findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -37,10 +37,10 @@ FunctionDeclaration
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: dart:async::@fragment::dart:async/stream.dart::@class::Stream
+    element: dart:async::@class::Stream
     type: Stream<int>
   name: f
   functionExpression: FunctionExpression
@@ -60,10 +60,10 @@ FunctionDeclaration
               staticType: int
             semicolon: ;
         rightBracket: }
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: Stream<int> Function()
     staticType: Stream<int> Function()
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: Stream<int> Function()
 ''');
   }
@@ -77,7 +77,7 @@ Stream<int> f() async* => 0;
       error(CompileTimeErrorCode.RETURN_IN_GENERATOR, 45, 2),
     ]);
 
-    var node = findNode.singleFunctionDeclaration;
+    final node = findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -87,10 +87,10 @@ FunctionDeclaration
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: dart:async::@fragment::dart:async/stream.dart::@class::Stream
+    element: dart:async::@class::Stream
     type: Stream<int>
   name: f
   functionExpression: FunctionExpression
@@ -105,10 +105,10 @@ FunctionDeclaration
         literal: 0
         staticType: int
       semicolon: ;
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: Stream<int> Function()
     staticType: Stream<int> Function()
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: Stream<int> Function()
 ''');
   }
@@ -154,12 +154,12 @@ int get foo(double a) => 0;
       error(ParserErrorCode.GETTER_WITH_PARAMETERS, 11, 1),
     ]);
 
-    var node = findNode.singleFunctionDeclaration;
+    final node = findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   propertyKeyword: get
   name: foo
@@ -169,10 +169,10 @@ FunctionDeclaration
       parameter: SimpleFormalParameter
         type: NamedType
           name: double
-          element: dart:core::<fragment>::@class::double
+          element: dart:core::@class::double
           type: double
         name: a
-        declaredElement: <testLibraryFragment>::@getter::foo::@parameter::a
+        declaredElement: self::@getter::foo::@parameter::a
           type: double
       rightParenthesis: )
     body: ExpressionFunctionBody
@@ -181,10 +181,10 @@ FunctionDeclaration
         literal: 0
         staticType: int
       semicolon: ;
-    declaredElement: <testLibraryFragment>::@getter::foo
+    declaredElement: self::@getter::foo
       type: int Function(double)
     staticType: int Function(double)
-  declaredElement: <testLibraryFragment>::@getter::foo
+  declaredElement: self::@getter::foo
     type: int Function(double)
 ''');
   }
@@ -198,7 +198,7 @@ Iterable<int> f() sync* {
       error(CompileTimeErrorCode.RETURN_IN_GENERATOR, 28, 6),
     ]);
 
-    var node = findNode.singleFunctionDeclaration;
+    final node = findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -208,10 +208,10 @@ FunctionDeclaration
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: dart:core::<fragment>::@class::Iterable
+    element: dart:core::@class::Iterable
     type: Iterable<int>
   name: f
   functionExpression: FunctionExpression
@@ -231,10 +231,10 @@ FunctionDeclaration
               staticType: int
             semicolon: ;
         rightBracket: }
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: Iterable<int> Function()
     staticType: Iterable<int> Function()
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: Iterable<int> Function()
 ''');
   }
@@ -246,7 +246,7 @@ Iterable<int> f() sync* => 0;
       error(CompileTimeErrorCode.RETURN_IN_GENERATOR, 24, 2),
     ]);
 
-    var node = findNode.singleFunctionDeclaration;
+    final node = findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -256,10 +256,10 @@ FunctionDeclaration
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: dart:core::<fragment>::@class::Iterable
+    element: dart:core::@class::Iterable
     type: Iterable<int>
   name: f
   functionExpression: FunctionExpression
@@ -274,129 +274,11 @@ FunctionDeclaration
         literal: 0
         staticType: int
       semicolon: ;
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: Iterable<int> Function()
     staticType: Iterable<int> Function()
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: Iterable<int> Function()
-''');
-  }
-
-  test_wildCardFunction() async {
-    await assertErrorsInCode('''
-_() {}
-''', [
-      error(WarningCode.UNUSED_ELEMENT, 0, 1),
-    ]);
-
-    var node = findNode.singleFunctionDeclaration;
-    assertResolvedNodeText(node, r'''
-FunctionDeclaration
-  name: _
-  functionExpression: FunctionExpression
-    parameters: FormalParameterList
-      leftParenthesis: (
-      rightParenthesis: )
-    body: BlockFunctionBody
-      block: Block
-        leftBracket: {
-        rightBracket: }
-    declaredElement: <testLibraryFragment>::@function::_
-      type: dynamic Function()
-    staticType: dynamic Function()
-  declaredElement: <testLibraryFragment>::@function::_
-    type: dynamic Function()
-''');
-  }
-
-  test_wildCardFunction_preWildCards() async {
-    await assertErrorsInCode('''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-_() {}
-''', [
-      error(WarningCode.UNUSED_ELEMENT, 44, 1),
-    ]);
-
-    var node = findNode.singleFunctionDeclaration;
-    assertResolvedNodeText(node, r'''
-FunctionDeclaration
-  name: _
-  functionExpression: FunctionExpression
-    parameters: FormalParameterList
-      leftParenthesis: (
-      rightParenthesis: )
-    body: BlockFunctionBody
-      block: Block
-        leftBracket: {
-        rightBracket: }
-    declaredElement: <testLibraryFragment>::@function::_
-      type: dynamic Function()
-    staticType: dynamic Function()
-  declaredElement: <testLibraryFragment>::@function::_
-    type: dynamic Function()
-''');
-  }
-
-  test_wildcardFunctionTypeParameter() async {
-    // Corresponding language test:
-    // language/wildcard_variables/multiple/local_declaration_type_parameter_error_test
-
-    await assertErrorsInCode(r'''
-void f<_ extends void Function<_>(_, _), _>() {}
-''', [
-      error(CompileTimeErrorCode.UNDEFINED_CLASS, 34, 1),
-      error(CompileTimeErrorCode.UNDEFINED_CLASS, 37, 1),
-    ]);
-
-    var node = findNode.typeParameter('<_>');
-    assertResolvedNodeText(node, r'''
-TypeParameter
-  name: _
-  extendsKeyword: extends
-  bound: GenericFunctionType
-    returnType: NamedType
-      name: void
-      element: <null>
-      type: void
-    functionKeyword: Function
-    typeParameters: TypeParameterList
-      leftBracket: <
-      typeParameters
-        TypeParameter
-          name: _
-          declaredElement: _@31
-      rightBracket: >
-    parameters: FormalParameterList
-      leftParenthesis: (
-      parameter: SimpleFormalParameter
-        type: NamedType
-          name: _
-          element: <null>
-          type: InvalidType
-        declaredElement: @-1
-          type: InvalidType
-      parameter: SimpleFormalParameter
-        type: NamedType
-          name: _
-          element: <null>
-          type: InvalidType
-        declaredElement: @-1
-          type: InvalidType
-      rightParenthesis: )
-    declaredElement: GenericFunctionTypeElement
-      parameters
-        <empty>
-          kind: required positional
-          type: InvalidType
-        <empty>
-          kind: required positional
-          type: InvalidType
-      returnType: void
-      type: void Function<_>(InvalidType, InvalidType)
-    type: void Function<_>(InvalidType, InvalidType)
-  declaredElement: _@7
 ''');
   }
 }

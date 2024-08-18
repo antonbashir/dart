@@ -10,8 +10,6 @@ Types Order:
  topLevelFunction4:FunctionTypesMacro1.new()
  topLevelFunction5:FunctionTypesMacro1.new()
 Types:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 import 'package:macro/macro.dart' as prefix1;
 
@@ -29,8 +27,7 @@ class topLevelFunction4GeneratedClass {
 }
 class topLevelFunction5GeneratedClass {
   external OmittedType0 method();
-}
-*/
+}*/
 
 import 'package:macro/macro.dart';
 

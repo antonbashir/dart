@@ -5,5 +5,4 @@ class B<TypeY extends A> {}
 extension C<TypeY extends A> on int {}
 
 main() {}
-
 typedef D<TypeY extends A> = int;

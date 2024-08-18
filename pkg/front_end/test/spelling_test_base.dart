@@ -3,20 +3,27 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io' show File, Platform;
+
 import 'dart:typed_data' show Uint8List;
 
 import 'package:_fe_analyzer_shared/src/scanner/scanner.dart' show ErrorToken;
+
 import 'package:_fe_analyzer_shared/src/scanner/token.dart'
     show BeginToken, KeywordToken, StringToken, Token;
+
 import 'package:_fe_analyzer_shared/src/scanner/utf8_bytes_scanner.dart'
     show Utf8BytesScanner;
-import 'package:front_end/src/base/command_line_reporting.dart'
+
+import 'package:front_end/src/fasta/command_line_reporting.dart'
     as command_line_reporting;
+
 import 'package:kernel/kernel.dart' show Location, Source;
+
 import 'package:testing/testing.dart'
     show Chain, ChainContext, Result, Step, TestDescription;
 
 import 'spell_checking_utils.dart' as spell;
+
 import 'testing_utils.dart' show filterList;
 
 abstract class SpellContext extends ChainContext {
@@ -30,6 +37,13 @@ abstract class SpellContext extends ChainContext {
 
   SpellContext({required this.interactive, required this.onlyInGit});
 
+  // Override special handling of negative tests.
+  @override
+  Result processTestResult(
+      TestDescription description, Result result, bool last) {
+    return result;
+  }
+
   List<spell.Dictionaries> get dictionaries;
 
   bool get onlyDenylisted;
@@ -40,8 +54,8 @@ abstract class SpellContext extends ChainContext {
   Set<String> reportedWordsDenylisted = {};
 
   @override
-  Future<List<TestDescription>> list(Chain suite) async {
-    return filterList(suite, onlyInGit, await super.list(suite));
+  Stream<TestDescription> list(Chain suite) {
+    return filterList(suite, onlyInGit, super.list(suite));
   }
 
   @override

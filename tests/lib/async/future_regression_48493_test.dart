@@ -7,10 +7,9 @@
 // The `Completer.complete` method, given an already completed `_Future`
 // with a value result, will complete the `Completer.future` synchronously.
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 void main() async {
   asyncStart();

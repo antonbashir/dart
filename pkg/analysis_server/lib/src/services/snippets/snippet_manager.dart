@@ -76,16 +76,16 @@ class DartSnippetManager {
     }
 
     try {
-      var snippets = <Snippet>[];
-      var generators = producerGenerators[request.context];
+      final snippets = <Snippet>[];
+      final generators = producerGenerators[request.context];
       if (generators == null) {
         return snippets;
       }
-      var elementImportCache = <Element, LibraryElement?>{};
-      for (var generator in generators) {
-        var producer =
+      final elementImportCache = <Element, LibraryElement?>{};
+      for (final generator in generators) {
+        final producer =
             generator(request, elementImportCache: elementImportCache);
-        var matchesFilter = filter?.call(producer.snippetPrefix) ?? true;
+        final matchesFilter = filter?.call(producer.snippetPrefix) ?? true;
         if (matchesFilter && await producer.isValid()) {
           snippets.add(await producer.compute());
         }

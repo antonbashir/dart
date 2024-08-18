@@ -6,5 +6,4 @@ class Class {
 }
 
 main() {}
-
 test() {}

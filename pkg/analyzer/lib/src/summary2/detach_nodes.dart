@@ -19,12 +19,6 @@ void detachElementsFromNodes(LibraryElementImpl element) {
 
 class _Visitor extends GeneralizingElementVisitor<void> {
   @override
-  void visitAugmentationImportElement(AugmentationImportElement element) {
-    element.importedAugmentation?.accept(this);
-    super.visitAugmentationImportElement(element);
-  }
-
-  @override
   void visitClassElement(ClassElement element) {
     if (element is ClassElementImpl) {
       element.mixinInferenceCallback = null;
@@ -39,10 +33,10 @@ class _Visitor extends GeneralizingElementVisitor<void> {
       var initializers = element.constantInitializers.toFixedList();
       initializers.forEach(_detachNode);
 
-      for (var initializer in initializers) {
+      for (final initializer in initializers) {
         if (initializer is! ConstructorInitializerImpl) continue;
         switch (initializer) {
-          case AssertInitializerImpl(:var condition, :var message):
+          case AssertInitializerImpl(:final condition, :final message):
             var conditionReplacement = replaceNotSerializableNode(condition);
             initializer.condition = conditionReplacement;
 
@@ -50,12 +44,12 @@ class _Visitor extends GeneralizingElementVisitor<void> {
               var messageReplacement = replaceNotSerializableNode(message);
               initializer.message = messageReplacement;
             }
-          case ConstructorFieldInitializerImpl(:var expression):
+          case ConstructorFieldInitializerImpl(:final expression):
             var replacement = replaceNotSerializableNode(expression);
             initializer.expression = replacement;
-          case RedirectingConstructorInvocationImpl(:var argumentList):
+          case RedirectingConstructorInvocationImpl(:final argumentList):
             _sanitizeArguments(argumentList.arguments);
-          case SuperConstructorInvocationImpl(:var argumentList):
+          case SuperConstructorInvocationImpl(:final argumentList):
             _sanitizeArguments(argumentList.arguments);
         }
       }
@@ -67,8 +61,8 @@ class _Visitor extends GeneralizingElementVisitor<void> {
 
   @override
   void visitElement(Element element) {
-    for (var annotation in element.metadata) {
-      var ast = (annotation as ElementAnnotationImpl).annotationAst;
+    for (final annotation in element.metadata) {
+      final ast = (annotation as ElementAnnotationImpl).annotationAst;
       _detachNode(ast);
       _sanitizeArguments(ast.arguments?.arguments);
     }

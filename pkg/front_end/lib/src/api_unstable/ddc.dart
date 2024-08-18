@@ -2,12 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart'
+    show SerializationMode;
 import 'package:_fe_analyzer_shared/src/messages/diagnostic_message.dart'
     show DiagnosticMessageHandler;
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/kernel.dart' show Component, Library;
 import 'package:kernel/target/targets.dart' show Target;
-import 'package:macros/src/executor/serialization.dart' show SerializationMode;
 
 import '../api_prototype/compiler_options.dart' show CompilerOptions;
 import '../api_prototype/experimental_flags.dart' show ExperimentalFlag;
@@ -36,17 +37,15 @@ export '../api_prototype/memory_file_system.dart' show MemoryFileSystem;
 export '../api_prototype/standard_file_system.dart' show StandardFileSystem;
 export '../api_prototype/terminal_color_support.dart'
     show printDiagnosticMessage;
-export '../base/compiler_context.dart' show CompilerContext;
-export '../base/hybrid_file_system.dart' show HybridFileSystem;
-export '../base/incremental_compiler.dart' show IncrementalCompiler;
-export '../base/incremental_serializer.dart' show IncrementalSerializer;
 export '../base/nnbd_mode.dart' show NnbdMode;
 export '../base/processed_options.dart' show ProcessedOptions;
-export '../base/ticker.dart' show Ticker;
-export '../compute_platform_binaries_location.dart'
-    show computePlatformBinariesLocation;
-export '../kernel/constructor_tearoff_lowering.dart' show isTearOffLowering;
-export '../type_inference/type_schema_environment.dart'
+export '../fasta/compiler_context.dart' show CompilerContext;
+export '../fasta/hybrid_file_system.dart' show HybridFileSystem;
+export '../fasta/incremental_compiler.dart' show IncrementalCompiler;
+export '../fasta/kernel/constructor_tearoff_lowering.dart'
+    show isTearOffLowering;
+export '../fasta/ticker.dart' show Ticker;
+export '../fasta/type_inference/type_schema_environment.dart'
     show TypeSchemaEnvironment;
 export 'compiler_state.dart'
     show InitializedCompilerState, WorkerInputComponent, digestsEqual;
@@ -106,7 +105,6 @@ InitializedCompilerState initializeCompiler(
     Map<ExperimentalFlag, bool>? explicitExperimentalFlags,
     Map<String, String>? environmentDefines,
     required NnbdMode nnbdMode,
-    bool requirePrebuiltMacros = false,
     List<String>? precompiledMacros,
     String? macroSerializationMode}) {
   additionalDills.sort((a, b) => a.toString().compareTo(b.toString()));
@@ -120,9 +118,7 @@ InitializedCompilerState initializeCompiler(
       equalLists(oldState.options.additionalDills, additionalDills) &&
       equalMaps(oldState.options.explicitExperimentalFlags,
           explicitExperimentalFlags) &&
-      equalMaps(oldState.options.environmentDefines, environmentDefines) &&
-      equalLists(oldState.options.precompiledMacros, precompiledMacros) &&
-      oldState.options.requirePrebuiltMacros == requirePrebuiltMacros) {
+      equalMaps(oldState.options.environmentDefines, environmentDefines)) {
     // Reuse old state.
     return oldState;
   }
@@ -171,8 +167,6 @@ Future<InitializedCompilerState> initializeIncrementalCompiler(
     required Map<ExperimentalFlag, bool> explicitExperimentalFlags,
     required Map<String, String> environmentDefines,
     bool trackNeededDillLibraries = false,
-    bool requirePrebuiltMacros = false,
-    List<String> precompiledMacros = const [],
     required NnbdMode nnbdMode}) {
   return modular.initializeIncrementalCompiler(
       oldState,
@@ -191,8 +185,6 @@ Future<InitializedCompilerState> initializeIncrementalCompiler(
       environmentDefines: environmentDefines,
       outlineOnly: false,
       omitPlatform: false,
-      requirePrebuiltMacros: requirePrebuiltMacros,
-      precompiledMacros: precompiledMacros,
       trackNeededDillLibraries: trackNeededDillLibraries,
       nnbdMode: nnbdMode);
 }

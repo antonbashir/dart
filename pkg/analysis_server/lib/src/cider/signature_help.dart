@@ -17,16 +17,16 @@ class CiderSignatureHelpComputer {
 
   Future<SignatureHelpResponse?> compute2(
       String filePath, int line, int column) async {
-    var resolvedUnit = await _fileResolver.resolve(path: filePath);
+    var resolvedUnit = await _fileResolver.resolve2(path: filePath);
     var lineInfo = resolvedUnit.lineInfo;
     var offset = lineInfo.getOffsetOfLine(line) + column;
-    var formats = <MarkupKind>{MarkupKind.Markdown};
+    final formats = <MarkupKind>{MarkupKind.Markdown};
 
     var dartDocInfo = DartdocDirectiveInfo();
-    var typeArgsComputer = DartTypeArgumentsSignatureComputer(
+    final typeArgsComputer = DartTypeArgumentsSignatureComputer(
         dartDocInfo, resolvedUnit.unit, offset, formats);
     if (typeArgsComputer.offsetIsValid) {
-      var typeSignature = typeArgsComputer.compute();
+      final typeSignature = typeArgsComputer.compute();
 
       if (typeSignature != null) {
         return SignatureHelpResponse(typeSignature,
@@ -34,10 +34,10 @@ class CiderSignatureHelpComputer {
       }
     }
 
-    var computer =
+    final computer =
         DartUnitSignatureComputer(dartDocInfo, resolvedUnit.unit, offset);
     if (computer.offsetIsValid) {
-      var signature = computer.compute();
+      final signature = computer.compute();
       if (signature != null) {
         return SignatureHelpResponse(toSignatureHelp(formats, signature),
             lineInfo.getLocation(computer.argumentList.offset + 1));

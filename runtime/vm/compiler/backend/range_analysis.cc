@@ -34,7 +34,7 @@ static void CheckRangeForRepresentation(const Assert& assert,
     assert.Fail(
         "During range analysis for:\n  %s\n"
         "expected range containing only %s-representable values, but got %s",
-        instr->ToCString(), RepresentationUtils::ToCString(rep),
+        instr->ToCString(), RepresentationToCString(rep),
         Range::ToCString(range));
   }
 }
@@ -315,6 +315,30 @@ const Range* RangeAnalysis::GetIntRange(Value* value) const {
   }
 
   return range;
+}
+
+const char* RangeBoundary::KindToCString(Kind kind) {
+  switch (kind) {
+#define KIND_CASE(name)                                                        \
+  case Kind::k##name:                                                          \
+    return #name;
+    FOR_EACH_RANGE_BOUNDARY_KIND(KIND_CASE)
+#undef KIND_CASE
+    default:
+      UNREACHABLE();
+      return nullptr;
+  }
+}
+
+bool RangeBoundary::ParseKind(const char* str, Kind* out) {
+#define KIND_CASE(name)                                                        \
+  if (strcmp(str, #name) == 0) {                                               \
+    *out = Kind::k##name;                                                      \
+    return true;                                                               \
+  }
+  FOR_EACH_RANGE_BOUNDARY_KIND(KIND_CASE)
+#undef KIND_CASE
+  return false;
 }
 
 static bool AreEqualDefinitions(Definition* a, Definition* b) {
@@ -917,10 +941,10 @@ class BoundsCheckGeneralizer {
     }
   }
 
-  typedef Definition* (BoundsCheckGeneralizer::* PhiBoundFunc)(PhiInstr*,
-                                                               LoopInfo*,
-                                                               InductionVar*,
-                                                               Instruction*);
+  typedef Definition* (BoundsCheckGeneralizer::*PhiBoundFunc)(PhiInstr*,
+                                                              LoopInfo*,
+                                                              InductionVar*,
+                                                              Instruction*);
 
   // Construct symbolic lower bound for a value at the given point.
   Definition* ConstructLowerBound(Definition* value, Instruction* point) {
@@ -1709,43 +1733,50 @@ RangeBoundary RangeBoundary::FromDefinition(Definition* defn, int64_t offs) {
 }
 
 RangeBoundary RangeBoundary::LowerBound() const {
+  if (IsInfinity()) {
+    return NegativeInfinity();
+  }
   if (IsConstant()) return *this;
   return Add(Range::ConstantMinSmi(symbol()->range()),
-             RangeBoundary::FromConstant(offset_));
+             RangeBoundary::FromConstant(offset_), NegativeInfinity());
 }
 
 RangeBoundary RangeBoundary::UpperBound() const {
+  if (IsInfinity()) {
+    return PositiveInfinity();
+  }
   if (IsConstant()) return *this;
 
   return Add(Range::ConstantMaxSmi(symbol()->range()),
-             RangeBoundary::FromConstant(offset_));
-}
-
-bool RangeBoundary::WillAddOverflow(const RangeBoundary& a,
-                                    const RangeBoundary& b) {
-  ASSERT(a.IsConstant() && b.IsConstant());
-  return Utils::WillAddOverflow(a.ConstantValue(), b.ConstantValue());
+             RangeBoundary::FromConstant(offset_), PositiveInfinity());
 }
 
 RangeBoundary RangeBoundary::Add(const RangeBoundary& a,
-                                 const RangeBoundary& b) {
+                                 const RangeBoundary& b,
+                                 const RangeBoundary& overflow) {
+  if (a.IsInfinity() || b.IsInfinity()) return overflow;
+
   ASSERT(a.IsConstant() && b.IsConstant());
-  ASSERT(!WillAddOverflow(a, b));
-  const int64_t result = a.ConstantValue() + b.ConstantValue();
+  if (Utils::WillAddOverflow(a.ConstantValue(), b.ConstantValue())) {
+    return overflow;
+  }
+
+  int64_t result = a.ConstantValue() + b.ConstantValue();
+
   return RangeBoundary::FromConstant(result);
 }
 
-bool RangeBoundary::WillSubOverflow(const RangeBoundary& a,
-                                    const RangeBoundary& b) {
-  ASSERT(a.IsConstant() && b.IsConstant());
-  return Utils::WillSubOverflow(a.ConstantValue(), b.ConstantValue());
-}
-
 RangeBoundary RangeBoundary::Sub(const RangeBoundary& a,
-                                 const RangeBoundary& b) {
+                                 const RangeBoundary& b,
+                                 const RangeBoundary& overflow) {
+  if (a.IsInfinity() || b.IsInfinity()) return overflow;
   ASSERT(a.IsConstant() && b.IsConstant());
-  ASSERT(!WillSubOverflow(a, b));
-  const int64_t result = a.ConstantValue() - b.ConstantValue();
+  if (Utils::WillSubOverflow(a.ConstantValue(), b.ConstantValue())) {
+    return overflow;
+  }
+
+  int64_t result = a.ConstantValue() - b.ConstantValue();
+
   return RangeBoundary::FromConstant(result);
 }
 
@@ -1794,6 +1825,8 @@ bool RangeBoundary::SymbolicSub(const RangeBoundary& a,
 bool RangeBoundary::Equals(const RangeBoundary& other) const {
   if (IsConstant() && other.IsConstant()) {
     return ConstantValue() == other.ConstantValue();
+  } else if (IsInfinity() && other.IsInfinity()) {
+    return kind() == other.kind();
   } else if (IsSymbol() && other.IsSymbol()) {
     return (offset() == other.offset()) && DependOnSameSymbol(*this, other);
   } else if (IsUnknown() && other.IsUnknown()) {
@@ -1802,48 +1835,29 @@ bool RangeBoundary::Equals(const RangeBoundary& other) const {
   return false;
 }
 
-bool RangeBoundary::WillShlOverflow(const RangeBoundary& value_boundary,
-                                    int64_t shift_count) {
-  ASSERT(value_boundary.IsConstant());
-  ASSERT(shift_count >= 0);
-  const int64_t value = value_boundary.ConstantValue();
-  if (value == 0) {
-    return false;
-  }
-  return (shift_count >= kBitsPerInt64) ||
-         !Utils::IsInt(static_cast<int>(kBitsPerInt64 - shift_count), value);
-}
-
 RangeBoundary RangeBoundary::Shl(const RangeBoundary& value_boundary,
-                                 int64_t shift_count) {
+                                 int64_t shift_count,
+                                 const RangeBoundary& overflow) {
   ASSERT(value_boundary.IsConstant());
-  ASSERT(!WillShlOverflow(value_boundary, shift_count));
   ASSERT(shift_count >= 0);
+  int64_t limit = 64 - shift_count;
   int64_t value = value_boundary.ConstantValue();
 
   if (value == 0) {
     return RangeBoundary::FromConstant(0);
-  } else {
+  } else if (shift_count == 0 ||
+             (limit > 0 && Utils::IsInt(static_cast<int>(limit), value))) {
     // Result stays in 64 bit range.
     const int64_t result = static_cast<uint64_t>(value) << shift_count;
     return RangeBoundary(result);
   }
-}
 
-RangeBoundary RangeBoundary::Shr(const RangeBoundary& value_boundary,
-                                 int64_t shift_count) {
-  ASSERT(value_boundary.IsConstant());
-  ASSERT(shift_count >= 0);
-  const int64_t value = static_cast<int64_t>(value_boundary.ConstantValue());
-  const int64_t result = (shift_count <= 63)
-                             ? (value >> shift_count)
-                             : (value >= 0 ? 0 : -1);  // Dart semantics
-  return RangeBoundary(result);
+  return overflow;
 }
 
 static RangeBoundary CanonicalizeBoundary(const RangeBoundary& a,
                                           const RangeBoundary& overflow) {
-  if (a.IsConstant()) {
+  if (a.IsConstant() || a.IsInfinity()) {
     return a;
   }
 
@@ -1913,20 +1927,20 @@ static bool CanonicalizeMaxBoundary(RangeBoundary* a) {
   if ((range == nullptr) || !range->max().IsSymbol()) return false;
 
   if (Utils::WillAddOverflow(range->max().offset(), a->offset())) {
-    *a = RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+    *a = RangeBoundary::PositiveInfinity();
     return true;
   }
 
   const int64_t offset = range->max().offset() + a->offset();
 
   if (!RangeBoundary::IsValidOffsetForSymbolicRangeBoundary(offset)) {
-    *a = RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+    *a = RangeBoundary::PositiveInfinity();
     return true;
   }
 
   *a = CanonicalizeBoundary(
       RangeBoundary::FromDefinition(range->max().symbol(), offset),
-      RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64));
+      RangeBoundary::PositiveInfinity());
 
   return true;
 }
@@ -1938,20 +1952,20 @@ static bool CanonicalizeMinBoundary(RangeBoundary* a) {
   if ((range == nullptr) || !range->min().IsSymbol()) return false;
 
   if (Utils::WillAddOverflow(range->min().offset(), a->offset())) {
-    *a = RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
+    *a = RangeBoundary::NegativeInfinity();
     return true;
   }
 
   const int64_t offset = range->min().offset() + a->offset();
 
   if (!RangeBoundary::IsValidOffsetForSymbolicRangeBoundary(offset)) {
-    *a = RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
+    *a = RangeBoundary::NegativeInfinity();
     return true;
   }
 
   *a = CanonicalizeBoundary(
       RangeBoundary::FromDefinition(range->min().symbol(), offset),
-      RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64));
+      RangeBoundary::NegativeInfinity());
 
   return true;
 }
@@ -1988,7 +2002,7 @@ RangeBoundary RangeBoundary::JoinMin(RangeBoundary a,
   }
 
   if (CanonicalizeForComparison(&a, &b, &CanonicalizeMinBoundary,
-                                RangeBoundary::MinConstant(size))) {
+                                RangeBoundary::NegativeInfinity())) {
     return (a.offset() <= b.offset()) ? a : b;
   }
 
@@ -2013,9 +2027,8 @@ RangeBoundary RangeBoundary::JoinMax(RangeBoundary a,
     return b;
   }
 
-  if (CanonicalizeForComparison(
-          &a, &b, &CanonicalizeMaxBoundary,
-          RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64))) {
+  if (CanonicalizeForComparison(&a, &b, &CanonicalizeMaxBoundary,
+                                RangeBoundary::PositiveInfinity())) {
     return (a.offset() >= b.offset()) ? a : b;
   }
 
@@ -2034,14 +2047,11 @@ RangeBoundary RangeBoundary::JoinMax(RangeBoundary a,
 }
 
 RangeBoundary RangeBoundary::IntersectionMin(RangeBoundary a, RangeBoundary b) {
+  ASSERT(!a.IsPositiveInfinity() && !b.IsPositiveInfinity());
   ASSERT(!a.IsUnknown() && !b.IsUnknown());
 
   if (a.Equals(b)) {
     return a;
-  }
-
-  if (a.IsConstant() && b.IsConstant()) {
-    return RangeBoundary(Utils::Maximum(a.ConstantValue(), b.ConstantValue()));
   }
 
   if (a.IsMinimumOrBelow(RangeBoundary::kRangeBoundarySmi)) {
@@ -2050,9 +2060,8 @@ RangeBoundary RangeBoundary::IntersectionMin(RangeBoundary a, RangeBoundary b) {
     return a;
   }
 
-  if (CanonicalizeForComparison(
-          &a, &b, &CanonicalizeMinBoundary,
-          RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64))) {
+  if (CanonicalizeForComparison(&a, &b, &CanonicalizeMinBoundary,
+                                RangeBoundary::NegativeInfinity())) {
     return (a.offset() >= b.offset()) ? a : b;
   }
 
@@ -2063,14 +2072,11 @@ RangeBoundary RangeBoundary::IntersectionMin(RangeBoundary a, RangeBoundary b) {
 }
 
 RangeBoundary RangeBoundary::IntersectionMax(RangeBoundary a, RangeBoundary b) {
+  ASSERT(!a.IsNegativeInfinity() && !b.IsNegativeInfinity());
   ASSERT(!a.IsUnknown() && !b.IsUnknown());
 
   if (a.Equals(b)) {
     return a;
-  }
-
-  if (a.IsConstant() && b.IsConstant()) {
-    return RangeBoundary(Utils::Minimum(a.ConstantValue(), b.ConstantValue()));
   }
 
   if (a.IsMaximumOrAbove(RangeBoundary::kRangeBoundarySmi)) {
@@ -2079,9 +2085,8 @@ RangeBoundary RangeBoundary::IntersectionMax(RangeBoundary a, RangeBoundary b) {
     return a;
   }
 
-  if (CanonicalizeForComparison(
-          &a, &b, &CanonicalizeMaxBoundary,
-          RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64))) {
+  if (CanonicalizeForComparison(&a, &b, &CanonicalizeMaxBoundary,
+                                RangeBoundary::PositiveInfinity())) {
     return (a.offset() <= b.offset()) ? a : b;
   }
 
@@ -2100,9 +2105,6 @@ static RangeBoundary::RangeSize RepresentationToRangeSize(Representation r) {
   switch (r) {
     case kTagged:
       return RangeBoundary::kRangeBoundarySmi;
-    case kUnboxedInt8:
-      return RangeBoundary::kRangeBoundaryInt8;
-    case kUnboxedInt16:
     case kUnboxedUint8:  // Overapproximate Uint8 as Int16.
       return RangeBoundary::kRangeBoundaryInt16;
     case kUnboxedInt32:
@@ -2133,12 +2135,14 @@ bool Range::IsNegative() const {
 
 bool Range::OnlyLessThanOrEqualTo(int64_t val) const {
   const RangeBoundary upper_bound = max().UpperBound();
-  return upper_bound.ConstantValue() <= val;
+  return !upper_bound.IsPositiveInfinity() &&
+         (upper_bound.ConstantValue() <= val);
 }
 
 bool Range::OnlyGreaterThanOrEqualTo(int64_t val) const {
   const RangeBoundary lower_bound = min().LowerBound();
-  return lower_bound.ConstantValue() >= val;
+  return !lower_bound.IsNegativeInfinity() &&
+         (lower_bound.ConstantValue() >= val);
 }
 
 // Inclusive.
@@ -2149,14 +2153,23 @@ bool Range::IsWithin(int64_t min_int, int64_t max_int) const {
 bool Range::IsWithin(const Range* other) const {
   auto const lower_bound = other->min().LowerBound();
   auto const upper_bound = other->max().UpperBound();
-  return IsWithin(other->min().ConstantValue(), other->max().ConstantValue());
+  if (lower_bound.IsNegativeInfinity()) {
+    if (upper_bound.IsPositiveInfinity()) return true;
+    return OnlyLessThanOrEqualTo(other->max().ConstantValue());
+  } else if (upper_bound.IsPositiveInfinity()) {
+    return OnlyGreaterThanOrEqualTo(other->min().ConstantValue());
+  } else {
+    return IsWithin(other->min().ConstantValue(), other->max().ConstantValue());
+  }
 }
 
 bool Range::Overlaps(int64_t min_int, int64_t max_int) const {
   RangeBoundary lower = min().LowerBound();
   RangeBoundary upper = max().UpperBound();
-  const int64_t this_min = lower.ConstantValue();
-  const int64_t this_max = upper.ConstantValue();
+  const int64_t this_min =
+      lower.IsNegativeInfinity() ? RangeBoundary::kMin : lower.ConstantValue();
+  const int64_t this_max =
+      upper.IsPositiveInfinity() ? RangeBoundary::kMax : upper.ConstantValue();
   if ((this_min <= min_int) && (min_int <= this_max)) return true;
   if ((this_min <= max_int) && (max_int <= this_max)) return true;
   if ((min_int < this_min) && (max_int > this_max)) return true;
@@ -2164,6 +2177,10 @@ bool Range::Overlaps(int64_t min_int, int64_t max_int) const {
 }
 
 bool Range::IsUnsatisfiable() const {
+  // Infinity case: [+inf, ...] || [..., -inf]
+  if (min().IsPositiveInfinity() || max().IsNegativeInfinity()) {
+    return true;
+  }
   // Constant case: For example [0, -1].
   if (Range::ConstantMin(this).ConstantValue() >
       Range::ConstantMax(this).ConstantValue()) {
@@ -2199,31 +2216,16 @@ void Range::Shl(const Range* left,
                                      static_cast<int64_t>(0));
   int64_t right_min = Utils::Maximum(Range::ConstantMin(right).ConstantValue(),
                                      static_cast<int64_t>(0));
-  bool overflow = false;
-  {
-    const auto shift_amount =
-        left_min.ConstantValue() > 0 ? right_min : right_max;
-    if (RangeBoundary::WillShlOverflow(left_min, shift_amount)) {
-      overflow = true;
-    } else {
-      *result_min = RangeBoundary::Shl(left_min, shift_amount);
-    }
-  }
-  {
-    const auto shift_amount =
-        left_max.ConstantValue() > 0 ? right_max : right_min;
-    if (RangeBoundary::WillShlOverflow(left_max, shift_amount)) {
-      overflow = true;
-    } else {
-      *result_max = RangeBoundary::Shl(left_max, shift_amount);
-    }
-  }
-  if (overflow) {
-    *result_min =
-        RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-    *result_max =
-        RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
-  }
+
+  *result_min = RangeBoundary::Shl(
+      left_min, left_min.ConstantValue() > 0 ? right_min : right_max,
+      left_min.ConstantValue() > 0 ? RangeBoundary::PositiveInfinity()
+                                   : RangeBoundary::NegativeInfinity());
+
+  *result_max = RangeBoundary::Shl(
+      left_max, left_max.ConstantValue() > 0 ? right_max : right_min,
+      left_max.ConstantValue() > 0 ? RangeBoundary::PositiveInfinity()
+                                   : RangeBoundary::NegativeInfinity());
 }
 
 void Range::Shr(const Range* left,
@@ -2372,38 +2374,23 @@ void Range::Add(const Range* left_range,
   ASSERT(result_min != nullptr);
   ASSERT(result_max != nullptr);
 
-  RangeBoundary left_min = Definition::IsLengthLoad(left_defn)
+  RangeBoundary left_min = Definition::IsArrayLength(left_defn)
                                ? RangeBoundary::FromDefinition(left_defn)
                                : left_range->min();
 
-  RangeBoundary left_max = Definition::IsLengthLoad(left_defn)
+  RangeBoundary left_max = Definition::IsArrayLength(left_defn)
                                ? RangeBoundary::FromDefinition(left_defn)
                                : left_range->max();
 
-  bool overflow = false;
   if (!RangeBoundary::SymbolicAdd(left_min, right_range->min(), result_min)) {
-    const auto left_min_bound = left_range->min().LowerBound();
-    const auto right_min_bound = right_range->min().LowerBound();
-    if (RangeBoundary::WillAddOverflow(left_min_bound, right_min_bound)) {
-      overflow = true;
-    } else {
-      *result_min = RangeBoundary::Add(left_min_bound, right_min_bound);
-    }
+    *result_min = RangeBoundary::Add(left_range->min().LowerBound(),
+                                     right_range->min().LowerBound(),
+                                     RangeBoundary::NegativeInfinity());
   }
   if (!RangeBoundary::SymbolicAdd(left_max, right_range->max(), result_max)) {
-    const auto left_max_bound = left_range->max().UpperBound();
-    const auto right_max_bound = right_range->max().UpperBound();
-    if (RangeBoundary::WillAddOverflow(left_max_bound, right_max_bound)) {
-      overflow = true;
-    } else {
-      *result_max = RangeBoundary::Add(left_max_bound, right_max_bound);
-    }
-  }
-  if (overflow) {
-    *result_min =
-        RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-    *result_max =
-        RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+    *result_max = RangeBoundary::Add(right_range->max().UpperBound(),
+                                     left_range->max().UpperBound(),
+                                     RangeBoundary::PositiveInfinity());
   }
 }
 
@@ -2417,38 +2404,23 @@ void Range::Sub(const Range* left_range,
   ASSERT(result_min != nullptr);
   ASSERT(result_max != nullptr);
 
-  RangeBoundary left_min = Definition::IsLengthLoad(left_defn)
+  RangeBoundary left_min = Definition::IsArrayLength(left_defn)
                                ? RangeBoundary::FromDefinition(left_defn)
                                : left_range->min();
 
-  RangeBoundary left_max = Definition::IsLengthLoad(left_defn)
+  RangeBoundary left_max = Definition::IsArrayLength(left_defn)
                                ? RangeBoundary::FromDefinition(left_defn)
                                : left_range->max();
 
-  bool overflow = false;
   if (!RangeBoundary::SymbolicSub(left_min, right_range->max(), result_min)) {
-    const auto left_min_bound = left_range->min().LowerBound();
-    const auto right_max_bound = right_range->max().UpperBound();
-    if (RangeBoundary::WillSubOverflow(left_min_bound, right_max_bound)) {
-      overflow = true;
-    } else {
-      *result_min = RangeBoundary::Sub(left_min_bound, right_max_bound);
-    }
+    *result_min = RangeBoundary::Sub(left_range->min().LowerBound(),
+                                     right_range->max().UpperBound(),
+                                     RangeBoundary::NegativeInfinity());
   }
   if (!RangeBoundary::SymbolicSub(left_max, right_range->min(), result_max)) {
-    const auto left_max_bound = left_range->max().UpperBound();
-    const auto right_min_bound = right_range->min().LowerBound();
-    if (RangeBoundary::WillSubOverflow(left_max_bound, right_min_bound)) {
-      overflow = true;
-    } else {
-      *result_max = RangeBoundary::Sub(left_max_bound, right_min_bound);
-    }
-  }
-  if (overflow) {
-    *result_min =
-        RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-    *result_max =
-        RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+    *result_max = RangeBoundary::Sub(left_range->max().UpperBound(),
+                                     right_range->min().LowerBound(),
+                                     RangeBoundary::PositiveInfinity());
   }
 }
 
@@ -2487,8 +2459,16 @@ void Range::Mul(const Range* left_range,
     return;
   }
 
-  *result_min = RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-  *result_max = RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+  // TODO(vegorov): handle mixed sign case that leads to (-Infinity, 0] range.
+  if (OnlyPositiveOrZero(*left_range, *right_range) ||
+      OnlyNegativeOrZero(*left_range, *right_range)) {
+    *result_min = RangeBoundary::FromConstant(0);
+    *result_max = RangeBoundary::PositiveInfinity();
+    return;
+  }
+
+  *result_min = RangeBoundary::NegativeInfinity();
+  *result_max = RangeBoundary::PositiveInfinity();
 }
 
 void Range::TruncDiv(const Range* left_range,
@@ -2512,8 +2492,8 @@ void Range::TruncDiv(const Range* left_range,
     return;
   }
 
-  *result_min = RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-  *result_max = RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
+  *result_min = RangeBoundary::NegativeInfinity();
+  *result_max = RangeBoundary::PositiveInfinity();
 }
 
 void Range::Mod(const Range* right_range,
@@ -2578,6 +2558,10 @@ void Range::BinaryOp(const Token::Kind op,
   ASSERT(left_range != nullptr);
   ASSERT(right_range != nullptr);
 
+  // Both left and right ranges are finite.
+  ASSERT(left_range->IsFinite());
+  ASSERT(right_range->IsFinite());
+
   RangeBoundary min;
   RangeBoundary max;
   ASSERT(min.IsUnknown() && max.IsUnknown());
@@ -2625,9 +2609,8 @@ void Range::BinaryOp(const Token::Kind op,
       break;
 
     default:
-      *result =
-          Range(RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64),
-                RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64));
+      *result = Range(RangeBoundary::NegativeInfinity(),
+                      RangeBoundary::PositiveInfinity());
       return;
   }
 
@@ -2763,8 +2746,6 @@ static const Range* GetInputRange(RangeAnalysis* analysis,
   switch (size) {
     case RangeBoundary::kRangeBoundarySmi:
       return analysis->GetSmiRange(input);
-    case RangeBoundary::kRangeBoundaryInt8:
-    case RangeBoundary::kRangeBoundaryInt16:
     case RangeBoundary::kRangeBoundaryInt32:
       return input->definition()->range();
     case RangeBoundary::kRangeBoundaryInt64:
@@ -2867,12 +2848,53 @@ void LoadFieldInstr::InferRange(RangeAnalysis* analysis, Range* range) {
       Definition::InferRange(analysis, range);
       break;
 
+    case Slot::Kind::kReceivePort_send_port:
+    case Slot::Kind::kReceivePort_handler:
+    case Slot::Kind::kLinkedHashBase_index:
+    case Slot::Kind::kImmutableLinkedHashBase_index:
+    case Slot::Kind::kLinkedHashBase_data:
+    case Slot::Kind::kImmutableLinkedHashBase_data:
+    case Slot::Kind::kGrowableObjectArray_data:
+    case Slot::Kind::kContext_parent:
     case Slot::Kind::kTypeArguments:
+    case Slot::Kind::kArray_type_arguments:
+    case Slot::Kind::kClosure_context:
+    case Slot::Kind::kClosure_delayed_type_arguments:
+    case Slot::Kind::kClosure_function:
+    case Slot::Kind::kClosure_function_type_arguments:
+    case Slot::Kind::kClosure_instantiator_type_arguments:
+    case Slot::Kind::kFinalizer_callback:
+    case Slot::Kind::kFinalizer_type_arguments:
+    case Slot::Kind::kFinalizerBase_all_entries:
+    case Slot::Kind::kFinalizerBase_detachments:
+    case Slot::Kind::kFinalizerBase_entries_collected:
+    case Slot::Kind::kFinalizerEntry_detach:
+    case Slot::Kind::kFinalizerEntry_finalizer:
+    case Slot::Kind::kFinalizerEntry_next:
+    case Slot::Kind::kFinalizerEntry_token:
+    case Slot::Kind::kFinalizerEntry_value:
+    case Slot::Kind::kNativeFinalizer_callback:
+    case Slot::Kind::kFunction_data:
+    case Slot::Kind::kFunction_signature:
+    case Slot::Kind::kFunctionType_named_parameter_names:
+    case Slot::Kind::kFunctionType_parameter_types:
+    case Slot::Kind::kFunctionType_type_parameters:
+    case Slot::Kind::kInstance_native_fields_array:
+    case Slot::Kind::kSuspendState_function_data:
+    case Slot::Kind::kSuspendState_then_callback:
+    case Slot::Kind::kSuspendState_error_callback:
+    case Slot::Kind::kTypedDataView_typed_data:
     case Slot::Kind::kTypeArgumentsIndex:
-#define NATIVE_SLOT_CASE(ClassName, __, FieldName, ___, ____)                  \
-  case Slot::Kind::k##ClassName##_##FieldName:
-      NOT_INT_NATIVE_SLOTS_LIST(NATIVE_SLOT_CASE)
-#undef NATIVE_SLOT_CASE
+    case Slot::Kind::kTypeParameters_names:
+    case Slot::Kind::kTypeParameters_flags:
+    case Slot::Kind::kTypeParameters_bounds:
+    case Slot::Kind::kTypeParameters_defaults:
+    case Slot::Kind::kUnhandledException_exception:
+    case Slot::Kind::kUnhandledException_stacktrace:
+    case Slot::Kind::kWeakProperty_key:
+    case Slot::Kind::kWeakProperty_value:
+    case Slot::Kind::kWeakReference_target:
+    case Slot::Kind::kWeakReference_type_arguments:
       // Not an integer valued field.
       UNREACHABLE();
       break;
@@ -2882,11 +2904,20 @@ void LoadFieldInstr::InferRange(RangeAnalysis* analysis, Range* range) {
       UNREACHABLE();
       break;
 
-#define UNBOXED_NATIVE_SLOT_CASE(Class, __, Field, ___, ____)                  \
+#define UNBOXED_NATIVE_NONADDRESS_SLOT_CASE(Class, Untagged, Field, Rep,       \
+                                            IsFinal)                           \
   case Slot::Kind::k##Class##_##Field:
-      UNBOXED_NATIVE_SLOTS_LIST(UNBOXED_NATIVE_SLOT_CASE)
-#undef UNBOXED_NATIVE_SLOT_CASE
+      UNBOXED_NATIVE_NONADDRESS_SLOTS_LIST(UNBOXED_NATIVE_NONADDRESS_SLOT_CASE)
+#undef UNBOXED_NATIVE_NONADDRESS_SLOT_CASE
       *range = Range::Full(slot().representation());
+      break;
+
+#define UNBOXED_NATIVE_ADDRESS_SLOT_CASE(Class, Untagged, Field, MayMove,      \
+                                         IsFinal)                              \
+  case Slot::Kind::k##Class##_##Field:
+      UNBOXED_NATIVE_ADDRESS_SLOTS_LIST(UNBOXED_NATIVE_ADDRESS_SLOT_CASE)
+#undef UNBOXED_NATIVE_ADDRESS_SLOT_CASE
+      UNREACHABLE();
       break;
 
     case Slot::Kind::kClosure_hash:
@@ -2906,14 +2937,45 @@ void LoadFieldInstr::InferRange(RangeAnalysis* analysis, Range* range) {
 }
 
 void LoadIndexedInstr::InferRange(RangeAnalysis* analysis, Range* range) {
-  // Use the precise array element representation instead of the returned
-  // representation to avoid overapproximating the range for small elements.
-  auto const rep =
-      RepresentationUtils::RepresentationOfArrayElement(class_id());
-  if (RepresentationUtils::IsUnboxed(rep)) {
-    *range = Range::Full(rep);
-  } else {
-    Definition::InferRange(analysis, range);
+  switch (class_id()) {
+    case kTypedDataInt8ArrayCid:
+      *range = Range(RangeBoundary::FromConstant(-128),
+                     RangeBoundary::FromConstant(127));
+      break;
+    case kTypedDataUint8ArrayCid:
+    case kTypedDataUint8ClampedArrayCid:
+    case kExternalTypedDataUint8ArrayCid:
+    case kExternalTypedDataUint8ClampedArrayCid:
+      *range = Range(RangeBoundary::FromConstant(0),
+                     RangeBoundary::FromConstant(255));
+      break;
+    case kTypedDataInt16ArrayCid:
+      *range = Range(RangeBoundary::FromConstant(-32768),
+                     RangeBoundary::FromConstant(32767));
+      break;
+    case kTypedDataUint16ArrayCid:
+      *range = Range(RangeBoundary::FromConstant(0),
+                     RangeBoundary::FromConstant(65535));
+      break;
+    case kTypedDataInt32ArrayCid:
+      *range = Range(RangeBoundary::FromConstant(kMinInt32),
+                     RangeBoundary::FromConstant(kMaxInt32));
+      break;
+    case kTypedDataUint32ArrayCid:
+      *range = Range(RangeBoundary::FromConstant(0),
+                     RangeBoundary::FromConstant(kMaxUint32));
+      break;
+    case kOneByteStringCid:
+      *range = Range(RangeBoundary::FromConstant(0),
+                     RangeBoundary::FromConstant(0xFF));
+      break;
+    case kTwoByteStringCid:
+      *range = Range(RangeBoundary::FromConstant(0),
+                     RangeBoundary::FromConstant(0xFFFF));
+      break;
+    default:
+      Definition::InferRange(analysis, range);
+      break;
   }
 }
 
@@ -2927,10 +2989,7 @@ void LoadClassIdInstr::InferRange(uword* lower, uword* upper) {
   if (cid != kDynamicCid) {
     *lower = *upper = cid;
   } else if (CompilerState::Current().is_aot()) {
-    IsolateGroup* isolate_group = IsolateGroup::Current();
-    *upper = isolate_group->has_dynamically_extendable_classes()
-                 ? kClassIdTagMax
-                 : isolate_group->class_table()->NumCids();
+    *upper = IsolateGroup::Current()->class_table()->NumCids();
 
     HierarchyInfo* hi = Thread::Current()->hierarchy_info();
     if (hi != nullptr) {
@@ -2938,14 +2997,12 @@ void LoadClassIdInstr::InferRange(uword* lower, uword* upper) {
       if (type.IsType() && !type.IsFutureOrType() &&
           !Instance::NullIsAssignableTo(type)) {
         const auto& type_class = Class::Handle(type.type_class());
-        if (!type_class.has_dynamically_extendable_subtypes()) {
-          const auto& ranges =
-              hi->SubtypeRangesForClass(type_class, /*include_abstract=*/false,
-                                        /*exclude_null=*/true);
-          if (ranges.length() > 0) {
-            *lower = ranges[0].cid_start;
-            *upper = ranges[ranges.length() - 1].cid_end;
-          }
+        const auto& ranges =
+            hi->SubtypeRangesForClass(type_class, /*include_abstract=*/false,
+                                      /*exclude_null=*/true);
+        if (ranges.length() > 0) {
+          *lower = ranges[0].cid_start;
+          *upper = ranges[ranges.length() - 1].cid_end;
         }
       }
     }
@@ -2967,11 +3024,13 @@ void LoadCodeUnitsInstr::InferRange(RangeAnalysis* analysis, Range* range) {
   ASSERT(element_count_ > 0);
   switch (class_id()) {
     case kOneByteStringCid:
+    case kExternalOneByteStringCid:
       ASSERT(element_count_ <= 4);
       *range = Range(zero, RangeBoundary::FromConstant(
                                Utils::NBitMask(kBitsPerByte * element_count_)));
       break;
     case kTwoByteStringCid:
+    case kExternalTwoByteStringCid:
       ASSERT(element_count_ <= 2);
       *range = Range(zero, RangeBoundary::FromConstant(Utils::NBitMask(
                                2 * kBitsPerByte * element_count_)));
@@ -3114,8 +3173,8 @@ void IntConverterInstr::InferRange(RangeAnalysis* analysis, Range* range) {
     *range = to_range;
   } else if (RepresentationUtils::ValueSize(to()) >
                  RepresentationUtils::ValueSize(from()) &&
-             (!RepresentationUtils::IsUnsignedInteger(to()) ||
-              RepresentationUtils::IsUnsignedInteger(from()))) {
+             (!RepresentationUtils::IsUnsigned(to()) ||
+              RepresentationUtils::IsUnsigned(from()))) {
     // All signed unboxed ints of larger sizes can represent all values for
     // signed or unsigned unboxed ints of smaller sizes, and all unsigned
     // unboxed ints of larger sizes can represent all values for unsigned
@@ -3194,9 +3253,8 @@ static bool IsRedundantBasedOnRangeInformation(Value* index, Value* length) {
     return true;
   }
 
-  RangeBoundary canonical_length = CanonicalizeBoundary(
-      array_length,
-      RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64));
+  RangeBoundary canonical_length =
+      CanonicalizeBoundary(array_length, RangeBoundary::PositiveInfinity());
   if (canonical_length.OverflowedSmi()) {
     return false;
   }

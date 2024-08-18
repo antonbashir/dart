@@ -50,13 +50,15 @@ class FoldingTest extends AbstractLspAnalysisServerTest {
 
   void expectRanges(Map<int, FoldingRangeKind?> expected,
       {bool requireAll = true}) {
-    var expectedRanges = expected.entries.map((entry) {
-      var range = code.ranges[entry.key].range;
+    final expectedRanges = expected.entries.map((entry) {
+      final range = code.ranges[entry.key].range;
       return FoldingRange(
         startLine: range.start.line,
         startCharacter: lineFoldingOnly ? null : range.start.character,
         endLine: range.end.line,
         endCharacter: lineFoldingOnly ? null : range.end.character,
+        // We (and VS Code) don't currently support this.
+        collapsedText: null,
         kind: entry.value,
       );
     }).toSet();
@@ -72,11 +74,11 @@ class FoldingTest extends AbstractLspAnalysisServerTest {
       expectRanges(expected, requireAll: false);
 
   Future<void> test_class() async {
-    var content = '''
-class MyClass2/*[0*/ {
-  // Class content
-}/*0]*/
-''';
+    final content = '''
+    class MyClass2/*[0*/ {
+      // Class content
+    }/*0]*/
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -85,11 +87,11 @@ class MyClass2/*[0*/ {
   }
 
   Future<void> test_comments() async {
-    var content = '''
-/// This is a comment[/*[0*/
-/// that spans many lines/*0]*/
-class MyClass2 {}
-''';
+    final content = '''
+    /// This is a comment[/*[0*/
+    /// that spans many lines/*0]*/
+    class MyClass2 {}
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -98,24 +100,24 @@ class MyClass2 {}
   }
 
   Future<void> test_doLoop() async {
-    var content = '''
-f/*[0*/(int i) {
-  do {/*[1*/
-    print('with statements');/*1]*/
-  } while (i == 0);
+    final content = '''
+    f/*[0*/(int i) {
+      do {/*[1*/
+        print('with statements');/*1]*/
+      } while (i == 0)
 
-  do {/*[2*/
-    // only comments/*2]*/
-  } while (i == 0);
+      do {/*[2*/
+        // only comments/*2]*/
+      } while (i == 0)
 
-  // empty
-  do {
-  } while (i == 0);
+      // empty
+      do {
+      } while (i == 0)
 
-  // no body
-  while (false);
-}/*0]*/
-''';
+      // no body
+      do;
+    }/*0]*/
+    ''';
 
     await computeRanges(content);
     expectRangesContain({
@@ -126,13 +128,13 @@ f/*[0*/(int i) {
   }
 
   Future<void> test_enum() async {
-    var content = '''
-enum MyEnum {/*[0*/
-  one,
-  two,
-  three
-/*0]*/}
-''';
+    final content = '''
+    enum MyEnum {/*[0*/
+      one,
+      two,
+      three
+    /*0]*/}
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -140,40 +142,21 @@ enum MyEnum {/*[0*/
     });
   }
 
-  Future<void> test_forLoop() async {
-    var content = '''
-void f() {
-  for (int i = 0; i < 1; i++) /*[0*/{
-    ;
-  }/*0]*/
-
-  for (int i = 0; i < 1; i++) {}
-
-  for (int i = 0; i < 1; i++);
-}
-''';
-
-    await computeRanges(content);
-    expectRangesContain({
-      0: noFoldingKind,
-    });
-  }
-
   Future<void> test_fromPlugins_dartFile() async {
-    var pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.dart');
-    var pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
+    final pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.dart');
+    final pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
 
     const content = '''
-// /*[0*/contributed by fake plugin/*0]*/
+    // /*[0*/contributed by fake plugin/*0]*/
 
-class AnnotatedDartClass/*[1*/ {
-  // content of dart class, contributed by server
-}/*1]*/
-''';
+    class AnnotatedDartClass/*[1*/ {
+      // content of dart class, contributed by server
+    }/*1]*/
+    ''';
 
-    var pluginResult = plugin.AnalysisFoldingParams(
+    final pluginResult = plugin.AnalysisFoldingParams(
       pluginAnalyzedFilePath,
-      [plugin.FoldingRegion(plugin.FoldingKind.DIRECTIVES, 3, 26)],
+      [plugin.FoldingRegion(plugin.FoldingKind.DIRECTIVES, 7, 26)],
     );
 
     await computeRanges(
@@ -189,18 +172,18 @@ class AnnotatedDartClass/*[1*/ {
   }
 
   Future<void> test_fromPlugins_nonDartFile() async {
-    var pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.sql');
-    var pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
+    final pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.sql');
+    final pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
 
     const content = '''
-CREATE TABLE foo(
-    /*[0*/-- some columns/*0]*/
-);
-''';
+      CREATE TABLE foo(
+         /*[0*/-- some columns/*0]*/
+      );
+    ''';
 
-    var pluginResult = plugin.AnalysisFoldingParams(
+    final pluginResult = plugin.AnalysisFoldingParams(
       pluginAnalyzedFilePath,
-      [plugin.FoldingRegion(plugin.FoldingKind.CLASS_BODY, 22, 15)],
+      [plugin.FoldingRegion(plugin.FoldingKind.CLASS_BODY, 33, 15)],
     );
 
     await computeRanges(
@@ -214,33 +197,18 @@ CREATE TABLE foo(
     });
   }
 
-  Future<void> test_functionExpression() async {
-    var content = '''
-var x = () /*[0*/{
-  ;
-  ;
-  ;
-}/*0]*/;
-''';
-
-    await computeRanges(content);
-    expectRangesContain({
-      0: noFoldingKind,
-    });
-  }
-
   Future<void> test_headersImportsComments() async {
-    var content = '''
-// Copyright some year by some people/*[0*/
-// See LICENCE etc./*0]*/
+    final content = '''
+    // Copyright some year by some people/*[0*/
+    // See LICENCE etc./*0]*/
 
-import/*[1*/ 'dart:io';
-import 'dart:async';/*1]*/
+    import/*[1*/ 'dart:io';
+    import 'dart:async';/*1]*/
 
-/// This is not the file header/*[2*/
-/// It's just a comment/*2]*/
-void f() {}
-''';
+    /// This is not the file header/*[2*/
+    /// It's just a comment/*2]*/
+    void f() {}
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -251,20 +219,20 @@ void f() {}
   }
 
   Future<void> test_ifElseElseIf() async {
-    var content = '''
-f(int i) {
-  if (i == 0) {/*[0*/
-    // only
-    // comments/*0]*/
-  } else if (i == 1) {/*[1*/
-    print('statements');/*1]*/
-  } else if (i == 2) {
-  } else {/*[2*/
-    // else
-    // comments/*2]*/
-  }
-}
-''';
+    final content = '''
+    f(int i) {
+      if (i == 0) {/*[0*/
+        // only
+        // comments/*0]*/
+      } else if (i == 1) {/*[1*/
+        print('statements');/*1]*/
+      } else if (i == 2) {
+      } else {/*[2*/
+        // else
+        // comments/*2]*/
+      }
+    }
+    ''';
 
     await computeRanges(content);
     expectRangesContain({
@@ -274,75 +242,16 @@ f(int i) {
     });
   }
 
-  Future<void> test_multilineStrings() async {
-    var content = '''
-var x = /*[0*/"""
-1
-2
-3
-"""/*0]*/;
-
-var rx = /*[1*/r"""
-1
-2
-3
-"""/*1]*/;
-
-var ix = /*[2*/"""
-1
-\$x
-3
-"""/*2]*/;
-''';
-
-    await computeRanges(content);
-    expectRanges({
-      0: noFoldingKind,
-      1: noFoldingKind,
-      2: noFoldingKind,
-    });
-  }
-
-  Future<void> test_multilineStrings_lineFoldingOnly() async {
-    lineFoldingOnly = true;
-    var content = '''
-var x = """/*[0*/
-1
-2
-3
-/*0]*/""";
-
-var rx = r"""/*[1*/
-1
-2
-3
-/*1]*/""";
-
-var ix = """/*[2*/
-1
-\$x
-3
-/*2]*/""";
-''';
-
-    await computeRanges(content);
-    expectRanges({
-      0: noFoldingKind,
-      1: noFoldingKind,
-      2: noFoldingKind,
-    });
-  }
-
   Future<void> test_nested() async {
-    var content = '''
-class MyClass2/*[0*/ {
-  void f/*[1*/() {
-    void g/*[2*/() {
-      //
-    }/*2]*/
-  }/*1]*/
-}/*0]*/
-''';
+    final content = '''
+    class MyClass2/*[0*/ {
+      void f/*[1*/() {
+        void g/*[2*/() {
+          //
+        }/*2]*/
+      }/*1]*/
+    }/*0]*/
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -354,15 +263,15 @@ class MyClass2/*[0*/ {
 
   Future<void> test_nested_lineFoldingOnly() async {
     lineFoldingOnly = true;
-    var content = '''
-class MyClass2 {/*[0*/
-  void f() {/*[1*/
-    void g() {/*[2*/
-      //
-    /*2]*/}
-  /*1]*/}
-/*0]*/}
-''';
+    final content = '''
+    class MyClass2 {/*[0*/
+      void f() {/*[1*/
+        void g() {/*[2*/
+          //
+        /*2]*/}
+      /*1]*/}
+    /*0]*/}
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -380,13 +289,13 @@ class MyClass2 {/*[0*/
   /// When the client supports columns (not "lineFoldingOnly"), we can end
   /// one range on the same line as the next one starts.
   Future<void> test_overlapLines_columnsSupported() async {
-    var content = '''
+    final content = '''
 void f/*[0*/() {
   //
 }/*0]*/ void g/*[1*/() {
   //
 }/*1]*/
-''';
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -400,13 +309,13 @@ void f/*[0*/() {
   /// on the previous line.
   Future<void> test_overlapLines_lineFoldingOnly() async {
     lineFoldingOnly = true;
-    var content = '''
+    final content = '''
 void f/*[0*/() {
   ///*0]*/
 } void g/*[1*/() {
   //
 }/*1]*/
-''';
+    ''';
 
     await computeRanges(content);
     expectRanges({
@@ -416,14 +325,14 @@ void f/*[0*/() {
   }
 
   Future<void> test_recordLiteral() async {
-    var content = '''
-void f() {
-  var r = (/*[0*/
-    2,
-    'string',
-  /*0]*/);
-}
-''';
+    final content = '''
+    void f() {
+      var r = (/*[0*/
+        2,
+        'string',
+      /*0]*/);
+    }
+    ''';
 
     await computeRanges(content);
     expectRangesContain({
@@ -432,7 +341,7 @@ void f() {
   }
 
   Future<void> test_switchExpression() async {
-    var content = '''
+    final content = '''
 void f(int a) {
   var b = switch (a) {/*[0*/
     1 => '',
@@ -444,7 +353,7 @@ void f(int a) {
         '1234567890'/*2]*/
   }/*0]*/;
 }
-''';
+    ''';
 
     await computeRanges(content);
     expectRanges(
@@ -458,7 +367,7 @@ void f(int a) {
   }
 
   Future<void> test_switchPattern() async {
-    var content = '''
+    final content = '''
 void f(int a) {
   switch (a) {/*[0*/
     case 0:/*[1*/
@@ -470,7 +379,7 @@ void f(int a) {
       print('');/*3]*/
   }/*0]*/
 }
-''';
+    ''';
 
     await computeRanges(content);
     expectRanges(
@@ -485,8 +394,7 @@ void f(int a) {
   }
 
   Future<void> test_switchStatement() async {
-    failTestOnErrorDiagnostic = false; // Tests cases without breaks.
-    var content = '''
+    final content = '''
 // @dart = 2.19
 
 void f(int a) {
@@ -501,7 +409,7 @@ void f(int a) {
       print('');/*3]*/
   }/*0]*/
 }
-''';
+    ''';
 
     await computeRanges(content);
     expectRanges(
@@ -516,24 +424,24 @@ void f(int a) {
   }
 
   Future<void> test_whileLoop() async {
-    var content = '''
-f(int i) {
-  while (i == 0) {/*[0*/
-    print('with statements');/*0]*/
-  }
+    final content = '''
+    f(int i) {
+      while (i == 0) {/*[0*/
+        print('with statements');/*0]*/
+      }
 
-  while (i == 0) {/*[1*/
-    // only comments/*1]*/
-  }
+      while (i == 0) {/*[1*/
+        // only comments/*1]*/
+      }
 
-  // empty
-  while (i == 0) {
-  }
+      // empty
+      while (i == 0) {
+      }
 
-  // no body
-  while (i == 0);
-}
-''';
+      // no body
+      while (i == 0);
+    }
+    ''';
 
     await computeRanges(content);
     expectRangesContain({

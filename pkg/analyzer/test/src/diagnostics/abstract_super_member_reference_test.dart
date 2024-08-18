@@ -39,14 +39,14 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@method::foo::@parameter::_
+        parameter: self::@class::A::@method::foo::@parameter::_
         staticType: int
     rightParenthesis: )
   staticInvokeType: void Function(int)
@@ -80,7 +80,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@mixin::M::@method::foo
+    staticElement: self::@mixin::M::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -114,7 +114,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@mixin::A::@method::foo
+    staticElement: self::@mixin::A::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -150,14 +150,14 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@method::foo::@parameter::_
+        parameter: self::@class::A::@method::foo::@parameter::_
         staticType: int
     rightParenthesis: )
   staticInvokeType: void Function(int)
@@ -191,7 +191,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -223,7 +223,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: int Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -259,7 +259,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -284,7 +284,7 @@ abstract class B extends A {
       error(CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE, 86, 3),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -293,7 +293,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -314,7 +314,7 @@ mixin M implements A {
       error(CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE, 81, 3),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -323,7 +323,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -344,7 +344,7 @@ class B extends Object with A {
       error(CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE, 108, 3),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -353,7 +353,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@mixin::A::@getter::foo
+    staticElement: self::@mixin::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -372,7 +372,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -381,7 +381,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -403,7 +403,7 @@ class C extends B {
       error(CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE, 111, 3),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -412,7 +412,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -433,7 +433,7 @@ class C extends B {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -442,7 +442,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
@@ -463,7 +463,7 @@ abstract class B extends A {
       error(CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE, 90, 3),
     ]);
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -472,7 +472,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@class::A::@method::foo
+    staticElement: self::@class::A::@method::foo
     staticType: void Function()
   staticType: void Function()
 ''');
@@ -508,11 +508,11 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@class::A::@setter::foo::@parameter::_
+    parameter: self::@class::A::@setter::foo::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::foo
+  writeElement: self::@class::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int
@@ -549,11 +549,11 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@class::A::@setter::foo::@parameter::_
+    parameter: self::@class::A::@setter::foo::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::foo
+  writeElement: self::@class::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int
@@ -590,12 +590,12 @@ AssignmentExpression
   operator: =
   rightHandSide: SimpleIdentifier
     token: a
-    parameter: <testLibraryFragment>::@mixin::A::@setter::foo::@parameter::a
-    staticElement: <testLibraryFragment>::@class::B::@setter::foo::@parameter::a
+    parameter: self::@mixin::A::@setter::foo::@parameter::a
+    staticElement: self::@class::B::@setter::foo::@parameter::a
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@mixin::A::@setter::foo
+  writeElement: self::@mixin::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int
@@ -630,12 +630,12 @@ AssignmentExpression
   operator: =
   rightHandSide: SimpleIdentifier
     token: a
-    parameter: <testLibraryFragment>::@class::A::@setter::foo::@parameter::a
-    staticElement: <testLibraryFragment>::@class::B::@setter::foo::@parameter::a
+    parameter: self::@class::A::@setter::foo::@parameter::a
+    staticElement: self::@class::B::@setter::foo::@parameter::a
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::foo
+  writeElement: self::@class::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int
@@ -674,11 +674,11 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@class::A::@setter::foo::@parameter::_
+    parameter: self::@class::A::@setter::foo::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::A::@setter::foo
+  writeElement: self::@class::A::@setter::foo
   writeType: int
   staticElement: <null>
   staticType: int

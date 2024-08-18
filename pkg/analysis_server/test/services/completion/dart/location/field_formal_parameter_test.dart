@@ -15,9 +15,9 @@ void main() {
 
 @reflectiveTest
 class FieldFormalParameterTest extends AbstractCompletionDriverTest
-    with FieldFormalParameterTestCases {}
+    with SuperFormalParameterTestCases {}
 
-mixin FieldFormalParameterTestCases on AbstractCompletionDriverTest {
+mixin SuperFormalParameterTestCases on AbstractCompletionDriverTest {
   @override
   Future<void> setUp() async {
     await super.setUp();
@@ -156,44 +156,6 @@ suggestions
   second
     kind: field
     returnType: double
-''');
-  }
-
-  Future<void> test_requiredNamed_keywordName_in() async {
-    allowedIdentifiers = {'in01', 'out01'};
-    await computeSuggestions('''
-class A {
-  final int in01;
-  final int out01;
-  A({required this.in^});
-}
-''');
-    assertResponse(r'''
-replacement
-  left: 2
-suggestions
-  in01
-    kind: field
-    returnType: int
-''');
-  }
-
-  Future<void> test_requiredPositional_keywordName_in() async {
-    allowedIdentifiers = {'in01', 'out01'};
-    await computeSuggestions('''
-class A {
-  final int in01;
-  final int out01;
-  A(this.in^);
-}
-''');
-    assertResponse(r'''
-replacement
-  left: 2
-suggestions
-  in01
-    kind: field
-    returnType: int
 ''');
   }
 

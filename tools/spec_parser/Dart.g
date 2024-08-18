@@ -4,25 +4,6 @@
 
 // CHANGES:
 //
-// v0.45 Update rule about augmenting extension type declaration to omit
-// the primary constructor.
-//
-// v0.44 Support null-aware elements.
-//
-// v0.43 Change rule structure such that the association of metadata
-// with non-terminals can be explained in a simple and consistent way.
-// The derivable terms do not change. Remove `metadata` from the kind
-// of `forLoopParts` where the iteration variable is an existing variable
-// in scope (this is not implemented, is inconsistent anyway).
-//
-// v0.42 Support updated augmented `extensionDeclaration`.
-//
-// v0.41 Add missing `enumEntry` update for augmentations.
-//
-// v0.40 Include support for augmentation libraries.
-//
-// v0.39 Include latest changes to mixin related class modifiers.
-//
 // v0.38 Broaden `initializerExpression` to match implemented behavior.
 //
 // v0.37 Correct `libraryExport` to use `configurableUri`, not `uri`.
@@ -283,12 +264,13 @@ topLevelDefinition
     |    EXTERNAL getterSignature ';'
     |    EXTERNAL setterSignature ';'
     |    EXTERNAL finalVarOrType identifierList ';'
-    |    AUGMENT? getterSignature functionBody
-    |    AUGMENT? setterSignature functionBody
-    |    AUGMENT? functionSignature functionBody
-    |    AUGMENT? (FINAL | CONST) type? staticFinalDeclarationList ';'
-    |    AUGMENT? LATE FINAL type? initializedIdentifierList ';'
-    |    AUGMENT? LATE? varOrType initializedIdentifierList ';'
+    |    getterSignature functionBody
+    |    setterSignature functionBody
+    |    functionSignature functionBody
+    |    (FINAL | CONST) type? staticFinalDeclarationList ';'
+    |    LATE FINAL type? initializedIdentifierList ';'
+    |    LATE? varOrType identifier ('=' expression)?
+         (',' initializedIdentifier)* ';'
     ;
 
 declaredIdentifier
@@ -407,10 +389,10 @@ typeWithParameters
     ;
 
 classDeclaration
-    :    AUGMENT? (classModifiers | mixinClassModifiers)
+    :    (classModifiers | mixinClassModifiers)
          CLASS typeWithParameters superclass? interfaces?
          LBRACE (metadata classMemberDeclaration)* RBRACE
-    |    classModifiers MIXIN? CLASS mixinApplicationClass
+    |    classModifiers CLASS mixinApplicationClass
     ;
 
 classModifiers
@@ -436,7 +418,7 @@ interfaces
     ;
 
 classMemberDeclaration
-    :    AUGMENT? methodSignature functionBody
+    :    methodSignature functionBody
     |    declaration ';'
     ;
 
@@ -445,9 +427,16 @@ mixinApplicationClass
     ;
 
 mixinDeclaration
-    :    AUGMENT? BASE? MIXIN typeWithParameters
+    :    mixinModifier? MIXIN typeIdentifier typeParameters?
          (ON typeNotVoidNotFunctionList)? interfaces?
          LBRACE (metadata mixinMemberDeclaration)* RBRACE
+    ;
+
+mixinModifier
+    :    SEALED
+    |    BASE
+    |    INTERFACE
+    |    FINAL
     ;
 
 // TODO: We might want to make this more strict.
@@ -457,14 +446,13 @@ mixinMemberDeclaration
 
 extensionTypeDeclaration
     :    EXTENSION TYPE CONST? typeWithParameters
-         representationDeclaration interfaces?
-         LBRACE (metadata extensionTypeMemberDeclaration)* RBRACE
-    |    AUGMENT EXTENSION TYPE typeWithParameters interfaces?
+         representationDeclaration
+         interfaces?
          LBRACE (metadata extensionTypeMemberDeclaration)* RBRACE
     ;
 
 representationDeclaration
-    :    ('.' identifierOrNew)? '(' metadata typedIdentifier ')'
+    :    ('.' identifierOrNew)? '(' metadata type identifier ')'
     ;
 
 
@@ -474,16 +462,12 @@ extensionTypeMemberDeclaration
     ;
 
 extensionDeclaration
-    :    EXTENSION typeIdentifierNotType? typeParameters? ON type extensionBody
-    |    AUGMENT EXTENSION typeIdentifierNotType typeParameters? extensionBody
-    ;
-
-extensionBody
-    :    LBRACE (metadata extensionMemberDeclaration)* RBRACE
+    :    EXTENSION typeIdentifierNotType? typeParameters? ON type
+         LBRACE (metadata extensionMemberDefinition)* RBRACE
     ;
 
 // TODO: We might want to make this more strict.
-extensionMemberDeclaration
+extensionMemberDefinition
     :    classMemberDeclaration
     ;
 
@@ -505,17 +489,17 @@ declaration
     |    (EXTERNAL STATIC?)? setterSignature
     |    (EXTERNAL STATIC?)? functionSignature
     |    EXTERNAL (STATIC? finalVarOrType | COVARIANT varOrType) identifierList
-    |    EXTERNAL? operatorSignature
     |    ABSTRACT (finalVarOrType | COVARIANT varOrType) identifierList
-    |    AUGMENT? STATIC (FINAL | CONST) type? staticFinalDeclarationList
-    |    AUGMENT? STATIC LATE FINAL type? initializedIdentifierList
-    |    AUGMENT? STATIC LATE? varOrType initializedIdentifierList
-    |    AUGMENT? COVARIANT LATE FINAL type? identifierList
-    |    AUGMENT? COVARIANT LATE? varOrType initializedIdentifierList
-    |    AUGMENT? LATE? (FINAL type? | varOrType) initializedIdentifierList
-    |    AUGMENT? redirectingFactoryConstructorSignature
-    |    AUGMENT? constantConstructorSignature (redirection | initializers)?
-    |    AUGMENT? constructorSignature (redirection | initializers)?
+    |    EXTERNAL? operatorSignature
+    |    STATIC (FINAL | CONST) type? staticFinalDeclarationList
+    |    STATIC LATE FINAL type? initializedIdentifierList
+    |    STATIC LATE? varOrType initializedIdentifierList
+    |    COVARIANT LATE FINAL type? identifierList
+    |    COVARIANT LATE? varOrType initializedIdentifierList
+    |    LATE? (FINAL type? | varOrType) initializedIdentifierList
+    |    redirectingFactoryConstructorSignature
+    |    constantConstructorSignature (redirection | initializers)?
+    |    constructorSignature (redirection | initializers)?
     ;
 
 staticFinalDeclarationList
@@ -612,16 +596,15 @@ mixinApplication
     ;
 
 enumType
-    :    AUGMENT? ENUM typeWithParameters mixins? interfaces? LBRACE
+    :    ENUM typeIdentifier typeParameters? mixins? interfaces? LBRACE
          enumEntry (',' enumEntry)* (',')?
          (';' (metadata classMemberDeclaration)*)?
          RBRACE
     ;
 
 enumEntry
-    :    metadata AUGMENT? identifier argumentPart?
-    |    metadata AUGMENT? identifier typeArguments?
-         '.' identifierOrNew arguments
+    :    metadata identifier argumentPart?
+    |    metadata identifier typeArguments? '.' identifierOrNew arguments
     ;
 
 typeParameter
@@ -739,22 +722,11 @@ elements
     ;
 
 element
-    :    nullAwareExpressionElement
-    |    nullAwareMapElement
-    |    expressionElement
+    :    expressionElement
     |    mapElement
     |    spreadElement
     |    ifElement
     |    forElement
-    ;
-
-nullAwareExpressionElement
-    :    '?' expression
-    ;
-
-nullAwareMapElement
-    :    '?' expression ':' '?'? expression
-    |    expression ':' '?' expression
     ;
 
 expressionElement
@@ -1221,7 +1193,7 @@ objectPattern
     ;
 
 patternVariableDeclaration
-    :    outerPatternDeclarationPrefix '=' expression
+    :    (FINAL | VAR) outerPattern '=' expression
     ;
 
 outerPattern
@@ -1230,10 +1202,6 @@ outerPattern
     |    mapPattern
     |    recordPattern
     |    objectPattern
-    ;
-
-outerPatternDeclarationPrefix
-    :    (FINAL | VAR) outerPattern
     ;
 
 patternAssignment
@@ -1303,15 +1271,12 @@ forStatement
     :    AWAIT? FOR '(' forLoopParts ')' statement
     ;
 
+// TODO: Include `metadata` in the pattern form?
 forLoopParts
-    :    forInLoopPrefix IN expression
+    :    metadata declaredIdentifier IN expression
+    |    metadata identifier IN expression
     |    forInitializerStatement expression? ';' expressionList?
-    ;
-
-forInLoopPrefix
-    :    metadata declaredIdentifier
-    |    metadata outerPatternDeclarationPrefix
-    |    identifier
+    |    metadata (FINAL | VAR) outerPattern IN expression
     ;
 
 // The localVariableDeclaration cannot be CONST, but that can
@@ -1400,12 +1365,7 @@ assertion
     ;
 
 libraryName
-    :    metadata libraryNameBody ';'
-    ;
-
-libraryNameBody
-    :    LIBRARY dottedIdentifierList?
-    |    AUGMENT LIBRARY uri
+    :    metadata LIBRARY dottedIdentifierList? ';'
     ;
 
 dottedIdentifierList
@@ -1414,16 +1374,11 @@ dottedIdentifierList
 
 importOrExport
     :    libraryImport
-    |    libraryAugmentImport
     |    libraryExport
     ;
 
 libraryImport
     :    metadata importSpecification
-    ;
-
-libraryAugmentImport
-    :    metadata IMPORT AUGMENT uri ';'
     ;
 
 importSpecification
@@ -1537,8 +1492,8 @@ typeNotVoidNotFunctionList
     ;
 
 typeAlias
-    :    AUGMENT? TYPEDEF typeWithParameters '=' type ';'
-    |    AUGMENT? TYPEDEF functionTypeAlias
+    :    TYPEDEF typeIdentifier typeParameters? '=' type ';'
+    |    TYPEDEF functionTypeAlias
     ;
 
 functionTypeAlias
@@ -1697,7 +1652,6 @@ builtInIdentifier
 
 otherIdentifierNotType
     :    ASYNC
-    |    AUGMENT
     |    BASE
     |    HIDE
     |    OF
@@ -1980,10 +1934,6 @@ YIELD
 
 ASYNC
     :    'async'
-    ;
-
-AUGMENT
-    :    'augment'
     ;
 
 BASE

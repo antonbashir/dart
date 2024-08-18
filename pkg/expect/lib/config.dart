@@ -10,6 +10,7 @@
 /// This library is separate from `expect.dart` because it uses
 /// `fromEnvironment` constants that cannot be precompiled,
 /// and we precompile `expect.dart`.
+
 library expect_config;
 
 import 'package:smith/smith.dart';
@@ -31,8 +32,6 @@ bool get isVmJitConfiguration => _configuration.compiler == Compiler.dartk;
 bool get isVmAotConfiguration => _configuration.compiler == Compiler.dartkp;
 
 bool get isVmConfiguration => isVmJitConfiguration || isVmAotConfiguration;
-
-bool get isBrowserConfiguration => _configuration.runtime.isBrowser;
 
 bool get isWebConfiguration =>
     isDart2jsConfiguration || isDart2WasmConfiguration || isDdcConfiguration;

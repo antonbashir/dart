@@ -4,18 +4,18 @@
 
 import 'package:_fe_analyzer_shared/src/util/libraries_specification.dart';
 import 'package:expect/expect.dart';
-import 'package:front_end/src/base/compiler_context.dart';
 import 'package:front_end/src/base/processed_options.dart';
-import 'package:front_end/src/base/ticker.dart';
-import 'package:front_end/src/base/uri_translator.dart';
-import 'package:front_end/src/builder/declaration_builders.dart';
-import 'package:front_end/src/dill/dill_library_builder.dart';
-import 'package:front_end/src/dill/dill_loader.dart';
-import 'package:front_end/src/dill/dill_target.dart';
-import 'package:front_end/src/dill/dill_type_alias_builder.dart';
-import 'package:front_end/src/kernel/collections.dart';
-import 'package:front_end/src/kernel/forest.dart';
-import 'package:front_end/src/kernel/internal_ast.dart';
+import 'package:front_end/src/fasta/builder/declaration_builders.dart';
+import 'package:front_end/src/fasta/compiler_context.dart';
+import 'package:front_end/src/fasta/dill/dill_library_builder.dart';
+import 'package:front_end/src/fasta/dill/dill_loader.dart';
+import 'package:front_end/src/fasta/dill/dill_target.dart';
+import 'package:front_end/src/fasta/dill/dill_type_alias_builder.dart';
+import 'package:front_end/src/fasta/kernel/collections.dart';
+import 'package:front_end/src/fasta/kernel/forest.dart';
+import 'package:front_end/src/fasta/kernel/internal_ast.dart';
+import 'package:front_end/src/fasta/ticker.dart';
+import 'package:front_end/src/fasta/uri_translator.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/target/targets.dart';
 import 'package:package_config/package_config.dart';
@@ -66,7 +66,7 @@ final Uri dummyUri = Uri.parse('test:dummy');
 
 void main() {
   CompilerContext.runWithOptions(new ProcessedOptions(inputs: [dummyUri]),
-      (CompilerContext c) async {
+      (_) async {
     _testVariableDeclarations();
     _testTryStatement();
     _testForInStatementWithSynthesizedVariable();
@@ -75,8 +75,8 @@ void main() {
     _testCascade();
     _testDeferredCheck();
     _testFactoryConstructorInvocationJudgment();
-    _testTypeAliasedConstructorInvocation(c);
-    _testTypeAliasedFactoryInvocation(c);
+    _testTypeAliasedConstructorInvocation();
+    _testTypeAliasedFactoryInvocation();
     _testFunctionDeclarationImpl();
     _testIfNullExpression();
     _testIntLiterals();
@@ -511,12 +511,11 @@ new Class<void>.foo(0, bar: 1)''',
 new library test:dummy::Class<void>.foo(0, bar: 1)''');
 }
 
-void _testTypeAliasedConstructorInvocation(CompilerContext c) {
+void _testTypeAliasedConstructorInvocation() {
   DillTarget dillTarget = new DillTarget(
-      c,
       new Ticker(),
-      new UriTranslator(c.options, new TargetLibrariesSpecification('dummy'),
-          new PackageConfig([])),
+      new UriTranslator(
+          new TargetLibrariesSpecification('dummy'), new PackageConfig([])),
       new NoneTarget(new TargetFlags()));
   DillLoader dillLoader = new DillLoader(dillTarget);
   Library library = new Library(dummyUri, fileUri: dummyUri);
@@ -582,12 +581,11 @@ const Typedef<void>.foo(0, bar: 1)''',
 const library test:dummy::Typedef<void>.foo(0, bar: 1)''');
 }
 
-void _testTypeAliasedFactoryInvocation(CompilerContext c) {
+void _testTypeAliasedFactoryInvocation() {
   DillTarget dillTarget = new DillTarget(
-      c,
       new Ticker(),
-      new UriTranslator(c.options, new TargetLibrariesSpecification('dummy'),
-          new PackageConfig([])),
+      new UriTranslator(
+          new TargetLibrariesSpecification('dummy'), new PackageConfig([])),
       new NoneTarget(new TargetFlags()));
   DillLoader dillLoader = new DillLoader(dillTarget);
   Library library = new Library(dummyUri, fileUri: dummyUri);
@@ -670,8 +668,7 @@ void _testIfNullExpression() {
 void _testIntLiterals() {
   testExpression(new IntJudgment(0, null), '0');
   testExpression(new IntJudgment(0, 'foo'), 'foo');
-  testExpression(
-      new ShadowLargeIntLiteral('bar', 'bar', TreeNode.noOffset), 'bar');
+  testExpression(new ShadowLargeIntLiteral('bar', TreeNode.noOffset), 'bar');
 }
 
 void _testInternalMethodInvocation() {
@@ -884,7 +881,7 @@ void _testLoadLibraryTearOff() {
   Procedure procedure = new Procedure(new Name('get#loadLibrary'),
       ProcedureKind.Getter, new FunctionNode(new Block([])),
       fileUri: dummyUri);
-  testExpression(new LoadLibraryTearOff(dependency, procedure), '''
+  testExpression(new LoadLibraryTearOff(dependency, procedure), ''' 
 pre.loadLibrary''');
 }
 

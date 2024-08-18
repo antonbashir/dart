@@ -1,5 +1,4 @@
 // @dart = 2.13
-
 class Fisk<TypeY extends Function<TypeZ extends Hest<Never>>(TypeZ)> {}
 
 class Hest<TypeX extends Hest<TypeX>> {}

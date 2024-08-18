@@ -1,8 +1,10 @@
-// Copyright (c) 2022, the Dart project authors.  Please see the AUTHORS file
+// Copyright (c) 2020, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-mixin Diagnosticable {}
+// @dart=2.9
+
+class Diagnosticable {}
 
 // Originally the existence of this (unused) class (which has an anonymous mixin
 // that matches that of `State<T>`) caused an error in the VM's mixin
@@ -18,7 +20,7 @@ class StateA extends State {}
 
 class StateB extends State<int> {}
 
-StateA? a = StateA();
+StateA a = StateA();
 StateB b = StateB();
 
 foo<T>(T x) {

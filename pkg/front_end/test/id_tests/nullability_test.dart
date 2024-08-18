@@ -7,7 +7,7 @@ import 'dart:io' show Directory, Platform;
 import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
-import 'package:kernel/ast.dart';
+import 'package:kernel/ast.dart' hide Variance;
 
 Future<void> main(List<String> args) async {
   Directory dataDir = new Directory.fromUri(Platform.script.resolve(
@@ -16,7 +16,8 @@ Future<void> main(List<String> args) async {
       args: args,
       createUriForFileName: createUriForFileName,
       onFailure: onFailure,
-      runTest: runTestFor(const NullabilityDataComputer(), [defaultCfeConfig]));
+      runTest: runTestFor(
+          const NullabilityDataComputer(), [cfeNonNullableOnlyConfig]));
 }
 
 class NullabilityDataComputer extends CfeDataComputer<String> {

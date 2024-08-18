@@ -151,11 +151,11 @@ void f() {
     registerLintRules();
     newFile(analysisOptionsPath, analysisOptionsContent);
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.fixAll,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Files must be open to apply edits.
     await openFile(mainFileUri, content);
@@ -169,7 +169,7 @@ void f() {
       ApplyWorkspaceEditParams.fromJson,
       () async {
         // Apply the command and immediately modify a file afterwards.
-        var commandFuture = executeCommand(command);
+        final commandFuture = executeCommand(command);
         await replaceFile(12345, mainFileUri, 'client-modified-content');
         return commandFuture;
       },
@@ -183,8 +183,8 @@ void f() {
 
     // Extract the text edit from the 'workspace/applyEdit' params the server
     // sent us.
-    var change = editParams?.edit.documentChanges!.single;
-    var edit = change!.map(
+    final change = editParams?.edit.documentChanges!.single;
+    final edit = change!.map(
       (create) => throw 'Expected edit, got create',
       (delete) => throw 'Expected edit, got delete',
       (rename) => throw 'Expected edit, got rename',
@@ -196,8 +196,8 @@ void f() {
   }
 
   Future<void> test_part() async {
-    var containerFilePath = join(projectFolderPath, 'lib', 'container.dart');
-    var partFilePath = join(projectFolderPath, 'lib', 'part.dart');
+    final containerFilePath = join(projectFolderPath, 'lib', 'container.dart');
+    final partFilePath = join(projectFolderPath, 'lib', 'part.dart');
     const analysisOptionsContent = '''
 linter:
   rules:
@@ -243,19 +243,19 @@ class _MyClass {
 }
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.fixAll,
       triggerKind: CodeActionTriggerKind.Automatic,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // We should not get an applyEdit call during the command execution because
     // no edits should be produced.
-    var applyEditSubscription = requestsFromServer
+    final applyEditSubscription = requestsFromServer
         .where((n) => n.method == Method.workspace_applyEdit)
         .listen((_) => throw 'workspace/applyEdit was unexpectedly called');
-    var commandResponse = await executeCommand(command);
+    final commandResponse = await executeCommand(command);
     expect(commandResponse, isNull);
 
     await pumpEventQueue();
@@ -286,8 +286,8 @@ class _MyClass {
   }
 
   Future<void> test_unavailable_outsideAnalysisRoot() async {
-    var otherFile = convertPath('/other/file.dart');
-    var content = '';
+    final otherFile = convertPath('/other/file.dart');
+    final content = '';
 
     await expectNoAction(
       filePath: otherFile,
@@ -302,19 +302,19 @@ import 'dart:async';
 int? a;
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.fixAll,
       triggerKind: CodeActionTriggerKind.Automatic,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // We should not get an applyEdit call during the command execution because
     // no edits should be produced.
-    var applyEditSubscription = requestsFromServer
+    final applyEditSubscription = requestsFromServer
         .where((n) => n.method == Method.workspace_applyEdit)
         .listen((_) => throw 'workspace/applyEdit was unexpectedly called');
-    var commandResponse = await executeCommand(command);
+    final commandResponse = await executeCommand(command);
     expect(commandResponse, isNull);
 
     await pumpEventQueue();
@@ -404,8 +404,8 @@ int minified(int x, int y) => min(x, y);
     setSupportedCodeActionKinds(null); // no codeActionLiteralSupport
     await initialize();
 
-    var actions = await getCodeActions(mainFileUri);
-    var action = findCommand(actions, Commands.organizeImports)!;
+    final actions = await getCodeActions(mainFileUri);
+    final action = findCommand(actions, Commands.organizeImports)!;
     action.map(
       (command) {},
       (codeActionLiteral) => throw 'Expected command, got codeActionLiteral',
@@ -413,28 +413,28 @@ int minified(int x, int y) => min(x, y);
   }
 
   Future<void> test_fileHasErrors_failsSilentlyForAutomatic() async {
-    var content = 'invalid dart code';
+    final content = 'invalid dart code';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.organizeImports,
       triggerKind: CodeActionTriggerKind.Automatic,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Expect a valid null result.
-    var response = await executeCommand(command);
+    final response = await executeCommand(command);
     expect(response, isNull);
   }
 
   Future<void> test_fileHasErrors_failsWithErrorForManual() async {
-    var content = 'invalid dart code';
+    final content = 'invalid dart code';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.organizeImports,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Ensure the request returned an error (error responses are thrown by
     // the test helper to make consuming success results simpler).
@@ -468,21 +468,21 @@ Completer foo;
 int minified(int x, int y) => min(x, y);
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.organizeImports,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Execute the command and it should return without needing us to process
     // a workspace/applyEdit command because there were no edits.
-    var commandResponse = await executeCommand(command);
+    final commandResponse = await executeCommand(command);
     // Successful edits return an empty success() response.
     expect(commandResponse, isNull);
   }
 
   Future<void> test_unavailableWhenNotRequested() async {
-    var content = '';
+    final content = '';
 
     setSupportedCodeActionKinds([CodeActionKind.Refactor]); // not Source
     await expectNoAction(
@@ -492,7 +492,7 @@ int minified(int x, int y) => min(x, y);
   }
 
   Future<void> test_unavailableWithoutApplyEditSupport() async {
-    var content = '';
+    final content = '';
 
     setApplyEditSupport(false);
     await expectNoAction(
@@ -553,8 +553,8 @@ String b;
     setSupportedCodeActionKinds(null); // no codeActionLiteralSupport
     await initialize();
 
-    var actions = await getCodeActions(mainFileUri);
-    var action = findCommand(actions, Commands.sortMembers)!;
+    final actions = await getCodeActions(mainFileUri);
+    final action = findCommand(actions, Commands.sortMembers)!;
     action.map(
       (command) {},
       (codeActionLiteral) => throw 'Expected command, got codeActionLiteral',
@@ -567,13 +567,13 @@ String b;
 String a;
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.sortMembers,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
-    var commandResponse = handleExpectedRequest<Object?,
+    final commandResponse = handleExpectedRequest<Object?,
         ApplyWorkspaceEditParams, ApplyWorkspaceEditResult>(
       Method.workspace_applyEdit,
       ApplyWorkspaceEditParams.fromJson,
@@ -592,28 +592,28 @@ String a;
   }
 
   Future<void> test_fileHasErrors_failsSilentlyForAutomatic() async {
-    var content = 'invalid dart code';
+    final content = 'invalid dart code';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.sortMembers,
       triggerKind: CodeActionTriggerKind.Automatic,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Expect a valid null result.
-    var response = await executeCommand(command);
+    final response = await executeCommand(command);
     expect(response, isNull);
   }
 
   Future<void> test_fileHasErrors_failsWithErrorForManual() async {
-    var content = 'invalid dart code';
+    final content = 'invalid dart code';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.sortMembers,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Ensure the request returned an error (error responses are thrown by
     // the test helper to make consuming success results simpler).
@@ -630,7 +630,7 @@ String a;
   }
 
   Future<void> test_unavailableWhenNotRequested() async {
-    var content = '';
+    final content = '';
 
     setSupportedCodeActionKinds([CodeActionKind.Refactor]); // not Source
     await expectNoAction(
@@ -640,7 +640,7 @@ String a;
   }
 
   Future<void> test_unavailableWithoutApplyEditSupport() async {
-    var content = '';
+    final content = '';
 
     setApplyEditSupport(false);
     await expectNoAction(

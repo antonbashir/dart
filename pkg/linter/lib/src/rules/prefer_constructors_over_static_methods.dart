@@ -5,13 +5,12 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/src/generated/engine.dart'; //ignore: implementation_imports
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
-    r'Prefer defining constructors instead of static methods to create '
-    'instances.';
+    r'Prefer defining constructors instead of static methods to create instances.';
 
 const _details = r'''
 **PREFER** defining constructors instead of static methods to create instances.
@@ -43,25 +42,34 @@ class Point {
 ```
 ''';
 
+// TODO(pq): temporary; remove after renamed class is in the SDK
+// ignore: non_constant_identifier_names
+LintRule PreferConstructorsInsteadOfStaticMethods() =>
+    PreferConstructorsOverStaticMethods();
+
 bool _hasNewInvocation(DartType returnType, FunctionBody body) =>
     _BodyVisitor(returnType).containsInstanceCreation(body);
 
 class PreferConstructorsOverStaticMethods extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_constructors_over_static_methods',
+      'Static method should be a constructor.',
+      correctionMessage: 'Try converting the method into a constructor.');
+
   PreferConstructorsOverStaticMethods()
       : super(
             name: 'prefer_constructors_over_static_methods',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.prefer_constructors_over_static_methods;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addMethodDeclaration(this, visitor);
   }
 }
@@ -79,9 +87,6 @@ class _BodyVisitor extends RecursiveAstVisitor {
 
   @override
   visitInstanceCreationExpression(InstanceCreationExpression node) {
-    // TODO(srawlins): This assignment overrides existing `found` values.
-    // For example, given `() { C(); D(); }`, if `C` was the return type being
-    // sought, then the `found` value is overridden when we visit `D()`.
     found = node.staticType == returnType;
     if (!found) {
       super.visitInstanceCreationExpression(node);
@@ -91,8 +96,15 @@ class _BodyVisitor extends RecursiveAstVisitor {
 
 class _Visitor extends SimpleAstVisitor<void> {
   final LintRule rule;
+  final LinterContext context;
+  final bool strictCasts;
 
-  _Visitor(this.rule);
+  _Visitor(this.rule, this.context)
+      :
+        // TODO(pq): update when there's a better API to access strictCasts.
+        strictCasts =
+            // ignore: deprecated_member_use
+            (context.analysisOptions as AnalysisOptionsImpl).strictCasts;
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
@@ -102,10 +114,14 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (returnType is! InterfaceType) return;
 
     var interfaceType = node.parent.typeToCheckOrNull();
-    if (interfaceType != returnType) return;
-
-    if (_hasNewInvocation(returnType, node.body)) {
-      rule.reportLintForToken(node.name);
+    if (interfaceType != null) {
+      if (!context.typeSystem.isAssignableTo(returnType, interfaceType,
+          strictCasts: strictCasts)) {
+        return;
+      }
+      if (_hasNewInvocation(returnType, node.body)) {
+        rule.reportLintForToken(node.name);
+      }
     }
   }
 }

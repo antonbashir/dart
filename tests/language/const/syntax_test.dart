@@ -50,10 +50,6 @@ main() {
 
   var f4 = B4;
   var f5 = B5;
-  f6(const p1) {}
-  // ^^^^^
-  // [analyzer] SYNTACTIC_ERROR.EXTRANEOUS_MODIFIER
-  // [cfe] Can't have modifier 'const' here.
 }
 
 const F0 = 42;
@@ -81,7 +77,7 @@ class Point {
 const P0 = const Point(0, 0);
 const P1 = const Point(0, 0) + 1;
 //         ^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_EVAL_TYPE_NUM_STRING
+// [analyzer] COMPILE_TIME_ERROR.CONST_EVAL_TYPE_NUM
 //                           ^
 // [cfe] Constant evaluation error:
 const P2 = new Point(0, 0);

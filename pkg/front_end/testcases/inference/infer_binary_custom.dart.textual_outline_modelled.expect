@@ -6,7 +6,5 @@ class A {
 }
 
 main() {}
-
 var v_add = new A() + 'foo';
-
 var v_minus = new A() - 'bar';

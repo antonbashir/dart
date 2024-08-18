@@ -977,7 +977,6 @@ class BatchRunnerProcess {
   late List<String> _arguments;
   String? _runnerType;
 
-  bool _processJustStarted = false;
   io.Process? _process;
   Map<String, String>? _processEnvironmentOverrides;
   late Completer<void> _stdoutCompleter;
@@ -994,7 +993,7 @@ class BatchRunnerProcess {
   Timer? _timer;
   int _testCount = 0;
 
-  static const int extraStartupTimeout = 60;
+  static const int extraStartupTimeout = 30;
 
   BatchRunnerProcess({bool useJson = true}) : _useJson = useJson;
 
@@ -1020,13 +1019,17 @@ class BatchRunnerProcess {
     if (_process == null) {
       // Start process if not yet started.
       _startProcess(() {
-        doStartTest(command, timeout);
+        // We just started the process, add some extra timeout to account for
+        // the startup cost of the batch compiler.
+        doStartTest(command, timeout + extraStartupTimeout);
       });
     } else if (!sameRunnerType || clearMemoryLeak) {
       // Restart this runner with the right executable for this test if needed.
       _processExitHandler = (_) {
         _startProcess(() {
-          doStartTest(command, timeout);
+          // We just started the process, add some extra timeout to account for
+          // the startup cost of the batch compiler.
+          doStartTest(command, timeout + extraStartupTimeout);
         });
       };
       _process!.kill();
@@ -1056,12 +1059,6 @@ class BatchRunnerProcess {
   }
 
   void doStartTest(Command command, int timeout) {
-    if (_processJustStarted) {
-      // We just started the process, add some extra timeout to account for
-      // the startup cost of the batch compiler.
-      _processJustStarted = false;
-      timeout += extraStartupTimeout;
-    }
     _startTime = DateTime.now();
     _testStdout = OutputLog();
     _testStderr = OutputLog();
@@ -1146,7 +1143,6 @@ class BatchRunnerProcess {
     try {
       _process = await io.Process.start(executable, arguments,
           environment: environment);
-      _processJustStarted = true;
     } catch (e) {
       // TODO(floitsch): should we try to report the stacktrace?
       print("Process error:");

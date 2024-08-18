@@ -1144,11 +1144,12 @@ void g(void Function() f) {}
         completionLocation: 'ExtensionDeclaration_member', typeNames: true);
   }
 
-  Future<void> test_extensionOnClause_extendedType() async {
+  Future<void> test_extensionDeclaration_extendedType() async {
     // SimpleIdentifier  MethodDeclaration  ExtensionDeclaration
     addTestSource('extension E on ^ {}');
     await assertOpType(
-        completionLocation: 'ExtensionOnClause_extendedType', typeNames: true);
+        completionLocation: 'ExtensionDeclaration_extendedType',
+        typeNames: true);
   }
 
   Future<void> test_extensionOverride_argumentList() async {
@@ -2125,12 +2126,10 @@ void f(int a, {int b}) {}
   }
 
   Future<void> test_onClause_beginning() async {
-    // MixinOnClause  MixinDeclaration
+    // OnClause  MixinDeclaration
     addTestSource('mixin M on ^\n{}');
     await assertOpType(
-      completionLocation: 'MixinOnClause_superclassConstraint',
-      typeNames: true,
-    );
+        completionLocation: 'OnClause_superclassConstraint', typeNames: true);
   }
 
   Future<void> test_postfixExpression_inOperator() async {

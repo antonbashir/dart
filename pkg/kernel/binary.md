@@ -147,7 +147,7 @@ type CanonicalName {
 
 type ComponentFile {
   UInt32 magic = 0x90ABCDEF;
-  UInt32 formatVersion = 120;
+  UInt32 formatVersion = 114;
   Byte[10] shortSdkHash;
   List<String> problemsAsJson; // Described in problems.md.
   Library[] libraries;
@@ -242,7 +242,7 @@ type Name {
 }
 
 type Library {
-  Byte flags (isSynthetic, nnbdModeBit1, nnbdModeBit2, isUnsupported);
+  Byte flags (isSynthetic, isNonNullableByDefault, nnbdModeBit1, nnbdModeBit2, isUnsupported);
   UInt languageVersionMajor;
   UInt languageVersionMinor;
   CanonicalNameReference canonicalName;
@@ -346,7 +346,7 @@ type Extension extends Node {
   List<Expression> annotations;
   UriReference fileUri;
   FileOffset fileOffset;
-  Byte flags (isUnnamedExtension);
+  Byte flags (isExtensionTypeDeclaration, isUnnamedExtension);
   List<TypeParameter> typeParameters;
   DartType onType;
   List<ExtensionMemberDescriptor> members;
@@ -375,7 +375,7 @@ type ExtensionTypeDeclaration extends Node {
   StringReference representationName;
   List<DartType> implements;
   List<Procedure> procedures;
-  List<ExtensionTypeMemberDescriptor> members;
+  List<ExtensionTypeMemberKind> members;
 }
 
 enum ExtensionTypeMemberKind { Constructor = 0, Factory = 1, Field = 2, Method = 3, Getter = 4, Setter = 5, Operator = 6, }
@@ -401,7 +401,8 @@ type Field extends Member {
   FileOffset fileEndOffset;
   UInt flags (isFinal, isConst, isStatic, isCovariantByDeclaration,
                 isCovariantByClass, isLate, isExtensionMember,
-                isInternalImplementation, isEnumElement, isExtensionTypeMember);
+                isNonNullableByDefault, isInternalImplementation,
+                isEnumElement, isExtensionTypeMember);
   Name name;
   List<Expression> annotations;
   DartType type;
@@ -415,7 +416,7 @@ type Constructor extends Member {
   FileOffset startFileOffset; // Offset of the start of the constructor including any annotations.
   FileOffset fileOffset; // Offset of the constructor name.
   FileOffset fileEndOffset;
-  Byte flags (isConst, isExternal, isSynthetic);
+  Byte flags (isConst, isExternal, isSynthetic, isNonNullableByDefault);
   Name name;
   List<Expression> annotations;
   FunctionNode function;
@@ -455,8 +456,9 @@ type Procedure extends Member {
   Byte kind; // Index into the ProcedureKind enum above.
   Byte stubKind; // Index into the ProcedureStubKind enum above.
   UInt flags (isStatic, isAbstract, isExternal, isConst,
-              isExtensionMember, isSynthetic, isInternalImplementation, 
-              isExtensionTypeMember, hasWeakTearoffReferencePragma, IsLoweredLateField);
+              isExtensionMember, isNonNullableByDefault, isSynthetic,
+              isInternalImplementation, isExtensionTypeMember,
+              hasWeakTearoffReferencePragma, IsLoweredLateField);
   Name name;
   List<Expression> annotations;
   MemberReference stubTarget; // May be NullReference.
@@ -528,7 +530,7 @@ type FunctionNode {
   List<VariableDeclarationPlain> positionalParameters;
   List<VariableDeclarationPlain> namedParameters;
   DartType returnType;
-  Option<DartType> emittedValueType;
+  Option<DartType> futureValueType;
   Option<RedirectingFactoryTarget> redirectingFactoryTarget;
   Option<Statement> body;
 }
@@ -805,7 +807,6 @@ type InstanceGetterInvocation extends Expression {
 type DynamicInvocation extends Expression {
   Byte tag = 124;
   Byte kind; // Index into DynamicAccessKind above.
-  Byte flags (isImplicitCall);
   FileOffset fileOffset;
   Expression receiver;
   Name name;
@@ -988,6 +989,7 @@ type FileUriExpression extends Expression {
 type IsExpression extends Expression {
   Byte tag = 37;
   FileOffset fileOffset;
+  Byte flags (isForNonNullableByDefault);
   Expression operand;
   DartType type;
 }
@@ -995,7 +997,7 @@ type IsExpression extends Expression {
 type AsExpression extends Expression {
   Byte tag = 38;
   FileOffset fileOffset;
-  Byte flags (isTypeError,isCovarianceCheck,isForDynamic,isUnchecked);
+  Byte flags (isTypeError,isCovarianceCheck,isForDynamic,isForNonNullableByDefault);
   Expression operand;
   DartType type;
 }
@@ -1078,7 +1080,6 @@ type Rethrow extends Expression {
 type Throw extends Expression {
   Byte tag = 48;
   FileOffset fileOffset;
-  Byte flags (forErrorHandling);
   Expression value;
 }
 
@@ -1501,7 +1502,7 @@ type VariableDeclarationPlain {
 
   UInt flags (isFinal, isConst, hasDeclaredInitializer, isInitializingFormal,
               isCovariantByClass, isLate, isRequired, isCovariantByDeclaration,
-              isLowered, isSynthesized, isHoisted, isWildcard);
+              isLowered, isSynthesized, isHoisted);
   // For named parameters, this is the parameter name.
   // For other variables, the name is cosmetic, may be empty,
   // and is not necessarily unique.

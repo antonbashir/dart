@@ -156,8 +156,6 @@ class TranslationHelper {
                                                   bool required = true);
   virtual ClassPtr LookupClassByKernelClass(NameIndex klass,
                                             bool required = true);
-  ClassPtr LookupClassByKernelClassOrLibrary(NameIndex kernel_name,
-                                             bool required = true);
 
   FieldPtr LookupFieldByKernelField(NameIndex field, bool required = true);
   FieldPtr LookupFieldByKernelGetterOrSetter(NameIndex field,
@@ -175,7 +173,6 @@ class TranslationHelper {
   FunctionPtr LookupMethodByMember(NameIndex target,
                                    const String& method_name,
                                    bool required = true);
-  ObjectPtr LookupMemberByMember(NameIndex kernel_name, bool required = true);
   FunctionPtr LookupDynamicFunction(const Class& klass, const String& name);
 
   Type& GetDeclarationType(const Class& klass);
@@ -294,7 +291,7 @@ class FunctionNodeHelper {
     kPositionalParameters,
     kNamedParameters,
     kReturnType,
-    kEmittedValueType,
+    kFutureValueType,
     kRedirectingFactoryTarget,
     kBody,
     kEnd,
@@ -419,7 +416,6 @@ class VariableDeclarationHelper {
     kLowered = 1 << 8,
     kSynthesized = 1 << 9,
     kHoisted = 1 << 10,
-    kWildcard = 1 << 11,
   };
 
   explicit VariableDeclarationHelper(KernelReaderHelper* helper)
@@ -441,7 +437,6 @@ class VariableDeclarationHelper {
   bool IsRequired() const { return (flags_ & kRequired) != 0; }
   bool IsSynthesized() const { return (flags_ & kSynthesized) != 0; }
   bool IsHoisted() const { return (flags_ & kHoisted) != 0; }
-  bool IsWildcard() const { return (flags_ & kWildcard) != 0; }
   bool HasDeclaredInitializer() const {
     return (flags_ & kHasDeclaredInitializer) != 0;
   }
@@ -496,9 +491,10 @@ class FieldHelper {
     kIsGenericCovariantImpl = 1 << 4,
     kIsLate = 1 << 5,
     kExtensionMember = 1 << 6,
-    kInternalImplementation = 1 << 7,
-    kEnumElement = 1 << 8,
-    kExtensionTypeMember = 1 << 9,
+    kNonNullableByDefault = 1 << 7,
+    kInternalImplementation = 1 << 8,
+    kEnumElement = 1 << 9,
+    kExtensionTypeMember = 1 << 10,
   };
 
   explicit FieldHelper(KernelReaderHelper* helper)
@@ -595,10 +591,11 @@ class ProcedureHelper {
     kExternal = 1 << 2,
     kConst = 1 << 3,  // Only for external const factories.
     kExtensionMember = 1 << 4,
-    kSyntheticProcedure = 1 << 5,
-    kInternalImplementation = 1 << 6,
-    kExtensionTypeMember = 1 << 7,
-    kHasWeakTearoffReferencePragma = 1 << 8,
+    kIsNonNullableByDefault = 1 << 5,
+    kSyntheticProcedure = 1 << 6,
+    kInternalImplementation = 1 << 7,
+    kExtensionTypeMember = 1 << 8,
+    kHasWeakTearoffReferencePragma = 1 << 9,
   };
 
   explicit ProcedureHelper(KernelReaderHelper* helper)
@@ -848,9 +845,10 @@ class LibraryHelper {
 
   enum Flag {
     kSynthetic = 1 << 0,
-    kNonNullableByDefaultCompiledModeBit1 = 1 << 1,
-    kNonNullableByDefaultCompiledModeBit2 = 1 << 2,
-    kUnsupported = 1 << 3,
+    kIsNonNullableByDefault = 1 << 1,
+    kNonNullableByDefaultCompiledModeBit1 = 1 << 2,
+    kNonNullableByDefaultCompiledModeBit2 = 1 << 3,
+    kUnsupported = 1 << 4,
   };
 
   explicit LibraryHelper(KernelReaderHelper* helper)
@@ -866,11 +864,14 @@ class LibraryHelper {
   void SetJustRead(Field field) { next_read_ = field + 1; }
 
   bool IsSynthetic() const { return (flags_ & kSynthetic) != 0; }
+  bool IsNonNullableByDefault() const {
+    return (flags_ & kIsNonNullableByDefault) != 0;
+  }
   NNBDCompiledMode GetNonNullableByDefaultCompiledMode() const {
     bool bit1 = (flags_ & kNonNullableByDefaultCompiledModeBit1) != 0;
     bool bit2 = (flags_ & kNonNullableByDefaultCompiledModeBit2) != 0;
-    if (!bit1 && !bit2) return NNBDCompiledMode::kStrong;
-    if (bit1 && !bit2) return NNBDCompiledMode::kWeak;
+    if (!bit1 && !bit2) return NNBDCompiledMode::kWeak;
+    if (bit1 && !bit2) return NNBDCompiledMode::kStrong;
     if (bit1 && bit2) return NNBDCompiledMode::kAgnostic;
     if (!bit1 && bit2) return NNBDCompiledMode::kInvalid;
     UNREACHABLE();
@@ -975,11 +976,6 @@ class MetadataHelper {
 };
 
 struct DirectCallMetadata {
-  enum Flag {
-    kFlagCheckReceiverForNull = 1 << 0,
-    kFlagClosure = 1 << 1,
-  };
-
   DirectCallMetadata(const Function& target, bool check_receiver_for_null)
       : target_(target), check_receiver_for_null_(check_receiver_for_null) {}
 
@@ -997,13 +993,11 @@ class DirectCallMetadataHelper : public MetadataHelper {
   DirectCallMetadata GetDirectTargetForPropertyGet(intptr_t node_offset);
   DirectCallMetadata GetDirectTargetForPropertySet(intptr_t node_offset);
   DirectCallMetadata GetDirectTargetForMethodInvocation(intptr_t node_offset);
-  DirectCallMetadata GetDirectTargetForFunctionInvocation(intptr_t node_offset);
 
  private:
   bool ReadMetadata(intptr_t node_offset,
                     NameIndex* target_name,
-                    bool* check_receiver_for_null,
-                    intptr_t* closure_id = nullptr);
+                    bool* check_receiver_for_null);
 
   DISALLOW_COPY_AND_ASSIGN(DirectCallMetadataHelper);
 };
@@ -1224,10 +1218,6 @@ class UnboxingInfoMetadata : public ZoneAllocated {
     RecordShape record_shape = RecordShape::ForUnnamed(0);
   };
 
-  static constexpr uint8_t kMustUseStackCallingConventionFlag = 1 << 0;
-  static constexpr uint8_t kHasUnboxedParameterOrReturnValueFlag = 1 << 1;
-  static constexpr uint8_t kHasOverridesWithLessDirectParametersFlag = 1 << 2;
-
   UnboxingInfoMetadata() : unboxed_args_info(0), return_info() {}
 
   void SetArgsCount(intptr_t num_args) {
@@ -1236,12 +1226,8 @@ class UnboxingInfoMetadata : public ZoneAllocated {
     unboxed_args_info.FillWith(UnboxingType(), 0, num_args);
   }
 
-  // Caveat: this array does not cover receiver (`this`) which is always
-  // assumed to be boxed.
   GrowableArray<UnboxingType> unboxed_args_info;
   UnboxingType return_info;
-  bool must_use_stack_calling_convention;
-  bool has_overrides_with_less_direct_parameters;
 
   DISALLOW_COPY_AND_ASSIGN(UnboxingInfoMetadata);
 };
@@ -1390,6 +1376,7 @@ class KernelReaderHelper {
   friend class VariableDeclarationHelper;
   friend class ObfuscationProhibitionsMetadataHelper;
   friend class LoadingUnitsMetadataHelper;
+  friend bool NeedsDynamicInvocationForwarder(const Function& function);
   friend ArrayPtr CollectConstConstructorCoverageFrom(
       const Script& interesting_script);
 
@@ -1421,6 +1408,12 @@ class ActiveClass {
   bool MemberIsFactoryProcedure() {
     ASSERT(member != nullptr);
     return member->IsFactory();
+  }
+
+  bool RequireConstCanonicalTypeErasure(bool null_safety) const {
+    return klass != nullptr && !null_safety &&
+           Library::Handle(klass->library()).nnbd_compiled_mode() ==
+               NNBDCompiledMode::kAgnostic;
   }
 
   intptr_t MemberTypeParameterCount(Zone* zone);
@@ -1541,6 +1534,7 @@ class TypeTranslator {
                  ConstantReader* constant_reader,
                  ActiveClass* active_class,
                  bool finalize = false,
+                 bool apply_canonical_type_erasure = false,
                  bool in_constant_context = false);
 
   AbstractType& BuildType();
@@ -1631,6 +1625,7 @@ class TypeTranslator {
   Zone* zone_;
   AbstractType& result_;
   bool finalize_;
+  const bool apply_canonical_type_erasure_;
   const bool in_constant_context_;
 
   friend class ScopeBuilder;

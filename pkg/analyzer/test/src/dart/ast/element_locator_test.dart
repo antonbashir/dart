@@ -347,16 +347,16 @@ void main() {
   }
 
   test_locate_PartOfDirective_withName() async {
-    var libFile = newFile('$testPackageLibPath/lib.dart', r'''
+    final libFile = newFile('$testPackageLibPath/lib.dart', r'''
 library my.lib;
 part 'test.dart';
 ''');
 
-    var partFile = newFile('$testPackageLibPath/test.dart', r'''
+    final partFile = newFile('$testPackageLibPath/test.dart', r'''
 part of my.lib;
 ''');
 
-    await resolveFile(libFile);
+    await resolveFile(libFile.path);
 
     await resolveFile2(partFile);
     var node = findNode.partOf('part of');

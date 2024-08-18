@@ -1,17 +1,10 @@
 import augment 'augment_super_lib.dart';
-
 void topLevelMethod() {}
-
 void topLevelMethodErrors() {}
-
 List<int> get topLevelProperty => [42];
-
 void set topLevelProperty(List<int> value) {}
-
 List<int>? get nullableTopLevelProperty => [42];
-
 void set nullableTopLevelProperty(List<int>? value) {}
-
 class Class {
   void instanceMethod() {}
   void instanceMethodErrors() {}
@@ -20,5 +13,4 @@ class Class {
   int? get nullableInstanceProperty => 42;
   void set nullableInstanceProperty(int? value) {}
 }
-
 main() {}

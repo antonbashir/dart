@@ -43,7 +43,7 @@ testUint8() {
     writeUint8(view);
   }
 
-  var unmodifiable = new Uint8List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableUint8ListView(new Uint8List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readUint8(unmodifiable);
   }
@@ -83,7 +83,7 @@ testInt8() {
     writeInt8(view);
   }
 
-  var unmodifiable = new Int8List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableInt8ListView(new Int8List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readInt8(unmodifiable);
   }
@@ -124,7 +124,7 @@ testUint16() {
     writeUint16(view);
   }
 
-  var unmodifiable = new Uint16List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableUint16ListView(new Uint16List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readUint16(unmodifiable);
   }
@@ -164,7 +164,7 @@ testInt16() {
     writeInt16(view);
   }
 
-  var unmodifiable = new Int16List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableInt16ListView(new Int16List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readInt16(unmodifiable);
   }
@@ -205,7 +205,7 @@ testUint32() {
     writeUint32(view);
   }
 
-  var unmodifiable = new Uint32List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableUint32ListView(new Uint32List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readUint32(unmodifiable);
   }
@@ -245,7 +245,7 @@ testInt32() {
     writeInt32(view);
   }
 
-  var unmodifiable = new Int32List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableInt32ListView(new Int32List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readInt32(unmodifiable);
   }
@@ -286,7 +286,7 @@ testUint64() {
     writeUint64(view);
   }
 
-  var unmodifiable = new Uint64List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableUint64ListView(new Uint64List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readUint64(unmodifiable);
   }
@@ -326,7 +326,7 @@ testInt64() {
     writeInt64(view);
   }
 
-  var unmodifiable = new Int64List(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableInt64ListView(new Int64List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readInt64(unmodifiable);
   }
@@ -367,7 +367,8 @@ testFloat32() {
     writeFloat32(view);
   }
 
-  var unmodifiable = new Float32List(kListSize).asUnmodifiableView();
+  var unmodifiable =
+      new UnmodifiableFloat32ListView(new Float32List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readFloat32(unmodifiable);
   }
@@ -408,7 +409,8 @@ testFloat64() {
     writeFloat64(view);
   }
 
-  var unmodifiable = new Float64List(kListSize).asUnmodifiableView();
+  var unmodifiable =
+      new UnmodifiableFloat64ListView(new Float64List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readFloat64(unmodifiable);
   }
@@ -452,7 +454,8 @@ testInt32x4() {
     writeInt32x4(view);
   }
 
-  var unmodifiable = new Int32x4List(kListSize).asUnmodifiableView();
+  var unmodifiable =
+      new UnmodifiableInt32x4ListView(new Int32x4List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readInt32x4(unmodifiable);
   }
@@ -496,7 +499,8 @@ testFloat32x4() {
     writeFloat32x4(view);
   }
 
-  var unmodifiable = new Float32x4List(kListSize).asUnmodifiableView();
+  var unmodifiable =
+      new UnmodifiableFloat32x4ListView(new Float32x4List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readFloat32x4(unmodifiable);
   }
@@ -538,7 +542,8 @@ testFloat64x2() {
     writeFloat64x2(view);
   }
 
-  var unmodifiable = new Float64x2List(kListSize).asUnmodifiableView();
+  var unmodifiable =
+      new UnmodifiableFloat64x2ListView(new Float64x2List(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readFloat64x2(unmodifiable);
   }
@@ -578,7 +583,7 @@ testByteData() {
     writeByteData(view);
   }
 
-  var unmodifiable = new ByteData(kListSize).asUnmodifiableView();
+  var unmodifiable = new UnmodifiableByteDataView(new ByteData(kListSize));
   for (var i = 0; i < kLoopSize; i++) {
     readByteData(unmodifiable);
   }

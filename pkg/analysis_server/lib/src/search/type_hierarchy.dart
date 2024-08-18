@@ -21,8 +21,11 @@ class TypeHierarchyComputer {
   final Map<Element, TypeHierarchyItem> _elementItemMap =
       HashMap<Element, TypeHierarchyItem>();
 
-  TypeHierarchyComputer(this._searchEngine, Element pivotElement)
+  TypeHierarchyComputer(this._searchEngine, final Element pivotElement)
       : helper = TypeHierarchyComputerHelper.fromElement(pivotElement);
+
+  bool get _isNonNullableByDefault =>
+      helper.pivotLibrary.isNonNullableByDefault;
 
   /// Returns the computed type hierarchy, maybe `null`.
   Future<List<TypeHierarchyItem>?> compute() async {
@@ -65,9 +68,11 @@ class TypeHierarchyComputer {
       // create a subclass item
       var subMemberElement = helper.findMemberElement(subElement);
       var subMemberElementDeclared = subMemberElement?.nonSynthetic;
-      subItem = TypeHierarchyItem(convertElement(subElement),
+      subItem = TypeHierarchyItem(
+          convertElement(subElement, withNullability: _isNonNullableByDefault),
           memberElement: subMemberElementDeclared != null
-              ? convertElement(subMemberElementDeclared)
+              ? convertElement(subMemberElementDeclared,
+                  withNullability: _isNonNullableByDefault)
               : null,
           superclass: itemId);
       var subItemId = _items.length;
@@ -101,16 +106,21 @@ class TypeHierarchyComputer {
     {
       String? displayName;
       if (typeArguments != null && typeArguments.isNotEmpty) {
-        var typeArgumentsStr =
-            typeArguments.map((type) => type.getDisplayString()).join(', ');
+        var typeArgumentsStr = typeArguments
+            .map((type) =>
+                type.getDisplayString(withNullability: _isNonNullableByDefault))
+            .join(', ');
         displayName = '${classElement.displayName}<$typeArgumentsStr>';
       }
       var memberElement = helper.findMemberElement(classElement);
       var memberElementDeclared = memberElement?.nonSynthetic;
-      item = TypeHierarchyItem(convertElement(classElement),
+      item = TypeHierarchyItem(
+          convertElement(classElement,
+              withNullability: _isNonNullableByDefault),
           displayName: displayName,
           memberElement: memberElementDeclared != null
-              ? convertElement(memberElementDeclared)
+              ? convertElement(memberElementDeclared,
+                  withNullability: _isNonNullableByDefault)
               : null);
       _elementItemMap[classElement] = item;
       itemId = _items.length;
@@ -153,7 +163,7 @@ class TypeHierarchyComputerHelper {
   TypeHierarchyComputerHelper(this.pivotElement, this.pivotLibrary,
       this.pivotKind, this.pivotName, this.pivotFieldFinal, this.pivotClass);
 
-  factory TypeHierarchyComputerHelper.fromElement(Element pivotElement) {
+  factory TypeHierarchyComputerHelper.fromElement(final Element pivotElement) {
     // try to find enclosing ClassElement
     Element? element = pivotElement;
     bool pivotFieldFinal = false;
@@ -205,20 +215,15 @@ class TypeHierarchyComputerHelper {
     for (var mixin in clazz.mixins.reversed) {
       var mixinElement = mixin.element;
       if (pivotKind == ElementKind.METHOD) {
-        result = mixinElement.augmented
-            .lookUpMethod(name: pivotName, library: pivotLibrary);
+        result = mixinElement.lookUpMethod(pivotName, pivotLibrary);
       } else if (pivotKind == ElementKind.GETTER) {
-        result = mixinElement.augmented
-            .lookUpGetter(name: pivotName, library: pivotLibrary);
+        result = mixinElement.lookUpGetter(pivotName, pivotLibrary);
       } else if (pivotKind == ElementKind.SETTER) {
-        result = mixinElement.augmented
-            .lookUpSetter(name: pivotName, library: pivotLibrary);
+        result = mixinElement.lookUpSetter(pivotName, pivotLibrary);
       } else if (pivotKind == ElementKind.FIELD) {
-        result = mixinElement.augmented
-            .lookUpGetter(name: pivotName, library: pivotLibrary);
+        result = mixinElement.lookUpGetter(pivotName, pivotLibrary);
         if (result == null && !pivotFieldFinal) {
-          result = mixinElement.augmented
-              .lookUpSetter(name: pivotName, library: pivotLibrary);
+          result = mixinElement.lookUpSetter(pivotName, pivotLibrary);
         }
       }
       if (result == pivotElement) {

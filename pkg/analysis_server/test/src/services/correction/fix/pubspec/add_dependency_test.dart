@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/fix/pubspec/fix_kind.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/pubspec/validators/missing_dependency_validator.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:matcher/expect.dart';
@@ -304,8 +303,7 @@ dev_dependencies:
       String content, Set<String> usedDeps, Set<String> usedDevDeps) {
     this.content = content;
     node = loadYamlNode(this.content);
-    var file = newFile('/home/test/pubspec.yaml', content);
-    var source = FileSource(file);
+    var source = newFile('/home/test/pubspec.yaml', content).createSource();
 
     var errors = MissingDependencyValidator(node, source, resourceProvider)
         .validate(usedDeps, usedDevDeps);

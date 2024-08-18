@@ -77,7 +77,6 @@ class TokensWriter {
       return UnlinkedTokenType.DO;
     } else if (type == TokenType.DOUBLE) {
       return UnlinkedTokenType.DOUBLE;
-      // TODO(srawlins): TokenType.DOUBLE_WITH_SEPARATORS?
     } else if (type == Keyword.DYNAMIC) {
       return UnlinkedTokenType.DYNAMIC;
     } else if (type == Keyword.ELSE) {
@@ -130,7 +129,6 @@ class TokensWriter {
       return UnlinkedTokenType.HASH;
     } else if (type == TokenType.HEXADECIMAL) {
       return UnlinkedTokenType.HEXADECIMAL;
-      // TODO(srawlins): TokenType.HEXADECIMAL_WITH_SEPARATORS?
     } else if (type == Keyword.HIDE) {
       return UnlinkedTokenType.HIDE;
     } else if (type == TokenType.IDENTIFIER) {
@@ -151,7 +149,6 @@ class TokensWriter {
       return UnlinkedTokenType.INOUT;
     } else if (type == TokenType.INT) {
       return UnlinkedTokenType.INT;
-      // TODO(srawlins): TokenType.INT_WITH_SEPARATORS?
     } else if (type == Keyword.INTERFACE) {
       return UnlinkedTokenType.INTERFACE;
     } else if (type == TokenType.IS) {

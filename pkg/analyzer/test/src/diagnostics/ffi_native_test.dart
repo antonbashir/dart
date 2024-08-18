@@ -209,7 +209,7 @@ import 'dart:ffi';
 @Native()
 external int foo();
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 43, 3),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 20, 29),
     ]);
   }
 
@@ -238,7 +238,7 @@ class K {
 }
 ''', [
       error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS_WITH_RECEIVER,
-          102, 12),
+          31, 94),
     ]);
   }
 
@@ -248,7 +248,7 @@ import 'dart:ffi';
 @Native<Handle Function()>(symbol: 'DoesntMatter', isLeaf:true)
 external Object doesntMatter();
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 99, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 19, 95),
     ]);
   }
 
@@ -258,7 +258,7 @@ import 'dart:ffi';
 @Native<Void Function(Handle)>(symbol: 'DoesntMatter', isLeaf:true)
 external void doesntMatter(Object o);
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 101, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 19, 105),
     ]);
   }
 
@@ -268,7 +268,7 @@ import 'dart:ffi';
 @Native<IntPtr Function(int)>(symbol: 'doesntmatter')
 external int nonFfiParameter(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 86, 15),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 19, 90),
     ]);
   }
 
@@ -278,7 +278,7 @@ import 'dart:ffi';
 @Native<double Function(IntPtr)>(symbol: 'doesntmatter')
 external double nonFfiReturnType(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 92, 16),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 19, 97),
     ]);
   }
 
@@ -296,7 +296,7 @@ import 'dart:ffi';
 @Native<Void Function(Double)>(symbol: 'DoesntMatter')
 external void doesntMatter(double x, double y);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 88, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 102),
     ]);
   }
 
@@ -306,7 +306,7 @@ import 'dart:ffi';
 @Native<Void Function(Double, Double)>(symbol: 'DoesntMatter')
 external void doesntMatter(double x);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 96, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 100),
     ]);
   }
 
@@ -316,7 +316,7 @@ import 'dart:ffi';
 @Native<Handle Function(Uint32, Uint32, Handle)>(symbol: 'doesntmatter')
 external void voidReturn(int width, int height, Object outImage);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 106, 10),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 138),
     ]);
   }
 
@@ -326,7 +326,7 @@ import 'dart:ffi';
 @Native<IntPtr Function(Double)>(symbol: 'doesntmatter')
 external int wrongFfiParameter(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 89, 17),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 95),
     ]);
   }
 
@@ -336,22 +336,13 @@ import 'dart:ffi';
 @Native<IntPtr Function(IntPtr)>(symbol: 'doesntmatter')
 external double wrongFfiReturnType(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 92, 18),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 99),
     ]);
   }
 }
 
 @reflectiveTest
 class NativeFieldTest extends PubPackageResolutionTest {
-  test_AbiSpecific() async {
-    await assertNoErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native<Int>()
-external int foo;
-''');
-  }
-
   test_Accessors() async {
     await assertNoErrorsInCode(r'''
 import 'dart:ffi';
@@ -361,56 +352,6 @@ external int get foo;
 
 @Native<IntPtr>()
 external set foo(int value);
-''');
-  }
-
-  test_Array_InvalidDimension() async {
-    await assertErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native()
-@Array(0)
-external Array<IntPtr> field;
-''', [
-      error(FfiCode.NON_POSITIVE_ARRAY_DIMENSION, 37, 1),
-    ]);
-  }
-
-  test_Array_InvalidDimensionCount() async {
-    await assertErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native()
-@Array(10, 20)
-external Array<IntPtr> field;
-''', [
-      error(FfiCode.SIZE_ANNOTATION_DIMENSIONS, 30, 14),
-    ]);
-  }
-
-  test_Array_MissingAnnotation() async {
-    await assertErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native()
-external Array<IntPtr> field;
-''', [
-      error(FfiCode.MISSING_SIZE_ANNOTATION_CARRAY, 53, 5),
-    ]);
-  }
-
-  test_Array_Valid() async {
-    await assertNoErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native()
-@Array(12)
-external Array<IntPtr> field0;
-
-@Array(10, 20)
-@Native()
-external Array<Array<IntPtr>> field1;
-
 ''');
   }
 
@@ -465,17 +406,6 @@ int field;
     ]);
   }
 
-  test_MismatchingFunctionType() async {
-    await assertErrorsInCode(r'''
-import 'dart:ffi';
-
-@Native<NativeFunction<Double Function()>>()
-external int Function() field;
-''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 89, 5),
-    ]);
-  }
-
   test_MismatchingType() async {
     await assertErrorsInCode(r'''
 import 'dart:ffi';
@@ -501,6 +431,17 @@ external Pointer<IntPtr> valid;
     ]);
   }
 
+  test_Unsupported_Array() async {
+    await assertErrorsInCode(r'''
+import 'dart:ffi';
+
+@Native()
+external Array<IntPtr> field;
+''', [
+      error(FfiCode.NATIVE_FIELD_INVALID_TYPE, 53, 5),
+    ]);
+  }
+
   test_Unsupported_Function() async {
     await assertErrorsInCode(r'''
 import 'dart:ffi';
@@ -508,7 +449,7 @@ import 'dart:ffi';
 @Native<NativeFunction<Void Function()>>()
 external void Function() field;
 ''', [
-      error(FfiCode.NATIVE_FIELD_INVALID_TYPE, 88, 5),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 88, 5),
     ]);
   }
 
@@ -533,7 +474,7 @@ import 'dart:ffi';
 @Native<IntPtr>()
 external int foo();
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 51, 3),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 20, 37),
     ]);
   }
 
@@ -544,7 +485,7 @@ import 'dart:ffi';
 @Native()
 external int foo();
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 43, 3),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 20, 29),
     ]);
   }
 
@@ -557,7 +498,7 @@ const a = Native();
 @a
 external int foo();
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 57, 3),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 41, 22),
     ]);
   }
 
@@ -649,7 +590,7 @@ class K {
 }
 ''', [
       error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS_WITH_RECEIVER,
-          80, 12),
+          31, 72),
     ]);
   }
 
@@ -659,7 +600,7 @@ import 'dart:ffi';
 @Native<Handle Function()>(isLeaf:true)
 external Object doesntMatter();
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 75, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 19, 71),
     ]);
   }
 
@@ -671,7 +612,7 @@ const annotation = Native<Handle Function()>(isLeaf:true);
 @annotation
 external Object doesntMatter();
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 107, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_RETURN_HANDLE, 79, 43),
     ]);
   }
 
@@ -681,7 +622,7 @@ import 'dart:ffi';
 @Native<Void Function(Handle)>(symbol: 'DoesntMatter', isLeaf:true)
 external void doesntMatter(Object o);
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 101, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 19, 105),
     ]);
   }
 
@@ -693,7 +634,7 @@ const annotation = Native<Void Function(Handle)>(symbol: 'DoesntMatter', isLeaf:
 @annotation
 external void doesntMatter(Object o);
 ''', [
-      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 133, 12),
+      error(FfiCode.LEAF_CALL_MUST_NOT_TAKE_HANDLE, 107, 49),
     ]);
   }
 
@@ -703,7 +644,7 @@ import 'dart:ffi';
 @Native<IntPtr Function(int)>()
 external int nonFfiParameter(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 64, 15),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 19, 68),
     ]);
   }
 
@@ -713,7 +654,7 @@ import 'dart:ffi';
 @Native<double Function(IntPtr)>()
 external double nonFfiReturnType(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 70, 16),
+      error(FfiCode.MUST_BE_A_NATIVE_FUNCTION_TYPE, 19, 75),
     ]);
   }
 
@@ -731,7 +672,7 @@ import 'dart:ffi';
 @Native<Void Function(Double)>()
 external void doesntMatter(double x, double y);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 66, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 80),
     ]);
   }
 
@@ -741,7 +682,7 @@ import 'dart:ffi';
 @Native<Void Function(Double, Double)>()
 external void doesntMatter(double x);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 74, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 78),
     ]);
   }
 
@@ -759,7 +700,7 @@ import 'dart:ffi';
 @Native<Int8 Function(Int64, VarArgs<(Int32, Double)>)>()
 external int doesntMatter(int x, int y);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 90, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 98),
     ]);
   }
 
@@ -769,7 +710,7 @@ import 'dart:ffi';
 @Native<Int8 Function(Int64, VarArgs<(Int32, Double)>)>()
 external int doesntMatter(int x, int y, double z, int superfluous);
 ''', [
-      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 90, 12),
+      error(FfiCode.FFI_NATIVE_UNEXPECTED_NUMBER_OF_PARAMETERS, 19, 125),
     ]);
   }
 
@@ -779,7 +720,7 @@ import 'dart:ffi';
 @Native<Handle Function(Uint32, Uint32, Handle)>()
 external void voidReturn(int width, int height, Object outImage);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 84, 10),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 116),
     ]);
   }
 
@@ -789,7 +730,7 @@ import 'dart:ffi';
 @Native<IntPtr Function(Double)>()
 external int wrongFfiParameter(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 67, 17),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 73),
     ]);
   }
 
@@ -799,7 +740,7 @@ import 'dart:ffi';
 @Native<IntPtr Function(IntPtr)>()
 external double wrongFfiReturnType(int v);
 ''', [
-      error(FfiCode.MUST_BE_A_SUBTYPE, 70, 18),
+      error(FfiCode.MUST_BE_A_SUBTYPE, 19, 77),
     ]);
   }
 }

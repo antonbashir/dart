@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
@@ -16,21 +16,22 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveUnusedElement extends _RemoveUnused {
-  RemoveUnusedElement({required super.context});
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_UNUSED_ELEMENT;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var sourceRanges = <SourceRange>[];
+    final sourceRanges = <SourceRange>[];
 
-    var node = this.node;
+    final node = this.node;
 
     if (node is ConstructorDeclaration) {
       await _constructorDeclaration(
@@ -46,10 +47,10 @@ class RemoveUnusedElement extends _RemoveUnused {
         node is FunctionTypeAlias ||
         node is MethodDeclaration ||
         node is VariableDeclaration) {
-      var element = node is Declaration
+      final element = node is Declaration
           ? node.declaredElement!
           : (node as NamedCompilationUnitMember).declaredElement!;
-      var references = _findAllReferences(unit, element);
+      final references = _findAllReferences(unit, element);
       // TODO(pq): consider filtering for references that are limited to within the class.
       if (references.isEmpty) {
         var parent = node.parent;
@@ -81,7 +82,7 @@ class RemoveUnusedElement extends _RemoveUnused {
     required ChangeBuilder builder,
     required ConstructorDeclaration node,
   }) async {
-    NodeList<ClassMember> members;
+    final NodeList<ClassMember> members;
     switch (node.parent) {
       case ClassDeclaration classDeclaration:
         members = classDeclaration.members;
@@ -91,7 +92,7 @@ class RemoveUnusedElement extends _RemoveUnused {
         return;
     }
 
-    var nodeRange = range.nodeInList(members, node);
+    final nodeRange = range.nodeInList(members, node);
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addDeletion(nodeRange);
@@ -100,36 +101,37 @@ class RemoveUnusedElement extends _RemoveUnused {
 }
 
 class RemoveUnusedField extends _RemoveUnused {
-  RemoveUnusedField({required super.context});
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
   // Not predictably the correct action.
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.singleLocation;
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_UNUSED_FIELD;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var declaration = node;
+    final declaration = node;
     if (declaration is! VariableDeclaration) {
       return;
     }
 
-    var element = declaration.declaredElement;
+    final element = declaration.declaredElement;
     if (element is! FieldElement) {
       return;
     }
 
-    var sourceRanges = <SourceRange>[];
-    var references = [
+    final sourceRanges = <SourceRange>[];
+    final references = [
       node,
       ..._findAllReferences(unit, element),
     ];
     for (var reference in references) {
       // TODO(pq): consider scoping this to parent or parent.parent.
-      var referenceNode = reference.thisOrAncestorMatching((node) =>
+      final referenceNode = reference.thisOrAncestorMatching((node) =>
           node is VariableDeclaration ||
           node is ExpressionStatement ||
           node is ConstructorFieldInitializer ||
@@ -157,7 +159,7 @@ class RemoveUnusedField extends _RemoveUnused {
       sourceRanges.add(sourceRange);
     }
 
-    var uniqueSourceRanges = _uniqueSourceRanges(sourceRanges);
+    final uniqueSourceRanges = _uniqueSourceRanges(sourceRanges);
     await builder.addDartFileEdit(file, (builder) {
       for (var sourceRange in uniqueSourceRanges) {
         builder.addDeletion(sourceRange);
@@ -168,7 +170,7 @@ class RemoveUnusedField extends _RemoveUnused {
   SourceRange _forConstructorFieldInitializer(
     ConstructorFieldInitializer node,
   ) {
-    var constructor = node.parent as ConstructorDeclaration;
+    final constructor = node.parent as ConstructorDeclaration;
     if (constructor.initializers.length == 1) {
       return range.endEnd(constructor.parameters, node);
     } else {
@@ -251,7 +253,7 @@ class _ElementReferenceCollector extends RecursiveAstVisitor<void> {
 
   @override
   void visitFieldFormalParameter(FieldFormalParameter node) {
-    var declaredElement = node.declaredElement;
+    final declaredElement = node.declaredElement;
     if (declaredElement is FieldFormalParameterElement) {
       if (declaredElement.field == element) {
         references.add(node);
@@ -272,11 +274,11 @@ class _ElementReferenceCollector extends RecursiveAstVisitor<void> {
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
-    var staticElement = node.writeOrReadElement;
+    final staticElement = node.writeOrReadElement;
     if (staticElement == element) {
       references.add(node);
     } else if (staticElement is PropertyAccessorElement) {
-      if (staticElement.variable2 == element) {
+      if (staticElement.variable == element) {
         references.add(node);
       }
     } else if (staticElement is FieldFormalParameterElement) {
@@ -288,8 +290,6 @@ class _ElementReferenceCollector extends RecursiveAstVisitor<void> {
 }
 
 abstract class _RemoveUnused extends ResolvedCorrectionProducer {
-  _RemoveUnused({required super.context});
-
   List<AstNode> _findAllReferences(AstNode root, Element element) {
     var collector = _ElementReferenceCollector(element);
     root.accept(collector);

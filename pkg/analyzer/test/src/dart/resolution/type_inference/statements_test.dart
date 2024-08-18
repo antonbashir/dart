@@ -27,12 +27,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -55,12 +55,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -85,12 +85,12 @@ T a<T>() => throw '';
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 34, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -112,12 +112,12 @@ T a<T>() => throw '';
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 34, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -148,12 +148,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -175,12 +175,12 @@ T a<T>() => throw '';
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 22, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -202,12 +202,12 @@ T a<T>() => throw '';
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 22, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -241,12 +241,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -269,12 +269,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (

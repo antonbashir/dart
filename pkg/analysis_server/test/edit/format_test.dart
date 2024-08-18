@@ -98,8 +98,7 @@ void f() {
 void f() { int x =
 ''');
     await waitForTasksFinished();
-    var request = EditFormatParams(testFile.path, 0, 3)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditFormatParams(testFile.path, 0, 3).toRequest('0');
     var response = await handleRequest(request);
     expect(response, isResponseFailure('0'));
   }
@@ -109,9 +108,8 @@ void f() { int x =
     var request = EditFormatParams(
             testFile.path, selectionOffset, selectionLength,
             lineLength: lineLength)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    return EditFormatResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    return EditFormatResult.fromResponse(response);
   }
 }

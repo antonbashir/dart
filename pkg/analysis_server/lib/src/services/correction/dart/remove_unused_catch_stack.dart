@@ -2,20 +2,23 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveUnusedCatchStack extends ResolvedCorrectionProducer {
-  RemoveUnusedCatchStack({required super.context});
+  @override
+  // May not be appropriate while actively coding.
+  bool get canBeAppliedAutomatically => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // May not be appropriate while actively coding.
-      CorrectionApplicability.acrossFiles;
+  bool get canBeAppliedInBulk => true;
+
+  @override
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_UNUSED_CATCH_STACK;
@@ -25,17 +28,17 @@ class RemoveUnusedCatchStack extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var stackTraceParameter = node;
+    final stackTraceParameter = node;
     if (stackTraceParameter is! CatchClauseParameter) {
       return;
     }
 
-    var catchClause = stackTraceParameter.parent;
+    final catchClause = stackTraceParameter.parent;
     if (catchClause is! CatchClause) {
       return;
     }
 
-    var exceptionParameter = catchClause.exceptionParameter;
+    final exceptionParameter = catchClause.exceptionParameter;
     if (exceptionParameter == null) {
       return;
     }

@@ -3,22 +3,20 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ReplaceNullCheckWithCast extends ResolvedCorrectionProducer {
-  ReplaceNullCheckWithCast({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_NULL_CHECK_WITH_CAST;
@@ -28,7 +26,7 @@ class ReplaceNullCheckWithCast extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var node = this.node;
+    final node = this.node;
     Token? operator;
     DartType? operandType;
     if (node is NullAssertPattern) {
@@ -53,12 +51,8 @@ class ReplaceNullCheckWithCast extends ResolvedCorrectionProducer {
     // TODO(srawlins): Follow up on
     // https://github.com/dart-lang/linter/issues/3256.
     await builder.addDartFileEdit(file, (builder) {
-      var operandTypeNonNull =
-          (operandType as TypeImpl).withNullability(NullabilitySuffix.none);
-      builder.addSimpleReplacement(
-        range.token(operator!),
-        ' as ${operandTypeNonNull.getDisplayString()}',
-      );
+      builder.addSimpleReplacement(range.token(operator!),
+          ' as ${operandType!.getDisplayString(withNullability: false)}');
     });
   }
 }

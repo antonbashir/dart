@@ -5,7 +5,7 @@
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/computer/computer_color.dart'
     show ColorComputer, ColorReference;
-import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -32,18 +32,15 @@ class DocumentColorHandler
       DocumentColorParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<List<ColorInformation>>> handle(DocumentColorParams params,
       MessageInfo message, CancellationToken token) async {
     if (!isDartDocument(params.textDocument)) {
       return success([]);
     }
 
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
-    return unit.mapResultSync((unit) => _getColors(unit));
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
+    return unit.mapResult((unit) => _getColors(unit));
   }
 
   ErrorOr<List<ColorInformation>> _getColors(ResolvedUnitResult unit) {
@@ -61,8 +58,8 @@ class DocumentColorHandler
       );
     }
 
-    var computer = ColorComputer(unit, pathContext);
-    var colors = computer.compute();
+    final computer = ColorComputer(unit, pathContext);
+    final colors = computer.compute();
     return success(colors.map(toColorInformation).toList());
   }
 }
@@ -73,7 +70,7 @@ class DocumentColorRegistrations extends FeatureRegistration
 
   @override
   DocumentColorRegistrationOptions get options =>
-      DocumentColorRegistrationOptions(documentSelector: dartFiles);
+      DocumentColorRegistrationOptions(documentSelector: [dartFiles]);
 
   @override
   Method get registrationMethod => Method.textDocument_documentColor;

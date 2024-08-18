@@ -8,7 +8,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/dart_type_utilities.dart';
 
 const _desc =
@@ -52,15 +51,20 @@ It's valid to override a member in the following cases:
 ''';
 
 class UnnecessaryOverrides extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_overrides', 'Unnecessary override.',
+      correctionMessage:
+          'Try adding behavior in the overriding member or removing the override.');
+
   UnnecessaryOverrides()
       : super(
             name: 'unnecessary_overrides',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_overrides;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -246,12 +250,9 @@ class _UnnecessaryMethodOverrideVisitor
   ExecutableElement? getInheritedElement(node) {
     var element = node.declaredElement;
     if (element == null) return null;
-
     var enclosingElement = element.enclosingElement;
     if (enclosingElement is! InterfaceElement) return null;
-
-    var augmented = enclosingElement.augmented;
-    return augmented.declaration.thisType.lookUpMethod2(
+    return enclosingElement.thisType.lookUpMethod2(
       node.name.lexeme,
       element.library,
       concrete: true,

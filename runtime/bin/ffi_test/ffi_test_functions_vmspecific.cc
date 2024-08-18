@@ -480,10 +480,9 @@ intptr_t MyCallbackBlocking(intptr_t a) {
   auto callback = my_callback_blocking_fp_;  // Define storage duration.
   std::condition_variable cv;
   bool notified = false;
-  const Work work = [a, &result, callback, &mutex, &cv, &notified]() {
+  const Work work = [a, &result, callback, &cv, &notified]() {
     result = callback(a);
     printf("C Da:     Notify result ready.\n");
-    std::unique_lock<std::mutex> lock(mutex);
     notified = true;
     cv.notify_one();
   };
@@ -618,11 +617,7 @@ DART_EXPORT void ExecuteCallback(Work* work_ptr) {
 
 Dart_Port send_port_;
 
-DART_EXPORT void* Calloc(size_t count, size_t size) {
-  return calloc(count, size);
-}
-
-DART_EXPORT void FreeFinalizer(void*, void* value) {
+static void FreeFinalizer(void*, void* value) {
   free(value);
 }
 
@@ -688,7 +683,6 @@ class PendingCall {
     *response_length_ = response_length;
 
     printf("C   :     Notify result ready.\n");
-    std::unique_lock<std::mutex> lock(mutex);
     notified = true;
     cv.notify_one();
   }
@@ -1318,7 +1312,8 @@ DART_EXPORT void Regress216834909_SetAtExit(int64_t install) {
     Regress216834909_hang_at_exit = false;
   }
 }
-#endif
+#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) ||
+        // defined(DART_HOST_OS_MACOS)
 
 DART_EXPORT bool IsNull(Dart_Handle object) {
   return Dart_IsNull(object);

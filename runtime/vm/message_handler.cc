@@ -178,7 +178,7 @@ void MessageHandler::PostMessage(std::unique_ptr<Message> message,
 
 std::unique_ptr<Message> MessageHandler::DequeueMessage(
     Message::Priority min_priority) {
-  ASSERT(monitor_.IsOwnedByCurrentThread());
+  // TODO(turnidge): Add assert that monitor_ is held here.
   std::unique_ptr<Message> message = oob_queue_->Dequeue();
   if ((message == nullptr) && (min_priority < Message::kOOBPriority)) {
     message = queue_->Dequeue();

@@ -74,7 +74,6 @@ import 'rules/diagnostic_describe_all_properties.dart';
 import 'rules/directives_ordering.dart';
 import 'rules/discarded_futures.dart';
 import 'rules/do_not_use_environment.dart';
-import 'rules/document_ignores.dart';
 import 'rules/empty_catches.dart';
 import 'rules/empty_constructor_bodies.dart';
 import 'rules/empty_statements.dart';
@@ -89,7 +88,6 @@ import 'rules/implementation_imports.dart';
 import 'rules/implicit_call_tearoffs.dart';
 import 'rules/implicit_reopen.dart';
 import 'rules/invalid_case_patterns.dart';
-import 'rules/invalid_runtime_check_with_js_interop_types.dart';
 import 'rules/invariant_booleans.dart';
 import 'rules/iterable_contains_unrelated_type.dart';
 import 'rules/join_return_with_assignment.dart';
@@ -102,7 +100,6 @@ import 'rules/lines_longer_than_80_chars.dart';
 import 'rules/list_remove_unrelated_type.dart';
 import 'rules/literal_only_boolean_expressions.dart';
 import 'rules/matching_super_parameters.dart';
-import 'rules/missing_code_block_language_in_doc_comment.dart';
 import 'rules/missing_whitespace_between_adjacent_strings.dart';
 import 'rules/no_adjacent_strings_in_list.dart';
 import 'rules/no_default_cases.dart';
@@ -119,7 +116,6 @@ import 'rules/noop_primitive_operations.dart';
 import 'rules/null_check_on_nullable_type_parameter.dart';
 import 'rules/null_closures.dart';
 import 'rules/omit_local_variable_types.dart';
-import 'rules/omit_obvious_local_variable_types.dart';
 import 'rules/one_member_abstracts.dart';
 import 'rules/only_throw_errors.dart';
 import 'rules/overridden_fields.dart';
@@ -181,7 +177,6 @@ import 'rules/slash_for_doc_comments.dart';
 import 'rules/sort_child_properties_last.dart';
 import 'rules/sort_constructors_first.dart';
 import 'rules/sort_unnamed_constructors_first.dart';
-import 'rules/specify_nonobvious_local_variable_types.dart';
 import 'rules/super_goes_last.dart';
 import 'rules/test_types_in_equals.dart';
 import 'rules/throw_in_finally.dart';
@@ -190,7 +185,6 @@ import 'rules/type_annotate_public_apis.dart';
 import 'rules/type_init_formals.dart';
 import 'rules/type_literal_in_constant_pattern.dart';
 import 'rules/unawaited_futures.dart';
-import 'rules/unintended_html_in_doc_comment.dart';
 import 'rules/unnecessary_await_in_return.dart';
 import 'rules/unnecessary_brace_in_string_interps.dart';
 import 'rules/unnecessary_breaks.dart';
@@ -201,7 +195,6 @@ import 'rules/unnecessary_getters_setters.dart';
 import 'rules/unnecessary_lambdas.dart';
 import 'rules/unnecessary_late.dart';
 import 'rules/unnecessary_library_directive.dart';
-import 'rules/unnecessary_library_name.dart';
 import 'rules/unnecessary_new.dart';
 import 'rules/unnecessary_null_aware_assignments.dart';
 import 'rules/unnecessary_null_aware_operator_on_extension_on_nullable.dart';
@@ -238,11 +231,11 @@ import 'rules/use_string_in_part_of_directives.dart';
 import 'rules/use_super_parameters.dart';
 import 'rules/use_test_throws_matchers.dart';
 import 'rules/use_to_and_as_if_applicable.dart';
-import 'rules/use_truncating_division.dart';
 import 'rules/valid_regexps.dart';
 import 'rules/void_checks.dart';
 
 void registerLintRules() {
+  Analyzer.facade.cacheLinterVersion();
   Analyzer.facade
     ..register(AlwaysDeclareReturnTypes())
     ..register(AlwaysPutControlBodyOnNewLine())
@@ -315,7 +308,6 @@ void registerLintRules() {
     ..register(DiagnosticDescribeAllProperties())
     ..register(DirectivesOrdering())
     ..register(DiscardedFutures())
-    ..register(DocumentIgnores())
     ..register(DoNotUseEnvironment())
     ..register(EmptyCatches())
     ..register(EmptyConstructorBodies())
@@ -334,7 +326,6 @@ void registerLintRules() {
     ..register(InvariantBooleans())
     ..register(IterableContainsUnrelatedType())
     ..register(JoinReturnWithAssignment())
-    ..register(InvalidRuntimeCheckWithJSInteropTypes())
     ..register(LeadingNewlinesInMultilineStrings())
     ..register(LibraryAnnotations())
     ..register(LibraryNames())
@@ -344,7 +335,6 @@ void registerLintRules() {
     ..register(ListRemoveUnrelatedType())
     ..register(LiteralOnlyBooleanExpressions())
     ..register(MatchingSuperParameters())
-    ..register(MissingCodeBlockLanguageInDocComment())
     ..register(MissingWhitespaceBetweenAdjacentStrings())
     ..register(NoAdjacentStringsInList())
     ..register(NoDefaultCases())
@@ -361,7 +351,6 @@ void registerLintRules() {
     ..register(NullCheckOnNullableTypeParameter())
     ..register(NullClosures())
     ..register(OmitLocalVariableTypes())
-    ..register(OmitObviousLocalVariableTypes())
     ..register(OneMemberAbstracts())
     ..register(OnlyThrowErrors())
     ..register(OverriddenFields())
@@ -423,7 +412,6 @@ void registerLintRules() {
     ..register(SortPubDependencies())
     ..register(SortUnnamedConstructorsFirst())
     ..register(SuperGoesLast())
-    ..register(SpecifyNonObviousLocalVariableTypes())
     ..register(TestTypesInEquals())
     ..register(ThrowInFinally())
     ..register(TightenTypeOfInitializingFormals())
@@ -431,7 +419,6 @@ void registerLintRules() {
     ..register(TypeInitFormals())
     ..register(TypeLiteralInConstantPattern())
     ..register(UnawaitedFutures())
-    ..register(UnintendedHtmlInDocComment())
     ..register(UnnecessaryAwaitInReturn())
     ..register(UnnecessaryBraceInStringInterps())
     ..register(UnnecessaryBreaks())
@@ -442,7 +429,6 @@ void registerLintRules() {
     ..register(UnnecessaryLambdas())
     ..register(UnnecessaryLate())
     ..register(UnnecessaryLibraryDirective())
-    ..register(UnnecessaryLibraryName())
     ..register(UnnecessaryNew())
     ..register(UnnecessaryNullAwareAssignments())
     ..register(UnnecessaryNullAwareOperatorOnExtensionOnNullable())
@@ -479,7 +465,6 @@ void registerLintRules() {
     ..register(UseSuperParameters())
     ..register(UseTestThrowsMatchers())
     ..register(UseToAndAsIfApplicable())
-    ..register(UseTruncatingDivision())
     ..register(ValidRegexps())
     ..register(VoidChecks());
 }

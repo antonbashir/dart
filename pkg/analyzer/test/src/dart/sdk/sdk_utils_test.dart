@@ -124,7 +124,7 @@ String? getRelativePathIfInsideSlow(
 }
 
 void testGetImportUriIfMatchesRelativeSdkPathSlow() {
-  List<String> knownSdkPaths = [
+  final List<String> knownSdkPaths = [
     "_http/http.dart",
     "async/async.dart",
     "collection/collection.dart",
@@ -138,7 +138,7 @@ void testGetImportUriIfMatchesRelativeSdkPathSlow() {
     "math/math.dart",
     "typed_data/typed_data.dart",
   ];
-  List<SdkLibrary> sdkLibs = knownSdkPaths
+  final List<SdkLibrary> sdkLibs = knownSdkPaths
       .map((path) => MockSdkLibrary(
             path.substring(0, path.indexOf("/")),
             [MockSdkLibraryUnit(path, "")],

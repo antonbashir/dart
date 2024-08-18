@@ -25,7 +25,7 @@ void f<T, U>() {}
     _assertKindName();
     refactoring.newName = 'U';
 
-    var status = await refactoring.checkFinalConditions();
+    final status = await refactoring.checkFinalConditions();
     assertRefactoringStatus(
       status,
       RefactoringProblemSeverity.ERROR,

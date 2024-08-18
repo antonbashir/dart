@@ -2,17 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
-import 'package:analyzer/src/dart/ast/ast.dart'; // ignore: implementation_imports
-import 'package:analyzer/src/dart/element/element.dart'; // ignore: implementation_imports
 import 'package:analyzer/src/dart/element/member.dart'; // ignore: implementation_imports
-import 'package:analyzer/src/dart/element/type.dart' // ignore: implementation_imports
-    show
-        InvalidTypeImpl;
 import 'package:collection/collection.dart';
 
 import 'analyzer.dart';
@@ -28,36 +24,6 @@ class EnumLikeClassDescription {
 
 extension AstNodeExtension on AstNode {
   Iterable<AstNode> get childNodes => childEntities.whereType<AstNode>();
-
-  /// Whether this is the child of a private compilation unit member.
-  bool get inPrivateMember {
-    var parent = this.parent;
-    return switch (parent) {
-      NamedCompilationUnitMember() => parent.name.isPrivate,
-      ExtensionDeclaration() => parent.name == null || parent.name.isPrivate,
-      _ => false,
-    };
-  }
-
-  bool get isAugmentation {
-    var self = this;
-    return switch (self) {
-      ClassDeclaration() => self.augmentKeyword != null,
-      ConstructorDeclaration() => self.augmentKeyword != null,
-      EnumConstantDeclaration() => self.augmentKeyword != null,
-      EnumDeclaration() => self.augmentKeyword != null,
-      ExtensionTypeDeclaration() => self.augmentKeyword != null,
-      FieldDeclaration() => self.augmentKeyword != null,
-      FunctionDeclarationImpl() => self.augmentKeyword != null,
-      FunctionExpression() => self.parent?.isAugmentation ?? false,
-      MethodDeclaration() => self.augmentKeyword != null,
-      MixinDeclaration() => self.augmentKeyword != null,
-      TopLevelVariableDeclaration() => self.augmentKeyword != null,
-      VariableDeclaration(declaredElement: var element) =>
-        element is PropertyInducingElement && element.isAugmentation,
-      _ => false
-    };
-  }
 
   bool get isEffectivelyPrivate {
     var node = this;
@@ -82,22 +48,37 @@ extension AstNodeExtension on AstNode {
     var element = parent.declaredElement;
     return element != null && element.hasInternal;
   }
+
+  /// Builds the list resulting from traversing the node in DFS and does not
+  /// include the node itself.
+  ///
+  /// It excludes the nodes for which the [excludeCriteria] returns true. If
+  /// [excludeCriteria] is not provided, all nodes are included.
+  @Deprecated(
+      'This approach is slow and slated for removal. Traversal via a standard visitor is preferred.')
+  Iterable<AstNode> traverseNodesInDFS({AstNodePredicate? excludeCriteria}) {
+    var nodes = <AstNode>{};
+    var nodesToVisit = List.of(childNodes);
+    if (excludeCriteria == null) {
+      while (nodesToVisit.isNotEmpty) {
+        var node = nodesToVisit.removeAt(0);
+        nodes.add(node);
+        nodesToVisit.insertAll(0, node.childNodes);
+      }
+    } else {
+      while (nodesToVisit.isNotEmpty) {
+        var node = nodesToVisit.removeAt(0);
+        if (excludeCriteria(node)) continue;
+        nodes.add(node);
+        nodesToVisit.insertAll(0, node.childNodes);
+      }
+    }
+
+    return nodes;
+  }
 }
 
 extension AstNodeNullableExtension on AstNode? {
-  Element? get canonicalElement {
-    var self = this;
-    if (self is Expression) {
-      var node = self.unParenthesized;
-      if (node is Identifier) {
-        return node.staticElement?.canonicalElement;
-      } else if (node is PropertyAccess) {
-        return node.propertyName.staticElement?.canonicalElement;
-      }
-    }
-    return null;
-  }
-
   bool get isFieldNameShortcut {
     var node = this;
     if (node is NullCheckPattern) node = node.parent;
@@ -141,37 +122,6 @@ extension BlockExtension on Block {
 }
 
 extension ClassElementExtension on ClassElement {
-  /// Get all accessors, including merged augmentations.
-  List<PropertyAccessorElement> get allAccessors => augmented.accessors;
-
-  /// Get all constructors, including merged augmentations.
-  List<ConstructorElement> get allConstructors => augmented.constructors;
-
-  /// Get all fields, including merged augmentations.
-  List<FieldElement> get allFields => augmented.fields;
-
-  /// Get all interfaces, including merged augmentations.
-  List<InterfaceType> get allInterfaces => augmented.interfaces;
-
-  /// Get all methods, including merged augmentations.
-  List<MethodElement> get allMethods => augmented.methods;
-
-  /// Get all mixins, including merged augmentations.
-  List<InterfaceType> get allMixins => augmented.mixins;
-
-  bool get hasImmutableAnnotation {
-    var inheritedAndSelfElements = <InterfaceElement>[
-      ...allSupertypes.map((t) => t.element),
-      this,
-    ];
-
-    return inheritedAndSelfElements.any((e) => e.hasImmutable);
-
-    // TODO(pq): update when implemented or replace w/ a better has{*} call
-    // https://github.com/dart-lang/linter/issues/4939
-    //return inheritedAndSelfElements.any((e) => e.augmented.metadata.any((e) => e.isImmutable));
-  }
-
   bool get hasSubclassInDefiningCompilationUnit {
     var compilationUnit = library.definingCompilationUnit;
     for (var cls in compilationUnit.classes) {
@@ -336,7 +286,7 @@ extension ElementExtension on Element {
   Element get canonicalElement {
     var self = this;
     if (self is PropertyAccessorElement) {
-      var variable = self.variable2;
+      var variable = self.variable;
       if (variable is FieldMember) {
         // A field element defined in a parameterized type where the values of
         // the type parameters are known.
@@ -346,148 +296,22 @@ extension ElementExtension on Element {
         // equivalent to equivalent FieldMembers. See
         // https://github.com/dart-lang/sdk/issues/35343.
         return variable.declaration;
-      } else if (variable != null) {
+      } else {
         return variable;
       }
+    } else {
+      return self;
     }
-    return self;
-  }
-
-  bool get isMacro {
-    var self = this;
-    return self is ClassElementImpl && self.isMacro;
   }
 }
 
 extension ExpressionExtension on Expression? {
-  /// A very, very, very rough approximation of the context type of this node.
-  ///
-  /// This approximation will never be accurate for some expressions.
-  DartType? get approximateContextType {
-    var self = this;
-    if (self == null) return null;
-    var ancestor = self.parent;
-    var ancestorChild = self;
-    while (ancestor != null) {
-      if (ancestor is ParenthesizedExpression) {
-        ancestorChild = ancestor;
-        ancestor = ancestor.parent;
-      } else if (ancestor is CascadeExpression &&
-          ancestorChild == ancestor.target) {
-        ancestorChild = ancestor;
-        ancestor = ancestor.parent;
-      } else {
-        break;
-      }
-    }
-
-    switch (ancestor) {
-      // TODO(srawlins): Handle [AwaitExpression], [BinaryExpression],
-      // [CascadeExpression], [SwitchExpressionCase], likely others. Or move
-      // everything here to an analysis phase which has the actual context type.
-      case ArgumentList():
-        // Allow `function(LinkedHashSet())` for `function(LinkedHashSet mySet)`
-        // and `function(LinkedHashMap())` for `function(LinkedHashMap myMap)`.
-        return self.staticParameterElement?.type ?? InvalidTypeImpl.instance;
-      case AssignmentExpression():
-        // Allow `x = LinkedHashMap()`.
-        return ancestor.staticType;
-      case ConditionalExpression():
-        return ancestor.staticType;
-      case ConstructorFieldInitializer():
-        var fieldElement = ancestor.fieldName.staticElement;
-        return (fieldElement is VariableElement) ? fieldElement.type : null;
-      case ExpressionFunctionBody(parent: var function)
-          when function is FunctionExpression:
-        // Allow `<int, LinkedHashSet>{}.putIfAbsent(3, () => LinkedHashSet())`
-        // and `<int, LinkedHashMap>{}.putIfAbsent(3, () => LinkedHashMap())`.
-        var functionParent = function.parent;
-        if (functionParent is FunctionDeclaration) {
-          return functionParent.returnType?.type;
-        }
-        var functionType = function.approximateContextType;
-        return functionType is FunctionType ? functionType.returnType : null;
-      case ExpressionFunctionBody(parent: var function)
-          when function is FunctionDeclaration:
-        return function.returnType?.type;
-      case ExpressionFunctionBody(parent: var function)
-          when function is MethodDeclaration:
-        return function.returnType?.type;
-      case NamedExpression():
-        // Allow `void f({required LinkedHashSet<Foo> s})`.
-        return ancestor.staticParameterElement?.type ??
-            InvalidTypeImpl.instance;
-      case ReturnStatement():
-        return ancestor.thisOrAncestorOfType<FunctionBody>().expectedReturnType;
-      case VariableDeclaration(parent: VariableDeclarationList(:var type)):
-        // Allow `LinkedHashSet<int> s = node` and
-        // `LinkedHashMap<int> s = node`.
-        return type?.type;
-      case YieldStatement():
-        return ancestor.thisOrAncestorOfType<FunctionBody>().expectedReturnType;
-    }
-
-    return null;
-  }
-
   bool get isNullLiteral => this?.unParenthesized is NullLiteral;
 }
 
 extension FieldDeclarationExtension on FieldDeclaration {
   bool get isInvalidExtensionTypeField =>
       !isStatic && parent is ExtensionTypeDeclaration;
-}
-
-extension FunctionBodyExtension on FunctionBody? {
-  /// Attempts to calculate the expected return type of the function represented
-  /// by this node, accounting for an approximation of the function's context
-  /// type, in the case of a function literal.
-  DartType? get expectedReturnType {
-    var self = this;
-    if (self == null) return null;
-    var parent = self.parent;
-    if (parent is FunctionExpression) {
-      var grandparent = parent.parent;
-      if (grandparent is FunctionDeclaration) {
-        var returnType = grandparent.declaredElement?.returnType;
-        return self._expectedReturnableOrYieldableType(returnType);
-      }
-      var functionType = parent.approximateContextType;
-      if (functionType is! FunctionType) return null;
-      var returnType = functionType.returnType;
-      return self._expectedReturnableOrYieldableType(returnType);
-    }
-    if (parent is MethodDeclaration) {
-      var returnType = parent.declaredElement?.returnType;
-      return self._expectedReturnableOrYieldableType(returnType);
-    }
-    return null;
-  }
-
-  /// Extracts the expected type for return statements or yield statements.
-  ///
-  /// For example, for an asynchronous body in a function with a declared
-  /// [returnType] of `Future<int>`, this returns `int`. (Note: it would be more
-  /// accurate to use `FutureOr<int>` and an assignability check, but `int` is
-  /// an approximation that works for now; this should probably be revisited.)
-  DartType? _expectedReturnableOrYieldableType(DartType? returnType) {
-    var self = this;
-    if (self == null) return null;
-    if (returnType is! InterfaceType) return null;
-    if (self.isAsynchronous) {
-      if (!self.isGenerator && returnType.isDartAsyncFuture) {
-        return returnType.typeArguments.firstOrNull;
-      }
-      if (self.isGenerator && returnType.isDartAsyncStream) {
-        return returnType.typeArguments.firstOrNull;
-      }
-    } else {
-      if (self.isGenerator && returnType.isDartCoreIterable) {
-        return returnType.typeArguments.firstOrNull;
-      }
-    }
-    return returnType;
-  }
 }
 
 extension InhertanceManager3Extension on InheritanceManager3 {
@@ -583,8 +407,7 @@ extension MethodDeclarationExtension on MethodDeclaration {
     }
     var parent = declaredElement.enclosingElement;
     if (parent is InterfaceElement) {
-      return parent.augmented
-          .lookUpGetter(name: name.lexeme, library: declaredElement.library);
+      return parent.lookUpGetter(name.lexeme, declaredElement.library);
     }
     if (parent is ExtensionElement) {
       return parent.getGetter(name.lexeme);
@@ -645,6 +468,21 @@ extension MethodDeclarationExtension on MethodDeclaration {
   }
 }
 
+extension NullableAstNodeExtension on AstNode? {
+  Element? get canonicalElement {
+    var self = this;
+    if (self is Expression) {
+      var node = self.unParenthesized;
+      if (node is Identifier) {
+        return node.staticElement?.canonicalElement;
+      } else if (node is PropertyAccess) {
+        return node.propertyName.staticElement?.canonicalElement;
+      }
+    }
+    return null;
+  }
+}
+
 extension StringExtension on String {
   String toAbsoluteNormalizedPath() {
     var pathContext = PhysicalResourceProvider.INSTANCE.pathContext;
@@ -654,12 +492,6 @@ extension StringExtension on String {
 
 extension TokenExtension on Token? {
   bool get isFinal => this?.keyword == Keyword.FINAL;
-
-  /// Whether the given identifier has a private name.
-  bool get isPrivate {
-    var self = this;
-    return self != null ? Identifier.isPrivateName(self.lexeme) : false;
-  }
 }
 
 extension TokenTypeExtension on TokenType {

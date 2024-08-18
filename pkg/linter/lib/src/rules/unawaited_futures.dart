@@ -8,7 +8,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'`Future` results in `async` function bodies must be '
     '`await`ed or marked `unawaited` using `dart:async`.';
@@ -44,15 +43,20 @@ void main() async {
 ''';
 
 class UnawaitedFutures extends LintRule {
+  static const LintCode code = LintCode('unawaited_futures',
+      "Missing an 'await' for the 'Future' computed by this expression.",
+      correctionMessage:
+          "Try adding an 'await' or wrapping the expression un 'unawaited'.");
+
   UnawaitedFutures()
       : super(
             name: 'unawaited_futures',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unawaited_futures;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

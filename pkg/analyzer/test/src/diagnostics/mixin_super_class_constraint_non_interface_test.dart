@@ -25,9 +25,9 @@ mixin M on dynamic {}
           7),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
@@ -46,14 +46,14 @@ mixin M on E {}
           1),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
       name: E
-      element: <testLibraryFragment>::@enum::E
+      element: self::@enum::E
       type: E
 ''');
   }
@@ -67,14 +67,14 @@ mixin M on A {}
           1),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
       name: A
-      element: <testLibraryFragment>::@extensionType::A
+      element: self::@extensionType::A
       type: A
 ''');
   }
@@ -87,9 +87,9 @@ mixin M on Never {}
           5),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
@@ -108,9 +108,9 @@ mixin M on void {}
           4),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType

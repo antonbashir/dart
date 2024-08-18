@@ -31,24 +31,23 @@ class KernelCompilationService {
   ///
   /// Must be invoked with the [_lock] acquired.
   static Future<_FrontEndServerInstance> get _instance async {
-    var instance = _currentInstance;
+    final instance = _currentInstance;
     if (instance != null) {
       return instance;
     }
 
-    var sdkPaths = _computeSdkPaths();
+    final sdkPaths = _computeSdkPaths();
 
-    var socketCompleter = Completer<io.Socket>();
-    var serverSocket = await _loopbackServerSocket();
+    final socketCompleter = Completer<io.Socket>();
+    final serverSocket = await _loopbackServerSocket();
     serverSocket.listen((socket) async {
       socketCompleter.complete(socket);
-      socket.setOption(io.SocketOption.tcpNoDelay, true);
     });
 
-    var host = serverSocket.address.address;
-    var addressStr = '$host:${serverSocket.port}';
+    final host = serverSocket.address.address;
+    final addressStr = '$host:${serverSocket.port}';
 
-    io.Process process;
+    final io.Process process;
     if (io.File(sdkPaths.frontEndAotSnapshot).existsSync()) {
       process = await io.Process.start(sdkPaths.aotRuntime, [
         sdkPaths.frontEndAotSnapshot,
@@ -69,12 +68,12 @@ class KernelCompilationService {
       _currentInstance = null;
     });
 
-    var socket = await socketCompleter.future;
-    var requestChannel = RequestChannel(socket);
+    final socket = await socketCompleter.future;
+    final requestChannel = RequestChannel(socket);
 
     // Put the platform dill.
-    var platformDillPath = sdkPaths.platformDill;
-    var platformDillBytes = io.File(platformDillPath).readAsBytesSync();
+    final platformDillPath = sdkPaths.platformDill;
+    final platformDillBytes = io.File(platformDillPath).readAsBytesSync();
     await requestChannel.sendRequest<void>('dill.put', {
       'uri': 'dill:vm',
       'bytes': platformDillBytes,
@@ -93,20 +92,18 @@ class KernelCompilationService {
   /// be requested again using [dispose] or [disposeDelayed].
   static Future<Uint8List> compile({
     required MacroFileSystem fileSystem,
-    required String packageFilePath,
     required String path,
   }) {
     _disposeDelayTimer?.cancel();
     _disposeDelayTimer = null;
 
     return _lock.synchronized(() async {
-      var instance = await _instance;
-      var requestChannel = instance.requestChannel;
+      final instance = await _instance;
+      final requestChannel = instance.requestChannel;
 
-      var pathContext = fileSystem.pathContext;
       MacroFileEntry uriStrToFile(Object? uriStr) {
-        var uri = uriCache.parse(uriStr as String);
-        var path = pathContext.fromUri(uri);
+        final uri = uriCache.parse(uriStr as String);
+        final path = fileSystem.pathContext.fromUri(uri);
         return fileSystem.getFile(path);
       }
 
@@ -115,7 +112,7 @@ class KernelCompilationService {
         return uriStrToFile(uriStr).exists;
       });
       requestChannel.add('file.readAsBytes', (uriStr) async {
-        var content = uriStrToFile(uriStr).content;
+        final content = uriStrToFile(uriStr).content;
         return const Utf8Encoder().convert(content);
       });
       requestChannel.add('file.readAsStringSync', (uriStr) async {
@@ -125,8 +122,7 @@ class KernelCompilationService {
       // Now we can compile.
       return await requestChannel.sendRequest<Uint8List>('kernelForProgram', {
         'sdkSummary': 'dill:vm',
-        'packagesFileUri': pathContext.toUri(packageFilePath).toString(),
-        'uri': pathContext.toUri(path).toString(),
+        'uri': fileSystem.pathContext.toUri(path).toString(),
       });
     });
   }
@@ -134,7 +130,7 @@ class KernelCompilationService {
   /// Stops the running `frontend_server` process.
   static Future<void> dispose() {
     return _lock.synchronized(() async {
-      var instance = _currentInstance;
+      final instance = _currentInstance;
       if (instance != null) {
         _currentInstance = null;
         // We don't expect any answer, the process will stop.
@@ -160,13 +156,13 @@ class KernelCompilationService {
 
   static _SdkPaths _computeSdkPaths() {
     // Check for google3.
-    var runFiles = io.Platform.environment['TEST_SRCDIR'];
+    final runFiles = io.Platform.environment['RUNFILES'];
     if (runFiles != null) {
-      var aotRuntimePath = io.Platform.environment['AOT_RUNTIME_PATH']!;
-      var frontServerPath = io.Platform.environment['FRONTEND_SERVER_PATH']!;
-      var frontendServerAotSnapshotPath =
+      final aotRuntimePath = io.Platform.environment['AOT_RUNTIME_PATH']!;
+      final frontServerPath = io.Platform.environment['FRONTEND_SERVER_PATH']!;
+      final frontendServerAotSnapshotPath =
           io.Platform.environment['FRONTEND_SERVER_AOT_SNAPSHOT_PATH']!;
-      var platformDillPath = io.Platform.environment['PLATFORM_DILL_PATH']!;
+      final platformDillPath = io.Platform.environment['PLATFORM_DILL_PATH']!;
       return _SdkPaths(
         aotRuntime: package_path.join(runFiles, aotRuntimePath),
         frontEndSnapshot: package_path.join(runFiles, frontServerPath),
@@ -176,17 +172,9 @@ class KernelCompilationService {
       );
     }
 
-    var executablePath = io.Platform.resolvedExecutable;
-    var binPath = package_path.dirname(executablePath);
-    var sdkPath = package_path.dirname(binPath);
-
-    // By some reason `tools/test.py` uses `xcodebuild/ReleaseARM64/dart`
-    // instead of `xcodebuild/ReleaseARM64/dart-sdk/bin/dart`.
-    var realBin = package_path.join(binPath, 'dart-sdk', 'bin');
-    if (io.Directory(realBin).existsSync()) {
-      binPath = realBin;
-      sdkPath = package_path.dirname(binPath);
-    }
+    final executablePath = io.Platform.resolvedExecutable;
+    final binPath = package_path.dirname(executablePath);
+    final sdkPath = package_path.dirname(binPath);
 
     return _SdkPaths(
       aotRuntime: package_path.join(binPath, 'dartaotruntime'),
@@ -227,15 +215,15 @@ class _Lock {
   Future<void>? _last;
 
   Future<T> synchronized<T>(FutureOr<T> Function() f) async {
-    var previous = _last;
-    var completer = Completer<void>.sync();
+    final previous = _last;
+    final completer = Completer<void>.sync();
     _last = completer.future;
     try {
       if (previous != null) {
         await previous;
       }
 
-      var result = f();
+      final result = f();
       if (result is Future) {
         return await result;
       } else {

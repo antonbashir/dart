@@ -270,11 +270,10 @@ typedef td3 = double;
       {String? file, String? pattern, int? maxResults}) async {
     var request = SearchGetElementDeclarationsParams(
             file: file, pattern: pattern, maxResults: maxResults)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     var response = await handleSuccessfulRequest(request);
 
-    declarationsResult = SearchGetElementDeclarationsResult.fromResponse(
-        response,
-        clientUriConverter: server.uriConverter);
+    declarationsResult =
+        SearchGetElementDeclarationsResult.fromResponse(response);
   }
 }

@@ -32,7 +32,7 @@ abstract class TemporaryOverlayOperation {
 
   /// Apply pending file changes in any context that has a temporary overlay.
   Future<void> applyOverlays() async {
-    for (var context in _affectedContexts) {
+    for (final context in _affectedContexts) {
       await context.applyPendingFileChanges();
     }
     _affectedContexts.clear();
@@ -40,8 +40,8 @@ abstract class TemporaryOverlayOperation {
 
   /// Applies edits as a temporary overlay.
   void applyTemporaryOverlayEdits(SourceFileEdit fileEdit) {
-    var path = fileEdit.file;
-    var context = contextManager.getContextFor(path);
+    final path = fileEdit.file;
+    final context = contextManager.getContextFor(path);
     if (context == null) {
       throw ArgumentError(
           'Unable to apply a temporary overlay for file with no context: $path');
@@ -50,8 +50,8 @@ abstract class TemporaryOverlayOperation {
     // We expect the content from any overlay and that in fsState to match
     // because we have paused watchers and incoming events and expect a
     // consistent state.
-    var overlayContent = resourceProvider.getFile(path).readAsStringSync();
-    var stateContent = context.driver.fsState.getFileForPath(path).content;
+    final overlayContent = resourceProvider.getFile(path).readAsStringSync();
+    final stateContent = context.driver.fsState.getFileForPath(path).content;
     if (overlayContent != stateContent) {
       throw StateError('Overlay and analyzed content do not match');
     }
@@ -65,7 +65,7 @@ abstract class TemporaryOverlayOperation {
     _affectedContexts.add(context);
 
     // Finally, update the overlay and notify the driver.
-    var newContent = SourceEdit.applySequence(overlayContent, fileEdit.edits);
+    final newContent = SourceEdit.applySequence(overlayContent, fileEdit.edits);
     resourceProvider.setOverlay(path,
         content: newContent, modificationStamp: -1);
     context.changeFile(path);
@@ -107,15 +107,15 @@ abstract class TemporaryOverlayOperation {
   /// Restore all overlays to the original content before any temporary overlays
   /// were added and applies those changes.
   Future<void> revertOverlays() async {
-    for (var entry in _originalOverlays.entries) {
-      var path = entry.key;
-      var context = contextManager.getContextFor(path);
+    for (final entry in _originalOverlays.entries) {
+      final path = entry.key;
+      final context = contextManager.getContextFor(path);
       if (context == null) {
         throw ArgumentError(
             'Unable to reset a temporary overlay for file with no context: $path');
       }
 
-      var overlayContent = entry.value;
+      final overlayContent = entry.value;
       if (overlayContent != null) {
         resourceProvider.setOverlay(path,
             content: overlayContent, modificationStamp: -1);
@@ -138,7 +138,7 @@ abstract class TemporaryOverlayOperation {
         'Cannot remove addedFiles if they have already been removed',
       );
     }
-    for (var driver in server.driverMap.values) {
+    for (final driver in server.driverMap.values) {
       _originalAddedFiles[driver] = driver.addedFiles.toSet();
       driver.addedFiles.clear();
     }
@@ -146,9 +146,9 @@ abstract class TemporaryOverlayOperation {
 
   /// Restores all `addedFiles` that were removed by [_removeAddedFiles].
   void _restoreAddedFiles() {
-    for (var entry in _originalAddedFiles.entries) {
-      var driver = entry.key;
-      var originalFiles = entry.value;
+    for (final entry in _originalAddedFiles.entries) {
+      final driver = entry.key;
+      final originalFiles = entry.value;
       driver.addedFiles.addAll(originalFiles);
     }
     _originalAddedFiles.clear();

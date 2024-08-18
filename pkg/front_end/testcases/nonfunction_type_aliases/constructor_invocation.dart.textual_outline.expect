@@ -11,5 +11,4 @@ class Either2<T1, T2> {
 }
 
 typedef ProgressToken = Either2<int, String>;
-
 final analyzingProgressToken = ProgressToken.t2('ANALYZING');

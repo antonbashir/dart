@@ -42,12 +42,12 @@ class FactorTypeTest with FactorTypeTestMixin<DartType>, ElementsTypesMixin {
 
   void setUp() {
     var analysisContext = TestAnalysisContext();
-    typeProvider = analysisContext.typeProvider;
-    typeSystem = analysisContext.typeSystem;
+    typeProvider = analysisContext.typeProviderNonNullableByDefault;
+    typeSystem = analysisContext.typeSystemNonNullableByDefault;
   }
 
   @override
   String typeString(covariant TypeImpl type) {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: true);
   }
 }

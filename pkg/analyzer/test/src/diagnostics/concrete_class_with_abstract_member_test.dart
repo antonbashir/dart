@@ -10,11 +10,13 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ConcreteClassWithAbstractMemberTest);
+    defineReflectiveTests(ConcreteClassWithAbstractMemberWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
-class ConcreteClassWithAbstractMemberTest extends PubPackageResolutionTest {
+class ConcreteClassWithAbstractMemberTest extends PubPackageResolutionTest
+    with ConcreteClassWithAbstractMemberTestCases {
   test_abstract_field() async {
     await assertErrorsInCode('''
 class A {
@@ -37,15 +39,6 @@ class A {
     ]);
   }
 
-  test_direct() async {
-    await assertErrorsInCode('''
-class A {
-  m();
-}''', [
-      error(CompileTimeErrorCode.CONCRETE_CLASS_WITH_ABSTRACT_MEMBER, 12, 4),
-    ]);
-  }
-
   test_external_field() async {
     await assertNoErrorsInCode('''
 class A {
@@ -62,18 +55,6 @@ class A {
 ''');
   }
 
-  test_noSuchMethod_interface() async {
-    await assertErrorsInCode('''
-class I {
-  noSuchMethod(v) => '';
-}
-class A implements I {
-  m();
-}''', [
-      error(CompileTimeErrorCode.CONCRETE_CLASS_WITH_ABSTRACT_MEMBER, 62, 4),
-    ]);
-  }
-
   test_setter() async {
     await assertErrorsInCode('''
 class A {
@@ -85,3 +66,31 @@ class A {
     ]);
   }
 }
+
+mixin ConcreteClassWithAbstractMemberTestCases on PubPackageResolutionTest {
+  test_direct() async {
+    await assertErrorsInCode('''
+class A {
+  m();
+}''', [
+      error(CompileTimeErrorCode.CONCRETE_CLASS_WITH_ABSTRACT_MEMBER, 12, 4),
+    ]);
+  }
+
+  test_noSuchMethod_interface() async {
+    await assertErrorsInCode('''
+class I {
+  noSuchMethod(v) => '';
+}
+class A implements I {
+  m();
+}''', [
+      error(CompileTimeErrorCode.CONCRETE_CLASS_WITH_ABSTRACT_MEMBER, 62, 4),
+    ]);
+  }
+}
+
+@reflectiveTest
+class ConcreteClassWithAbstractMemberWithoutNullSafetyTest
+    extends PubPackageResolutionTest
+    with WithoutNullSafetyMixin, ConcreteClassWithAbstractMemberTestCases {}

@@ -100,6 +100,10 @@ class TypeProviderImpl extends TypeProviderBase {
   final LibraryElement _coreLibrary;
   final LibraryElement _asyncLibrary;
 
+  /// If `true`, then NNBD types are returned.
+  /// If `false`, then legacy types are returned.
+  final bool isNonNullableByDefault;
+
   bool _hasEnumElement = false;
   bool _hasEnumType = false;
 
@@ -147,13 +151,40 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType? _symbolType;
   InterfaceType? _typeType;
 
+  InterfaceType? _nullStar;
+
   /// Initialize a newly created type provider to provide the types defined in
   /// the given [coreLibrary] and [asyncLibrary].
   TypeProviderImpl({
     required LibraryElement coreLibrary,
     required LibraryElement asyncLibrary,
+    required this.isNonNullableByDefault,
   })  : _coreLibrary = coreLibrary,
         _asyncLibrary = asyncLibrary;
+
+  TypeProviderImpl get asLegacy {
+    if (isNonNullableByDefault) {
+      return TypeProviderImpl(
+        coreLibrary: _coreLibrary,
+        asyncLibrary: _asyncLibrary,
+        isNonNullableByDefault: false,
+      );
+    } else {
+      return this;
+    }
+  }
+
+  TypeProviderImpl get asNonNullableByDefault {
+    if (isNonNullableByDefault) {
+      return this;
+    } else {
+      return TypeProviderImpl(
+        coreLibrary: _coreLibrary,
+        asyncLibrary: _asyncLibrary,
+        isNonNullableByDefault: true,
+      );
+    }
+  }
 
   @override
   ClassElement get boolElement {
@@ -167,7 +198,10 @@ class TypeProviderImpl extends TypeProviderBase {
 
   @override
   DartType get bottomType {
-    return NeverTypeImpl.instance;
+    if (isNonNullableByDefault) {
+      return NeverTypeImpl.instance;
+    }
+    return NeverTypeImpl.instanceLegacy;
   }
 
   @override
@@ -210,7 +244,7 @@ class TypeProviderImpl extends TypeProviderBase {
         _enumType = InterfaceTypeImpl(
           element: element,
           typeArguments: const [],
-          nullabilitySuffix: NullabilitySuffix.none,
+          nullabilitySuffix: _nullabilitySuffix,
         );
       }
     }
@@ -227,7 +261,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _futureDynamicType ??= InterfaceTypeImpl(
       element: futureElement,
       typeArguments: fixedTypeList(dynamicType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -241,7 +275,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _futureNullType ??= InterfaceTypeImpl(
       element: futureElement,
       typeArguments: fixedTypeList(nullType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -255,7 +289,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _futureOrNullType ??= InterfaceTypeImpl(
       element: futureOrElement,
       typeArguments: fixedTypeList(nullType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -278,7 +312,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _iterableDynamicType ??= InterfaceTypeImpl(
       element: iterableElement,
       typeArguments: fixedTypeList(dynamicType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -292,7 +326,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _iterableObjectType ??= InterfaceTypeImpl(
       element: iterableElement,
       typeArguments: fixedTypeList(objectType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -311,16 +345,25 @@ class TypeProviderImpl extends TypeProviderBase {
     return _mapObjectObjectType ??= InterfaceTypeImpl(
       element: mapElement,
       typeArguments: fixedTypeList(objectType, objectType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
   @override
-  NeverType get neverType => NeverTypeImpl.instance;
+  NeverType get neverType => isNonNullableByDefault
+      ? NeverTypeImpl.instance
+      : NeverTypeImpl.instanceLegacy;
 
   @override
   ClassElement get nullElement {
     return _nullElement ??= _getClassElement(_coreLibrary, 'Null');
+  }
+
+  InterfaceType get nullStar {
+    return _nullStar ??= nullElement.instantiate(
+      typeArguments: const [],
+      nullabilitySuffix: NullabilitySuffix.star,
+    );
   }
 
   @override
@@ -359,7 +402,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType get objectType {
     return _objectType ??= objectElement.instantiate(
       typeArguments: const [],
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -391,7 +434,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return _streamDynamicType ??= InterfaceTypeImpl(
       element: streamElement,
       typeArguments: fixedTypeList(dynamicType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -428,11 +471,19 @@ class TypeProviderImpl extends TypeProviderBase {
   @override
   VoidType get voidType => VoidTypeImpl.instance;
 
+  NullabilitySuffix get _nullabilitySuffix {
+    if (isNonNullableByDefault) {
+      return NullabilitySuffix.none;
+    } else {
+      return NullabilitySuffix.star;
+    }
+  }
+
   @override
   InterfaceType futureOrType(DartType valueType) {
     return futureOrElement.instantiate(
       typeArguments: fixedTypeList(valueType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -440,7 +491,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType futureType(DartType valueType) {
     return futureElement.instantiate(
       typeArguments: fixedTypeList(valueType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -459,7 +510,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType iterableType(DartType elementType) {
     return iterableElement.instantiate(
       typeArguments: fixedTypeList(elementType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -467,7 +518,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType listType(DartType elementType) {
     return listElement.instantiate(
       typeArguments: fixedTypeList(elementType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -475,7 +526,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType mapType(DartType keyType, DartType valueType) {
     return mapElement.instantiate(
       typeArguments: fixedTypeList(keyType, valueType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -483,7 +534,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType setType(DartType elementType) {
     return setElement.instantiate(
       typeArguments: fixedTypeList(elementType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -491,7 +542,7 @@ class TypeProviderImpl extends TypeProviderBase {
   InterfaceType streamType(DartType elementType) {
     return streamElement.instantiate(
       typeArguments: fixedTypeList(elementType),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 
@@ -516,7 +567,7 @@ class TypeProviderImpl extends TypeProviderBase {
       typeArguments = typeParameters.map((e) {
         return TypeParameterTypeImpl(
           element: e,
-          nullabilitySuffix: NullabilitySuffix.none,
+          nullabilitySuffix: _nullabilitySuffix,
         );
       }).toList(growable: false);
     }
@@ -524,7 +575,7 @@ class TypeProviderImpl extends TypeProviderBase {
     return InterfaceTypeImpl(
       element: element,
       typeArguments: typeArguments,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: _nullabilitySuffix,
     );
   }
 }

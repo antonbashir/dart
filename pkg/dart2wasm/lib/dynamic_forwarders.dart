@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:kernel/ast.dart';
-import 'package:wasm_builder/wasm_builder.dart' as w;
+import 'package:dart2wasm/class_info.dart';
+import 'package:dart2wasm/dispatch_table.dart';
+import 'package:dart2wasm/reference_extensions.dart';
+import 'package:dart2wasm/translator.dart';
 
-import 'class_info.dart';
-import 'code_generator.dart' show MacroAssembler;
-import 'dispatch_table.dart';
-import 'reference_extensions.dart';
-import 'translator.dart';
+import 'package:kernel/ast.dart';
+
+import 'package:wasm_builder/wasm_builder.dart' as w;
 
 /// Stores forwarders for dynamic gets, sets, and invocations. See [Forwarder]
 /// for details.
@@ -24,12 +24,12 @@ class DynamicForwarders {
 
   Forwarder getDynamicGetForwarder(String memberName) =>
       _getterForwarderOfName[memberName] ??=
-          Forwarder._(translator, _ForwarderKind.Getter, memberName)
+          Forwarder(translator, _ForwarderKind.Getter, memberName)
             .._generateCode(translator);
 
   Forwarder getDynamicSetForwarder(String memberName) =>
       _setterForwarderOfName[memberName] ??=
-          Forwarder._(translator, _ForwarderKind.Setter, memberName)
+          Forwarder(translator, _ForwarderKind.Setter, memberName)
             .._generateCode(translator);
 
   Forwarder getDynamicInvocationForwarder(String memberName) {
@@ -37,7 +37,7 @@ class DynamicForwarders {
     // allow recursive calls in the "call" forwarder.
     var forwarder = _methodForwarderOfName[memberName];
     if (forwarder == null) {
-      forwarder = Forwarder._(translator, _ForwarderKind.Method, memberName);
+      forwarder = Forwarder(translator, _ForwarderKind.Method, memberName);
       _methodForwarderOfName[memberName] = forwarder;
       forwarder._generateCode(translator);
     }
@@ -65,18 +65,18 @@ class DynamicForwarders {
 /// not found, or the passed arguments do not match the expected parameters of
 /// the member.
 class Forwarder {
-  final _ForwarderKind _kind;
+  final _ForwarderKind kind;
 
   final String memberName;
 
   final w.FunctionBuilder function;
 
-  Forwarder._(Translator translator, this._kind, this.memberName)
-      : function = translator.m.functions.define(_kind.functionType(translator),
-            "$_kind forwarder for '$memberName'");
+  Forwarder(Translator translator, this.kind, this.memberName)
+      : function = translator.m.functions.define(
+            kind.functionType(translator), "$kind forwarder for '$memberName'");
 
   void _generateCode(Translator translator) {
-    switch (_kind) {
+    switch (kind) {
       case _ForwarderKind.Getter:
         _generateGetterCode(translator);
         break;
@@ -92,85 +92,107 @@ class Forwarder {
   }
 
   void _generateGetterCode(Translator translator) {
-    final selectors =
-        translator.dispatchTable.dynamicGetterSelectors(memberName);
-    final ranges = selectors
-        .expand((selector) =>
-            selector.targetRanges.map((r) => (range: r.range, value: r.target)))
-        .toList();
-    ranges.sort((a, b) => a.range.start.compareTo(b.range.start));
+    final b = function.body;
 
     final receiverLocal = function.locals[0];
-    final outputs = _kind.functionType(translator).outputs;
 
-    final b = function.body;
-    b.local_get(receiverLocal);
-    b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-    b.classIdSearch(ranges, outputs, (Reference target) {
-      final targetMember = target.asMember;
-      final Reference targetReference;
-      if (targetMember is Procedure) {
-        targetReference = targetMember.isGetter
-            ? targetMember.reference
-            : targetMember.tearOffReference;
-      } else if (targetMember is Field) {
-        targetReference = targetMember.getterReference;
-      } else {
-        throw '_generateGetterCode: member is not a procedure or field: $targetMember';
+    final selectors =
+        translator.dispatchTable.dynamicGetterSelectors(memberName);
+    for (final selector in selectors) {
+      translator.functions.activateSelector(selector);
+      for (int classID in selector.classIds) {
+        final Reference target = selector.targets[classID]!;
+        final targetMember = target.asMember;
+        if (targetMember.isAbstract) {
+          continue;
+        }
+        final targetClass = targetMember.enclosingClass!;
+        final targetClassInfo = translator.classInfo[targetClass]!;
+
+        b.local_get(receiverLocal);
+        b.struct_get(translator.topInfo.struct, FieldIndex.classId);
+        b.i32_const(classID);
+        b.i32_eq();
+        b.if_();
+
+        final w.ValueType receiverType = targetClassInfo.nonNullableType;
+        final Reference targetReference;
+        if (targetMember is Procedure) {
+          targetReference = targetMember.isGetter
+              ? targetMember.reference
+              : targetMember.tearOffReference;
+        } else if (targetMember is Field) {
+          targetReference = targetMember.getterReference;
+        } else {
+          throw '_generateGetterCode: member is not a procedure or field: $targetMember';
+        }
+
+        final w.BaseFunction targetFunction =
+            translator.functions.getFunction(targetReference);
+        b.local_get(receiverLocal);
+        translator.convertType(function, receiverLocal.type, receiverType);
+        b.call(targetFunction);
+        // Box return value if needed
+        translator.convertType(function, targetFunction.type.outputs.single,
+            kind.functionType(translator).outputs.single);
+        b.return_();
+
+        b.end();
       }
+    }
 
-      final w.BaseFunction targetFunction =
-          translator.functions.getFunction(targetReference);
-      b.local_get(receiverLocal);
-      translator.convertType(
-          b, receiverLocal.type, targetFunction.type.inputs.first);
-      b.call(targetFunction);
-      // Box return value if needed
-      translator.convertType(b, targetFunction.type.outputs.single,
-          _kind.functionType(translator).outputs.single);
-    }, () {
-      generateNoSuchMethodCall(translator, b, () => b.local_get(receiverLocal),
-          () => createGetterInvocationObject(translator, b, memberName));
-    });
+    generateNoSuchMethodCall(
+        translator,
+        function,
+        () => b.local_get(receiverLocal),
+        () => createGetterInvocationObject(translator, function, memberName));
 
-    b.return_();
     b.end();
   }
 
   void _generateSetterCode(Translator translator) {
-    final selectors =
-        translator.dispatchTable.dynamicSetterSelectors(memberName);
-    final ranges = selectors
-        .expand((selector) =>
-            selector.targetRanges.map((r) => (range: r.range, value: r.target)))
-        .toList();
-    ranges.sort((a, b) => a.range.start.compareTo(b.range.start));
+    final b = function.body;
 
     final receiverLocal = function.locals[0];
     final positionalArgLocal = function.locals[1];
 
-    final b = function.body;
-    b.local_get(receiverLocal);
-    b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-    b.classIdSearch(ranges, [positionalArgLocal.type], (Reference target) {
-      final Member targetMember = target.asMember;
-      b.local_get(receiverLocal);
-      b.local_get(positionalArgLocal);
-      b.call(
-          translator.functions.getFunction(targetMember.typeCheckerReference));
-    }, () {
-      generateNoSuchMethodCall(
-          translator,
-          b,
-          () => b.local_get(receiverLocal),
-          () => createSetterInvocationObject(
-              translator, b, memberName, positionalArgLocal));
+    final selectors =
+        translator.dispatchTable.dynamicSetterSelectors(memberName);
+    for (final selector in selectors) {
+      translator.functions.activateSelector(selector);
+      for (int classID in selector.classIds) {
+        final Reference target = selector.targets[classID]!;
+        final Member targetMember = target.asMember;
+        if (targetMember.isAbstract) {
+          continue;
+        }
 
-      b.drop(); // drop noSuchMethod return value
-      b.local_get(positionalArgLocal);
-    });
+        b.local_get(receiverLocal);
+        b.struct_get(translator.topInfo.struct, FieldIndex.classId);
+        b.i32_const(classID);
+        b.i32_eq();
+        b.if_();
 
-    b.return_();
+        b.local_get(receiverLocal);
+        b.local_get(positionalArgLocal);
+        b.call(translator.functions
+            .getFunction(targetMember.typeCheckerReference));
+        b.return_();
+
+        b.end();
+      }
+    }
+
+    generateNoSuchMethodCall(
+        translator,
+        function,
+        () => b.local_get(receiverLocal),
+        () => createSetterInvocationObject(
+            translator, function, memberName, positionalArgLocal));
+
+    b.drop(); // drop noSuchMethod return value
+    b.local_get(positionalArgLocal);
+
     b.end();
   }
 
@@ -178,30 +200,38 @@ class Forwarder {
     final b = function.body;
 
     final receiverLocal = function.locals[0]; // ref #Top
-    final typeArgsLocal = function.locals[1]; // ref WasmArray
-    final positionalArgsLocal = function.locals[2]; // ref WasmArray
-    final namedArgsLocal = function.locals[3]; // ref WasmArray
+    final typeArgsLocal = function.locals[1]; // ref _ListBase
+    final positionalArgsLocal = function.locals[2]; // ref _ListBase
+    final namedArgsLocal = function.locals[3]; // ref _ListBase
 
-    final classIdLocal = b.addLocal(w.NumType.i32);
+    final classIdLocal = function.addLocal(w.NumType.i32);
 
     // Continuation of this block calls `noSuchMethod` on the receiver.
     final noSuchMethodBlock = b.block();
 
-    final numArgsLocal = b.addLocal(w.NumType.i32);
+    final numArgsLocal = function.addLocal(w.NumType.i32);
 
     final methodSelectors =
         translator.dispatchTable.dynamicMethodSelectors(memberName);
     for (final selector in methodSelectors) {
-      // Accumulates all class ID ranges that have the same target.
-      final Map<Reference, List<Range>> targets = {};
-      for (final (:range, :target) in selector.targetRanges) {
-        targets.putIfAbsent(target, () => []).add(range);
+      translator.functions.activateSelector(selector);
+
+      // Map methods to classes that inherit them, to avoid generating
+      // duplicate blocks when a method is inherited by multiple classes.
+      final Map<Reference, List<int>> targets = {};
+      for (final classTarget in selector.targets.entries) {
+        targets.putIfAbsent(classTarget.value, () => []).add(classTarget.key);
       }
 
-      for (final MapEntry(key: target, value: classIdRanges)
-          in targets.entries) {
+      for (final targetClasses in targets.entries) {
+        final Reference target = targetClasses.key;
         final Procedure targetMember = target.asMember as Procedure;
-        final targetMemberParamInfo = translator.paramInfoForDirectCall(target);
+        final List<int> classIds = targetClasses.value;
+        if (targetMember.isAbstract) {
+          continue;
+        }
+
+        final targetMemberParamInfo = translator.paramInfoFor(target);
 
         b.local_get(receiverLocal);
         b.struct_get(translator.topInfo.struct, FieldIndex.classId);
@@ -210,8 +240,21 @@ class Forwarder {
         final classIdNoMatch = b.block();
         final classIdMatch = b.block();
 
-        for (Range classIdRange in classIdRanges) {
-          if (classIdRange.length == 1) {
+        classIds.sort();
+        final List<ClassIdRange> classIdRanges = [];
+        int i = 0;
+        while (i < classIds.length) {
+          final start = classIds[i];
+          while ((i < classIds.length - 1) &&
+              (classIds[i] + 1 == classIds[i + 1])) {
+            i += 1;
+          }
+          classIdRanges.add(ClassIdRange(start, classIds[i]));
+          i += 1;
+        }
+
+        for (ClassIdRange classIdRange in classIdRanges) {
+          if (classIdRange.start == classIdRange.end) {
             b.local_get(classIdLocal);
             b.i32_const(classIdRange.start);
             b.i32_eq();
@@ -220,8 +263,8 @@ class Forwarder {
             b.local_get(classIdLocal);
             b.i32_const(classIdRange.start);
             b.i32_sub();
-            b.i32_const(classIdRange.length);
-            b.i32_lt_u();
+            b.i32_const(classIdRange.end - classIdRange.start);
+            b.i32_le_u();
             b.br_if(classIdMatch);
           }
         }
@@ -234,12 +277,12 @@ class Forwarder {
         if (targetMemberParamInfo.typeParamCount == 0) {
           // typeArgs.length == 0
           b.local_get(typeArgsLocal);
-          b.array_len();
+          translator.getListLength(b);
           b.i32_eqz();
         } else {
           // typeArgs.length == 0 || typeArgs.length == typeParams.length
           b.local_get(typeArgsLocal);
-          b.array_len();
+          translator.getListLength(b);
           b.local_tee(numArgsLocal);
           b.i32_eqz();
           b.local_get(numArgsLocal);
@@ -259,7 +302,7 @@ class Forwarder {
         // positionalArgs.length >= nRequired &&
         //   positionalArgs.length <= nTotal
         b.local_get(positionalArgsLocal);
-        b.array_len();
+        translator.getListLength(b);
         b.local_tee(numArgsLocal);
         b.i32_const(nRequired);
         b.i32_ge_u();
@@ -273,14 +316,13 @@ class Forwarder {
         // Add default values of optional positional parameters if needed
         w.Local? adjustedPositionalArgsLocal;
         if (nRequired != nTotal) {
-          adjustedPositionalArgsLocal =
-              b.addLocal(translator.nullableObjectArrayTypeRef);
-          b.i32_const(nTotal);
-          b.array_new_default(translator.nullableObjectArrayType);
+          adjustedPositionalArgsLocal = function.addLocal(translator
+              .classInfo[translator.growableListClass]!.nonNullableType);
+          _makeEmptyGrowableList(translator, function, nTotal);
           b.local_set(adjustedPositionalArgsLocal);
 
           // Copy passed arguments
-          final argIdxLocal = b.addLocal(w.NumType.i32);
+          final argIdxLocal = function.addLocal(w.NumType.i32);
           b.i32_const(0);
           b.local_set(argIdxLocal);
 
@@ -290,11 +332,11 @@ class Forwarder {
           b.i32_lt_u();
           b.if_();
           b.local_get(adjustedPositionalArgsLocal);
-          b.local_get(argIdxLocal);
           b.local_get(positionalArgsLocal);
-          b.local_get(argIdxLocal);
-          b.array_get(translator.nullableObjectArrayType);
-          b.array_set(translator.nullableObjectArrayType);
+          translator.indexList(b, (b) => b.local_get(argIdxLocal));
+          b.call(translator.functions
+              .getFunction(translator.growableListAdd.reference));
+          b.drop();
           b.local_get(argIdxLocal);
           b.i32_const(1);
           b.i32_add();
@@ -311,14 +353,17 @@ class Forwarder {
             b.i32_const(optionalParamIdx);
             b.i32_le_u();
             b.if_();
+            b.local_get(adjustedPositionalArgsLocal);
 
             final param = targetMemberParamInfo.positional[optionalParamIdx]!;
 
-            b.local_get(adjustedPositionalArgsLocal);
-            b.i32_const(optionalParamIdx);
-            translator.constants
-                .instantiateConstant(b, param, translator.topInfo.nullableType);
-            b.array_set(translator.nullableObjectArrayType);
+            translator.constants.instantiateConstant(
+                function, b, param, translator.topInfo.nullableType);
+
+            b.call(translator.functions
+                .getFunction(translator.growableListAdd.reference));
+            b.drop();
+
             b.end();
           }
         }
@@ -330,23 +375,23 @@ class Forwarder {
         if (targetMemberParamInfo.named.isEmpty) {
           // namedArgs.length == 0
           b.local_get(namedArgsLocal);
-          b.array_len();
+          translator.getListLength(b);
           b.i32_eqz();
           b.i32_eqz();
           b.br_if(noSuchMethodBlock);
         } else {
-          adjustedNamedArgsLocal =
-              b.addLocal(translator.nullableObjectArrayTypeRef);
-          b.i32_const(targetMemberParamInfo.named.length);
-          b.array_new_default(translator.nullableObjectArrayType);
+          adjustedNamedArgsLocal = function.addLocal(translator
+              .classInfo[translator.growableListClass]!.nonNullableType);
+          _makeEmptyGrowableList(
+              translator, function, targetMemberParamInfo.named.length);
           b.local_set(adjustedNamedArgsLocal);
 
-          final namedParameterIdxLocal = b.addLocal(
+          final namedParameterIdxLocal = function.addLocal(
               translator.classInfo[translator.boxedIntClass]!.nullableType);
 
           final remainingNamedArgsLocal = numArgsLocal;
           b.local_get(namedArgsLocal);
-          b.array_len();
+          translator.getListLength(b);
           b.i32_const(1);
           b.i32_shr_u();
           b.local_set(remainingNamedArgsLocal);
@@ -364,17 +409,15 @@ class Forwarder {
             return null;
           }
 
-          for (int nameIdx = 0;
-              nameIdx < targetMemberParamInfo.names.length;
-              ++nameIdx) {
-            final String name = targetMemberParamInfo.names[nameIdx];
+          for (final name in targetMemberParamInfo.names) {
             final Constant? paramInfoDefaultValue =
-                targetMemberParamInfo.named[name];
+                targetMemberParamInfo.named[name]!;
             final Expression? functionNodeDefaultValue =
                 initializerForNamedParamInMember(name);
 
             b.local_get(namedArgsLocal);
             translator.constants.instantiateConstant(
+                function,
                 b,
                 SymbolConstant(name, null),
                 translator.classInfo[translator.symbolClass]!.nonNullableType);
@@ -398,55 +441,58 @@ class Forwarder {
                 paramInfoDefaultValue == null) {
               // Required parameter missing
               b.br_if(noSuchMethodBlock);
-
-              // Copy provided named parameter.
-
               b.local_get(adjustedNamedArgsLocal);
-              b.i32_const(nameIdx);
-
               b.local_get(namedArgsLocal);
-              b.local_get(namedParameterIdxLocal);
-              translator.convertType(
-                  b, namedParameterIdxLocal.type, w.NumType.i64);
-              b.i32_wrap_i64();
-              b.array_get(translator.nullableObjectArrayType);
-
-              b.array_set(translator.nullableObjectArrayType);
+              translator.indexList(b, (b) {
+                b.local_get(namedParameterIdxLocal);
+                translator.convertType(
+                    function, namedParameterIdxLocal.type, w.NumType.i64);
+                b.i32_wrap_i64();
+              });
+              b.call(translator.functions
+                  .getFunction(translator.growableListAdd.reference));
+              b.drop();
             } else {
               // Optional, either has a default in the member or not used by
               // the member
               b.if_();
 
               b.local_get(adjustedNamedArgsLocal);
-              b.i32_const(nameIdx);
 
               if (functionNodeDefaultValue != null) {
                 // Used by the member, has a default value
                 translator.constants.instantiateConstant(
+                    function,
                     b,
                     (functionNodeDefaultValue as ConstantExpression).constant,
                     translator.topInfo.nullableType);
               } else {
                 // Not used by the member
                 translator.constants.instantiateConstant(
+                  function,
                   b,
                   paramInfoDefaultValue!,
                   translator.topInfo.nullableType,
                 );
               }
-              b.array_set(translator.nullableObjectArrayType);
+
+              b.call(translator.functions
+                  .getFunction(translator.growableListAdd.reference));
+              b.drop();
 
               b.else_();
 
               b.local_get(adjustedNamedArgsLocal);
-              b.i32_const(nameIdx);
               b.local_get(namedArgsLocal);
-              b.local_get(namedParameterIdxLocal);
-              translator.convertType(
-                  b, namedParameterIdxLocal.type, w.NumType.i64);
-              b.i32_wrap_i64();
-              b.array_get(translator.nullableObjectArrayType);
-              b.array_set(translator.nullableObjectArrayType);
+              translator.indexList(b, (b) {
+                b.local_get(namedParameterIdxLocal);
+                translator.convertType(
+                    function, namedParameterIdxLocal.type, w.NumType.i64);
+                b.i32_wrap_i64();
+              });
+              b.call(translator.functions
+                  .getFunction(translator.growableListAdd.reference));
+              b.drop();
 
               b.end();
             }
@@ -474,89 +520,94 @@ class Forwarder {
 
     final getterSelectors =
         translator.dispatchTable.dynamicGetterSelectors(memberName);
-    final getterValueLocal = b.addLocal(translator.topInfo.nullableType);
+    final getterValueLocal = function.addLocal(translator.topInfo.nullableType);
     for (final selector in getterSelectors) {
-      for (final (:range, :target) in selector.targetRanges) {
-        for (int classId = range.start; classId <= range.end; ++classId) {
-          final targetMember = target.asMember;
-          // This loop checks getters and fields. Methods are considered in the
-          // previous loop, skip them here.
-          if (targetMember is Procedure && !targetMember.isGetter) {
-            continue;
-          }
-
-          b.local_get(receiverLocal);
-          b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-          b.i32_const(classId);
-          b.i32_eq();
-          b.if_();
-
-          final Reference targetReference;
-          if (targetMember is Procedure) {
-            assert(targetMember.isGetter); // methods are skipped above
-            targetReference = targetMember.reference;
-          } else if (targetMember is Field) {
-            targetReference = targetMember.getterReference;
-          } else {
-            throw '_generateMethodCode: member is not a procedure or field: $targetMember';
-          }
-
-          final w.BaseFunction targetFunction =
-              translator.functions.getFunction(targetReference);
-
-          // Get field value
-          b.local_get(receiverLocal);
-          translator.convertType(
-              b, receiverLocal.type, targetFunction.type.inputs.first);
-          b.call(targetFunction);
-          translator.convertType(b, targetFunction.type.outputs.single,
-              translator.topInfo.nullableType);
-          b.local_tee(getterValueLocal);
-
-          // Throw `NoSuchMethodError` if the value is null
-          b.br_on_null(noSuchMethodBlock);
-          // Reuse `receiverLocal`. This also updates the `noSuchMethod` receiver
-          // below.
-          b.local_tee(receiverLocal);
-
-          // Invoke "call" if the value is not a closure
-          b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-          b.i32_const(translator.closureInfo.classId);
-          b.i32_ne();
-          b.if_();
-          // Value is not a closure
-          final callForwarder = translator.dynamicForwarders
-              .getDynamicInvocationForwarder("call")
-              .function;
-          b.local_get(receiverLocal);
-          b.local_get(typeArgsLocal);
-          b.local_get(positionalArgsLocal);
-          b.local_get(namedArgsLocal);
-          b.call(callForwarder);
-          b.return_();
-          b.end();
-
-          // Cast the closure to `#ClosureBase`
-          final closureBaseType = w.RefType.def(
-              translator.closureLayouter.closureBaseStruct,
-              nullable: false);
-          final closureLocal = b.addLocal(closureBaseType);
-          b.local_get(receiverLocal);
-          b.ref_cast(closureBaseType);
-          b.local_set(closureLocal);
-
-          generateDynamicFunctionCall(
-              translator,
-              b,
-              closureLocal,
-              typeArgsLocal,
-              positionalArgsLocal,
-              namedArgsLocal,
-              noSuchMethodBlock);
-          b.return_();
-
-          b.end(); // class ID
+      translator.functions.activateSelector(selector);
+      for (int classID in selector.classIds) {
+        final Reference target = selector.targets[classID]!;
+        final targetMember = target.asMember;
+        if (targetMember.isAbstract) {
+          continue;
         }
+        // This loop checks getters and fields. Methods are considered in the
+        // previous loop, skip them here.
+        if (targetMember is Procedure && !targetMember.isGetter) {
+          continue;
+        }
+        final targetClass = targetMember.enclosingClass!;
+        final targetClassInfo = translator.classInfo[targetClass]!;
+
+        b.local_get(receiverLocal);
+        b.struct_get(translator.topInfo.struct, FieldIndex.classId);
+        b.i32_const(classID);
+        b.i32_eq();
+        b.if_();
+
+        final w.ValueType receiverType = targetClassInfo.nonNullableType;
+        final Reference targetReference;
+        if (targetMember is Procedure) {
+          assert(targetMember.isGetter); // methods are skipped above
+          targetReference = targetMember.reference;
+        } else if (targetMember is Field) {
+          targetReference = targetMember.getterReference;
+        } else {
+          throw '_generateMethodCode: member is not a procedure or field: $targetMember';
+        }
+
+        final w.BaseFunction targetFunction =
+            translator.functions.getFunction(targetReference);
+
+        // Get field value
+        b.local_get(receiverLocal);
+        translator.convertType(function, receiverLocal.type, receiverType);
+        b.call(targetFunction);
+        translator.convertType(function, targetFunction.type.outputs.single,
+            translator.topInfo.nullableType);
+        b.local_tee(getterValueLocal);
+
+        // Throw `NoSuchMethodError` if the value is null
+        b.br_on_null(noSuchMethodBlock);
+        // Reuse `receiverLocal`. This also updates the `noSuchMethod` receiver
+        // below.
+        b.local_tee(receiverLocal);
+
+        // Invoke "call" if the value is not a closure
+        b.struct_get(translator.topInfo.struct, FieldIndex.classId);
+        b.i32_const(translator.closureInfo.classId);
+        b.i32_ne();
+        b.if_();
+        // Value is not a closure
+        final callForwarder = translator.dynamicForwarders
+            .getDynamicInvocationForwarder("call")
+            .function;
+        b.local_get(receiverLocal);
+        b.local_get(typeArgsLocal);
+        b.local_get(positionalArgsLocal);
+        b.local_get(namedArgsLocal);
+        b.call(callForwarder);
+        b.return_();
+        b.end();
+
+        // Cast the closure to `#ClosureBase`
+        final closureBaseType = w.RefType.def(
+            translator.closureLayouter.closureBaseStruct,
+            nullable: false);
+        final closureLocal = function.addLocal(closureBaseType);
+        b.local_get(receiverLocal);
+        b.ref_cast(closureBaseType);
+        b.local_set(closureLocal);
+
+        generateDynamicFunctionCall(
+            translator,
+            function,
+            closureLocal,
+            typeArgsLocal,
+            positionalArgsLocal,
+            namedArgsLocal,
+            noSuchMethodBlock);
+        b.return_();
+
+        b.end(); // class ID
       }
     }
 
@@ -565,10 +616,10 @@ class Forwarder {
     // Unable to find a matching member, call `noSuchMethod`
     generateNoSuchMethodCall(
         translator,
-        b,
+        function,
         () => b.local_get(receiverLocal),
-        () => createInvocationObject(translator, b, memberName, typeArgsLocal,
-            positionalArgsLocal, namedArgsLocal));
+        () => createInvocationObject(translator, function, memberName,
+            typeArgsLocal, positionalArgsLocal, namedArgsLocal));
 
     b.end();
   }
@@ -579,21 +630,26 @@ enum _ForwarderKind {
   Setter,
   Method;
 
-  @override
   String toString() {
-    return switch (this) {
-      _ForwarderKind.Getter => "get",
-      _ForwarderKind.Setter => "set",
-      _ForwarderKind.Method => "method"
-    };
+    switch (this) {
+      case _ForwarderKind.Getter:
+        return "get";
+      case _ForwarderKind.Setter:
+        return "set";
+      case _ForwarderKind.Method:
+        return "method";
+    }
   }
 
   w.FunctionType functionType(Translator translator) {
-    return switch (this) {
-      _ForwarderKind.Getter => translator.dynamicGetForwarderFunctionType,
-      _ForwarderKind.Setter => translator.dynamicSetForwarderFunctionType,
-      _ForwarderKind.Method => translator.dynamicInvocationForwarderFunctionType
-    };
+    switch (this) {
+      case _ForwarderKind.Getter:
+        return translator.dynamicGetForwarderFunctionType;
+      case _ForwarderKind.Setter:
+        return translator.dynamicSetForwarderFunctionType;
+      case _ForwarderKind.Method:
+        return translator.dynamicInvocationForwarderFunctionType;
+    }
   }
 }
 
@@ -605,43 +661,33 @@ enum _ForwarderKind {
 ///
 /// [typeArgsLocal], [posArgsLocal], [namedArgsLocal] are the locals for type,
 /// positional, and named arguments, respectively. Types of these locals must
-/// be `ref WasmListBase`.
+/// be `ref _ListBase`.
 ///
 /// [noSuchMethodBlock] is used as the `br` target when the shape check fails.
 void generateDynamicFunctionCall(
   Translator translator,
-  w.InstructionsBuilder b,
+  w.FunctionBuilder function,
   w.Local closureLocal,
   w.Local typeArgsLocal,
   w.Local posArgsLocal,
   w.Local namedArgsLocal,
   w.Label noSuchMethodBlock,
 ) {
-  assert(typeArgsLocal.type == translator.typeArrayTypeRef);
-  assert(posArgsLocal.type == translator.nullableObjectArrayTypeRef);
-  assert(namedArgsLocal.type == translator.nullableObjectArrayTypeRef);
+  final listArgumentType =
+      translator.classInfo[translator.listBaseClass]!.nonNullableType;
+  assert(typeArgsLocal.type == listArgumentType);
+  assert(posArgsLocal.type == listArgumentType);
+  assert(namedArgsLocal.type == listArgumentType);
+
+  final b = function.body;
 
   // Read the `_FunctionType` field
   final functionTypeLocal =
-      b.addLocal(translator.closureLayouter.functionTypeType);
+      function.addLocal(translator.closureLayouter.functionTypeType);
   b.local_get(closureLocal);
   b.struct_get(translator.closureLayouter.closureBaseStruct,
       FieldIndex.closureRuntimeType);
   b.local_tee(functionTypeLocal);
-
-  // If no type arguments were supplied but the closure has type parameters, use
-  // the default values.
-  b.local_get(typeArgsLocal);
-  b.array_len();
-  b.i32_eqz();
-  b.if_();
-  b.local_get(functionTypeLocal);
-  b.struct_get(
-      translator.classInfo[translator.functionTypeClass]!.struct,
-      translator
-          .fieldIndex[translator.functionTypeTypeParameterDefaultsField]!);
-  b.local_set(typeArgsLocal);
-  b.end();
 
   // Check closure shape
   b.local_get(typeArgsLocal);
@@ -654,7 +700,7 @@ void generateDynamicFunctionCall(
   b.br_if(noSuchMethodBlock);
 
   // Shape check passed, check types
-  if (!translator.options.omitImplicitTypeChecks) {
+  if (!translator.options.omitTypeChecks) {
     b.local_get(functionTypeLocal);
     b.local_get(typeArgsLocal);
     b.local_get(posArgsLocal);
@@ -683,33 +729,39 @@ void generateDynamicFunctionCall(
 
 void createInvocationObject(
     Translator translator,
-    w.InstructionsBuilder b,
+    w.FunctionBuilder function,
     String memberName,
     w.Local typeArgsLocal,
     w.Local positionalArgsLocal,
     w.Local namedArgsLocal) {
-  translator.constants.instantiateConstant(b, SymbolConstant(memberName, null),
+  final b = function.body;
+
+  translator.constants.instantiateConstant(
+      function,
+      b,
+      SymbolConstant(memberName, null),
       translator.classInfo[translator.symbolClass]!.nonNullableType);
 
   b.local_get(typeArgsLocal);
-  b.call(translator.functions
-      .getFunction(translator.typeArgumentsToList.reference));
   b.local_get(positionalArgsLocal);
-  b.call(translator.functions
-      .getFunction(translator.positionalParametersToList.reference));
   b.local_get(namedArgsLocal);
   b.call(translator.functions
-      .getFunction(translator.namedParametersToMap.reference));
+      .getFunction(translator.namedParameterListToMap.reference));
   b.call(translator.functions
       .getFunction(translator.invocationGenericMethodFactory.reference));
 }
 
 void createGetterInvocationObject(
   Translator translator,
-  w.InstructionsBuilder b,
+  w.FunctionBuilder function,
   String memberName,
 ) {
-  translator.constants.instantiateConstant(b, SymbolConstant(memberName, null),
+  final b = function.body;
+
+  translator.constants.instantiateConstant(
+      function,
+      b,
+      SymbolConstant(memberName, null),
       translator.classInfo[translator.symbolClass]!.nonNullableType);
 
   b.call(translator.functions
@@ -718,13 +770,18 @@ void createGetterInvocationObject(
 
 void createSetterInvocationObject(
   Translator translator,
-  w.InstructionsBuilder b,
+  w.FunctionBuilder function,
   String memberName,
   w.Local positionalArgLocal,
 ) {
+  final b = function.body;
+
   memberName = '$memberName=';
 
-  translator.constants.instantiateConstant(b, SymbolConstant(memberName, null),
+  translator.constants.instantiateConstant(
+      function,
+      b,
+      SymbolConstant(memberName, null),
       translator.classInfo[translator.symbolClass]!.nonNullableType);
 
   b.local_get(positionalArgLocal);
@@ -734,13 +791,15 @@ void createSetterInvocationObject(
 
 void generateNoSuchMethodCall(
   Translator translator,
-  w.InstructionsBuilder b,
+  w.FunctionBuilder function,
   void Function() pushReceiver,
   void Function() pushInvocationObject,
 ) {
+  final b = function.body;
+
   final SelectorInfo noSuchMethodSelector = translator.dispatchTable
       .selectorForTarget(translator.objectNoSuchMethod.reference);
-  translator.functions.recordSelectorUse(noSuchMethodSelector);
+  translator.functions.activateSelector(noSuchMethodSelector);
 
   final noSuchMethodParamInfo = noSuchMethodSelector.paramInfo;
   final noSuchMethodWasmFunctionType = noSuchMethodSelector.signature;
@@ -750,7 +809,7 @@ void generateNoSuchMethodCall(
 
   final invocationFactory = translator.functions
       .getFunction(translator.invocationGenericMethodFactory.reference);
-  translator.convertType(b, invocationFactory.type.outputs[0],
+  translator.convertType(function, invocationFactory.type.outputs[0],
       noSuchMethodSelector.signature.inputs[1]);
 
   // `noSuchMethod` can have extra parameters as long as they are optional.
@@ -761,7 +820,10 @@ void generateNoSuchMethodCall(
       positionalArgIdx += 1) {
     final positionalParameterValue =
         noSuchMethodParamInfo.positional[positionalArgIdx]!;
-    translator.constants.instantiateConstant(b, positionalParameterValue,
+    translator.constants.instantiateConstant(
+        function,
+        b,
+        positionalParameterValue,
         noSuchMethodWasmFunctionType.inputs[wasmArgIdx]);
     wasmArgIdx += 1;
   }
@@ -770,7 +832,7 @@ void generateNoSuchMethodCall(
   for (String namedParameterName in noSuchMethodParamInfo.names) {
     final namedParameterValue =
         noSuchMethodParamInfo.named[namedParameterName]!;
-    translator.constants.instantiateConstant(b, namedParameterValue,
+    translator.constants.instantiateConstant(function, b, namedParameterValue,
         noSuchMethodWasmFunctionType.inputs[wasmArgIdx]);
     wasmArgIdx += 1;
   }
@@ -789,6 +851,27 @@ void generateNoSuchMethodCall(
   }
 
   b.call_indirect(noSuchMethodWasmFunctionType);
+}
+
+void _makeEmptyGrowableList(
+    Translator translator, w.FunctionBuilder function, int capacity) {
+  final b = function.body;
+  Class cls = translator.growableListClass;
+  ClassInfo info = translator.classInfo[cls]!;
+  translator.functions.allocateClass(info.classId);
+  w.ArrayType arrayType = translator.listArrayType;
+
+  b.i32_const(info.classId);
+  b.i32_const(initialIdentityHash);
+  translator.constants.instantiateConstant(
+      function,
+      b,
+      TypeLiteralConstant(DynamicType()),
+      translator.classInfo[translator.typeClass]!.nonNullableType);
+  b.i64_const(0); // _length
+  b.i32_const(capacity);
+  b.array_new_default(arrayType); // _data
+  b.struct_new(info.struct);
 }
 
 class ClassIdRange {

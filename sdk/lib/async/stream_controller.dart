@@ -533,7 +533,7 @@ abstract class _StreamController<T> implements _StreamControllerBase<T> {
       return _varData as dynamic;
     }
     _StreamControllerAddStreamState<T> state = _varData as dynamic;
-    return state._varData;
+    return state.varData;
   }
 
   // Returns the pending events, and creates the object if necessary.
@@ -547,9 +547,9 @@ abstract class _StreamController<T> implements _StreamControllerBase<T> {
       return events as dynamic;
     }
     _StreamControllerAddStreamState<T> state = _varData as dynamic;
-    Object? events = state._varData;
+    Object? events = state.varData;
     if (events == null) {
-      state._varData = events = _PendingEvents<T>();
+      state.varData = events = _PendingEvents<T>();
     }
     return events as dynamic;
   }
@@ -562,7 +562,7 @@ abstract class _StreamController<T> implements _StreamControllerBase<T> {
     Object? varData = _varData;
     if (_isAddingStream) {
       _StreamControllerAddStreamState<Object?> streamState = varData as dynamic;
-      varData = streamState._varData;
+      varData = streamState.varData;
     }
     return varData as dynamic;
   }
@@ -673,7 +673,7 @@ abstract class _StreamController<T> implements _StreamControllerBase<T> {
     // End of addStream stream.
     assert(_isAddingStream);
     _StreamControllerAddStreamState<T> addState = _varData as dynamic;
-    _varData = addState._varData;
+    _varData = addState.varData;
     _state &= ~_STATE_ADDSTREAM;
     addState.complete();
   }
@@ -692,7 +692,7 @@ abstract class _StreamController<T> implements _StreamControllerBase<T> {
     _state |= _STATE_SUBSCRIBED;
     if (_isAddingStream) {
       _StreamControllerAddStreamState<T> addState = _varData as dynamic;
-      addState._varData = subscription;
+      addState.varData = subscription;
       addState.resume();
     } else {
       _varData = subscription;
@@ -814,7 +814,6 @@ mixin _AsyncStreamControllerDispatch<T> implements _StreamController<T> {
 class _AsyncStreamController<T> = _StreamController<T>
     with _AsyncStreamControllerDispatch<T>;
 
-@pragma("vm:entry-point")
 class _SyncStreamController<T> = _StreamController<T>
     with _SyncStreamControllerDispatch<T>;
 
@@ -891,7 +890,6 @@ class _StreamSinkWrapper<T> implements StreamSink<T> {
 /// Object containing the state used to handle [StreamController.addStream].
 class _AddStreamState<T> {
   // [_Future] returned by call to addStream.
-  @pragma('vm:entry-point')
   final _Future addStreamFuture;
 
   // Subscription on stream argument to addStream.
@@ -946,11 +944,10 @@ class _StreamControllerAddStreamState<T> extends _AddStreamState<T> {
   // The subscription or pending data of a _StreamController.
   // Stored here because we reuse the `_varData` field  in the _StreamController
   // to store this state object.
-  @pragma('vm:entry-point')
-  var _varData;
+  var varData;
 
-  _StreamControllerAddStreamState(_StreamController<T> controller,
-      this._varData, Stream<T> source, bool cancelOnError)
+  _StreamControllerAddStreamState(_StreamController<T> controller, this.varData,
+      Stream<T> source, bool cancelOnError)
       : super(controller, source, cancelOnError) {
     if (controller.isPaused) {
       addSubscription.pause();

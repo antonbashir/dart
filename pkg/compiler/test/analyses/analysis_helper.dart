@@ -10,10 +10,13 @@ import 'package:args/args.dart';
 import 'package:async_helper/async_helper.dart';
 import 'package:compiler/src/common.dart';
 import 'package:compiler/src/compiler.dart';
+import 'package:compiler/src/ir/scope.dart';
+import 'package:compiler/src/ir/static_type.dart';
 import 'package:compiler/src/ir/util.dart';
 import 'package:compiler/src/util/memory_compiler.dart';
 import 'package:compiler/src/phase/load_kernel.dart' as load_kernel;
 import 'package:expect/expect.dart';
+import 'package:front_end/src/api_prototype/constant_evaluator.dart' as ir;
 import 'package:front_end/src/api_unstable/dart2js.dart' show relativizeUri;
 import 'package:kernel/ast.dart' as ir;
 import 'package:kernel/class_hierarchy.dart' as ir;
@@ -63,33 +66,92 @@ run(Uri entryPoint, String? allowedListPath,
         false)))!;
     compiler.frontendStrategy
         .registerLoadedLibraries(result.component, result.libraries!);
-    final coreTypes = ir.CoreTypes(result.component);
-    final classHierarchy = ir.ClassHierarchy(result.component, coreTypes);
-    final typeEnvironment = ir.TypeEnvironment(coreTypes, classHierarchy);
     DynamicVisitor(compiler.reporter, result.component, allowedListPath,
-            analyzedUrisFilter, coreTypes, typeEnvironment)
+            analyzedUrisFilter)
         .run(verbose: verbose, generate: generate);
   });
 }
 
-class DynamicVisitor extends ir.RecursiveVisitor {
+class StaticTypeVisitorBase extends StaticTypeVisitor {
+  @override
+  VariableScopeModel get variableScopeModel => _variableScopeModel!;
+  VariableScopeModel? _variableScopeModel;
+
+  @override
+  ir.StaticTypeContext get staticTypeContext => _staticTypeContext!;
+  set staticTypeContext(ir.StaticTypeContext context) {
+    _staticTypeContext = context;
+  }
+
+  ir.StaticTypeContext? _staticTypeContext;
+
+  StaticTypeVisitorBase(
+      ir.Component component, ir.ClassHierarchy classHierarchy,
+      {required ir.EvaluationMode evaluationMode})
+      : super(ir.TypeEnvironment(new ir.CoreTypes(component), classHierarchy),
+            classHierarchy, StaticTypeCacheImpl());
+
+  @override
+  bool get useAsserts => false;
+
+  @override
+  bool get inferEffectivelyFinalVariableTypes => true;
+
+  @override
+  ir.DartType visitProcedure(ir.Procedure node) {
+    if (node.kind == ir.ProcedureKind.Factory && node.isRedirectingFactory) {
+      // Don't visit redirecting factories.
+      return const ir.VoidType();
+    }
+    _staticTypeContext = ir.StaticTypeContext(node, typeEnvironment);
+    _variableScopeModel =
+        ScopeModel.from(node, typeEnvironment).variableScopeModel;
+    final result = super.visitProcedure(node);
+    _variableScopeModel = null;
+    _staticTypeContext = null;
+    return result;
+  }
+
+  @override
+  ir.DartType visitField(ir.Field node) {
+    _staticTypeContext = ir.StaticTypeContext(node, typeEnvironment);
+    _variableScopeModel =
+        ScopeModel.from(node, typeEnvironment).variableScopeModel;
+    final result = super.visitField(node);
+    _variableScopeModel = null;
+    _staticTypeContext = null;
+    return result;
+  }
+
+  @override
+  ir.DartType visitConstructor(ir.Constructor node) {
+    _staticTypeContext = ir.StaticTypeContext(node, typeEnvironment);
+    _variableScopeModel =
+        ScopeModel.from(node, typeEnvironment).variableScopeModel;
+    final result = super.visitConstructor(node);
+    _variableScopeModel = null;
+    _staticTypeContext = null;
+    return result;
+  }
+}
+
+class DynamicVisitor extends StaticTypeVisitorBase {
   final DiagnosticReporter reporter;
   final ir.Component component;
   final String? _allowedListPath;
   final bool Function(Uri uri)? analyzedUrisFilter;
-  late ir.StaticTypeContext staticTypeContext;
-  final ir.TypeEnvironment typeEnvironment;
-  final ir.CoreTypes coreTypes;
 
   Map _expectedJson = {};
   final Map<String, Map<String, List<DiagnosticMessage>>> _actualMessages = {};
 
   DynamicVisitor(this.reporter, this.component, this._allowedListPath,
-      this.analyzedUrisFilter, this.coreTypes, this.typeEnvironment);
+      this.analyzedUrisFilter)
+      : super(component, ir.ClassHierarchy(component, ir.CoreTypes(component)),
+            evaluationMode: ir.EvaluationMode.weak);
 
   void run({bool verbose = false, bool generate = false}) {
     if (!generate && _allowedListPath != null) {
-      File file = File(_allowedListPath);
+      File file = File(_allowedListPath!);
       if (file.existsSync()) {
         try {
           _expectedJson = json.jsonDecode(file.readAsStringSync());
@@ -111,7 +173,7 @@ class DynamicVisitor extends ir.RecursiveVisitor {
         actualJson[uri] = map;
       });
 
-      File(_allowedListPath).writeAsStringSync(
+      File(_allowedListPath!).writeAsStringSync(
           json.JsonEncoder.withIndent('  ').convert(actualJson));
       return;
     }
@@ -220,49 +282,74 @@ class DynamicVisitor extends ir.RecursiveVisitor {
     }
   }
 
+  /// Pulls the static type from `getStaticType` on [node].
+  ir.DartType _getStaticTypeFromExpression(ir.Expression node) {
+    ir.TreeNode? enclosingClass = node;
+    while (enclosingClass != null && enclosingClass is! ir.Class) {
+      enclosingClass = enclosingClass.parent;
+    }
+    try {
+      return node.getStaticType(staticTypeContext);
+    } catch (e) {
+      // The static type computation crashes on type errors. Use `dynamic`
+      // as static type.
+      return const ir.DynamicType();
+    }
+  }
+
   @override
-  void visitLibrary(ir.Library node) {
+  ir.DartType visitNode(ir.TreeNode node) {
+    ir.DartType staticType = node.accept(this);
+    assert(
+        node is! ir.Expression ||
+            staticType is ir.NullType ||
+            staticType is ir.FutureOrType ||
+            typeEnvironment.isSubtypeOf(
+                staticType,
+                _getStaticTypeFromExpression(node),
+                ir.SubtypeCheckMode.ignoringNullabilities),
+        reportAssertionFailure(
+            node,
+            "Unexpected static type for $node (${node.runtimeType}): "
+            "Found ${staticType}, expected ${_getStaticTypeFromExpression(node)}."));
+    return staticType;
+  }
+
+  @override
+  ir.DartType visitLibrary(ir.Library node) {
     if (analyzedUrisFilter != null) {
       if (analyzedUrisFilter!(node.importUri)) {
-        return node.visitChildren(this);
+        return super.visitLibrary(node);
       }
+      return const ir.VoidType();
     } else {
-      return node.visitChildren(this);
+      return super.visitLibrary(node);
     }
   }
 
   @override
-  void visitProcedure(ir.Procedure node) {
-    if (node.kind == ir.ProcedureKind.Factory && node.isRedirectingFactory) {
-      // Don't visit redirecting factories.
-      return;
-    }
-    super.visitProcedure(node);
-  }
-
-  @override
-  void defaultMember(ir.Member node) {
-    staticTypeContext = ir.StaticTypeContext(node, typeEnvironment);
-    super.defaultMember(node);
-  }
-
-  @override
-  void visitDynamicGet(ir.DynamicGet node) {
-    if (node.receiver.getStaticType(staticTypeContext) is ir.DynamicType) {
-      registerError(node, "Dynamic access of '${node.name}'.");
+  void handleDynamicGet(ir.Expression node, ir.DartType receiverType,
+      ir.Name name, ir.DartType resultType) {
+    if (receiverType is ir.DynamicType) {
+      registerError(node, "Dynamic access of '${name}'.");
     }
   }
 
   @override
-  void visitDynamicSet(ir.DynamicSet node) {
-    if (node.receiver.getStaticType(staticTypeContext) is ir.DynamicType) {
-      registerError(node, "Dynamic update to '${node.name}'.");
+  void handleDynamicSet(ir.Expression node, ir.DartType receiverType,
+      ir.Name name, ir.DartType valueType) {
+    if (receiverType is ir.DynamicType) {
+      registerError(node, "Dynamic update to '${name}'.");
     }
   }
 
   @override
-  void visitDynamicInvocation(ir.DynamicInvocation node) {
-    if (node.receiver.getStaticType(staticTypeContext) is ir.DynamicType) {
+  void handleDynamicInvocation(
+      ir.InvocationExpression node,
+      ir.DartType receiverType,
+      ArgumentTypes argumentTypes,
+      ir.DartType returnType) {
+    if (receiverType is ir.DynamicType) {
       registerError(node, "Dynamic invocation of '${node.name}'.");
     }
   }

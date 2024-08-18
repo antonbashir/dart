@@ -59,10 +59,10 @@ class LiteralElementVerifier {
       var errorCode = forList
           ? CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE
           : CompileTimeErrorCode.SET_ELEMENT_TYPE_NOT_ASSIGNABLE;
-      errorReporter.atNode(
-        errorNode,
+      errorReporter.reportErrorForNode(
         errorCode,
-        arguments: [type, elementType],
+        errorNode,
+        [type, elementType],
       );
     }
   }
@@ -78,10 +78,8 @@ class LiteralElementVerifier {
         }
         _checkAssignableToElementType(element.typeOrThrow, element);
       } else {
-        errorReporter.atNode(
-          element,
-          CompileTimeErrorCode.EXPRESSION_IN_MAP,
-        );
+        errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.EXPRESSION_IN_MAP, element);
       }
     } else if (element is ForElement) {
       _verifyElement(element.body);
@@ -92,10 +90,8 @@ class LiteralElementVerifier {
       if (forMap) {
         _verifyMapLiteralEntry(element);
       } else {
-        errorReporter.atNode(
-          element,
-          CompileTimeErrorCode.MAP_ENTRY_NOT_IN_MAP,
-        );
+        errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.MAP_ENTRY_NOT_IN_MAP, element);
       }
     } else if (element is SpreadElement) {
       var isNullAware = element.isNullAware;
@@ -126,20 +122,20 @@ class LiteralElementVerifier {
     var keyType = entry.key.typeOrThrow;
     if (!typeSystem.isAssignableTo(keyType, mapKeyType,
         strictCasts: _strictCasts)) {
-      errorReporter.atNode(
-        entry.key,
+      errorReporter.reportErrorForNode(
         CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE,
-        arguments: [keyType, mapKeyType],
+        entry.key,
+        [keyType, mapKeyType],
       );
     }
 
     var valueType = entry.value.typeOrThrow;
     if (!typeSystem.isAssignableTo(valueType, mapValueType,
         strictCasts: _strictCasts)) {
-      errorReporter.atNode(
-        entry.value,
+      errorReporter.reportErrorForNode(
         CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE,
-        arguments: [valueType, mapValueType],
+        entry.value,
+        [valueType, mapValueType],
       );
     }
   }
@@ -150,27 +146,39 @@ class LiteralElementVerifier {
     var expressionType = expression.typeOrThrow;
     if (expressionType is DynamicType) {
       if (_errorVerifier.strictCasts) {
-        errorReporter.atNode(
-          expression,
+        return errorReporter.reportErrorForNode(
           CompileTimeErrorCode.NOT_ITERABLE_SPREAD,
+          expression,
         );
       }
       return;
     }
 
-    if (typeSystem.isSubtypeOf(expressionType, NeverTypeImpl.instance)) {
-      return;
-    }
-
-    if (typeSystem.isSubtypeOf(expressionType, typeSystem.nullNone)) {
-      if (isNullAware) {
+    if (typeSystem.isNonNullableByDefault) {
+      if (typeSystem.isSubtypeOf(expressionType, NeverTypeImpl.instance)) {
         return;
       }
-      errorReporter.atNode(
-        expression,
-        CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
-      );
-      return;
+      if (typeSystem.isSubtypeOf(expressionType, typeSystem.nullNone)) {
+        if (isNullAware) {
+          return;
+        }
+        errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
+          expression,
+        );
+        return;
+      }
+    } else {
+      if (expressionType.isDartCoreNull) {
+        if (isNullAware) {
+          return;
+        }
+        errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
+          expression,
+        );
+        return;
+      }
     }
 
     var iterableType = expressionType.asInstanceOf(
@@ -178,9 +186,9 @@ class LiteralElementVerifier {
     );
 
     if (iterableType == null) {
-      return errorReporter.atNode(
-        expression,
+      return errorReporter.reportErrorForNode(
         CompileTimeErrorCode.NOT_ITERABLE_SPREAD,
+        expression,
       );
     }
 
@@ -196,10 +204,10 @@ class LiteralElementVerifier {
       var implicitCallMethod = _errorVerifier.getImplicitCallMethod(
           iterableElementType, elementType, expression);
       if (implicitCallMethod == null) {
-        errorReporter.atNode(
-          expression,
+        errorReporter.reportErrorForNode(
           errorCode,
-          arguments: [iterableElementType, elementType],
+          expression,
+          [iterableElementType, elementType],
         );
       } else {
         var tearoffType = implicitCallMethod.type;
@@ -211,10 +219,6 @@ class LiteralElementVerifier {
             errorNode: expression,
             genericMetadataIsEnabled: true,
             strictInference: _errorVerifier.options.strictInference,
-            strictCasts: _errorVerifier.options.strictCasts,
-            typeSystemOperations: _errorVerifier.typeSystemOperations,
-            dataForTesting: null,
-            nodeForTesting: null,
           );
           if (typeArguments.isNotEmpty) {
             tearoffType = tearoffType.instantiate(typeArguments);
@@ -223,10 +227,10 @@ class LiteralElementVerifier {
 
         if (!typeSystem.isAssignableTo(tearoffType, elementType,
             strictCasts: _strictCasts)) {
-          errorReporter.atNode(
-            expression,
+          errorReporter.reportErrorForNode(
             errorCode,
-            arguments: [iterableElementType, elementType],
+            expression,
+            [iterableElementType, elementType],
           );
         }
       }
@@ -239,27 +243,39 @@ class LiteralElementVerifier {
     var expressionType = expression.typeOrThrow;
     if (expressionType is DynamicType) {
       if (_errorVerifier.strictCasts) {
-        errorReporter.atNode(
-          expression,
+        return errorReporter.reportErrorForNode(
           CompileTimeErrorCode.NOT_MAP_SPREAD,
+          expression,
         );
       }
       return;
     }
 
-    if (typeSystem.isSubtypeOf(expressionType, NeverTypeImpl.instance)) {
-      return;
-    }
-
-    if (typeSystem.isSubtypeOf(expressionType, typeSystem.nullNone)) {
-      if (isNullAware) {
+    if (typeSystem.isNonNullableByDefault) {
+      if (typeSystem.isSubtypeOf(expressionType, NeverTypeImpl.instance)) {
         return;
       }
-      errorReporter.atNode(
-        expression,
-        CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
-      );
-      return;
+      if (typeSystem.isSubtypeOf(expressionType, typeSystem.nullNone)) {
+        if (isNullAware) {
+          return;
+        }
+        errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
+          expression,
+        );
+        return;
+      }
+    } else {
+      if (expressionType.isDartCoreNull) {
+        if (isNullAware) {
+          return;
+        }
+        errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.NOT_NULL_AWARE_NULL_SPREAD,
+          expression,
+        );
+        return;
+      }
     }
 
     var mapType = expressionType.asInstanceOf(
@@ -267,9 +283,9 @@ class LiteralElementVerifier {
     );
 
     if (mapType == null) {
-      return errorReporter.atNode(
-        expression,
+      return errorReporter.reportErrorForNode(
         CompileTimeErrorCode.NOT_MAP_SPREAD,
+        expression,
       );
     }
 
@@ -277,10 +293,10 @@ class LiteralElementVerifier {
     var mapKeyType = this.mapKeyType;
     if (!typeSystem.isAssignableTo(keyType, mapKeyType!,
         strictCasts: _strictCasts)) {
-      errorReporter.atNode(
-        expression,
+      errorReporter.reportErrorForNode(
         CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE,
-        arguments: [keyType, mapKeyType],
+        expression,
+        [keyType, mapKeyType],
       );
     }
 
@@ -288,10 +304,10 @@ class LiteralElementVerifier {
     var mapValueType = this.mapValueType;
     if (!typeSystem.isAssignableTo(valueType, mapValueType!,
         strictCasts: _strictCasts)) {
-      errorReporter.atNode(
-        expression,
+      errorReporter.reportErrorForNode(
         CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE,
-        arguments: [valueType, mapValueType],
+        expression,
+        [valueType, mapValueType],
       );
     }
   }

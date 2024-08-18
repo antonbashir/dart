@@ -52,6 +52,10 @@ final analysisOptionsFile = TextDocumentFilterWithScheme(
 /// A [ProgressToken] used for reporting progress while the server is analyzing.
 final analyzingProgressToken = ProgressToken.t2('ANALYZING');
 
+/// A [TextDocumentFilterWithScheme] for Dart file.
+final dartFiles =
+    TextDocumentFilterWithScheme(language: 'dart', scheme: 'file');
+
 final emptyWorkspaceEdit = WorkspaceEdit();
 
 final fileOperationRegistrationOptions = FileOperationRegistrationOptions(
@@ -83,16 +87,8 @@ final fixDataFile = TextDocumentFilterWithScheme(
 final pubspecFile = TextDocumentFilterWithScheme(
     language: 'yaml', scheme: 'file', pattern: '**/pubspec.yaml');
 
-/// IDs of client-provided commands that the server knows about.
-///
-/// Clients can advertise support for these commands and the server can then use
-/// them in returns commands in CodeActions, CodeLenses etc.
-abstract final class ClientCommands {
-  static const goToLocation = 'dart.goToLocation';
-}
-
 /// Constants for command IDs that are exchanged between LSP client/server.
-abstract final class Commands {
+abstract class Commands {
   /// A list of all commands IDs that can be sent to the client to inform which
   /// commands should be sent to the server for execution (as opposed to being
   /// executed in the local plugin).
@@ -100,8 +96,6 @@ abstract final class Commands {
     sortMembers,
     organizeImports,
     fixAll,
-    previewFixAllInWorkspace,
-    fixAllInWorkspace,
     sendWorkspaceEdit,
     performRefactor,
     validateRefactor,
@@ -109,26 +103,16 @@ abstract final class Commands {
     // Add commands for each of the new refactorings.
     ...RefactoringProcessor.generators.keys,
   ];
-  static const sortMembers = 'dart.edit.sortMembers';
-  static const organizeImports = 'dart.edit.organizeImports';
-  static const fixAll = 'dart.edit.fixAll';
-  static const fixAllInWorkspace = 'dart.edit.fixAllInWorkspace';
-  static const previewFixAllInWorkspace = 'dart.edit.fixAllInWorkspace.preview';
-  static const sendWorkspaceEdit = 'dart.edit.sendWorkspaceEdit';
-  static const logAction = 'dart.logAction';
-  // TODO(dantup): These command IDs are globally registered in the editor so
-  //  should be prefixed (eg. with "dart.") to avoid potential collisions with
-  //  other extensions. However, the refactor.* are hard-coded into Dart-Code
-  //  for some improved integration, so cannot be updated until some time has
-  //  passed where Dart-Code supports prefixed versions.
-  //  Support for "dart." prefixed versions shipped in Dart-Code March 2023.
+  static const sortMembers = 'edit.sortMembers';
+  static const organizeImports = 'edit.organizeImports';
+  static const fixAll = 'edit.fixAll';
+  static const sendWorkspaceEdit = 'edit.sendWorkspaceEdit';
   static const performRefactor = 'refactor.perform';
   static const validateRefactor = 'refactor.validate';
+  static const logAction = 'dart.logAction';
 }
 
-abstract final class CustomMethods {
-  static const augmented = Method('dart/textDocument/augmented');
-  static const augmentation = Method('dart/textDocument/augmentation');
+abstract class CustomMethods {
   static const diagnosticServer = Method('dart/diagnosticServer');
   static const reanalyze = Method('dart/reanalyze');
   static const openUri = Method('dart/openUri');
@@ -138,9 +122,6 @@ abstract final class CustomMethods {
   static const publishFlutterOutline =
       Method('dart/textDocument/publishFlutterOutline');
   static const super_ = Method('dart/textDocument/super');
-  static const dartTextDocumentContent = Method('dart/textDocumentContent');
-  static const dartTextDocumentContentDidChange =
-      Method('dart/textDocumentContentDidChange');
 
   // TODO(dantup): Remove custom AnalyzerStatus status method soon as no clients
   // should be relying on it as we now support proper $/progress events.
@@ -154,7 +135,7 @@ abstract final class CustomMethods {
       Method('textDocument/semanticTokens');
 }
 
-abstract final class CustomSemanticTokenModifiers {
+abstract class CustomSemanticTokenModifiers {
   /// A modifier applied to the identifier following the `@` annotation token to
   /// allow users to color it differently (for example in the same way as `@`).
   static const annotation = SemanticTokenModifiers('annotation');
@@ -223,7 +204,7 @@ abstract final class CustomSemanticTokenModifiers {
   ];
 }
 
-abstract final class CustomSemanticTokenTypes {
+abstract class CustomSemanticTokenTypes {
   static const annotation = SemanticTokenTypes('annotation');
   static const boolean = SemanticTokenTypes('boolean');
 
@@ -243,7 +224,7 @@ abstract final class CustomSemanticTokenTypes {
 }
 
 /// CodeActionKinds supported by the server that are not declared in the LSP spec.
-abstract final class DartCodeActionKind {
+abstract class DartCodeActionKind {
   /// A list of all supported CodeAction kinds, supplied to the client during
   /// initialization to allow enabling features based upon them.
   static const serverSupportedKinds = [
@@ -265,7 +246,7 @@ abstract final class DartCodeActionKind {
   static const RefactorMove = CodeActionKind('refactor.move');
 }
 
-abstract final class ServerErrorCodes {
+abstract class ServerErrorCodes {
   // JSON-RPC reserves -32000 to -32099 for implementation-defined server-errors.
   static const ServerAlreadyStarted = ErrorCodes(-32000);
   static const UnhandledError = ErrorCodes(-32001);
@@ -285,9 +266,6 @@ abstract final class ServerErrorCodes {
   /// A file that is expected to be analyzed, but failed.
   static const FileAnalysisFailed = ErrorCodes(-32013);
 
-  /// Computation of a refactoring change failed.
-  static const RefactoringComputeStatusFailure = ErrorCodes(-32014);
-
   /// An error raised when the server detects that the server and client are out
   /// of sync and cannot recover. For example if a textDocument/didChange notification
   /// has invalid offsets, suggesting the client and server have become out of sync
@@ -304,7 +282,7 @@ abstract final class ServerErrorCodes {
 }
 
 /// Strings used in user prompts (window/showMessageRequest).
-abstract final class UserPromptActions {
+abstract class UserPromptActions {
   static const String yes = 'Yes';
   static const String no = 'No';
   static const String cancel = 'Cancel';

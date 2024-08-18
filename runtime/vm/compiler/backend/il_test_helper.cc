@@ -120,37 +120,35 @@ FlowGraph* TestPipeline::RunPasses(
   const bool optimized = true;
   const intptr_t osr_id = Compiler::kNoOSRDeoptId;
 
-  // We assume that prebuilt graph is already in SSA form so we should
-  // avoid running ComputeSSA on it (it will just crash).
-  const bool is_ssa = (flow_graph_ != nullptr);
-  if (flow_graph_ == nullptr) {
-    auto pipeline = CompilationPipeline::New(zone, function_);
+  auto pipeline = CompilationPipeline::New(zone, function_);
 
-    parsed_function_ = new (zone)
-        ParsedFunction(thread, Function::ZoneHandle(zone, function_.ptr()));
-    pipeline->ParseFunction(parsed_function_);
+  parsed_function_ = new (zone)
+      ParsedFunction(thread, Function::ZoneHandle(zone, function_.ptr()));
+  pipeline->ParseFunction(parsed_function_);
 
-    // Extract type feedback before the graph is built, as the graph
-    // builder uses it to attach it to nodes.
-    ic_data_array_ = new (zone) ZoneGrowableArray<const ICData*>();
-    if (mode_ == CompilerPass::kJIT) {
-      function_.RestoreICDataMap(ic_data_array_, /*clone_ic_data=*/false);
-    }
-
-    flow_graph_ = pipeline->BuildFlowGraph(zone, parsed_function_,
-                                           ic_data_array_, osr_id, optimized);
+  // Extract type feedback before the graph is built, as the graph
+  // builder uses it to attach it to nodes.
+  ic_data_array_ = new (zone) ZoneGrowableArray<const ICData*>();
+  if (mode_ == CompilerPass::kJIT) {
+    function_.RestoreICDataMap(ic_data_array_, /*clone_ic_data=*/false);
   }
+
+  flow_graph_ = pipeline->BuildFlowGraph(zone, parsed_function_, ic_data_array_,
+                                         osr_id, optimized);
 
   if (mode_ == CompilerPass::kAOT) {
     flow_graph_->PopulateWithICData(function_);
   }
 
-  if (mode_ == CompilerPass::kJIT && flow_graph_->should_reorder_blocks()) {
+  const bool reorder_blocks =
+      FlowGraph::ShouldReorderBlocks(function_, optimized);
+  if (mode_ == CompilerPass::kJIT && reorder_blocks) {
     BlockScheduler::AssignEdgeWeights(flow_graph_);
   }
 
   pass_state_ =
       new CompilerPassState(thread, flow_graph_, speculative_policy_.get());
+  pass_state_->reorder_blocks = reorder_blocks;
 
   if (optimized) {
     JitCallSpecializer jit_call_specializer(flow_graph_,
@@ -166,8 +164,7 @@ FlowGraph* TestPipeline::RunPasses(
     if (passes.size() > 0) {
       flow_graph_ = CompilerPass::RunPipelineWithPasses(pass_state_, passes);
     } else {
-      flow_graph_ = CompilerPass::RunPipeline(mode_, pass_state_,
-                                              /*compute_ssa=*/!is_ssa);
+      flow_graph_ = CompilerPass::RunPipeline(mode_, pass_state_);
     }
     pass_state_->call_specializer = nullptr;
   }
@@ -191,6 +188,7 @@ void TestPipeline::RunAdditionalPasses(
   pass_state_->call_specializer = nullptr;
 }
 
+// Keep in sync with CompilerPass::RunForceOptimizedPipeline.
 void TestPipeline::RunForcedOptimizedAfterSSAPasses() {
   RunAdditionalPasses({
       CompilerPass::kSetOuterInliningId,
@@ -200,6 +198,7 @@ void TestPipeline::RunForcedOptimizedAfterSSAPasses() {
       CompilerPass::kIfConvert,
       CompilerPass::kConstantPropagation,
       CompilerPass::kTypePropagation,
+      CompilerPass::kWidenSmiToInt32,
       CompilerPass::kSelectRepresentations_Final,
       CompilerPass::kTypePropagation,
       CompilerPass::kTryCatchOptimization,

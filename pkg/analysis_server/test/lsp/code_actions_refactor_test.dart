@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/handlers/commands/perform_refactor.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:language_server_protocol/json_parsing.dart';
 import 'package:test/test.dart';
@@ -121,12 +120,12 @@ class ExtractMethodRefactorCodeActionsTest extends RefactorCodeActionsTest {
   ///
   /// Analyzing statuses are not included.
   Stream<String> get progressUpdates {
-    var controller = StreamController<String>();
+    final controller = StreamController<String>();
 
     requestsFromServer
         .where((r) => r.method == Method.window_workDoneProgress_create)
         .listen((request) async {
-      var params = WorkDoneProgressCreateParams.fromJson(
+      final params = WorkDoneProgressCreateParams.fromJson(
           request.params as Map<String, Object?>);
       if (params.token != analyzingProgressToken) {
         controller.add('CREATE');
@@ -135,7 +134,7 @@ class ExtractMethodRefactorCodeActionsTest extends RefactorCodeActionsTest {
     notificationsFromServer
         .where((n) => n.method == Method.progress)
         .listen((notification) {
-      var params =
+      final params =
           ProgressParams.fromJson(notification.params as Map<String, Object?>);
       if (params.token != analyzingProgressToken) {
         if (WorkDoneProgressBegin.canParse(params.value, nullLspJsonReporter)) {
@@ -194,7 +193,7 @@ void newMethod() {
 }
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.performRefactor,
       title: extractMethodTitle,
@@ -205,7 +204,7 @@ void newMethod() {
     late WorkspaceEdit edit;
     requestsFromServer.listen((request) async {
       if (request.method == Method.workspace_applyEdit) {
-        var params = ApplyWorkspaceEditParams.fromJson(
+        final params = ApplyWorkspaceEditParams.fromJson(
             request.params as Map<String, Object?>);
         edit = params.edit;
         respondTo(request, ApplyWorkspaceEditResult(applied: true));
@@ -213,8 +212,8 @@ void newMethod() {
     });
 
     // Send two requests together.
-    var req1 = executeCommand(codeAction.command!);
-    var req2 = executeCommand(codeAction.command!);
+    final req1 = executeCommand(codeAction.command!);
+    final req2 = executeCommand(codeAction.command!);
 
     // Expect the first will have cancelled the second.
     await expectLater(
@@ -233,29 +232,21 @@ void f() {
 }
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.performRefactor,
       title: extractMethodTitle,
       openTargetFile: true,
     );
 
-    // Use a Completer to control when the refactor handler starts computing.
-    var completer = Completer<void>();
-    PerformRefactorCommandHandler.delayAfterResolveForTests = completer.future;
-    try {
-      // Send an edit request immediately after the refactor request.
-      var req1 = executeCommand(codeAction.command!);
-      await replaceFile(100, mainFileUri, 'new test content');
-      completer.complete();
+    // Send an edit request immediately after the refactor request.
+    final req1 = executeCommand(codeAction.command!);
+    final req2 = replaceFile(100, mainFileUri, 'new test content');
 
-      // Expect the first to fail because of the modified content.
-      await expectLater(
-          req1, throwsA(isResponseError(ErrorCodes.ContentModified)));
-    } finally {
-      // Ensure we never leave an incomplete future if anything above throws.
-      PerformRefactorCommandHandler.delayAfterResolveForTests = null;
-    }
+    // Expect the first to fail because of the modified content.
+    await expectLater(
+        req1, throwsA(isResponseError(ErrorCodes.ContentModified)));
+    await req2;
   }
 
   Future<void> test_filtersCorrectly() async {
@@ -268,7 +259,7 @@ void f() {
   [!print('Test!');!]
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(mainFilePath, code.code);
     await initialize();
 
@@ -282,9 +273,9 @@ void f() {
     // returned have either an equal kind, or a kind that is prefixed with the
     // requested kind followed by a dot.
     Future<void> checkResults(CodeActionKind kind) async {
-      var results = await ofKind(kind);
-      for (var result in results) {
-        var resultKind = result.map(
+      final results = await ofKind(kind);
+      for (final result in results) {
+        final resultKind = result.map(
           (cmd) => throw 'Expected CodeAction, got Command: ${cmd.title}',
           (action) => action.kind,
         );
@@ -370,7 +361,7 @@ void f() {
 ''';
 
     setDocumentChangesSupport(false);
-    var action = await expectAction(
+    final action = await expectAction(
       content,
       command: Commands.performRefactor,
       title: extractMethodTitle,
@@ -483,17 +474,17 @@ f() {
 void doFoo(void Function() a) => a();
 
 ''';
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.performRefactor,
       title: extractMethodTitle,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Call the `refactor.validate` command with the same arguments.
     // Clients that want validation behaviour will need to implement this
     // themselves (via middleware).
-    var response = await executeCommand(
+    final response = await executeCommand(
       Command(
           title: command.title,
           command: Commands.validateRefactor,
@@ -502,8 +493,7 @@ void doFoo(void Function() a) => a();
     );
 
     expect(response.valid, isFalse);
-    expect(
-        response.message, contains('Cannot extract the closure as a method'));
+    expect(response.message, contains('Cannot extract closure as method'));
   }
 
   /// Test if the client does not call refactor.validate it still gets a
@@ -519,17 +509,20 @@ f() {
 void doFoo(void Function() a) => a();
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.performRefactor,
+
       title: extractMethodTitle,
+      // We expect an error notification so don't fail on it.
+      failTestOnAnyErrorNotification: false,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Call the refactor without any validation and expected an error message
     // without a request failure.
-    var errorNotification = await expectErrorNotification(() async {
-      var response = await executeCommand(
+    final errorNotification = await expectErrorNotification(() async {
+      final response = await executeCommand(
         Command(
             title: command.title,
             command: command.command,
@@ -539,7 +532,7 @@ void doFoo(void Function() a) => a();
     });
     expect(
       errorNotification.message,
-      contains('Cannot extract the closure as a method'),
+      contains('Cannot extract closure as method'),
     );
   }
 
@@ -553,17 +546,17 @@ void doFoo(void Function() a) => a();
 
 ''';
 
-    var codeAction = await expectAction(
+    final codeAction = await expectAction(
       content,
       command: Commands.performRefactor,
       title: extractMethodTitle,
     );
-    var command = codeAction.command!;
+    final command = codeAction.command!;
 
     // Call the `Commands.validateRefactor` command with the same arguments.
     // Clients that want validation behaviour will need to implement this
     // themselves (via middleware).
-    var response = await executeCommand(
+    final response = await executeCommand(
       Command(
           title: command.title,
           command: Commands.validateRefactor,
@@ -742,22 +735,6 @@ class A {
     );
   }
 
-  Future<void> test_macroGenerated() async {
-    setDartTextDocumentContentProviderSupport();
-    var macroFilePath = join(projectFolderPath, 'lib', 'test.macro.dart');
-    var content = '''
-int f(int a, int b) {
-  return [!a + b!];
-}
-''';
-    await expectNoAction(
-      content,
-      command: Commands.performRefactor,
-      filePath: macroFilePath,
-      title: extractVariableTitle,
-    );
-  }
-
   Future<void> test_methodToGetter_function_startOfParameterList() async {
     const content = '''
 int test^() => 42;
@@ -844,7 +821,8 @@ const NewWidget({
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(
+    writePackageConfig(
+      projectFolderPath,
       flutter: true,
     );
 
@@ -873,7 +851,7 @@ class MyWidget extends StatelessWidget {
   }
 }
 ''';
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:flutter/material.dart';
 
 class MyWidget extends StatelessWidget {

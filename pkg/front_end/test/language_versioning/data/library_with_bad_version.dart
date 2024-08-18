@@ -3,10 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /*error: errors=LanguageVersionTooHigh*/
-// @dart = %TOO_HIGH_VERSION_MARKER%
+// @dart = 3.5
 
-// If no valid language version is specified, we default to the most recent one.
+// If no valid language version is specified, we default to the most reason one.
+// In the tests this is hard-coded to 2.8.
 
-/*library: languageVersion=%CURRENT_VERSION_MARKER%*/
+/*library: languageVersion=2.8*/
 
 main() {}

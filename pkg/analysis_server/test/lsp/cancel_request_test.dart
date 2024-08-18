@@ -20,9 +20,9 @@ void main() {
 @reflectiveTest
 class CancelRequestTest extends AbstractLspAnalysisServerTest {
   Future<void> test_cancel() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
-  ^
+  InOtherF^
 }
 ''');
 
@@ -31,7 +31,7 @@ void f() {
     await initialAnalysis;
 
     // Create a completion request that we'll cancel.
-    var completionRequest = makeRequest(
+    final completionRequest = makeRequest(
       Method.textDocument_completion,
       CompletionParams(
         textDocument: TextDocumentIdentifier(uri: mainFileUri),
@@ -39,14 +39,14 @@ void f() {
       ),
     );
     // And a request to cancel it.
-    var cancelNotification = makeNotification(
+    final cancelNotification = makeNotification(
         Method.cancelRequest, CancelParams(id: completionRequest.id));
 
     // Send both (without waiting for the results of the first).
-    var completionRequestFuture = sendRequestToServer(completionRequest);
+    final completionRequestFuture = sendRequestToServer(completionRequest);
     await sendNotificationToServer(cancelNotification);
 
-    var result = await completionRequestFuture;
+    final result = await completionRequestFuture;
     expect(result.result, isNull);
     expect(result.error, isNotNull);
     expect(result.error, isResponseError(ErrorCodes.RequestCancelled));

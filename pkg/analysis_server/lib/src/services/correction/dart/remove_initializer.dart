@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -11,27 +11,21 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveInitializer extends ResolvedCorrectionProducer {
   @override
-  final CorrectionApplicability applicability;
+  bool canBeAppliedInBulk;
 
-  /// If true, remove the `late` keyword.
-  final bool _removeLate;
+  @override
+  bool canBeAppliedToFile;
 
   /// Initialize a newly created instance that can't apply bulk and in-file
   /// fixes.
-  RemoveInitializer({required super.context})
-      : applicability = CorrectionApplicability.singleLocation,
-        _removeLate = true;
+  RemoveInitializer()
+      : canBeAppliedInBulk = false,
+        canBeAppliedToFile = false;
 
   /// Initialize a newly created instance that can apply bulk and in-file fixes.
-  RemoveInitializer.bulkFixable({required super.context})
-      : applicability = CorrectionApplicability.automatically,
-        _removeLate = true;
-
-  /// Initialize a newly created instance that can't apply bulk and in-file
-  /// fixes and will not remove the `late` keyword if present.
-  RemoveInitializer.notLate({required super.context})
-      : applicability = CorrectionApplicability.singleLocation,
-        _removeLate = false;
+  RemoveInitializer.bulkFixable()
+      : canBeAppliedInBulk = true,
+        canBeAppliedToFile = true;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_INITIALIZER;
@@ -63,18 +57,6 @@ class RemoveInitializer extends ResolvedCorrectionProducer {
             range.endEnd(variable.name, initializer),
           );
         });
-        // Delete the `late` keyword if present.
-        if (_removeLate && variable.isLate) {
-          var parent = node.parent;
-          if (parent != null) {
-            await builder.addDartFileEdit(file, (builder) {
-              builder.addDeletion(
-                range.startLength(
-                    parent.beginToken, parent.beginToken.length + 1),
-              );
-            });
-          }
-        }
       } else {
         var initializer =
             node.thisOrAncestorOfType<ConstructorFieldInitializer>();

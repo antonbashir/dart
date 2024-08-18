@@ -24,7 +24,7 @@ void f() {
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -34,7 +34,7 @@ PatternVariableDeclarationStatement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: num
-          element: dart:core::<fragment>::@class::num
+          element: dart:core::@class::num
           type: num
         name: a
         declaredElement: isFinal a@24
@@ -58,7 +58,7 @@ void f() {
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -89,9 +89,9 @@ void f() {
 
 class A {}
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 18, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -110,9 +110,9 @@ PatternVariableDeclarationStatement
       constructorName: ConstructorName
         type: NamedType
           name: A
-          element: <testLibraryFragment>::@class::A
+          element: self::@class::A
           type: A
-        staticElement: <testLibraryFragment>::@class::A::@constructor::new
+        staticElement: self::@class::A::@constructor::new
       argumentList: ArgumentList
         leftParenthesis: (
         rightParenthesis: )
@@ -129,7 +129,7 @@ void f() {
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -139,7 +139,7 @@ PatternVariableDeclarationStatement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: num
-          element: dart:core::<fragment>::@class::num
+          element: dart:core::@class::num
           type: num
         name: a
         declaredElement: a@22
@@ -164,9 +164,9 @@ void f() {
 
 T g<T>() => throw 0;
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 22, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 22, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -176,7 +176,7 @@ PatternVariableDeclarationStatement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: a
         declaredElement: a@22
@@ -188,7 +188,7 @@ PatternVariableDeclarationStatement
     expression: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>()
       argumentList: ArgumentList
         leftParenthesis: (
@@ -209,7 +209,7 @@ void f() {
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -238,10 +238,10 @@ void f((int, String) x) {
   var (a, b) = x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 33, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 36, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 33, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 36, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -268,7 +268,7 @@ PatternVariableDeclarationStatement
     equals: =
     expression: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: (int, String)
     patternTypeSchema: (_, _)
   semicolon: ;
@@ -285,7 +285,7 @@ T g<T>(T a) => throw 0;
 ''', [
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    final node = findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -306,7 +306,7 @@ PatternVariableDeclarationStatement
     expression: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>(T)
       argumentList: ArgumentList
         leftParenthesis: (

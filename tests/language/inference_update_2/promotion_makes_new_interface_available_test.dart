@@ -5,6 +5,8 @@
 // Tests that promotion of a field makes it possible to access methods, getters,
 // and operators that aren't exposed from the unpromoted type.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import '../static_type_helper.dart';
 
 class A {}

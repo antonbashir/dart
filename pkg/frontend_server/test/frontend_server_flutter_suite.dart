@@ -8,11 +8,10 @@ import 'dart:io' show File, exitCode;
 import 'dart:isolate' show Isolate, ReceivePort, SendPort;
 
 import 'package:args/args.dart' show ArgParser;
-import 'package:args/src/arg_results.dart';
 
 import "frontend_server_flutter.dart" show Logger, compileTests;
 
-const String suiteNamePrefix = "flutter_frontend";
+const suiteNamePrefix = "flutter_frontend";
 
 class Options {
   final String configurationName;
@@ -33,7 +32,7 @@ class Options {
       this.flutterPlatformDir);
 
   static Options parse(List<String> args) {
-    ArgParser parser = new ArgParser()
+    var parser = ArgParser()
       ..addOption("named-configuration",
           abbr: "n",
           defaultsTo: suiteNamePrefix,
@@ -46,9 +45,9 @@ class Options {
           abbr: "p", help: "print failure logs", defaultsTo: false)
       ..addOption("flutterDir")
       ..addOption("flutterPlatformDir");
-    ArgResults parsedArguments = parser.parse(args);
+    var parsedArguments = parser.parse(args);
     String outputPath = parsedArguments["output-directory"] ?? ".";
-    Uri outputDirectory = Uri.base.resolveUri(new Uri.directory(outputPath));
+    Uri outputDirectory = Uri.base.resolveUri(Uri.directory(outputPath));
     String? filter;
     if (parsedArguments.rest.length == 1) {
       filter = parsedArguments.rest.single;
@@ -56,7 +55,7 @@ class Options {
         filter = filter.substring(suiteNamePrefix.length + 1);
       }
     }
-    return new Options(
+    return Options(
       parsedArguments["named-configuration"],
       parsedArguments["verbose"],
       parsedArguments["print"],
@@ -75,7 +74,7 @@ class ResultLogger extends Logger {
 
   ResultLogger(this.suiteConfiguration);
 
-  void handleTestResult(String testName, bool matchedExpectations) {
+  handleTestResult(String testName, bool matchedExpectations) {
     String fullTestName = "$suiteNamePrefix/$testName";
     suiteConfiguration.resultsPort.send(jsonEncode({
       "name": fullTestName,
@@ -113,7 +112,7 @@ class ResultLogger extends Logger {
 
   @override
   void logTestStart(String testName) {
-    stopwatches[testName] = new Stopwatch()..start();
+    stopwatches[testName] = Stopwatch()..start();
     _log.clear();
   }
 
@@ -138,7 +137,7 @@ class ResultLogger extends Logger {
   }
 }
 
-const Duration timeoutDuration = const Duration(minutes: 45);
+const Duration timeoutDuration = Duration(minutes: 45);
 
 class SuiteConfiguration {
   final SendPort resultsPort;
@@ -167,8 +166,8 @@ class SuiteConfiguration {
       this.shards);
 }
 
-Future<void> runSuite(SuiteConfiguration configuration) async {
-  ResultLogger logger = new ResultLogger(configuration);
+void runSuite(SuiteConfiguration configuration) async {
+  ResultLogger logger = ResultLogger(configuration);
   try {
     await compileTests(
       configuration.flutterDir,
@@ -184,17 +183,16 @@ Future<void> runSuite(SuiteConfiguration configuration) async {
 }
 
 void writeLinesToFile(Uri uri, List<String> lines) {
-  new File.fromUri(uri)
-      .writeAsStringSync(lines.map((line) => "$line\n").join());
+  File.fromUri(uri).writeAsStringSync(lines.map((line) => "$line\n").join());
 }
 
-Future<void> main([List<String> arguments = const <String>[]]) async {
+main([List<String> arguments = const <String>[]]) async {
   List<String> results = [];
   List<String> logs = [];
   Options options = Options.parse(arguments);
-  ReceivePort resultsPort = new ReceivePort()
+  ReceivePort resultsPort = ReceivePort()
     ..listen((resultEntry) => results.add(resultEntry));
-  ReceivePort logsPort = new ReceivePort()
+  ReceivePort logsPort = ReceivePort()
     ..listen((logEntry) => logs.add(logEntry));
   String? filter = options.testFilter;
 
@@ -202,9 +200,9 @@ Future<void> main([List<String> arguments = const <String>[]]) async {
   List<Future<bool>> futures = [];
   for (int shard = 0; shard < shards; shard++) {
     // Start the test suite in a new isolate.
-    ReceivePort exitPort = new ReceivePort();
-    ReceivePort errorPort = new ReceivePort();
-    SuiteConfiguration configuration = new SuiteConfiguration(
+    ReceivePort exitPort = ReceivePort();
+    ReceivePort errorPort = ReceivePort();
+    SuiteConfiguration configuration = SuiteConfiguration(
       resultsPort.sendPort,
       logsPort.sendPort,
       options.verbose,
@@ -216,8 +214,8 @@ Future<void> main([List<String> arguments = const <String>[]]) async {
       shard,
       shards,
     );
-    Future<bool> future = new Future<bool>(() async {
-      Stopwatch stopwatch = new Stopwatch()..start();
+    Future<bool> future = Future<bool>(() async {
+      Stopwatch stopwatch = Stopwatch()..start();
       print("Running suite shard $shard of $shards");
       Isolate isolate = await Isolate.spawn<SuiteConfiguration>(
           runSuite, configuration,
@@ -229,7 +227,7 @@ Future<void> main([List<String> arguments = const <String>[]]) async {
         logs.add("$message");
       });
       bool timedOut = false;
-      Timer timer = new Timer(timeoutDuration, () {
+      Timer timer = Timer(timeoutDuration, () {
         timedOut = true;
         print("Suite timed out after "
             "${timeoutDuration.inMilliseconds}ms");

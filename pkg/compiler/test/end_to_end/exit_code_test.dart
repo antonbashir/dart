@@ -83,6 +83,7 @@ class TestCompiler extends Compiler {
         case 'internalError':
           onTest(testMarker, testType);
           reporter.internalError(NO_LOCATION_SPANNABLE, marker);
+          break;
         case 'NoSuchMethodError':
           onTest(testMarker, testType);
           dynamic n;

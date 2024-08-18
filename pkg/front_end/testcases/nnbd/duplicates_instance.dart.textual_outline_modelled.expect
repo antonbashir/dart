@@ -32,11 +32,7 @@ class Class {
 }
 
 expect(expected, actual) {}
-
 main() {}
-
 test() {}
-
 throws(dynamic Function() f) {}
-
 var result;

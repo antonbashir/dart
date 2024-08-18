@@ -20,7 +20,7 @@ extension DartCompletionRequestExtensions on DartCompletionRequest {
       return false;
     }
 
-    var contextType = this.contextType;
+    final contextType = this.contextType;
     if (contextType is! FunctionType) {
       return false;
     }

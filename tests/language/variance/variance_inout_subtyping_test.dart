@@ -154,10 +154,6 @@ main() {
   iterableMiddle = listMiddle;
 
   testCall(listMiddle);
-  Expect.subtype<List<Invariant<Middle>>, Iterable<Invariant<Middle>>>();
-  Expect.notSubtype<Iterable<Invariant<Middle>>, List<Invariant<Middle>>>();
-  Expect.notSubtype<List<Invariant<Upper>>, Iterable<Invariant<Middle>>>();
-  Expect.notSubtype<List<Invariant<Lower>>, Iterable<Invariant<Middle>>>();
 
   Expect.subtype<Invariant<Middle>, Invariant<Middle>>();
   Expect.notSubtype<Invariant<Lower>, Invariant<Middle>>();
@@ -171,20 +167,4 @@ main() {
 
   Expect.subtype<Invariant<FutureOr<Never>>, Invariant<Future<Never>>>();
   Expect.subtype<Invariant<Future<Never>>, Invariant<FutureOr<Never>>>();
-
-  Expect.subtype<Invariant<FutureOr<Null>>, Invariant<Future<Null>?>>();
-  Expect.subtype<Invariant<Future<Null>?>, Invariant<FutureOr<Null>>>();
-
-  Expect.subtype<String Function(Invariant<Middle>),
-      String Function(Invariant<Middle>)>();
-  Expect.subtype<Invariant<Middle> Function(String),
-      Invariant<Middle> Function(String)>();
-  Expect.notSubtype<Invariant<Upper> Function(String),
-      Invariant<Middle> Function(String)>();
-  Expect.notSubtype<String Function(Invariant<Upper>),
-      String Function(Invariant<Middle>)>();
-  Expect.notSubtype<Invariant<Lower> Function(String),
-      Invariant<Middle> Function(String)>();
-  Expect.notSubtype<String Function(Invariant<Lower>),
-      String Function(Invariant<Middle>)>();
 }

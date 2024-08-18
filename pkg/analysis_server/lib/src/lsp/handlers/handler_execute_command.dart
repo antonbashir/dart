@@ -4,9 +4,7 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/fix_all.dart';
-import 'package:analysis_server/src/lsp/handlers/commands/fix_all_in_workspace.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/log_action.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/organize_imports.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/perform_refactor.dart';
@@ -31,9 +29,6 @@ class ExecuteCommandHandler
           Commands.sortMembers: SortMembersCommandHandler(server),
           Commands.organizeImports: OrganizeImportsCommandHandler(server),
           Commands.fixAll: FixAllCommandHandler(server),
-          Commands.fixAllInWorkspace: FixAllInWorkspaceCommandHandler(server),
-          Commands.previewFixAllInWorkspace:
-              PreviewFixAllInWorkspaceCommandHandler(server),
           Commands.performRefactor: PerformRefactorCommandHandler(server),
           Commands.validateRefactor: ValidateRefactorCommandHandler(server),
           Commands.sendWorkspaceEdit: SendWorkspaceEditCommandHandler(server),
@@ -41,9 +36,7 @@ class ExecuteCommandHandler
           // Add commands for each of the refactorings.
           for (var entry in RefactoringProcessor.generators.entries)
             entry.key: RefactorCommandHandler(server, entry.key, entry.value),
-        } {
-    server.executeCommandHandler = this;
-  }
+        };
 
   @override
   Method get handlesMessage => Method.workspace_executeCommand;
@@ -55,17 +48,17 @@ class ExecuteCommandHandler
   @override
   Future<ErrorOr<Object?>> handle(ExecuteCommandParams params,
       MessageInfo message, CancellationToken token) async {
-    var handler = commandHandlers[params.command];
+    final handler = commandHandlers[params.command];
     if (handler == null) {
       return error(ServerErrorCodes.UnknownCommand,
-          '${params.command} is not a valid command identifier');
+          '${params.command} is not a valid command identifier', null);
     }
 
     if (!handler.recordsOwnAnalytics) {
       server.analyticsManager.executedCommand(params.command);
     }
-    var workDoneToken = params.workDoneToken;
-    var progress = workDoneToken != null
+    final workDoneToken = params.workDoneToken;
+    final progress = workDoneToken != null
         ? ProgressReporter.clientProvided(server, workDoneToken)
         : server.lspClientCapabilities?.workDoneProgress ?? false
             ? ProgressReporter.serverCreated(server)
@@ -76,14 +69,12 @@ class ExecuteCommandHandler
     //
     // However, some handlers still support the list for compatibility so we
     // must allow them to convert a `List` to a `Map`.
-    var arguments = params.arguments ?? const [];
+    final arguments = params.arguments ?? const [];
     Map<String, Object?> commandParams;
-    if (handler case PositionalArgCommandHandler argHandler) {
+    if (arguments case [Map<String, Object?> singleArgument]) {
+      commandParams = singleArgument;
+    } else if (handler case PositionalArgCommandHandler argHandler) {
       commandParams = argHandler.parseArgList(arguments);
-    } else if (arguments.isEmpty) {
-      commandParams = {};
-    } else if (arguments.length == 1 && arguments[0] is Map<String, Object?>) {
-      commandParams = arguments.single as Map<String, Object?>;
     } else {
       return ErrorOr.error(ResponseError(
         code: ServerErrorCodes.InvalidCommandArguments,

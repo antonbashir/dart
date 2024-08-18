@@ -2,10 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// ignore_for_file: library_names
+
 /// Constants and predicates used for encoding and decoding type recipes.
 ///
 /// This library is synchronized between the compiler and the runtime system.
-library;
+library js_shared._recipe_syntax;
 
 abstract class Recipe {
   Recipe._();

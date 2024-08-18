@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -20,7 +21,27 @@ main() {
 
 @reflectiveTest
 class ForElementResolutionTest_ForEachPartsWithDeclaration
-    extends PubPackageResolutionTest {
+    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
+  test_optIn_fromOptOut() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A implements Iterable<int> {
+  Iterator<int> iterator => throw 0;
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+f(A a) {
+  for (var v in a) {
+    v;
+  }
+}
+''');
+  }
+
   test_withDeclaration_scope() async {
     await assertNoErrorsInCode(r'''
 main() {
@@ -81,7 +102,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: dynamic
   rightParenthesis: )
   body: SimpleIdentifier
@@ -116,7 +137,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: List<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -153,7 +174,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Object
   rightParenthesis: )
   body: SimpleIdentifier
@@ -183,7 +204,7 @@ ForElement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: a
         declaredElement: a@28
@@ -195,7 +216,7 @@ ForElement
     iterable: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>()
       argumentList: ArgumentList
         leftParenthesis: (
@@ -240,7 +261,7 @@ ForElement
     iterable: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>()
       argumentList: ArgumentList
         leftParenthesis: (
@@ -282,7 +303,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: List<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -310,7 +331,7 @@ ForElement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: num
-          element: dart:core::<fragment>::@class::num
+          element: dart:core::@class::num
           type: num
         name: a
         declaredElement: a@39
@@ -321,7 +342,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: List<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -355,7 +376,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@getter::x
+      staticElement: self::@getter::x
       staticType: List<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -389,7 +410,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@getter::x
+      staticElement: self::@getter::x
       staticType: List<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -429,7 +450,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: dynamic
   rightParenthesis: )
   body: SimpleIdentifier
@@ -467,7 +488,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Object
   rightParenthesis: )
   body: SimpleIdentifier
@@ -503,7 +524,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Stream<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -534,7 +555,7 @@ ForElement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: a
         declaredElement: a@40
@@ -546,7 +567,7 @@ ForElement
     iterable: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>()
       argumentList: ArgumentList
         leftParenthesis: (
@@ -592,7 +613,7 @@ ForElement
     iterable: MethodInvocation
       methodName: SimpleIdentifier
         token: g
-        staticElement: <testLibraryFragment>::@function::g
+        staticElement: self::@function::g
         staticType: T Function<T>()
       argumentList: ArgumentList
         leftParenthesis: (
@@ -635,7 +656,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Stream<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -664,7 +685,7 @@ ForElement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: num
-          element: dart:core::<fragment>::@class::num
+          element: dart:core::@class::num
           type: num
         name: a
         declaredElement: a@53
@@ -675,7 +696,7 @@ ForElement
     inKeyword: in
     iterable: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Stream<int>
   rightParenthesis: )
   body: SimpleIdentifier
@@ -696,12 +717,12 @@ f(bool Function() b) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('b()');
+    final node = findNode.functionExpressionInvocation('b()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: b
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: bool Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -741,7 +762,7 @@ void f((int, bool) x) {
 }
 ''');
 
-    var node = findNode.singleForElement;
+    final node = findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -771,7 +792,7 @@ ForElement
       equals: =
       expression: SimpleIdentifier
         token: x
-        staticElement: <testLibraryFragment>::@function::f::@parameter::x
+        staticElement: self::@function::f::@parameter::x
         staticType: (int, bool)
       patternTypeSchema: (_, _)
     leftSeparator: ;
@@ -791,7 +812,7 @@ ForElement
         readType: int
         writeElement: a@37
         writeType: int
-        staticElement: dart:core::<fragment>::@class::num::@method::-
+        staticElement: dart:core::@class::num::@method::-
         staticType: int
   rightParenthesis: )
   body: IntegerLiteral

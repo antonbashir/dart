@@ -3,15 +3,11 @@ import 'package:front_end/src/api_unstable/dart2js.dart'
 import 'package:kernel/ast.dart';
 import 'package:kernel/type_environment.dart';
 
-import '../../../options.dart';
-
 class ConstantTransformer extends Transformer {
   final TryConstantEvaluator constantEvaluator;
   late StaticTypeContext _staticTypeContext;
 
-  final CompilerOptions _options;
-
-  ConstantTransformer(this.constantEvaluator, this._options);
+  ConstantTransformer(this.constantEvaluator);
 
   Constant _evaluate(Expression node) =>
       constantEvaluator.evaluate(_staticTypeContext, node);
@@ -108,7 +104,7 @@ class ConstantTransformer extends Transformer {
   @override
   TreeNode visitIsExpression(IsExpression node) {
     node.transformChildren(this);
-    if (!_options.experimentNullSafetyChecks && _isConstant(node.operand)) {
+    if (_isConstant(node.operand)) {
       return _evaluateAndWrapOrNode(node);
     }
     return node;
@@ -117,7 +113,7 @@ class ConstantTransformer extends Transformer {
   @override
   TreeNode visitAsExpression(AsExpression node) {
     node.transformChildren(this);
-    if (!_options.experimentNullSafetyChecks && _isConstant(node.operand)) {
+    if (_isConstant(node.operand)) {
       return _evaluateAndWrapOrNode(node);
     }
     return node;

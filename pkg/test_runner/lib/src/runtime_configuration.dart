@@ -31,9 +31,6 @@ abstract class RuntimeConfiguration {
         // TODO(ahe): Replace this with one or more browser runtimes.
         return DummyRuntimeConfiguration();
 
-      case Runtime.jsc:
-        return JSCRuntimeConfiguration(configuration.compiler);
-
       case Runtime.jsshell:
         return JsshellRuntimeConfiguration(configuration.compiler);
 
@@ -147,14 +144,6 @@ abstract class RuntimeConfiguration {
     return d8;
   }
 
-  String get jscFileName {
-    final jscPath =
-        Repository.dir.append('third_party/jsc/jsc$executableExtension');
-    final jsc = jscPath.toNativePath();
-    TestUtils.ensureExists(jsc, _configuration);
-    return jsc;
-  }
-
   String get jsShellFileName {
     var executable = 'jsshell$executableExtension';
     var jsshellDir = Repository.uri.resolve("tools/testing/bin").path;
@@ -209,8 +198,8 @@ class D8RuntimeConfiguration extends CommandLineJavaScriptRuntime {
     checkArtifact(artifact!);
     if (compiler == Compiler.dart2wasm) {
       return [
-        Dart2WasmCommandLineCommand(moniker, 'pkg/dart2wasm/tool/run_benchmark',
-            ['--d8', ...arguments], environmentOverrides)
+        Dart2WasmCommandLineCommand(
+            moniker, d8FileName, arguments, environmentOverrides)
       ];
     } else {
       return [
@@ -225,30 +214,6 @@ class D8RuntimeConfiguration extends CommandLineJavaScriptRuntime {
     return [
       preambleDir.resolve('seal_native_object.js').toFilePath(),
       preambleDir.resolve('d8.js').toFilePath()
-    ];
-  }
-}
-
-/// Safari/WebKit/JavaScriptCore-based development shell (jsc).
-class JSCRuntimeConfiguration extends CommandLineJavaScriptRuntime {
-  final Compiler compiler;
-
-  JSCRuntimeConfiguration(this.compiler) : super('jsc');
-
-  @override
-  List<Command> computeRuntimeCommands(
-      CommandArtifact? artifact,
-      List<String> arguments,
-      Map<String, String> environmentOverrides,
-      List<String> extraLibs,
-      bool isCrashExpected) {
-    checkArtifact(artifact!);
-    if (compiler != Compiler.dart2wasm) {
-      throw 'No test runner setup for jsc + dart2js yet';
-    }
-    return [
-      Dart2WasmCommandLineCommand(moniker, 'pkg/dart2wasm/tool/run_benchmark',
-          ['--jsc', ...arguments], environmentOverrides)
     ];
   }
 }
@@ -269,8 +234,8 @@ class JsshellRuntimeConfiguration extends CommandLineJavaScriptRuntime {
     checkArtifact(artifact!);
     if (compiler == Compiler.dart2wasm) {
       return [
-        Dart2WasmCommandLineCommand(moniker, 'pkg/dart2wasm/tool/run_benchmark',
-            ['--jsshell', ...arguments], environmentOverrides)
+        Dart2WasmCommandLineCommand(
+            moniker, jsShellFileName, arguments, environmentOverrides)
       ];
     } else {
       return [
@@ -344,19 +309,12 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
     if (_configuration.useQemu) {
       multiplier *= 2;
     }
-    if (system == System.fuchsia && arch == Architecture.arm64) {
-      multiplier *= 4; // Full system QEMU.
-    }
 
     // Configurations where `kernel-service` doesn't run from AppJIT snapshot
     // will make tests run very slow due to the `kernel-service` code slowly
     // warming up the JIT. This is especially noticable in `debug` mode.
     if (arch == Architecture.ia32) {
       multiplier *= 2;
-    }
-    if ((arch == Architecture.x64 && system == System.mac) ||
-        (arch == Architecture.arm64 && system == System.win)) {
-      multiplier *= 2; // Slower machines.
     }
 
     if (mode.isDebug) {
@@ -390,8 +348,7 @@ class StandaloneDartRuntimeConfiguration extends DartVmRuntimeConfiguration {
         type != 'application/dart' &&
         type != 'application/dart-snapshot' &&
         type != 'application/kernel-ir' &&
-        type != 'application/kernel-ir-fully-linked' &&
-        type != 'application/dart-bytecode') {
+        type != 'application/kernel-ir-fully-linked') {
       throw "Dart VM cannot run files of type '$type'.";
     }
     if (isCrashExpected) {
@@ -428,9 +385,7 @@ class DartPrecompiledRuntimeConfiguration extends DartVmRuntimeConfiguration {
       bool isCrashExpected) {
     var script = artifact?.filename;
     var type = artifact?.mimeType;
-    if (script != null &&
-        type != 'application/dart-precompiled' &&
-        type != 'application/dart-bytecode') {
+    if (script != null && type != 'application/dart-precompiled') {
       throw "dart_precompiled cannot run files of type '$type'.";
     }
 
@@ -536,15 +491,16 @@ class DartkFuchsiaEmulatorRuntimeConfiguration
             argument.replaceAll(Directory.current.path, "pkg/data"))
         .toList();
 
-    arguments.insert(arguments.length - 1, '--disable-dart-dev');
-    return [
-      FuchsiaEmulator.instance().getTestCommand(
-          _configuration.buildDirectory,
-          _configuration.mode.name,
-          _configuration.architecture.name,
-          arguments,
-          environmentOverrides)
-    ];
+    var command = FuchsiaEmulator.instance().getTestCommand(
+        _configuration.buildDirectory,
+        _configuration.mode.name,
+        _configuration.architecture.name,
+        arguments);
+    command.arguments
+        .insert(command.arguments.length - 1, '--disable-dart-dev');
+    command.environmentOverrides.addAll(environmentOverrides);
+    print("+ About to run command $command to test against fuchsia vm");
+    return [command];
   }
 }
 

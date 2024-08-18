@@ -12,17 +12,18 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:_internal' show VMInternalsForTesting;
 
-import 'package:expect/config.dart';
 import 'package:expect/expect.dart';
 
 const int isolateCount = 3;
 const int deoptIsolateId = 0;
 const int polyIsolateId = 1;
 
+final bool isAOT = Platform.executable.contains('dart_precompiled_runtime');
+
 main() async {
   // This test will cause deoptimizations (via helper in `dart:_internal`) and
   // does therefore not run in AOT.
-  if (isVmAotConfiguration) return;
+  if (isAOT) return;
 
   final onExit = ReceivePort();
   final onError = ReceivePort()

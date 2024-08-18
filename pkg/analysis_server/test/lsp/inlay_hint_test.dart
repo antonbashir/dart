@@ -24,12 +24,12 @@ void main() {
 @reflectiveTest
 class ParameterNameInlayHintTest extends _AbstractInlayHintTest {
   Future<void> test_beforeTypes() async {
-    var content = '''
+    final content = '''
 void f(Object a) {
   f([1, 2]);
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f(Object a) {
   f((Parameter:a:) (Type:<int>)[1, 2]);
 }
@@ -38,26 +38,26 @@ void f(Object a) {
   }
 
   Future<void> test_location() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f(int /*[0*/a/*0]*/) {}
 void g() {
   f(1);
 }
 ''');
-    var hints = await _fetchHints(code.code);
-    var location = hints.single.labelParts.single.location!;
+    final hints = await _fetchHints(code.code);
+    final location = hints.single.labelParts.single.location!;
 
     expect(location.uri, mainFileUri);
     expect(location.range, code.range.range);
   }
 
   Future<void> test_named() async {
-    var content = '''
+    final content = '''
 void f({required int? a, int? b}) {
   f(a: a); // already named
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f({required int? a, int? b}) {
   f(a: a); // already named
 }
@@ -66,12 +66,12 @@ void f({required int? a, int? b}) {
   }
 
   Future<void> test_optionalPositional() async {
-    var content = '''
+    final content = '''
 void f([int? a, int? b]) {
   f(a);
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f([int? a, int? b]) {
   f((Parameter:a:) a);
 }
@@ -80,12 +80,12 @@ void f([int? a, int? b]) {
   }
 
   Future<void> test_requiredPositional() async {
-    var content = '''
+    final content = '''
 void f(int a, int b) {
   f(a, b);
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f(int a, int b) {
   f((Parameter:a:) a, (Parameter:b:) b);
 }
@@ -95,7 +95,7 @@ void f(int a, int b) {
 
   /// Don't try to produce hints for parameters without names.
   Future<void> test_unnamed() async {
-    var content = '''
+    final content = '''
 void f(void Function(int) a) => a(1);
 ''';
     await _expectNoHints(content);
@@ -105,9 +105,7 @@ void f(void Function(int) a) => a(1);
   /// additional error where the nameOffset of the parameter element was -1.
   /// https://github.com/Dart-Code/Dart-Code/issues/4436
   Future<void> test_unnamed2() async {
-    failTestOnErrorDiagnostic = false;
-
-    var content = '''
+    final content = '''
 void f() {
   <int, void Function(int)>{
   0
@@ -122,12 +120,12 @@ void f() {
 @reflectiveTest
 class TypeInlayHintTest extends _AbstractInlayHintTest {
   Future<void> test_class_field() async {
-    var content = '''
+    final content = '''
 class A {
   final i1 = 1;
 }
 ''';
-    var expected = '''
+    final expected = '''
 class A {
   final (Type:int) i1 = 1;
 }
@@ -136,7 +134,7 @@ class A {
   }
 
   Future<void> test_class_typeArguments() async {
-    var content = '''
+    final content = '''
 class A<T1, T2> {
   A(T1 a, T2 b) {}
 }
@@ -145,7 +143,7 @@ void f() {
   final a = A('', 1);
 }
 ''';
-    var expected = '''
+    final expected = '''
 class A<T1, T2> {
   A(T1 a, T2 b) {}
 }
@@ -158,14 +156,14 @@ void f() {
   }
 
   Future<void> test_documentUpdates() async {
-    var content = '''
+    final content = '''
 final a = 1;
 ''';
     await initialize();
 
     // Start with a blank document expecting no hints,
     await openFile(mainFileUri, '');
-    var hintsBeforeChange = await getInlayHints(
+    final hintsBeforeChange = await getInlayHints(
       mainFileUri,
       startOfDocRange,
     );
@@ -174,7 +172,7 @@ final a = 1;
     // Don't await `replaceFile` because we want to check the server correctly
     // handles an inlayHints request that immediately follows a document update.
     unawaited(replaceFile(1, mainFileUri, content));
-    var hintsAfterChange = await getInlayHints(
+    final hintsAfterChange = await getInlayHints(
       mainFileUri,
       rangeOfWholeContent(content),
     );
@@ -184,12 +182,12 @@ final a = 1;
   }
 
   Future<void> test_forElement() async {
-    var content = '''
+    final content = '''
 void f() {
   [for (var i in [1, 2]) i];
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   (Type:<int>)[for (var (Type:int) i in (Type:<int>)[1, 2]) i];
 }
@@ -198,12 +196,12 @@ void f() {
   }
 
   Future<void> test_forInLoop() async {
-    var content = '''
+    final content = '''
 void f() {
   for (var i in [1, 2]) {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   for (var (Type:int) i in (Type:<int>)[1, 2]) {}
 }
@@ -212,12 +210,12 @@ void f() {
   }
 
   Future<void> test_forLoop() async {
-    var content = '''
+    final content = '''
 void f() {
   for (var i = 0; i < 1; i++) {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   for (var (Type:int) i = 0; i < 1; i++) {}
 }
@@ -226,14 +224,14 @@ void f() {
   }
 
   Future<void> test_function_typeArguments() async {
-    var content = '''
+    final content = '''
 void f1<T1, T2>(T1 a, T2 b) {}
 
 void f() {
   f1('', 1);
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f1<T1, T2>(T1 a, T2 b) {}
 
 void f() {
@@ -244,17 +242,17 @@ void f() {
   }
 
   Future<void> test_getter() async {
-    var content = '''
+    final content = '''
 get f => 1;
 ''';
-    var expected = '''
+    final expected = '''
 (Type:dynamic) get f => 1;
 ''';
     await _expectHints(content, expected);
   }
 
   Future<void> test_leadingAnnotation() async {
-    var content = '''
+    final content = '''
 @deprecated
 f() => '';
 
@@ -263,7 +261,7 @@ class A {
   f() => '';
 }
 ''';
-    var expected = '''
+    final expected = '''
 @deprecated
 (Type:dynamic) f() => '';
 
@@ -276,7 +274,7 @@ class A {
   }
 
   Future<void> test_leadingComment() async {
-    var content = '''
+    final content = '''
 // Comment
 f() => '';
 
@@ -285,7 +283,7 @@ class A {
   f() => '';
 }
 ''';
-    var expected = '''
+    final expected = '''
 // Comment
 (Type:dynamic) f() => '';
 
@@ -298,7 +296,7 @@ class A {
   }
 
   Future<void> test_leadingDocumentation() async {
-    var content = '''
+    final content = '''
 /// Documentation
 f() => '';
 
@@ -307,7 +305,7 @@ class A {
   f() => '';
 }
 ''';
-    var expected = '''
+    final expected = '''
 /// Documentation
 (Type:dynamic) f() => '';
 
@@ -321,7 +319,7 @@ class A {
 
   Future<void> test_localFunction_returnType() async {
     // Check inferred return types for local functions have type hints.
-    var content = '''
+    final content = '''
 void f() {
   g() => '';
   h() { return ''; }
@@ -329,7 +327,7 @@ void f() {
   void j() {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   (Type:String) g() => '';
   (Type:String) h() { return ''; }
@@ -341,27 +339,27 @@ void f() {
   }
 
   Future<void> test_location_local() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class /*[0*/A/*0]*/ {}
 final a1 = A();
 ''');
-    var hints = await _fetchHints(code.code);
-    var location = hints.single.labelParts.single.location!;
+    final hints = await _fetchHints(code.code);
+    final location = hints.single.labelParts.single.location!;
 
     expect(location.uri, mainFileUri);
     expect(location.range, code.range.range);
   }
 
   Future<void> test_location_records() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class /*[0*/A/*0]*/<T> {}
 class /*[1*/B/*1]*/ {}
 class /*[2*/C/*2]*/ {}
 final x = A<(B, C, {B b2, C c2})>();
 ''');
-    var ranges = code.ranges.map((r) => r.range).toList();
-    var hints = await _fetchHints(code.code);
-    var parts = hints.single.labelParts;
+    final ranges = code.ranges.map((r) => r.range).toList();
+    final hints = await _fetchHints(code.code);
+    final parts = hints.single.labelParts;
 
     // Check the parts of the label.
     expect(
@@ -388,11 +386,11 @@ final x = A<(B, C, {B b2, C c2})>();
   }
 
   Future<void> test_location_sdk() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 final a1 = '';
 ''');
-    var hints = await _fetchHints(code.code);
-    var location = hints.single.labelParts.single.location!;
+    final hints = await _fetchHints(code.code);
+    final location = hints.single.labelParts.single.location!;
 
     expect(location.uri,
         pathContext.toUri(convertPath('/sdk/lib/core/core.dart')));
@@ -406,15 +404,15 @@ final a1 = '';
   }
 
   Future<void> test_location_typeArguments() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class /*[0*/A/*0]*/<T> {}
 class /*[1*/B/*1]*/<T> {}
 class /*[2*/C/*2]*/ {}
 final x = A<B<C>>();
 ''');
-    var ranges = code.ranges.map((r) => r.range).toList();
-    var hints = await _fetchHints(code.code);
-    var parts = hints.single.labelParts;
+    final ranges = code.ranges.map((r) => r.range).toList();
+    final hints = await _fetchHints(code.code);
+    final parts = hints.single.labelParts;
 
     // Check the parts of the label.
     expect(
@@ -432,7 +430,7 @@ final x = A<B<C>>();
   }
 
   Future<void> test_method_parameters() async {
-    var content = '''
+    final content = '''
 class A {
   void m1(int a, [String? b]) {}
   void m2(int a, {String? b, required String c}) {}
@@ -444,7 +442,7 @@ class B extends A {
   void m3(a, {b}) {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 class A {
   void m1(int a, [String? b]) {}
   void m2(int a, {String? b, required String c}) {}
@@ -460,13 +458,13 @@ class B extends A {
   }
 
   Future<void> test_method_returnType() async {
-    var content = '''
+    final content = '''
 class A {
   f() => '';
 }
 ''';
     // method return types are not inferred and always `dynamic`.
-    var expected = '''
+    final expected = '''
 class A {
   (Type:dynamic) f() => '';
 }
@@ -475,7 +473,7 @@ class A {
   }
 
   Future<void> test_method_typeArguments() async {
-    var content = '''
+    final content = '''
 class A {
   void m1<T1, T2>(T1 a, T2 b) {}
 }
@@ -485,7 +483,7 @@ void f() {
   a.m1('', 1);
 }
 ''';
-    var expected = '''
+    final expected = '''
 class A {
   void m1<T1, T2>(T1 a, T2 b) {}
 }
@@ -499,7 +497,7 @@ void f() {
   }
 
   Future<void> test_patterns_destructure() async {
-    var content = '''
+    final content = '''
 void f() {
   final (i, ) = (1, );
   final (j, k) = (1, 2);
@@ -507,7 +505,7 @@ void f() {
   final (int j2, int k2) = (1, 2);
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   final ((Type:int) i, ) = (1, );
   final ((Type:int) j, (Type:int) k) = (1, 2);
@@ -519,13 +517,13 @@ void f() {
   }
 
   Future<void> test_patterns_ifCase() async {
-    var content = '''
+    final content = '''
 void f() {
   final (int, {(int, ) test}) pattern = (test: (10,), 2);
   if (pattern case final p) {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   final (int, {(int, ) test}) pattern = (test: (10,), 2);
   if (pattern case final (Type:(int, {(int,) test})) p) {}
@@ -535,7 +533,7 @@ void f() {
   }
 
   Future<void> test_patterns_ifCase_typeArguments() async {
-    var content = '''
+    final content = '''
 class Box<T> {
   final T value;
   Box(this.value);
@@ -545,7 +543,7 @@ void f(Box<List<String>> a) {
   if (a case Box(value: List(:final int length))) {}
 }
 ''';
-    var expected = '''
+    final expected = '''
 class Box<T> {
   final T value;
   Box(this.value);
@@ -559,7 +557,7 @@ void f(Box<List<String>> a) {
   }
 
   Future<void> test_patterns_switchExpression() async {
-    var content = '''
+    final content = '''
 void f() {
   final (int, {(int, ) test}) pattern = (test: (10,), 2);
   final Null _switch = switch (pattern) {
@@ -567,7 +565,7 @@ void f() {
   };
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f() {
   final (int, {(int, ) test}) pattern = (test: (10,), 2);
   final Null _switch = switch (pattern) {
@@ -579,13 +577,13 @@ void f() {
   }
 
   Future<void> test_records_singlePositionalComma() async {
-    var content = '''
+    final content = '''
 final withComma = (1,);
 final noComma1 = (1, 2);
 final noComma2 = (a: '');
 final noComma3 = (1, a: '');
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:(int,)) withComma = (1,);
 final (Type:(int, int)) noComma1 = (1, 2);
 final (Type:({String a})) noComma2 = (a: '');
@@ -594,66 +592,34 @@ final (Type:(int, {String a})) noComma3 = (1, a: '');
     await _expectHints(content, expected);
   }
 
-  /// During initialization the server asks the client for configuration.
-  /// Verify that if we send an inlay hint request before the client responds
-  /// to that, we do not fail to respond due to a deadlock.
-  ///
-  /// https://github.com/dart-lang/sdk/issues/56311
-  Future<void> test_requestBeforeInitializationConfigurationComplete() async {
-    var initializedComplete = Completer<void>();
-    var configResponse = Completer<Map<String, Object?>>();
-
-    // Initialize server (and wait for initialized), but don't respond to
-    // the config request yet.
-    unawaited(provideConfig(() async {
-      await initialize();
-      initializedComplete.complete();
-    }, configResponse.future));
-    await initializedComplete.future;
-
-    // Send a request for inlay hints (which will stall because server isn't
-    // ready until we've replied to config).
-    unawaited(openFile(mainFileUri, ''));
-    var hintsFuture = getInlayHints(
-      mainFileUri,
-      startOfDocRange,
-    );
-    await pumpEventQueue(times: 5000);
-
-    // Finally, respond to config and ensure inlay hints completes because
-    // the server completed initialization.
-    configResponse.complete({});
-    expect(await hintsFuture, isEmpty);
-  }
-
   Future<void> test_setter() async {
-    var content = '''
+    final content = '''
 set f(int i) {}
 ''';
     // Setters are always `void` so we don't show a label there.
-    var expected = '''
+    final expected = '''
 set f(int i) {}
 ''';
     await _expectHints(content, expected);
   }
 
   Future<void> test_topLevelFunction_returnType() async {
-    var content = '''
+    final content = '''
 f() => '';
 ''';
     // top-level function return types are not inferred and always `dynamic`
-    var expected = '''
+    final expected = '''
 (Type:dynamic) f() => '';
 ''';
     await _expectHints(content, expected);
   }
 
   Future<void> test_topLevelVariable_closureResult() async {
-    var content = '''
+    final content = '''
 var c1 = (() => 3)();
 int c2 = (() => 3)(); // already typed
 ''';
-    var expected = '''
+    final expected = '''
 var (Type:int) c1 = (() => 3)();
 int c2 = (() => 3)(); // already typed
 ''';
@@ -661,12 +627,12 @@ int c2 = (() => 3)(); // already typed
   }
 
   Future<void> test_topLevelVariable_functionResult() async {
-    var content = '''
+    final content = '''
 String f() => '';
 final s1 = f();
 final String s2 = f(); // already typed
 ''';
-    var expected = '''
+    final expected = '''
 String f() => '';
 final (Type:String) s1 = f();
 final String s2 = f(); // already typed
@@ -675,11 +641,11 @@ final String s2 = f(); // already typed
   }
 
   Future<void> test_topLevelVariable_functionType() async {
-    var content = '''
+    final content = '''
 final f1 = (List<String> x) => x;
 final List<String> Function(List<String>) f2 = (List<String> x) => x; // already typed
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:List<String> Function(List<String>)) f1 = (List<String> x) => x;
 final List<String> Function(List<String>) f2 = (List<String> x) => x; // already typed
 ''';
@@ -687,14 +653,14 @@ final List<String> Function(List<String>) f2 = (List<String> x) => x; // already
   }
 
   Future<void> test_topLevelVariable_literal() async {
-    var content = '''
+    final content = '''
 final i1 = 1;
 const i2 = 1;
 var i3 = 1;
 final i4 = 2, s1 = '';
 int i5 = 1; // already typed
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:int) i1 = 1;
 const (Type:int) i2 = 1;
 var (Type:int) i3 = 1;
@@ -705,14 +671,14 @@ int i5 = 1; // already typed
   }
 
   Future<void> test_topLevelVariable_literalList() async {
-    var content = '''
+    final content = '''
 final l1 = [1, 2, 3];
 final l2 = [1, '', 3];
 final l3 = ['', null, ''];
 final l4 = <Object>[1, 2, 3];
 final List<Object> l5 = [1, 2, 3];
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:List<int>) l1 = (Type:<int>)[1, 2, 3];
 final (Type:List<Object>) l2 = (Type:<Object>)[1, '', 3];
 final (Type:List<String?>) l3 = (Type:<String?>)['', null, ''];
@@ -723,32 +689,32 @@ final List<Object> l5 = (Type:<Object>)[1, 2, 3];
   }
 
   Future<void> test_topLevelVariable_literalMap() async {
-    var content = '''
+    final content = '''
 final m1 = {1: '', 2: ''};
 final m2 = {'': [1]};
 final m3 = {'': null};
 final m4 = <Object, String>{1: '', 2: ''};
-final Map<int, String> m5 = {1: '', 2: ''};
+final Map<int, String> m1 = {1: '', 2: ''};
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:Map<int, String>) m1 = (Type:<int, String>){1: '', 2: ''};
 final (Type:Map<String, List<int>>) m2 = (Type:<String, List<int>>){'': (Type:<int>)[1]};
 final (Type:Map<String, Null>) m3 = (Type:<String, Null>){'': null};
 final (Type:Map<Object, String>) m4 = <Object, String>{1: '', 2: ''};
-final Map<int, String> m5 = (Type:<int, String>){1: '', 2: ''};
+final Map<int, String> m1 = (Type:<int, String>){1: '', 2: ''};
 ''';
     await _expectHints(content, expected);
   }
 
   Future<void> test_topLevelVariable_literalSet() async {
-    var content = '''
+    final content = '''
 final s1 = {1, 2, 3};
 final s2 = {1, '', 3};
 final s3 = {'', null, ''};
 final s4 = <Object>{1, 2, 3};
 final Set<Object> s5 = {1, 2, 3};
 ''';
-    var expected = '''
+    final expected = '''
 final (Type:Set<int>) s1 = (Type:<int>){1, 2, 3};
 final (Type:Set<Object>) s2 = (Type:<Object>){1, '', 3};
 final (Type:Set<String?>) s3 = (Type:<String?>){'', null, ''};
@@ -777,13 +743,13 @@ class _AbstractInlayHintTest extends AbstractLspAnalysisServerTest {
   /// ```
   String substituteHints(String content, List<InlayHint> hints) {
     hints.sort((h1, h2) => positionCompare(h1.position, h2.position));
-    var buffer = StringBuffer();
-    var lineInfo = LineInfo.fromContent(content);
+    final buffer = StringBuffer();
+    final lineInfo = LineInfo.fromContent(content);
 
     var lastOffset = 0;
-    for (var hint in hints) {
+    for (final hint in hints) {
       // First add any text from the last hint up to this hint.
-      var offset = toOffset(lineInfo, hint.position).result;
+      final offset = toOffset(lineInfo, hint.position).result;
       buffer.write(content.substring(lastOffset, offset));
 
       // Then add the hint. Include the kind in parens so it can be tested too,
@@ -799,20 +765,20 @@ class _AbstractInlayHintTest extends AbstractLspAnalysisServerTest {
 
   Future<void> _expectHints(
       String content, String expectedContentWithHints) async {
-    var hints = await _fetchHints(content);
-    var actualContentWithHints = substituteHints(content, hints);
+    final hints = await _fetchHints(content);
+    final actualContentWithHints = substituteHints(content, hints);
     expect(actualContentWithHints, expectedContentWithHints);
   }
 
   Future<void> _expectNoHints(String content) async {
-    var hints = await _fetchHints(content);
+    final hints = await _fetchHints(content);
     expect(hints, isEmpty);
   }
 
   Future<List<InlayHint>> _fetchHints(String content) async {
     await initialize();
     await openFile(mainFileUri, content);
-    var hints = await getInlayHints(
+    final hints = await getInlayHints(
       mainFileUri,
       rangeOfWholeContent(content),
     );
@@ -823,7 +789,7 @@ class _AbstractInlayHintTest extends AbstractLspAnalysisServerTest {
   void _writeHintDescription(StringBuffer buffer, InlayHint hint) {
     // TODO(dantup): Improve the LSP enum codegen to allow us to get the names
     //  of int-based enums.
-    var kindNames = {
+    final kindNames = {
       InlayHintKind.Type: 'Type',
       InlayHintKind.Parameter: 'Parameter',
     };

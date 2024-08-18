@@ -1,8 +1,11 @@
 class Foo {
-  // Not OK.
-  void foo.x() { }
-  // Not OK.
-  void foo.x() : initializer = true { }
-  // Not OK.
-  void foo() : initializer = true {}
+  void foo.x() {
+    // Not OK.
+  }
+  void foo.x() : initializer = true {
+    // Not OK.
+  }
+  void foo() : initializer = true {
+    // Not OK.
+  }
 }

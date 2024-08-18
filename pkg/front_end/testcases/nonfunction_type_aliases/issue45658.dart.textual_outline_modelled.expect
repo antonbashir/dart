@@ -4,7 +4,5 @@ class C<X> {
 }
 
 foo() {}
-
 main() {}
-
 typedef A<X extends C<X>> = C<X>;

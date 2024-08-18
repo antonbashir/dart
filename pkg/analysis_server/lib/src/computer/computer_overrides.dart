@@ -4,6 +4,7 @@
 
 import 'package:analysis_server/src/collections.dart';
 import 'package:analysis_server/src/protocol_server.dart' as proto;
+import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -48,11 +49,13 @@ class DartUnitOverridesComputer {
       if (superElements.isNotEmpty || interfaceElements.isNotEmpty) {
         var superMember = superElements.isNotEmpty
             ? proto.newOverriddenMember_fromEngine(
-                superElements.first.nonSynthetic)
+                superElements.first.nonSynthetic,
+                withNullability: _unit.isNonNullableByDefault)
             : null;
         var interfaceMembers = interfaceElements
-            .map((member) =>
-                proto.newOverriddenMember_fromEngine(member.nonSynthetic))
+            .map((member) => proto.newOverriddenMember_fromEngine(
+                member.nonSynthetic,
+                withNullability: _unit.isNonNullableByDefault))
             .toList();
         _overrides.add(proto.Override(token.offset, token.length,
             superclassMember: superMember,
@@ -136,7 +139,6 @@ class _OverriddenElementsFinder {
 
   /// Add the [OverriddenElements] for this element.
   OverriddenElements find() {
-    _class = _class.augmented.declaration;
     _visited.clear();
     _addSuperOverrides(_class, withThisType: false);
     _visited.clear();
@@ -198,24 +200,21 @@ class _OverriddenElementsFinder {
     Element? member;
     // method
     if (_kinds.contains(ElementKind.METHOD)) {
-      var augmented = classElement.augmented;
-      member = augmented.lookUpMethod(name: _name, library: _library);
+      member = classElement.lookUpMethod(_name, _library);
       if (member != null) {
         return member;
       }
     }
     // getter
     if (_kinds.contains(ElementKind.GETTER)) {
-      var augmented = classElement.augmented;
-      member = augmented.lookUpGetter(name: _name, library: _library);
+      member = classElement.lookUpGetter(_name, _library);
       if (member != null) {
         return member;
       }
     }
     // setter
     if (_kinds.contains(ElementKind.SETTER)) {
-      var augmented = classElement.augmented;
-      member = augmented.lookUpSetter(name: '$_name=', library: _library);
+      member = classElement.lookUpSetter('$_name=', _library);
       if (member != null) {
         return member;
       }

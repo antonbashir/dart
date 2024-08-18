@@ -19,7 +19,7 @@ class ExtensionTypeResolutionTest extends PubPackageResolutionTest {
 extension type A.named(int it) {}
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -32,15 +32,15 @@ ExtensionTypeDeclaration
     leftParenthesis: (
     fieldType: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::named
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::named
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
+  declaredElement: self::@extensionType::A
 ''');
   }
 
@@ -51,7 +51,7 @@ extension type A(int it) {
 }
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -61,18 +61,18 @@ ExtensionTypeDeclaration
     leftParenthesis: (
     fieldType: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::new
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::new
   leftBracket: {
   members
     ConstructorDeclaration
       returnType: SimpleIdentifier
         token: A
-        staticElement: <testLibraryFragment>::@extensionType::A
+        staticElement: self::@extensionType::A
         staticType: null
       period: .
       name: named
@@ -82,15 +82,15 @@ ExtensionTypeDeclaration
           thisKeyword: this
           period: .
           name: it
-          declaredElement: <testLibraryFragment>::@extensionType::A::@constructor::named::@parameter::it
+          declaredElement: self::@extensionType::A::@constructor::named::@parameter::it
             type: int
         rightParenthesis: )
       body: EmptyFunctionBody
         semicolon: ;
-      declaredElement: <testLibraryFragment>::@extensionType::A::@constructor::named
+      declaredElement: self::@extensionType::A::@constructor::named
         type: A Function(int)
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
+  declaredElement: self::@extensionType::A
 ''');
   }
 
@@ -101,7 +101,7 @@ extension type A(num it) {
 }
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -111,19 +111,19 @@ ExtensionTypeDeclaration
     leftParenthesis: (
     fieldType: NamedType
       name: num
-      element: dart:core::<fragment>::@class::num
+      element: dart:core::@class::num
       type: num
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::new
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::new
   leftBracket: {
   members
     ConstructorDeclaration
       constKeyword: const
       returnType: SimpleIdentifier
         token: A
-        staticElement: <testLibraryFragment>::@extensionType::A
+        staticElement: self::@extensionType::A
         staticType: null
       period: .
       name: named
@@ -132,10 +132,10 @@ ExtensionTypeDeclaration
         parameter: SimpleFormalParameter
           type: NamedType
             name: int
-            element: dart:core::<fragment>::@class::int
+            element: dart:core::@class::int
             type: int
           name: a
-          declaredElement: <testLibraryFragment>::@extensionType::A::@constructor::named::@parameter::a
+          declaredElement: self::@extensionType::A::@constructor::named::@parameter::a
             type: int
         rightParenthesis: )
       separator: :
@@ -143,19 +143,19 @@ ExtensionTypeDeclaration
         ConstructorFieldInitializer
           fieldName: SimpleIdentifier
             token: it
-            staticElement: <testLibraryFragment>::@extensionType::A::@field::it
+            staticElement: self::@extensionType::A::@field::it
             staticType: null
           equals: =
           expression: SimpleIdentifier
             token: a
-            staticElement: <testLibraryFragment>::@extensionType::A::@constructor::named::@parameter::a
+            staticElement: self::@extensionType::A::@constructor::named::@parameter::a
             staticType: int
       body: EmptyFunctionBody
         semicolon: ;
-      declaredElement: <testLibraryFragment>::@extensionType::A::@constructor::named
+      declaredElement: self::@extensionType::A::@constructor::named
         type: A Function(int)
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
+  declaredElement: self::@extensionType::A
 ''');
   }
 
@@ -164,7 +164,7 @@ ExtensionTypeDeclaration
 extension type A(int it) {}
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -174,15 +174,15 @@ ExtensionTypeDeclaration
     leftParenthesis: (
     fieldType: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::new
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::new
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
+  declaredElement: self::@extensionType::A
 ''');
   }
 
@@ -191,7 +191,7 @@ ExtensionTypeDeclaration
 extension type A(int it) implements num {}
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -201,22 +201,22 @@ ExtensionTypeDeclaration
     leftParenthesis: (
     fieldType: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::new
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::new
   implementsClause: ImplementsClause
     implementsKeyword: implements
     interfaces
       NamedType
         name: num
-        element: dart:core::<fragment>::@class::num
+        element: dart:core::@class::num
         type: num
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
+  declaredElement: self::@extensionType::A
 ''');
   }
 
@@ -230,7 +230,7 @@ extension type A<T>(int it) {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    final node = findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -253,7 +253,7 @@ MethodDeclaration
         element: T@17
         type: T
       name: t
-      declaredElement: <testLibraryFragment>::@extensionType::A::@method::foo::@parameter::t
+      declaredElement: self::@extensionType::A::@method::foo::@parameter::t
         type: T
     parameter: SimpleFormalParameter
       type: NamedType
@@ -261,7 +261,7 @@ MethodDeclaration
         element: U@41
         type: U
       name: u
-      declaredElement: <testLibraryFragment>::@extensionType::A::@method::foo::@parameter::u
+      declaredElement: self::@extensionType::A::@method::foo::@parameter::u
         type: U
     rightParenthesis: )
   body: BlockFunctionBody
@@ -281,7 +281,7 @@ MethodDeclaration
             staticType: Type
           semicolon: ;
       rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A::@method::foo
+  declaredElement: self::@extensionType::A::@method::foo
     type: void Function<U>(T, U)
 ''');
   }
@@ -291,7 +291,7 @@ MethodDeclaration
 extension type A<T, U>(Map<T, U> it) {}
 ''');
 
-    var node = findNode.singleExtensionTypeDeclaration;
+    final node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -323,60 +323,15 @@ ExtensionTypeDeclaration
             element: U@20
             type: U
         rightBracket: >
-      element: dart:core::<fragment>::@class::Map
+      element: dart:core::@class::Map
       type: Map<T, U>
     fieldName: it
     rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::A::@field::it
-    constructorElement: <testLibraryFragment>::@extensionType::A::@constructor::new
+    fieldElement: self::@extensionType::A::@field::it
+    constructorElement: self::@extensionType::A::@constructor::new
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::A
-''');
-  }
-
-  test_typeParameters_wildcards() async {
-    await assertNoErrorsInCode(r'''
-extension type ET<_, _, _ extends num>(int _) {}
-''');
-
-    var node = findNode.singleExtensionTypeDeclaration;
-    assertResolvedNodeText(node, r'''
-ExtensionTypeDeclaration
-  extensionKeyword: extension
-  typeKeyword: type
-  name: ET
-  typeParameters: TypeParameterList
-    leftBracket: <
-    typeParameters
-      TypeParameter
-        name: _
-        declaredElement: _@18
-      TypeParameter
-        name: _
-        declaredElement: _@21
-      TypeParameter
-        name: _
-        extendsKeyword: extends
-        bound: NamedType
-          name: num
-          element: dart:core::<fragment>::@class::num
-          type: num
-        declaredElement: _@24
-    rightBracket: >
-  representation: RepresentationDeclaration
-    leftParenthesis: (
-    fieldType: NamedType
-      name: int
-      element: dart:core::<fragment>::@class::int
-      type: int
-    fieldName: _
-    rightParenthesis: )
-    fieldElement: <testLibraryFragment>::@extensionType::ET::@field::_
-    constructorElement: <testLibraryFragment>::@extensionType::ET::@constructor::new
-  leftBracket: {
-  rightBracket: }
-  declaredElement: <testLibraryFragment>::@extensionType::ET
+  declaredElement: self::@extensionType::A
 ''');
   }
 }

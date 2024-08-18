@@ -89,8 +89,7 @@ void FUNCTION_NAME(Builtin_PrintString)(Dart_NativeArguments args) {
   if (Dart_IsError(result)) {
     Dart_PropagateError(result);
   }
-  intptr_t new_length = length + 1;
-  uint8_t* chars = Dart_ScopeAllocate(new_length);
+  uint8_t* chars = Dart_ScopeAllocate(length + 1);
   ASSERT(chars != nullptr);
   result = Dart_CopyUTF8EncodingOfString(str, chars, length);
   if (Dart_IsError(result)) {
@@ -99,13 +98,13 @@ void FUNCTION_NAME(Builtin_PrintString)(Dart_NativeArguments args) {
   chars[length] = '\n';
 
   // Uses fwrite to support printing NUL bytes.
-  intptr_t res = fwrite(chars, 1, new_length, stdout);
-  ASSERT(res == new_length);
+  intptr_t res = fwrite(chars, 1, length + 1, stdout);
+  ASSERT(res == (length + 1));
   fflush(stdout);
   if (ShouldCaptureStdout()) {
     // For now we report print output on the Stdout stream.
     const char* res =
-        Dart_ServiceSendDataEvent("Stdout", "WriteEvent", chars, new_length);
+        Dart_ServiceSendDataEvent("Stdout", "WriteEvent", chars, length);
     ASSERT(res == nullptr);
   }
 }

@@ -26,9 +26,6 @@ class StackTraceUtils : public AllStatic {
     // Code object corresponding to this frame.
     const Code& code;
 
-    // Bytecode object corresponding to this frame.
-    const Bytecode& bytecode;
-
     // Offset into the code object corresponding to this frame.
     //
     // Will be set to |kFutureListenerPcOffset| if this frame corresponds to
@@ -38,6 +35,10 @@ class StackTraceUtils : public AllStatic {
     // Closure corresponding to the awaiter frame or |null| if this is
     // a synchronous frame or a gap.
     const Closure& closure;
+
+    // |true| if an asynchronous exception would be caught by a |catchError|
+    // listener somewhere between the previous frame and this frame.
+    bool has_async_catch_error;
   };
 
   // Returns |true| if this function is needed to correctly unwind through
@@ -45,13 +46,6 @@ class StackTraceUtils : public AllStatic {
   // its signature and the corresponding |Code| object (so that we could
   // perform the reverse lookup).
   static bool IsNeededForAsyncAwareUnwinding(const Function& function);
-
-  // Returns |true| if the given class might serve as an awaiter-link when
-  // unwinding an awaiter chain.
-  //
-  // This is used to eagerly mark tear-offs of methods on this class
-  // as having an awaiter-link.
-  static bool IsPossibleAwaiterLink(const Class& cls);
 
   /// Collects all frames on the current stack until an async/async* frame is
   /// hit which has yielded before (i.e. is not in sync-async case).
@@ -61,8 +55,7 @@ class StackTraceUtils : public AllStatic {
   static void CollectFrames(
       Thread* thread,
       int skip_frames,
-      const std::function<void(const Frame&)>& handle_frame,
-      bool* has_async_catch_error = nullptr);
+      const std::function<void(const Frame&)>& handle_frame);
 
   // If |closure| has an awaiter-link pointing to the |SuspendState|
   // the return that object.

@@ -7,9 +7,6 @@ class Square {
 }
 
 String log = "";
-
 void logger(String s) {}
-
 main() {}
-
 expect(expected, actual) {}

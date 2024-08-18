@@ -96,17 +96,11 @@ void main() {
   // F == G
   testEquals(
       new TypedefTearOffConstant(
-          [
-            new StructuralParameter(
-                'T', const DynamicType(), const DynamicType())
-          ],
+          [new TypeParameter('T', const DynamicType(), const DynamicType())],
           tearOffConstant1a,
           []),
       new TypedefTearOffConstant(
-          [
-            new StructuralParameter(
-                'S', const DynamicType(), const DynamicType())
-          ],
+          [new TypeParameter('S', const DynamicType(), const DynamicType())],
           tearOffConstant1b,
           []));
 
@@ -117,18 +111,13 @@ void main() {
   testNotEquals(
       new TypedefTearOffConstant(
           [
-            new StructuralParameter(
-                'T1', const DynamicType(), const DynamicType()),
-            new StructuralParameter(
-                'T2', const DynamicType(), const DynamicType())
+            new TypeParameter('T1', const DynamicType(), const DynamicType()),
+            new TypeParameter('T2', const DynamicType(), const DynamicType())
           ],
           tearOffConstant1a,
           []),
       new TypedefTearOffConstant(
-          [
-            new StructuralParameter(
-                'S', const DynamicType(), const DynamicType())
-          ],
+          [new TypeParameter('S', const DynamicType(), const DynamicType())],
           tearOffConstant1b,
           []));
 
@@ -138,51 +127,38 @@ void main() {
   // F != G
   testNotEquals(
       new TypedefTearOffConstant(
-          [new StructuralParameter('T', const VoidType(), const DynamicType())],
+          [new TypeParameter('T', const VoidType(), const DynamicType())],
           tearOffConstant1a,
           []),
       new TypedefTearOffConstant(
-          [
-            new StructuralParameter(
-                'S', const DynamicType(), const DynamicType())
-          ],
+          [new TypeParameter('S', const DynamicType(), const DynamicType())],
           tearOffConstant1b,
           []));
   {
-    StructuralParameter structuralParameter1 =
-        new StructuralParameter('T', const DynamicType(), const DynamicType());
-    StructuralParameter structuralParameter2 =
-        new StructuralParameter('S', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter1 =
+        new TypeParameter('T', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter2 =
+        new TypeParameter('S', const DynamicType(), const DynamicType());
 
     // foo<X>() {}
     // typedef F<T> = foo<T>;
     // typedef G<S> = foo<S>;
     // F == G
     testEquals(
-        new TypedefTearOffConstant(
-            [structuralParameter1],
-            tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter1, Nullability.nullable)
-            ]),
-        new TypedefTearOffConstant(
-            [structuralParameter2],
-            tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter2, Nullability.nullable)
-            ]));
+        new TypedefTearOffConstant([typeParameter1], tearOffConstant3,
+            [new TypeParameterType(typeParameter1, Nullability.nullable)]),
+        new TypedefTearOffConstant([typeParameter2], tearOffConstant3,
+            [new TypeParameterType(typeParameter2, Nullability.nullable)]));
   }
   {
-    StructuralParameter structuralParameter1a =
-        new StructuralParameter('T1', const DynamicType(), const DynamicType());
-    StructuralParameter structuralParameter1b =
-        new StructuralParameter('T2', const DynamicType(), const DynamicType());
-    StructuralParameter structuralParameter2a =
-        new StructuralParameter('S1', const DynamicType(), const DynamicType());
-    StructuralParameter structuralParameter2b =
-        new StructuralParameter('S2', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter1a =
+        new TypeParameter('T1', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter1b =
+        new TypeParameter('T2', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter2a =
+        new TypeParameter('S1', const DynamicType(), const DynamicType());
+    TypeParameter typeParameter2b =
+        new TypeParameter('S2', const DynamicType(), const DynamicType());
 
     // foo<X>() {}
     // typedef F<T1, T2> = foo<T1>;
@@ -190,19 +166,13 @@ void main() {
     // F == G
     testEquals(
         new TypedefTearOffConstant(
-            [structuralParameter1a, structuralParameter1b],
+            [typeParameter1a, typeParameter1b],
             tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter1a, Nullability.nullable)
-            ]),
+            [new TypeParameterType(typeParameter1a, Nullability.nullable)]),
         new TypedefTearOffConstant(
-            [structuralParameter2a, structuralParameter2b],
+            [typeParameter2a, typeParameter2b],
             tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter2a, Nullability.nullable)
-            ]));
+            [new TypeParameterType(typeParameter2a, Nullability.nullable)]));
 
     // foo<X>() {}
     // typedef F<T1, T2> = foo<T1>;
@@ -210,19 +180,13 @@ void main() {
     // F != G
     testNotEquals(
         new TypedefTearOffConstant(
-            [structuralParameter1a, structuralParameter1b],
+            [typeParameter1a, typeParameter1b],
             tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter1a, Nullability.nullable)
-            ]),
+            [new TypeParameterType(typeParameter1a, Nullability.nullable)]),
         new TypedefTearOffConstant(
-            [structuralParameter2a, structuralParameter2b],
+            [typeParameter2a, typeParameter2b],
             tearOffConstant3,
-            [
-              new StructuralParameterType(
-                  structuralParameter2b, Nullability.nullable)
-            ]));
+            [new TypeParameterType(typeParameter2b, Nullability.nullable)]));
 
     testEquals(tearOffConstant4, tearOffConstant4);
     testEquals(tearOffConstant5, tearOffConstant5);

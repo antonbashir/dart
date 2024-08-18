@@ -23,17 +23,17 @@ class A { foo() {return b == true ? 1 : ^}}
 ''');
     assertResponse(r'''
 suggestions
-  null
-    kind: keyword
   const
     kind: keyword
   false
     kind: keyword
-  this
+  null
     kind: keyword
   super
     kind: keyword
   switch
+    kind: keyword
+  this
     kind: keyword
   true
     kind: keyword
@@ -46,19 +46,19 @@ class A { foo() {return b == true ? ^}}
 ''');
     assertResponse(r'''
 suggestions
-  null
-    kind: keyword
   const
     kind: keyword
-  true
-    kind: keyword
   false
+    kind: keyword
+  null
     kind: keyword
   super
     kind: keyword
   switch
     kind: keyword
   this
+    kind: keyword
+  true
     kind: keyword
 ''');
   }

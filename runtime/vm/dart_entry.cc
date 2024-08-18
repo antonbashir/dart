@@ -9,7 +9,6 @@
 #include "vm/debugger.h"
 #include "vm/dispatch_table.h"
 #include "vm/heap/safepoint.h"
-#include "vm/interpreter.h"
 #include "vm/object_store.h"
 #include "vm/resolver.h"
 #include "vm/runtime_entry.h"
@@ -83,31 +82,6 @@ extern "C" typedef uword /*ObjectPtr*/ (*invokestub)(
     uword /*ArrayPtr*/ arguments,
     Thread* thread);
 
-// Private helper for converting types and switching between Simulator
-// and CPU invocations.
-static ObjectPtr InvokeDartCode(uword entry_point,
-                                const Array& arguments_descriptor,
-                                const Array& arguments,
-                                Thread* thread) {
-  DartEntryScope dart_entry_scope(thread);
-
-  const uword stub = StubCode::InvokeDartCode().EntryPoint();
-#if defined(USING_SIMULATOR)
-  auto invoke = [&](uword entry_point, uword arguments_descriptor,
-                    uword arguments, Thread* thread) -> uword {
-    return Simulator::Current()->Call(stub, entry_point, arguments_descriptor,
-                                      arguments,
-                                      reinterpret_cast<int64_t>(thread));
-  };
-#else
-  auto invoke = reinterpret_cast<invokestub>(stub);
-#endif
-  uword result =
-      invoke(entry_point, static_cast<uword>(arguments_descriptor.ptr()),
-             static_cast<uword>(arguments.ptr()), thread);
-  return static_cast<ObjectPtr>(result);
-}
-
 ObjectPtr DartEntry::InvokeFunction(const Function& function,
                                     const Array& arguments,
                                     const Array& arguments_descriptor) {
@@ -121,17 +95,6 @@ ObjectPtr DartEntry::InvokeFunction(const Function& function,
   ASSERT(thread->IsDartMutatorThread());
   ASSERT(!function.IsNull());
 
-#if defined(DART_DYNAMIC_MODULES)
-  if (function.HasBytecode()) {
-    // SuspendLongJumpScope suspend_long_jump_scope(thread);
-    TransitionToGenerated transition(thread);
-    return Interpreter::Current()->Call(function, arguments_descriptor,
-                                        arguments, thread);
-  } else {
-    ASSERT(!function.is_declared_in_bytecode());
-  }
-#endif  // defined(DART_DYNAMIC_MODULES)
-
 #if !defined(DART_PRECOMPILED_RUNTIME)
   if (!function.HasCode()) {
     const Object& result = Object::Handle(
@@ -144,15 +107,30 @@ ObjectPtr DartEntry::InvokeFunction(const Function& function,
 
   ASSERT(function.HasCode());
 
-  // Note: InvokeFunction takes Arguments then ArgumentsDescriptor,
-  // where as InvokeDartCode takes ArgumentsDescriptor then Arguments.
-  return InvokeDartCode(
+  DartEntryScope dart_entry_scope(thread);
+
+  const uword stub = StubCode::InvokeDartCode().EntryPoint();
+#if defined(USING_SIMULATOR)
+  return bit_copy<ObjectPtr, int64_t>(Simulator::Current()->Call(
+      static_cast<intptr_t>(stub),
+#if defined(DART_PRECOMPILED_RUNTIME)
+      static_cast<intptr_t>(function.entry_point()),
+#else
+      static_cast<intptr_t>(function.CurrentCode()),
+#endif
+      static_cast<intptr_t>(arguments_descriptor.ptr()),
+      static_cast<intptr_t>(arguments.ptr()),
+      reinterpret_cast<intptr_t>(thread)));
+#else  // USING_SIMULATOR
+  return static_cast<ObjectPtr>((reinterpret_cast<invokestub>(stub))(
 #if defined(DART_PRECOMPILED_RUNTIME)
       function.entry_point(),
 #else
       static_cast<uword>(function.CurrentCode()),
 #endif
-      arguments_descriptor, arguments, thread);
+      static_cast<uword>(arguments_descriptor.ptr()),
+      static_cast<uword>(arguments.ptr()), thread));
+#endif
 }
 
 #if defined(TESTING)
@@ -169,14 +147,36 @@ ObjectPtr DartEntry::InvokeCode(const Code& code,
 
   ASSERT(!code.IsNull());
   ASSERT(thread->no_callback_scope_depth() == 0);
+  ASSERT(!thread->isolate_group()->null_safety_not_set());
 
-  return InvokeDartCode(
+  DartEntryScope dart_entry_scope(thread);
+
+  const uword stub = StubCode::InvokeDartCode().EntryPoint();
 #if defined(DART_PRECOMPILED_RUNTIME)
-      code.EntryPoint(),
-#else  // defined(DART_PRECOMPILED_RUNTIME)
-      static_cast<uword>(code.ptr()),
+#if defined(USING_SIMULATOR)
+  return bit_copy<ObjectPtr, int64_t>(Simulator::Current()->Call(
+      static_cast<intptr_t>(stub), static_cast<intptr_t>(code.EntryPoint()),
+      static_cast<intptr_t>(arguments_descriptor.ptr()),
+      static_cast<intptr_t>(arguments.ptr()),
+      reinterpret_cast<intptr_t>(thread)));
+#else
+  return static_cast<ObjectPtr>((reinterpret_cast<invokestub>(stub))(
+      code.EntryPoint(), arguments_descriptor.ptr(), arguments.ptr(), thread));
 #endif
-      arguments_descriptor, arguments, thread);
+#else  // defined(DART_PRECOMPILED_RUNTIME)
+#if defined(USING_SIMULATOR)
+  return bit_copy<ObjectPtr, int64_t>(Simulator::Current()->Call(
+      static_cast<intptr_t>(stub), static_cast<intptr_t>(code.ptr()),
+      static_cast<intptr_t>(arguments_descriptor.ptr()),
+      static_cast<intptr_t>(arguments.ptr()),
+      reinterpret_cast<intptr_t>(thread)));
+#else
+  return static_cast<ObjectPtr>((reinterpret_cast<invokestub>(stub))(
+      static_cast<uword>(code.ptr()),
+      static_cast<uword>(arguments_descriptor.ptr()),
+      static_cast<uword>(arguments.ptr()), thread));
+#endif
+#endif
 }
 #endif  // defined(TESTING)
 
@@ -790,13 +790,13 @@ static ObjectPtr RehashObjects(Zone* zone,
   return DartEntry::InvokeFunction(rehashing_function, arguments);
 }
 
-ObjectPtr DartLibraryCalls::RehashObjectsInDartCompactHash(
+ObjectPtr DartLibraryCalls::RehashObjectsInDartCollection(
     Thread* thread,
     const Object& array_or_growable_array) {
   auto zone = thread->zone();
-  const auto& compact_hash_lib =
-      Library::Handle(zone, Library::CompactHashLibrary());
-  return RehashObjects(zone, compact_hash_lib, array_or_growable_array);
+  const auto& collections_lib =
+      Library::Handle(zone, Library::CollectionLibrary());
+  return RehashObjects(zone, collections_lib, array_or_growable_array);
 }
 
 ObjectPtr DartLibraryCalls::RehashObjectsInDartCore(

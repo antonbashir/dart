@@ -36,6 +36,9 @@ abstract class Entity implements Spannable {
 abstract class LibraryEntity extends Entity {
   /// Return the canonical uri that identifies this library.
   Uri get canonicalUri;
+
+  /// Returns whether or not this library has opted into null safety.
+  bool get isNonNullableByDefault;
 }
 
 /// Stripped down super interface for import entities.
@@ -174,19 +177,21 @@ abstract class FunctionEntity extends MemberEntity {
 }
 
 /// Enum for the synchronous/asynchronous function body modifiers.
-enum AsyncMarker {
+class AsyncMarker {
   /// The default function body marker.
-  SYNC._(AsyncModifier.Sync),
+  static const AsyncMarker SYNC = AsyncMarker._(AsyncModifier.Sync);
 
   /// The `sync*` function body marker.
-  SYNC_STAR._(AsyncModifier.SyncStar, isYielding: true),
+  static const AsyncMarker SYNC_STAR =
+      AsyncMarker._(AsyncModifier.SyncStar, isYielding: true);
 
   /// The `async` function body marker.
-  ASYNC._(AsyncModifier.Async, isAsync: true),
+  static const AsyncMarker ASYNC =
+      AsyncMarker._(AsyncModifier.Async, isAsync: true);
 
   /// The `async*` function body marker.
-  ASYNC_STAR._(AsyncModifier.AsyncStar, isAsync: true, isYielding: true),
-  ;
+  static const AsyncMarker ASYNC_STAR =
+      AsyncMarker._(AsyncModifier.AsyncStar, isAsync: true, isYielding: true);
 
   /// Is `true` if this marker defines the function body to have an
   /// asynchronous result, that is, either a [Future] or a [Stream].
@@ -205,7 +210,26 @@ enum AsyncMarker {
   String toString() {
     return '${isAsync ? 'async' : 'sync'}${isYielding ? '*' : ''}';
   }
+
+  /// Canonical list of marker values.
+  ///
+  /// Added to make [AsyncMarker] enum-like.
+  static const List<AsyncMarker> values = <AsyncMarker>[
+    SYNC,
+    SYNC_STAR,
+    ASYNC,
+    ASYNC_STAR
+  ];
+
+  /// Index to this marker within [values].
+  ///
+  /// Added to make [AsyncMarker] enum-like.
+  int get index => values.indexOf(this);
 }
+
+/// Values for variance annotations.
+/// This needs to be kept in sync with values of `Variance` in `dart:_rti`.
+enum Variance { legacyCovariant, covariant, contravariant, invariant }
 
 /// Stripped down super interface for constructor like entities.
 ///
@@ -331,7 +355,7 @@ class ParameterStructure {
   }
 
   /// Deserializes a [ParameterStructure] object from [source].
-  factory ParameterStructure.readFromDataSource(DataSourceReader source) {
+  static readFromDataSource(DataSourceReader source) {
     final tag = ParameterStructure.tag;
     source.begin(tag);
     int requiredPositionalParameters = source.readInt();

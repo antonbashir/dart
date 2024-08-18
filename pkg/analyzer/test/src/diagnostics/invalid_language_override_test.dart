@@ -84,7 +84,7 @@ int i = 0;
   test_location_afterClass() async {
     await assertErrorsInCode(r'''
 class A {
-  // @dart = 3.0
+  // @dart = 2.5
   void test() {}
 }
 ''', [
@@ -95,21 +95,21 @@ class A {
   test_location_afterDeclaration() async {
     await assertErrorsInCode(r'''
 class A {}
-// @dart = 3.0
+// @dart = 2.5
 ''', [error(WarningCode.INVALID_LANGUAGE_VERSION_OVERRIDE_LOCATION, 14, 11)]);
   }
 
   test_location_afterDeclaration_beforeEof() async {
     await assertErrorsInCode(r'''
 class A {}
-// @dart = 3.0
+// @dart = 2.5
 ''', [error(WarningCode.INVALID_LANGUAGE_VERSION_OVERRIDE_LOCATION, 14, 11)]);
   }
 
   test_location_afterDirective() async {
     await assertErrorsInCode(r'''
 import 'dart:core';
-// @dart = 3.0
+// @dart = 2.5
 class A {}
 ''', [error(WarningCode.INVALID_LANGUAGE_VERSION_OVERRIDE_LOCATION, 23, 11)]);
   }

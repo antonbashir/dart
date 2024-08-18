@@ -48,7 +48,7 @@ class MemoryByteStore implements ByteStore {
 
   @override
   Uint8List? get(String key) {
-    var entry = map[key];
+    final entry = map[key];
     if (entry == null) {
       return null;
     }
@@ -59,7 +59,7 @@ class MemoryByteStore implements ByteStore {
 
   @override
   Uint8List putGet(String key, Uint8List bytes) {
-    var entry = map[key];
+    final entry = map[key];
     if (entry != null) {
       entry.refCount++;
       return entry.bytes;
@@ -71,8 +71,8 @@ class MemoryByteStore implements ByteStore {
 
   @override
   void release(Iterable<String> keys) {
-    for (var key in keys) {
-      var entry = map[key];
+    for (final key in keys) {
+      final entry = map[key];
       if (entry != null) {
         entry.refCount--;
         if (entry.refCount == 0) {
@@ -108,12 +108,12 @@ class MemoryCachingByteStore implements ByteStore {
 
   @override
   Uint8List? get(String key) {
-    var cached = _cache.get(key);
+    final cached = _cache.get(key);
     if (cached != null) {
       return cached;
     }
 
-    var fromStore = _store.get(key);
+    final fromStore = _store.get(key);
     if (fromStore != null) {
       _cache.put(key, fromStore);
       return fromStore;

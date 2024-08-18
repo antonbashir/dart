@@ -28,7 +28,7 @@ class B implements a.A {}
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 67, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -37,9 +37,9 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: a
         period: .
-        element: <testLibraryFragment>::@prefix::a
+        element: self::@prefix::a
       name: A
-      element: package:test/lib1.dart::<fragment>::@class::A
+      element: package:test/lib1.dart::@class::A
       type: A
 ''');
   }
@@ -58,7 +58,7 @@ class C implements a.B {}
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 67, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -67,11 +67,11 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: a
         period: .
-        element: <testLibraryFragment>::@prefix::a
+        element: self::@prefix::a
       name: B
-      element: package:test/lib1.dart::<fragment>::@typeAlias::B
+      element: package:test/lib1.dart::@typeAlias::B
       type: A
-        alias: package:test/lib1.dart::<fragment>::@typeAlias::B
+        alias: package:test/lib1.dart::@typeAlias::B
 ''');
   }
 
@@ -90,7 +90,7 @@ class C = B with M implements a.A;
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 100, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -99,9 +99,9 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: a
         period: .
-        element: <testLibraryFragment>::@prefix::a
+        element: self::@prefix::a
       name: A
-      element: package:test/lib1.dart::<fragment>::@class::A
+      element: package:test/lib1.dart::@class::A
       type: A
 ''');
   }
@@ -118,7 +118,7 @@ extension type B(a.A it) implements a.A {}
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 67, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -127,9 +127,9 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: a
         period: .
-        element: <testLibraryFragment>::@prefix::a
+        element: self::@prefix::a
       name: A
-      element: package:test/a.dart::<fragment>::@class::A
+      element: package:test/a.dart::@class::A
       type: A
 ''');
   }
@@ -146,7 +146,7 @@ extension type B(int it) implements a.A {}
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 67, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -155,9 +155,9 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: a
         period: .
-        element: <testLibraryFragment>::@prefix::a
+        element: self::@prefix::a
       name: A
-      element: package:test/a.dart::<fragment>::@extensionType::A
+      element: package:test/a.dart::@extensionType::A
       type: A
 ''');
   }
@@ -170,7 +170,7 @@ mixin M implements math.Random {}
       error(CompileTimeErrorCode.IMPLEMENTS_DEFERRED_CLASS, 56, 11),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -179,9 +179,9 @@ ImplementsClause
       importPrefix: ImportPrefixReference
         name: math
         period: .
-        element: <testLibraryFragment>::@prefix::math
+        element: self::@prefix::math
       name: Random
-      element: dart:math::<fragment>::@class::Random
+      element: dart:math::@class::Random
       type: Random
 ''');
   }

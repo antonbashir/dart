@@ -3,5 +3,4 @@ class C {
 }
 
 use(_) => null;
-
 main() {}

@@ -20,18 +20,18 @@ import 'package:front_end/src/api_prototype/experimental_flags.dart'
     show ExperimentalFlag, defaultExperimentalFlags;
 import 'package:front_end/src/api_prototype/memory_file_system.dart'
     show MemoryFileSystem;
-import 'package:front_end/src/base/command_line_reporting.dart'
-    as command_line_reporting;
-import 'package:front_end/src/base/hybrid_file_system.dart'
-    show HybridFileSystem;
 import 'package:front_end/src/base/nnbd_mode.dart' show NnbdMode;
 import 'package:front_end/src/compute_platform_binaries_location.dart'
     show computePlatformBinariesLocation;
+import 'package:front_end/src/fasta/command_line_reporting.dart'
+    as command_line_reporting;
+import 'package:front_end/src/fasta/hybrid_file_system.dart'
+    show HybridFileSystem;
 import 'package:kernel/ast.dart' show Location, Source;
 import "package:kernel/target/targets.dart" show TargetFlags;
 import "package:testing/testing.dart"
     show Chain, ChainContext, Expectation, Result, Step, TestDescription;
-import "package:vm/modular/target/vm.dart" show VmTarget;
+import "package:vm/target/vm.dart" show VmTarget;
 import "package:yaml/yaml.dart" show YamlList, YamlMap, YamlNode, loadYamlNode;
 
 import "../../tool/_fasta/entry_points.dart" show BatchCompiler;
@@ -130,9 +130,8 @@ class MessageTestSuite extends ChainContext {
   /// failure by the [Validate] step that can be suppressed via the status
   /// file.
   @override
-  Future<List<MessageTestDescription>> list(Chain suite) {
-    List<MessageTestDescription> result = [];
-    Uri uri = suite.root.resolve("messages.yaml");
+  Stream<MessageTestDescription> list(Chain suite) async* {
+    Uri uri = suite.uri.resolve("messages.yaml");
     File file = new File.fromUri(uri);
     String fileContent = file.readAsStringSync();
     YamlMap messages = loadYamlNode(fileContent, sourceUrl: uri) as YamlMap;
@@ -426,81 +425,81 @@ class MessageTestSuite extends ChainContext {
 
       if (!fastOnly) {
         for (Example example in examples) {
-          result.add(createDescription(example.name, example, null));
+          yield createDescription(example.name, example, null);
         }
         // "Wrap" example as a part.
         for (Example example in examples) {
-          result.add(createDescription(
+          yield createDescription(
               "part_wrapped_${example.name}",
               new PartWrapExample("part_wrapped_${example.name}", name,
                   exampleAllowMoreCodes, example),
-              null));
+              null);
         }
       }
 
-      result.add(createDescription(
+      yield createDescription(
           "knownKeys",
           null,
           unknownKeys.isNotEmpty
               ? "Unknown keys: ${unknownKeys.join(' ')}."
-              : null));
+              : null);
 
-      result.add(createDescription(
+      yield createDescription(
           'hasPublishedDocs',
           null,
           badHasPublishedDocsValue.isNotEmpty
               ? "Bad hasPublishedDocs value (only 'true' supported) in:"
                   " ${badHasPublishedDocsValue.join(', ')}"
-              : null));
+              : null);
 
-      result.add(createDescription(
+      yield createDescription(
           "severity",
           null,
           badSeverity != null
               ? "Unknown severity: '${badSeverity.value}'."
               : null,
-          location: badSeverity?.span.start));
+          location: badSeverity?.span.start);
 
-      result.add(createDescription(
+      yield createDescription(
           "unnecessarySeverity",
           null,
           unnecessarySeverity != null
               ? "The 'ERROR' severity is the default and not necessary."
               : null,
-          location: unnecessarySeverity?.span.start));
+          location: unnecessarySeverity?.span.start);
 
-      result.add(createDescription(
+      yield createDescription(
           "spelling",
           null,
           spellingMessages != null
               ? spellingMessages.join("\n") + spellingPostMessage
-              : null));
+              : null);
 
       bool exampleAndAnalyzerCodeRequired = severity != Severity.context &&
           severity != Severity.internalProblem &&
           severity != Severity.ignored;
 
-      result.add(createDescription(
+      yield createDescription(
           "externalExample",
           null,
           exampleAndAnalyzerCodeRequired &&
                   externalTest != null &&
-                  !(new File.fromUri(suite.root.resolve(externalTest))
+                  !(new File.fromUri(suite.uri.resolve(externalTest))
                       .existsSync())
               ? "Given external example for $name points to a nonexisting file "
-                  "(${suite.root.resolve(externalTest)})."
-              : null));
+                  "(${suite.uri.resolve(externalTest)})."
+              : null);
 
-      result.add(createDescription(
+      yield createDescription(
           "example",
           null,
           exampleAndAnalyzerCodeRequired &&
                   examples.isEmpty &&
                   externalTest == null
               ? "No example for $name, please add at least one example."
-              : null));
+              : null);
 
-      result.add(createDescription(
+      yield createDescription(
           "analyzerCode",
           null,
           exampleAndAnalyzerCodeRequired &&
@@ -511,9 +510,8 @@ class MessageTestSuite extends ChainContext {
                   " <BUILDDIR>/dart-sdk/bin/dartanalyzer --format=machine"
                   " on an example to find the code."
                   " The code is printed just before the file name."
-              : null));
+              : null);
     }
-    return Future.value(result);
   }
 
   String formatProblems(
@@ -797,8 +795,7 @@ class Compile extends Step<Example?, Null, MessageTestSuite> {
           ..fileSystem = new HybridFileSystem(suite.fileSystem)
           ..packagesFileUri = packageConfigUri
           ..onDiagnostic = messages.add
-          ..environmentDefines = const {}
-          ..omitPlatform = true),
+          ..environmentDefines = const {}),
         main,
         output);
 
@@ -886,9 +883,5 @@ class Script {
 }
 
 Future<void> main([List<String> arguments = const []]) async {
-  await internalMain(
-    createContext,
-    arguments: arguments,
-    displayName: "messages suite",
-  );
+  await internalMain(createContext, arguments: arguments);
 }

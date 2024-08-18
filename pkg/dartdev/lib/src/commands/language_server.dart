@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:async';
+import 'dart:io' as io;
 
 import 'package:analysis_server/src/server/driver.dart' as server;
 import 'package:args/args.dart';
@@ -10,6 +10,7 @@ import 'package:args/args.dart';
 import '../core.dart';
 import '../sdk.dart';
 import '../utils.dart';
+import '../vm_interop_handler.dart';
 
 class LanguageServerCommand extends DartdevCommand {
   static const String commandName = 'language-server';
@@ -45,16 +46,20 @@ For more information about the server's capabilities and configuration, see:
     var args = argResults!.arguments;
     if (!args.any((arg) => arg.startsWith('--$protocol'))) {
       args = [...args, '--$protocol=$lsp'];
-    } else {
-      // Need to make a copy as argResults!.arguments is an
-      // UnmodifiableListView object which cannot be passed as
-      // the args for spawnUri.
-      args = [...args];
     }
-    return await runFromSnapshot(
-      snapshot: sdk.analysisServerSnapshot,
-      args: args,
-      verbose: verbose,
+
+    if (!Sdk.checkArtifactExists(sdk.analysisServerSnapshot)) return 255;
+
+    VmInteropHandler.run(
+      sdk.analysisServerSnapshot,
+      args,
+      packageConfigOverride: null,
     );
+
+    // The server will continue to run past the return from this method.
+    //
+    // On an error on startup, the server will set the dart:io exitCode value
+    // (or, call exit() directly).
+    return io.exitCode;
   }
 }

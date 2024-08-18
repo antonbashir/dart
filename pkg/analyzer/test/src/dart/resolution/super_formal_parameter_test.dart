@@ -32,25 +32,25 @@ class C<V> extends B<V> {
 }
 ''');
 
-    var C = findElement.unnamedConstructor('C');
-    var C_key = C.superFormalParameter('key');
+    final C = findElement.unnamedConstructor('C');
+    final C_key = C.superFormalParameter('key');
 
-    var B_key_member = C_key.superConstructorParameter;
+    final B_key_member = C_key.superConstructorParameter;
     B_key_member as SuperFormalParameterMember;
 
-    var B = findElement.unnamedConstructor('B');
-    var B_key = B.superFormalParameter('key');
+    final B = findElement.unnamedConstructor('B');
+    final B_key = B.superFormalParameter('key');
     assertElement2(
       B_key_member,
       declaration: B_key,
       substitution: {'U': 'V'},
     );
 
-    var A_key_member = B_key_member.superConstructorParameter;
+    final A_key_member = B_key_member.superConstructorParameter;
     A_key_member as ParameterMember;
 
-    var A = findElement.unnamedConstructor('A');
-    var A_key = A.parameter('key');
+    final A = findElement.unnamedConstructor('A');
+    final A_key = A.parameter('key');
     assertElement2(
       A_key_member,
       declaration: A_key,
@@ -72,7 +72,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   type: NamedType
@@ -94,13 +94,13 @@ SuperFormalParameter
     parameter: SimpleFormalParameter
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: b
-      declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a::@parameter::b
+      declaredElement: self::@class::B::@constructor::new::@parameter::a::@parameter::b
         type: int
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  declaredElement: self::@class::B::@constructor::new::@parameter::a
     type: T Function<T>(int)
 ''');
   }
@@ -112,13 +112,13 @@ void f(super.a) {}
       error(CompileTimeErrorCode.INVALID_SUPER_FORMAL_PARAMETER_LOCATION, 7, 5),
     ]);
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
   period: .
   name: a
-  declaredElement: <testLibraryFragment>::@function::f::@parameter::a
+  declaredElement: self::@function::f::@parameter::a
     type: dynamic
 ''');
   }
@@ -134,13 +134,13 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
   period: .
   name: a
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  declaredElement: self::@class::B::@constructor::new::@parameter::a
     type: int?
 ''');
   }
@@ -156,13 +156,13 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
   period: .
   name: a
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  declaredElement: self::@class::B::@constructor::new::@parameter::a
     type: int?
 ''');
   }
@@ -178,14 +178,14 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   requiredKeyword: required
   superKeyword: super
   period: .
   name: a
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  declaredElement: self::@class::B::@constructor::new::@parameter::a
     type: int
 ''');
   }
@@ -201,13 +201,13 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    final node = findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
   period: .
   name: a
-  declaredElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  declaredElement: self::@class::B::@constructor::new::@parameter::a
     type: int
 ''');
   }
@@ -226,11 +226,11 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.simple('a; // ref');
+    final node = findNode.simple('a; // ref');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@class::A::@getter::a
+  staticElement: self::@class::A::@getter::a
   staticType: int
 ''');
   }
@@ -247,11 +247,11 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.simple('a; }');
+    final node = findNode.simple('a; }');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@class::B::@constructor::new::@parameter::a
+  staticElement: self::@class::B::@constructor::new::@parameter::a
   staticType: int
 ''');
   }

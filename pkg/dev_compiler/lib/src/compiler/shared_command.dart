@@ -5,8 +5,6 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:front_end/src/api_prototype/macros.dart' as macros
-    show isMacroLibraryUri;
 import 'package:front_end/src/api_unstable/ddc.dart'
     show InitializedCompilerState, parseExperimentalArguments;
 import 'package:path/path.dart' as p;
@@ -96,6 +94,9 @@ class SharedCompilerOptions {
   /// Whether or not the `--canary` flag was specified during compilation.
   final bool canaryFeatures;
 
+  /// A canary feature that enables a new runtime type representation.
+  final bool newRuntimeTypes;
+
   /// When `true` stars "*" will appear to represent legacy types when printing
   /// runtime types in the compiled application.
   final bool printLegacyStars = false;
@@ -127,7 +128,9 @@ class SharedCompilerOptions {
       this.soundNullSafety = true,
       this.canaryFeatures = false,
       this.precompiledMacros = const [],
-      this.macroSerializationMode});
+      this.macroSerializationMode})
+      : // Current canary features.
+        newRuntimeTypes = canaryFeatures;
 
   SharedCompilerOptions.fromArguments(ArgResults args)
       : this(
@@ -301,7 +304,7 @@ Map<String, String> _parseCustomSummaryModules(List<String> summaryPaths,
       modulePath = summaryPath.substring(equalSign + 1);
       summaryPath = summaryPath.substring(0, equalSign);
     } else if (moduleRoot != null && p.isWithin(moduleRoot, summaryPath)) {
-      // TODO: Determine if this logic is still needed.
+      // TODO(jmesserly): remove this, it's legacy --module-root support.
       modulePath = p.url.joinAll(
           p.split(p.relative(summaryPathWithoutExt, from: moduleRoot)));
     } else {
@@ -429,14 +432,13 @@ Map placeSourceMap(Map sourceMap, String sourceMapPath, String? multiRootScheme,
         // like dart2js.
         var shortPath = uri.path.replaceAll('/sdk/', '/dart-sdk/');
         var multiRootPath = "${multiRootOutputPath ?? ''}$shortPath";
-        multiRootPath = p.url
-            .joinAll(p.split(p.relative(multiRootPath, from: sourceMapDir)));
+        multiRootPath = p.url.relative(multiRootPath, from: sourceMapDir);
         return multiRootPath;
       }
       return sourcePath;
     }
 
-    if (macros.isMacroLibraryUri(uri)) {
+    if (scheme == 'org-dartlang-augmentation') {
       // TODO: https://github.com/dart-lang/sdk/issues/53913
       return sourcePath;
     }

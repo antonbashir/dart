@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io' show Directory, Platform;
-
 import 'package:_fe_analyzer_shared/src/testing/id.dart';
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
@@ -17,7 +16,20 @@ Future<void> main(List<String> args) async {
       args: args,
       createUriForFileName: createUriForFileName,
       onFailure: onFailure,
-      runTest: runTestFor(const StaticTypeDataComputer(), [defaultCfeConfig]));
+      runTest: runTestFor(const StaticTypeDataComputer(),
+          [cfeNoNonNullableConfig, cfeNonNullableConfig]),
+      skipMap: {
+        defaultCfeConfig.marker: [
+          // NNBD-only tests.
+          'constant_from_opt_in',
+          'constant_from_opt_out',
+          'from_opt_in',
+          'from_opt_out',
+          'if_null.dart',
+          'null_check.dart',
+          'never.dart',
+        ]
+      });
 }
 
 class StaticTypeDataComputer extends CfeDataComputer<String> {
@@ -78,9 +90,14 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
   }
 
   @override
+  String computeLibraryValue(Id id, Library node) {
+    return 'nnbd=${node.isNonNullableByDefault}';
+  }
+
+  @override
   String? computeMemberValue(Id id, Member node) {
-    if (node is Procedure && node.function.emittedValueType != null) {
-      return 'futureValueType=${typeToText(node.function.emittedValueType!)}';
+    if (node is Procedure && node.function.futureValueType != null) {
+      return 'futureValueType=${typeToText(node.function.futureValueType!)}';
     }
     return null;
   }
@@ -92,10 +109,9 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
     }
     if (node is Expression) {
       DartType type = node.getStaticType(_staticTypeContext!);
-      if (node is FunctionExpression &&
-          node.function.emittedValueType != null) {
+      if (node is FunctionExpression && node.function.futureValueType != null) {
         return '${typeToText(type)},'
-            'futureValueType=${typeToText(node.function.emittedValueType!)}';
+            'futureValueType=${typeToText(node.function.futureValueType!)}';
       }
       return typeToText(type);
     } else if (node is Arguments) {
@@ -107,8 +123,8 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
         return typeToText(node.getElementType(_staticTypeContext!));
       }
     } else if (node is FunctionDeclaration) {
-      if (node.function.emittedValueType != null) {
-        return 'futureValueType=${typeToText(node.function.emittedValueType!)}';
+      if (node.function.futureValueType != null) {
+        return 'futureValueType=${typeToText(node.function.futureValueType!)}';
       }
     }
     return null;

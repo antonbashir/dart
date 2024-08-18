@@ -13,19 +13,19 @@ import 'codegen_dart.dart';
 import 'meta_model.dart';
 
 Future<void> main(List<String> arguments) async {
-  var args = argParser.parse(arguments);
+  final args = argParser.parse(arguments);
   var help = args[argHelp] as bool;
   if (help) {
     print(argParser.usage);
     return;
   }
 
-  var outFolder = path.join(languageServerProtocolPackagePath, 'lib');
+  final outFolder = path.join(languageServerProtocolPackagePath, 'lib');
   Directory(outFolder).createSync();
 
   // Collect definitions for types in the model and our custom extensions.
-  var specTypes = await getSpecClasses(args);
-  var customTypes = getCustomClasses();
+  final specTypes = await getSpecClasses(args);
+  final customTypes = getCustomClasses();
 
   // Record both sets of types in dictionaries for faster lookups, but also so
   // they can reference each other and we can find the definitions during
@@ -34,8 +34,8 @@ Future<void> main(List<String> arguments) async {
   recordTypes(customTypes);
 
   // Generate formatted Dart code (as a string) for each set of types.
-  var specTypesOutput = generateDartForTypes(specTypes);
-  var customTypesOutput = generateDartForTypes(customTypes);
+  final specTypesOutput = generateDartForTypes(specTypes);
+  final customTypesOutput = generateDartForTypes(customTypes);
 
   File(path.join(outFolder, 'protocol_generated.dart')).writeAsStringSync(
       generatedFileHeader(2018, importCustom: true) + specTypesOutput);
@@ -56,7 +56,7 @@ final argParser = ArgParser()
           'Download the latest version of the LSP spec before generating types');
 
 final String languageServerProtocolPackagePath =
-    path.join(sdkRootPath, 'third_party', 'pkg', 'language_server_protocol');
+    '$sdkRootPath/third_party/pkg/language_server_protocol';
 
 final String licenseComment = LineSplitter.split(
         File(localLicensePath).readAsStringSync())
@@ -83,13 +83,13 @@ final Uri specUri = Uri.parse(
     'https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/metaModel/metaModel.json');
 
 Future<void> downloadSpec() async {
-  var specResp = await http.get(specUri);
-  var licenseResp = await http.get(specLicenseUri);
+  final specResp = await http.get(specUri);
+  final licenseResp = await http.get(specLicenseUri);
 
   assert(specResp.statusCode == 200);
   assert(licenseResp.statusCode == 200);
 
-  var dartSdkLicense = await File('$sdkRootPath/LICENSE').readAsString();
+  final dartSdkLicense = await File('$sdkRootPath/LICENSE').readAsString();
   await File(localSpecPath).writeAsString(specResp.body);
   await File(localLicensePath).writeAsString('''
 $dartSdkLicense
@@ -109,8 +109,6 @@ $licenseComment
 // This file has been automatically generated. Please do not edit it manually.
 // To regenerate the file, use the script
 // "pkg/analysis_server/tool/lsp_spec/generate_all.dart".
-
-// ignore_for_file: constant_identifier_names
 
 import 'dart:convert' show JsonEncoder;
 
@@ -146,7 +144,7 @@ List<LspEntity> getCustomClasses() {
     bool canBeNull = false,
     bool canBeUndefined = false,
   }) {
-    var fieldType = array
+    final fieldType = array
         ? ArrayType(TypeReference(type))
         : literal
             ? LiteralType(TypeReference.string, type)
@@ -161,7 +159,7 @@ List<LspEntity> getCustomClasses() {
     );
   }
 
-  var customTypes = <LspEntity>[
+  final customTypes = <LspEntity>[
     TypeAlias(
       name: 'LSPAny',
       baseType: TypeReference.LspAny,
@@ -500,47 +498,6 @@ List<LspEntity> getCustomClasses() {
       baseType: 'CommandParameter',
       comment: 'Information about a Save URI argument needed by the command.',
     ),
-    interface(
-      'DartTextDocumentContentProviderRegistrationOptions',
-      [
-        field(
-          'schemes',
-          type: 'string',
-          array: true,
-          comment: 'A set of URI schemes the server can provide content for. '
-              'The server may also return URIs with these schemes in responses '
-              'to other requests.',
-        ),
-      ],
-    ),
-    interface(
-      'DartTextDocumentContentParams',
-      [
-        field(
-          'uri',
-          type: 'DocumentUri',
-        ),
-      ],
-    ),
-    interface(
-      'DartTextDocumentContent',
-      [
-        field(
-          'content',
-          type: 'String',
-          canBeNull: true,
-        ),
-      ],
-    ),
-    interface(
-      'DartTextDocumentContentDidChangeParams',
-      [
-        field(
-          'uri',
-          type: 'DocumentUri',
-        ),
-      ],
-    ),
   ];
   return customTypes;
 }
@@ -551,7 +508,7 @@ Future<List<LspEntity>> getSpecClasses(ArgResults args) async {
     await downloadSpec();
   }
 
-  var file = File(localSpecPath);
+  final file = File(localSpecPath);
   var model = LspMetaModelReader().readFile(file);
   model = LspMetaModelCleaner().cleanModel(model);
 

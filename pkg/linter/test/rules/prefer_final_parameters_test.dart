@@ -62,20 +62,6 @@ void f(final List<int> x) {
     ]);
   }
 
-  test_closure_wildcard() async {
-    await assertNoDiagnostics(r'''
-var f = (Object _) { };
-''');
-  }
-
-  test_constructor_unused_wildcard() async {
-    await assertNoDiagnostics(r'''
-class C {
-  C(String _);
-}
-''');
-  }
-
   test_constructor_usedInBody() async {
     await assertDiagnostics(r'''
 class C {
@@ -172,22 +158,6 @@ class C {
 ''');
   }
 
-  test_method_wildcard() async {
-    await assertNoDiagnostics(r'''
-class C {
-  void m(String _) { }
-}
-''');
-  }
-
-  test_method_wildcard_final() async {
-    await assertNoDiagnostics(r'''
-class C {
-  void m(final String _) { }
-}
-''');
-  }
-
   test_operator() async {
     await assertDiagnostics(r'''
 class C {
@@ -205,16 +175,6 @@ class C {
 class C {
   C operator +(final C other) {
     return other;
-  }
-}
-''');
-  }
-
-  test_operator_wildcard() async {
-    await assertNoDiagnostics(r'''
-class C {
-  C operator +(C _) {
-    return this;
   }
 }
 ''');
@@ -244,14 +204,6 @@ class C {
 class C {
   int x = 0;
   void set f(final int y) => x = y;
-}
-''');
-  }
-
-  test_setter_wildcard() async {
-    await assertNoDiagnostics(r'''
-class C {
-  void set f(int _) { }
 }
 ''');
   }
@@ -322,16 +274,6 @@ void f({final String? p}) {
 ''');
   }
 
-  test_topLevelFunction_named_wildcard() async {
-    await assertDiagnostics(r'''
-void f({final String? _}) { }
-''', [
-      // No lint.
-      // https://github.com/dart-lang/language/blob/main/working/wildcards/feature-specification.md#declarations-that-are-capable-of-declaring-a-wildcard
-      error(CompileTimeErrorCode.PRIVATE_OPTIONAL_PARAMETER, 22, 1),
-    ]);
-  }
-
   test_topLevelFunction_namedRequired() async {
     await assertDiagnostics(r'''
 void f({required String p}) {
@@ -350,16 +292,6 @@ void f({required final String p}) {
 ''');
   }
 
-  test_topLevelFunction_namedRequired_wildcard() async {
-    await assertDiagnostics(r'''
-void f({required String _}) { }
-''', [
-      // No lint.
-      // https://github.com/dart-lang/language/blob/main/working/wildcards/feature-specification.md#declarations-that-are-capable-of-declaring-a-wildcard
-      error(CompileTimeErrorCode.PRIVATE_OPTIONAL_PARAMETER, 24, 1),
-    ]);
-  }
-
   test_topLevelFunction_optional() async {
     await assertDiagnostics(r'''
 void f([String? p]) {
@@ -375,18 +307,6 @@ void f([String? p]) {
 void f([final String? p]) {
   print(p);
 }
-''');
-  }
-
-  test_topLevelFunction_optional_wildcard() async {
-    await assertNoDiagnostics(r'''
-void f([String? _]) { }
-''');
-  }
-
-  test_topLevelFunction_wildcard() async {
-    await assertNoDiagnostics(r'''
-void f(int _){ }
 ''');
   }
 }

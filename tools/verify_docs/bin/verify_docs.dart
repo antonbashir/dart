@@ -169,7 +169,7 @@ class ValidateCommentCodeSamplesVisitor extends GeneralizingAstVisitor {
 
   void _handleDocumentableNode(AnnotatedNode node) {
     final docComment = node.documentationComment;
-    if (docComment == null) {
+    if (docComment == null || !docComment.isDocumentation) {
       return;
     }
 
@@ -242,7 +242,7 @@ class ValidateCommentCodeSamplesVisitor extends GeneralizingAstVisitor {
       r'final class\b|class\b|mixin\b|enum\b|extension\b|typedef\b|.*\bmain\('
       r')');
 
-  Future<void> validateCodeSample(CodeSample sample) async {
+  validateCodeSample(CodeSample sample) async {
     final lines = sample.lines;
 
     // The default imports includes the library itself
@@ -344,7 +344,7 @@ class ValidateCommentCodeSamplesVisitor extends GeneralizingAstVisitor {
       // be intentional in samples.
       errors.removeWhere(
         (e) =>
-            e.errorCode == WarningCode.UNUSED_LOCAL_VARIABLE ||
+            e.errorCode == HintCode.UNUSED_LOCAL_VARIABLE ||
             e.errorCode == WarningCode.UNUSED_ELEMENT,
       );
 
@@ -381,6 +381,8 @@ class ValidateCommentCodeSamplesVisitor extends GeneralizingAstVisitor {
     } else {
       throw 'unexpected result type: $result';
     }
+
+    return;
   }
 }
 

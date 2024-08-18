@@ -2,15 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/*spec.class: global#JSArray:checkedInstance,checks=[$isIterable,$isList],instance*/
+// @dart = 2.7
+
+/*spec.class: global#JSArray:checkedInstance,checks=[$isIterable],instance*/
 /*prod.class: global#JSArray:checks=[$isIterable],instance*/
 
 /*class: global#Iterable:checkedInstance*/
 
-/*class: A:checkedInstance,checkedTypeArgument,typeArgument*/
+/*spec.class: A:checkedInstance,checkedTypeArgument,typeArgument*/
+/*prod.class: A:checkedTypeArgument,typeArgument*/
 class A {}
 
-/*class: B:checkedInstance,typeArgument*/
+/*spec.class: B:checkedInstance,typeArgument*/
+/*prod.class: B:typeArgument*/
 class B {}
 
 @pragma('dart2js:noInline')

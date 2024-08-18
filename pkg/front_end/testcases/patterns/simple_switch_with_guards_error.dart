@@ -4,9 +4,8 @@
 
 test(dynamic x) {
   switch (x) {
-    case [int a, _] when a.isEven:
+    case [int a, _] when a.isEven: // Error: type of 'a' mismatch.
     case [_, double a] when a.ceil().isOdd:
-      // Error: type of 'a' mismatch.
       return a;
     default:
       return null;

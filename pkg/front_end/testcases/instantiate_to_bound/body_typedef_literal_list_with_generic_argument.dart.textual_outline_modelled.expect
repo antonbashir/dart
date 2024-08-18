@@ -3,5 +3,4 @@ class B<U> {
 }
 
 main() {}
-
 typedef A<T>(T p);

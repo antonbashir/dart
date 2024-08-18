@@ -7,5 +7,4 @@ class A {
 }
 
 main() {}
-
 var c = 0;

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/globals.h"  // NOLINT
-#include "vm/pointer_tagging.h"
 #if defined(TARGET_ARCH_X64)
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
@@ -148,7 +147,7 @@ void Assembler::EnterFullSafepoint() {
   // For TSAN, we always go to the runtime so TSAN is aware of the release
   // semantics of entering the safepoint.
   Label done, slow_path;
-  if (FLAG_use_slow_path || FLAG_target_thread_sanitizer) {
+  if (FLAG_use_slow_path || kTargetUsesThreadSanitizer) {
     jmp(&slow_path);
   }
 
@@ -162,7 +161,7 @@ void Assembler::EnterFullSafepoint() {
   popq(RAX);
   cmpq(TMP, Immediate(target::Thread::full_safepoint_state_unacquired()));
 
-  if (!FLAG_use_slow_path && !FLAG_target_thread_sanitizer) {
+  if (!FLAG_use_slow_path && !kTargetUsesThreadSanitizer) {
     j(EQUAL, &done);
   }
 
@@ -205,7 +204,7 @@ void Assembler::ExitFullSafepoint(bool ignore_unwind_in_progress) {
   // For TSAN, we always go to the runtime so TSAN is aware of the acquire
   // semantics of leaving the safepoint.
   Label done, slow_path;
-  if (FLAG_use_slow_path || FLAG_target_thread_sanitizer) {
+  if (FLAG_use_slow_path || kTargetUsesThreadSanitizer) {
     jmp(&slow_path);
   }
 
@@ -221,7 +220,7 @@ void Assembler::ExitFullSafepoint(bool ignore_unwind_in_progress) {
   popq(RAX);
   cmpq(TMP, Immediate(target::Thread::full_safepoint_state_acquired()));
 
-  if (!FLAG_use_slow_path && !FLAG_target_thread_sanitizer) {
+  if (!FLAG_use_slow_path && !kTargetUsesThreadSanitizer) {
     j(EQUAL, &done);
   }
 
@@ -245,8 +244,7 @@ void Assembler::ExitFullSafepoint(bool ignore_unwind_in_progress) {
 }
 
 void Assembler::TransitionNativeToGenerated(bool leave_safepoint,
-                                            bool ignore_unwind_in_progress,
-                                            bool set_tag) {
+                                            bool ignore_unwind_in_progress) {
   if (leave_safepoint) {
     ExitFullSafepoint(ignore_unwind_in_progress);
   } else {
@@ -263,10 +261,7 @@ void Assembler::TransitionNativeToGenerated(bool leave_safepoint,
 #endif
   }
 
-  if (set_tag) {
-    movq(Assembler::VMTagAddress(),
-         Immediate(target::Thread::vm_tag_dart_id()));
-  }
+  movq(Assembler::VMTagAddress(), Immediate(target::Thread::vm_tag_dart_id()));
   movq(Address(THR, target::Thread::execution_state_offset()),
        Immediate(target::Thread::generated_execution_state()));
 
@@ -1455,21 +1450,18 @@ void Assembler::LoadUniqueObject(
   LoadObjectHelper(dst, object, true, snapshot_behavior);
 }
 
-void Assembler::StoreObject(const Address& dst,
-                            const Object& object,
-                            OperandSize size) {
+void Assembler::StoreObject(const Address& dst, const Object& object) {
   ASSERT(IsOriginalObject(object));
-  ASSERT(size == kWordBytes || size == kObjectBytes);
 
   intptr_t offset_from_thread;
   if (target::CanLoadFromThread(object, &offset_from_thread)) {
     movq(TMP, Address(THR, offset_from_thread));
-    Store(TMP, dst, size);
+    movq(dst, TMP);
   } else if (target::IsSmi(object)) {
-    MoveImmediate(dst, Immediate(target::ToRawSmi(object)), size);
+    MoveImmediate(dst, Immediate(target::ToRawSmi(object)));
   } else {
     LoadObject(TMP, object);
-    Store(TMP, dst, size);
+    movq(dst, TMP);
   }
 }
 
@@ -1515,24 +1507,12 @@ void Assembler::LoadImmediate(Register reg, const Immediate& imm) {
   }
 }
 
-void Assembler::MoveImmediate(const Address& dst,
-                              const Immediate& imm,
-                              OperandSize size) {
+void Assembler::MoveImmediate(const Address& dst, const Immediate& imm) {
   if (imm.is_int32()) {
-    if (size == kFourBytes) {
-      movl(dst, imm);
-    } else {
-      ASSERT(size == kEightBytes);
-      movq(dst, imm);
-    }
+    movq(dst, imm);
   } else {
     LoadImmediate(TMP, imm);
-    if (size == kFourBytes) {
-      movl(dst, TMP);
-    } else {
-      ASSERT(size == kEightBytes);
-      movq(dst, TMP);
-    }
+    movq(dst, TMP);
   }
 }
 
@@ -1564,22 +1544,62 @@ void Assembler::LoadQImmediate(FpuRegister dst, simd128_value_t immediate) {
                               kHeapObjectTag));
 }
 
-#if defined(DART_COMPRESSED_POINTERS)
 void Assembler::LoadCompressed(Register dest, const Address& slot) {
+#if !defined(DART_COMPRESSED_POINTERS)
+  movq(dest, slot);
+#else
   movl(dest, slot);  // Zero-extension.
   addq(dest, Address(THR, target::Thread::heap_base_offset()));
-}
 #endif
+}
+
+void Assembler::LoadCompressedSmi(Register dest, const Address& slot) {
+#if !defined(DART_COMPRESSED_POINTERS)
+  movq(dest, slot);
+#else
+  movl(dest, slot);  // Zero-extension.
+#endif
+#if defined(DEBUG)
+  Label done;
+  BranchIfSmi(dest, &done, kNearJump);
+  Stop("Expected Smi");
+  Bind(&done);
+#endif
+}
+
+void Assembler::StoreIntoObject(Register object,
+                                const Address& dest,
+                                Register value,
+                                CanBeSmi can_be_smi,
+                                MemoryOrder memory_order) {
+  if (memory_order == kRelease) {
+    StoreRelease(value, dest.base(), dest.disp32());
+  } else {
+    movq(dest, value);
+  }
+  StoreBarrier(object, value, can_be_smi);
+}
+
+void Assembler::StoreCompressedIntoObject(Register object,
+                                          const Address& dest,
+                                          Register value,
+                                          CanBeSmi can_be_smi,
+                                          MemoryOrder memory_order) {
+  if (memory_order == kRelease) {
+    StoreReleaseCompressed(value, dest.base(), dest.disp8());
+  } else {
+    OBJ(mov)(dest, value);
+  }
+  StoreBarrier(object, value, can_be_smi);
+}
 
 void Assembler::StoreBarrier(Register object,
                              Register value,
-                             CanBeSmi can_be_smi,
-                             Register scratch) {
+                             CanBeSmi can_be_smi) {
   // x.slot = x. Barrier should have be removed at the IL level.
   ASSERT(object != value);
-  ASSERT(object != scratch);
-  ASSERT(value != scratch);
-  ASSERT(scratch != kNoRegister);
+  ASSERT(object != TMP);
+  ASSERT(value != TMP);
 
   // In parallel, test whether
   //  - object is old and not remembered and value is new, or
@@ -1591,19 +1611,12 @@ void Assembler::StoreBarrier(Register object,
   Label done;
   if (can_be_smi == kValueCanBeSmi) {
     BranchIfSmi(value, &done, kNearJump);
-  } else {
-#if defined(DEBUG)
-    Label passed_check;
-    BranchIfNotSmi(value, &passed_check, kNearJump);
-    Breakpoint();
-    Bind(&passed_check);
-#endif
   }
-  movb(ByteRegisterOf(scratch),
+  movb(ByteRegisterOf(TMP),
        FieldAddress(object, target::Object::tags_offset()));
-  shrl(scratch, Immediate(target::UntaggedObject::kBarrierOverlapShift));
-  andl(scratch, Address(THR, target::Thread::write_barrier_mask_offset()));
-  testb(FieldAddress(value, target::Object::tags_offset()), scratch);
+  shrl(TMP, Immediate(target::UntaggedObject::kBarrierOverlapShift));
+  andl(TMP, Address(THR, target::Thread::write_barrier_mask_offset()));
+  testb(FieldAddress(value, target::Object::tags_offset()), TMP);
   j(ZERO, &done, kNearJump);
 
   Register object_for_call = object;
@@ -1630,15 +1643,29 @@ void Assembler::StoreBarrier(Register object,
   Bind(&done);
 }
 
-void Assembler::ArrayStoreBarrier(Register object,
-                                  Register slot,
-                                  Register value,
-                                  CanBeSmi can_be_smi,
-                                  Register scratch) {
-  ASSERT(object != scratch);
-  ASSERT(value != scratch);
-  ASSERT(slot != scratch);
-  ASSERT(scratch != kNoRegister);
+void Assembler::StoreIntoArray(Register object,
+                               Register slot,
+                               Register value,
+                               CanBeSmi can_be_smi) {
+  movq(Address(slot, 0), value);
+  StoreIntoArrayBarrier(object, slot, value, can_be_smi);
+}
+
+void Assembler::StoreCompressedIntoArray(Register object,
+                                         Register slot,
+                                         Register value,
+                                         CanBeSmi can_be_smi) {
+  OBJ(mov)(Address(slot, 0), value);
+  StoreIntoArrayBarrier(object, slot, value, can_be_smi);
+}
+
+void Assembler::StoreIntoArrayBarrier(Register object,
+                                      Register slot,
+                                      Register value,
+                                      CanBeSmi can_be_smi) {
+  ASSERT(object != TMP);
+  ASSERT(value != TMP);
+  ASSERT(slot != TMP);
 
   // In parallel, test whether
   //  - object is old and not remembered and value is new, or
@@ -1650,19 +1677,12 @@ void Assembler::ArrayStoreBarrier(Register object,
   Label done;
   if (can_be_smi == kValueCanBeSmi) {
     BranchIfSmi(value, &done, kNearJump);
-  } else {
-#if defined(DEBUG)
-    Label passed_check;
-    BranchIfNotSmi(value, &passed_check, kNearJump);
-    Breakpoint();
-    Bind(&passed_check);
-#endif
   }
-  movb(ByteRegisterOf(scratch),
+  movb(ByteRegisterOf(TMP),
        FieldAddress(object, target::Object::tags_offset()));
-  shrl(scratch, Immediate(target::UntaggedObject::kBarrierOverlapShift));
-  andl(scratch, Address(THR, target::Thread::write_barrier_mask_offset()));
-  testb(FieldAddress(value, target::Object::tags_offset()), scratch);
+  shrl(TMP, Immediate(target::UntaggedObject::kBarrierOverlapShift));
+  andl(TMP, Address(THR, target::Thread::write_barrier_mask_offset()));
+  testb(FieldAddress(value, target::Object::tags_offset()), TMP);
   j(ZERO, &done, kNearJump);
 
   if ((object != kWriteBarrierObjectReg) || (value != kWriteBarrierValueReg) ||
@@ -1678,8 +1698,16 @@ void Assembler::ArrayStoreBarrier(Register object,
   Bind(&done);
 }
 
-void Assembler::VerifyStoreNeedsNoWriteBarrier(Register object,
-                                               Register value) {
+void Assembler::StoreIntoObjectNoBarrier(Register object,
+                                         const Address& dest,
+                                         Register value,
+                                         MemoryOrder memory_order) {
+  if (memory_order == kRelease) {
+    StoreRelease(value, dest.base(), dest.disp32());
+  } else {
+    movq(dest, value);
+  }
+#if defined(DEBUG)
   // We can't assert the incremental barrier is not needed here, only the
   // generational barrier. We sometimes omit the write barrier when 'value' is
   // a constant, but we don't eagerly mark 'value' and instead assume it is also
@@ -1688,26 +1716,64 @@ void Assembler::VerifyStoreNeedsNoWriteBarrier(Register object,
   Label done;
   BranchIfSmi(value, &done, kNearJump);
   testb(FieldAddress(value, target::Object::tags_offset()),
-        Immediate(1 << target::UntaggedObject::kNewOrEvacuationCandidateBit));
+        Immediate(1 << target::UntaggedObject::kNewBit));
   j(ZERO, &done, Assembler::kNearJump);
   testb(FieldAddress(object, target::Object::tags_offset()),
         Immediate(1 << target::UntaggedObject::kOldAndNotRememberedBit));
   j(ZERO, &done, Assembler::kNearJump);
   Stop("Write barrier is required");
   Bind(&done);
+#endif  // defined(DEBUG)
+  // No store buffer update.
 }
 
-void Assembler::StoreObjectIntoObjectNoBarrier(Register object,
-                                               const Address& dest,
-                                               const Object& value,
-                                               MemoryOrder memory_order,
-                                               OperandSize size) {
+void Assembler::StoreCompressedIntoObjectNoBarrier(Register object,
+                                                   const Address& dest,
+                                                   Register value,
+                                                   MemoryOrder memory_order) {
+  if (memory_order == kRelease) {
+    StoreReleaseCompressed(value, dest.base(), dest.disp8());
+  } else {
+    OBJ(mov)(dest, value);
+  }
+#if defined(DEBUG)
+  // We can't assert the incremental barrier is not needed here, only the
+  // generational barrier. We sometimes omit the write barrier when 'value' is
+  // a constant, but we don't eagerly mark 'value' and instead assume it is also
+  // reachable via a constant pool, so it doesn't matter if it is not traced via
+  // 'object'.
+  Label done;
+  BranchIfSmi(value, &done, kNearJump);
+  testb(FieldAddress(value, target::Object::tags_offset()),
+        Immediate(1 << target::UntaggedObject::kNewBit));
+  j(ZERO, &done, Assembler::kNearJump);
+  testb(FieldAddress(object, target::Object::tags_offset()),
+        Immediate(1 << target::UntaggedObject::kOldAndNotRememberedBit));
+  j(ZERO, &done, Assembler::kNearJump);
+  Stop("Write barrier is required");
+  Bind(&done);
+#endif  // defined(DEBUG)
+  // No store buffer update.
+}
+
+void Assembler::StoreIntoObjectNoBarrier(Register object,
+                                         const Address& dest,
+                                         const Object& value,
+                                         MemoryOrder memory_order) {
   if (memory_order == kRelease) {
     LoadObject(TMP, value);
-    StoreIntoObjectNoBarrier(object, dest, TMP, memory_order, size);
+    StoreIntoObjectNoBarrier(object, dest, TMP, memory_order);
   } else {
-    StoreObject(dest, value, size);
+    StoreObject(dest, value);
   }
+}
+
+void Assembler::StoreCompressedIntoObjectNoBarrier(Register object,
+                                                   const Address& dest,
+                                                   const Object& value,
+                                                   MemoryOrder memory_order) {
+  LoadObject(TMP, value);
+  StoreCompressedIntoObjectNoBarrier(object, dest, TMP, memory_order);
 }
 
 void Assembler::StoreInternalPointer(Register object,
@@ -1763,7 +1829,9 @@ void Assembler::Bind(Label* label) {
   label->BindTo(bound);
 }
 
-void Assembler::Load(Register reg, const Address& address, OperandSize sz) {
+void Assembler::LoadFromOffset(Register reg,
+                               const Address& address,
+                               OperandSize sz) {
   switch (sz) {
     case kByte:
       return movsxb(reg, address);
@@ -1785,7 +1853,9 @@ void Assembler::Load(Register reg, const Address& address, OperandSize sz) {
   }
 }
 
-void Assembler::Store(Register reg, const Address& address, OperandSize sz) {
+void Assembler::StoreToOffset(Register reg,
+                              const Address& address,
+                              OperandSize sz) {
   switch (sz) {
     case kByte:
     case kUnsignedByte:
@@ -2027,6 +2097,8 @@ LeafRuntimeScope::~LeafRuntimeScope() {
   __ LeaveFrame();
 }
 
+
+#if defined(TARGET_USES_THREAD_SANITIZER)
 void Assembler::TsanLoadAcquire(Address addr) {
   LeafRuntimeScope rt(this, /*frame_size=*/0, /*preserve_registers=*/true);
   leaq(CallingConventions::kArg1Reg, addr);
@@ -2038,6 +2110,7 @@ void Assembler::TsanStoreRelease(Address addr) {
   leaq(CallingConventions::kArg1Reg, addr);
   rt.Call(kTsanStoreReleaseRuntimeEntry, /*argument_count=*/1);
 }
+#endif
 
 void Assembler::RestoreCodePointer() {
   movq(CODE_REG,
@@ -2279,28 +2352,6 @@ void Assembler::FinalizeHashForSize(intptr_t bit_size,
 }
 
 #ifndef PRODUCT
-void Assembler::MaybeTraceAllocation(Register cid,
-                                     Label* trace,
-                                     Register temp_reg,
-                                     JumpDistance distance) {
-  if (temp_reg == kNoRegister) {
-    temp_reg = TMP;
-  }
-  ASSERT(temp_reg != cid);
-  LoadIsolateGroup(temp_reg);
-  movq(temp_reg, Address(temp_reg, target::IsolateGroup::class_table_offset()));
-
-  movq(temp_reg,
-       Address(temp_reg,
-               target::ClassTable::allocation_tracing_state_table_offset()));
-  cmpb(Address(temp_reg, cid, TIMES_1,
-               target::ClassTable::AllocationTracingStateSlotOffsetFor(0)),
-       Immediate(0));
-  // We are tracing for this class, jump to the trace label which will use
-  // the allocation stub.
-  j(NOT_ZERO, trace, distance);
-}
-
 void Assembler::MaybeTraceAllocation(intptr_t cid,
                                      Label* trace,
                                      Register temp_reg,
@@ -2708,18 +2759,6 @@ void Assembler::EnsureHasClassIdInDEBUG(intptr_t cid,
 
 Address Assembler::VMTagAddress() {
   return Address(THR, target::Thread::vm_tag_offset());
-}
-
-bool Assembler::AddressCanHoldConstantIndex(const Object& constant,
-                                            bool is_external,
-                                            intptr_t cid,
-                                            intptr_t index_scale) {
-  if (!IsSafeSmi(constant)) return false;
-  const int64_t index = target::SmiValue(constant);
-  const int64_t disp =
-      index * index_scale +
-      (is_external ? 0 : target::Instance::DataOffsetFor(cid) - kHeapObjectTag);
-  return Utils::IsInt(32, disp);
 }
 
 Address Assembler::ElementAddressForIntIndex(bool is_external,

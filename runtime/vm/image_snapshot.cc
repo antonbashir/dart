@@ -82,7 +82,13 @@ uword* Image::bss() const {
 uword Image::instructions_relocated_address() const {
 #if defined(DART_PRECOMPILED_RUNTIME)
   ASSERT(extra_info_ != nullptr);
-  return extra_info_->instructions_relocated_address_;
+  // For assembly snapshots, we need to retrieve this from the initialized BSS.
+  const uword address =
+      compiled_to_elf() ? extra_info_->instructions_relocated_address_
+                        : bss()[BSS::RelocationIndex(
+                              BSS::Relocation::InstructionsRelocatedAddress)];
+  ASSERT(address != kNoRelocatedAddress);
+  return address;
 #else
   return kNoRelocatedAddress;
 #endif
@@ -131,7 +137,7 @@ uword ObjectOffsetTrait::Hash(Key key) {
   uword body = UntaggedObject::ToAddr(obj) + sizeof(UntaggedObject);
   uword end = UntaggedObject::ToAddr(obj) + obj->untag()->HeapSize();
 
-  uint32_t hash = obj->GetClassIdOfHeapObject();
+  uint32_t hash = obj->GetClassId();
   // Don't include the header. Objects in the image are pre-marked, but objects
   // in the current isolate are not.
   for (uword cursor = body; cursor < end; cursor += sizeof(uint32_t)) {
@@ -147,7 +153,7 @@ bool ObjectOffsetTrait::IsKeyEqual(Pair pair, Key key) {
   ASSERT(!a->IsSmi());
   ASSERT(!b->IsSmi());
 
-  if (a->GetClassIdOfHeapObject() != b->GetClassIdOfHeapObject()) {
+  if (a->GetClassId() != b->GetClassId()) {
     return false;
   }
 
@@ -188,8 +194,7 @@ ImageWriter::ImageWriter(Thread* t, bool generates_assembly)
       instructions_section_type_(
           TagObjectTypeAsReadOnly(zone_, "InstructionsSection")),
       instructions_type_(TagObjectTypeAsReadOnly(zone_, "Instructions")),
-      trampoline_type_(TagObjectTypeAsReadOnly(zone_, "Trampoline")),
-      padding_type_(TagObjectTypeAsReadOnly(zone_, "Padding")) {
+      trampoline_type_(TagObjectTypeAsReadOnly(zone_, "Trampoline")) {
   ResetOffsets();
 }
 
@@ -218,13 +223,6 @@ void ImageWriter::PrepareForSerialization(
           instructions_.Add(
               InstructionsData(trampoline_bytes, trampoline_length, offset));
           next_text_offset_ += trampoline_length;
-          break;
-        }
-        case ImageWriterCommand::InsertPadding: {
-          auto padding_length = inst.insert_padding.padding_length;
-          const intptr_t offset = next_text_offset_;
-          instructions_.Add(InstructionsData(nullptr, padding_length, offset));
-          next_text_offset_ += padding_length;
           break;
         }
         default:
@@ -258,7 +256,7 @@ intptr_t ImageWriter::SizeInSnapshotForBytes(intptr_t length) {
 }
 
 intptr_t ImageWriter::SizeInSnapshot(ObjectPtr raw_object) {
-  const classid_t cid = raw_object->GetClassIdOfHeapObject();
+  const classid_t cid = raw_object->GetClassId();
 
   switch (cid) {
     case kCompressedStackMapsCid: {
@@ -385,8 +383,7 @@ void ImageWriter::DumpInstructionsSizes() {
   js.OpenArray();
   for (intptr_t i = 0; i < instructions_.length(); i++) {
     auto& data = instructions_[i];
-    // We count alignment padding into trampolines for now.
-    const bool is_trampoline = data.trampoline_length != 0;
+    const bool is_trampoline = data.code_ == nullptr;
     if (is_trampoline) {
       trampolines_total_size += data.trampoline_length;
       continue;
@@ -466,7 +463,8 @@ void ImageWriter::Write(NonStreamingWriteStream* clustered_stream, bool vm) {
   // will allocate on the Dart heap.
   for (intptr_t i = 0; i < instructions_.length(); i++) {
     InstructionsData& data = instructions_[i];
-    if (data.trampoline_length != 0) continue;
+    const bool is_trampoline = data.trampoline_bytes != nullptr;
+    if (is_trampoline) continue;
 
     data.insns_ = &Instructions::Handle(zone_, data.raw_insns_);
     ASSERT(data.raw_code_ != nullptr);
@@ -601,7 +599,7 @@ static constexpr uword kReadOnlyGCBits =
     UntaggedObject::AlwaysSetBit::encode(true) |
     UntaggedObject::NotMarkedBit::encode(false) |
     UntaggedObject::OldAndNotRememberedBit::encode(true) |
-    UntaggedObject::NewOrEvacuationCandidateBit::encode(false);
+    UntaggedObject::NewBit::encode(false);
 
 uword ImageWriter::GetMarkedTags(classid_t cid,
                                  intptr_t size,
@@ -789,7 +787,7 @@ void ImageWriter::WriteText(bool vm) {
 
     const intptr_t section_contents_alignment =
         bare_instruction_payloads
-            ? InstructionsSection::kPayloadAlignment
+            ? compiler::target::Instructions::kBarePayloadAlignment
             : compiler::target::ObjectAlignment::kObjectAlignment;
     const intptr_t alignment_offset =
         compiler::target::ObjectAlignment::kOldObjectAlignmentOffset;
@@ -811,16 +809,10 @@ void ImageWriter::WriteText(bool vm) {
   PcDescriptors& descriptors = PcDescriptors::Handle(zone_);
 #endif
 
-  // We don't expect more than 64 bytes of padding.
-  uint8_t padding_bytes[64];
-  memset(&padding_bytes[0], 0, sizeof(padding_bytes));
-
   ASSERT(offset_space_ != IdSpace::kSnapshot);
   for (intptr_t i = 0; i < instructions_.length(); i++) {
     auto& data = instructions_[i];
     const bool is_trampoline = data.trampoline_bytes != nullptr;
-    const bool is_padding =
-        data.trampoline_bytes == nullptr && data.trampoline_length != 0;
     ASSERT_EQUAL(data.text_offset_, text_offset);
 
 #if defined(DART_PRECOMPILER)
@@ -828,12 +820,9 @@ void ImageWriter::WriteText(bool vm) {
 
     if (profile_writer_ != nullptr) {
       const V8SnapshotProfileWriter::ObjectId id(offset_space_, text_offset);
-      auto const type = is_trampoline ? trampoline_type_
-                        : is_padding  ? padding_type_
-                                      : instructions_type_;
-      const intptr_t size = (is_trampoline || is_padding)
-                                ? data.trampoline_length
-                                : SizeInSnapshot(data.insns_->ptr());
+      auto const type = is_trampoline ? trampoline_type_ : instructions_type_;
+      const intptr_t size = is_trampoline ? data.trampoline_length
+                                          : SizeInSnapshot(data.insns_->ptr());
       profile_writer_->SetObjectTypeAndName(id, type, object_name);
       profile_writer_->AttributeBytesTo(id, size);
       const intptr_t element_offset = id.nonce() - parent_id.nonce();
@@ -847,11 +836,6 @@ void ImageWriter::WriteText(bool vm) {
       text_offset += WriteBytes(data.trampoline_bytes, data.trampoline_length);
       delete[] data.trampoline_bytes;
       data.trampoline_bytes = nullptr;
-      continue;
-    }
-
-    if (is_padding) {
-      text_offset += WriteBytes(padding_bytes, data.trampoline_length);
       continue;
     }
 
@@ -971,7 +955,6 @@ intptr_t ImageWriter::AlignWithBreakInstructions(intptr_t alignment,
        remaining -= compiler::target::kWordSize) {
     bytes_written += WriteTargetWord(kBreakInstructionFiller);
   }
-  // clang-format off
 #if defined(TARGET_ARCH_ARM)
   // All instructions are 4 bytes long on ARM architectures, so on 32-bit ARM
   // there won't be any padding.
@@ -990,7 +973,6 @@ intptr_t ImageWriter::AlignWithBreakInstructions(intptr_t alignment,
 #else
 #error Unexpected architecture.
 #endif
-  // clang-format on
   ASSERT_EQUAL(bytes_written, Utils::RoundUp(offset, alignment) - offset);
   return bytes_written;
 }
@@ -1297,8 +1279,6 @@ const char* ImageWriter::SnapshotTextObjectNamer::SnapshotNameFor(
   ZoneTextBuffer printer(zone_);
   if (data.trampoline_bytes != nullptr) {
     printer.AddString("Trampoline");
-  } else if (data.trampoline_length != 0) {
-    printer.AddString("Padding");
   } else {
     AddNonUniqueNameFor(&printer, *data.code_);
   }

@@ -22,9 +22,8 @@ class B<E> extends A<E> implements M {
 }
 
 foo() {
-  int y = new B<String>()
+  int y = /*error:INVALID_ASSIGNMENT*/ new B<String>()
       . /*@target=B.m*/ m(throw '', throw '')
-      // Error:INVALID_ASSIGNMENT
       . /*@target=A.value*/ value;
   String z = new B<String>()
       . /*@target=B.m*/ m(throw '', throw '')

@@ -6,8 +6,9 @@ library front_end.standard_file_system;
 
 import 'dart:io' as io;
 
-import '../base/file_system_dependency_tracker.dart';
 import 'file_system.dart';
+
+import '../fasta/compiler_context.dart' show CompilerContext;
 
 /// Concrete implementation of [FileSystem] handling standard URI schemes.
 ///
@@ -16,28 +17,17 @@ import 'file_system.dart';
 ///
 /// Not intended to be implemented or extended by clients.
 class StandardFileSystem implements FileSystem {
-  /// This instance is without file tracking. If file tracking is wanted use
-  /// [instanceWithTracking] instead.
-  static final StandardFileSystem instance = new StandardFileSystem._(null);
+  static final StandardFileSystem instance = new StandardFileSystem._();
 
-  // Coverage-ignore(suite): Not run.
-  static StandardFileSystem instanceWithTracking(
-          FileSystemDependencyTracker tracker) =>
-      new StandardFileSystem._(tracker);
-
-  final FileSystemDependencyTracker? tracker;
-
-  StandardFileSystem._(this.tracker);
+  StandardFileSystem._();
 
   @override
   FileSystemEntity entityForUri(Uri uri) {
     if (uri.isScheme('file')) {
-      return new _IoFileSystemEntity(tracker, uri);
-    }
-    // Coverage-ignore(suite): Not run.
-    else if (!uri.hasScheme) {
+      return new _IoFileSystemEntity(uri);
+    } else if (!uri.hasScheme) {
       // TODO(askesc): Empty schemes should have been handled elsewhere.
-      return new _IoFileSystemEntity(tracker, Uri.base.resolveUri(uri));
+      return new _IoFileSystemEntity(Uri.base.resolveUri(uri));
     } else if (uri.isScheme('data')) {
       return new DataFileSystemEntity(Uri.base.resolveUri(uri));
     } else {
@@ -49,12 +39,10 @@ class StandardFileSystem implements FileSystem {
 
 /// Concrete implementation of [FileSystemEntity] for file: URIs.
 class _IoFileSystemEntity implements FileSystemEntity {
-  FileSystemDependencyTracker? tracker;
-
   @override
   final Uri uri;
 
-  _IoFileSystemEntity(this.tracker, this.uri);
+  _IoFileSystemEntity(this.uri);
 
   @override
   int get hashCode => uri.hashCode;
@@ -69,7 +57,6 @@ class _IoFileSystemEntity implements FileSystemEntity {
       return new Future.value(true);
     }
     if (io.FileSystemEntity.isDirectorySync(uri.toFilePath())) {
-      // Coverage-ignore-block(suite): Not run.
       return new Future.value(true);
     }
     // TODO(CFE-team): What about [Link]s?
@@ -77,7 +64,6 @@ class _IoFileSystemEntity implements FileSystemEntity {
   }
 
   @override
-  // Coverage-ignore(suite): Not run.
   Future<bool> existsAsyncIfPossible() async {
     if (await new io.File.fromUri(uri).exists()) {
       return true;
@@ -92,7 +78,7 @@ class _IoFileSystemEntity implements FileSystemEntity {
   @override
   Future<List<int>> readAsBytes() {
     try {
-      FileSystemDependencyTracker.recordDependency(tracker, uri);
+      CompilerContext.recordDependency(uri);
       return new Future.value(new io.File.fromUri(uri).readAsBytesSync());
     } on io.FileSystemException catch (exception) {
       return new Future.error(
@@ -101,10 +87,9 @@ class _IoFileSystemEntity implements FileSystemEntity {
   }
 
   @override
-  // Coverage-ignore(suite): Not run.
   Future<List<int>> readAsBytesAsyncIfPossible() async {
     try {
-      FileSystemDependencyTracker.recordDependency(tracker, uri);
+      CompilerContext.recordDependency(uri);
       return await new io.File.fromUri(uri).readAsBytes();
     } on io.FileSystemException catch (exception) {
       throw _toFileSystemException(exception);
@@ -114,11 +99,9 @@ class _IoFileSystemEntity implements FileSystemEntity {
   @override
   Future<String> readAsString() async {
     try {
-      FileSystemDependencyTracker.recordDependency(tracker, uri);
+      CompilerContext.recordDependency(uri);
       return await new io.File.fromUri(uri).readAsString();
-    }
-    // Coverage-ignore(suite): Not run.
-    on io.FileSystemException catch (exception) {
+    } on io.FileSystemException catch (exception) {
       throw _toFileSystemException(exception);
     }
   }
@@ -136,7 +119,6 @@ class _IoFileSystemEntity implements FileSystemEntity {
   }
 }
 
-// Coverage-ignore(suite): Not run.
 /// Concrete implementation of [FileSystemEntity] for data: URIs.
 class DataFileSystemEntity implements FileSystemEntity {
   @override

@@ -29,13 +29,11 @@
     {
       protocol: [
         "fuchsia.deprecatedtimezone.Timezone",
-        "fuchsia.inspect.InspectSink",
         "fuchsia.intl.PropertyProvider",
         "fuchsia.logger.LogSink",
         "fuchsia.net.name.Lookup",
         "fuchsia.posix.socket.Provider",
         "fuchsia.sysmem.Allocator",
-        "fuchsia.sysmem2.Allocator",
         "fuchsia.timezone.Timezone",
         "fuchsia.tracing.provider.Registry",
       ],

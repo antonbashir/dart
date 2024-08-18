@@ -4,7 +4,10 @@
 
 // Regression test for Issue 17141.
 
+library test.metadata_nested_constructor_call;
+
 import 'dart:mirrors';
+import 'package:expect/expect.dart';
 
 class Box {
   final contents;
@@ -16,60 +19,67 @@ class MutableBox {
   MutableBox([this.contents]); // Not const.
 }
 
-@Box(const Box(const MutableBox()))
-//             ^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONST
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-//                   ^
-// [cfe] Cannot invoke a non-'const' constructor where a const expression is expected.
+@Box()
+class A {}
+
+@Box(const Box())
+class B {}
+
+@Box(const Box(const Box()))
+class C {}
+
+@Box(const Box(const MutableBox())) // //# 01: compile-time error
 class D {}
 
-@Box(const MutableBox(const Box()))
-//   ^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONST
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-//         ^
-// [cfe] Cannot invoke a non-'const' constructor where a const expression is expected.
+@Box(const MutableBox(const Box())) // //# 02: compile-time error
 class E {}
 
-@Box(Box(const MutableBox()))
-//       ^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONST
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-//             ^
-// [cfe] Cannot invoke a non-'const' constructor where a const expression is expected.
+@Box(Box())
+class F {}
+
+@Box(Box(const Box()))
+class G {}
+
+@Box(Box(const MutableBox())) // //# 05: compile-time error
 class H {}
 
-@Box(MutableBox(const Box()))
-//   ^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONST
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [cfe] Cannot invoke a non-'const' constructor where a const expression is expected.
+@Box(MutableBox(const Box())) // //# 06: compile-time error
 class I {}
 
 final closure = () => 42;
 
-@Box(closure())
-//   ^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [cfe] Method invocation is not a constant expression.
-// [cfe] Not a constant expression.
+@Box(closure()) // //# 07: compile-time error
 class J {}
 
-@Box(closure)
-// [error column 2]
-// [cfe] Constant evaluation error:
-//   ^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [cfe] Not a constant expression.
+@Box(closure) // //# 08: compile-time error
 class K {}
 
 function() => 42;
 
-@Box(function())
-//   ^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_EVAL_METHOD_INVOCATION
-// [cfe] Method invocation is not a constant expression.
+@Box(function()) // //# 09: compile-time error
 class L {}
 
-main() {}
+// N.B. This is legal, but @function is not (tested by metadata_allowed_values).
+@Box(function)
+class M {}
+
+checkMetadata(DeclarationMirror mirror, List expectedMetadata) {
+  Expect.listEquals(expectedMetadata.map(reflect).toList(), mirror.metadata);
+}
+
+main() {
+  closure();
+  checkMetadata(reflectClass(A), [const Box()]);
+  checkMetadata(reflectClass(B), [const Box(const Box())]);
+  checkMetadata(reflectClass(C), [const Box(const Box(const Box()))]);
+  reflectClass(D).metadata;
+  reflectClass(E).metadata;
+  reflectClass(F).metadata;
+  reflectClass(G).metadata;
+  reflectClass(H).metadata;
+  reflectClass(I).metadata;
+  reflectClass(J).metadata;
+  reflectClass(K).metadata;
+  reflectClass(L).metadata;
+  reflectClass(M).metadata;
+}

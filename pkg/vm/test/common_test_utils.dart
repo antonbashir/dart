@@ -13,6 +13,7 @@ import 'package:front_end/src/api_unstable/vm.dart'
         computePlatformBinariesLocation,
         kernelForModule,
         kernelForProgram,
+        NnbdMode,
         parseExperimentalArguments,
         parseExperimentalFlags;
 import 'package:kernel/ast.dart';
@@ -46,6 +47,7 @@ Future<Component> compileTestCaseToKernelProgram(Uri sourceUri,
       ..additionalDills = <Uri>[platformKernel]
       ..environmentDefines = environmentDefines
       ..packagesFileUri = packagesFileUri
+      ..nnbdMode = NnbdMode.Strong
       ..explicitExperimentalFlags =
           parseExperimentalFlags(parseExperimentalArguments(experimentalFlags),
               onError: (String message) {
@@ -155,8 +157,8 @@ void compareResultWithExpectationsFile(
   String actual, {
   String expectFilePostfix = '',
 }) {
-  final baseFilename = '${source.toFilePath()}$expectFilePostfix';
-  final expectFile = new File('$baseFilename.expect');
+  final expectFile =
+      new File('${source.toFilePath()}$expectFilePostfix.expect');
   final expected = expectFile.existsSync() ? expectFile.readAsStringSync() : '';
 
   if (actual != expected) {
@@ -165,7 +167,7 @@ void compareResultWithExpectationsFile(
       print("  Updated $expectFile");
     } else {
       if (bool.fromEnvironment(kDumpActualResult)) {
-        new File('$baseFilename.actual').writeAsStringSync(actual);
+        new File(source.toFilePath() + '.actual').writeAsStringSync(actual);
       }
       Difference diff = findFirstDifference(actual, expected);
       fail("""

@@ -20,8 +20,6 @@ abstract class AnalysisContextCollection {
   ///
   /// If [sdkPath] is given, then Dart SDK at this path will be used, otherwise
   /// the default Dart SDK will be used.
-  ///
-  /// [dispose] must be invoked after collection is finished being used.
   factory AnalysisContextCollection({
     required List<String> includedPaths,
     List<String>? excludedPaths,
@@ -36,7 +34,4 @@ abstract class AnalysisContextCollection {
   /// given [path], or throw [StateError] if the [path] is not analyzed in any
   /// of the created analysis contexts.
   AnalysisContext contextFor(String path);
-
-  /// Stops associated processes, and free resources.
-  Future<void> dispose();
 }

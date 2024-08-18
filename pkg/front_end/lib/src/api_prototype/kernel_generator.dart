@@ -7,18 +7,24 @@ library front_end.kernel_generator;
 
 import 'package:_fe_analyzer_shared/src/messages/codes.dart'
     show messageMissingMain, noLength;
+
 import 'package:_fe_analyzer_shared/src/messages/severity.dart' show Severity;
+
 import 'package:kernel/ast.dart' show Component;
+
 import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
+
 import 'package:kernel/core_types.dart' show CoreTypes;
 
-import '../base/compiler_context.dart' show CompilerContext;
 import '../base/processed_options.dart' show ProcessedOptions;
+
+import '../fasta/compiler_context.dart' show CompilerContext;
+
 import '../kernel_generator_impl.dart'
     show generateKernel, generateKernelInternal;
+
 import 'compiler_options.dart' show CompilerOptions;
 
-// Coverage-ignore(suite): Not run.
 /// Generates a kernel representation of the program whose main library is in
 /// the given [source].
 ///
@@ -45,31 +51,22 @@ Future<CompilerResult?> kernelForProgram(Uri source, CompilerOptions options,
       additionalSources: additionalSources));
 }
 
-// Coverage-ignore(suite): Not run.
 Future<CompilerResult?> kernelForProgramInternal(
-  Uri source,
-  CompilerOptions options, {
-  List<Uri> additionalSources = const <Uri>[],
-  bool retainDataForTesting = false,
-  bool requireMain = true,
-  bool buildComponent = true,
-}) async {
+    Uri source, CompilerOptions options,
+    {List<Uri> additionalSources = const <Uri>[],
+    bool retainDataForTesting = false,
+    bool requireMain = true}) async {
   ProcessedOptions pOptions = new ProcessedOptions(
       options: options, inputs: [source, ...additionalSources]);
   return await CompilerContext.runWithOptions(pOptions, (context) async {
     CompilerResult result = await generateKernelInternal(
-      context,
-      includeHierarchyAndCoreTypes: true,
-      retainDataForTesting: retainDataForTesting,
-      buildComponent: buildComponent,
-    );
-
+        includeHierarchyAndCoreTypes: true,
+        retainDataForTesting: retainDataForTesting);
     Component? component = result.component;
     if (component == null) return null;
 
     if (requireMain && component.mainMethod == null) {
       context.options.report(
-          context,
           messageMissingMain.withLocation(source, -1, noLength),
           Severity.error);
       return null;
@@ -78,7 +75,6 @@ Future<CompilerResult?> kernelForProgramInternal(
   });
 }
 
-// Coverage-ignore(suite): Not run.
 /// Generates a kernel representation for a module containing [sources].
 ///
 /// A module is a collection of libraries that are compiled together. Libraries
@@ -118,6 +114,12 @@ abstract class CompilerResult {
 
   /// The components loaded from dill (excluding the sdk).
   List<Component> get loadedComponents;
+
+  /// Dependencies traversed by the compiler. Used only for generating
+  /// dependency .GN files in the dart-sdk build system.
+  /// Note this might be removed when we switch to compute dependencies without
+  /// using the compiler itself.
+  List<Uri> get deps;
 
   /// The [ClassHierarchy] for the compiled [component], if it was requested.
   ClassHierarchy? get classHierarchy;

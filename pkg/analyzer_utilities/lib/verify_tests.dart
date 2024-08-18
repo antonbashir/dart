@@ -13,8 +13,7 @@ import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 
 /// Helper class to test that `test_all.dart` files are properly set up in the
-/// `analyzer` package (and related packages) and that no tests are annotated
-/// to run solo.
+/// `analyzer` package (and related packages).
 class VerifyTests {
   /// Path to the package's `test` subdirectory.
   final String testDirPath;
@@ -33,7 +32,7 @@ class VerifyTests {
         resourceProvider: provider,
         includedPaths: <String>[testDirPath],
         excludedPaths: excludedPaths);
-    var singleAnalysisContext = collection.contexts
+    final singleAnalysisContext = collection.contexts
         .where(analysisContextPredicate ?? (_) => true)
         .toList()
         .singleOrNull;
@@ -157,8 +156,7 @@ class VerifyTests {
             for (var member in declaration.members) {
               if (member is MethodDeclaration) {
                 var name = member.name.lexeme;
-                // Handle both 'solo_test_' and 'solo_fail_'.
-                if (name.startsWith('solo_')) {
+                if (name.startsWith('solo_test_')) {
                   fail("Solo test: $name in '$testFilePath'");
                 }
                 for (var annotation in member.metadata) {

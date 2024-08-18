@@ -3,14 +3,21 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "package:expect/expect.dart" show Expect;
+
 import "package:kernel/ast.dart" show Component, DartType, Library;
+
 import "package:kernel/class_hierarchy.dart" show ClassHierarchy;
+
 import "package:kernel/core_types.dart" show CoreTypes;
-import 'package:kernel/testing/mock_sdk.dart' show mockSdk;
+
+import "package:kernel/text/ast_to_text.dart" show Printer;
+
+import "package:kernel/type_environment.dart" show IsSubtypeOf, TypeEnvironment;
+
 import 'package:kernel/testing/type_parser_environment.dart'
     show TypeParserEnvironment, parseLibrary;
-import "package:kernel/text/ast_to_text.dart" show Printer;
-import "package:kernel/type_environment.dart" show IsSubtypeOf, TypeEnvironment;
+
+import 'package:kernel/testing/mock_sdk.dart' show mockSdk;
 
 import 'shared_type_tests.dart' show SubtypeTest;
 
@@ -117,19 +124,19 @@ extension type NonNullableExtensionType(self::Object it) implements self::Object
 }
 extension type PotentiallyNullableGenericExtensionType<T extends self::Object? = dynamic>(T% it) {
 }
-extension type PotentiallyNullableGenericExtensionSubType<T extends self::Object? = dynamic>(T% it) implements self::PotentiallyNullableGenericExtensionType<T%>% /* erasure=T%, declared=! */ {
+extension type PotentiallyNullableGenericExtensionSubType<T extends self::Object? = dynamic>(T% it) implements self::PotentiallyNullableGenericExtensionType<T%> /* = T% */ {
 }
 extension type NonNullableGenericExtensionType<T extends self::Object>(T it) implements self::Object {
 }
-extension type NonNullableGenericExtensionSubType<T extends self::Object>(T it) implements self::NonNullableGenericExtensionType<T> /* erasure=T */ {
+extension type NonNullableGenericExtensionSubType<T extends self::Object>(T it) implements self::NonNullableGenericExtensionType<T> /* = T */ {
 }
 extension type GenericExtensionTypeImplements<T extends self::Object? = dynamic>(self::GenericClass<T%> it) implements self::GenericClass<T%> {
 }
-extension type GenericSubExtensionTypeImplements<T extends self::Object? = dynamic>(self::SubGenericClass<T%> it) implements self::GenericExtensionTypeImplements<T%> /* erasure=self::GenericClass<T%> */, self::SubGenericClass<T%> {
+extension type GenericSubExtensionTypeImplements<T extends self::Object? = dynamic>(self::SubGenericClass<T%> it) implements self::GenericExtensionTypeImplements<T%> /* = self::GenericClass<T%> */, self::SubGenericClass<T%> {
 }
-extension type PotentiallyNullableNestedGenericExtensionType<T extends self::Object? = dynamic>(self::PotentiallyNullableGenericExtensionType<T%>% /* erasure=T%, declared=! */ it) {
+extension type PotentiallyNullableNestedGenericExtensionType<T extends self::Object? = dynamic>(self::PotentiallyNullableGenericExtensionType<T%> /* = T% */ it) {
 }
-extension type NonNullableNestedGenericExtensionType<T extends self::Object>(self::NonNullableGenericExtensionType<T> /* erasure=T */ it) implements self::Object {
+extension type NonNullableNestedGenericExtensionType<T extends self::Object>(self::NonNullableGenericExtensionType<T> /* = T */ it) implements self::Object {
 }
 """;
 

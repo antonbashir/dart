@@ -31,14 +31,14 @@ class CompletionDomainHandlerGetSuggestionDetails2Test
     String expected, {
     bool printIfFailed = true,
   }) {
-    var buffer = StringBuffer();
+    final buffer = StringBuffer();
     _SuggestionDetailsPrinter(
       resourceProvider: resourceProvider,
       fileDisplayMap: {testFile: 'testFile'},
       buffer: buffer,
       result: result,
     ).writeResult();
-    var actual = buffer.toString();
+    final actual = buffer.toString();
 
     if (actual != expected) {
       if (printIfFailed) {
@@ -147,7 +147,7 @@ completion: Test
 
     var request = CompletionGetSuggestionDetails2Params(
             testFile.path, 0, 'Random', '[foo]:bar')
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
 
     var response = await handleRequest(request);
     expect(response.error?.code, RequestErrorCode.INVALID_PARAMETER);
@@ -159,7 +159,7 @@ completion: Test
 
     var request =
         CompletionGetSuggestionDetails2Params('foo', 0, 'Random', 'dart:math')
-            .toRequest('0', clientUriConverter: server.uriConverter);
+            .toRequest('0');
 
     var response = await handleRequest(request);
     expect(response.error?.code, RequestErrorCode.INVALID_FILE_PATH_FORMAT);
@@ -206,11 +206,10 @@ completion: Test
       completionOffset,
       completion,
       libraryUri,
-    ).toRequest('0', clientUriConverter: server.uriConverter);
+    ).toRequest('0');
 
     var response = await handleSuccessfulRequest(request);
-    return CompletionGetSuggestionDetails2Result.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    return CompletionGetSuggestionDetails2Result.fromResponse(response);
   }
 
   Future<CompletionGetSuggestionDetails2Result> _getTestCodeDetails(
@@ -232,7 +231,7 @@ class CompletionDomainHandlerGetSuggestions2Test
     extends PubPackageAnalysisServerTest {
   printer.Configuration printerConfiguration = printer.Configuration(
     filter: (suggestion) {
-      var completion = suggestion.completion;
+      final completion = suggestion.completion;
       if (completion.startsWith('A0')) {
         return suggestion.isClass;
       }
@@ -249,13 +248,13 @@ class CompletionDomainHandlerGetSuggestions2Test
     String expected, {
     bool printIfFailed = true,
   }) {
-    var buffer = StringBuffer();
+    final buffer = StringBuffer();
     printer.CompletionResponsePrinter(
       buffer: buffer,
       configuration: printerConfiguration,
       response: response,
     ).writeResponse();
-    var actual = buffer.toString();
+    final actual = buffer.toString();
 
     if (actual != expected) {
       if (printIfFailed) {
@@ -336,7 +335,7 @@ suggestions
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay('void f() {}'),
-      }).toRequest('1', clientUriConverter: server.uriConverter),
+      }).toRequest('1'),
     );
 
     // The request should be aborted.
@@ -447,7 +446,7 @@ suggestions
     await _configureWithWorkspaceRoot();
 
     // Empty budget, so no not yet imported libraries.
-    server.completionState.budgetDuration = const Duration();
+    server.completionState.budgetDuration = const Duration(milliseconds: 0);
 
     var response = await _getTestCodeSuggestions('''
 void f() {
@@ -735,54 +734,6 @@ suggestions
 ''');
   }
 
-  Future<void> test_notImported_pub_dependencies_inBin() async {
-    writeTestPackagePubspecYamlFile(r'''
-name: test
-dependencies:
-  aaa: any
-dev_dependencies:
-  bbb: any
-''');
-
-    var aaaRoot = getFolder('$workspaceRootPath/packages/aaa');
-    newFile('${aaaRoot.path}/lib/f.dart', '''
-class A01 {}
-''');
-
-    var bbbRoot = getFolder('$workspaceRootPath/packages/bbb');
-    newFile('${bbbRoot.path}/lib/f.dart', '''
-class A02 {}
-''');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootPath: aaaRoot.path)
-        ..add(name: 'bbb', rootPath: bbbRoot.path),
-    );
-
-    await _configureWithWorkspaceRoot();
-
-    var binPath = convertPath('$testPackageRootPath/bin/main.dart');
-    var response = await _getCodeSuggestions(
-      path: binPath,
-      content: '''
-void f() {
-  A0^
-}
-''',
-    );
-
-    assertResponseText(response, r'''
-replacement
-  left: 2
-suggestions
-  A01
-    kind: class
-    isNotImported: true
-    libraryUri: package:aaa/f.dart
-''');
-  }
-
   Future<void> test_notImported_pub_dependencies_inLib() async {
     writeTestPackagePubspecYamlFile(r'''
 name: test
@@ -888,54 +839,6 @@ suggestions
     kind: class
     isNotImported: true
     libraryUri: package:bbb/f.dart
-''');
-  }
-
-  Future<void> test_notImported_pub_dependencies_inWeb() async {
-    writeTestPackagePubspecYamlFile(r'''
-name: test
-dependencies:
-  aaa: any
-dev_dependencies:
-  bbb: any
-''');
-
-    var aaaRoot = getFolder('$workspaceRootPath/packages/aaa');
-    newFile('${aaaRoot.path}/lib/f.dart', '''
-class A01 {}
-''');
-
-    var bbbRoot = getFolder('$workspaceRootPath/packages/bbb');
-    newFile('${bbbRoot.path}/lib/f.dart', '''
-class A02 {}
-''');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootPath: aaaRoot.path)
-        ..add(name: 'bbb', rootPath: bbbRoot.path),
-    );
-
-    await _configureWithWorkspaceRoot();
-
-    var webPath = convertPath('$testPackageRootPath/web/main.dart');
-    var response = await _getCodeSuggestions(
-      path: webPath,
-      content: '''
-void f() {
-  A0^
-}
-''',
-    );
-
-    assertResponseText(response, r'''
-replacement
-  left: 2
-suggestions
-  A01
-    kind: class
-    isNotImported: true
-    libraryUri: package:aaa/f.dart
 ''');
   }
 
@@ -1812,10 +1715,6 @@ suggestions
     kind: class
     isNotImported: null
     libraryUri: dart:math
-  Random
-    kind: constructorInvocation
-    isNotImported: null
-    libraryUri: dart:math
 ''');
   }
 
@@ -2107,15 +2006,11 @@ suggestions
     kind: identifier
   |repository: |
     kind: identifier
-  |resolution: |
-    kind: identifier
   screenshots:
     kind: identifier
   |topics: |
     kind: identifier
   |version: |
-    kind: identifier
-  workspace:
     kind: identifier
 ''');
   }
@@ -2158,19 +2053,12 @@ suggestions
       path,
       completionOffset,
       maxResults,
-    ).toRequest('0', clientUriConverter: server.uriConverter);
+    ).toRequest('0');
 
     var response = await handleSuccessfulRequest(request);
-    var result = CompletionGetSuggestions2Result.fromResponse(response,
-        clientUriConverter: server.uriConverter);
-
-    // Extract the internal request object.
-    var dartRequest = server.completionState.currentRequest;
-
+    var result = CompletionGetSuggestions2Result.fromResponse(response);
     return CompletionResponseForTesting(
       requestOffset: completionOffset,
-      requestLocationName: dartRequest?.collectorLocationName,
-      opTypeLocationName: dartRequest?.opType.completionLocation,
       replacementOffset: result.replacementOffset,
       replacementLength: result.replacementLength,
       isIncomplete: result.isIncomplete,
@@ -2194,7 +2082,7 @@ suggestions
       testFile.path,
       0,
       1 << 10,
-    ).toRequest(id, clientUriConverter: server.uriConverter);
+    ).toRequest(id);
     var futureResponse = handleRequest(request);
     return RequestWithFutureResponse(offset, request, futureResponse);
   }
@@ -2210,12 +2098,9 @@ class RequestWithFutureResponse {
   Future<CompletionResponseForTesting> toResponse() async {
     var response = await futureResponse;
     expect(response, isResponseSuccess(request.id));
-    var result = CompletionGetSuggestions2Result.fromResponse(response,
-        clientUriConverter: null);
+    var result = CompletionGetSuggestions2Result.fromResponse(response);
     return CompletionResponseForTesting(
       requestOffset: offset,
-      requestLocationName: null,
-      opTypeLocationName: null,
       replacementOffset: result.replacementOffset,
       replacementLength: result.replacementLength,
       isIncomplete: result.isIncomplete,
@@ -2256,7 +2141,7 @@ class _SuggestionDetailsPrinter {
   void _writeChange(SourceChange change) {
     _writelnWithIndent('change');
     _withIndent(() {
-      for (var fileEdit in change.edits) {
+      for (final fileEdit in change.edits) {
         _writeSourceFileEdit(fileEdit);
       }
     });
@@ -2271,17 +2156,17 @@ class _SuggestionDetailsPrinter {
     _writelnWithIndent('offset: ${edit.offset}');
     _writelnWithIndent('length: ${edit.length}');
 
-    var replacementStr = edit.replacement.replaceAll('\n', r'\n');
+    final replacementStr = edit.replacement.replaceAll('\n', r'\n');
     _writelnWithIndent('replacement: $replacementStr');
   }
 
   void _writeSourceFileEdit(SourceFileEdit fileEdit) {
-    var file = resourceProvider.getFile(fileEdit.file);
-    var fileStr = fileDisplayMap[file] ?? fail('No display name: $file');
+    final file = resourceProvider.getFile(fileEdit.file);
+    final fileStr = fileDisplayMap[file] ?? fail('No display name: $file');
     _writelnWithIndent(fileStr);
 
     _withIndent(() {
-      for (var edit in fileEdit.edits) {
+      for (final edit in fileEdit.edits) {
         _writeSourceEdit(edit);
       }
     });

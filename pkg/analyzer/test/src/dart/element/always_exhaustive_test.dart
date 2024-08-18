@@ -40,35 +40,15 @@ class IsAlwaysExhaustiveTest extends AbstractTypeSystemTest {
   }
 
   test_class_sealed() {
-    var A = class_(name: 'A', isSealed: true);
+    final A = class_(name: 'A', isSealed: true);
     isAlwaysExhaustive(interfaceTypeNone(A));
     isAlwaysExhaustive(interfaceTypeQuestion(A));
   }
 
   test_enum() {
-    var E = enum_(name: 'E', constants: []);
+    final E = enum_(name: 'E', constants: []);
     isAlwaysExhaustive(interfaceTypeNone(E));
     isAlwaysExhaustive(interfaceTypeQuestion(E));
-  }
-
-  test_extensionType() {
-    isAlwaysExhaustive(
-      interfaceTypeNone(
-        extensionType('A', representationType: boolNone),
-      ),
-    );
-
-    isAlwaysExhaustive(
-      interfaceTypeNone(
-        extensionType('A', representationType: boolQuestion),
-      ),
-    );
-
-    isNotAlwaysExhaustive(
-      interfaceTypeNone(
-        extensionType('A', representationType: intNone),
-      ),
-    );
   }
 
   test_futureOr() {

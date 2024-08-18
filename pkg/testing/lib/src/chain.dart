@@ -4,6 +4,8 @@
 
 library testing.chain;
 
+import 'dart:async' show Future, Stream;
+
 import 'dart:convert' show json, JsonEncoder;
 
 import 'dart:io' show Directory, File, FileSystemEntity, exitCode;
@@ -12,13 +14,16 @@ import 'suite.dart' show Suite;
 
 import '../testing.dart' show FileBasedTestDescription, TestDescription;
 
-import 'status_file_parser.dart' show readTestExpectations, TestExpectations;
+import 'test_dart/status_file_parser.dart'
+    show readTestExpectations, TestExpectations;
 
 import 'zone_helper.dart' show runGuarded;
 
 import 'error_handling.dart' show withErrorHandling;
 
 import 'log.dart' show Logger, StdoutLogger, splitLines;
+
+import 'multitest.dart' show MultitestTransformer, isError;
 
 import 'expectation.dart' show Expectation, ExpectationGroup, ExpectationSet;
 
@@ -29,50 +34,31 @@ typedef CreateContext = Future<ChainContext> Function(
 class Chain extends Suite {
   final Uri source;
 
-  final Uri root;
-
-  final List<Uri> subRoots;
-
-  final List<String> includeEndsWith;
+  final Uri uri;
 
   final List<RegExp> pattern;
 
   final List<RegExp> exclude;
 
-  Chain(String name, String kind, this.source, this.root, this.subRoots,
-      Uri statusFile, this.includeEndsWith, this.pattern, this.exclude)
+  final bool processMultitests;
+
+  Chain(String name, String kind, this.source, this.uri, Uri statusFile,
+      this.pattern, this.exclude, this.processMultitests)
       : super(name, kind, statusFile);
 
   factory Chain.fromJsonMap(Uri base, Map json, String name, String kind) {
     Uri source = base.resolve(json["source"]);
-    String root = json["root"];
-    if (!root.endsWith("/")) {
-      root += "/";
+    String path = json["path"];
+    if (!path.endsWith("/")) {
+      path += "/";
     }
-    Uri rootUri = base.resolve(root);
-    List<Uri> subRoots = [];
-    List? subRootsList = json["subRoots"];
-    if (subRootsList != null) {
-      for (String subRoot in subRootsList) {
-        if (!subRoot.endsWith("/")) {
-          subRoot += "/";
-        }
-        subRoots.add(rootUri.resolve(subRoot));
-      }
-    } else {
-      subRoots.add(rootUri);
-    }
+    Uri uri = base.resolve(path);
     Uri statusFile = base.resolve(json["status"]);
-    List<String> includeEndsWith =
-        List<String>.from(json['includeEndsWith'] ?? const []);
-    List<RegExp> pattern = [
-      for (final p in json['pattern'] ?? const []) RegExp(p)
-    ];
-    List<RegExp> exclude = [
-      for (final e in json['exclude'] ?? const []) RegExp(e)
-    ];
-    return Chain(name, kind, source, rootUri, subRoots, statusFile,
-        includeEndsWith, pattern, exclude);
+    List<RegExp> pattern = [for (final p in json['pattern']) RegExp(p)];
+    List<RegExp> exclude = [for (final e in json['exclude']) RegExp(e)];
+    bool processMultitests = json["process-multitests"] ?? false;
+    return Chain(name, kind, source, uri, statusFile, pattern, exclude,
+        processMultitests);
   }
 
   void writeImportOn(StringSink sink) {
@@ -86,7 +72,7 @@ class Chain extends Suite {
   void writeClosureOn(StringSink sink) {
     sink.write("await runChain(");
     sink.write(name);
-    sink.writeln(".createContext, {...environment}, selectors, r'''");
+    sink.writeln(".createContext, environment, selectors, r'''");
     const String jsonExtraIndent = "    ";
     sink.write(jsonExtraIndent);
     sink.writeAll(splitLines(JsonEncoder.withIndent("  ").convert(this)),
@@ -99,10 +85,10 @@ class Chain extends Suite {
       "name": name,
       "kind": kind,
       "source": "$source",
-      "root": "$root",
+      "path": "$uri",
       "status": "$statusFile",
+      "process-multitests": processMultitests,
       "pattern": [for (final r in pattern) r.pattern],
-      "includeEndsWith": includeEndsWith,
       "exclude": [for (final r in exclude) r.pattern],
     };
   }
@@ -122,23 +108,19 @@ abstract class ChainContext {
     assert(shards >= 1, "Invalid shards count: $shards");
     assert(0 <= shard && shard < shards,
         "Invalid shard index: $shard, not in range [0,$shards[.");
-    List<String> tripleDotSelectors = selectors
+    List<String> partialSelectors = selectors
         .where((s) => s.endsWith('...'))
         .map((s) => s.substring(0, s.length - 3))
         .toList();
-    List<RegExp> asteriskSelectors = selectors
-        .where((s) => s.contains('*'))
-        .map((s) => _createRegExpForAsterisk(s))
-        .toList();
-    TestExpectations expectations = readTestExpectations(
-        <String>[suite.statusFile!.toFilePath()], expectationSet);
-    List<TestDescription> descriptions = await list(suite);
+    TestExpectations expectations = await readTestExpectations(
+        <String>[suite.statusFile!.toFilePath()], {}, expectationSet);
+    Stream<TestDescription> stream = list(suite);
+    if (suite.processMultitests) {
+      stream = stream.transform(MultitestTransformer());
+    }
+    List<TestDescription> descriptions = await stream.toList();
     descriptions.sort();
-
-    /// Hack: If not running with asserts running the (invalid) configuration
-    /// shards=1 shard>0 should behave as when running with the (invalid)
-    /// configuration shards>1 shard>=shards, i.e. it should run nothing.
-    if (shards > 1 || shard >= shards) {
+    if (shards > 1) {
       List<TestDescription> shardDescriptions = [];
       for (int index = 0; index < descriptions.length; index++) {
         if (index % shards == shard) {
@@ -159,8 +141,7 @@ abstract class ChainContext {
       if (selectors.isNotEmpty &&
           !selectors.contains(selector) &&
           !selectors.contains(suite.name) &&
-          !tripleDotSelectors.any((s) => selector.startsWith(s)) &&
-          !asteriskSelectors.any((s) => s.hasMatch(selector))) {
+          !partialSelectors.any((s) => selector.startsWith(s))) {
         continue;
       }
       final Set<Expectation> expectedOutcomes = processExpectedOutcomes(
@@ -174,6 +155,7 @@ abstract class ChainContext {
       }
       if (shouldSkip) continue;
       final StringBuffer sb = StringBuffer();
+      final Step? lastStep = steps.isNotEmpty ? steps.last : null;
       final Iterator<Step> iterator = steps.iterator;
 
       Result? result;
@@ -228,6 +210,8 @@ abstract class ChainContext {
             }
           }
           await cleanUp(description, result!);
+          result =
+              processTestResult(description, result!, lastStep == lastStepRun);
           if (!expectedOutcomes.contains(result!.outcome) &&
               !expectedOutcomes.contains(result!.outcome.canonical)) {
             result!.addLog("$sb");
@@ -269,43 +253,68 @@ abstract class ChainContext {
         print("${suite.name}/${description.shortName}: ${result.outcome}");
       });
     }
-    await postRun();
+    postRun();
   }
 
-  Future<List<TestDescription>> list(Chain suite) async {
-    List<TestDescription> result = [];
-    for (Uri subRoot in suite.subRoots) {
-      Directory testRoot = Directory.fromUri(subRoot);
-      if (testRoot.existsSync()) {
-        for (FileSystemEntity entity
-            in testRoot.listSync(recursive: true, followLinks: false)) {
-          if (entity is! File) continue;
-          // Use `.uri.path` instead of just `.path` to ensure forward slashes.
-          String path = entity.uri.path;
-
-          if (suite.exclude.any((RegExp r) => path.contains(r))) continue;
-
-          bool include = false;
-          if (suite.includeEndsWith.any((String end) => path.endsWith(end))) {
-            include = true;
-          }
-          if (!include && suite.pattern.any((RegExp r) => path.contains(r))) {
-            include = true;
-          }
-          if (include) {
-            result.add(FileBasedTestDescription(suite.root, entity));
-          }
+  Stream<TestDescription> list(Chain suite) async* {
+    Directory testRoot = Directory.fromUri(suite.uri);
+    if (await testRoot.exists()) {
+      Stream<FileSystemEntity> files =
+          testRoot.list(recursive: true, followLinks: false);
+      await for (FileSystemEntity entity in files) {
+        if (entity is! File) continue;
+        String path = entity.uri.path;
+        if (suite.exclude.any((RegExp r) => path.contains(r))) continue;
+        if (suite.pattern.any((RegExp r) => path.contains(r))) {
+          yield FileBasedTestDescription(suite.uri, entity);
         }
-      } else {
-        throw "$subRoot isn't a directory";
       }
+    } else {
+      throw "${suite.uri} isn't a directory";
     }
-    return result;
   }
 
   Set<Expectation> processExpectedOutcomes(
       Set<Expectation> outcomes, TestDescription description) {
     return outcomes;
+  }
+
+  Result processTestResult(
+      TestDescription description, Result result, bool last) {
+    if (description is FileBasedTestDescription &&
+        description.multitestExpectations != null) {
+      if (isError(description.multitestExpectations!)) {
+        result =
+            toNegativeTestResult(result, description.multitestExpectations);
+      }
+    } else if (last && description.shortName.endsWith("negative_test")) {
+      if (result.outcome == Expectation.pass) {
+        result.addLog("Negative test didn't report an error.\n");
+      } else if (result.outcome == Expectation.fail) {
+        result.addLog("Negative test reported an error as expected.\n");
+      }
+      result = toNegativeTestResult(result);
+    }
+    return result;
+  }
+
+  Result toNegativeTestResult(Result result, [Set<String>? expectations]) {
+    Expectation outcome = result.outcome;
+    if (outcome == Expectation.pass) {
+      if (expectations == null) {
+        outcome = Expectation.fail;
+      } else if (expectations.contains("compile-time error")) {
+        outcome = expectationSet["MissingCompileTimeError"];
+      } else if (expectations.contains("runtime error") ||
+          expectations.contains("dynamic type error")) {
+        outcome = expectationSet["MissingRuntimeError"];
+      } else {
+        outcome = Expectation.fail;
+      }
+    } else if (outcome == Expectation.fail) {
+      outcome = Expectation.pass;
+    }
+    return result.copyWithOutcome(outcome);
   }
 
   Future<void> cleanUp(TestDescription description, Result result) async {}
@@ -402,6 +411,10 @@ class Result<O> {
     logs.add(log);
   }
 
+  Result<O> copyWithOutcome(Expectation outcome) {
+    return Result<O>(output, outcome, error, trace: trace)..logs.addAll(logs);
+  }
+
   Result<O2> copyWithOutput<O2>(O2 output) {
     return Result<O2>(output, outcome, error,
         trace: trace,
@@ -420,16 +433,4 @@ Future<void> runChain(CreateContext f, Map<String, String> environment,
     ChainContext context = await f(suite, environment);
     return context.run(suite, selectors);
   });
-}
-
-RegExp _createRegExpForAsterisk(String s) {
-  StringBuffer sb = StringBuffer("^");
-  String between = "";
-  for (String split in s.split("*")) {
-    sb.write(between);
-    between = ".*";
-    sb.write(RegExp.escape(split));
-  }
-  sb.write("\$");
-  return RegExp(sb.toString());
 }

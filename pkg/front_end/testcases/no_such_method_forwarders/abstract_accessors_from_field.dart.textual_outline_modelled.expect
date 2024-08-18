@@ -9,5 +9,4 @@ class A implements I {
 class B extends A {}
 
 main() {}
-
 void expectTypeError(callback()) {}

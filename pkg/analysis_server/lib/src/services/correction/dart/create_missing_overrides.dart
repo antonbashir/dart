@@ -2,48 +2,38 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/scanner/token.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/utilities/strings.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/error/inheritance_override.dart';
+import 'package:analyzer_plugin/protocol/protocol_common.dart' show Position;
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class CreateMissingOverrides extends ResolvedCorrectionProducer {
   int _numElements = 0;
 
-  CreateMissingOverrides({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments =>
-      [_numElements.toString(), _numElements == 1 ? '' : 's'];
+  List<Object> get fixArguments => [_numElements, _numElements == 1 ? '' : 's'];
 
   @override
   FixKind get fixKind => DartFixKind.CREATE_MISSING_OVERRIDES;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var targetDeclaration = node;
-    if (targetDeclaration is! NamedCompilationUnitMember) {
+    final targetClass = node;
+    if (targetClass is! ClassDeclaration) {
       return;
     }
-    if (targetDeclaration is! ClassDeclaration &&
-        targetDeclaration is! EnumDeclaration) {
-      return;
-    }
+    utils.targetClassElement = targetClass.declaredElement;
     var signatures = [
-      ...InheritanceOverrideVerifier.missingOverrides(targetDeclaration),
-      ...InheritanceOverrideVerifier.missingMustBeOverridden(targetDeclaration)
+      ...InheritanceOverrideVerifier.missingOverrides(targetClass),
+      ...InheritanceOverrideVerifier.missingMustBeOverridden(targetClass)
     ];
-    // Sort by name, getters before setters.
+    // sort by name, getters before setters
     signatures.sort((ExecutableElement a, ExecutableElement b) {
       var names = compareStrings(a.displayName, b.displayName);
       if (names != 0) {
@@ -56,47 +46,56 @@ class CreateMissingOverrides extends ResolvedCorrectionProducer {
     });
     _numElements = signatures.length;
 
-    var prefix = utils.oneIndent;
+    var location =
+        utils.prepareNewClassMemberLocation(targetClass, (_) => true);
+    if (location == null) {
+      return;
+    }
+
+    var prefix = utils.getIndent(1);
     await builder.addDartFileEdit(file, (builder) {
-      builder.insertIntoUnitMember(targetDeclaration, (builder) {
+      final syntheticLeftBracket = targetClass.leftBracket.isSynthetic;
+      if (syntheticLeftBracket) {
+        var previousToLeftBracket = targetClass.leftBracket.previous!;
+        builder.addSimpleInsertion(previousToLeftBracket.end, ' {');
+      }
+
+      builder.addInsertion(location.offset, (builder) {
         // Separator management.
         var numOfMembersWritten = 0;
         void addSeparatorBetweenDeclarations() {
           if (numOfMembersWritten == 0) {
-            if (_numElements > 1) {
-              // Set the selection to the offset of the first member inserted.
-              builder.selectHere();
+            var locationPrefix = location.prefix;
+            if (syntheticLeftBracket && locationPrefix.startsWith(eol)) {
+              locationPrefix = locationPrefix.substring(eol.length);
             }
+            builder.write(locationPrefix);
           } else {
-            builder.write(eol); // After the previous member.
-            builder.write(eol); // Empty line separator.
+            builder.write(eol); // after the previous member
+            builder.write(eol); // empty line separator
             builder.write(prefix);
           }
           numOfMembersWritten++;
         }
 
-        // Merge getter/setter pairs into fields.
+        // merge getter/setter pairs into fields
         for (var i = 0; i < signatures.length; i++) {
           var element = signatures[i];
           if (element.kind == ElementKind.GETTER && i + 1 < signatures.length) {
             var nextElement = signatures[i + 1];
             if (nextElement.kind == ElementKind.SETTER) {
-              // Remove this and the next elements, adjust iterator.
+              // remove this and the next elements, adjust iterator
               signatures.removeAt(i + 1);
               signatures.removeAt(i);
               i--;
               _numElements--;
-              // Add a separator.
+              // separator
               addSeparatorBetweenDeclarations();
-              // Add `@override`.
+              // @override
               builder.write('@override');
               builder.write(eol);
-              // Add field.
+              // add field
               builder.write(prefix);
-              if (targetDeclaration is EnumDeclaration) {
-                builder.write(Keyword.FINAL.lexeme);
-                builder.write(' ');
-              }
               builder.writeType(element.returnType, required: true);
               builder.write(' ');
               builder.write(element.name);
@@ -104,14 +103,27 @@ class CreateMissingOverrides extends ResolvedCorrectionProducer {
             }
           }
         }
-        // Add elements.
+        // add elements
         for (var element in signatures) {
           addSeparatorBetweenDeclarations();
-          // When only 1 override is being added, we delegate the
-          // selection-setting to `builder.writeOverride`.
-          builder.writeOverride(element, setSelection: _numElements == 1);
+          builder.writeOverride(element);
+        }
+        builder.write(location.suffix);
+
+        if (targetClass.rightBracket.isSynthetic) {
+          var next = targetClass.rightBracket.next!;
+          if (next.type != TokenType.CLOSE_CURLY_BRACKET) {
+            if (!syntheticLeftBracket) {
+              builder.write(eol);
+            }
+            builder.write('}');
+            if (syntheticLeftBracket) {
+              builder.write(eol);
+            }
+          }
         }
       });
     });
+    builder.setSelection(Position(file, location.offset));
   }
 }

@@ -25,9 +25,9 @@ abstract class DartSnippetProducerTest extends AbstractSingleUnitTest {
   bool get verifyNoTestUnitErrors => false;
 
   Future<void> assertSnippet(String content, String expected) async {
-    var code = TestCode.parse(content);
-    var expectedCode = TestCode.parse(expected);
-    var snippet = await expectValidSnippet(code);
+    final code = TestCode.parse(content);
+    final expectedCode = TestCode.parse(expected);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));
@@ -44,7 +44,7 @@ abstract class DartSnippetProducerTest extends AbstractSingleUnitTest {
     expect(snippet.change.selection!.offset, expectedCode.position.offset);
 
     // And linked edits.
-    var expectedLinkedGroups = expectedCode.ranges
+    final expectedLinkedGroups = expectedCode.ranges
         .map(
           (range) => {
             'positions': [
@@ -58,31 +58,31 @@ abstract class DartSnippetProducerTest extends AbstractSingleUnitTest {
           },
         )
         .toSet();
-    var actualLinkedGroups =
+    final actualLinkedGroups =
         snippet.change.linkedEditGroups.map((group) => group.toJson()).toSet();
     expect(actualLinkedGroups, equals(expectedLinkedGroups));
   }
 
   Future<void> expectNotValidSnippet(String content) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await resolveTestCode(code.code);
-    var request = DartSnippetRequest(
+    final request = DartSnippetRequest(
       unit: testAnalysisResult,
       offset: code.position.offset,
     );
 
-    var producer = generator(request, elementImportCache: {});
+    final producer = generator(request, elementImportCache: {});
     expect(await producer.isValid(), isFalse);
   }
 
   Future<Snippet> expectValidSnippet(TestCode code) async {
     await resolveTestCode(code.code);
-    var request = DartSnippetRequest(
+    final request = DartSnippetRequest(
       unit: testAnalysisResult,
       offset: code.position.offset,
     );
 
-    var producer = generator(request, elementImportCache: {});
+    final producer = generator(request, elementImportCache: {});
     expect(await producer.isValid(), isTrue);
     return producer.compute();
   }
@@ -98,7 +98,7 @@ abstract class FlutterSnippetProducerTest extends DartSnippetProducerTest {
     TestCode expected,
   ) {
     expect(change.edits, hasLength(1));
-    var code = SourceEdit.applySequence('', change.edits.single.edits);
+    final code = SourceEdit.applySequence('', change.edits.single.edits);
     expect(code, expected.code);
 
     expect(change.selection!.file, testFile.path);
@@ -125,17 +125,17 @@ abstract class FlutterSnippetProducerTest extends DartSnippetProducerTest {
   Future<void> test_valid_importsAndEditsOverlap() async {
     writeTestPackageConfig(flutter: true);
 
-    var snippet = await expectValidSnippet(TestCode.parse('$prefix^'));
+    final snippet = await expectValidSnippet(TestCode.parse('$prefix^'));
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
 
     // Main edits replace $prefix.length characters starting at $prefix
-    var mainEdit = snippet.change.edits[0].edits[0];
+    final mainEdit = snippet.change.edits[0].edits[0];
     expect(mainEdit.offset, testCode.indexOf(prefix));
     expect(mainEdit.length, prefix.length);
 
     // Imports inserted at start of doc (0)
-    var importEdit = snippet.change.edits[0].edits[1];
+    final importEdit = snippet.change.edits[0].edits[1];
     expect(importEdit.offset, 0);
     expect(importEdit.length, 0);
   }
@@ -143,7 +143,7 @@ abstract class FlutterSnippetProducerTest extends DartSnippetProducerTest {
   Future<void> test_valid_suffixReplacement() async {
     writeTestPackageConfig(flutter: true);
 
-    var snippet = await expectValidSnippet(TestCode.parse('''
+    final snippet = await expectValidSnippet(TestCode.parse('''
 class A {}
 
 $prefix^
@@ -152,12 +152,12 @@ $prefix^
     expect(snippet.label, label);
 
     // Main edits replace $prefix.length characters starting at $prefix
-    var mainEdit = snippet.change.edits[0].edits[0];
+    final mainEdit = snippet.change.edits[0].edits[0];
     expect(mainEdit.offset, testCode.indexOf(prefix));
     expect(mainEdit.length, prefix.length);
 
     // Imports inserted at start of doc (0)
-    var importEdit = snippet.change.edits[0].edits[1];
+    final importEdit = snippet.change.edits[0].edits[1];
     expect(importEdit.offset, 0);
     expect(importEdit.length, 0);
   }

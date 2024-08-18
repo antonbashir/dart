@@ -8,15 +8,14 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Prefer `const` over `final` for declarations.';
+const _desc = r'Prefer const over final for declarations.';
 
 const _details = r'''
-**PREFER** using `const` for constant-valued declarations.
+**PREFER** using `const` for const declarations.
 
-Constant declarations are more hot-reload friendly and allow
-values to be used in other constant expressions.
+Const declarations are more hot-reload friendly and allow to use const
+constructors if an instantiation references this declaration.
 
 **BAD:**
 ```dart
@@ -39,20 +38,24 @@ class A {
 ''';
 
 class PreferConstDeclarations extends LintRule {
+  static const LintCode code = LintCode('prefer_const_declarations',
+      "Use 'const' for final variables initialized to a constant value.",
+      correctionMessage: "Try replacing 'final' with 'const'.");
+
   PreferConstDeclarations()
       : super(
             name: 'prefer_const_declarations',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_const_declarations;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addFieldDeclaration(this, visitor);
     registry.addTopLevelVariableDeclaration(this, visitor);
     registry.addVariableDeclarationStatement(this, visitor);
@@ -62,7 +65,9 @@ class PreferConstDeclarations extends LintRule {
 class _Visitor extends SimpleAstVisitor<void> {
   final LintRule rule;
 
-  _Visitor(this.rule);
+  final LinterContext context;
+
+  _Visitor(this.rule, this.context);
 
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
@@ -86,7 +91,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       return initializer != null &&
           (initializer is! TypedLiteral ||
               (initializer.beginToken.keyword == Keyword.CONST)) &&
-          !hasConstantError(initializer);
+          !hasConstantError(context, initializer);
     })) {
       rule.reportLint(node);
     }

@@ -3,12 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/completion/yaml/analysis_options_generator.dart';
-import 'package:analyzer/src/dart/error/lint_codes.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/task/options.dart';
 import 'package:linter/src/rules.dart';
-import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'yaml_generator_test_support.dart';
@@ -147,15 +145,11 @@ linter:
   rules:
     ^
 ''');
-    var completion = assertSuggestion('annotate_overrides');
-    expect(
-      completion.docComplete,
-      contains('**DO** annotate overridden methods and fields'),
-    );
+    assertSuggestion('annotate_overrides');
   }
 
   void test_linter_rules_internal() {
-    registerRule(InternalRule());
+    registerRule(InternalLint());
 
     getCompletions('''
 linter:
@@ -256,19 +250,13 @@ li^
   }
 }
 
-class InternalRule extends LintRule {
-  static const LintCode code = LintCode('internal_rule', 'Internal rule.',
-      correctionMessage: 'Try internal rule.');
-
-  InternalRule()
+class InternalLint extends LintRule {
+  InternalLint()
       : super(
           name: 'internal_lint',
-          categories: {LintRuleCategory.style},
+          group: Group.style,
           state: State.internal(),
           description: '',
           details: '',
         );
-
-  @override
-  LintCode get lintCode => code;
 }

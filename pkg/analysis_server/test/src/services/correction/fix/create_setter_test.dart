@@ -320,7 +320,7 @@ class B {
 
   Future<void> test_qualified_instance_inPart_self() async {
     await resolveTestCode('''
-part of 'a.dart';
+part of lib;
 
 class A {
 }

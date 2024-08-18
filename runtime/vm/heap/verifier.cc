@@ -48,6 +48,10 @@ void VerifyPointersVisitor::VisitPointers(ObjectPtr* from, ObjectPtr* to) {
     ObjectPtr obj = *ptr;
     if (obj->IsHeapObject()) {
       if (!allocated_set_->Contains(obj)) {
+        if (obj->IsInstructions() &&
+            allocated_set_->Contains(Page::ToWritable(obj))) {
+          continue;
+        }
         FATAL("%s: Invalid pointer: *0x%" Px " = 0x%" Px "\n", msg_,
               reinterpret_cast<uword>(ptr), static_cast<uword>(obj));
       }
@@ -63,6 +67,10 @@ void VerifyPointersVisitor::VisitCompressedPointers(uword heap_base,
     ObjectPtr obj = ptr->Decompress(heap_base);
     if (obj->IsHeapObject()) {
       if (!allocated_set_->Contains(obj)) {
+        if (obj->IsInstructions() &&
+            allocated_set_->Contains(Page::ToWritable(obj))) {
+          continue;
+        }
         FATAL("%s: Invalid pointer: *0x%" Px " = 0x%" Px "\n", msg_,
               reinterpret_cast<uword>(ptr), static_cast<uword>(obj));
       }

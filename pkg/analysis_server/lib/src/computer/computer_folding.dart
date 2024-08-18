@@ -39,7 +39,7 @@ class DartUnitFoldingComputer {
     // So these types of blocks should have their folding regions end at the
     // end of the preceding statement.
 
-    var start = block.leftBracket.end;
+    final start = block.leftBracket.end;
     Token? comment = block.endToken.precedingComments;
     if (comment != null) {
       var lastComment = comment;
@@ -100,7 +100,7 @@ class DartUnitFoldingComputer {
     } else {
       // Single line comments need grouping together explicitly but should
       // only group if the prefix is the same and up to any blank line.
-      var isTripleSlash = commentToken.isTripleSlash;
+      final isTripleSlash = commentToken.isTripleSlash;
       // Track the last comment that belongs to this folding region.
       var lastComment = commentToken;
       var current = lastComment.next;
@@ -126,7 +126,7 @@ class DartUnitFoldingComputer {
               _hasBlankLineBetween(end, _unit.beginToken.offset));
     }
 
-    var kind = isFileHeader
+    final kind = isFileHeader
         ? FoldingKind.FILE_HEADER
         : (commentToken.lexeme.startsWith('///') ||
                 commentToken.lexeme.startsWith('/**'))
@@ -326,36 +326,10 @@ class _DartUnitFoldingComputerVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
-  void visitForStatement(ForStatement node) {
-    var body = node.body;
-    if (body is Block) {
-      _computer._addRegion(
-        body.leftBracket.offset,
-        body.rightBracket.end,
-        FoldingKind.BLOCK,
-      );
-    }
-    super.visitForStatement(node);
-  }
-
-  @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     _computer._addRegionForAnnotations(node.metadata);
     _computer._addRegion(node.name.end, node.end, FoldingKind.FUNCTION_BODY);
     super.visitFunctionDeclaration(node);
-  }
-
-  @override
-  void visitFunctionExpression(FunctionExpression node) {
-    var body = node.body;
-    if (body is BlockFunctionBody) {
-      _computer._addRegion(
-        body.block.leftBracket.offset,
-        body.block.rightBracket.end,
-        FoldingKind.BLOCK,
-      );
-    }
-    super.visitFunctionExpression(node);
   }
 
   @override
@@ -432,26 +406,6 @@ class _DartUnitFoldingComputerVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
-  void visitSimpleStringLiteral(SimpleStringLiteral node) {
-    _computer._addRegion(
-      node.offset,
-      node.end,
-      FoldingKind.LITERAL,
-    );
-    super.visitSimpleStringLiteral(node);
-  }
-
-  @override
-  void visitStringInterpolation(StringInterpolation node) {
-    _computer._addRegion(
-      node.offset,
-      node.end,
-      FoldingKind.LITERAL,
-    );
-    super.visitStringInterpolation(node);
-  }
-
-  @override
   void visitSwitchCase(SwitchCase node) {
     _computer._addRegion(node.colon.end, node.end, FoldingKind.BLOCK);
     super.visitSwitchCase(node);
@@ -512,7 +466,7 @@ extension _CommentTokenExtensions on Token {
   /// Return the offset of the first eol character or `null` if no newlines were
   /// found.
   int? get eolOffset {
-    var offset = lexeme.indexOf(_newlinePattern);
+    final offset = lexeme.indexOf(_newlinePattern);
     return offset != -1 ? offset : null;
   }
 

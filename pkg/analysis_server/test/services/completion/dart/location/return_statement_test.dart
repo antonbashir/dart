@@ -23,19 +23,19 @@ class A { foo() {return ^}}
 ''');
     assertResponse(r'''
 suggestions
-  true
-    kind: keyword
-  null
+  const
     kind: keyword
   false
     kind: keyword
-  this
-    kind: keyword
-  const
+  null
     kind: keyword
   super
     kind: keyword
   switch
+    kind: keyword
+  this
+    kind: keyword
+  true
     kind: keyword
 ''');
   }

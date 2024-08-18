@@ -7,5 +7,4 @@ class B {
 }
 
 main() {}
-
 test1() {}

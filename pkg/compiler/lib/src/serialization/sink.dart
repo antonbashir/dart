@@ -14,12 +14,8 @@ abstract class DataSink {
   /// Serialization of a non-negative integer value.
   void writeInt(int value);
 
-  /// Serialization of a non-negative 32 bit integer value. [value] might not be
-  /// compacted as with [writeInt].
-  void writeUint32(int value);
-
   /// Serialization of an enum value.
-  void writeEnum<E extends Enum>(E value);
+  void writeEnum(dynamic value);
 
   /// Serialization of a String value.
   void writeString(String value);
@@ -33,18 +29,6 @@ abstract class DataSink {
   /// Writes a deferred entity which can be skipped when reading and read later
   /// via an offset read.
   void writeDeferred(void writer());
-
-  /// Begins a block of data that can later be read as a deferred block.
-  /// [endDeferred] must eventually be called to end the block. This creates a
-  /// block similar to [writeDeferred] but does not require the data to be
-  /// written in a single closure.
-  void startDeferred();
-
-  /// End a block of data that can later be read as a deferred block.
-  /// [startDeferred] must be called before this to start the block. This
-  /// creates a block similar to [writeDeferred] but does not require the data
-  /// to be written in a single closure.
-  void endDeferred();
 
   /// Closes any underlying data sinks.
   void close();
@@ -147,14 +131,6 @@ class DataSinkWriter {
     _sinkWriter.writeDeferred(f);
   }
 
-  void startDeferrable() {
-    _sinkWriter.startDeferred();
-  }
-
-  void endDeferrable() {
-    _sinkWriter.endDeferred();
-  }
-
   /// Writes a reference to [value] to this data sink. If [value] has not yet
   /// been serialized, [f] is called to serialize the value itself. If
   /// [identity] is true then the cache is backed by a [Map] created using
@@ -231,13 +207,6 @@ class DataSinkWriter {
     assert(value >= 0 && value >> 30 == 0);
     _writeDataKind(DataKind.uint30);
     _sinkWriter.writeInt(value);
-  }
-
-  /// Writes the non-negative 32 bit integer [value] to this data sink. [value]
-  /// might not be compacted as with [writeInt].
-  void writeUint32(int value) {
-    _writeDataKind(DataKind.uint32);
-    _sinkWriter.writeUint32(value);
   }
 
   /// Writes the potentially `null` non-negative [value] to this data sink.
@@ -318,7 +287,11 @@ class DataSinkWriter {
   }
 
   /// Writes the enum value [value] to this data sink.
-  void writeEnum<E extends Enum>(E value) {
+  // TODO(johnniwinther): Change the signature to
+  // `void writeEnum<E extends Enum<E>>(E value);` when an interface for enums
+  // is added to the language.
+
+  void writeEnum(dynamic value) {
     _writeDataKind(DataKind.enumValue);
     _sinkWriter.writeEnum(value);
   }
@@ -440,11 +413,30 @@ class DataSinkWriter {
     writeMapOrNull(map, writeMemberNode, f);
   }
 
+  /// Writes a kernel name node to this data sink.
+  void writeName(ir.Name value) {
+    writeString(value.text);
+    writeValueOrNull(value.library, writeLibraryNode);
+  }
+
   /// Writes a [Name] to this data sink.
   void writeMemberName(Name value) {
     writeString(value.text);
     writeValueOrNull(value.uri, writeUri);
     writeBool(value.isSetter);
+  }
+
+  /// Writes a kernel library dependency node [value] to this data sink.
+  void writeLibraryDependencyNode(ir.LibraryDependency value) {
+    final library = value.parent as ir.Library;
+    writeLibraryNode(library);
+    writeInt(library.dependencies.indexOf(value));
+  }
+
+  /// Writes a potentially `null` kernel library dependency node [value] to
+  /// this data sink.
+  void writeLibraryDependencyNodeOrNull(ir.LibraryDependency? value) {
+    writeValueOrNull(value, writeLibraryDependencyNode);
   }
 
   /// Writes a reference to the kernel tree node [value] to this data sink.
@@ -874,17 +866,6 @@ class DataSinkWriter {
   /// [DataSourceReader.readLocalMap].
   void writeLocalMap<V>(Map<Local, V> map, void f(V value)) {
     writeMap(map, writeLocal, f);
-  }
-
-  /// Writes the [map] from selectors to [V] values to this data sink, calling
-  /// [f] to write each value to the data sink.
-  ///
-  /// This is a convenience method to be used together with
-  /// [DataSourceReader.readSelectorMap].
-  void writeSelectorMap<V>(Map<Selector, V> map, void f(V value)) {
-    writeMap(map, (Selector selector) {
-      selector.writeToDataSink(this);
-    }, f);
   }
 
   /// Writes the constant [value] to this data sink.

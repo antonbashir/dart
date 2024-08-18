@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:collection/collection.dart';
 import 'package:dap/dap.dart';
 import 'package:test/test.dart';
 
@@ -113,7 +114,7 @@ main() {
       // Collect paths from any OutputEvents that had them.
       final stackFramePaths = outputEvents.output
           .map((event) => event.source?.path)
-          .nonNulls
+          .whereNotNull()
           .toList();
       // Ensure we had a frame with the absolute path of the test script.
       expect(stackFramePaths, contains(testFile.path));
@@ -297,8 +298,7 @@ main() {
       final outputEvents = await client.collectTestOutput(
         launch: () => client.attach(
           vmServiceUri: 'ws://bogus.local/',
-          autoResumeOnEntry: false,
-          autoResumeOnExit: false,
+          autoResume: false,
         ),
       );
 

@@ -3,5 +3,4 @@ class T {}
 class V {}
 
 test() {}
-
 void main() {}

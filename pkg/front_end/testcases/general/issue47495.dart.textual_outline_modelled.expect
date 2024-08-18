@@ -1,5 +1,4 @@
 // @dart = 2.13
-
 class C = SAlias with MAlias;
 
 class M {}
@@ -7,7 +6,5 @@ class M {}
 class S {}
 
 main() {}
-
 typedef MAlias = M;
-
 typedef SAlias = S;

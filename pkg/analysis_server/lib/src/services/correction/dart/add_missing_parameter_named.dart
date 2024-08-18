@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/executable_parameters.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -12,15 +12,8 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 class AddMissingParameterNamed extends ResolvedCorrectionProducer {
   String _parameterName = '';
 
-  AddMissingParameterNamed({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_parameterName];
+  List<Object> get fixArguments => [_parameterName];
 
   @override
   FixKind get fixKind => DartFixKind.ADD_MISSING_PARAMETER_NAMED;
@@ -28,7 +21,7 @@ class AddMissingParameterNamed extends ResolvedCorrectionProducer {
   @override
   Future<void> compute(ChangeBuilder builder) async {
     // Prepare the name of the missing parameter.
-    var node = this.node;
+    final node = this.node;
     if (node is! SimpleIdentifier) {
       return;
     }

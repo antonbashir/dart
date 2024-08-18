@@ -8,10 +8,9 @@ import 'dart:io';
 
 import 'package:_fe_analyzer_shared/src/scanner/abstract_scanner.dart'
     show ScannerConfiguration;
-import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:dart_style/dart_style.dart' show DartFormatter;
 import 'package:front_end/src/api_prototype/experimental_flags.dart';
-import 'package:front_end/src/util/textual_outline.dart';
+import 'package:front_end/src/fasta/util/textual_outline.dart';
 import 'package:testing/testing.dart'
     show
         Chain,
@@ -20,15 +19,12 @@ import 'package:testing/testing.dart'
         ExpectationSet,
         Result,
         Step,
-        TestDescription;
+        TestDescription,
+        runMe;
 
 import '../utils/kernel_chain.dart' show MatchContext;
-import 'suite_utils.dart';
-import 'testing/environment_keys.dart';
 import 'testing/folder_options.dart';
-
-const int minSupportedMajorVersion = 2;
-const int minSupportedMinorVersion = 12;
+import 'testing/suite.dart' show UPDATE_EXPECTATIONS;
 
 const List<Map<String, String>> EXPECTATIONS = [
   {
@@ -54,14 +50,11 @@ const List<Map<String, String>> EXPECTATIONS = [
 ];
 
 Future<Context> createContext(Chain suite, Map<String, String> environment) {
-  return new Future.value(new Context(suite.root, environment));
+  return new Future.value(new Context(suite.uri, environment));
 }
 
-void main([List<String> arguments = const []]) => internalMain(
-      createContext,
-      arguments: arguments,
-      displayName: "textual outline suite",
-    );
+void main([List<String> arguments = const []]) =>
+    runMe(arguments, createContext, configurationPath: "../../testing.json");
 
 class Context extends ChainContext with MatchContext {
   final SuiteFolderOptions suiteFolderOptions;
@@ -71,16 +64,14 @@ class Context extends ChainContext with MatchContext {
   final bool updateExpectations;
 
   @override
-  String get updateExpectationsOption =>
-      '${EnvironmentKeys.updateExpectations}=true';
+  String get updateExpectationsOption => '${UPDATE_EXPECTATIONS}=true';
 
   @override
   bool get canBeFixWithUpdateExpectations => true;
 
   Context(Uri baseUri, Map<String, String> environment)
       : suiteFolderOptions = new SuiteFolderOptions(baseUri),
-        updateExpectations =
-            environment[EnvironmentKeys.updateExpectations] == "true",
+        updateExpectations = environment[UPDATE_EXPECTATIONS] == "true",
         forcedExperimentalFlags =
             SuiteFolderOptions.computeForcedExperimentalFlags(environment);
 
@@ -126,6 +117,7 @@ class TextualOutline extends Step<TestDescription, TestDescription, Context> {
         ),
         throwOnUnexpected: true,
         performModelling: modelled,
+        addMarkerForUnknownForTest: modelled,
         returnNullOnError: false,
         enablePatterns: isExperimentEnabled(ExperimentalFlag.patterns,
             explicitExperimentalFlags: experimentalFlags),
@@ -136,19 +128,25 @@ class TextualOutline extends Step<TestDescription, TestDescription, Context> {
             null, context.expectationSet["EmptyOutput"], description.uri);
       }
 
-      bool containsUnknownChunk = info.hasUnknownChunk;
-      bool tryFormat = !containsUnknownChunk;
-      for (LanguageVersionToken version in info.languageVersionTokens) {
-        if (version.major < minSupportedMajorVersion) {
-          tryFormat = false;
-        } else if (version.major == minSupportedMajorVersion &&
-            version.minor < minSupportedMinorVersion) {
-          tryFormat = false;
+      // In an attempt to make it less sensitive to formatting first remove
+      // excess new lines, then format.
+      List<String> lines = result.split("\n");
+      bool containsUnknownChunk = false;
+      StringBuffer sb = new StringBuffer();
+      for (String line in lines) {
+        if (line.trim() != "") {
+          if (line == "---- unknown chunk starts ----") {
+            containsUnknownChunk = true;
+          }
+          sb.writeln(line);
         }
       }
+      result = sb.toString().trim();
+
       dynamic formatterException;
       StackTrace? formatterExceptionSt;
-      if (tryFormat) {
+      if (!containsUnknownChunk) {
+        // Try to format only if it doesn't contain the unknown chunk marker.
         try {
           List<String> experimentFlags = [];
           for (MapEntry<ExperimentalFlag, bool> entry
@@ -185,6 +183,9 @@ class TextualOutline extends Step<TestDescription, TestDescription, Context> {
         for (MapEntry<ExperimentalFlag, bool> entry
             in experimentalFlagsExplicit.entries) {
           if (entry.value) {
+            // Don't treat "inline-class" as disabled by default as it's about
+            // to have the flag flipped.
+            if (entry.key.name == "inline-class") continue;
             if (!entry.key.isEnabledByDefault) {
               hasUnreleasedExperiment = true;
               break;

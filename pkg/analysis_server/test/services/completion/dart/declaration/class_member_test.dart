@@ -284,10 +284,10 @@ suggestions
     kind: field
   p1
     kind: getter
-  p3
-    kind: setter
   p2
     kind: methodInvocation
+  p3
+    kind: setter
   p4
     kind: constructorInvocation
 ''');

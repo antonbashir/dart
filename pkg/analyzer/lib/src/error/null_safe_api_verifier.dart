@@ -25,11 +25,13 @@ class NullSafeApiVerifier {
   /// Reports an error if the expression creates a `Future<T>.value` with a non-
   /// nullable value `T` and an argument that is effectively `null`.
   void instanceCreation(InstanceCreationExpression expression) {
-    var constructor = expression.constructorName.staticElement;
+    if (!_typeSystem.isNonNullableByDefault) return;
+
+    final constructor = expression.constructorName.staticElement;
     if (constructor == null) return;
 
-    var type = constructor.returnType;
-    var isFutureValue = type.isDartAsyncFuture && constructor.name == 'value';
+    final type = constructor.returnType;
+    final isFutureValue = type.isDartAsyncFuture && constructor.name == 'value';
 
     if (isFutureValue) {
       _checkTypes(expression, 'Future.value', type.typeArguments.single,
@@ -40,10 +42,12 @@ class NullSafeApiVerifier {
   /// Reports an error if `Completer<T>.complete` is invoked with a non-nullable
   /// `T` and an argument that is effectively `null`.
   void methodInvocation(MethodInvocation node) {
-    var targetType = node.realTarget?.staticType;
+    if (!_typeSystem.isNonNullableByDefault) return;
+
+    final targetType = node.realTarget?.staticType;
     if (targetType is! InterfaceType) return;
 
-    var targetClass = targetType.element;
+    final targetClass = targetType.element;
 
     if (targetClass.library.isDartAsync == true &&
         targetClass.name == 'Completer' &&
@@ -60,19 +64,19 @@ class NullSafeApiVerifier {
     // expect a non-nullable type in the first place.
     if (args.arguments.length > 1 || !_typeSystem.isNonNullable(type)) return;
 
-    var argument = args.arguments.isEmpty ? null : args.arguments.single;
-    var argumentType = argument?.staticType;
+    final argument = args.arguments.isEmpty ? null : args.arguments.single;
+    final argumentType = argument?.staticType;
     // Skip if the type is not currently resolved.
     if (argument != null && argumentType == null) return;
 
-    var argumentIsNull = argument == null || _typeSystem.isNull(argumentType!);
+    final argumentIsNull =
+        argument == null || _typeSystem.isNull(argumentType!);
 
     if (argumentIsNull) {
-      _errorReporter.atNode(
-        argument ?? node,
-        WarningCode.NULL_ARGUMENT_TO_NON_NULL_TYPE,
-        arguments: [memberName, type.getDisplayString()],
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.NULL_ARGUMENT_TO_NON_NULL_TYPE,
+          argument ?? node,
+          [memberName, type.getDisplayString(withNullability: true)]);
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:analyzer/src/test_utilities/find_element.dart';
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -34,19 +35,19 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: null
-  element: <testLibraryFragment>::@getter::a
+  element: self::@getter::a
 ''');
     _assertAnnotationValueText(annotation, '''
 int 42
-  variable: <testLibraryFragment>::@topLevelVariable::a
+  variable: self::@variable::a
 ''');
   }
 
   test_location_augmentationImportDirective() async {
     newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+library augment 'test.dart';
 ''');
 
     await assertNoErrorsInCode(r'''
@@ -121,16 +122,16 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: v
-    staticElement: <testLibraryFragment>::@enum::E::@getter::v
+    staticElement: self::@enum::E::@getter::v
     staticType: null
-  element: <testLibraryFragment>::@enum::E::@getter::v
+  element: self::@enum::E::@getter::v
 ''');
 
     _assertAnnotationValueText(annotation, '''
 E
   _name: String v
   index: int 0
-  variable: <testLibraryFragment>::@enum::E::@field::v
+  variable: self::@enum::E::@field::v
 ''');
   }
 
@@ -162,7 +163,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -171,21 +172,21 @@ Annotation
         constructorName: ConstructorName
           type: NamedType
             name: A
-            element: <testLibraryFragment>::@class::A
+            element: self::@class::A
             type: A
-          staticElement: <testLibraryFragment>::@class::A::@constructor::new
+          staticElement: self::@class::A::@constructor::new
         argumentList: ArgumentList
           leftParenthesis: (
           arguments
             IntegerLiteral
               literal: 0
-              parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+              parameter: self::@class::A::@constructor::new::@parameter::f
               staticType: int
           rightParenthesis: )
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+        parameter: self::@class::A::@constructor::new::@parameter::f
         staticType: A
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
     _assertAnnotationValueText(annotation, r'''
 A
@@ -204,61 +205,21 @@ void f() {
     // No checks, as long as it does not crash.
   }
 
-  test_location_libraryAugmentation_class() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-class A {
-  final int a;
-  const A(this.a);
-}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'test.dart';
-import 'a.dart' as prefix;
-
-@prefix.A(42)
-class B {}
-''');
-
+  test_location_libraryAugmentationDirective() async {
     newFile('$testPackageLibPath/test.dart', r'''
-import augment 'b.dart';
+import augment 'a.dart';
+const foo = 42;
 ''');
 
-    await resolveFile2(b);
-
-    var annotation = findNode.annotation('@prefix.A(42)');
-    assertResolvedNodeText(annotation, '''
-Annotation
-  atSign: @
-  name: PrefixedIdentifier
-    prefix: SimpleIdentifier
-      token: prefix
-      staticElement: <testLibrary>::@fragment::package:test/b.dart::@prefix::prefix
-      staticType: null
-    period: .
-    identifier: SimpleIdentifier
-      token: A
-      staticElement: package:test/a.dart::<fragment>::@class::A
-      staticType: null
-    staticElement: package:test/a.dart::<fragment>::@class::A
-    staticType: null
-  arguments: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 42
-        parameter: package:test/a.dart::<fragment>::@class::A::@constructor::new::@parameter::a
-        staticType: int
-    rightParenthesis: )
-  element: package:test/a.dart::<fragment>::@class::A::@constructor::new
+    var a = newFile('$testPackageLibPath/a.dart', r'''
+@foo
+library augment 'test.dart';
 ''');
 
-    var localVariable = findElement.class_('B');
-    var annotationOnElement = localVariable.metadata.single;
-    _assertElementAnnotationValueText(annotationOnElement, '''
-A
-  a: int 42
-''');
+    await resolveFile2(a);
+    assertNoErrorsInResult();
+
+    _assertAtFoo42();
   }
 
   test_location_libraryDirective() async {
@@ -315,21 +276,21 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 3
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+        parameter: self::@class::A::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
 
-    var localVariable = findElement.localVar('x');
-    var annotationOnElement = localVariable.metadata.single;
+    final localVariable = findElement.localVar('x');
+    final annotationOnElement = localVariable.metadata.single;
     _assertElementAnnotationValueText(annotationOnElement, '''
 A
   a: int 3
@@ -411,23 +372,23 @@ class A {
 
 ({@A(0) int f1, String f2}) f() => throw 0;
 ''');
-    var node = findNode.annotation('@A');
+    final node = findNode.annotation('@A');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+        parameter: self::@class::A::@constructor::new::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
     _assertAnnotationValueText(node, r'''
 A
@@ -444,23 +405,23 @@ class A {
 
 (int, @A(0) String) f() => throw 0;
 ''');
-    var node = findNode.annotation('@A');
+    final node = findNode.annotation('@A');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+        parameter: self::@class::A::@constructor::new::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
     _assertAnnotationValueText(node, r'''
 A
@@ -490,6 +451,422 @@ final bar = 0;
     _assertAtFoo42();
   }
 
+  test_optIn_fromOptOut_class() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  const A(int a);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+@A(0)
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@A'), r'''
+Annotation
+  atSign: @
+  name: SimpleIdentifier
+    token: A
+    staticElement: package:test/a.dart::@class::A
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: package:test/a.dart::@class::A::@constructor::new::@parameter::a
+          isLegacy: true
+        staticType: int*
+    rightParenthesis: )
+  element: ConstructorMember
+    base: package:test/a.dart::@class::A::@constructor::new
+    isLegacy: true
+''');
+  }
+
+  test_optIn_fromOptOut_class_constructor() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  final int a;
+  const A.named(this.a);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+@A.named(42)
+void f() {}
+''');
+
+    var annotation = findNode.annotation('@A');
+    assertResolvedNodeText(annotation, r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: named
+      staticElement: ConstructorMember
+        base: package:test/a.dart::@class::A::@constructor::named
+        isLegacy: true
+      staticType: null
+    staticElement: ConstructorMember
+      base: package:test/a.dart::@class::A::@constructor::named
+      isLegacy: true
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 42
+        parameter: FieldFormalParameterMember
+          base: package:test/a.dart::@class::A::@constructor::named::@parameter::a
+          isLegacy: true
+        staticType: int*
+    rightParenthesis: )
+  element: ConstructorMember
+    base: package:test/a.dart::@class::A::@constructor::named
+    isLegacy: true
+''');
+
+    _assertElementAnnotationValueText(
+        findElement.function('f').metadata[0], r'''
+A*
+  a: int 42
+''');
+  }
+
+  test_optIn_fromOptOut_class_constructor_withDefault() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  final int a;
+  const A.named({this.a = 42});
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+@A.named()
+void f() {}
+''');
+
+    var annotation = findNode.annotation('@A');
+    assertResolvedNodeText(annotation, r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: named
+      staticElement: ConstructorMember
+        base: package:test/a.dart::@class::A::@constructor::named
+        isLegacy: true
+      staticType: null
+    staticElement: ConstructorMember
+      base: package:test/a.dart::@class::A::@constructor::named
+      isLegacy: true
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  element: ConstructorMember
+    base: package:test/a.dart::@class::A::@constructor::named
+    isLegacy: true
+''');
+
+    _assertElementAnnotationValueText(
+        findElement.function('f').metadata[0], r'''
+A*
+  a: int 42
+''');
+  }
+
+  test_optIn_fromOptOut_class_getter() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  static const foo = 42;
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+@A.foo
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@A'), r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: foo
+      staticElement: PropertyAccessorMember
+        base: package:test/a.dart::@class::A::@getter::foo
+        isLegacy: true
+      staticType: null
+    staticElement: PropertyAccessorMember
+      base: package:test/a.dart::@class::A::@getter::foo
+      isLegacy: true
+    staticType: null
+  element: PropertyAccessorMember
+    base: package:test/a.dart::@class::A::@getter::foo
+    isLegacy: true
+''');
+
+    _assertElementAnnotationValueText(
+        findElement.function('f').metadata[0], r'''
+int 42
+  variable: package:test/a.dart::@class::A::@field::foo
+''');
+  }
+
+  test_optIn_fromOptOut_getter() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+const foo = 42;
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart';
+
+@foo
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@foo'), r'''
+Annotation
+  atSign: @
+  name: SimpleIdentifier
+    token: foo
+    staticElement: PropertyAccessorMember
+      base: package:test/a.dart::@getter::foo
+      isLegacy: true
+    staticType: null
+  element: PropertyAccessorMember
+    base: package:test/a.dart::@getter::foo
+    isLegacy: true
+''');
+
+    _assertElementAnnotationValueText(
+        findElement.function('f').metadata[0], r'''
+int 42
+  variable: package:test/a.dart::@variable::foo
+''');
+  }
+
+  test_optIn_fromOptOut_prefix_class() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  const A(int a);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart' as a;
+
+@a.A(0)
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@a.A'), r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@prefix::a
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    staticElement: package:test/a.dart::@class::A
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: package:test/a.dart::@class::A::@constructor::new::@parameter::a
+          isLegacy: true
+        staticType: int*
+    rightParenthesis: )
+  element: ConstructorMember
+    base: package:test/a.dart::@class::A::@constructor::new
+    isLegacy: true
+''');
+  }
+
+  test_optIn_fromOptOut_prefix_class_constructor() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  const A.named(int a);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart' as a;
+
+@a.A.named(0)
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@a.A'), r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@prefix::a
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    staticElement: package:test/a.dart::@class::A
+    staticType: null
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    staticElement: ConstructorMember
+      base: package:test/a.dart::@class::A::@constructor::named
+      isLegacy: true
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: package:test/a.dart::@class::A::@constructor::named::@parameter::a
+          isLegacy: true
+        staticType: int*
+    rightParenthesis: )
+  element: ConstructorMember
+    base: package:test/a.dart::@class::A::@constructor::named
+    isLegacy: true
+''');
+  }
+
+  test_optIn_fromOptOut_prefix_class_getter() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  static const foo = 0;
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart' as a;
+
+@a.A.foo
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@a.A'), r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@prefix::a
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: A
+      staticElement: package:test/a.dart::@class::A
+      staticType: null
+    staticElement: package:test/a.dart::@class::A
+    staticType: null
+  period: .
+  constructorName: SimpleIdentifier
+    token: foo
+    staticElement: PropertyAccessorMember
+      base: package:test/a.dart::@class::A::@getter::foo
+      isLegacy: true
+    staticType: null
+  element: PropertyAccessorMember
+    base: package:test/a.dart::@class::A::@getter::foo
+    isLegacy: true
+''');
+  }
+
+  test_optIn_fromOptOut_prefix_getter() async {
+    noSoundNullSafety = false;
+    newFile('$testPackageLibPath/a.dart', r'''
+const foo = 0;
+''');
+
+    await assertNoErrorsInCode(r'''
+// @dart = 2.7
+import 'a.dart' as a;
+
+@a.foo
+void f() {}
+''');
+
+    assertResolvedNodeText(findNode.annotation('@a'), r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@prefix::a
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: foo
+      staticElement: PropertyAccessorMember
+        base: package:test/a.dart::@getter::foo
+        isLegacy: true
+      staticType: null
+    staticElement: PropertyAccessorMember
+      base: package:test/a.dart::@getter::foo
+      isLegacy: true
+    staticType: null
+  element: PropertyAccessorMember
+    base: package:test/a.dart::@getter::foo
+    isLegacy: true
+''');
+  }
+
   test_value_class_inference_namedConstructor() async {
     await assertNoErrorsInCode(r'''
 class A {
@@ -508,24 +885,24 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
-      staticElement: <testLibraryFragment>::@class::A::@constructor::named
+      staticElement: self::@class::A::@constructor::named
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@constructor::named
+    staticElement: self::@class::A::@constructor::named
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+        parameter: self::@class::A::@constructor::named::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::named
+  element: self::@class::A::@constructor::named
 ''');
     _assertAnnotationValueText(annotation, '''
 A
@@ -544,31 +921,31 @@ A
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
-      staticElement: <testLibraryFragment>::@class::A::@constructor::named
+      staticElement: self::@class::A::@constructor::named
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@constructor::named
+    staticElement: self::@class::A::@constructor::named
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+        parameter: self::@class::A::@constructor::named::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::named
+  element: self::@class::A::@constructor::named
 ''');
 
     _assertAnnotationValueText(node, r'''
@@ -594,20 +971,20 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: null
-  element: <testLibraryFragment>::@class::A::@getter::foo
+  element: self::@class::A::@getter::foo
 ''');
     _assertAnnotationValueText(annotation, '''
 int 42
-  variable: <testLibraryFragment>::@class::A::@field::foo
+  variable: self::@class::A::@field::foo
 ''');
   }
 
@@ -622,23 +999,23 @@ class A {
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+        parameter: self::@class::A::@constructor::new::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
 
     _assertAnnotationValueText(node, r'''
@@ -662,13 +1039,13 @@ class D {
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
     token: D
-    staticElement: <testLibraryFragment>::@class::D
+    staticElement: self::@class::D
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -678,16 +1055,16 @@ Annotation
         constructorName: ConstructorName
           type: NamedType
             name: C
-            element: <testLibraryFragment>::@class::C
+            element: self::@class::C
             type: C
-          staticElement: <testLibraryFragment>::@class::C::@constructor::new
+          staticElement: self::@class::C::@constructor::new
         argumentList: ArgumentList
           leftParenthesis: (
           rightParenthesis: )
-        parameter: <testLibraryFragment>::@class::D::@constructor::new::@parameter::c
+        parameter: self::@class::D::@constructor::new::@parameter::c
         staticType: C
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::D::@constructor::new
+  element: self::@class::D::@constructor::new
 ''');
 
     _assertAnnotationValueText(node, r'''
@@ -714,17 +1091,17 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: Object?}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: Object?}
     staticType: null
   arguments: ArgumentList
@@ -734,12 +1111,12 @@ Annotation
         leftBracket: [
         rightBracket: ]
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: Object?}
         staticType: List<List<Object?>>
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: Object?}
 ''');
     _assertAnnotationValueText(annotation, '''
@@ -766,7 +1143,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -775,12 +1152,12 @@ Annotation
         leftBracket: [
         rightBracket: ]
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: Object?}
         staticType: List<List<Object?>>
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: Object?}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -808,17 +1185,17 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -827,12 +1204,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, '''
@@ -858,7 +1235,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -866,12 +1243,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -896,16 +1273,16 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: null
-  element: <testLibraryFragment>::@class::A::@getter::foo
+  element: self::@class::A::@getter::foo
 ''');
   }
 
@@ -927,17 +1304,17 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: dynamic}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: dynamic}
     staticType: null
   arguments: ArgumentList
@@ -946,12 +1323,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: dynamic}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: dynamic}
 ''');
     _assertAnnotationValueText(annotation, '''
@@ -977,16 +1354,16 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
-      staticElement: <testLibraryFragment>::@class::A
+      staticElement: self::@class::A
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: null
-  element: <testLibraryFragment>::@class::A::@getter::foo
+  element: self::@class::A::@getter::foo
 ''');
     _assertAnnotationValueText(annotation, '''
 <null>
@@ -1010,21 +1387,21 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   period: .
   constructorName: SimpleIdentifier
     token: named
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -1033,12 +1410,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, '''
@@ -1064,14 +1441,14 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   arguments: ArgumentList
@@ -1080,12 +1457,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1112,7 +1489,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
+    staticElement: self::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1120,12 +1497,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: dynamic}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: dynamic}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1155,7 +1532,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1163,12 +1540,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1202,7 +1579,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1210,12 +1587,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1246,7 +1623,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1254,12 +1631,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1289,7 +1666,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1297,12 +1674,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1333,7 +1710,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1341,12 +1718,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1379,7 +1756,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1387,12 +1764,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1423,14 +1800,14 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@class::B
+    staticElement: self::@class::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   arguments: ArgumentList
@@ -1439,12 +1816,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::B::@constructor::new::@parameter::f
+          base: self::@class::B::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::B::@constructor::new
+    base: self::@class::B::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1558,36 +1935,36 @@ import 'a.dart' as prefix;
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: A
-      staticElement: package:test/a.dart::<fragment>::@class::A
+      staticElement: package:test/a.dart::@class::A
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@class::A
+    staticElement: package:test/a.dart::@class::A
     staticType: null
   period: .
   constructorName: SimpleIdentifier
     token: named
-    staticElement: package:test/a.dart::<fragment>::@class::A::@constructor::named
+    staticElement: package:test/a.dart::@class::A::@constructor::named
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: package:test/a.dart::<fragment>::@class::A::@constructor::named::@parameter::f
+        parameter: package:test/a.dart::@class::A::@constructor::named::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: package:test/a.dart::<fragment>::@class::A::@constructor::named
+  element: package:test/a.dart::@class::A::@constructor::named
 ''');
 
     _assertAnnotationValueText(node, '''
@@ -1609,33 +1986,33 @@ import 'a.dart' as prefix;
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: A
-      staticElement: package:test/a.dart::<fragment>::@class::A
+      staticElement: package:test/a.dart::@class::A
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@class::A
+    staticElement: package:test/a.dart::@class::A
     staticType: null
   period: .
   constructorName: SimpleIdentifier
     token: foo
-    staticElement: package:test/a.dart::<fragment>::@class::A::@getter::foo
+    staticElement: package:test/a.dart::@class::A::@getter::foo
     staticType: null
-  element: package:test/a.dart::<fragment>::@class::A::@getter::foo
+  element: package:test/a.dart::@class::A::@getter::foo
 ''');
 
     _assertAnnotationValueText(node, '''
 int 42
-  variable: package:test/a.dart::<fragment>::@class::A::@field::foo
+  variable: package:test/a.dart::@class::A::@field::foo
 ''');
   }
 
@@ -1654,31 +2031,31 @@ import 'a.dart' as prefix;
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: A
-      staticElement: package:test/a.dart::<fragment>::@class::A
+      staticElement: package:test/a.dart::@class::A
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@class::A
+    staticElement: package:test/a.dart::@class::A
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: package:test/a.dart::<fragment>::@class::A::@constructor::new::@parameter::f
+        parameter: package:test/a.dart::@class::A::@constructor::new::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: package:test/a.dart::<fragment>::@class::A::@constructor::new
+  element: package:test/a.dart::@class::A::@constructor::new
 ''');
 
     _assertAnnotationValueText(node, '''
@@ -1699,28 +2076,28 @@ import 'a.dart' as prefix;
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    final node = findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: package:test/a.dart::<fragment>::@getter::foo
+      staticElement: package:test/a.dart::@getter::foo
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@getter::foo
+    staticElement: package:test/a.dart::@getter::foo
     staticType: null
-  element: package:test/a.dart::<fragment>::@getter::foo
+  element: package:test/a.dart::@getter::foo
 ''');
 
     _assertAnnotationValueText(node, '''
 int 42
-  variable: package:test/a.dart::<fragment>::@topLevelVariable::foo
+  variable: package:test/a.dart::@variable::foo
 ''');
   }
 
@@ -1746,25 +2123,25 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: B
-      staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+      staticElement: package:test/a.dart::@typeAlias::B
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+    staticElement: package:test/a.dart::@typeAlias::B
     staticType: null
   period: .
   constructorName: SimpleIdentifier
     token: foo
-    staticElement: package:test/a.dart::<fragment>::@class::A::@getter::foo
+    staticElement: package:test/a.dart::@class::A::@getter::foo
     staticType: null
-  element: package:test/a.dart::<fragment>::@class::A::@getter::foo
+  element: package:test/a.dart::@class::A::@getter::foo
 ''');
     _assertAnnotationValueText(annotation, '''
 int 42
-  variable: package:test/a.dart::<fragment>::@class::A::@field::foo
+  variable: package:test/a.dart::@class::A::@field::foo
 ''');
   }
 
@@ -1791,20 +2168,20 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: B
-      staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+      staticElement: package:test/a.dart::@typeAlias::B
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+    staticElement: package:test/a.dart::@typeAlias::B
     staticType: null
   period: .
   constructorName: SimpleIdentifier
     token: named
     staticElement: ConstructorMember
-      base: package:test/a.dart::<fragment>::@class::A::@constructor::named
+      base: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -1813,12 +2190,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: package:test/a.dart::<fragment>::@class::A::@constructor::named::@parameter::f
+          base: package:test/a.dart::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: package:test/a.dart::<fragment>::@class::A::@constructor::named
+    base: package:test/a.dart::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1850,14 +2227,14 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: B
-      staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+      staticElement: package:test/a.dart::@typeAlias::B
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+    staticElement: package:test/a.dart::@typeAlias::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -1865,12 +2242,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: package:test/a.dart::<fragment>::@class::A::@constructor::new::@parameter::f
+          base: package:test/a.dart::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: package:test/a.dart::<fragment>::@class::A::@constructor::new
+    base: package:test/a.dart::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1902,28 +2279,28 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: B
-      staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+      staticElement: package:test/a.dart::@typeAlias::B
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+    staticElement: package:test/a.dart::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   period: .
   constructorName: SimpleIdentifier
     token: named
     staticElement: ConstructorMember
-      base: package:test/a.dart::<fragment>::@class::A::@constructor::named
+      base: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -1932,12 +2309,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: package:test/a.dart::<fragment>::@class::A::@constructor::named::@parameter::f
+          base: package:test/a.dart::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: package:test/a.dart::<fragment>::@class::A::@constructor::named
+    base: package:test/a.dart::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -1969,21 +2346,21 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
-      staticElement: <testLibraryFragment>::@prefix::prefix
+      staticElement: self::@prefix::prefix
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: B
-      staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+      staticElement: package:test/a.dart::@typeAlias::B
       staticType: null
-    staticElement: package:test/a.dart::<fragment>::@typeAlias::B
+    staticElement: package:test/a.dart::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   arguments: ArgumentList
@@ -1992,12 +2369,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: package:test/a.dart::<fragment>::@class::A::@constructor::new::@parameter::f
+          base: package:test/a.dart::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: package:test/a.dart::<fragment>::@class::A::@constructor::new
+    base: package:test/a.dart::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2036,20 +2413,20 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
-      staticElement: <testLibraryFragment>::@typeAlias::B
+      staticElement: self::@typeAlias::B
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@class::A::@getter::foo
+      staticElement: self::@class::A::@getter::foo
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@getter::foo
+    staticElement: self::@class::A::@getter::foo
     staticType: null
-  element: <testLibraryFragment>::@class::A::@getter::foo
+  element: self::@class::A::@getter::foo
 ''');
     _assertAnnotationValueText(annotation, '''
 int 42
-  variable: <testLibraryFragment>::@class::A::@field::foo
+  variable: self::@class::A::@field::foo
 ''');
   }
 
@@ -2073,21 +2450,21 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   period: .
   constructorName: SimpleIdentifier
     token: named
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int, U: double}
     staticType: null
   arguments: ArgumentList
@@ -2096,18 +2473,18 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::t
+          base: self::@class::A::@constructor::named::@parameter::t
           substitution: {T: int, U: double}
         staticType: int
       DoubleLiteral
         literal: 1.2
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::u
+          base: self::@class::A::@constructor::named::@parameter::u
           substitution: {T: int, U: double}
         staticType: double
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int, U: double}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2137,14 +2514,14 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   arguments: ArgumentList
@@ -2153,18 +2530,18 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::t
+          base: self::@class::A::@constructor::new::@parameter::t
           substitution: {T: int, U: double}
         staticType: int
       DoubleLiteral
         literal: 1.2
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::u
+          base: self::@class::A::@constructor::new::@parameter::u
           substitution: {T: int, U: double}
         staticType: double
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int, U: double}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2194,17 +2571,17 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
-      staticElement: <testLibraryFragment>::@typeAlias::B
+      staticElement: self::@typeAlias::B
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -2213,12 +2590,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2246,7 +2623,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -2254,12 +2631,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2287,21 +2664,21 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   period: .
   constructorName: SimpleIdentifier
     token: named
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -2310,12 +2687,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2343,14 +2720,14 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   typeArguments: TypeArgumentList
     leftBracket: <
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   arguments: ArgumentList
@@ -2359,12 +2736,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2393,17 +2770,17 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
-      staticElement: <testLibraryFragment>::@typeAlias::B
+      staticElement: self::@typeAlias::B
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::A::@constructor::named
+        base: self::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
     staticElement: ConstructorMember
-      base: <testLibraryFragment>::@class::A::@constructor::named
+      base: self::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
@@ -2412,12 +2789,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+          base: self::@class::A::@constructor::named::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::named
+    base: self::@class::A::@constructor::named
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2445,7 +2822,7 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
@@ -2453,12 +2830,12 @@ Annotation
       IntegerLiteral
         literal: 42
         parameter: FieldFormalParameterMember
-          base: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+          base: self::@class::A::@constructor::new::@parameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
   element: ConstructorMember
-    base: <testLibraryFragment>::@class::A::@constructor::new
+    base: self::@class::A::@constructor::new
     substitution: {T: int}
 ''');
     _assertAnnotationValueText(annotation, r'''
@@ -2487,24 +2864,24 @@ Annotation
   name: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
-      staticElement: <testLibraryFragment>::@typeAlias::B
+      staticElement: self::@typeAlias::B
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: named
-      staticElement: <testLibraryFragment>::@class::A::@constructor::named
+      staticElement: self::@class::A::@constructor::named
       staticType: null
-    staticElement: <testLibraryFragment>::@class::A::@constructor::named
+    staticElement: self::@class::A::@constructor::named
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@constructor::named::@parameter::f
+        parameter: self::@class::A::@constructor::named::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::named
+  element: self::@class::A::@constructor::named
 ''');
     _assertAnnotationValueText(annotation, r'''
 A
@@ -2531,17 +2908,17 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: B
-    staticElement: <testLibraryFragment>::@typeAlias::B
+    staticElement: self::@typeAlias::B
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 42
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::f
+        parameter: self::@class::A::@constructor::new::@parameter::f
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@class::A::@constructor::new
+  element: self::@class::A::@constructor::new
 ''');
     _assertAnnotationValueText(annotation, r'''
 A
@@ -2555,21 +2932,21 @@ A
   }
 
   void _assertAtFoo42() {
-    var node = findNode.annotation('@foo');
+    final node = findNode.annotation('@foo');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
     token: foo
-    staticElement: <testLibraryFragment>::@getter::foo
+    staticElement: self::@getter::foo
     staticType: null
-  element: <testLibraryFragment>::@getter::foo
+  element: self::@getter::foo
 ''');
 
-    var element = node.elementAnnotation!;
+    final element = node.elementAnnotation!;
     _assertElementAnnotationValueText(element, r'''
 int 42
-  variable: <testLibraryFragment>::@topLevelVariable::foo
+  variable: self::@variable::foo
 ''');
   }
 

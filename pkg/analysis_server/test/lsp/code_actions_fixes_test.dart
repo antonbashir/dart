@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/analysis_server.dart';
-import 'package:analyzer/src/dart/error/lint_codes.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
@@ -25,23 +24,14 @@ void main() {
 
 /// A version of `camel_case_types` that is deprecated.
 class DeprecatedCamelCaseTypes extends LintRule {
-  static const LintCode code = LintCode('camel_case_types',
-      "The type name '{0}' isn't an UpperCamelCase identifier.",
-      correctionMessage:
-          'Try changing the name to follow the UpperCamelCase style.',
-      hasPublishedDocs: true);
-
   DeprecatedCamelCaseTypes()
       : super(
           name: 'camel_case_types',
-          categories: {LintRuleCategory.style},
+          group: Group.style,
           state: State.deprecated(),
           description: '',
           details: '',
         );
-
-  @override
-  LintCode get lintCode => code;
 }
 
 @reflectiveTest
@@ -58,7 +48,7 @@ class FixesCodeActionsTest extends AbstractCodeActionsTest {
 bar
 ''';
 
-    var pluginResult = plugin.EditGetFixesResult([
+    final pluginResult = plugin.EditGetFixesResult([
       plugin.AnalysisErrorFixes(
         plugin.AnalysisError(
           plugin.AnalysisErrorSeverity.ERROR,
@@ -108,16 +98,16 @@ bar
       'class MyClass {}',
     );
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 MyCla^ss? a;
 ''');
 
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, position: code.position.position);
-    var codeActionTitles = codeActions.map((action) =>
+    final codeActionTitles = codeActions.map((action) =>
         action.map((command) => command.title, (action) => action.title));
 
     expect(
@@ -138,16 +128,16 @@ MyCla^ss? a;
       'class MyClass {}',
     );
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 MyCla^ss? a;
 ''');
 
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, position: code.position.position);
-    var codeActionTitles = codeActions.map((action) =>
+    final codeActionTitles = codeActions.map((action) =>
         action.map((command) => command.title, (action) => action.title));
 
     expect(
@@ -167,16 +157,16 @@ MyCla^ss? a;
       'class MyClass {}',
     );
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 MyCla^ss? a;
 ''');
 
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, position: code.position.position);
-    var codeActionTitles = codeActions.map((action) =>
+    final codeActionTitles = codeActions.map((action) =>
         action.map((command) => command.title, (action) => action.title));
 
     expect(
@@ -301,7 +291,7 @@ import '[!newfile.dart!]';
     setSupportedCodeActionKinds(
         [CodeActionKind.QuickFix, CodeActionKind.Refactor]);
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'dart:async';
 [!import!] 'dart:convert';
 
@@ -331,7 +321,7 @@ void f(String a) {
 }
 ''';
 
-    var action = await expectAction(
+    final action = await expectAction(
       content,
       kind: CodeActionKind('quickfix.remove.nonNullAssertion.multi'),
       title: "Remove '!'s in file",
@@ -345,7 +335,7 @@ void f(String a) {
     // Some fixes (for example 'create function foo') are not available in the
     // batch processor, so should not generate fix-all-in-file fixes even if there
     // are multiple instances.
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 var a = [!foo!]();
 var b = bar();
 ''');
@@ -353,11 +343,11 @@ var b = bar();
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var allFixes = await getCodeActions(mainFileUri, range: code.range.range);
+    final allFixes = await getCodeActions(mainFileUri, range: code.range.range);
 
     // Expect only the single-fix, there should be no apply-all.
     expect(allFixes, hasLength(1));
-    var fixTitle = allFixes.first.map((f) => f.title, (f) => f.title);
+    final fixTitle = allFixes.first.map((f) => f.title, (f) => f.title);
     expect(fixTitle, equals("Create function 'foo'"));
   }
 
@@ -432,7 +422,7 @@ void f(String a) {
   }
 
   Future<void> test_ignoreDiagnostic_afterOtherFixes() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void main() {
   Uint8List inputBytes = Uin^t8List.fromList(List.filled(100000000, 0));
 }
@@ -441,10 +431,10 @@ void main() {
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var position = code.position.position;
-    var range = Range(start: position, end: position);
-    var codeActions = await getCodeActions(mainFileUri, range: range);
-    var codeActionKinds = codeActions.map(
+    final position = code.position.position;
+    final range = Range(start: position, end: position);
+    final codeActions = await getCodeActions(mainFileUri, range: range);
+    final codeActionKinds = codeActions.map(
       (item) => item.map(
         (command) => null,
         (action) => action.kind?.toString(),
@@ -527,37 +517,20 @@ Future foo;
   }
 
   Future<void> test_logsExecution() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!import!] 'dart:convert';
 ''');
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, range: code.range.range);
-    var fixAction = findAction(codeActions,
+    final fixAction = findAction(codeActions,
         title: 'Remove unused import',
         kind: CodeActionKind('quickfix.remove.unusedImport'))!;
 
     await executeCommand(fixAction.command!);
     expectCommandLogged('dart.fix.remove.unusedImport');
-  }
-
-  Future<void> test_macroGenerated() async {
-    setDartTextDocumentContentProviderSupport();
-    var macroFilePath = join(projectFolderPath, 'lib', 'test.macro.dart');
-    var code = TestCode.parse('''
-void f() {
-  js^on.encode('');
-}
-''');
-    newFile(macroFilePath, code.code);
-    await initialize();
-
-    var codeActions = await getCodeActions(
-        uriConverter.toClientUri(macroFilePath),
-        position: code.position.position);
-    expect(codeActions, isEmpty);
   }
 
   /// Repro for https://github.com/Dart-Code/Dart-Code/issues/4462.
@@ -572,7 +545,7 @@ linter:
     - prefer_expression_function_bodies
     ''');
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 int foo() {
   [!return!] 1;
 }
@@ -581,9 +554,9 @@ int foo() {
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, range: code.range.range);
-    var fixAction = findAction(codeActions,
+    final fixAction = findAction(codeActions,
         title: 'Convert to expression body',
         kind: CodeActionKind('quickfix.convert.toExpressionBody'));
     expect(fixAction, isNotNull);
@@ -595,7 +568,7 @@ int foo() {
     // diagnostics have their own fixes of the same type.
     //
     // Expect only the only one nearest to the start of the range to be returned.
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
   var a = [];
   print(a!!);^
@@ -605,9 +578,9 @@ void f() {
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, position: code.position.position);
-    var removeNnaAction = findAction(codeActions,
+    final removeNnaAction = findAction(codeActions,
         title: "Remove the '!'",
         kind: CodeActionKind('quickfix.remove.nonNullAssertion'));
 
@@ -616,23 +589,24 @@ void f() {
 
     // Ensure the action is for the diagnostic on the second bang which was
     // closest to the range requested.
-    var secondBangPos = positionFromOffset(code.code.indexOf('!);'), code.code);
+    final secondBangPos =
+        positionFromOffset(code.code.indexOf('!);'), code.code);
     expect(removeNnaAction!.diagnostics, hasLength(1));
-    var diagStart = removeNnaAction.diagnostics!.first.range.start;
+    final diagStart = removeNnaAction.diagnostics!.first.range.start;
     expect(diagStart, equals(secondBangPos));
   }
 
   Future<void> test_noDuplicates_sameFix() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 var a = [Test, Test, Te[!!]st];
 ''');
 
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, range: code.range.range);
-    var createClassActions = findAction(codeActions,
+    final createClassActions = findAction(codeActions,
         title: "Create class 'Test'",
         kind: CodeActionKind('quickfix.create.class'));
 
@@ -645,16 +619,16 @@ var a = [Test, Test, Te[!!]st];
     setDocumentChangesSupport();
     setSupportedCodeActionKinds([CodeActionKind.QuickFix]);
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 var a = [Test, Test, Te[!!]st];
 ''');
 
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, range: code.range.range);
-    var createClassActions = findAction(codeActions,
+    final createClassActions = findAction(codeActions,
         title: "Create class 'Test'",
         kind: CodeActionKind('quickfix.create.class'));
 
@@ -696,12 +670,12 @@ ProcessInfo b;
   }
 
   Future<void> test_outsideRoot() async {
-    var otherFilePath = convertPath('/home/otherProject/foo.dart');
-    var otherFileUri = pathContext.toUri(otherFilePath);
+    final otherFilePath = convertPath('/home/otherProject/foo.dart');
+    final otherFileUri = pathContext.toUri(otherFilePath);
     newFile(otherFilePath, 'bad code to create error');
     await initialize();
 
-    var codeActions = await getCodeActions(
+    final codeActions = await getCodeActions(
       otherFileUri,
       position: startOfDocPos,
     );
@@ -722,12 +696,12 @@ ProcessInfo b;
     if (!AnalysisServer.supportsPlugins) return;
     // Produces a server fix for removing unused import with a default
     // priority of 50.
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!import!] 'dart:convert';
 ''');
 
     // Provide two plugin results that should sort either side of the server fix.
-    var pluginResult = plugin.EditGetFixesResult([
+    final pluginResult = plugin.EditGetFixesResult([
       plugin.AnalysisErrorFixes(
         plugin.AnalysisError(
           plugin.AnalysisErrorSeverity.ERROR,
@@ -750,9 +724,9 @@ ProcessInfo b;
     newFile(mainFilePath, code.code);
     await initialize();
 
-    var codeActions =
+    final codeActions =
         await getCodeActions(mainFileUri, range: code.range.range);
-    var codeActionTitles = codeActions.map((action) =>
+    final codeActionTitles = codeActions.map((action) =>
         action.map((command) => command.title, (action) => action.title));
 
     expect(
@@ -807,39 +781,6 @@ class A {
     );
   }
 
-  /// Ensure braces aren't over-escaped in snippet choices.
-  /// https://github.com/dart-lang/sdk/issues/54403
-  Future<void> test_snippets_createMissingOverrides_recordBraces() async {
-    const content = '''
-abstract class A {
-  void m(Iterable<({int a, int b})> r);
-}
-
-class ^B extends A {}
-''';
-
-    const expectedContent = r'''
-abstract class A {
-  void m(Iterable<({int a, int b})> r);
-}
-
-class B extends A {
-  @override
-  void m(${1|Iterable<({int a\, int b})>,Object|} ${2:r}) {
-    // TODO: implement m$0
-  }
-}
-''';
-
-    setSnippetTextEditSupport();
-    await verifyActionEdits(
-      content,
-      expectedContent,
-      kind: CodeActionKind('quickfix.create.missingOverrides'),
-      title: 'Create 1 missing override',
-    );
-  }
-
   Future<void>
       test_snippets_extractVariable_functionTypeNestedParameters() async {
     const content = '''
@@ -870,7 +811,7 @@ useFunction(int g(a, b)) {}
 
   void _enableLints(List<String> lintNames) {
     registerLintRules();
-    var lintsYaml = lintNames.map((name) => '    - $name\n').join();
+    final lintsYaml = lintNames.map((name) => '    - $name\n').join();
     newFile(analysisOptionsPath, '''
 linter:
   rules:

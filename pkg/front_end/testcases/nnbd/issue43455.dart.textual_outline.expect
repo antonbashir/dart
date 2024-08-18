@@ -1,5 +1,4 @@
 assertRightSubtype(dynamic x) {}
-
 assertLeftSubtype<X>(X x) {}
 
 class C<X extends Object?, Y extends Object> {

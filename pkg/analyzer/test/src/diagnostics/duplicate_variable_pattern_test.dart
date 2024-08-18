@@ -24,16 +24,16 @@ void f(int x) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_VARIABLE_PATTERN, 42, 1,
-          contextMessages: [message(testFile, 33, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 33, 1)]),
     ]);
-    var node = findNode.singleIfStatement;
+    final node = findNode.singleIfStatement;
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: int
   caseClause: CaseClause
     caseKeyword: case
@@ -77,9 +77,9 @@ void f(int x) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_VARIABLE_PATTERN, 53, 1,
-          contextMessages: [message(testFile, 44, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 1)]),
     ]);
-    var node = findNode.singleSwitchPatternCase;
+    final node = findNode.singleSwitchPatternCase;
     assertResolvedNodeText(node, r'''
 SwitchPatternCase
   keyword: case
@@ -118,10 +118,10 @@ void f() {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_VARIABLE_PATTERN, 21, 1,
-          contextMessages: [message(testFile, 18, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 18, 1)]),
     ]);
 
-    var node = findNode.singleBlock;
+    final node = findNode.singleBlock;
     assertResolvedNodeText(node, r'''
 Block
   leftBracket: {

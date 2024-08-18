@@ -31,6 +31,21 @@ class LocateElementTest extends PubPackageResolutionTest {
 
   File get testFile2 => getFile('$testPackageLibPath/test2.dart');
 
+  /// Create a library and (unless [addToSession] is `false`) add it to [session].
+  Future<LibraryElement> createLibrary(
+    String path,
+    String content, {
+    bool addToSession = true,
+  }) async {
+    final code = TestCode.parse(content);
+    newFile(path, code.code);
+    final library = (await resolveFile(path)).libraryElement;
+    if (addToSession) {
+      session.addLibrary(library);
+    }
+    return library;
+  }
+
   /// Find class [name] in [library].
   ClassElement findClass(LibraryElement library, String name) {
     return library.definingCompilationUnit.getClass(name)!;
@@ -47,44 +62,29 @@ class LocateElementTest extends PubPackageResolutionTest {
   }
 
   void test_elementInLibrary() async {
-    var libraryOne = await _createLibrary(testFile, 'class C {}');
-    var libraryTwo = await _createLibrary(testFile2, 'class C {}');
-    var classOne = findClass(libraryOne, 'C');
-    var classTwo = findClass(libraryTwo, 'C');
+    final libraryOne = await createLibrary(testFile.path, 'class C {}');
+    final libraryTwo = await createLibrary(testFile2.path, 'class C {}');
+    final classOne = findClass(libraryOne, 'C');
+    final classTwo = findClass(libraryTwo, 'C');
 
     expect(await getElement(classOne.location!), classOne);
     expect(await getElement(classTwo.location!), classTwo);
   }
 
   void test_invalid() async {
-    var library =
-        await _createLibrary(testFile, 'class C {}', addToSession: false);
-    var class_ = findClass(library, 'C');
+    final library =
+        await createLibrary(testFile.path, 'class C {}', addToSession: false);
+    final class_ = findClass(library, 'C');
 
     expect(await getElement(class_.location!), isNull);
   }
 
   void test_library() async {
-    var libraryOne = await _createLibrary(testFile, 'class C {}');
-    var libraryTwo = await _createLibrary(testFile2, 'class C {}');
+    final libraryOne = await createLibrary(testFile.path, 'class C {}');
+    final libraryTwo = await createLibrary(testFile2.path, 'class C {}');
 
     expect(await getElement(libraryOne.location!), libraryOne);
     expect(await getElement(libraryTwo.location!), libraryTwo);
-  }
-
-  /// Create a library and (unless [addToSession] is `false`) add it to [session].
-  Future<LibraryElement> _createLibrary(
-    File file,
-    String content, {
-    bool addToSession = true,
-  }) async {
-    var code = TestCode.parse(content);
-    newFile(file.path, code.code);
-    var library = (await resolveFile(file)).libraryElement;
-    if (addToSession) {
-      session.addLibrary(library);
-    }
-    return library;
   }
 }
 
@@ -96,7 +96,7 @@ class _MockAnalysisSession implements AnalysisSession {
 
   @override
   Future<SomeLibraryElementResult> getLibraryByUri(String uri) async {
-    var library = _libraries[uri];
+    final library = _libraries[uri];
     return library != null
         ? LibraryElementResultImpl(library)
         : CannotResolveUriResult();

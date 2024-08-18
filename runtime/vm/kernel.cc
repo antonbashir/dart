@@ -15,6 +15,7 @@
 #include "vm/parser.h"  // For Parser::kParameter* constants.
 #include "vm/stack_frame.h"
 
+
 namespace dart {
 namespace kernel {
 
@@ -685,10 +686,6 @@ bool NeedsDynamicInvocationForwarder(const Function& function) {
   // actual target (which accepts unboxed parameters) and boxes return values
   // of the return value.
   if (function.HasUnboxedParameters() || function.HasUnboxedReturnValue()) {
-    return true;
-  }
-
-  if (function.MaxNumberOfParametersInRegisters(zone) > 0) {
     return true;
   }
 

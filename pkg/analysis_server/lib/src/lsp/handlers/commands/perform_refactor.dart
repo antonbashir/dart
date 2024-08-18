@@ -5,21 +5,14 @@
 import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/abstract_refactor.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/progress.dart';
 import 'package:analysis_server/src/protocol_server.dart';
-import 'package:meta/meta.dart';
 
 class PerformRefactorCommandHandler extends AbstractRefactorCommandHandler
     with LspHandlerHelperMixin {
-  /// A [Future] used by tests to allow inserting a delay between resolving
-  /// the initial unit and the refactor running.
-  @visibleForTesting
-  static Future<void>? delayAfterResolveForTests;
-
   PerformRefactorCommandHandler(super.server);
 
   @override
@@ -39,16 +32,12 @@ class PerformRefactorCommandHandler extends AbstractRefactorCommandHandler
     ProgressReporter reporter,
     int? docVersion,
   ) async {
-    var actionName = 'dart.refactor.${kind.toLowerCase()}';
+    final actionName = 'dart.refactor.${kind.toLowerCase()}';
     server.analyticsManager.executedCommand(actionName);
 
-    var result = await requireResolvedUnit(path);
-    if (delayAfterResolveForTests != null) {
-      await delayAfterResolveForTests;
-    }
-
+    final result = await requireResolvedUnit(path);
     return result.mapResult((result) async {
-      var refactoring = await getRefactoring(
+      final refactoring = await getRefactoring(
           RefactoringKind(kind), result, offset, length, options);
       return refactoring.mapResult((refactoring) async {
         // Don't include potential edits in refactorings until there is some UI
@@ -58,12 +47,12 @@ class PerformRefactorCommandHandler extends AbstractRefactorCommandHandler
         // If the token we were given is not cancelable, wrap it with one that
         // is for the rest of this request as a future refactor may need to
         // cancel this request.
-        var cancelableToken = cancellationToken.asCancelable();
+        final cancelableToken = cancellationToken.asCancelable();
         manager.begin(cancelableToken);
 
         try {
           reporter.begin('Refactoring…');
-          var status = await refactoring.checkAllConditions();
+          final status = await refactoring.checkAllConditions();
 
           if (status.hasError) {
             // Show the error to the user but don't fail the request, as the
@@ -77,7 +66,7 @@ class PerformRefactorCommandHandler extends AbstractRefactorCommandHandler
             return error(ErrorCodes.RequestCancelled, 'Request was cancelled');
           }
 
-          var change = await refactoring.createChange();
+          final change = await refactoring.createChange();
 
           if (cancelableToken.isCancellationRequested) {
             return error(ErrorCodes.RequestCancelled, 'Request was cancelled');
@@ -93,7 +82,7 @@ class PerformRefactorCommandHandler extends AbstractRefactorCommandHandler
             return fileModifiedError;
           }
 
-          var edit = createWorkspaceEdit(server, change);
+          final edit = createWorkspaceEdit(server, change);
           return await sendWorkspaceEditToClient(edit);
         } finally {
           manager.end(cancelableToken);

@@ -7,7 +7,6 @@ import 'package:analysis_server/src/services/correction/fix/data_driven/transfor
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:meta/meta.dart';
 
 /// An object used to manage the transform sets.
@@ -50,7 +49,7 @@ class TransformSetManager {
     var packages = package.packagesAvailableTo(libraryPath);
     for (var package in packages.packages) {
       var folder = package.libFolder;
-      transformSets.addAll(fromFolder(folder, packageName: package.name));
+      transformSets.addAll(fromFolder(folder));
     }
     if (_sdkCache != null) {
       transformSets.add(_sdkCache!);
@@ -114,7 +113,8 @@ class TransformSetManager {
       var parser = TransformSetParser(
           ErrorReporter(
             AnalysisErrorListener.NULL_LISTENER,
-            FileSource(file),
+            file.createSource(),
+            isNonNullableByDefault: false,
           ),
           packageName);
       return parser.parse(content);

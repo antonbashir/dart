@@ -3,9 +3,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// @dart = %VERSION_MARKER0%
+// @dart = 2.4
 
-/*library: languageVersion=%VERSION_MARKER0%*/
+/*library: languageVersion=2.4*/
 
 foo2() {
   print("Hello from foo2!");

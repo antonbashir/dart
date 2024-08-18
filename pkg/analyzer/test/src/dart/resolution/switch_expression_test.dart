@@ -27,14 +27,14 @@ void f(Object? x) {
 void g() {}
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    final node = findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -59,7 +59,7 @@ SwitchExpression
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: g
-          staticElement: <testLibraryFragment>::@function::g
+          staticElement: self::@function::g
           staticType: void Function()
         argumentList: ArgumentList
           leftParenthesis: (
@@ -78,7 +78,7 @@ final a = switch (0) {};
       error(CompileTimeErrorCode.NON_EXHAUSTIVE_SWITCH_EXPRESSION, 10, 6),
     ]);
 
-    var node = findNode.singleSwitchExpression;
+    final node = findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
@@ -106,14 +106,14 @@ class A {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@method::bar::@parameter::x
+    staticElement: self::@class::A::@method::bar::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -127,7 +127,7 @@ SwitchExpression
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: foo
-          staticElement: <testLibraryFragment>::@class::A::@method::foo
+          staticElement: self::@class::A::@method::foo
           staticType: T Function<T>()
         argumentList: ArgumentList
           leftParenthesis: (
@@ -152,14 +152,14 @@ void f(void x) {
       error(CompileTimeErrorCode.USE_OF_VOID_RESULT, 27, 1),
     ]);
 
-    var node = findNode.singleSwitchExpression;
+    final node = findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: void
   rightParenthesis: )
   leftBracket: {
@@ -188,14 +188,14 @@ final b = switch (a) {
 };
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    final node = findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: num
   rightParenthesis: )
   leftBracket: {
@@ -205,7 +205,7 @@ SwitchExpression
         pattern: ObjectPattern
           type: NamedType
             name: int
-            element: dart:core::<fragment>::@class::int
+            element: dart:core::@class::int
             type: int
           leftParenthesis: (
           fields
@@ -218,7 +218,7 @@ SwitchExpression
                 declaredElement: hasImplicitType isEven@46
                   type: bool
                 matchedValueType: bool
-              element: dart:core::<fragment>::@class::int::@getter::isEven
+              element: dart:core::@class::int::@getter::isEven
           rightParenthesis: )
           matchedValueType: num
         whenClause: WhenClause
@@ -254,7 +254,7 @@ void f(Object? x, int Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('_');
+    final node = findNode.switchExpressionCase('_');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
@@ -265,7 +265,7 @@ SwitchExpressionCase
   expression: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: int Function()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -290,7 +290,7 @@ class A {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('=> 0');
+    final node = findNode.switchExpressionCase('=> 0');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
@@ -300,9 +300,9 @@ SwitchExpressionCase
         constructorName: ConstructorName
           type: NamedType
             name: A
-            element: <testLibraryFragment>::@class::A
+            element: self::@class::A
             type: A
-          staticElement: <testLibraryFragment>::@class::A::@constructor::new
+          staticElement: self::@class::A::@constructor::new
         argumentList: ArgumentList
           leftParenthesis: (
           rightParenthesis: )
@@ -325,7 +325,7 @@ void f(Object? x, bool Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('=> true');
+    final node = findNode.switchExpressionCase('=> true');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
@@ -339,7 +339,7 @@ SwitchExpressionCase
       expression: FunctionExpressionInvocation
         function: SimpleIdentifier
           token: a
-          staticElement: <testLibraryFragment>::@function::f::@parameter::a
+          staticElement: self::@function::f::@parameter::a
           staticType: bool Function()
         argumentList: ArgumentList
           leftParenthesis: (
@@ -363,7 +363,7 @@ void f(int Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
@@ -371,7 +371,7 @@ SwitchExpression
   expression: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: int Function()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -406,14 +406,14 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -453,14 +453,14 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -502,14 +502,14 @@ void f(Object? x) {
       error(WarningCode.DEAD_CODE, 52, 8),
     ]);
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -522,7 +522,7 @@ SwitchExpression
             arguments
               NamedType
                 name: int
-                element: dart:core::<fragment>::@class::int
+                element: dart:core::@class::int
                 type: int
             rightBracket: >
           leftBracket: [
@@ -577,17 +577,17 @@ void f(Object? x) {
       error(CompileTimeErrorCode.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION, 64,
           1),
       error(CompileTimeErrorCode.REFERENCED_BEFORE_DECLARATION, 64, 1,
-          contextMessages: [message(testFile, 58, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 58, 1)]),
     ]);
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -600,7 +600,7 @@ SwitchExpression
             DeclaredVariablePattern
               type: NamedType
                 name: int
-                element: dart:core::<fragment>::@class::int
+                element: dart:core::@class::int
                 type: int
               name: a
               declaredElement: a@58
@@ -612,7 +612,7 @@ SwitchExpression
                 token: a
                 staticElement: a@58
                 staticType: int
-              element: dart:core::<fragment>::@class::Object::@method::==
+              element: dart:core::@class::Object::@method::==
               matchedValueType: Object?
           rightBracket: ]
           matchedValueType: Object?
@@ -627,9 +627,9 @@ SwitchExpression
             operator: >
             rightOperand: IntegerLiteral
               literal: 0
-              parameter: dart:core::<fragment>::@class::num::@method::>::@parameter::other
+              parameter: dart:core::@class::num::@method::>::@parameter::other
               staticType: int
-            staticElement: dart:core::<fragment>::@class::num::@method::>
+            staticElement: dart:core::@class::num::@method::>
             staticInvokeType: bool Function(num)
             staticType: bool
       arrow: =>
@@ -663,14 +663,14 @@ void f(Object? x) {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 72, 1),
     ]);
 
-    var node = findNode.switchExpression('switch');
+    final node = findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object?
   rightParenthesis: )
   leftBracket: {
@@ -680,7 +680,7 @@ SwitchExpression
         pattern: DeclaredVariablePattern
           type: NamedType
             name: int
-            element: dart:core::<fragment>::@class::int
+            element: dart:core::@class::int
             type: int
           name: a
           declaredElement: a@44
@@ -696,9 +696,9 @@ SwitchExpression
             operator: >
             rightOperand: IntegerLiteral
               literal: 0
-              parameter: dart:core::<fragment>::@class::num::@method::>::@parameter::other
+              parameter: dart:core::@class::num::@method::>::@parameter::other
               staticType: int
-            staticElement: dart:core::<fragment>::@class::num::@method::>
+            staticElement: dart:core::@class::num::@method::>
             staticInvokeType: bool Function(num)
             staticType: bool
       arrow: =>

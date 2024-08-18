@@ -5,9 +5,6 @@ class C {
 }
 
 foo<T extends C?>(C? c, T t, T? nt) {}
-
 functionContext(int Function() f) {}
-
 main() {}
-
 nullableFunctionContext(int Function()? f) {}

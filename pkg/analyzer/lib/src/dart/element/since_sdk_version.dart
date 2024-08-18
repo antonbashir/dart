@@ -4,6 +4,7 @@
 
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
+import 'package:collection/collection.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 class SinceSdkVersionComputer {
@@ -13,7 +14,7 @@ class SinceSdkVersionComputer {
   /// Evaluates its annotations and returns the version.
   Version? compute(ElementImpl element) {
     // Must be in a `dart:` library.
-    var librarySource = element.librarySource;
+    final librarySource = element.librarySource;
     if (librarySource == null || !librarySource.uri.isScheme('dart')) {
       return null;
     }
@@ -28,8 +29,8 @@ class SinceSdkVersionComputer {
       return null;
     }
 
-    var specified = _specifiedVersion(element);
-    var enclosing = element.enclosingElement?.sinceSdkVersion;
+    final specified = _specifiedVersion(element);
+    final enclosing = element.enclosingElement?.sinceSdkVersion;
     return specified.maxWith(enclosing);
   }
 
@@ -51,13 +52,14 @@ class SinceSdkVersionComputer {
   /// Returns the maximal specified `@Since()` version, `null` if none.
   static Version? _specifiedVersion(ElementImpl element) {
     Version? result;
-    for (var annotation in element.metadata) {
+    for (final annotation in element.metadata) {
+      annotation as ElementAnnotationImpl;
       if (annotation.isDartInternalSince) {
-        var arguments = annotation.annotationAst.arguments?.arguments;
-        var versionNode = arguments?.singleOrNull;
+        final arguments = annotation.annotationAst.arguments?.arguments;
+        final versionNode = arguments?.singleOrNull;
         if (versionNode is SimpleStringLiteralImpl) {
-          var versionStr = versionNode.value;
-          var version = _parseVersion(versionStr);
+          final versionStr = versionNode.value;
+          final version = _parseVersion(versionStr);
           if (version != null) {
             result = result.maxWith(version);
           }
@@ -70,7 +72,7 @@ class SinceSdkVersionComputer {
 
 extension on Version? {
   Version? maxWith(Version? other) {
-    var self = this;
+    final self = this;
     if (self == null) {
       return other;
     } else if (other == null) {

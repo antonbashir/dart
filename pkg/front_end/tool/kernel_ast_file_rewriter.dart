@@ -7,10 +7,13 @@ import "dart:typed_data" show Uint8List;
 
 import 'package:_fe_analyzer_shared/src/parser/parser.dart'
     show IdentifierContext;
+
 import 'package:_fe_analyzer_shared/src/scanner/token.dart'
     show CommentToken, Token;
-import "package:front_end/src/util/parser_ast.dart";
-import 'package:front_end/src/util/parser_ast_helper.dart';
+
+import "package:front_end/src/fasta/util/parser_ast.dart";
+
+import 'package:front_end/src/fasta/util/parser_ast_helper.dart';
 
 void main(List<String> args) {
   Uri uri = Platform.script;
@@ -175,7 +178,7 @@ void processField(
   String initializerString = "";
   if (initializer != null) {
     Token token = initializer.assignment;
-    Token endToken = initializer.endToken.next!;
+    Token endToken = initializer.token;
     while (token != endToken) {
       initializerString += " ${token.lexeme}";
       token = token.next!;

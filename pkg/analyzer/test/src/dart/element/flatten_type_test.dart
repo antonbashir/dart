@@ -25,23 +25,27 @@ class FlattenTypeTest extends AbstractTypeSystemTest {
   test_interfaceType() {
     _check(intNone, 'int');
     _check(intQuestion, 'int?');
+    _check(intStar, 'int*');
   }
 
   test_interfaceType_none_hasFutureType() {
     _check(futureNone(intNone), 'int');
     _check(futureNone(intQuestion), 'int?');
+    _check(futureNone(intStar), 'int*');
 
     _check(futureQuestion(intNone), 'int?');
     _check(futureQuestion(intQuestion), 'int?');
 
     _check(futureOrNone(intNone), 'int');
     _check(futureOrNone(intQuestion), 'int?');
+    _check(futureOrNone(intStar), 'int*');
 
     _check(futureOrQuestion(intNone), 'int?');
     _check(futureOrQuestion(intQuestion), 'int?');
 
     _check(futureOrNone(futureNone(intNone)), 'Future<int>');
     _check(futureOrNone(futureNone(intQuestion)), 'Future<int?>');
+    _check(futureOrNone(futureNone(intStar)), 'Future<int*>');
 
     _check(futureOrQuestion(futureNone(intNone)), 'Future<int>?');
     _check(futureOrQuestion(futureNone(intQuestion)), 'Future<int?>?');
@@ -124,14 +128,14 @@ class FlattenTypeTest extends AbstractTypeSystemTest {
   }
 
   test_unknownInferredType() {
-    var type = UnknownInferredType.instance;
+    final type = UnknownInferredType.instance;
     expect(typeSystem.flatten(type), same(type));
   }
 
   void _check(DartType T, String expected) {
-    var result = typeSystem.flatten(T);
+    final result = typeSystem.flatten(T);
     expect(
-      result.getDisplayString(),
+      result.getDisplayString(withNullability: true),
       expected,
     );
   }
@@ -148,7 +152,7 @@ class FutureTypeTest extends AbstractTypeSystemTest {
   }
 
   test_implements_Future() {
-    var A = class_(name: 'A', interfaces: [
+    final A = class_(name: 'A', interfaces: [
       futureNone(intNone),
     ]);
 
@@ -245,12 +249,12 @@ class FutureTypeTest extends AbstractTypeSystemTest {
   }
 
   void _check(DartType T, String? expected) {
-    var result = typeSystem.futureType(T);
+    final result = typeSystem.futureType(T);
     if (result == null) {
       expect(expected, isNull);
     } else {
       expect(
-        result.getDisplayString(),
+        result.getDisplayString(withNullability: true),
         expected,
       );
     }

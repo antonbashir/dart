@@ -74,8 +74,8 @@ class ObjectLocator : public ObjectVisitor {
       : context_(context), count_(0) {}
 
   void VisitObject(ObjectPtr obj) override {
-    InstanceMorpher* morpher = context_->instance_morpher_by_cid_.LookupValue(
-        obj->GetClassIdOfHeapObject());
+    InstanceMorpher* morpher =
+        context_->instance_morpher_by_cid_.LookupValue(obj->GetClassId());
     if (morpher != nullptr) {
       morpher->AddObject(obj);
       count_++;
@@ -817,14 +817,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
   // assumptions from field guards or CHA or deferred library prefixes.
   // TODO(johnmccutchan): Deoptimizing dependent code here (before the reload)
   // is paranoid. This likely can be moved to the commit phase.
-  const Error& error = Error::Handle(
-      IG->program_reload_context()->EnsuredUnoptimizedCodeForStack());
-  if (!error.IsNull()) {
-    AddReasonForCancelling(new Aborted(Z, error));
-    ReportReasonsForCancelling();
-    CommonFinalizeTail(num_old_libs_);
-    return false;
-  }
+  IG->program_reload_context()->EnsuredUnoptimizedCodeForStack();
   IG->program_reload_context()->DeoptimizeDependentCode();
   IG->program_reload_context()->ReloadPhase1AllocateStorageMapsAndCheckpoint();
 
@@ -835,7 +828,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
   if (FLAG_gc_during_reload) {
     // We force the GC to compact, which is more likely to discover untracked
     // pointers (and other issues, like incorrect class table).
-    heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/true);
+    heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/ true);
   }
 
   // Clone the class table.
@@ -847,7 +840,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
   if (FLAG_gc_during_reload) {
     // We force the GC to compact, which is more likely to discover untracked
     // pointers (and other issues, like incorrect class table).
-    heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/true);
+    heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/ true);
   }
 
   // We synchronously load the hot-reload kernel diff (which includes changed
@@ -876,7 +869,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
     if (FLAG_gc_during_reload) {
       // We force the GC to compact, which is more likely to discover untracked
       // pointers (and other issues, like incorrect class table).
-      heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/true);
+      heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/ true);
     }
 
     // If we use the CFE and performed a compilation, we need to notify that
@@ -909,7 +902,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
         if (FLAG_gc_during_reload) {
           // We force the GC to compact, which is more likely to discover
           // untracked pointers (and other issues, like incorrect class table).
-          heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/true);
+          heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/ true);
         }
         const intptr_t count = locator.count();
         if (count > 0) {
@@ -947,7 +940,7 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
         if (FLAG_gc_during_reload) {
           // We force the GC to compact, which is more likely to discover
           // untracked pointers (and other issues, like incorrect class table).
-          heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/true);
+          heap->CollectAllGarbage(GCReason::kDebugging, /*compact=*/ true);
         }
       }
       if (FLAG_identity_reload) {
@@ -970,24 +963,20 @@ bool IsolateGroupReloadContext::Reload(bool force_reload,
       if (discard_class_tables) {
         IG->DropOriginalClassTable();
       }
-      const Error& error = Error::Handle(
-          isolate_group_->program_reload_context()->ReloadPhase4CommitFinish());
-      if (error.IsNull()) {
-        TIR_Print("---- DONE COMMIT\n");
-        isolate_group_->set_last_reload_timestamp(reload_timestamp_);
-      } else {
-        AddReasonForCancelling(new Aborted(Z, error));
-      }
+      isolate_group_->program_reload_context()->ReloadPhase4CommitFinish();
+      TIR_Print("---- DONE COMMIT\n");
+      isolate_group_->set_last_reload_timestamp(reload_timestamp_);
     } else {
       TIR_Print("---- ROLLING BACK");
       isolate_group_->program_reload_context()->ReloadPhase4Rollback();
     }
 
     // ValidateReload mutates the direct subclass information and does
-    // not remove dead subclasses.
+    // not remove dead subclasses.  Rebuild the direct subclass
+    // information from scratch.
     {
       SafepointWriteRwLocker ml(thread, IG->program_lock());
-      IG->program_reload_context()->RestoreClassHierarchyInvariants();
+      IG->program_reload_context()->RebuildDirectSubclasses();
     }
     const intptr_t final_library_count =
         GrowableObjectArray::Handle(Z, IG->object_store()->libraries())
@@ -1245,9 +1234,9 @@ void ProgramReloadContext::ReloadPhase4CommitPrepare() {
   CommitBeforeInstanceMorphing();
 }
 
-ErrorPtr ProgramReloadContext::ReloadPhase4CommitFinish() {
+void ProgramReloadContext::ReloadPhase4CommitFinish() {
   CommitAfterInstanceMorphing();
-  return PostCommit();
+  PostCommit();
 }
 
 void ProgramReloadContext::ReloadPhase4Rollback() {
@@ -1330,17 +1319,10 @@ void IsolateGroupReloadContext::ReportOnJSON(JSONStream* stream,
   }
 }
 
-ErrorPtr ProgramReloadContext::EnsuredUnoptimizedCodeForStack() {
+void ProgramReloadContext::EnsuredUnoptimizedCodeForStack() {
   TIMELINE_SCOPE(EnsuredUnoptimizedCodeForStack);
 
-  Error& error = Error::Handle();
-  IG->ForEachIsolate([&error](Isolate* isolate) {
-    if (!error.IsNull()) {
-      // An error occurred the previous time this callback was called, but
-      // |ForEachIsolate| does not support stopping iteration early, so we
-      // return here.
-      return;
-    }
+  IG->ForEachIsolate([](Isolate* isolate) {
     auto thread = isolate->mutator_thread();
     if (thread == nullptr) {
       return;
@@ -1357,16 +1339,11 @@ ErrorPtr ProgramReloadContext::EnsuredUnoptimizedCodeForStack() {
         // Force-optimized functions don't need unoptimized code because their
         // optimized code cannot deopt.
         if (!func.ForceOptimize()) {
-          error = func.EnsureHasCompiledUnoptimizedCodeNoThrow();
-          if (!error.IsNull()) {
-            return;
-          }
+          func.EnsureHasCompiledUnoptimizedCode();
         }
       }
     }
   });
-
-  return error.ptr();
 }
 
 void ProgramReloadContext::DeoptimizeDependentCode() {
@@ -1599,6 +1576,7 @@ void ProgramReloadContext::CheckpointLibraries() {
   object_store()->set_root_library(Library::Handle());
 }
 
+
 void ProgramReloadContext::RollbackLibraries() {
   TIR_Print("---- ROLLING BACK LIBRARY CHANGES\n");
   Thread* thread = Thread::Current();
@@ -1796,11 +1774,11 @@ bool ProgramReloadContext::IsDirty(const Library& lib) {
   return library_infos_[index].dirty;
 }
 
-ErrorPtr ProgramReloadContext::PostCommit() {
+void ProgramReloadContext::PostCommit() {
   TIMELINE_SCOPE(PostCommit);
   saved_root_library_ = Library::null();
   saved_libraries_ = GrowableObjectArray::null();
-  return InvalidateWorld();
+  InvalidateWorld();
 }
 
 void IsolateGroupReloadContext::AddReasonForCancelling(
@@ -1978,7 +1956,7 @@ class InvalidationCollector : public ObjectVisitor {
   virtual ~InvalidationCollector() {}
 
   void VisitObject(ObjectPtr obj) override {
-    intptr_t cid = obj->GetClassIdOfHeapObject();
+    intptr_t cid = obj->GetClassId();
     if (cid == kFunctionCid) {
       const Function& func =
           Function::Handle(zone_, static_cast<FunctionPtr>(obj));
@@ -2008,7 +1986,7 @@ class InvalidationCollector : public ObjectVisitor {
   GrowableArray<const Instance*>* const instances_;
 };
 
-ErrorPtr ProgramReloadContext::RunInvalidationVisitors() {
+void ProgramReloadContext::RunInvalidationVisitors() {
   TIR_Print("---- RUNNING INVALIDATION HEAP VISITORS\n");
   Thread* thread = Thread::Current();
   StackZone stack_zone(thread);
@@ -2029,20 +2007,12 @@ ErrorPtr ProgramReloadContext::RunInvalidationVisitors() {
   }
 
   InvalidateKernelInfos(zone, kernel_infos);
-
-  const Error& error =
-      Error::Handle(InvalidateSuspendStates(zone, suspend_states));
-  if (!error.IsNull()) {
-    return error.ptr();
-  }
-
+  InvalidateSuspendStates(zone, suspend_states);
   InvalidateFields(zone, fields, instances);
 
   // After InvalidateFields in order to invalidate
   // implicit getters which need load guards.
   InvalidateFunctions(zone, functions);
-
-  return Error::null();
 }
 
 void ProgramReloadContext::InvalidateKernelInfos(
@@ -2146,7 +2116,7 @@ void ProgramReloadContext::InvalidateFunctions(
   }
 }
 
-ErrorPtr ProgramReloadContext::InvalidateSuspendStates(
+void ProgramReloadContext::InvalidateSuspendStates(
     Zone* zone,
     const GrowableArray<const SuspendState*>& suspend_states) {
   TIMELINE_SCOPE(InvalidateSuspendStates);
@@ -2156,7 +2126,6 @@ ErrorPtr ProgramReloadContext::InvalidateSuspendStates(
   CallSiteResetter resetter(zone);
   Code& code = Code::Handle(zone);
   Function& function = Function::Handle(zone);
-  Error& error = Error::Handle(zone);
 
   SafepointWriteRwLocker ml(thread, thread->isolate_group()->program_lock());
   for (intptr_t i = 0, n = suspend_states.length(); i < n; ++i) {
@@ -2189,16 +2158,11 @@ ErrorPtr ProgramReloadContext::InvalidateSuspendStates(
       // can be cleared along with the code in InvalidateFunctions
       // during previous hot reloads.
       // Rebuild an unoptimized code in order to recreate ICData array.
-      error = function.EnsureHasCompiledUnoptimizedCodeNoThrow();
-      if (!error.IsNull()) {
-        return error.ptr();
-      }
+      function.EnsureHasCompiledUnoptimizedCode();
       resetter.ResetSwitchableCalls(code);
       resetter.ResetCaches(code);
     }
   }
-
-  return Error::null();
 }
 
 // Finds fields that are initialized or have a value that does not conform to
@@ -2227,6 +2191,7 @@ class FieldInvalidator {
 
   void CheckStatics(const GrowableArray<const Field*>& fields) {
     Thread* thread = Thread::Current();
+    const bool null_safety = thread->isolate_group()->null_safety();
     HANDLESCOPE(thread);
     instantiator_type_arguments_ = TypeArguments::null();
     for (intptr_t i = 0; i < fields.length(); i++) {
@@ -2245,8 +2210,9 @@ class FieldInvalidator {
         // At that point it doesn't have the field table setup yet.
         if (field_table->IsReadyToUse()) {
           value_ = field_table->At(field_id);
-          if (value_.ptr() != Object::sentinel().ptr()) {
-            CheckValueType(value_, field);
+          if ((value_.ptr() != Object::sentinel().ptr()) &&
+              (value_.ptr() != Object::transition_sentinel().ptr())) {
+            CheckValueType(null_safety, value_, field);
           }
         }
       });
@@ -2255,15 +2221,16 @@ class FieldInvalidator {
 
   void CheckInstances(const GrowableArray<const Instance*>& instances) {
     Thread* thread = Thread::Current();
+    const bool null_safety = thread->isolate_group()->null_safety();
     HANDLESCOPE(thread);
     for (intptr_t i = 0; i < instances.length(); i++) {
-      CheckInstance(*instances[i]);
+      CheckInstance(null_safety, *instances[i]);
     }
   }
 
  private:
   DART_FORCE_INLINE
-  void CheckInstance(const Instance& instance) {
+  void CheckInstance(bool null_safety, const Instance& instance) {
     cls_ = instance.clazz();
     if (cls_.NumTypeArguments() > 0) {
       instantiator_type_arguments_ = instance.GetTypeArguments();
@@ -2277,12 +2244,14 @@ class FieldInvalidator {
         continue;
       }
       const Field& field = Field::Cast(entry_);
-      CheckInstanceField(instance, field);
+      CheckInstanceField(null_safety, instance, field);
     }
   }
 
   DART_FORCE_INLINE
-  void CheckInstanceField(const Instance& instance, const Field& field) {
+  void CheckInstanceField(bool null_safety,
+                          const Instance& instance,
+                          const Field& field) {
     if (field.needs_load_guard()) {
       return;  // Already guarding.
     }
@@ -2301,19 +2270,25 @@ class FieldInvalidator {
       field.set_needs_load_guard(true);
       return;
     }
-    CheckValueType(value_, field);
+    CheckValueType(null_safety, value_, field);
   }
 
   DART_FORCE_INLINE
-  bool CheckAssignabilityUsingCache(const Object& value,
+  bool CheckAssignabilityUsingCache(bool null_safety,
+                                    const Object& value,
                                     const AbstractType& type) {
     ASSERT(!value.IsSentinel());
+    if (!null_safety && value.IsNull()) {
+      return true;
+    }
+
     if (type.IsDynamicType()) {
       return true;
     }
 
     if (type.IsRecordType()) {
-      return CheckAssignabilityForRecordType(value, RecordType::Cast(type));
+      return CheckAssignabilityForRecordType(null_safety, value,
+                                             RecordType::Cast(type));
     }
 
     cls_ = value.clazz();
@@ -2366,7 +2341,8 @@ class FieldInvalidator {
     return false;
   }
 
-  bool CheckAssignabilityForRecordType(const Object& value,
+  bool CheckAssignabilityForRecordType(bool null_safety,
+                                       const Object& value,
                                        const RecordType& type) {
     if (!value.IsRecord()) {
       return false;
@@ -2384,7 +2360,7 @@ class FieldInvalidator {
     for (intptr_t i = 0; i < num_fields; ++i) {
       field_value = record.FieldAt(i);
       field_type = type.FieldTypeAt(i);
-      if (!CheckAssignabilityUsingCache(field_value, field_type)) {
+      if (!CheckAssignabilityUsingCache(null_safety, field_value, field_type)) {
         return false;
       }
     }
@@ -2392,10 +2368,15 @@ class FieldInvalidator {
   }
 
   DART_FORCE_INLINE
-  void CheckValueType(const Object& value, const Field& field) {
+  void CheckValueType(bool null_safety,
+                      const Object& value,
+                      const Field& field) {
     ASSERT(!value.IsSentinel());
+    if (!null_safety && value.IsNull()) {
+      return;
+    }
     type_ = field.type();
-    if (!CheckAssignabilityUsingCache(value, type_)) {
+    if (!CheckAssignabilityUsingCache(null_safety, value, type_)) {
       // Even if doing an identity reload, type check can fail if hot reload
       // happens while constructor is still running and field is not
       // initialized yet, so it has a null value.
@@ -2442,7 +2423,7 @@ void ProgramReloadContext::InvalidateFields(
   invalidator.CheckInstances(instances);
 }
 
-ErrorPtr ProgramReloadContext::InvalidateWorld() {
+void ProgramReloadContext::InvalidateWorld() {
   TIMELINE_SCOPE(InvalidateWorld);
   TIR_Print("---- INVALIDATING WORLD\n");
   ResetMegamorphicCaches();
@@ -2451,7 +2432,7 @@ ErrorPtr ProgramReloadContext::InvalidateWorld() {
   }
   DeoptimizeFunctionsOnStack();
   ResetUnoptimizedICsOnStack();
-  return RunInvalidationVisitors();
+  RunInvalidationVisitors();
 }
 
 ClassPtr ProgramReloadContext::OldClassOrNull(const Class& replacement_or_new) {
@@ -2672,7 +2653,7 @@ void ProgramReloadContext::AddBecomeMapping(const Object& old,
   become_.Add(old, neu);
 }
 
-void ProgramReloadContext::RestoreClassHierarchyInvariants() {
+void ProgramReloadContext::RebuildDirectSubclasses() {
   ClassTable* class_table = IG->class_table();
   intptr_t num_cids = class_table->NumCids();
 
@@ -2693,25 +2674,43 @@ void ProgramReloadContext::RestoreClassHierarchyInvariants() {
       if (cls.direct_implementors() != GrowableObjectArray::null()) {
         cls.set_direct_implementors(null_list);
       }
-      if (cls.is_implemented()) {
-        cls.set_is_implemented(false);
-      }
-      if (cls.implementor_cid() != kIllegalCid) {
-        cls.ClearImplementor();
-      }
     }
   }
 
-  // Recompute class hiearchy.
-  ClassHiearchyUpdater class_hieararchy_updater(zone());
+  // Recompute the direct subclasses / implementors.
+
+  AbstractType& super_type = AbstractType::Handle();
+  Class& super_cls = Class::Handle();
+
+  Array& interface_types = Array::Handle();
+  AbstractType& interface_type = AbstractType::Handle();
+  Class& interface_class = Class::Handle();
+
   for (intptr_t i = 1; i < num_cids; i++) {
     if (class_table->HasValidClassAt(i)) {
       cls = class_table->At(i);
       if (!cls.is_declaration_loaded()) {
         continue;  // Will register itself later when loaded.
       }
+      super_type = cls.super_type();
+      if (!super_type.IsNull() && !super_type.IsObjectType()) {
+        super_cls = cls.SuperClass();
+        ASSERT(!super_cls.IsNull());
+        super_cls.AddDirectSubclass(cls);
+      }
 
-      class_hieararchy_updater.Register(cls);
+      interface_types = cls.interfaces();
+      if (!interface_types.IsNull()) {
+        const intptr_t mixin_index = cls.is_transformed_mixin_application()
+                                         ? interface_types.Length() - 1
+                                         : -1;
+        for (intptr_t j = 0; j < interface_types.Length(); ++j) {
+          interface_type ^= interface_types.At(j);
+          interface_class = interface_type.type_class();
+          interface_class.AddDirectImplementor(
+              cls, /* is_mixin = */ i == mixin_index);
+        }
+      }
     }
   }
 }

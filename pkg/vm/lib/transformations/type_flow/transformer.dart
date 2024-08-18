@@ -9,7 +9,7 @@ import 'dart:core' hide Type;
 
 import 'package:front_end/src/api_prototype/static_weak_references.dart'
     show StaticWeakReferences;
-import 'package:front_end/src/api_prototype/resource_identifier.dart'
+import 'package:front_end/src/fasta/kernel/resource_identifier.dart'
     as ResourceIdentifiers;
 import 'package:kernel/ast.dart' hide Statement, StatementVisitor;
 import 'package:kernel/ast.dart' as ast show Statement;
@@ -32,7 +32,6 @@ import 'package:vm/transformations/pragma.dart';
 
 import 'analysis.dart';
 import 'calls.dart';
-import 'config.dart';
 import 'finalizable_types.dart';
 import 'protobuf_handler.dart' show ProtobufHandler;
 import 'rta.dart' show RapidTypeAnalysis;
@@ -51,7 +50,6 @@ const bool kDumpClassHierarchy =
 Component transformComponent(
     Target target, CoreTypes coreTypes, Component component,
     {PragmaAnnotationParser? matcher,
-    TFAConfiguration config = defaultTFAConfiguration,
     bool treeShakeSignatures = true,
     bool treeShakeWriteOnlyFields = true,
     bool treeShakeProtobufs = false,
@@ -74,8 +72,7 @@ Component transformComponent(
       .visitComponent(component);
 
   Stopwatch? rtaStopWatch;
-  List<Class>? allocatedClasses;
-
+  RapidTypeAnalysis? rta;
   if (useRapidTypeAnalysis) {
     // Rapid type analysis (RTA) is used to quickly calculate
     // the set of allocated classes to make the subsequent
@@ -84,9 +81,8 @@ Component transformComponent(
     final protobufHandlerRta = treeShakeProtobufs
         ? ProtobufHandler.forComponent(component, coreTypes)
         : null;
-    allocatedClasses = RapidTypeAnalysis(component, coreTypes, target,
-            hierarchy, libraryIndex, protobufHandlerRta)
-        .run();
+    rta = RapidTypeAnalysis(component, coreTypes, target, hierarchy,
+        libraryIndex, protobufHandlerRta);
     rtaStopWatch.stop();
   }
 
@@ -95,7 +91,6 @@ Component transformComponent(
   MoveFieldInitializers().transformComponent(component);
 
   final typeFlowAnalysis = new TypeFlowAnalysis(
-      config,
       target,
       component,
       coreTypes,
@@ -115,7 +110,7 @@ Component transformComponent(
   }
 
   if (useRapidTypeAnalysis) {
-    for (Class c in allocatedClasses!) {
+    for (Class c in rta!.allocatedClasses) {
       typeFlowAnalysis.addAllocatedClass(c);
     }
   }
@@ -130,29 +125,28 @@ Component transformComponent(
 
   final transformsStopWatch = new Stopwatch()..start();
 
-  final fieldMorpher = new TreeShaker(
-          component, typeFlowAnalysis, coreTypes, hierarchy,
-          treeShakeWriteOnlyFields: treeShakeWriteOnlyFields)
-      .transformComponent(component);
+  final treeShaker = new TreeShaker(
+      component, typeFlowAnalysis, coreTypes, hierarchy,
+      treeShakeWriteOnlyFields: treeShakeWriteOnlyFields);
+  treeShaker.transformComponent(component);
 
-  final closureIdMetadata = ClosureIdMetadataRepository();
-
-  new TFADevirtualization(component, typeFlowAnalysis, hierarchy, fieldMorpher,
-          closureIdMetadata)
+  new TFADevirtualization(
+          component, typeFlowAnalysis, hierarchy, treeShaker.fieldMorpher)
       .visitComponent(component);
 
   final tableSelectorAssigner = new TableSelectorAssigner(component);
 
   if (treeShakeSignatures) {
-    new SignatureShaker(typeFlowAnalysis, tableSelectorAssigner)
-        .transformComponent(component);
+    final signatureShaker =
+        new SignatureShaker(typeFlowAnalysis, tableSelectorAssigner);
+    signatureShaker.transformComponent(component);
   }
 
   final unboxingInfo = new UnboxingInfoManager(typeFlowAnalysis)
     ..analyzeComponent(component, typeFlowAnalysis, tableSelectorAssigner);
 
-  new AnnotateKernel(component, typeFlowAnalysis, hierarchy, fieldMorpher,
-          tableSelectorAssigner, unboxingInfo, closureIdMetadata)
+  new AnnotateKernel(component, typeFlowAnalysis, hierarchy,
+          treeShaker.fieldMorpher, tableSelectorAssigner, unboxingInfo)
       .visitComponent(component);
 
   transformsStopWatch.stop();
@@ -215,14 +209,6 @@ class MoveFieldInitializers {
         Expression initExpr = f.initializer!;
         if (!isFirst) {
           initExpr = CloneVisitorNotMembers().clone(initExpr);
-        }
-        if (c.fileUri != f.fileUri) {
-          if (initExpr is ConstantExpression) {
-            initExpr = FileUriConstantExpression(initExpr.constant,
-                type: initExpr.type, fileUri: f.fileUri);
-          } else {
-            initExpr = FileUriExpression(initExpr, f.fileUri);
-          }
         }
         final Initializer newInit = initializedFields.contains(f)
             ? LocalInitializer(VariableDeclaration(null,
@@ -304,10 +290,9 @@ class CleanupAnnotations extends RecursiveVisitor {
 class TFADevirtualization extends Devirtualization {
   final TypeFlowAnalysis _typeFlowAnalysis;
   final FieldMorpher fieldMorpher;
-  final ClosureIdMetadataRepository _closureIdMetadata;
 
   TFADevirtualization(Component component, this._typeFlowAnalysis,
-      ClassHierarchy hierarchy, this.fieldMorpher, this._closureIdMetadata)
+      ClassHierarchy hierarchy, this.fieldMorpher)
       : super(_typeFlowAnalysis.environment.coreTypes, component, hierarchy);
 
   @override
@@ -318,28 +303,8 @@ class TFADevirtualization extends Devirtualization {
       final Member? singleTarget = fieldMorpher
           .getMorphedMember(callSite.monomorphicTarget, isSetter: setter);
       if (singleTarget != null) {
-        if (node is FunctionInvocation) {
-          final closure =
-              _typeFlowAnalysis.getClosureByCallMethod(singleTarget)!;
-          final function = closure.function;
-          int closureId;
-          if (function != null) {
-            _closureIdMetadata.indexClosures(closure.member);
-            closureId = _closureIdMetadata.getClosureId(function);
-            if (closureId < 0) {
-              return null;
-            } else {
-              assert(closureId > 0);
-            }
-          } else {
-            closureId = 0;
-          }
-          return DirectCallMetadata.targetClosure(
-              closure.member, closureId, callSite.isNullableReceiver);
-        } else if (!isArtificialNode(singleTarget)) {
-          return DirectCallMetadata.targetMember(
-              singleTarget, callSite.isNullableReceiver);
-        }
+        return new DirectCallMetadata(
+            singleTarget, callSite.isNullableReceiver);
       }
     }
     return null;
@@ -354,7 +319,6 @@ class AnnotateKernel extends RecursiveVisitor {
   final DirectCallMetadataRepository _directCallMetadataRepository;
   final InferredTypeMetadataRepository _inferredTypeMetadata;
   final InferredArgTypeMetadataRepository _inferredArgTypeMetadata;
-  final InferredReturnTypeMetadataRepository _inferredReturnTypeMetadata;
   final UnreachableNodeMetadataRepository _unreachableNodeMetadata;
   final ProcedureAttributesMetadataRepository _procedureAttributesMetadata;
   final TableSelectorMetadataRepository _tableSelectorMetadata;
@@ -366,30 +330,23 @@ class AnnotateKernel extends RecursiveVisitor {
   final TFClass _intTFClass;
   late final Constant _nullConstant = NullConstant();
 
-  AnnotateKernel(
-      Component component,
-      this._typeFlowAnalysis,
-      this.hierarchy,
-      this.fieldMorpher,
-      this._tableSelectorAssigner,
-      this._unboxingInfo,
-      this._closureIdMetadata)
+  AnnotateKernel(Component component, this._typeFlowAnalysis, this.hierarchy,
+      this.fieldMorpher, this._tableSelectorAssigner, this._unboxingInfo)
       : _directCallMetadataRepository =
             component.metadata[DirectCallMetadataRepository.repositoryTag]
                 as DirectCallMetadataRepository,
         _inferredTypeMetadata = InferredTypeMetadataRepository(),
         _inferredArgTypeMetadata = InferredArgTypeMetadataRepository(),
-        _inferredReturnTypeMetadata = InferredReturnTypeMetadataRepository(),
         _unreachableNodeMetadata = UnreachableNodeMetadataRepository(),
         _procedureAttributesMetadata = ProcedureAttributesMetadataRepository(),
         _tableSelectorMetadata = TableSelectorMetadataRepository(),
+        _closureIdMetadata = ClosureIdMetadataRepository(),
         _unboxingInfoMetadata = UnboxingInfoMetadataRepository(),
         _intClass = _typeFlowAnalysis.environment.coreTypes.intClass,
         _intTFClass = _typeFlowAnalysis.hierarchyCache
             .getTFClass(_typeFlowAnalysis.environment.coreTypes.intClass) {
     component.addMetadataRepository(_inferredTypeMetadata);
     component.addMetadataRepository(_inferredArgTypeMetadata);
-    component.addMetadataRepository(_inferredReturnTypeMetadata);
     component.addMetadataRepository(_unreachableNodeMetadata);
     component.addMetadataRepository(_procedureAttributesMetadata);
     component.addMetadataRepository(_tableSelectorMetadata);
@@ -493,13 +450,6 @@ class AnnotateKernel extends RecursiveVisitor {
     }
   }
 
-  void _setInferredReturnType(TreeNode node, Type type) {
-    final inferredType = _convertType(type);
-    if (inferredType != null) {
-      _inferredReturnTypeMetadata.mapping[node] = inferredType;
-    }
-  }
-
   void _setUnreachable(TreeNode node) {
     _unreachableNodeMetadata.mapping[node] = const UnreachableNode();
   }
@@ -576,10 +526,6 @@ class AnnotateKernel extends RecursiveVisitor {
       if (member is Field) {
         _setInferredType(member, _typeFlowAnalysis.fieldType(member)!);
       } else {
-        if (member is Procedure && !member.isSetter) {
-          _setInferredReturnType(member, _typeFlowAnalysis.resultType(member)!);
-        }
-
         Args<Type> argTypes = _typeFlowAnalysis.argumentTypes(member)!;
         final uncheckedParameters =
             _typeFlowAnalysis.uncheckedParameters(member);
@@ -612,7 +558,7 @@ class AnnotateKernel extends RecursiveVisitor {
 
       final unboxingInfoMetadata =
           _unboxingInfo.getUnboxingInfoOfMember(member);
-      if (unboxingInfoMetadata != null && !unboxingInfoMetadata.isTrivial) {
+      if (unboxingInfoMetadata != null && !unboxingInfoMetadata.isFullyBoxed) {
         _unboxingInfoMetadata.mapping[member] = unboxingInfoMetadata;
       }
     } else {
@@ -634,7 +580,7 @@ class AnnotateKernel extends RecursiveVisitor {
               unboxingInfoMetadata.argsInfo[i] = UnboxingType.kBoxed;
             }
           }
-          if (!unboxingInfoMetadata.isTrivial) {
+          if (!unboxingInfoMetadata.isFullyBoxed) {
             _unboxingInfoMetadata.mapping[member] = unboxingInfoMetadata;
           }
         }
@@ -844,16 +790,12 @@ class TreeShaker {
     _pass2 = new _TreeShakerPass2(this);
   }
 
-  FieldMorpher transformComponent(Component component) {
+  transformComponent(Component component) {
     _pass1.transformComponent(component);
     _pass2.transformComponent(component);
-
-    return fieldMorpher.._shaker = null;
   }
 
   bool isLibraryUsed(Library l) => _usedLibraries.contains(l);
-  bool isLibraryReferencedFromNativeCode(Library l) =>
-      typeFlowAnalysis.nativeCodeOracle.isLibraryReferencedFromNativeCode(l);
   bool isClassReferencedFromNativeCode(Class c) =>
       typeFlowAnalysis.nativeCodeOracle.isClassReferencedFromNativeCode(c);
   bool isClassUsed(Class c) => _usedClasses.contains(c);
@@ -1026,16 +968,13 @@ class TreeShaker {
 }
 
 class FieldMorpher {
-  // Nullable so that it can be detached from the [TreeShaker].
-  TreeShaker? _shaker;
+  final TreeShaker shaker;
   final Set<Member> _extraMembersWithReachableBody = <Member>{};
   final Map<Field, Member> _gettersForRemovedFields = <Field, Member>{};
   final Map<Field, Member> _settersForRemovedFields = <Field, Member>{};
   final Map<Member, Field> _removedFields = <Member, Field>{};
 
-  TreeShaker get shaker => _shaker!;
-
-  FieldMorpher(this._shaker);
+  FieldMorpher(this.shaker);
 
   Member _createAccessorForRemovedField(Field field, bool isSetter) {
     assert(!field.isStatic);
@@ -1789,7 +1728,12 @@ class _TreeShakerPass1 extends RemovingTransformer {
       }
     }
     final right = transform(node.right);
-    if (_isExtendedBoolLiteral(left)) {
+    // Without sound null safety arguments of logical expression
+    // are implicitly checked for null, so transform the node only
+    // if using sound null safety or it evaluates to a bool literal.
+    if (_isExtendedBoolLiteral(left) &&
+        (shaker.typeFlowAnalysis.target.flags.soundNullSafety ||
+            _isExtendedBoolLiteral(right))) {
       return _evaluateArguments([left], right);
     }
     node.left = left..parent = node;
@@ -1912,9 +1856,7 @@ class _TreeShakerPass2 extends RemovingTransformer {
 
   @override
   TreeNode visitLibrary(Library node, TreeNode? removalSentinel) {
-    if (!shaker.isLibraryUsed(node) &&
-        !shaker.isLibraryReferencedFromNativeCode(node) &&
-        node.importUri.scheme != 'dart') {
+    if (!shaker.isLibraryUsed(node) && node.importUri.scheme != 'dart') {
       return removalSentinel!;
     }
     _additionalDeps.clear();

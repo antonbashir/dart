@@ -138,7 +138,7 @@ void matchIL$testDouble(FlowGraph graph) {
       'v7_boxed' << match.Box('v7'),
       match.MoveArgument('v7_boxed'),
       match.StaticCall(),
-      match.DartReturn(),
+      match.Return(),
     ]),
   ]);
 }
@@ -274,7 +274,7 @@ void matchIL$testInt(FlowGraph graph) {
       'v7_boxed' << match.BoxInt64('v7'),
       match.MoveArgument('v7_boxed'),
       match.StaticCall(),
-      match.DartReturn(),
+      match.Return(),
     ]),
   ]);
 }

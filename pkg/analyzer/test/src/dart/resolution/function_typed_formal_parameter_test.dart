@@ -20,7 +20,7 @@ class FunctionTypedFormalParameterResolutionTest
 void f<V>(T p<T, U>(U a, V b)) {}
 ''');
 
-    var node = findNode.singleFunctionTypedFormalParameter;
+    final node = findNode.singleFunctionTypedFormalParameter;
     assertResolvedNodeText(node, r'''
 FunctionTypedFormalParameter
   returnType: NamedType
@@ -36,7 +36,7 @@ FunctionTypedFormalParameter
         element: U@17
         type: U
       name: a
-      declaredElement: <testLibraryFragment>::@function::f::@parameter::p::@parameter::a
+      declaredElement: self::@function::f::@parameter::p::@parameter::a
         type: U
     parameter: SimpleFormalParameter
       type: NamedType
@@ -44,10 +44,10 @@ FunctionTypedFormalParameter
         element: V@7
         type: V
       name: b
-      declaredElement: <testLibraryFragment>::@function::f::@parameter::p::@parameter::b
+      declaredElement: self::@function::f::@parameter::p::@parameter::b
         type: V
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@function::f::@parameter::p
+  declaredElement: self::@function::f::@parameter::p
     type: T Function<T, U>(U, V)
 ''');
   }
@@ -57,7 +57,7 @@ FunctionTypedFormalParameter
 void f(void p(int a)) {}
 ''');
 
-    var node = findNode.singleFunctionTypedFormalParameter;
+    final node = findNode.singleFunctionTypedFormalParameter;
     assertResolvedNodeText(node, r'''
 FunctionTypedFormalParameter
   returnType: NamedType
@@ -70,13 +70,13 @@ FunctionTypedFormalParameter
     parameter: SimpleFormalParameter
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: a
-      declaredElement: <testLibraryFragment>::@function::f::@parameter::p::@parameter::a
+      declaredElement: self::@function::f::@parameter::p::@parameter::a
         type: int
     rightParenthesis: )
-  declaredElement: <testLibraryFragment>::@function::f::@parameter::p
+  declaredElement: self::@function::f::@parameter::p
     type: void Function(int)
 ''');
   }

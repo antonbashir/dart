@@ -16,7 +16,6 @@ import 'package:linter/src/extensions.dart';
 import 'package:linter/src/rules.dart';
 import 'package:linter/src/test_utilities/analyzer_utils.dart';
 import 'package:linter/src/test_utilities/formatter.dart';
-import 'package:linter/src/test_utilities/test_linter.dart';
 
 import 'util/score_utils.dart';
 
@@ -140,7 +139,7 @@ Future<void> runLinter(List<String> args) async {
     return;
   }
 
-  var linter = TestLinter(linterOptions);
+  var linter = DartLinter(linterOptions);
 
   try {
     var timer = Stopwatch()..start();
@@ -174,8 +173,8 @@ Future<void> writeBenchmarks(
     IOSink out, List<File> filesToLint, LinterOptions linterOptions) async {
   var timings = <String, int>{};
   for (var i = 0; i < benchmarkRuns; ++i) {
-    await lintFiles(TestLinter(linterOptions), filesToLint);
-    lintRuleTimers.timers.forEach((n, t) {
+    await lintFiles(DartLinter(linterOptions), filesToLint);
+    lintRegistry.timers.forEach((n, t) {
       var timing = t.elapsedMilliseconds;
       var previous = timings[n];
       if (previous == null) {

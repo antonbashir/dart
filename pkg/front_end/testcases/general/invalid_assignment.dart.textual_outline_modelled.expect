@@ -3,5 +3,4 @@ class A {
 }
 
 main() {}
-
 test(int? i, String s, A a) {}

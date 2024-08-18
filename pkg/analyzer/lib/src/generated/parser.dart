@@ -32,17 +32,18 @@ class Parser {
       bool allowNativeClause = true,
       required LineInfo lineInfo})
       : astBuilder = AstBuilder(
-          ErrorReporter(errorListener, source),
+          ErrorReporter(
+            errorListener,
+            source,
+            isNonNullableByDefault: featureSet.isEnabled(Feature.non_nullable),
+          ),
           source.uri,
           true,
           featureSet,
           lineInfo,
         ) {
-    fastaParser = fasta.Parser(
-      astBuilder,
-      allowPatterns: featureSet.isEnabled(Feature.patterns),
-      enableFeatureEnhancedParts: featureSet.isEnabled(Feature.enhanced_parts),
-    );
+    fastaParser = fasta.Parser(astBuilder,
+        allowPatterns: featureSet.isEnabled(Feature.patterns));
     astBuilder.parser = fastaParser;
     astBuilder.allowNativeClause = allowNativeClause;
   }

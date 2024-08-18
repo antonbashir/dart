@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use valid regular expression syntax.';
 
@@ -30,15 +29,19 @@ print(RegExp(r'\(').hasMatch('foo()'));
 ''';
 
 class ValidRegexps extends LintRule {
+  static const LintCode code = LintCode(
+      'valid_regexps', 'Invalid regular expression syntax.',
+      correctionMessage: 'Try correcting the regular expression.');
+
   ValidRegexps()
       : super(
             name: 'valid_regexps',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.unintentional});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.valid_regexps;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

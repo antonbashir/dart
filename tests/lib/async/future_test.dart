@@ -4,10 +4,9 @@
 
 library future_test;
 
-import 'dart:async';
-
 import 'package:async_helper/async_helper.dart';
-import 'package:expect/expect.dart';
+import "package:expect/expect.dart";
+import 'dart:async';
 
 const Duration MS = const Duration(milliseconds: 1);
 
@@ -1139,16 +1138,7 @@ void testFutureOfFuture() async {
   completer.complete(Future<int>.value(42));
 }
 
-void testIgnoreWhenCompleteError() {
-  // Regression test for https://github.com/dart-lang/sdk/issues/54943
-  asyncStart();
-  Future.error("Should be overridden by whenComplete error.").whenComplete(() {
-    return Future.error("From whenComplete. Should be ignored.");
-  }).ignore();
-  Future.delayed(Duration.zero, asyncEnd);
-}
-
-void main() {
+main() {
   asyncStart();
 
   testValue();
@@ -1221,8 +1211,6 @@ void main() {
   testFutureResult();
 
   testFutureOfFuture();
-
-  testIgnoreWhenCompleteError();
 
   asyncEnd();
 }

@@ -22,7 +22,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleSetOrMapLiteral;
+    final node = findNode.singleSetOrMapLiteral;
     assertResolvedNodeText(node, r'''
 SetOrMapLiteral
   typeArguments: TypeArgumentList
@@ -30,7 +30,7 @@ SetOrMapLiteral
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: {
@@ -47,7 +47,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleSetOrMapLiteral;
+    final node = findNode.singleSetOrMapLiteral;
     assertResolvedNodeText(node, r'''
 SetOrMapLiteral
   typeArguments: TypeArgumentList
@@ -55,11 +55,11 @@ SetOrMapLiteral
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
     rightBracket: >
   leftBracket: {
@@ -78,7 +78,7 @@ void f() {
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
     ]);
 
-    var node = findNode.singleSetOrMapLiteral;
+    final node = findNode.singleSetOrMapLiteral;
     assertResolvedNodeText(node, r'''
 SetOrMapLiteral
   leftBracket: {
@@ -101,7 +101,7 @@ void f() {
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
     ]);
 
-    var node = findNode.singleSetOrMapLiteral;
+    final node = findNode.singleSetOrMapLiteral;
     assertResolvedNodeText(node, r'''
 SetOrMapLiteral
   leftBracket: {
@@ -128,7 +128,7 @@ void f() {
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
     ]);
 
-    var node = findNode.singleSetOrMapLiteral;
+    final node = findNode.singleSetOrMapLiteral;
     assertResolvedNodeText(node, r'''
 SetOrMapLiteral
   leftBracket: {

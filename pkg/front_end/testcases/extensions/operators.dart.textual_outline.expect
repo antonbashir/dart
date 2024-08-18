@@ -17,11 +17,7 @@ extension Operators on Complex {
 }
 
 main() {}
-
 implicit() {}
-
 explicit() {}
-
 void errors(Complex c) {}
-
 expect(expected, actual) {}

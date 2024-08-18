@@ -63,15 +63,11 @@ class RangeFactory {
 
   /// Return the deletion range of the [node], considering the spaces and
   /// comments before and after it.
-  ///
-  /// If a non-`null` [overrideEnd] is supplied, it will be used in place of
-  /// [AstNode.endToken] to determine the range of tokens to delete.
-  SourceRange deletionRange(AstNode node, {Token? overrideEnd}) {
+  SourceRange deletionRange(AstNode node) {
     var begin = node.beginToken;
     begin = begin.precedingComments ?? begin;
 
-    var initialEndToken = overrideEnd ?? node.endToken;
-    var end = initialEndToken.next!;
+    var end = node.endToken.next!;
     end = end.precedingComments ?? end;
 
     int startOffset;
@@ -88,7 +84,7 @@ class RangeFactory {
       } else {
         startOffset = begin.previous!.end;
       }
-      endOffset = initialEndToken.end;
+      endOffset = node.endToken.end;
     } else {
       startOffset = begin.offset;
       endOffset = end.offset;
@@ -156,7 +152,7 @@ class RangeFactory {
       }
       return node(item);
     }
-    var index = list.indexOf(item);
+    final index = list.indexOf(item);
     if (index == 0) {
       // Remove the trailing comma.
       return startStart(item, list[1]);
@@ -206,13 +202,6 @@ class RangeFactory {
   /// Return a source range that starts at the given [startOffset], and has
   /// the given [length].
   SourceRange startOffsetLength(int startOffset, int length) {
-    return SourceRange(startOffset, length);
-  }
-
-  /// Returns the source range that starts at [startOffset] and ends at the
-  /// start of [rightEntity].
-  SourceRange startOffsetStart(int startOffset, SyntacticEntity rightEntity) {
-    var length = rightEntity.offset - startOffset;
     return SourceRange(startOffset, length);
   }
 

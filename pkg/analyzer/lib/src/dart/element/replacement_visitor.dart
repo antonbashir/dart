@@ -448,10 +448,10 @@ class ReplacementVisitor
     }
 
     List<RecordTypePositionalFieldImpl>? newPositionalFields;
-    var positionalFields = type.positionalFields;
+    final positionalFields = type.positionalFields;
     for (var i = 0; i < positionalFields.length; i++) {
-      var field = positionalFields[i];
-      var newType = field.type.accept(this);
+      final field = positionalFields[i];
+      final newType = field.type.accept(this);
       if (newType != null) {
         newPositionalFields ??= positionalFields.toList(growable: false);
         newPositionalFields[i] = RecordTypePositionalFieldImpl(
@@ -461,10 +461,10 @@ class ReplacementVisitor
     }
 
     List<RecordTypeNamedFieldImpl>? newNamedFields;
-    var namedFields = type.namedFields;
+    final namedFields = type.namedFields;
     for (var i = 0; i < namedFields.length; i++) {
-      var field = namedFields[i];
-      var newType = field.type.accept(this);
+      final field = namedFields[i];
+      final newType = field.type.accept(this);
       if (newType != null) {
         newNamedFields ??= namedFields.toList(growable: false);
         newNamedFields[i] = RecordTypeNamedFieldImpl(
@@ -492,17 +492,17 @@ class ReplacementVisitor
   @override
   DartType? visitRecordTypeBuilder(RecordTypeBuilder type) {
     List<DartType>? newFieldTypes;
-    var fieldTypes = type.fieldTypes;
+    final fieldTypes = type.fieldTypes;
     for (var i = 0; i < fieldTypes.length; i++) {
-      var fieldType = fieldTypes[i];
-      var newFieldType = fieldType.accept(this);
+      final fieldType = fieldTypes[i];
+      final newFieldType = fieldType.accept(this);
       if (newFieldType != null) {
         newFieldTypes ??= fieldTypes.toList(growable: false);
         newFieldTypes[i] = newFieldType;
       }
     }
 
-    var newNullability = visitNullability(type);
+    final newNullability = visitNullability(type);
 
     if (newFieldTypes == null && newNullability == null) {
       return null;

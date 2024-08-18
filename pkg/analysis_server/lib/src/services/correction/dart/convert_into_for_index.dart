@@ -3,8 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -13,13 +12,6 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ConvertIntoForIndex extends ResolvedCorrectionProducer {
-  ConvertIntoForIndex({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   AssistKind get assistKind => DartAssistKind.CONVERT_INTO_FOR_INDEX;
 
@@ -73,7 +65,7 @@ class ConvertIntoForIndex extends ResolvedCorrectionProducer {
     String indexName;
     {
       var conflicts =
-          unit.findPossibleLocalVariableConflicts(forStatement.offset);
+          utils.findPossibleLocalVariableConflicts(forStatement.offset);
       if (!conflicts.contains('i')) {
         indexName = 'i';
       } else if (!conflicts.contains('j')) {
@@ -86,7 +78,7 @@ class ConvertIntoForIndex extends ResolvedCorrectionProducer {
     }
     // prepare environment
     var prefix = utils.getNodePrefix(forStatement);
-    var indent = utils.oneIndent;
+    var indent = utils.getIndent(1);
     var firstBlockLine = utils.getLineContentEnd(body.leftBracket.end);
     // add change
     await builder.addDartFileEdit(file, (builder) {

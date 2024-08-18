@@ -4,8 +4,9 @@
 
 import 'dart:io';
 
-import 'package:front_end/src/api_unstable/dart2js.dart' as ir
-    show serializeComponent, ByteSink;
+import 'package:front_end/src/fasta/kernel/utils.dart' as ir
+    show serializeComponent;
+import 'package:front_end/src/fasta/kernel/utils.dart';
 import 'package:kernel/ast.dart' as ir;
 import 'package:kernel/binary/ast_from_binary.dart' show BinaryBuilder;
 
@@ -75,7 +76,7 @@ class BytesInMemorySerializationStrategy extends SerializationStrategy<int> {
       GlobalTypeInferenceResults results,
       CompilerOptions options,
       SerializationIndices indices) {
-    ir.ByteSink byteSink = ir.ByteSink();
+    ByteSink byteSink = ByteSink();
     DataSinkWriter sink = DataSinkWriter(
         BinaryDataSink(byteSink), options, indices,
         useDataKinds: useDataKinds);
@@ -110,7 +111,7 @@ class BytesInMemorySerializationStrategy extends SerializationStrategy<int> {
   @override
   List<int> serializeClosedWorld(JClosedWorld closedWorld,
       CompilerOptions options, SerializationIndices indices) {
-    ir.ByteSink byteSink = ir.ByteSink();
+    ByteSink byteSink = ByteSink();
     DataSinkWriter sink = DataSinkWriter(
         BinaryDataSink(byteSink), options, indices,
         useDataKinds: useDataKinds);

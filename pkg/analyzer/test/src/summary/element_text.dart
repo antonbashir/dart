@@ -4,57 +4,45 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/field_name_non_promotability_info.dart';
 import 'package:analyzer/src/summary2/export.dart';
 import 'package:analyzer/src/summary2/macro_application_error.dart';
-import 'package:analyzer/src/summary2/macro_type_location.dart';
 import 'package:analyzer/src/task/inference_error.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:collection/collection.dart';
-import 'package:pub_semver/pub_semver.dart';
 import 'package:test/test.dart';
 
 import '../../util/element_printer.dart';
+import '../../util/tree_string_sink.dart';
 import 'resolved_ast_printer.dart';
 
 String getLibraryText({
   required LibraryElementImpl library,
   required ElementTextConfiguration configuration,
 }) {
-  var buffer = StringBuffer();
-  var sink = TreeStringSink(
+  final buffer = StringBuffer();
+  final sink = TreeStringSink(
     sink: buffer,
     indent: '',
   );
-  var elementPrinter = ElementPrinter(
+  final elementPrinter = ElementPrinter(
     sink: sink,
-    configuration: configuration.elementPrinterConfiguration,
+    configuration: ElementPrinterConfiguration(),
+    selfUriStr: '${library.source.uri}',
   );
-  var writer = _ElementWriter(
+  final writer = _ElementWriter(
     sink: sink,
     elementPrinter: elementPrinter,
     configuration: configuration,
   );
   writer.writeLibraryElement(library);
-
-  sink.writeln('-' * 40);
-  var writer2 = _Element2Writer(
-    sink: sink,
-    elementPrinter: elementPrinter,
-    configuration: configuration,
-  );
-  writer2.writeLibraryElement(library);
   return buffer.toString();
 }
 
 class ElementTextConfiguration {
-  ElementPrinterConfiguration elementPrinterConfiguration =
-      ElementPrinterConfiguration();
   bool Function(Object) filter;
-  List<Pattern>? macroDiagnosticMessagePatterns;
+  void Function(String message)? macroDiagnosticMessageValidator;
   bool withAllSupertypes = false;
   bool withAugmentedWithoutAugmentation = false;
   bool withCodeRanges = false;
@@ -70,6 +58,7 @@ class ElementTextConfiguration {
   bool withNonSynthetic = false;
   bool withPropertyLinking = false;
   bool withRedirectedConstructors = false;
+  bool withReferences = false;
   bool withReturnType = true;
   bool withSyntheticDartCoreImport = false;
 
@@ -81,850 +70,20 @@ class ElementTextConfiguration {
 }
 
 /// Writes the canonical text presentation of elements.
-abstract class _AbstractElementWriter {
+class _ElementWriter {
   final TreeStringSink _sink;
   final ElementPrinter _elementPrinter;
   final ElementTextConfiguration configuration;
   final _IdMap _idMap = _IdMap();
 
-  _AbstractElementWriter({
+  _ElementWriter({
     required TreeStringSink sink,
     required ElementPrinter elementPrinter,
     required this.configuration,
   })  : _sink = sink,
         _elementPrinter = elementPrinter;
 
-  ResolvedAstPrinter _createAstPrinter() {
-    return ResolvedAstPrinter(
-      sink: _sink,
-      elementPrinter: _elementPrinter,
-      configuration: ResolvedNodeTextConfiguration()
-        // TODO(scheglov): https://github.com/dart-lang/sdk/issues/49101
-        ..withParameterElements = false,
-      withOffsets: true,
-    );
-  }
-
-  void _writeDirectiveUri(DirectiveUri uri) {
-    if (uri is DirectiveUriWithAugmentationImpl) {
-      _sink.write('${uri.augmentation.source.uri}');
-    } else if (uri is DirectiveUriWithLibraryImpl) {
-      _sink.write('${uri.library.source.uri}');
-    } else if (uri is DirectiveUriWithUnit) {
-      _sink.write('${uri.unit.source.uri}');
-    } else if (uri is DirectiveUriWithSource) {
-      _sink.write("source '${uri.source.uri}'");
-    } else if (uri is DirectiveUriWithRelativeUri) {
-      _sink.write("relativeUri '${uri.relativeUri}'");
-    } else if (uri is DirectiveUriWithRelativeUriString) {
-      _sink.write("relativeUriString '${uri.relativeUriString}'");
-    } else {
-      _sink.write('noRelativeUriString');
-    }
-  }
-
-  void _writeElements<T extends Object>(
-    String name,
-    List<T> elements,
-    void Function(T) write,
-  ) {
-    var filtered = elements.where(configuration.filter).toList();
-    if (filtered.isNotEmpty) {
-      _sink.writelnWithIndent(name);
-      _sink.withIndent(() {
-        for (var element in filtered) {
-          write(element);
-        }
-      });
-    }
-  }
-
-  void _writeExportedReferences(LibraryElementImpl e) {
-    var exportedReferences = e.exportedReferences.toList();
-    exportedReferences.sortBy((e) => e.reference.toString());
-
-    for (var exported in exportedReferences) {
-      _sink.writeIndentedLine(() {
-        if (exported is ExportedReferenceDeclared) {
-          _sink.write('declared ');
-        } else if (exported is ExportedReferenceExported) {
-          _sink.write('exported${exported.locations} ');
-        }
-        _elementPrinter.writeReference(exported.reference);
-      });
-    }
-  }
-
-  void _writeFieldNameNonPromotabilityInfo(
-    Map<String, FieldNameNonPromotabilityInfo>? info,
-  ) {
-    if (info == null || info.isEmpty) {
-      return;
-    }
-
-    _sink.writelnWithIndent('fieldNameNonPromotabilityInfo');
-    _sink.withIndent(() {
-      for (var entry in info.entries) {
-        _sink.writelnWithIndent(entry.key);
-        _sink.withIndent(() {
-          _elementPrinter.writeElementList(
-            'conflictingFields',
-            entry.value.conflictingFields,
-          );
-          _elementPrinter.writeElementList(
-            'conflictingGetters',
-            entry.value.conflictingGetters,
-          );
-          _elementPrinter.writeElementList(
-            'conflictingNsmClasses',
-            entry.value.conflictingNsmClasses,
-          );
-        });
-      }
-    });
-  }
-
-  void _writeNode(AstNode node) {
-    _sink.writeIndent();
-    node.accept(
-      _createAstPrinter(),
-    );
-  }
-
-  void _writeReference(ElementImpl e) {
-    if (e.reference case var reference?) {
-      _sink.writeIndentedLine(() {
-        _sink.write('reference: ');
-        _elementPrinter.writeReference(reference);
-      });
-    }
-  }
-}
-
-/// Writes the canonical text presentation of elements.
-class _Element2Writer extends _AbstractElementWriter {
-  _Element2Writer({
-    required super.sink,
-    required super.elementPrinter,
-    required super.configuration,
-  });
-
-  void writeLibraryElement(LibraryElement2 e) {
-    expect(e.enclosingElement2, isNull);
-
-    _sink.writelnWithIndent('library');
-    _sink.withIndent(() {
-      _writeReference(e as ElementImpl);
-
-      var name = e.name;
-      if (name != null && name.isNotEmpty) {
-        _sink.writelnWithIndent('name: $name');
-      }
-
-      _writeDocumentation(e.documentationComment);
-      _writeMetadata(e.metadata);
-      _writeSinceSdkVersion(e.sinceSdkVersion);
-
-      // _writeElements(
-      //   'libraryExports',
-      //   e.libraryExports,
-      //   _writeLibraryExportElement,
-      // );
-
-      // TODO(brianwilkerson): Consider adding `fragments` as a convenience
-      //  getter in `_Fragmented`
-      var fragments = <LibraryFragment>[];
-      for (LibraryFragment? fragment = e.firstFragment;
-          fragment != null;
-          fragment = fragment.nextFragment) {
-        fragments.add(fragment);
-        expect(fragment.element, same(e));
-      }
-
-      _writeElements('fragments', fragments, _writeLibraryFragment);
-
-      _writeElements('classes', e.classes, _writeInstanceElement);
-      _writeElements('enums', e.enums, _writeInstanceElement);
-      _writeElements('mixins', e.mixins, _writeInstanceElement);
-
-      if (configuration.withExportScope) {
-        _sink.writelnWithIndent('exportedReferences');
-        _sink.withIndent(() {
-          _writeExportedReferences(e as LibraryElementImpl);
-        });
-        _sink.writelnWithIndent('exportNamespace');
-        _sink.withIndent(() {
-          _writeExportNamespace(e);
-        });
-      }
-
-      _writeFieldNameNonPromotabilityInfo(
-          (e as LibraryElementImpl).fieldNameNonPromotabilityInfo);
-      _writeMacroDiagnostics(e);
-    });
-  }
-
-  void _assertNonSyntheticElementSelf(Element2 element) {
-    expect(element.isSynthetic, isFalse);
-    expect(element.nonSynthetic2, same(element));
-  }
-
-  String _elementName(Element2 e) {
-    var name = e.name ?? '<null>';
-    if (e is SetterElement) {
-      expect(name, endsWith('='));
-    }
-    return name;
-  }
-
-  void _writeCodeRange(Element2 e) {
-    if (configuration.withCodeRanges && !e.isSynthetic) {
-      if (e is MaybeAugmentedInstanceElementMixin) {
-        e = e.declaration;
-      }
-      e as ElementImpl;
-      _sink.writelnWithIndent('codeOffset: ${e.codeOffset}');
-      _sink.writelnWithIndent('codeLength: ${e.codeLength}');
-    }
-  }
-
-  void _writeDocumentation(String? documentation) {
-    if (documentation != null) {
-      var str = documentation;
-      str = str.replaceAll('\n', r'\n');
-      str = str.replaceAll('\r', r'\r');
-      _sink.writelnWithIndent('documentationComment: $str');
-    }
-  }
-
-  void _writeElementName(Element2 e) {
-    String name = _elementName(e);
-    _sink.write(name);
-  }
-
-  void _writeElementReference(Element2 e) {
-    if (e is MaybeAugmentedInstanceElementMixin) {
-      e = e.declaration;
-    }
-    if ((e as ElementImpl).reference case var reference?) {
-      _sink.writeIndentedLine(() {
-        _sink.write('reference: ');
-        _elementPrinter.writeReference(reference);
-      });
-    }
-  }
-
-  void _writeEnclosingElement(Element2 e) {
-    _elementPrinter.writeNamedElement(
-      'enclosingElement2',
-      e.enclosingElement2 as Element?,
-    );
-  }
-
-  void _writeExportNamespace(LibraryElement2 e) {
-    var map = e.exportNamespace.definedNames;
-    var sortedEntries = map.entries.sortedBy((entry) => entry.key);
-    for (var entry in sortedEntries) {
-      _elementPrinter.writeNamedElement(entry.key, entry.value);
-    }
-  }
-
-  void _writeFragmentReference(Fragment? f, {String? label}) {
-    if (f == null) {
-      return;
-    }
-    if (f is CompilationUnitElementImpl) {
-      _sink.writeIndentedLine(() {
-        _sink.write(label ?? 'reference: ');
-        _elementPrinter.writeReference(f.reference!);
-      });
-      return;
-    }
-    Element2? element;
-    if (f is ElementImpl) {
-      element = f as ElementImpl;
-    } else {
-      element = f.element;
-      if (element is! ElementImpl) {
-        if (element is NotAugmentedInstanceElementImpl) {
-          element = element.baseElement;
-        } else if (element is MaybeAugmentedInstanceElementMixin) {
-          element = element.declaration;
-        }
-      }
-    }
-    if (element is! ElementImpl) {
-      _sink.write('<none>');
-      return;
-    }
-    if (element.reference case var reference?) {
-      _sink.writeIndentedLine(() {
-        _sink.write(label ?? 'reference: ');
-        _elementPrinter.writeReference(reference);
-      });
-    }
-  }
-
-  void _writeInstanceElement(InstanceElement2 e) {
-    _sink.writeIndentedLine(() {
-      switch (e) {
-        case ClassElement2():
-          _sink.writeIf(e.isAbstract, 'abstract ');
-          // _sink.writeIf(e.isMacro, 'macro ');
-          _sink.writeIf(e.isSealed, 'sealed ');
-          _sink.writeIf(e.isBase, 'base ');
-          _sink.writeIf(e.isInterface, 'interface ');
-          _sink.writeIf(e.isFinal, 'final ');
-          // _writeNotSimplyBounded(e);
-          _sink.writeIf(e.isMixinClass, 'mixin ');
-          _sink.write('class ');
-          _sink.writeIf(e.isMixinApplication, 'alias ');
-        case EnumElement2():
-          // _writeNotSimplyBounded(e);
-          _sink.write('enum ');
-        case ExtensionElement2():
-          _sink.write('extension ');
-        case ExtensionTypeElement2():
-          //   _sink.writeIf(
-          //     e.hasRepresentationSelfReference,
-          //     'hasRepresentationSelfReference ',
-          //   );
-          //   _sink.writeIf(
-          //     e.hasImplementsSelfReference,
-          //     'hasImplementsSelfReference ',
-          //   );
-          //   // _writeNotSimplyBounded(e);
-          _sink.write('extension type ');
-        case MixinElement2():
-          _sink.writeIf(e.isBase, 'base ');
-          // _writeNotSimplyBounded(e);
-          _sink.write('mixin ');
-      }
-
-      _writeElementName(e);
-    });
-
-    _sink.withIndent(() {
-      _writeElementReference(e);
-      _writeEnclosingElement(e);
-      _writeDocumentation(e.documentationComment);
-      // _writeMetadata(e.metadata);
-      _writeSinceSdkVersion(e.sinceSdkVersion);
-      _writeCodeRange(e);
-      // _writeElements('typeParameters', e.typeParameters2, _writeTypeParameterElement);
-      _writeMacroDiagnostics(e);
-      _writeFragmentReference(e.firstFragment, label: 'firstFragment: ');
-
-      if (e is InterfaceElement2) {
-        var supertype = e.supertype;
-        if (supertype != null &&
-            (supertype.element.name != 'Object' || e.mixins.isNotEmpty)) {
-          _writeType('supertype', supertype);
-        }
-      }
-
-      if (e is ExtensionTypeElement2) {
-        // _elementPrinter.writeNamedElement('representation', e.representation2);
-        // _elementPrinter.writeNamedElement(
-        //     'primaryConstructor', e.primaryConstructor2);
-        _elementPrinter.writeNamedType('typeErasure', e.typeErasure);
-      }
-
-      if (e is MixinElement2) {
-        _elementPrinter.writeTypeList(
-          'superclassConstraints',
-          e.superclassConstraints,
-        );
-      }
-
-      // TODO(brianwilkerson): Add a `writeTypeList2` that will use the new API
-      //  version of the elements of type parameters.
-      // _elementPrinter.writeTypeList('mixins', e.mixins);
-      // _elementPrinter.writeTypeList('interfaces', e.interfaces);
-
-      if (configuration.withAllSupertypes && e is InterfaceElement2) {
-        var sorted = e.allSupertypes.sortedBy((t) => t.element.name);
-        _elementPrinter.writeTypeList('allSupertypes', sorted);
-      }
-
-      // _writeElements('fields', e.fields, _writePropertyInducingElement);
-
-      // var constructors = e.constructors;
-      // if (e is MixinElement) {
-      //   expect(constructors, isEmpty);
-      // } else if (configuration.withConstructors) {
-      //   _writeElements('constructors', constructors, _writeConstructorElement);
-      // }
-
-      // _writeElements('getters', f.getters, _writeGetterElement);
-      // _writeElements('setters', f.setters, _writeSetterElement);
-      // _writeMethods(e.methods);
-    });
-
-    _assertNonSyntheticElementSelf(e);
-  }
-
-  void _writeInstanceFragment(InstanceFragment f) {
-    _sink.writeIndentedLine(() {
-      switch (f) {
-        case ClassFragment():
-          // TODO(brianwilkerson): Figure out why we can't ask the fragments
-          //  these questions.
-          // _sink.writeIf(f.isAbstract, 'abstract ');
-          // _sink.writeIf(f.isMacro, 'macro ');
-          // _sink.writeIf(f.isSealed, 'sealed ');
-          // _sink.writeIf(f.isBase, 'base ');
-          // _sink.writeIf(f.isInterface, 'interface ');
-          // _sink.writeIf(f.isFinal, 'final ');
-          // _writeNotSimplyBounded(f);
-          // _sink.writeIf(f.isMixinClass, 'mixin ');
-          _sink.write('class ');
-        // _sink.writeIf(f.isMixinApplication, 'alias ');
-        case EnumFragment():
-          // _writeNotSimplyBounded(f);
-          _sink.write('enum ');
-        case ExtensionFragment():
-          _sink.write('extension ');
-        case ExtensionTypeFragment():
-          //   _sink.writeIf(
-          //     e.hasRepresentationSelfReference,
-          //     'hasRepresentationSelfReference ',
-          //   );
-          //   _sink.writeIf(
-          //     e.hasImplementsSelfReference,
-          //     'hasImplementsSelfReference ',
-          //   );
-          //   // _writeNotSimplyBounded(e);
-          _sink.write('extension type ');
-        case MixinFragment():
-          // _sink.writeIf(f.isBase, 'base ');
-          // _writeNotSimplyBounded(f);
-          _sink.write('mixin ');
-      }
-      var name = f.element.name;
-      if (name != null) {
-        _sink.write(name);
-      }
-      var offset = f.nameOffset;
-      if (offset != null) {
-        _sink.write(' @');
-        _sink.write(offset);
-      }
-    });
-    _sink.withIndent(() {
-      _writeFragmentReference(f);
-      _writeFragmentReference(f.previousFragment, label: 'previousFragment: ');
-      _writeFragmentReference(f.nextFragment, label: 'nextFragment: ');
-    });
-  }
-
-  void _writeLibraryFragment(LibraryFragment f) {
-    var reference = (f as CompilationUnitElementImpl).reference!;
-    _sink.writeIndentedLine(() {
-      _elementPrinter.writeReference(reference);
-    });
-
-    _sink.withIndent(() {
-      _writeFragmentReference(f.previousFragment, label: 'previousFragment: ');
-      _writeFragmentReference(f.nextFragment, label: 'nextFragment: ');
-
-      _writeMetadata(f.metadata);
-
-      if (configuration.withImports) {
-        var imports = f.libraryImports2.where((import) {
-          return configuration.withSyntheticDartCoreImport ||
-              !import.isSynthetic;
-        }).toList();
-        _writeElements(
-          'libraryImports',
-          imports,
-          _writeLibraryImport,
-        );
-      }
-      _writeElements('prefixes', f.prefixes, _writePrefixElement);
-      // _writeElements(
-      //     'libraryExports', f.libraryExports, _writeLibraryExportElement);
-      // _writeElements('parts', f.parts, _writePartElement);
-
-      _writeElements('classes', f.classes2, _writeInstanceFragment);
-      _writeElements('enums', f.enums2, _writeInstanceFragment);
-      _writeElements('extensions', f.extensions2, _writeInstanceFragment);
-      _writeElements(
-        'extensionTypes',
-        f.extensionTypes2,
-        _writeInstanceFragment,
-      );
-      _writeElements('mixins', f.mixins2, _writeInstanceFragment);
-      // _writeElements('typeAliases', f.typeAliases, _writeTypeAliasElement);
-      // _writeElements(
-      //   'topLevelVariables',
-      //   f.topLevelVariables,
-      //   _writePropertyInducingElement,
-      // );
-      // _writeElements(
-      //   'accessors',
-      //   f.accessors,
-      //   _writePropertyAccessorElement,
-      // );
-      // _writeElements('functions', f.functions, _writeFunctionElement);
-    });
-  }
-
-  void _writeLibraryImport(LibraryImport e) {
-    (e as LibraryImportElementImpl).location;
-
-    _sink.writeIndentedLine(() {
-      _writeDirectiveUri(e.uri);
-      _sink.writeIf(e.isSynthetic, ' synthetic');
-      // _writeImportElementPrefix(e.prefix);
-    });
-
-    _sink.withIndent(() {
-      _writeElementReference(e);
-      // _writeEnclosingElement(e);
-      _writeMetadata(e.metadata);
-      // _writeNamespaceCombinators(e.combinators);
-    });
-  }
-
-  void _writeMacroDiagnostics(Element2 e) {
-    void writeTypeAnnotationLocation(TypeAnnotationLocation location) {
-      switch (location) {
-        case AliasedTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('AliasedTypeLocation');
-        case ElementTypeLocation():
-          _sink.writelnWithIndent('ElementTypeLocation');
-          _sink.withIndent(() {
-            _elementPrinter.writeNamedElement('element', location.element);
-          });
-        case ExtendsClauseTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ExtendsClauseTypeLocation');
-        case FormalParameterTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('FormalParameterTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case ListIndexTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ListIndexTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case RecordNamedFieldTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('RecordNamedFieldTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case RecordPositionalFieldTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('RecordPositionalFieldTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case ReturnTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ReturnTypeLocation');
-        case VariableTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('VariableTypeLocation');
-        default:
-          // TODO(scheglov): Handle this case.
-          throw UnimplementedError('${location.runtimeType}');
-      }
-    }
-
-    /// Returns `true` if patterns were printed.
-    /// Returns `false` if no patterns configured.
-    bool printMessagePatterns(String message) {
-      var patterns = configuration.macroDiagnosticMessagePatterns;
-      if (patterns == null) {
-        return false;
-      }
-
-      _sink.writelnWithIndent('contains');
-      _sink.withIndent(() {
-        for (var pattern in patterns) {
-          if (message.contains(pattern)) {
-            _sink.writelnWithIndent(pattern);
-          }
-        }
-      });
-      return true;
-    }
-
-    void writeMessage(MacroDiagnosticMessage object) {
-      // Write the message.
-      if (!printMessagePatterns(object.message)) {
-        var message = object.message;
-        const stackTraceText = '#0';
-        var stackTraceIndex = message.indexOf(stackTraceText);
-        if (stackTraceIndex >= 0) {
-          var end = stackTraceIndex + stackTraceText.length;
-          var withoutStackTrace = message.substring(0, end);
-          if (configuration.withMacroStackTraces) {
-            _sink.writelnWithIndent('message:\n$message');
-          } else {
-            _sink.writelnWithIndent('message:\n$withoutStackTrace <cut>');
-          }
-        } else {
-          _sink.writelnWithIndent('message: $message');
-        }
-      }
-      // Write the target.
-      var target = object.target;
-      switch (target) {
-        case ApplicationMacroDiagnosticTarget():
-          _sink.writelnWithIndent('target: ApplicationMacroDiagnosticTarget');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent(
-              'annotationIndex: ${target.annotationIndex}',
-            );
-          });
-        case ElementMacroDiagnosticTarget():
-          _sink.writelnWithIndent('target: ElementMacroDiagnosticTarget');
-          _sink.withIndent(() {
-            _elementPrinter.writeNamedElement('element', target.element);
-          });
-        case ElementAnnotationMacroDiagnosticTarget():
-          _sink.writelnWithIndent(
-            'target: ElementAnnotationMacroDiagnosticTarget',
-          );
-          _sink.withIndent(() {
-            _elementPrinter.writeNamedElement('element', target.element);
-            _sink.writelnWithIndent(
-              'annotationIndex: ${target.annotationIndex}',
-            );
-          });
-        case TypeAnnotationMacroDiagnosticTarget():
-          _sink.writelnWithIndent(
-            'target: TypeAnnotationMacroDiagnosticTarget',
-          );
-          _sink.withIndent(() {
-            writeTypeAnnotationLocation(target.location);
-          });
-      }
-    }
-
-    if (e case MacroTargetElement macroTarget) {
-      _sink.writeElements(
-        'macroDiagnostics',
-        macroTarget.macroDiagnostics,
-        (diagnostic) {
-          switch (diagnostic) {
-            case ArgumentMacroDiagnostic():
-              _sink.writelnWithIndent('ArgumentMacroDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _sink.writelnWithIndent(
-                  'argumentIndex: ${diagnostic.argumentIndex}',
-                );
-                _sink.writelnWithIndent('message: ${diagnostic.message}');
-              });
-            case DeclarationsIntrospectionCycleDiagnostic():
-              _sink.writelnWithIndent(
-                'DeclarationsIntrospectionCycleDiagnostic',
-              );
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _elementPrinter.writeNamedElement(
-                  'introspectedElement',
-                  diagnostic.introspectedElement,
-                );
-                _sink.writeElements(
-                  'components',
-                  diagnostic.components,
-                  (component) {
-                    _sink.writelnWithIndent(
-                      'DeclarationsIntrospectionCycleComponent',
-                    );
-                    _sink.withIndent(() {
-                      _elementPrinter.writeNamedElement(
-                        'element',
-                        component.element,
-                      );
-                      _sink.writelnWithIndent(
-                        'annotationIndex: ${component.annotationIndex}',
-                      );
-                      _elementPrinter.writeNamedElement(
-                        'introspectedElement',
-                        component.introspectedElement,
-                      );
-                    });
-                  },
-                );
-              });
-            case ExceptionMacroDiagnostic():
-              _sink.writelnWithIndent('ExceptionMacroDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                if (!printMessagePatterns(diagnostic.message)) {
-                  _sink.writelnWithIndent(
-                    'message: ${diagnostic.message}',
-                  );
-                }
-                if (configuration.withMacroStackTraces) {
-                  _sink.writelnWithIndent(
-                    'stackTrace:\n${diagnostic.stackTrace}',
-                  );
-                }
-              });
-            case InvalidMacroTargetDiagnostic():
-              _sink.writelnWithIndent('InvalidMacroTargetDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _sink.writeElements(
-                  'supportedKinds',
-                  diagnostic.supportedKinds,
-                  (kindName) {
-                    _sink.writelnWithIndent(kindName);
-                  },
-                );
-              });
-            case MacroDiagnostic():
-              _sink.writelnWithIndent('MacroDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent('message: MacroDiagnosticMessage');
-                _sink.withIndent(() {
-                  writeMessage(diagnostic.message);
-                });
-                _sink.writeElements(
-                  'contextMessages',
-                  diagnostic.contextMessages,
-                  (message) {
-                    _sink.writelnWithIndent('MacroDiagnosticMessage');
-                    _sink.withIndent(() {
-                      writeMessage(message);
-                    });
-                  },
-                );
-                _sink.writelnWithIndent(
-                  'severity: ${diagnostic.severity.name}',
-                );
-                if (diagnostic.correctionMessage case var correctionMessage?) {
-                  _sink.writelnWithIndent(
-                    'correctionMessage: $correctionMessage',
-                  );
-                }
-              });
-            case NotAllowedDeclarationDiagnostic():
-              _sink.writelnWithIndent('NotAllowedDeclarationDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _sink.writelnWithIndent(
-                  'phase: ${diagnostic.phase.name}',
-                );
-                var nodeRangesStr = diagnostic.nodeRanges
-                    .map((r) => '(${r.offset}, ${r.length})')
-                    .join(' ');
-                _sink.writelnWithIndent('nodeRanges: $nodeRangesStr');
-                _sink.writeln('---');
-                _sink.write(diagnostic.code);
-                _sink.writeln('---');
-              });
-          }
-        },
-      );
-    }
-  }
-
-  void _writeMetadata(List<ElementAnnotation> annotations) {
-    if (configuration.withMetadata) {
-      if (annotations.isNotEmpty) {
-        _sink.writelnWithIndent('metadata');
-        _sink.withIndent(() {
-          for (var annotation in annotations) {
-            annotation as ElementAnnotationImpl;
-            _writeNode(annotation.annotationAst);
-          }
-        });
-      }
-    }
-  }
-
-  void _writePrefixElement(PrefixElement2 e) {
-    _sink.writeIndentedLine(() {
-      _writeElementName(e);
-    });
-
-    _sink.withIndent(() {
-      _writeElementReference(e);
-      // _writeEnclosingElement(e);
-    });
-  }
-
-  void _writeSinceSdkVersion(Version? version) {
-    if (version != null) {
-      _sink.writelnWithIndent('sinceSdkVersion: $version');
-    }
-  }
-
-  void _writeType(String name, DartType type) {
-    _elementPrinter.writeNamedType(name, type);
-
-    // if (configuration.withFunctionTypeParameters) {
-    //   if (type is FunctionType) {
-    //     _sink.withIndent(() {
-    //       // TODO(brianwilkerson): We need to define `parameters2` to return
-    //       //  `List<ParmaeterElement2>`.
-    //       _writeParameterElements(type.parameters);
-    //     });
-    //   }
-    // }
-  }
-
-  // void _writeTypeParameterElement(TypeParameterElement2 e) {
-  //   e as TypeParameterElementImpl;
-
-  //   _sink.writeIndentedLine(() {
-  //     _sink.write('${(e as TypeParameterElementImpl).variance.name} ');
-  //     _writeElementName(e);
-  //   });
-
-  //   _sink.withIndent(() {
-  //     _writeCodeRange(e);
-
-  //     var bound = e.bound;
-  //     if (bound != null) {
-  //       _writeType('bound', bound);
-  //     }
-
-  //     // var defaultType = e.defaultType;
-  //     // if (defaultType != null) {
-  //     //   _writeType('defaultType', defaultType);
-  //     // }
-
-  //     _writeMetadata(e.metadata);
-  //   });
-
-  //   _assertNonSyntheticElementSelf(e);
-  // }
-}
-
-/// Writes the canonical text presentation of elements.
-class _ElementWriter extends _AbstractElementWriter {
-  _ElementWriter({
-    required super.sink,
-    required super.elementPrinter,
-    required super.configuration,
-  });
-
   void writeLibraryElement(LibraryElementImpl e) {
-    expect(e.enclosingElement, isNull);
-
     _sink.writelnWithIndent('library');
     _sink.withIndent(() {
       var name = e.name;
@@ -939,28 +98,7 @@ class _ElementWriter extends _AbstractElementWriter {
 
       _writeLibraryOrAugmentationElement(e);
 
-      for (var part in e.parts) {
-        if (part.uri case DirectiveUriWithUnitImpl uri) {
-          expect(uri.unit.libraryOrAugmentationElement, same(e));
-        }
-      }
-
-      _writeElements('parts', e.parts, (part) {
-        _sink.writelnWithIndent(_idMap[part]);
-      });
-
-      _writeElements('units', e.units, (unit) {
-        _sink.writeIndent();
-        _elementPrinter.writeElement(unit);
-        _sink.withIndent(() {
-          _writeUnitElement(unit);
-        });
-      });
-
-      // All fragments have this library.
-      for (var unit in e.units) {
-        expect(unit.library, same(e));
-      }
+      _writeElements('parts', e.parts, _writePartElement);
 
       if (configuration.withExportScope) {
         _sink.writelnWithIndent('exportedReferences');
@@ -983,27 +121,40 @@ class _ElementWriter extends _AbstractElementWriter {
     expect(element.nonSynthetic, same(element));
   }
 
+  ResolvedAstPrinter _createAstPrinter() {
+    return ResolvedAstPrinter(
+      sink: _sink,
+      elementPrinter: _elementPrinter,
+      configuration: ResolvedNodeTextConfiguration()
+        // TODO(scheglov): https://github.com/dart-lang/sdk/issues/49101
+        ..withParameterElements = false,
+      withOffsets: true,
+    );
+  }
+
   void _validateAugmentedInstanceElement(InstanceElementImpl e) {
-    InstanceElementImpl? current = e;
-    while (current != null) {
-      expect(current.augmented, same(e.augmented));
-      expect(current.thisType, same(e.thisType));
-      switch (e) {
-        case ExtensionElementImpl():
-          current as ExtensionElementImpl;
-          expect(current.extendedType, same(e.extendedType));
-        case ExtensionTypeElementImpl():
-          current as ExtensionTypeElementImpl;
-          expect(current.primaryConstructor, same(e.primaryConstructor));
-          expect(current.representation, same(e.representation));
-          expect(current.typeErasure, same(e.typeErasure));
-      }
-      current = current.augmentationTarget;
+    final augmented = e.augmented;
+
+    // Find the end of the augmentations chain.
+    // It will be a declaration in valid code.
+    InstanceElementImpl? endOfAugmentations = e;
+    while (endOfAugmentations != null && endOfAugmentations.isAugmentation) {
+      endOfAugmentations = endOfAugmentations.augmentationTarget;
     }
+
+    // If does not end with a declaration.
+    if (endOfAugmentations == null) {
+      expect(augmented, isNull);
+      return;
+    }
+
+    // ...otherwise we must have the augmented data.
+    expect(augmented, isNotNull);
+    expect(augmented, same(endOfAugmentations.augmented));
   }
 
   void _writeAugmentation(ElementImpl e) {
-    if (e case AugmentableElement(:var augmentation?)) {
+    if (e case AugmentableElement(:final augmentation?)) {
       _elementPrinter.writeNamedElement('augmentation', augmentation);
     }
   }
@@ -1012,14 +163,13 @@ class _ElementWriter extends _AbstractElementWriter {
     _writeLibraryOrAugmentationElement(e);
   }
 
-  void _writeAugmentationImportElement(AugmentationImportElementImpl e) {
-    var uri = e.uri;
+  void _writeAugmentationImportElement(AugmentationImportElement e) {
+    final uri = e.uri;
     _sink.writeIndentedLine(() {
       _writeDirectiveUri(e.uri);
     });
 
     _sink.withIndent(() {
-      _writeEnclosingElement(e);
       _writeMetadata(e);
       if (uri is DirectiveUriWithAugmentationImpl) {
         _writeAugmentationElement(uri.augmentation);
@@ -1029,22 +179,20 @@ class _ElementWriter extends _AbstractElementWriter {
 
   void _writeAugmentationTarget(ElementImpl e) {
     if (e is AugmentableElement && e.isAugmentation) {
-      if (e.augmentationTarget case var target?) {
-        _elementPrinter.writeNamedElement(
-          'augmentationTarget',
-          target,
-        );
-      } else if (e.augmentationTargetAny case var targetAny?) {
-        _elementPrinter.writeNamedElement(
-          'augmentationTargetAny',
-          targetAny,
-        );
-      }
+      _elementPrinter.writeNamedElement(
+        'augmentationTarget',
+        e.augmentationTarget,
+      );
     }
   }
 
   void _writeAugmented(InstanceElementImpl e) {
-    if (e.augmentationTarget != null) {
+    // TODO(scheglov): enable for other types
+    if (!(e is ClassElementImpl || e is MixinElementImpl)) {
+      return;
+    }
+
+    if (e.isAugmentation) {
       return;
     }
 
@@ -1056,10 +204,13 @@ class _ElementWriter extends _AbstractElementWriter {
       }
     }
 
-    var augmented = e.augmented;
+    final augmented = e.augmented;
+    if (augmented == null) {
+      return;
+    }
 
     void writeFields() {
-      var sorted = augmented.fields.sortedBy((e) => e.name);
+      final sorted = augmented.fields.sortedBy((e) => e.name);
       _elementPrinter.writeElementList('fields', sorted);
     }
 
@@ -1068,19 +219,19 @@ class _ElementWriter extends _AbstractElementWriter {
         return;
       }
       if (augmented is AugmentedInterfaceElementImpl) {
-        var sorted = augmented.constructors.sortedBy((e) => e.name);
+        final sorted = augmented.constructors.sortedBy((e) => e.name);
         expect(sorted, isNotEmpty);
         _elementPrinter.writeElementList('constructors', sorted);
       }
     }
 
     void writeAccessors() {
-      var sorted = augmented.accessors.sortedBy((e) => e.name);
+      final sorted = augmented.accessors.sortedBy((e) => e.name);
       _elementPrinter.writeElementList('accessors', sorted);
     }
 
     void writeMethods() {
-      var sorted = augmented.methods.sortedBy((e) => e.name);
+      final sorted = augmented.methods.sortedBy((e) => e.name);
       _elementPrinter.writeElementList('methods', sorted);
     }
 
@@ -1089,27 +240,6 @@ class _ElementWriter extends _AbstractElementWriter {
       switch (augmented) {
         case AugmentedClassElement():
           _elementPrinter.writeTypeList('mixins', augmented.mixins);
-          _elementPrinter.writeTypeList('interfaces', augmented.interfaces);
-          writeFields();
-          writeConstructors();
-          writeAccessors();
-          writeMethods();
-        case AugmentedEnumElement():
-          _elementPrinter.writeTypeList('mixins', augmented.mixins);
-          _elementPrinter.writeTypeList('interfaces', augmented.interfaces);
-          writeFields();
-          _elementPrinter.writeElementList(
-            'constants',
-            augmented.constants.sortedBy((e) => e.name),
-          );
-          writeConstructors();
-          writeAccessors();
-          writeMethods();
-        case AugmentedExtensionElement():
-          writeFields();
-          writeAccessors();
-          writeMethods();
-        case AugmentedExtensionTypeElement():
           _elementPrinter.writeTypeList('interfaces', augmented.interfaces);
           writeFields();
           writeConstructors();
@@ -1124,10 +254,8 @@ class _ElementWriter extends _AbstractElementWriter {
           writeFields();
           writeAccessors();
           writeMethods();
-        default:
-          // TODO(scheglov): Add other types and properties
-          throw UnimplementedError('${e.runtimeType}');
       }
+      // TODO(scheglov): Add other types and properties
     });
   }
 
@@ -1151,9 +279,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
   void _writeCodeRange(Element e) {
     if (configuration.withCodeRanges && !e.isSynthetic) {
-      if (e is MaybeAugmentedInstanceElementMixin) {
-        e = e.declaration!;
-      }
       e as ElementImpl;
       _sink.writelnWithIndent('codeOffset: ${e.codeOffset}');
       _sink.writelnWithIndent('codeLength: ${e.codeLength}');
@@ -1195,7 +320,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -1219,7 +343,7 @@ class _ElementWriter extends _AbstractElementWriter {
 
       var superConstructor = e.superConstructor;
       if (superConstructor != null) {
-        var enclosingElement = superConstructor.enclosingElement;
+        final enclosingElement = superConstructor.enclosingElement;
         if (enclosingElement is ClassElement &&
             !enclosingElement.isDartCoreObject) {
           _elementPrinter.writeNamedElement(
@@ -1250,7 +374,27 @@ class _ElementWriter extends _AbstractElementWriter {
       expect(e.nameOffset, -1);
       expect(e.nonSynthetic, same(e.enclosingElement));
     } else {
-      expect(e.nameOffset, isPositive);
+      if (!e.isTempAugmentation) {
+        expect(e.nameOffset, isPositive);
+      }
+    }
+  }
+
+  void _writeDirectiveUri(DirectiveUri uri) {
+    if (uri is DirectiveUriWithAugmentationImpl) {
+      _sink.write('${uri.augmentation.source.uri}');
+    } else if (uri is DirectiveUriWithLibraryImpl) {
+      _sink.write('${uri.library.source.uri}');
+    } else if (uri is DirectiveUriWithUnit) {
+      _sink.write('${uri.unit.source.uri}');
+    } else if (uri is DirectiveUriWithSource) {
+      _sink.write("source '${uri.source.uri}'");
+    } else if (uri is DirectiveUriWithRelativeUri) {
+      _sink.write("relativeUri '${uri.relativeUri}'");
+    } else if (uri is DirectiveUriWithRelativeUriString) {
+      _sink.write("relativeUriString '${uri.relativeUriString}'");
+    } else {
+      _sink.write('noRelativeUriString');
     }
   }
 
@@ -1270,76 +414,81 @@ class _ElementWriter extends _AbstractElementWriter {
     }
   }
 
-  void _writeEnclosingElement(ElementImpl e) {
-    _elementPrinter.writeNamedElement(
-      'enclosingElement',
-      e.enclosingElement,
-    );
-
-    switch (e) {
-      case CompilationUnitElementImpl():
-        if (identical(e.library.definingCompilationUnit, e)) {
-          expect(e.enclosingElement3, isNull);
-        } else {
-          expect(
-            e.enclosingElement3,
-            TypeMatcher<CompilationUnitElementImpl>(),
-          );
-          _elementPrinter.writeNamedElement(
-            'enclosingElement3',
-            e.enclosingElement3,
-          );
+  void _writeElements<T extends Object>(
+    String name,
+    List<T> elements,
+    void Function(T) f,
+  ) {
+    var filtered = elements.where(configuration.filter).toList();
+    if (filtered.isNotEmpty) {
+      _sink.writelnWithIndent(name);
+      _sink.withIndent(() {
+        for (var element in filtered) {
+          f(element);
         }
-      case LibraryImportElementImpl():
-      case LibraryExportElementImpl():
-      case PartElementImpl():
-      case PrefixElementImpl():
-        expect(
-          e.enclosingElement3,
-          TypeMatcher<CompilationUnitElementImpl>(),
-        );
-        _elementPrinter.writeNamedElement(
-          'enclosingElement3',
-          e.enclosingElement3,
-        );
-      default:
-        expect(e.enclosingElement3, same(e.enclosingElement));
+      });
     }
   }
 
+  void _writeExportedReferences(LibraryElementImpl e) {
+    final exportedReferences = e.exportedReferences.toList();
+    exportedReferences.sortBy((e) => e.reference.toString());
+
+    for (final exported in exportedReferences) {
+      _sink.writeIndentedLine(() {
+        if (exported is ExportedReferenceDeclared) {
+          _sink.write('declared ');
+        } else if (exported is ExportedReferenceExported) {
+          _sink.write('exported${exported.locations} ');
+        }
+        _elementPrinter.writeReference(exported.reference);
+      });
+    }
+  }
+
+  void _writeExportElement(LibraryExportElement e) {
+    e.location;
+
+    _sink.writeIndentedLine(() {
+      _writeDirectiveUri(e.uri);
+    });
+
+    _sink.withIndent(() {
+      _writeMetadata(e);
+      _writeNamespaceCombinators(e.combinators);
+    });
+
+    _assertNonSyntheticElementSelf(e);
+  }
+
   void _writeExportNamespace(LibraryElement e) {
-    var map = e.exportNamespace.definedNames;
-    var sortedEntries = map.entries.sortedBy((entry) => entry.key);
-    for (var entry in sortedEntries) {
+    final map = e.exportNamespace.definedNames;
+    final sortedEntries = map.entries.sortedBy((entry) => entry.key);
+    for (final entry in sortedEntries) {
       _elementPrinter.writeNamedElement(entry.key, entry.value);
     }
   }
 
   void _writeExtensionElement(ExtensionElementImpl e) {
     _sink.writeIndentedLine(() {
-      _sink.writeIf(e.isAugmentation, 'augment ');
       _writeName(e);
     });
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
       _writeCodeRange(e);
       _writeTypeParameterElements(e.typeParameters);
-      if (e.augmentationTarget == null) {
-        _writeType('extendedType', e.extendedType);
-      }
+      _writeType('extendedType', e.extendedType);
       _writeMacroDiagnostics(e);
-      _writeAugmentationTarget(e);
-      _writeAugmentation(e);
+    });
+
+    _sink.withIndent(() {
       _writeElements('fields', e.fields, _writePropertyInducingElement);
       _writeElements('accessors', e.accessors, _writePropertyAccessorElement);
       _writeMethods(e.methods);
-      _validateAugmentedInstanceElement(e);
-      _writeAugmented(e);
     });
 
     _assertNonSyntheticElementSelf(e);
@@ -1356,6 +505,35 @@ class _ElementWriter extends _AbstractElementWriter {
     }
   }
 
+  void _writeFieldNameNonPromotabilityInfo(
+    Map<String, FieldNameNonPromotabilityInfo>? info,
+  ) {
+    if (info == null || info.isEmpty) {
+      return;
+    }
+
+    _sink.writelnWithIndent('fieldNameNonPromotabilityInfo');
+    _sink.withIndent(() {
+      for (final entry in info.entries) {
+        _sink.writelnWithIndent(entry.key);
+        _sink.withIndent(() {
+          _elementPrinter.writeElementList(
+            'conflictingFields',
+            entry.value.conflictingFields,
+          );
+          _elementPrinter.writeElementList(
+            'conflictingGetters',
+            entry.value.conflictingGetters,
+          );
+          _elementPrinter.writeElementList(
+            'conflictingNsmClasses',
+            entry.value.conflictingNsmClasses,
+          );
+        });
+      }
+    });
+  }
+
   void _writeFunctionElement(FunctionElementImpl e) {
     expect(e.isStatic, isTrue);
 
@@ -1368,7 +546,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -1384,7 +561,22 @@ class _ElementWriter extends _AbstractElementWriter {
     _assertNonSyntheticElementSelf(e);
   }
 
-  void _writeImportElementPrefix(ImportElementPrefixImpl? prefix) {
+  void _writeImportElement(LibraryImportElement e) {
+    e.location;
+
+    _sink.writeIndentedLine(() {
+      _writeDirectiveUri(e.uri);
+      _sink.writeIf(e.isSynthetic, ' synthetic');
+      _writeImportElementPrefix(e.prefix);
+    });
+
+    _sink.withIndent(() {
+      _writeMetadata(e);
+      _writeNamespaceCombinators(e.combinators);
+    });
+  }
+
+  void _writeImportElementPrefix(ImportElementPrefix? prefix) {
     if (prefix != null) {
       _sink.writeIf(prefix is DeferredImportElementPrefix, ' deferred');
       _sink.write(' as ');
@@ -1434,7 +626,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -1445,7 +636,7 @@ class _ElementWriter extends _AbstractElementWriter {
       _writeAugmentation(e);
 
       if (!e.isAugmentation) {
-        var supertype = e.supertype;
+        final supertype = e.supertype;
         if (supertype != null &&
             (supertype.element.name != 'Object' || e.mixins.isNotEmpty)) {
           _writeType('supertype', supertype);
@@ -1453,12 +644,10 @@ class _ElementWriter extends _AbstractElementWriter {
       }
 
       if (e is ExtensionTypeElementImpl) {
-        if (e.augmentationTarget == null) {
-          _elementPrinter.writeNamedElement('representation', e.representation);
-          _elementPrinter.writeNamedElement(
-              'primaryConstructor', e.primaryConstructor);
-          _elementPrinter.writeNamedType('typeErasure', e.typeErasure);
-        }
+        _elementPrinter.writeNamedElement('representation', e.representation);
+        _elementPrinter.writeNamedElement(
+            'primaryConstructor', e.primaryConstructor);
+        _elementPrinter.writeNamedType('typeErasure', e.typeErasure);
       }
 
       if (e is MixinElementImpl) {
@@ -1472,7 +661,7 @@ class _ElementWriter extends _AbstractElementWriter {
       _elementPrinter.writeTypeList('interfaces', e.interfaces);
 
       if (configuration.withAllSupertypes) {
-        var sorted = e.allSupertypes.sortedBy((t) => t.element.name);
+        final sorted = e.allSupertypes.sortedBy((t) => t.element.name);
         _elementPrinter.writeTypeList('allSupertypes', sorted);
       }
 
@@ -1497,11 +686,11 @@ class _ElementWriter extends _AbstractElementWriter {
 
   void _writeLibraryAugmentations(LibraryElementImpl e) {
     if (configuration.withLibraryAugmentations) {
-      var augmentations = e.augmentations;
+      final augmentations = e.augmentations;
       if (augmentations.isNotEmpty) {
         _sink.writelnWithIndent('augmentations');
         _sink.withIndent(() {
-          for (var element in augmentations) {
+          for (final element in augmentations) {
             _sink.writeIndent();
             _elementPrinter.writeElement(element);
           }
@@ -1510,42 +699,17 @@ class _ElementWriter extends _AbstractElementWriter {
     }
   }
 
-  void _writeLibraryExportElement(LibraryExportElementImpl e) {
-    e.location;
-
-    _sink.writeIndentedLine(() {
-      _writeDirectiveUri(e.uri);
-    });
-
-    _sink.withIndent(() {
-      _writeReference(e);
-      _writeEnclosingElement(e);
-      _writeMetadata(e);
-      _writeNamespaceCombinators(e.combinators);
-    });
-
-    _assertNonSyntheticElementSelf(e);
-  }
-
-  void _writeLibraryImportElement(LibraryImportElementImpl e) {
-    e.location;
-
-    _sink.writeIndentedLine(() {
-      _writeDirectiveUri(e.uri);
-      _sink.writeIf(e.isSynthetic, ' synthetic');
-      _writeImportElementPrefix(e.prefix);
-    });
-
-    _sink.withIndent(() {
-      _writeReference(e);
-      _writeEnclosingElement(e);
-      _writeMetadata(e);
-      _writeNamespaceCombinators(e.combinators);
-    });
-  }
-
   void _writeLibraryOrAugmentationElement(LibraryOrAugmentationElementImpl e) {
     _writeReference(e);
+
+    if (e is LibraryAugmentationElementImpl) {
+      if (e.macroGenerated case final macroGenerated?) {
+        _sink.writelnWithIndent('macroGeneratedCode');
+        _sink.writeln('---');
+        _sink.write(macroGenerated.code);
+        _sink.writeln('---');
+      }
+    }
 
     _writeDocumentation(e);
     _writeMetadata(e);
@@ -1555,24 +719,16 @@ class _ElementWriter extends _AbstractElementWriter {
       var imports = e.libraryImports.where((import) {
         return configuration.withSyntheticDartCoreImport || !import.isSynthetic;
       }).toList();
-      _writeElements(
-        'libraryImports',
-        imports,
-        _writeLibraryImportElement,
-      );
-      _writeElements('prefixes', e.prefixes, _writePrefixElement);
+      _writeElements('imports', imports, _writeImportElement);
     }
 
-    _writeElements(
-      'libraryExports',
-      e.libraryExports,
-      _writeLibraryExportElement,
-    );
+    _writeElements('exports', e.libraryExports, _writeExportElement);
 
-    var definingUnit = e.definingCompilationUnit;
-    expect(definingUnit.libraryOrAugmentationElement, same(e));
-    if (configuration.filter(definingUnit)) {
-      _elementPrinter.writeNamedElement('definingUnit', definingUnit);
+    if (configuration.filter(e.definingCompilationUnit)) {
+      _sink.writelnWithIndent('definingUnit');
+      _sink.withIndent(() {
+        _writeUnitElement(e.definingCompilationUnit);
+      });
     }
 
     if (e is LibraryElementImpl) {
@@ -1584,83 +740,18 @@ class _ElementWriter extends _AbstractElementWriter {
   }
 
   void _writeMacroDiagnostics(Element e) {
-    void writeTypeAnnotationLocation(TypeAnnotationLocation location) {
-      switch (location) {
-        case AliasedTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('AliasedTypeLocation');
-        case ElementTypeLocation():
-          _sink.writelnWithIndent('ElementTypeLocation');
-          _sink.withIndent(() {
-            _elementPrinter.writeNamedElement('element', location.element);
-          });
-        case ExtendsClauseTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ExtendsClauseTypeLocation');
-        case FormalParameterTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('FormalParameterTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case ListIndexTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ListIndexTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case RecordNamedFieldTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('RecordNamedFieldTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case RecordPositionalFieldTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('RecordPositionalFieldTypeLocation');
-          _sink.withIndent(() {
-            _sink.writelnWithIndent('index: ${location.index}');
-          });
-        case ReturnTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('ReturnTypeLocation');
-        case VariableTypeLocation():
-          writeTypeAnnotationLocation(location.parent);
-          _sink.writelnWithIndent('VariableTypeLocation');
-        default:
-          // TODO(scheglov): Handle this case.
-          throw UnimplementedError('${location.runtimeType}');
-      }
-    }
-
-    /// Returns `true` if patterns were printed.
-    /// Returns `false` if no patterns configured.
-    bool printMessagePatterns(String message) {
-      var patterns = configuration.macroDiagnosticMessagePatterns;
-      if (patterns == null) {
-        return false;
-      }
-
-      _sink.writelnWithIndent('contains');
-      _sink.withIndent(() {
-        for (var pattern in patterns) {
-          if (message.contains(pattern)) {
-            _sink.writelnWithIndent(pattern);
-          }
-        }
-      });
-      return true;
-    }
-
     void writeMessage(MacroDiagnosticMessage object) {
       // Write the message.
-      if (!printMessagePatterns(object.message)) {
-        var message = object.message;
-        const stackTraceText = '#0';
-        var stackTraceIndex = message.indexOf(stackTraceText);
+      final validator = configuration.macroDiagnosticMessageValidator;
+      if (validator != null) {
+        validator(object.message);
+      } else {
+        final message = object.message;
+        const stackTraceText = 'Stack trace:';
+        final stackTraceIndex = message.indexOf(stackTraceText);
         if (stackTraceIndex >= 0) {
-          var end = stackTraceIndex + stackTraceText.length;
-          var withoutStackTrace = message.substring(0, end);
+          final end = stackTraceIndex + stackTraceText.length;
+          final withoutStackTrace = message.substring(0, end);
           if (configuration.withMacroStackTraces) {
             _sink.writelnWithIndent('message:\n$message');
           } else {
@@ -1671,7 +762,7 @@ class _ElementWriter extends _AbstractElementWriter {
         }
       }
       // Write the target.
-      var target = object.target;
+      final target = object.target;
       switch (target) {
         case ApplicationMacroDiagnosticTarget():
           _sink.writelnWithIndent('target: ApplicationMacroDiagnosticTarget');
@@ -1685,27 +776,10 @@ class _ElementWriter extends _AbstractElementWriter {
           _sink.withIndent(() {
             _elementPrinter.writeNamedElement('element', target.element);
           });
-        case ElementAnnotationMacroDiagnosticTarget():
-          _sink.writelnWithIndent(
-            'target: ElementAnnotationMacroDiagnosticTarget',
-          );
-          _sink.withIndent(() {
-            _elementPrinter.writeNamedElement('element', target.element);
-            _sink.writelnWithIndent(
-              'annotationIndex: ${target.annotationIndex}',
-            );
-          });
-        case TypeAnnotationMacroDiagnosticTarget():
-          _sink.writelnWithIndent(
-            'target: TypeAnnotationMacroDiagnosticTarget',
-          );
-          _sink.withIndent(() {
-            writeTypeAnnotationLocation(target.location);
-          });
       }
     }
 
-    if (e case MacroTargetElement macroTarget) {
+    if (e case final MacroTargetElement macroTarget) {
       _sink.writeElements(
         'macroDiagnostics',
         macroTarget.macroDiagnostics,
@@ -1726,66 +800,35 @@ class _ElementWriter extends _AbstractElementWriter {
               _sink.writelnWithIndent(
                 'DeclarationsIntrospectionCycleDiagnostic',
               );
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _elementPrinter.writeNamedElement(
-                  'introspectedElement',
-                  diagnostic.introspectedElement,
-                );
-                _sink.writeElements(
-                  'components',
-                  diagnostic.components,
-                  (component) {
-                    _sink.writelnWithIndent(
-                      'DeclarationsIntrospectionCycleComponent',
+              _sink.writeElements(
+                'components',
+                diagnostic.components,
+                (component) {
+                  _sink.writelnWithIndent(
+                    'DeclarationsIntrospectionCycleComponent',
+                  );
+                  _sink.withIndent(() {
+                    _elementPrinter.writeNamedElement(
+                      'element',
+                      component.element,
                     );
-                    _sink.withIndent(() {
-                      _elementPrinter.writeNamedElement(
-                        'element',
-                        component.element,
-                      );
-                      _sink.writelnWithIndent(
-                        'annotationIndex: ${component.annotationIndex}',
-                      );
-                      _elementPrinter.writeNamedElement(
-                        'introspectedElement',
-                        component.introspectedElement,
-                      );
-                    });
-                  },
-                );
-              });
+                    _sink.writelnWithIndent(
+                      'annotationIndex: ${component.annotationIndex}',
+                    );
+                  });
+                },
+              );
             case ExceptionMacroDiagnostic():
               _sink.writelnWithIndent('ExceptionMacroDiagnostic');
               _sink.withIndent(() {
                 _sink.writelnWithIndent(
                   'annotationIndex: ${diagnostic.annotationIndex}',
                 );
-                if (!printMessagePatterns(diagnostic.message)) {
-                  _sink.writelnWithIndent(
-                    'message: ${diagnostic.message}',
-                  );
-                }
-                if (configuration.withMacroStackTraces) {
-                  _sink.writelnWithIndent(
-                    'stackTrace:\n${diagnostic.stackTrace}',
-                  );
-                }
-              });
-            case InvalidMacroTargetDiagnostic():
-              _sink.writelnWithIndent('InvalidMacroTargetDiagnostic');
-              _sink.withIndent(() {
                 _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
+                  'message: ${diagnostic.message}',
                 );
-                _sink.writeElements(
-                  'supportedKinds',
-                  diagnostic.supportedKinds,
-                  (kindName) {
-                    _sink.writelnWithIndent(kindName);
-                  },
+                _sink.writelnWithIndent(
+                  'stackTrace:\n${diagnostic.stackTrace}',
                 );
               });
             case MacroDiagnostic():
@@ -1808,28 +851,6 @@ class _ElementWriter extends _AbstractElementWriter {
                 _sink.writelnWithIndent(
                   'severity: ${diagnostic.severity.name}',
                 );
-                if (diagnostic.correctionMessage case var correctionMessage?) {
-                  _sink.writelnWithIndent(
-                    'correctionMessage: $correctionMessage',
-                  );
-                }
-              });
-            case NotAllowedDeclarationDiagnostic():
-              _sink.writelnWithIndent('NotAllowedDeclarationDiagnostic');
-              _sink.withIndent(() {
-                _sink.writelnWithIndent(
-                  'annotationIndex: ${diagnostic.annotationIndex}',
-                );
-                _sink.writelnWithIndent(
-                  'phase: ${diagnostic.phase.name}',
-                );
-                var nodeRangesStr = diagnostic.nodeRanges
-                    .map((r) => '(${r.offset}, ${r.length})')
-                    .join(' ');
-                _sink.writelnWithIndent('nodeRanges: $nodeRangesStr');
-                _sink.writeln('---');
-                _sink.write(diagnostic.code);
-                _sink.writeln('---');
               });
           }
         },
@@ -1866,7 +887,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -1895,7 +915,7 @@ class _ElementWriter extends _AbstractElementWriter {
   }
 
   void _writeName(Element e) {
-    String name;
+    final String name;
     switch (e) {
       case ExtensionElement(name: null):
         name = '<null>';
@@ -1914,19 +934,25 @@ class _ElementWriter extends _AbstractElementWriter {
 
   void _writeNamespaceCombinator(NamespaceCombinator e) {
     _sink.writeIndentedLine(() {
-      switch (e) {
-        case ShowElementCombinator():
-          _sink.write('show: ');
-          _sink.write(e.shownNames.join(', '));
-        case HideElementCombinator():
-          _sink.write('hide: ');
-          _sink.write(e.hiddenNames.join(', '));
+      if (e is ShowElementCombinator) {
+        _sink.write('show: ');
+        _sink.write(e.shownNames.join(', '));
+      } else if (e is HideElementCombinator) {
+        _sink.write('hide: ');
+        _sink.write(e.hiddenNames.join(', '));
       }
     });
   }
 
   void _writeNamespaceCombinators(List<NamespaceCombinator> elements) {
     _writeElements('combinators', elements, _writeNamespaceCombinator);
+  }
+
+  void _writeNode(AstNode node) {
+    _sink.writeIndent();
+    node.accept(
+      _createAstPrinter(),
+    );
   }
 
   void _writeNonSyntheticElement(Element e) {
@@ -1973,7 +999,6 @@ class _ElementWriter extends _AbstractElementWriter {
       if (e is FieldFormalParameterElement) {
         _sink.write('this.');
       } else if (e is SuperFormalParameterElement) {
-        _sink.writeIf(e.hasDefaultValue, 'hasDefaultValue ');
         _sink.write('super.');
       }
 
@@ -1999,56 +1024,39 @@ class _ElementWriter extends _AbstractElementWriter {
     _writeElements('parameters', elements, _writeParameterElement);
   }
 
-  void _writePartElement(PartElementImpl e) {
-    _sink.writelnWithIndent(_idMap[e]);
-
-    _sink.withIndent(() {
-      var uri = e.uri;
-      _sink.writeIndentedLine(() {
-        _sink.write('uri: ');
-        _writeDirectiveUri(e.uri);
-      });
-
-      _writeEnclosingElement(e);
-      _writeMetadata(e);
-
-      if (uri is DirectiveUriWithUnitImpl) {
-        _elementPrinter.writeNamedElement('unit', uri.unit);
-      }
-    });
-  }
-
-  void _writePrefixElement(PrefixElementImpl e) {
+  void _writePartElement(PartElement e) {
+    final uri = e.uri;
     _sink.writeIndentedLine(() {
-      _writeName(e);
+      _writeDirectiveUri(e.uri);
     });
 
     _sink.withIndent(() {
-      _writeReference(e);
-      _writeEnclosingElement(e);
+      _writeMetadata(e);
+      if (uri is DirectiveUriWithUnitImpl) {
+        _writeUnitElement(uri.unit);
+      }
     });
   }
 
   void _writePropertyAccessorElement(PropertyAccessorElement e) {
     e as PropertyAccessorElementImpl;
 
-    var variable = e.variable2;
-    if (variable != null) {
-      var variableEnclosing = variable.enclosingElement;
-      if (variableEnclosing is CompilationUnitElement) {
-        expect(variableEnclosing.topLevelVariables, contains(variable));
-      } else if (variableEnclosing is InterfaceElement) {
-        expect(variableEnclosing.fields, contains(variable));
-      }
-    } else {
-      expect(e.isAugmentation, isTrue);
-      expect(e.augmentationTarget, isNull);
+    PropertyInducingElement variable = e.variable;
+    expect(variable, isNotNull);
+
+    var variableEnclosing = variable.enclosingElement;
+    if (variableEnclosing is CompilationUnitElement) {
+      expect(variableEnclosing.topLevelVariables, contains(variable));
+    } else if (variableEnclosing is InterfaceElement) {
+      expect(variableEnclosing.fields, contains(variable));
     }
 
     if (e.isSynthetic) {
       expect(e.nameOffset, -1);
     } else {
-      expect(e.nameOffset, isPositive);
+      if (!e.isTempAugmentation) {
+        expect(e.nameOffset, isPositive);
+      }
       _assertNonSyntheticElementSelf(e);
     }
 
@@ -2072,17 +1080,12 @@ class _ElementWriter extends _AbstractElementWriter {
     void writeLinking() {
       if (configuration.withPropertyLinking) {
         _sink.writelnWithIndent('id: ${_idMap[e]}');
-        if (e.variable2 case var variable?) {
-          _sink.writelnWithIndent('variable: ${_idMap[variable]}');
-        } else {
-          _sink.writelnWithIndent('variable: <null>');
-        }
+        _sink.writelnWithIndent('variable: ${_idMap[e.variable]}');
       }
     }
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -2112,7 +1115,9 @@ class _ElementWriter extends _AbstractElementWriter {
         expect(e.getter, isNotNull);
       }
 
-      expect(e.nameOffset, isPositive);
+      if (!e.isTempAugmentation) {
+        expect(e.nameOffset, isPositive);
+      }
       _assertNonSyntheticElementSelf(e);
     }
 
@@ -2138,12 +1143,12 @@ class _ElementWriter extends _AbstractElementWriter {
       if (configuration.withPropertyLinking) {
         _sink.writelnWithIndent('id: ${_idMap[e]}');
 
-        var getter = e.getter;
+        final getter = e.getter;
         if (getter != null) {
           _sink.writelnWithIndent('getter: ${_idMap[getter]}');
         }
 
-        var setter = e.setter;
+        final setter = e.setter;
         if (setter != null) {
           _sink.writelnWithIndent('setter: ${_idMap[setter]}');
         }
@@ -2152,7 +1157,6 @@ class _ElementWriter extends _AbstractElementWriter {
 
     _sink.withIndent(() {
       _writeReference(e);
-      _writeEnclosingElement(e);
       _writeDocumentation(e);
       _writeMetadata(e);
       _writeSinceSdkVersion(e);
@@ -2167,6 +1171,19 @@ class _ElementWriter extends _AbstractElementWriter {
       _writeAugmentationTarget(e);
       _writeAugmentation(e);
     });
+  }
+
+  void _writeReference(ElementImpl e) {
+    if (!configuration.withReferences) {
+      return;
+    }
+
+    if (e.reference case final reference?) {
+      _sink.writeIndentedLine(() {
+        _sink.write('reference: ');
+        _elementPrinter.writeReference(reference);
+      });
+    }
   }
 
   void _writeReturnType(DartType type) {
@@ -2188,7 +1205,7 @@ class _ElementWriter extends _AbstractElementWriter {
   }
 
   void _writeSinceSdkVersion(Element e) {
-    var sinceSdkVersion = e.sinceSdkVersion;
+    final sinceSdkVersion = e.sinceSdkVersion;
     if (sinceSdkVersion != null) {
       _sink.writelnWithIndent('sinceSdkVersion: $sinceSdkVersion');
     }
@@ -2224,7 +1241,6 @@ class _ElementWriter extends _AbstractElementWriter {
     e as TypeAliasElementImpl;
 
     _sink.writeIndentedLine(() {
-      _sink.writeIf(e.isAugmentation, 'augment ');
       _sink.writeIf(e.isFunctionTypeAliasBased, 'functionTypeAliasBased ');
       _sink.writeIf(!e.isSimplyBounded, 'notSimplyBounded ');
       _writeName(e);
@@ -2250,10 +1266,6 @@ class _ElementWriter extends _AbstractElementWriter {
           _writeReturnType(aliasedElement.returnType);
         });
       }
-
-      _writeMacroDiagnostics(e);
-      _writeAugmentationTarget(e);
-      _writeAugmentation(e);
     });
 
     _assertNonSyntheticElementSelf(e);
@@ -2285,7 +1297,7 @@ class _ElementWriter extends _AbstractElementWriter {
     e as TypeParameterElementImpl;
 
     _sink.writeIndentedLine(() {
-      _sink.write('${e.variance.name} ');
+      _sink.write('${e.variance} ');
       _writeName(e);
     });
 
@@ -2313,30 +1325,7 @@ class _ElementWriter extends _AbstractElementWriter {
   }
 
   void _writeUnitElement(CompilationUnitElementImpl e) {
-    _writeEnclosingElement(e);
-
-    if (e.macroGenerated case var macroGenerated?) {
-      _sink.writelnWithIndent('macroGeneratedCode');
-      _sink.writeln('---');
-      _sink.write(macroGenerated.code);
-      _sink.writeln('---');
-    }
-
-    if (configuration.withImports) {
-      var imports = e.libraryImports.where((import) {
-        return configuration.withSyntheticDartCoreImport || !import.isSynthetic;
-      }).toList();
-      _writeElements('libraryImports', imports, _writeLibraryImportElement);
-    }
-    _writeElements(
-      'libraryImportPrefixes',
-      e.libraryImportPrefixes,
-      _writePrefixElement,
-    );
-    _writeElements(
-        'libraryExports', e.libraryExports, _writeLibraryExportElement);
-    _writeElements('parts', e.parts, _writePartElement);
-
+    _writeReference(e);
     _writeElements('classes', e.classes, _writeInterfaceElement);
     _writeElements('enums', e.enums, _writeInterfaceElement);
     _writeElements('extensions', e.extensions, _writeExtensionElement);
@@ -2364,7 +1353,6 @@ class _ElementWriter extends _AbstractElementWriter {
 class _IdMap {
   final Map<Element, String> fieldMap = Map.identity();
   final Map<Element, String> getterMap = Map.identity();
-  final Map<Element, String> partMap = Map.identity();
   final Map<Element, String> setterMap = Map.identity();
 
   String operator [](Element element) {
@@ -2374,8 +1362,6 @@ class _IdMap {
       return fieldMap[element] ??= 'variable_${fieldMap.length}';
     } else if (element is PropertyAccessorElement && element.isGetter) {
       return getterMap[element] ??= 'getter_${getterMap.length}';
-    } else if (element is PartElementImpl) {
-      return partMap[element] ??= 'part_${partMap.length}';
     } else if (element is PropertyAccessorElement && element.isSetter) {
       return setterMap[element] ??= 'setter_${setterMap.length}';
     } else {

@@ -29,7 +29,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 37, 5),
     ]);
 
-    var node = findNode.singleVariableDeclarationStatement;
+    final node = findNode.singleVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 VariableDeclarationStatement
   variables: VariableDeclarationList
@@ -58,7 +58,7 @@ class A {
       error(WarningCode.UNUSED_LOCAL_VARIABLE, 33, 1),
     ]);
 
-    var node = findNode.singleVariableDeclarationStatement;
+    final node = findNode.singleVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 VariableDeclarationStatement
   variables: VariableDeclarationList

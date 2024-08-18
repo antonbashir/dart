@@ -6,13 +6,12 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/leak_detector_visitor.dart';
 
-const _desc = r'Close instances of `dart:core` `Sink`.';
+const _desc = r'Close instances of `dart.core.Sink`.';
 
 const _details = r'''
-**DO** invoke `close` on instances of `dart:core` `Sink`.
+**DO** invoke `close` on instances of `dart.core.Sink`.
 
 Closing instances of Sink prevents memory leaks and unexpected behavior.
 
@@ -63,19 +62,26 @@ for more information.
 
 ''';
 
+bool _isSink(DartType type) => type.implementsInterface('Sink', 'dart.core');
+
+bool _isSocket(DartType type) => type.implementsInterface('Socket', 'dart.io');
+
 class CloseSinks extends LintRule {
+  static const LintCode code = LintCode(
+      'close_sinks', "Unclosed instance of 'Sink'.",
+      correctionMessage:
+          "Try invoking 'close' in the function in which the 'Sink' was "
+          'created.');
+
   CloseSinks()
       : super(
             name: 'close_sinks',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.errorProne,
-              LintRuleCategory.memoryLeaks
-            });
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.close_sinks;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -87,19 +93,14 @@ class CloseSinks extends LintRule {
 }
 
 class _Visitor extends LeakDetectorProcessors {
-  static final Map<DartTypePredicate, String> _predicates = {
-    _isSink: 'close',
-    _isSocket: 'destroy',
+  static const _closeMethodName = 'close';
+  static const _destroyMethodName = 'destroy';
+
+  @override
+  Map<DartTypePredicate, String> predicates = {
+    _isSink: _closeMethodName,
+    _isSocket: _destroyMethodName
   };
 
   _Visitor(super.rule);
-
-  @override
-  Map<DartTypePredicate, String> get predicates => _predicates;
-
-  static bool _isSink(DartType type) =>
-      type.implementsInterface('Sink', 'dart.core');
-
-  static bool _isSocket(DartType type) =>
-      type.implementsInterface('Socket', 'dart.io');
 }

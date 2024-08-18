@@ -7,8 +7,7 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 
-import 'package:native_assets_cli/native_assets_cli_internal.dart'
-    show CCompilerConfigImpl;
+import 'package:native_assets_cli/native_assets_cli.dart' show CCompilerConfig;
 import 'package:smith/configuration.dart';
 import 'package:smith/smith.dart';
 
@@ -60,6 +59,7 @@ class TestConfiguration {
       this.taskCount = 1,
       this.shardCount = 1,
       this.shard = 1,
+      this.stepName,
       this.testServerPort = 0,
       this.testServerCrossOriginPort = 0,
       this.testDriverErrorPort = 0,
@@ -118,7 +118,7 @@ class TestConfiguration {
   bool get hotReload => configuration.useHotReload;
   bool get hotReloadRollback => configuration.useHotReloadRollback;
   bool get isChecked => configuration.isChecked;
-  bool get enableHostAsserts => configuration.enableHostAsserts;
+  bool get isHostChecked => configuration.isHostChecked;
   bool get isCsp => configuration.isCsp;
   bool get isMinified => configuration.isMinified;
   bool get isSimulator => architecture.isSimulator;
@@ -144,6 +144,7 @@ class TestConfiguration {
   final int shardCount;
   final int shard;
   final int repeat;
+  final String? stepName;
 
   final int testServerPort;
   final int testServerCrossOriginPort;
@@ -245,7 +246,7 @@ class TestConfiguration {
             arch: architecture,
             system: system);
 
-        _timeout = 30 * compilerMultiplier * runtimeMultiplier;
+        _timeout = 60 * compilerMultiplier * runtimeMultiplier;
       }
     }
 
@@ -285,12 +286,12 @@ class TestConfiguration {
 
   late final Map<String, String> nativeCompilerEnvironmentVariables = () {
     String unparseKey(String key) => key.replaceAll('.', '__').toUpperCase();
-    final arKey = unparseKey(CCompilerConfigImpl.arConfigKeyFull);
-    final ccKey = unparseKey(CCompilerConfigImpl.ccConfigKeyFull);
-    final ldKey = unparseKey(CCompilerConfigImpl.ldConfigKeyFull);
-    final envScriptKey = unparseKey(CCompilerConfigImpl.envScriptConfigKeyFull);
+    final arKey = unparseKey(CCompilerConfig.arConfigKeyFull);
+    final ccKey = unparseKey(CCompilerConfig.ccConfigKeyFull);
+    final ldKey = unparseKey(CCompilerConfig.ldConfigKeyFull);
+    final envScriptKey = unparseKey(CCompilerConfig.envScriptConfigKeyFull);
     final envScriptArgsKey =
-        unparseKey(CCompilerConfigImpl.envScriptArgsConfigKeyFull);
+        unparseKey(CCompilerConfig.envScriptArgsConfigKeyFull);
 
     if (Platform.isWindows) {
       // Use MSVC from Depot Tools instead. When using clang from DEPS, we still
@@ -340,10 +341,7 @@ class TestConfiguration {
       Abi.linuxArm64: 'linux-arm64',
       Abi.linuxX64: 'linux-x64',
     };
-    final hostFolderName = clangHostFolderName[Abi.current()];
-    if (hostFolderName == null) {
-      return <String, String>{};
-    }
+    final hostFolderName = clangHostFolderName[Abi.current()]!;
     final clangBin =
         Directory.current.uri.resolve('buildtools/$hostFolderName/clang/bin/');
     return {
@@ -412,40 +410,19 @@ class TestConfiguration {
       _compilerConfiguration ??= CompilerConfiguration(this);
 
   /// The set of [Feature]s supported by this configuration.
-  Set<Feature> get supportedFeatures {
-    // The analyzer should parse all tests that don't require legacy support.
-    if (compiler == Compiler.dart2analyzer) {
-      return {...Feature.all.where((f) => !Feature.legacy.contains(f))};
-    }
-
-    var isDart2jsProduction = dart2jsOptions.contains('-O3');
-    var isOptimizedDart2Wasm = dart2wasmOptions.contains('-O1');
-    var isJsCompiler = compiler == Compiler.dart2js || compiler == Compiler.ddc;
-    return {
-      // The supported NNBD features depending on the `nnbdMode`.
-      if (NnbdMode.legacy == configuration.nnbdMode)
-        Feature.nnbdLegacy
-      else
-        Feature.nnbd,
-      if (NnbdMode.weak == configuration.nnbdMode) Feature.nnbdWeak,
-      if (NnbdMode.strong == configuration.nnbdMode) Feature.nnbdStrong,
-
-      // The configurations with the following builder tags and configurations
-      // with the `minified` flag set to `true` will obfuscate `Type.toString`
-      // strings.
-      if (!isDart2jsProduction && builderTag != 'obfuscated' && !isMinified)
-        Feature.readableTypeStrings,
-
-      if (isJsCompiler) Feature.jsNumbers else Feature.nativeNumbers,
-
-      if (!isDart2jsProduction && !isOptimizedDart2Wasm) ...[
-        Feature.checkedImplicitDowncasts,
-        Feature.checkedParameters,
-      ],
-
-      if (!isOptimizedDart2Wasm) Feature.checkedExplicitCasts,
-    };
-  }
+  late final Set<Feature> supportedFeatures = compiler == Compiler.dart2analyzer
+      // The analyzer should parse all tests.
+      ? {...Feature.all}
+      : {
+          // TODO(rnystrom): Define more features for things like "dart:io", separate
+          // int/double representation, etc.
+          if (NnbdMode.legacy == configuration.nnbdMode)
+            Feature.nnbdLegacy
+          else
+            Feature.nnbd,
+          if (NnbdMode.weak == configuration.nnbdMode) Feature.nnbdWeak,
+          if (NnbdMode.strong == configuration.nnbdMode) Feature.nnbdStrong,
+        };
 
   /// Determines if this configuration has a compatible compiler and runtime
   /// and other valid fields.
@@ -563,11 +540,12 @@ class Progress {
   static const verbose = Progress._('verbose');
   static const silent = Progress._('silent');
   static const status = Progress._('status');
+  static const buildbot = Progress._('buildbot');
 
   static final List<String> names = _all.keys.toList();
 
   static final _all = Map<String, Progress>.fromIterable(
-      [compact, color, line, verbose, silent, status],
+      [compact, color, line, verbose, silent, status, buildbot],
       key: (progress) => (progress as Progress).name);
 
   static Progress find(String name) {

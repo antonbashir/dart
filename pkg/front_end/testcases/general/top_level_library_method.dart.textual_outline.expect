@@ -1,3 +1,2 @@
 library() {}
-
 main() => library();

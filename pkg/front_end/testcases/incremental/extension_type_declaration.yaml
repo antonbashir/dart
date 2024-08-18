@@ -26,6 +26,7 @@ worlds:
           ExtensionType.staticField = ExtensionType.staticField + 1;
         }
     expectedLibraryCount: 1
+    experiments: inline-class
   - entry: main.dart
     invalidate:
       - main.dart
@@ -48,5 +49,6 @@ worlds:
           ExtensionType.staticField = ExtensionType.staticField + 2;
         }
     expectedLibraryCount: 1
+    experiments: inline-class
     advancedInvalidation: bodiesOnly
 

@@ -4,19 +4,17 @@
 
 import 'package:analyzer/dart/ast/ast.dart'
     show AstNode, ConstructorDeclaration;
-import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/source/source.dart';
-import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/diagnostic/diagnostic.dart';
 import 'package:meta/meta.dart';
 import 'package:source_span/source_span.dart';
 
-/// An object that listens for [AnalysisError]s being produced by the analysis
+/// An object that listen for [AnalysisError]s being produced by the analysis
 /// engine.
 abstract class AnalysisErrorListener {
   /// An error listener that ignores errors that are reported to it.
@@ -48,6 +46,9 @@ class ErrorReporter {
   /// The error listener to which errors will be reported.
   final AnalysisErrorListener _errorListener;
 
+  /// Is `true` if the library being analyzed is non-nullable by default.
+  final bool isNonNullableByDefault;
+
   /// The source to be used when reporting errors.
   final Source _source;
 
@@ -59,120 +60,10 @@ class ErrorReporter {
   /// Initialize a newly created error reporter that will report errors to the
   /// given [_errorListener]. Errors will be reported against the
   /// [_defaultSource] unless another source is provided later.
-  ErrorReporter(
-    this._errorListener,
-    this._source, {
-    @Deprecated('Will be removed') bool isNonNullableByDefault = true,
-  });
+  ErrorReporter(this._errorListener, this._source,
+      {required this.isNonNullableByDefault});
 
   Source get source => _source;
-
-  /// Report an error with the given [errorCode] and [arguments].
-  /// The [element] is used to compute the location of the error.
-  void atElement(
-    Element element,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    var nonSynthetic = element.nonSynthetic;
-    atOffset(
-      errorCode: errorCode,
-      offset: nonSynthetic.nameOffset,
-      length: nonSynthetic.nameLength,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
-  }
-
-  /// Report an error with the given [errorCode] and [arguments].
-  /// The [entity] is used to compute the location of the error.
-  void atEntity(
-    SyntacticEntity entity,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    atOffset(
-      errorCode: errorCode,
-      offset: entity.offset,
-      length: entity.length,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
-  }
-
-  /// Report an error with the given [errorCode] and [arguments].
-  /// The [node] is used to compute the location of the error.
-  void atNode(
-    AstNode node,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    atOffset(
-      errorCode: errorCode,
-      offset: node.offset,
-      length: node.length,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
-  }
-
-  /// Report an error with the given [errorCode] and [arguments]. The location
-  /// of the error is specified by the given [offset] and [length].
-  void atOffset({
-    required int offset,
-    required int length,
-    required ErrorCode errorCode,
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    if (lockLevel != 0) {
-      return;
-    }
-
-    _convertElements(arguments);
-    contextMessages ??= [];
-    contextMessages.addAll(_convertTypeNames(arguments));
-    _errorListener.onError(
-      AnalysisError.tmp(
-        source: _source,
-        offset: offset,
-        length: length,
-        errorCode: errorCode,
-        arguments: arguments ?? const [],
-        contextMessages: contextMessages,
-        data: data,
-      ),
-    );
-  }
-
-  /// Report an error with the given [errorCode] and [arguments]. The [token] is
-  /// used to compute the location of the error.
-  void atToken(
-    Token token,
-    ErrorCode errorCode, {
-    List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
-    Object? data,
-  }) {
-    atOffset(
-      errorCode: errorCode,
-      offset: token.offset,
-      length: token.length,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
-  }
 
   /// Report the given [error].
   void reportError(AnalysisError error) {
@@ -181,15 +72,11 @@ class ErrorReporter {
 
   /// Report an error with the given [errorCode] and [arguments]. The [element]
   /// is used to compute the location of the error.
-  @Deprecated('Use atElement() instead')
   void reportErrorForElement(ErrorCode errorCode, Element element,
       [List<Object>? arguments, List<DiagnosticMessage>? messages]) {
-    atElement(
-      element,
-      errorCode,
-      arguments: arguments,
-      contextMessages: messages,
-    );
+    var nonSynthetic = element.nonSynthetic;
+    reportErrorForOffset(errorCode, nonSynthetic.nameOffset,
+        nonSynthetic.nameLength, arguments, messages);
   }
 
   /// Report a diagnostic with the given [code] and [arguments]. The
@@ -201,58 +88,53 @@ class ErrorReporter {
     //  declaration. This might make it easier to be consistent.
     if (constructor.name != null) {
       var offset = constructor.returnType.offset;
-      atOffset(
-        offset: offset,
-        length: constructor.name!.end - offset,
-        errorCode: code,
-        arguments: arguments,
-      );
+      reportErrorForOffset(
+          code, offset, constructor.name!.end - offset, arguments);
     } else {
-      atNode(
-        constructor.returnType,
-        code,
-        arguments: arguments,
-      );
+      reportErrorForNode(code, constructor.returnType, arguments);
     }
   }
 
   /// Report an error with the given [errorCode] and [arguments].
   /// The [node] is used to compute the location of the error.
-  @Deprecated('Use atNode() instead')
   void reportErrorForNode(
     ErrorCode errorCode,
     AstNode node, [
     List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
+    List<DiagnosticMessage>? messages,
     Object? data,
   ]) {
-    atNode(
-      node,
-      errorCode,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
+    reportErrorForOffset(
+        errorCode, node.offset, node.length, arguments, messages, data);
   }
 
   /// Report an error with the given [errorCode] and [arguments]. The location
   /// of the error is specified by the given [offset] and [length].
-  @Deprecated('Use atOffset() instead')
   void reportErrorForOffset(
     ErrorCode errorCode,
     int offset,
     int length, [
     List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
+    List<DiagnosticMessage>? messages,
     Object? data,
   ]) {
-    atOffset(
-      offset: offset,
-      length: length,
-      errorCode: errorCode,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
+    if (lockLevel != 0) {
+      return;
+    }
+
+    _convertElements(arguments);
+    messages ??= [];
+    messages.addAll(_convertTypeNames(arguments));
+    _errorListener.onError(
+      AnalysisError.tmp(
+        source: _source,
+        offset: offset,
+        length: length,
+        errorCode: errorCode,
+        arguments: arguments ?? const [],
+        contextMessages: messages,
+        data: data,
+      ),
     );
   }
 
@@ -260,31 +142,20 @@ class ErrorReporter {
   /// of the error is specified by the given [span].
   void reportErrorForSpan(ErrorCode errorCode, SourceSpan span,
       [List<Object>? arguments]) {
-    atOffset(
-      offset: span.start.offset,
-      length: span.length,
-      errorCode: errorCode,
-      arguments: arguments,
-    );
+    reportErrorForOffset(errorCode, span.start.offset, span.length, arguments);
   }
 
   /// Report an error with the given [errorCode] and [arguments]. The [token] is
   /// used to compute the location of the error.
-  @Deprecated('Use atToken() instead')
   void reportErrorForToken(
     ErrorCode errorCode,
     Token token, [
     List<Object>? arguments,
-    List<DiagnosticMessage>? contextMessages,
+    List<DiagnosticMessage>? messages,
     Object? data,
   ]) {
-    atToken(
-      token,
-      errorCode,
-      arguments: arguments,
-      contextMessages: contextMessages,
-      data: data,
-    );
+    reportErrorForOffset(
+        errorCode, token.offset, token.length, arguments, messages, data);
   }
 
   /// Report an error with the given [errorCode] and [arguments]. The [node] is
@@ -295,16 +166,11 @@ class ErrorReporter {
   /// used in order to clarify the message.
   ///
   /// If there are not two or more types in the argument list, the method
-  /// [atNode] should be used instead.
+  /// [reportErrorForNode] should be used instead.
   @Deprecated('Use reportErrorForNode(), it will convert types as well')
   void reportTypeErrorForNode(
       ErrorCode errorCode, AstNode node, List<Object> arguments) {
-    atOffset(
-      offset: node.offset,
-      length: node.length,
-      errorCode: errorCode,
-      arguments: arguments,
-    );
+    reportErrorForOffset(errorCode, node.offset, node.length, arguments);
   }
 
   /// Convert all [Element]s in the [arguments] into their display strings.
@@ -316,7 +182,9 @@ class ErrorReporter {
     for (var i = 0; i < arguments.length; i++) {
       var argument = arguments[i];
       if (argument is Element) {
-        arguments[i] = argument.getDisplayString();
+        arguments[i] = argument.getDisplayString(
+          withNullability: isNonNullableByDefault,
+        );
       } else if (!(argument is String ||
           argument is DartType ||
           argument is int ||
@@ -341,9 +209,9 @@ class ErrorReporter {
     Map<String, List<_TypeToConvert>> typeGroups = {};
     for (int i = 0; i < arguments.length; i++) {
       var argument = arguments[i];
-      if (argument is TypeImpl) {
+      if (argument is DartType) {
         String displayName = argument.getDisplayString(
-          preferTypeAlias: true,
+          withNullability: isNonNullableByDefault,
         );
         List<_TypeToConvert> types =
             typeGroups.putIfAbsent(displayName, () => <_TypeToConvert>[]);

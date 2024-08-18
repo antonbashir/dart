@@ -7,7 +7,6 @@
 
 #include <errno.h>  // NOLINT
 #include <time.h>   // NOLINT
-#include <memory>
 
 #include "bin/utils.h"
 #include "bin/utils_win.h"
@@ -236,13 +235,6 @@ int64_t TimerUtils::GetCurrentMonotonicMicros() {
 
 void TimerUtils::Sleep(int64_t millis) {
   ::Sleep(millis);
-}
-
-std::unique_ptr<wchar_t[]> Utf8ToWideChar(const char* path) {
-  int wide_len = MultiByteToWideChar(CP_UTF8, 0, path, -1, nullptr, 0);
-  auto result = std::make_unique<wchar_t[]>(wide_len);
-  MultiByteToWideChar(CP_UTF8, 0, path, -1, result.get(), wide_len);
-  return result;
 }
 
 }  // namespace bin

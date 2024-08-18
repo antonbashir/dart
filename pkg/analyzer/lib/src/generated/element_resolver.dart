@@ -156,8 +156,10 @@ class ElementResolver {
       var name = node.name;
       if (name == null) {
         constructor = type.lookUpConstructor(null, _definingLibrary);
+        constructor = _resolver.toLegacyElement(constructor);
       } else {
         constructor = type.lookUpConstructor(name.name, _definingLibrary);
+        constructor = _resolver.toLegacyElement(constructor);
         name.staticElement = constructor;
       }
       node.staticElement = constructor;
@@ -267,15 +269,11 @@ class ElementResolver {
     _resolveAnnotations(node.metadata);
   }
 
-  /// Resolves the method invocation, [node].
-  ///
-  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
-  /// process, then returns that new node. Otherwise, returns `null`.
-  FunctionExpressionInvocation? visitMethodInvocation(MethodInvocation node,
+  void visitMethodInvocation(MethodInvocation node,
       {List<WhyNotPromotedGetter>? whyNotPromotedList,
-      required DartType contextType}) {
+      required DartType? contextType}) {
     whyNotPromotedList ??= [];
-    return _methodInvocationResolver.resolve(
+    _methodInvocationResolver.resolve(
         node as MethodInvocationImpl, whyNotPromotedList,
         contextType: contextType);
   }
@@ -311,13 +309,12 @@ class ElementResolver {
       // TODO(brianwilkerson): Report this error.
       return;
     }
-    var enclosingAugmented = enclosingClass.augmented;
     ConstructorElement? element;
     var name = node.constructorName;
     if (name == null) {
-      element = enclosingAugmented.unnamedConstructor;
+      element = enclosingClass.unnamedConstructor;
     } else {
-      element = enclosingAugmented.getNamedConstructor(name.name);
+      element = enclosingClass.getNamedConstructor(name.name);
     }
     if (element == null) {
       // TODO(brianwilkerson): Report this error and decide what element to
@@ -358,19 +355,18 @@ class ElementResolver {
     var name = node.constructorName;
     var superName = name?.name;
     var element = superType.lookUpConstructor(superName, _definingLibrary);
+    element = _resolver.toLegacyElement(element);
     if (element == null || !element.isAccessibleIn(_definingLibrary)) {
       if (name != null) {
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.UNDEFINED_CONSTRUCTOR_IN_INITIALIZER,
-          arguments: [superType, name.name],
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.UNDEFINED_CONSTRUCTOR_IN_INITIALIZER,
+            node,
+            [superType, name.name]);
       } else {
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.UNDEFINED_CONSTRUCTOR_IN_INITIALIZER_DEFAULT,
-          arguments: [superType],
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.UNDEFINED_CONSTRUCTOR_IN_INITIALIZER_DEFAULT,
+            node,
+            [superType]);
       }
       return;
     } else {
@@ -378,11 +374,8 @@ class ElementResolver {
           // Check if we've reported [NO_GENERATIVE_CONSTRUCTORS_IN_SUPERCLASS].
           !element.enclosingElement.constructors
               .every((constructor) => constructor.isFactory)) {
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.NON_GENERATIVE_CONSTRUCTOR,
-          arguments: [element],
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.NON_GENERATIVE_CONSTRUCTOR, node, [element]);
       }
     }
     if (name != null) {
@@ -414,20 +407,14 @@ class ElementResolver {
     switch (context) {
       case SuperContext.annotation:
       case SuperContext.static:
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.SUPER_IN_INVALID_CONTEXT,
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.SUPER_IN_INVALID_CONTEXT, node);
       case SuperContext.extension:
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.SUPER_IN_EXTENSION,
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.SUPER_IN_EXTENSION, node);
       case SuperContext.extensionType:
-        _errorReporter.atNode(
-          node,
-          CompileTimeErrorCode.SUPER_IN_EXTENSION_TYPE,
-        );
+        _errorReporter.reportErrorForNode(
+            CompileTimeErrorCode.SUPER_IN_EXTENSION_TYPE, node);
     }
   }
 
@@ -492,7 +479,7 @@ class ElementResolver {
           // Ensure that the name always resolves to a top-level variable
           // rather than a getter or setter
           if (element is PropertyAccessorElement) {
-            name.staticElement = element.variable2;
+            name.staticElement = element.variable;
           } else {
             name.staticElement = element;
           }

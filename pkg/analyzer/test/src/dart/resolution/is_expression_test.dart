@@ -26,7 +26,7 @@ class A<T> {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 30, 5),
     ]);
 
-    var node = findNode.singleIsExpression;
+    final node = findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
   expression: SuperExpression
@@ -58,7 +58,7 @@ IsExpression
     leftParenthesis: (
     expression: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Object?
     rightParenthesis: )
     leftBracket: {
@@ -77,7 +77,7 @@ IsExpression
   isOperator: is
   type: NamedType
     name: double
-    element: dart:core::<fragment>::@class::double
+    element: dart:core::@class::double
     type: double
   staticType: bool
 ''');
@@ -90,17 +90,17 @@ void f(Object? a) {
 }
 ''');
 
-    var node = findNode.singleIsExpression;
+    final node = findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: Object?
   isOperator: is
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   staticType: bool
 ''');
@@ -113,18 +113,18 @@ void f(Object? a) {
 }
 ''');
 
-    var node = findNode.singleIsExpression;
+    final node = findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: Object?
   isOperator: is
   notOperator: !
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   staticType: bool
 ''');

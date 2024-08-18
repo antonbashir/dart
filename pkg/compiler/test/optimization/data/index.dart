@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 import 'dart:collection';
 
 /*member: dynamicIndex:Specializer=[!Index]*/
@@ -20,7 +22,7 @@ unknownListIndex(List list) {
 @pragma('dart2js:noInline')
 possiblyNullMutableListIndex(bool b) {
   var list = b ? [0] : null;
-  return list![0];
+  return list[0];
 }
 
 /*member: mutableListIndex:Specializer=[Index]*/
@@ -60,9 +62,9 @@ main() {
   mutableDynamicListDynamicIndex('');
 }
 
-class MyList<E> extends ListBase<E?> {
-  E? operator [](int index) => null;
-  void operator []=(int index, E? value) {}
+class MyList<E> extends ListBase<E> {
+  E operator [](int index) => null;
+  void operator []=(int index, E value) {}
   int get length => 0;
   void set length(int value) {}
 }

@@ -20,7 +20,7 @@ void f(x) {
   if (x case (0)) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (
@@ -43,7 +43,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (

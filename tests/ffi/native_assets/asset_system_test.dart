@@ -68,7 +68,6 @@ Future<void> selfInvokes() async {
     runtime: Runtime.aot,
     arguments: [runTestsArg],
     nativeAssetsYaml: nativeAssetsYaml,
-    protobufAwareTreeshaking: true,
   );
 }
 

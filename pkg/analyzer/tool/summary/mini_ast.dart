@@ -12,6 +12,7 @@ import 'package:_fe_analyzer_shared/src/parser/parser.dart';
 import 'package:_fe_analyzer_shared/src/parser/stack_listener.dart';
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:analyzer/src/dart/analysis/experiments.dart';
+import 'package:collection/collection.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 /// "Mini AST" representation of a declaration which can accept annotations.
@@ -160,7 +161,7 @@ class MiniAstBuilder extends StackListener {
   final compilationUnit = CompilationUnit();
 
   @override
-  bool get isDartLibrary => throw UnimplementedError();
+  Uri get importUri => throw UnimplementedError();
 
   @override
   Uri get uri => throw UnimplementedError();
@@ -194,7 +195,7 @@ class MiniAstBuilder extends StackListener {
   }
 
   @override
-  void endBinaryExpression(Token token, Token endToken) {
+  void endBinaryExpression(Token token) {
     debugEvent("BinaryExpression");
 
     if (identical('.', token.stringValue)) {
@@ -376,7 +377,6 @@ class MiniAstBuilder extends StackListener {
 
   @override
   void endTopLevelFields(
-      Token? augmentToken,
       Token? externalToken,
       Token? staticToken,
       Token? covariantToken,
@@ -416,7 +416,7 @@ class MiniAstBuilder extends StackListener {
   }
 
   @override
-  void handleEnumElement(Token beginToken, Token? augmentToken) {
+  void handleEnumElement(Token beginToken) {
     debugEvent("EnumElement");
     pop(); // Arguments.
     pop(); // Type arguments.
@@ -432,13 +432,12 @@ class MiniAstBuilder extends StackListener {
     var name = pop() as String;
     var metadata = popTypedList<Annotation>();
     var comment = pop() as Comment?;
-    compilationUnit.declarations.add(
-        EnumDeclaration(comment, metadata, name, constants.nonNulls.toList()));
+    compilationUnit.declarations.add(EnumDeclaration(
+        comment, metadata, name, constants.whereNotNull().toList()));
   }
 
   @override
-  void handleEnumHeader(
-      Token? augmentToken, Token enumKeyword, Token leftBrace) {
+  void handleEnumHeader(Token enumKeyword, Token leftBrace) {
     debugEvent("EnumHeader");
   }
 
@@ -671,7 +670,7 @@ class MiniAstParser extends Parser {
 
   @override
   Token parseArgumentsOpt(Token token) {
-    var listener = this.listener as MiniAstBuilder;
+    final listener = this.listener as MiniAstBuilder;
     if (listener.inMetadata) {
       return super.parseArgumentsOpt(token);
     } else {

@@ -10,5 +10,4 @@ class D extends C {
 }
 
 main() {}
-
 void set onlySetter(value) {}

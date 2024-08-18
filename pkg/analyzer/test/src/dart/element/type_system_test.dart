@@ -27,7 +27,7 @@ class IsValidExtensionTypeSuperinterfaceTest extends AbstractTypeSystemTest {
   }
 
   test_interfaceType_extensionType() {
-    var element = extensionType('A', representationType: intNone);
+    final element = extensionType('A', representationType: intNone);
     _assertValid(
       interfaceTypeNone(element),
     );
@@ -70,7 +70,7 @@ class IsValidExtensionTypeSuperinterfaceTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameterType() {
-    var T = typeParameter('T');
+    final T = typeParameter('T');
     _assertNotValid(
       typeParameterTypeNone(T),
     );

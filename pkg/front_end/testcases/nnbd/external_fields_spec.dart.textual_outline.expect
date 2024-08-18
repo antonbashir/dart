@@ -1,5 +1,4 @@
 external int s1;
-
 external final fx;
 
 class A {

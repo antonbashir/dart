@@ -28,15 +28,9 @@ class UsedAsInterface {
 }
 
 main() {}
-
 unusedTopLevel() {}
-
 usedTopLevel() {}
-
 void baseClassCall(UsedAsBaseClass object) {}
-
 void exactCallA(ClassA object) {}
-
 void exactCallB(ClassB object) {}
-
 void interfaceCall(UsedAsInterface object) {}

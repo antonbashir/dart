@@ -25,7 +25,7 @@ class _TypeSubstitutor extends ReplacementVisitor {
   _TypeSubstitutor(this._eraseStaticInteropType);
 
   @override
-  DartType? visitInterfaceType(InterfaceType type, Variance variance) {
+  DartType? visitInterfaceType(InterfaceType type, int variance) {
     if (hasStaticInteropAnnotation(type.classNode)) {
       return _eraseStaticInteropType(type);
     }
@@ -47,7 +47,7 @@ class StaticInteropClassEraser extends Transformer {
   // Visiting core libraries that don't contain `@staticInterop` adds overhead.
   // To avoid this, we use an allowlist that contains libraries that we know use
   // `@staticInterop`.
-  final Set<String> _erasableCoreLibraries = {
+  late final Set<String> _erasableCoreLibraries = {
     'js_interop_unsafe',
     'ui',
     'ui_web',

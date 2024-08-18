@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async' show StreamController, Zone;
-import 'dart:collection' show HashSet;
 import 'dart:convert' show Encoding, LineSplitter, utf8;
 import 'dart:io'
     show
@@ -16,14 +15,18 @@ import 'dart:io'
         exitCode;
 import 'dart:typed_data' show BytesBuilder, Uint8List;
 
+import 'package:front_end/src/api_prototype/language_version.dart'
+    show uriUsesLegacyLanguageVersion;
+import 'package:front_end/src/api_unstable/vm.dart'
+    show CompilerOptions, NnbdMode, StandardFileSystem;
 import 'package:frontend_server/starter.dart';
-import 'package:kernel/ast.dart' show Component, Library;
-import 'package:kernel/binary/multi_binary_loader.dart' show MultiBinaryLoader;
+import 'package:kernel/ast.dart' show Component;
+import 'package:kernel/kernel.dart' show loadComponentFromBytes;
 import 'package:kernel/target/targets.dart';
 import 'package:kernel/verifier.dart' show VerificationStage, verifyComponent;
 import 'package:vm/kernel_front_end.dart';
 
-Future<void> main(List<String> args) async {
+main(List<String> args) async {
   String? flutterDir;
   String? flutterPlatformDir;
   for (String arg in args) {
@@ -34,13 +37,27 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  await compileTests(flutterDir, flutterPlatformDir, new StdoutLogger());
+  await compileTests(flutterDir, flutterPlatformDir, StdoutLogger());
+}
+
+Future<NnbdMode> _getNNBDMode(Uri script, Uri packageConfigUri) async {
+  final CompilerOptions compilerOptions = CompilerOptions()
+    ..sdkRoot = null
+    ..fileSystem = StandardFileSystem.instance
+    ..packagesFileUri = packageConfigUri
+    ..sdkSummary = null
+    ..nnbdMode = NnbdMode.Weak;
+
+  if (await uriUsesLegacyLanguageVersion(script, compilerOptions)) {
+    return NnbdMode.Weak;
+  }
+  return NnbdMode.Strong;
 }
 
 Future compileTests(
     String? flutterDir, String? flutterPlatformDir, Logger logger,
     {String? filter, int shards = 1, int shard = 0}) async {
-  if (flutterDir == null || !(new Directory(flutterDir).existsSync())) {
+  if (flutterDir == null || !(Directory(flutterDir).existsSync())) {
     throw "Didn't get a valid flutter directory to work with.";
   }
   if (shards < 1) {
@@ -54,43 +71,42 @@ Future compileTests(
   }
   // Ensure the path ends in a slash.
   final Directory flutterDirectory =
-      new Directory.fromUri(new Directory(flutterDir).uri);
+      Directory.fromUri(Directory(flutterDir).uri);
 
   List<FileSystemEntity> allFlutterFiles =
       flutterDirectory.listSync(recursive: true, followLinks: false);
   Directory flutterPlatformDirectoryTmp;
 
   if (flutterPlatformDir == null) {
-    List<File> platformFiles = new List<File>.from(allFlutterFiles.where((f) =>
-        f.uri
-            .toString()
-            .endsWith("/flutter_patched_sdk/platform_strong.dill")));
+    List<File> platformFiles = List<File>.from(allFlutterFiles.where((f) => f
+        .uri
+        .toString()
+        .endsWith("/flutter_patched_sdk/platform_strong.dill")));
     if (platformFiles.isEmpty) {
       throw "Expected to find a flutter platform file but didn't.";
     }
     flutterPlatformDirectoryTmp = platformFiles.first.parent;
   } else {
-    flutterPlatformDirectoryTmp = new Directory(flutterPlatformDir);
+    flutterPlatformDirectoryTmp = Directory(flutterPlatformDir);
   }
   if (!flutterPlatformDirectoryTmp.existsSync()) {
     throw "$flutterPlatformDirectoryTmp doesn't exist.";
   }
   // Ensure the path ends in a slash.
   final Directory flutterPlatformDirectory =
-      new Directory.fromUri(flutterPlatformDirectoryTmp.uri);
+      Directory.fromUri(flutterPlatformDirectoryTmp.uri);
 
-  if (!new File.fromUri(
+  if (!File.fromUri(
           flutterPlatformDirectory.uri.resolve("platform_strong.dill"))
       .existsSync()) {
     throw "$flutterPlatformDirectory doesn't contain a "
         "platform_strong.dill file.";
   }
   logger.notice("Using $flutterPlatformDirectory as platform directory.");
-  List<File> packageConfigFiles = new List<File>.from(allFlutterFiles.where(
-      (f) =>
-          (f.uri.toString().contains("/examples/") ||
-              f.uri.toString().contains("/packages/")) &&
-          f.uri.toString().endsWith("/.dart_tool/package_config.json")));
+  List<File> packageConfigFiles = List<File>.from(allFlutterFiles.where((f) =>
+      (f.uri.toString().contains("/examples/") ||
+          f.uri.toString().contains("/packages/")) &&
+      f.uri.toString().endsWith("/.dart_tool/package_config.json")));
 
   List<String> allCompilationErrors = [];
   final Directory systemTempDir = Directory.systemTemp;
@@ -99,7 +115,7 @@ Future compileTests(
   for (int i = 0; i < packageConfigFiles.length; i++) {
     File packageConfig = packageConfigFiles[i];
     Directory testDir =
-        new Directory.fromUri(packageConfig.parent.uri.resolve("../test/"));
+        Directory.fromUri(packageConfig.parent.uri.resolve("../test/"));
     if (!testDir.existsSync()) continue;
     if (testDir.toString().contains("packages/flutter_web_plugins/test/")) {
       // TODO(jensj): Figure out which tests are web-tests, and compile those
@@ -107,7 +123,7 @@ Future compileTests(
       continue;
     }
     List<File> testFiles =
-        new List<File>.from(testDir.listSync(recursive: true).where((f) {
+        List<File>.from(testDir.listSync(recursive: true).where((f) {
       if (!f.path.endsWith("_test.dart")) return false;
       if (filter != null) {
         String testName = f.path.substring(flutterDirectory.path.length);
@@ -116,9 +132,26 @@ Future compileTests(
       return true;
     }));
 
-    if (testFiles.isEmpty) continue;
-    queue.add(new _QueueEntry(testFiles, packageConfig, testDir));
-    totalFiles += testFiles.length;
+    // Split into NNBD Strong and Weak so only the ones that match are
+    // compiled together. If mixing-and-matching the first file (which could
+    // be either) will setup the compiler which can lead to compilation errors
+    // for another file, for instance if the first one is strong but a
+    // subsequent one tries to opt out (i.e. is weak) an error is issued that
+    // that's not possible.
+    List<File> weak = [];
+    List<File> strong = [];
+    for (File file in testFiles) {
+      if (await _getNNBDMode(file.uri, packageConfig.uri) == NnbdMode.Weak) {
+        weak.add(file);
+      } else {
+        strong.add(file);
+      }
+    }
+    for (List<File> files in [weak, strong]) {
+      if (files.isEmpty) continue;
+      queue.add(_QueueEntry(files, packageConfig, testDir));
+      totalFiles += files.length;
+    }
   }
 
   // Process queue, taking shards into account.
@@ -214,14 +247,14 @@ Future<List<String>> attemptStuff(
     String? filter) async {
   if (testFiles.isEmpty) return [];
 
-  File dillFile = new File('${tempDir.path}/dill.dill');
+  File dillFile = File('${tempDir.path}/dill.dill');
   if (dillFile.existsSync()) {
     throw "$dillFile already exists.";
   }
 
-  Uint8List platformData = new File.fromUri(
-          flutterPlatformDirectory.uri.resolve("platform_strong.dill"))
-      .readAsBytesSync();
+  List<int> platformData =
+      File.fromUri(flutterPlatformDirectory.uri.resolve("platform_strong.dill"))
+          .readAsBytesSync();
   final String targetName = 'flutter';
   final Target target = createFrontEndTarget(targetName)!;
   final List<String> args = <String>[
@@ -232,18 +265,19 @@ Future<List<String>> attemptStuff(
     '--packages',
     packageConfig.path,
     '--output-dill=${dillFile.path}',
+    // '--unsafe-package-serialization',
   ];
 
-  Stopwatch stopwatch = new Stopwatch()..start();
+  Stopwatch stopwatch = Stopwatch()..start();
 
   final StreamController<List<int>> inputStreamController =
-      new StreamController<List<int>>();
+      StreamController<List<int>>();
   final StreamController<List<int>> stdoutStreamController =
-      new StreamController<List<int>>();
-  final IOSink ioSink = new IOSink(stdoutStreamController.sink);
-  StreamController<Result> receivedResults = new StreamController<Result>();
+      StreamController<List<int>>();
+  final IOSink ioSink = IOSink(stdoutStreamController.sink);
+  StreamController<Result> receivedResults = StreamController<Result>();
 
-  final OutputParser outputParser = new OutputParser(receivedResults);
+  final outputParser = OutputParser(receivedResults);
   stdoutStreamController.stream
       .transform(utf8.decoder)
       .transform(const LineSplitter())
@@ -268,20 +302,17 @@ Future<List<String>> attemptStuff(
     return starter(args, input: inputStreamController.stream, output: ioSink);
   }, createFile: (String path) {
     if (files[path] != null) return files[path]!;
-    File f = parentZone.run(() => new File(path));
-    if (path.endsWith(".dill")) return files[path] = new _MockFile(f);
+    File f = parentZone.run(() => File(path));
+    if (path.endsWith(".dill")) return files[path] = _MockFile(f);
     return f;
   });
-
-  Set<Library> alreadyVerifiedLibraries = new HashSet.identity();
-  MultiBinaryLoader multiBinaryLoader = new MultiBinaryLoader();
 
   String testName =
       testFileIterator.current.path.substring(flutterDirectory.path.length);
 
   logger.logTestStart(testName);
   logger.notice("    => $testName");
-  Stopwatch stopwatch2 = new Stopwatch()..start();
+  Stopwatch stopwatch2 = Stopwatch()..start();
   inputStreamController
       .add('compile ${testFileIterator.current.path}\n'.codeUnits);
   int compilations = 0;
@@ -292,78 +323,28 @@ Future<List<String>> attemptStuff(
     bool error = false;
     try {
       compiledResult.expectNoErrors();
+      logger.logExpectedResult(testName);
     } catch (e) {
       logger.log("Got errors. Compiler output for this compile:");
       outputParser.allReceived.forEach(logger.log);
       compilationErrors.add(testFileIterator.current.path);
       error = true;
-    }
-
-    if (!error) {
-      try {
-        _MockIOSink sink = files[dillFile.path]!.writeSink!;
-        Uint8List resultBytes = sink.bb.takeBytes();
-        List<List<int>> originalDataChunks = sink.originalDataChunks;
-        // The frontend-server serializes with the incremental serializer which
-        // works by outputting previously serialized component bytes, i.e. a
-        // single dill actually contains several components, and many of these
-        // components will byte-for-byte be the same between compiles.
-        // Furthermore what's added to the sink will be the *identical*
-        // Uint8List for the same bytes.
-        // We utilize this here by a) loading with the (same) MultiBinaryLoader
-        // which generally (with no additional help) figure out if a
-        // sub-component was previously loaded from the exact same bytes;
-        // b) additionally help it by returning the *identical* chunk
-        // representing a sub components bytes if available, which will allow it
-        // to not having to compare bytes, but simple use an identity hash on
-        // the list.
-        Component component = multiBinaryLoader.load(
-            [platformData, resultBytes], (Uint8List data, int from, int to) {
-          if (!identical(data, resultBytes)) return null;
-          // We're asked if we have an alternative to the bytes in [data]
-          // between [from] and [to]: We search the chunks used, and return the
-          // matching one if any. This will generally be *identical* to any
-          // previous one which allows us to not compare bytes.
-          int at = 0;
-          for (List<int> chunk in originalDataChunks) {
-            if (from == at && chunk is Uint8List) {
-              int length = to - from;
-              if (chunk.length == length) {
-                return chunk;
-              }
-            }
-            if (at > from) return null;
-            at += chunk.length;
-          }
-          return null;
-        });
-        verifyComponent(
-          target,
-          VerificationStage.afterModularTransformations,
-          component,
-          skipPlatform: true,
-          librarySkipFilter: (library) =>
-              !alreadyVerifiedLibraries.add(library),
-        );
-        logger.log(
-            "        => verified in ${stopwatch2.elapsedMilliseconds} ms.");
-      } catch (e, st) {
-        logger.log("Crash when trying to verify:");
-        logger.log("Error: $e");
-        logger.log("Stack trace: $st");
-        error = true;
-
-        // If there's been a crash we might have left the AST in a bad state.
-        // To avoid any potential issues caused by this we reset the loader etc.
-        alreadyVerifiedLibraries = new HashSet.identity();
-        multiBinaryLoader = new MultiBinaryLoader();
-      }
-    }
-
-    if (!error) {
-      logger.logExpectedResult(testName);
-    } else {
       logger.logUnexpectedResult(testName);
+    }
+    if (!error) {
+      Uint8List resultBytes = files[dillFile.path]!.writeSink!.bb.takeBytes();
+      Component component = loadComponentFromBytes(platformData);
+      component = loadComponentFromBytes(resultBytes, component);
+      verifyComponent(
+        target,
+        VerificationStage.afterModularTransformations,
+        component,
+        // We load the platform from dill so it's guranteed to not have changed
+        // and has been verified already.
+        skipPlatform: true,
+      );
+      logger
+          .log("        => verified in ${stopwatch2.elapsedMilliseconds} ms.");
     }
 
     files.clear();
@@ -440,7 +421,7 @@ class OutputParser {
       }
       // Second boundaryKey indicates end of frontend server response
       expectSources = true;
-      _receivedResults.add(new Result(
+      _receivedResults.add(Result(
           s.length > _boundaryKey!.length
               ? s.substring(_boundaryKey!.length + 1)
               : null,
@@ -461,7 +442,7 @@ class Result {
   Result(this.status, this.sources);
 
   void expectNoErrors({String? filename}) {
-    CompilationResult result = new CompilationResult.parse(status!);
+    CompilationResult result = CompilationResult.parse(status!);
     if (result.errorsCount != 0) {
       throw "Got ${result.errorsCount} errors. Expected 0.";
     }
@@ -551,7 +532,7 @@ class _MockFile implements File {
 
   @override
   IOSink openWrite({FileMode mode = FileMode.write, Encoding encoding = utf8}) {
-    return writeSink = new _MockIOSink();
+    return writeSink = _MockIOSink();
   }
 
   @override
@@ -561,21 +542,19 @@ class _MockFile implements File {
 }
 
 class _MockIOSink implements IOSink {
-  BytesBuilder bb = new BytesBuilder();
-  List<List<int>> originalDataChunks = [];
+  BytesBuilder bb = BytesBuilder();
   bool _closed = false;
 
   @override
   void add(List<int> data) {
     if (_closed) throw "Adding to closed";
     bb.add(data);
-    originalDataChunks.add(data);
   }
 
   @override
   Future close() {
     _closed = true;
-    return new Future.value();
+    return Future.value();
   }
 
   @override

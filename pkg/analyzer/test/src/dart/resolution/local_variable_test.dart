@@ -59,7 +59,7 @@ void f() {
   int x = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 17, 1),
     ]);
 
     var x = findElement.localVar('x');
@@ -75,7 +75,7 @@ void f() {
   const int x = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 23, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 23, 1),
     ]);
 
     var x = findElement.localVar('x');
@@ -91,7 +91,7 @@ void f() {
   final int x = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 23, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 23, 1),
     ]);
 
     var x = findElement.localVar('x');
@@ -108,7 +108,7 @@ void f() {
     int x = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 32, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 32, 1),
     ]);
 
     var x = findElement.localVar('x');
@@ -124,7 +124,7 @@ void f() {
   late int x = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 22, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 22, 1),
     ]);
 
     var x = findElement.localVar('x');
@@ -134,74 +134,24 @@ void f() {
     expect(x.isStatic, isFalse);
   }
 
-  test_localVariable_wildcardFunction() async {
+  test_nonNullifyType() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.7
+var a = 0;
+''');
+
     await assertErrorsInCode('''
-f() {
-  _() {}
-  _();
-}
-''', [
-      error(WarningCode.DEAD_CODE, 8, 6),
-      error(CompileTimeErrorCode.UNDEFINED_FUNCTION, 17, 1),
-    ]);
-  }
-
-  test_localVariable_wildcardFunction_preWildcards() async {
-    await assertNoErrorsInCode('''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f() {
-  _() {}
-  _();
-}
-''');
-
-    var node = findNode.simple('_();');
-    assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _
-  staticElement: _@52
-  staticType: Null Function()
-''');
-  }
-
-  test_localVariable_wildcardVariable_field() async {
-    await assertNoErrorsInCode('''
-class C {
-  var _ = 1;
-  void m() {
-    var _ = 0;
-    _;
-  }
-}
-''');
-
-    var node = findNode.simple('_;');
-    assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _
-  staticElement: <testLibraryFragment>::@class::C::@getter::_
-  staticType: int
-''');
-  }
-
-  test_localVariable_wildcardVariable_topLevel() async {
-    await assertNoErrorsInCode('''
-var _ = 1;
+import 'a.dart';
 
 void f() {
-  var _ = 0;
-  _;
+  var x = a;
+  x;
 }
-''');
+''', [
+      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
+    ]);
 
-    var node = findNode.simple('_;');
-    assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _
-  staticElement: <testLibraryFragment>::@getter::_
-  staticType: int
-''');
+    var x = findElement.localVar('x');
+    assertType(x.type, 'int');
   }
 }

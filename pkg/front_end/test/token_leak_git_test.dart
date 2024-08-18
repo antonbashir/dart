@@ -4,18 +4,18 @@
 
 import "dart:developer" as developer;
 
-import 'package:_fe_analyzer_shared/src/util/filenames.dart';
 import 'package:front_end/src/api_prototype/file_system.dart' as api;
-import 'package:front_end/src/base/compiler_context.dart';
-import 'package:front_end/src/base/uri_translator.dart';
-import 'package:front_end/src/dill/dill_target.dart';
-import 'package:front_end/src/kernel/kernel_target.dart';
-import 'package:front_end/src/kernel/macro/macro.dart';
+import 'package:_fe_analyzer_shared/src/util/filenames.dart';
+import 'package:front_end/src/fasta/dill/dill_target.dart';
+import 'package:front_end/src/fasta/kernel/kernel_target.dart';
+import 'package:front_end/src/fasta/kernel/macro/macro.dart';
+import 'package:front_end/src/fasta/uri_translator.dart';
 import 'package:kernel/ast.dart' show CanonicalName, Class;
 import 'package:vm_service/vm_service.dart' as vmService;
 import "package:vm_service/vm_service_io.dart" as vmServiceIo;
 
 import 'compiler_test_helper.dart';
+
 import 'find_all_subclasses_tool.dart';
 
 Future<void> main(List<String> args) async {
@@ -54,21 +54,13 @@ Future<void> main(List<String> args) async {
                   .resolve('pkg/front_end/test/token_leak_test_helper.dart'),
             ],
       compileSdk: compileSdk,
-      kernelTargetCreator: (CompilerContext compilerContext,
-          api.FileSystem fileSystem,
+      kernelTargetCreator: (api.FileSystem fileSystem,
           bool includeComments,
           DillTarget dillTarget,
           UriTranslator uriTranslator,
           BodyBuilderCreator bodyBuilderCreator) {
-        return new KernelTargetTester(
-            compilerContext,
-            fileSystem,
-            includeComments,
-            dillTarget,
-            uriTranslator,
-            bodyBuilderCreator,
-            serviceClient,
-            classesInUris);
+        return new KernelTargetTester(fileSystem, includeComments, dillTarget,
+            uriTranslator, bodyBuilderCreator, serviceClient, classesInUris);
       });
 
   await serviceClient.dispose();
@@ -84,7 +76,6 @@ class KernelTargetTester extends KernelTargetTest {
   final Map<String, List<Uri>> classesInUris;
 
   KernelTargetTester(
-    CompilerContext compilerContext,
     api.FileSystem fileSystem,
     bool includeComments,
     DillTarget dillTarget,
@@ -92,8 +83,8 @@ class KernelTargetTester extends KernelTargetTest {
     BodyBuilderCreator bodyBuilderCreator,
     this.serviceClient,
     this.classesInUris,
-  ) : super(compilerContext, fileSystem, includeComments, dillTarget,
-            uriTranslator, bodyBuilderCreator);
+  ) : super(fileSystem, includeComments, dillTarget, uriTranslator,
+            bodyBuilderCreator);
 
   @override
   Future<BuildResult> buildOutlines({CanonicalName? nameRoot}) async {
@@ -160,7 +151,7 @@ void throwOnLeaksOrNoFinds(Map<vmService.Class, int> foundInstances,
     }
     if (entry.value > 0) {
       // 'SyntheticToken' will have 1 alive because of dummyToken in
-      // front_end/lib/src/kernel/utils.dart. Hack around that.
+      // front_end/lib/src/fasta/kernel/utils.dart. Hack around that.
       if (entry.key.name == "SyntheticToken" && entry.value == 1) {
         continue;
       }

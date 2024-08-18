@@ -5,8 +5,7 @@
 import 'package:analysis_server/src/services/correction/bulk_fix_processor.dart';
 import 'package:analysis_server/src/services/correction/dart/data_driven.dart';
 import 'package:analysis_server/src/services/correction/fix/data_driven/transform_set_manager.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
-import 'package:analysis_server_plugin/src/correction/fix_generators.dart';
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -30,7 +29,6 @@ void main() {
     defineReflectiveTests(UndefinedIdentifierTest);
     defineReflectiveTests(UndefinedMethodTest);
     defineReflectiveTests(UndefinedSetterTest);
-    defineReflectiveTests(UriTest);
     defineReflectiveTests(WrongNumberOfTypeArgumentsConstructorTest);
     defineReflectiveTests(WrongNumberOfTypeArgumentsExtensionTest);
     defineReflectiveTests(WrongNumberOfTypeArgumentsMethodTest);
@@ -505,30 +503,25 @@ class NoProducerOverlapsTest {
     // non-data-driven fixes, as this could result in an LSP "Apply-all" code
     // action accidentally executing data-driven fixes.
 
-    var dataDrivenCodes = <String>{};
-    var bulkFixCodes = registeredFixGenerators.lintProducers.entries
+    final dataDrivenCodes = <String>{};
+    final bulkFixCodes = FixProcessor.lintProducerMap.entries
         .where((e) => e.value
-            .where((generator) =>
-                generator(context: StubCorrectionProducerContext.instance)
-                    .canBeAppliedAcrossFiles)
+            .where((generator) => generator().canBeAppliedInBulk)
             .isNotEmpty)
         .map((e) => e.key);
-    var nonDataDrivenCodes = {
+    final nonDataDrivenCodes = <String>{
       ...bulkFixCodes,
-      ...registeredFixGenerators.nonLintProducers.entries
+      ...FixProcessor.nonLintProducerMap.entries
           .where((e) => e.value
-              .where((generator) =>
-                  generator(context: StubCorrectionProducerContext.instance)
-                      .canBeAppliedAcrossFiles)
+              .where((generator) => generator().canBeAppliedInBulk)
               .isNotEmpty)
           .map((e) => e.key.uniqueName),
     };
 
-    for (var MapEntry(key: code, value: generators)
-        in BulkFixProcessor.nonLintMultiProducerMap.entries) {
-      for (var generator in generators) {
-        var producer =
-            generator(context: StubCorrectionProducerContext.instance);
+    for (final entry in BulkFixProcessor.nonLintMultiProducerMap.entries) {
+      var code = entry.key;
+      for (final producerFunc in entry.value) {
+        final producer = producerFunc();
         if (producer is DataDriven) {
           dataDrivenCodes.add(code.uniqueName);
         } else {
@@ -537,11 +530,10 @@ class NoProducerOverlapsTest {
       }
     }
 
-    var intersection = dataDrivenCodes.intersection(nonDataDrivenCodes);
+    final intersection = dataDrivenCodes.intersection(nonDataDrivenCodes);
     if (intersection.isNotEmpty) {
       fail(
-          'Error codes $intersection have both data-driven and non-data-driven '
-          'fixes');
+          'Error codes $intersection have both data-driven and non-data-driven fixes');
     }
   }
 }
@@ -1159,43 +1151,6 @@ void f(C a, C b) {
 }
 
 @reflectiveTest
-class UriTest extends _DataDrivenTest {
-  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/52233')
-  Future<void> test_relative_uri_for_exported() async {
-    newFile('$workspaceRootPath/p/lib/src/ex.dart', '''
-@deprecated
-class Old {}
-class New {}
-''');
-    newFile('$workspaceRootPath/p/lib/lib.dart', '''
-export 'src/ex.dart';
-''');
-    addPackageDataFile('''
-version: 1
-transforms:
-- title: 'Rename to New'
-  date: 2020-09-01
-  element:
-    uris: ['lib.dart']
-    class: 'Old'
-  changes:
-    - kind: 'rename'
-      newName: 'New'
-''');
-    await resolveTestCode('''
-import '$importUri';
-class A extends Old {}
-class B extends Old {}
-''');
-    await assertHasFix('''
-import '$importUri';
-class A extends New {}
-class B extends New {}
-''');
-  }
-}
-
-@reflectiveTest
 class WrongNumberOfTypeArgumentsConstructorTest extends _DataDrivenTest {
   Future<void> test_addTypeParameter() async {
     setPackageContent('''
@@ -1391,8 +1346,8 @@ class _DataDrivenTest extends BulkFixProcessorTest {
   }
 
   @override
-  Future<void> tearDown() async {
+  void tearDown() {
     TransformSetManager.instance.clearCache();
-    await super.tearDown();
+    super.tearDown();
   }
 }

@@ -7,6 +7,8 @@ Date: March 31 2019
 License: BSD
 
 Description:
-This directory contains the d8 binaries for Windows, Mac and Linux.
+In a synced checkout, this directory contains the d8 binaries for Windows, Mac and Linux.
+The binaries are downloaded as a CIPD package and unpacked in this directory.
+To upload a new version of the package run: ./update.sh <version>
 
 The binaries are used for testing dart code compiled to javascript.

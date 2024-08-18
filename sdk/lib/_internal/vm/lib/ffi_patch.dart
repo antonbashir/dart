@@ -72,7 +72,7 @@ void _checkPointerAlignment(int address, int elementSize) {
 }
 
 @patch
-int sizeOf<T extends SizedNativeType>() {
+int sizeOf<T extends NativeType>() {
   // This case should have been rewritten in pre-processing.
   throw UnimplementedError("$T");
 }
@@ -198,9 +198,8 @@ external dynamic _nativeIsolateLocalCallbackFunction<NS extends Function>(
     dynamic exceptionalReturn);
 
 @patch
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
-final class Pointer<T extends NativeType> implements SizedNativeType {
+final class Pointer<T extends NativeType> {
   @patch
   factory Pointer.fromAddress(int ptr) => _fromAddress(ptr);
 
@@ -315,7 +314,10 @@ final class _NativeCallableListener<T extends Function>
 
 @patch
 @pragma("vm:entry-point")
-final class Array<T extends NativeType> extends _Compound {
+final class Array<T extends NativeType> {
+  @pragma("vm:entry-point")
+  final Object _typedDataBase;
+
   @pragma("vm:entry-point")
   final int _size;
 
@@ -327,12 +329,7 @@ final class Array<T extends NativeType> extends _Compound {
   List<int>? _nestedDimensionsRestCache;
 
   @pragma("vm:entry-point")
-  Array._(
-    super._typedDataBase,
-    super._offsetInBytes,
-    this._size,
-    this._nestedDimensions,
-  ) : super._fromTypedDataBase();
+  Array._(this._typedDataBase, this._size, this._nestedDimensions);
 
   int get _nestedDimensionsFlattened =>
       _nestedDimensionsFlattenedCache ??= _nestedDimensions.fold<int>(
@@ -344,12 +341,7 @@ final class Array<T extends NativeType> extends _Compound {
   List<int> get _nestedDimensionsRest =>
       _nestedDimensionsRestCache ??= _nestedDimensions.sublist(1);
 
-  static const _variableLengthLength = 0;
-
-  void _checkIndex(int index) {
-    if (_size == _variableLengthLength) {
-      return;
-    }
+  _checkIndex(int index) {
     if (index < 0 || index >= _size) {
       throw RangeError.range(index, 0, _size - 1);
     }
@@ -447,7 +439,7 @@ external int _loadAbiSpecificInt<T extends AbiSpecificInteger>(
 @pragma("vm:recognized", "other")
 @pragma("vm:idempotent")
 external int _loadAbiSpecificIntAtIndex<T extends AbiSpecificInteger>(
-    Object typedDataBase, int offsetInBytes, int index);
+    Object typedDataBase, int index);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:idempotent")
@@ -518,7 +510,7 @@ external int _storeAbiSpecificInt<T extends AbiSpecificInteger>(
 @pragma("vm:recognized", "other")
 @pragma("vm:idempotent")
 external int _storeAbiSpecificIntAtIndex<T extends AbiSpecificInteger>(
-    Object typedDataBase, int offsetInBytes, int index, int value);
+    Object typedDataBase, int index, int value);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:idempotent")
@@ -580,19 +572,15 @@ extension NativeFunctionPointer<NF extends Function>
 @patch
 extension Int8Pointer on Pointer<Int8> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadInt8(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeInt8(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadInt8(this, index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeInt8(this, index, value);
 
   @patch
@@ -617,19 +605,15 @@ extension Int8Pointer on Pointer<Int8> {
 @patch
 extension Int16Pointer on Pointer<Int16> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadInt16(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeInt16(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadInt16(this, 2 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeInt16(this, 2 * index, value);
 
   @patch
@@ -654,19 +638,15 @@ extension Int16Pointer on Pointer<Int16> {
 @patch
 extension Int32Pointer on Pointer<Int32> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadInt32(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeInt32(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadInt32(this, 4 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeInt32(this, 4 * index, value);
 
   @patch
@@ -691,19 +671,15 @@ extension Int32Pointer on Pointer<Int32> {
 @patch
 extension Int64Pointer on Pointer<Int64> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadInt64(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeInt64(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadInt64(this, 8 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeInt64(this, 8 * index, value);
 
   @patch
@@ -728,19 +704,15 @@ extension Int64Pointer on Pointer<Int64> {
 @patch
 extension Uint8Pointer on Pointer<Uint8> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadUint8(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeUint8(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadUint8(this, index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeUint8(this, index, value);
 
   @patch
@@ -765,19 +737,15 @@ extension Uint8Pointer on Pointer<Uint8> {
 @patch
 extension Uint16Pointer on Pointer<Uint16> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadUint16(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeUint16(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadUint16(this, 2 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeUint16(this, 2 * index, value);
 
   @patch
@@ -802,19 +770,15 @@ extension Uint16Pointer on Pointer<Uint16> {
 @patch
 extension Uint32Pointer on Pointer<Uint32> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadUint32(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeUint32(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadUint32(this, 4 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeUint32(this, 4 * index, value);
 
   @patch
@@ -839,19 +803,15 @@ extension Uint32Pointer on Pointer<Uint32> {
 @patch
 extension Uint64Pointer on Pointer<Uint64> {
   @patch
-  @pragma("vm:prefer-inline")
   int get value => _loadUint64(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(int value) => _storeUint64(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   int operator [](int index) => _loadUint64(this, 8 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, int value) => _storeUint64(this, 8 * index, value);
 
   @patch
@@ -876,19 +836,15 @@ extension Uint64Pointer on Pointer<Uint64> {
 @patch
 extension FloatPointer on Pointer<Float> {
   @patch
-  @pragma("vm:prefer-inline")
   double get value => _loadFloat(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(double value) => _storeFloat(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   double operator [](int index) => _loadFloat(this, 4 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, double value) => _storeFloat(this, 4 * index, value);
 
   @patch
@@ -913,19 +869,15 @@ extension FloatPointer on Pointer<Float> {
 @patch
 extension DoublePointer on Pointer<Double> {
   @patch
-  @pragma("vm:prefer-inline")
   double get value => _loadDouble(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(double value) => _storeDouble(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   double operator [](int index) => _loadDouble(this, 8 * index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, double value) => _storeDouble(this, 8 * index, value);
 
   @patch
@@ -950,19 +902,15 @@ extension DoublePointer on Pointer<Double> {
 @patch
 extension BoolPointer on Pointer<Bool> {
   @patch
-  @pragma("vm:prefer-inline")
   bool get value => _loadBool(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value(bool value) => _storeBool(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   bool operator [](int index) => _loadBool(this, index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, bool value) => _storeBool(this, index, value);
 }
 
@@ -971,20 +919,13 @@ extension Int8Array on Array<Int8> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadInt8(
-      _typedDataBase,
-      _offsetInBytes + index,
-    );
+    return _loadInt8(_typedDataBase, index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeInt8(
-      _typedDataBase,
-      _offsetInBytes + index,
-      value,
-    );
+    return _storeInt8(_typedDataBase, index, value);
   }
 }
 
@@ -993,20 +934,13 @@ extension Int16Array on Array<Int16> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadInt16(
-      _typedDataBase,
-      _offsetInBytes + 2 * index,
-    );
+    return _loadInt16(_typedDataBase, 2 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeInt16(
-      _typedDataBase,
-      _offsetInBytes + 2 * index,
-      value,
-    );
+    return _storeInt16(_typedDataBase, 2 * index, value);
   }
 }
 
@@ -1015,20 +949,13 @@ extension Int32Array on Array<Int32> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadInt32(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-    );
+    return _loadInt32(_typedDataBase, 4 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeInt32(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-      value,
-    );
+    return _storeInt32(_typedDataBase, 4 * index, value);
   }
 }
 
@@ -1037,20 +964,13 @@ extension Int64Array on Array<Int64> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadInt64(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-    );
+    return _loadInt64(_typedDataBase, 8 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeInt64(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-      value,
-    );
+    return _storeInt64(_typedDataBase, 8 * index, value);
   }
 }
 
@@ -1059,20 +979,13 @@ extension Uint8Array on Array<Uint8> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadUint8(
-      _typedDataBase,
-      _offsetInBytes + index,
-    );
+    return _loadUint8(_typedDataBase, index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeUint8(
-      _typedDataBase,
-      _offsetInBytes + index,
-      value,
-    );
+    return _storeUint8(_typedDataBase, index, value);
   }
 }
 
@@ -1081,20 +994,13 @@ extension Uint16Array on Array<Uint16> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadUint16(
-      _typedDataBase,
-      _offsetInBytes + 2 * index,
-    );
+    return _loadUint16(_typedDataBase, 2 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeUint16(
-      _typedDataBase,
-      _offsetInBytes + 2 * index,
-      value,
-    );
+    return _storeUint16(_typedDataBase, 2 * index, value);
   }
 }
 
@@ -1103,20 +1009,13 @@ extension Uint32Array on Array<Uint32> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadUint32(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-    );
+    return _loadUint32(_typedDataBase, 4 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeUint32(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-      value,
-    );
+    return _storeUint32(_typedDataBase, 4 * index, value);
   }
 }
 
@@ -1125,20 +1024,13 @@ extension Uint64Array on Array<Uint64> {
   @patch
   int operator [](int index) {
     _checkIndex(index);
-    return _loadUint64(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-    );
+    return _loadUint64(_typedDataBase, 8 * index);
   }
 
   @patch
   operator []=(int index, int value) {
     _checkIndex(index);
-    return _storeUint64(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-      value,
-    );
+    return _storeUint64(_typedDataBase, 8 * index, value);
   }
 }
 
@@ -1147,20 +1039,13 @@ extension FloatArray on Array<Float> {
   @patch
   double operator [](int index) {
     _checkIndex(index);
-    return _loadFloat(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-    );
+    return _loadFloat(_typedDataBase, 4 * index);
   }
 
   @patch
   operator []=(int index, double value) {
     _checkIndex(index);
-    return _storeFloat(
-      _typedDataBase,
-      _offsetInBytes + 4 * index,
-      value,
-    );
+    return _storeFloat(_typedDataBase, 4 * index, value);
   }
 }
 
@@ -1169,20 +1054,13 @@ extension DoubleArray on Array<Double> {
   @patch
   double operator [](int index) {
     _checkIndex(index);
-    return _loadDouble(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-    );
+    return _loadDouble(_typedDataBase, 8 * index);
   }
 
   @patch
   operator []=(int index, double value) {
     _checkIndex(index);
-    return _storeDouble(
-      _typedDataBase,
-      _offsetInBytes + 8 * index,
-      value,
-    );
+    return _storeDouble(_typedDataBase, 8 * index, value);
   }
 }
 
@@ -1191,20 +1069,13 @@ extension BoolArray on Array<Bool> {
   @patch
   bool operator [](int index) {
     _checkIndex(index);
-    return _loadBool(
-      _typedDataBase,
-      _offsetInBytes + index,
-    );
+    return _loadBool(_typedDataBase, index);
   }
 
   @patch
   operator []=(int index, bool value) {
     _checkIndex(index);
-    return _storeBool(
-      _typedDataBase,
-      _offsetInBytes + index,
-      value,
-    );
+    return _storeBool(_typedDataBase, index, value);
   }
 }
 
@@ -1337,23 +1208,12 @@ extension AbiSpecificIntegerPointer<T extends AbiSpecificInteger>
 @patch
 extension PointerArray<T extends NativeType> on Array<Pointer<T>> {
   @patch
-  Pointer<T> operator [](int index) {
-    _checkIndex(index);
-    return _loadPointer(
-      _typedDataBase,
-      _offsetInBytes + _intPtrSize * index,
-    );
-  }
+  Pointer<T> operator [](int index) =>
+      _loadPointer(_typedDataBase, _intPtrSize * index);
 
   @patch
-  void operator []=(int index, Pointer<T> value) {
-    _checkIndex(index);
-    return _storePointer(
-      _typedDataBase,
-      _offsetInBytes + _intPtrSize * index,
-      value,
-    );
-  }
+  void operator []=(int index, Pointer<T> value) =>
+      _storePointer(_typedDataBase, _intPtrSize * index, value);
 }
 
 @patch
@@ -1385,7 +1245,7 @@ extension UnionArray<T extends Union> on Array<T> {
 }
 
 @patch
-extension AbiSpecificIntegerArray<T extends AbiSpecificInteger> on Array<T> {
+extension AbiSpecificIntegerArray on Array<AbiSpecificInteger> {
   @patch
   int operator [](int index) {
     throw ArgumentError(
@@ -1493,8 +1353,6 @@ final class _ArraySize<T extends NativeType> implements Array<T> {
 
   Object get _typedDataBase =>
       throw UnsupportedError('_ArraySize._typedDataBase');
-
-  int get _offsetInBytes => throw UnsupportedError('_ArraySize._offsetInBytes');
 }
 
 @patch

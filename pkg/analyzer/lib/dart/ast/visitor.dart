@@ -164,14 +164,6 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
       visitUriBasedDirective(node);
 
   @override
-  R? visitAugmentedExpression(AugmentedExpression node) =>
-      visitExpression(node);
-
-  @override
-  R? visitAugmentedInvocation(AugmentedInvocation node) =>
-      visitExpression(node);
-
-  @override
   R? visitAwaitExpression(AwaitExpression node) => visitExpression(node);
 
   @override
@@ -325,9 +317,6 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
   @override
   R? visitExtensionDeclaration(ExtensionDeclaration node) =>
       visitCompilationUnitMember(node);
-
-  @override
-  R? visitExtensionOnClause(ExtensionOnClause node) => visitNode(node);
 
   @override
   R? visitExtensionOverride(ExtensionOverride node) => visitExpression(node);
@@ -523,12 +512,6 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
   R? visitMixinDeclaration(MixinDeclaration node) =>
       visitNamedCompilationUnitMember(node);
 
-  @override
-  R? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
   R? visitNamedCompilationUnitMember(NamedCompilationUnitMember node) =>
       visitCompilationUnitMember(node);
 
@@ -536,7 +519,7 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
   R? visitNamedExpression(NamedExpression node) => visitExpression(node);
 
   @override
-  R? visitNamedType(NamedType node) => visitTypeAnnotation(node);
+  R? visitNamedType(NamedType node) => visitNode(node);
 
   R? visitNamespaceDirective(NamespaceDirective node) =>
       visitUriBasedDirective(node);
@@ -560,10 +543,6 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
   R? visitNullAssertPattern(NullAssertPattern node) => visitDartPattern(node);
 
   @override
-  R? visitNullAwareElement(NullAwareElement node) =>
-      visitCollectionElement(node);
-
-  @override
   R? visitNullCheckPattern(NullCheckPattern node) => visitDartPattern(node);
 
   @override
@@ -572,7 +551,6 @@ class GeneralizingAstVisitor<R> implements AstVisitor<R> {
   @override
   R? visitObjectPattern(ObjectPattern node) => visitDartPattern(node);
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   R? visitOnClause(OnClause node) => visitNode(node);
 
@@ -870,18 +848,6 @@ class RecursiveAstVisitor<R> implements AstVisitor<R> {
   }
 
   @override
-  R? visitAugmentedExpression(AugmentedExpression node) {
-    node.visitChildren(this);
-    return null;
-  }
-
-  @override
-  R? visitAugmentedInvocation(AugmentedInvocation node) {
-    node.visitChildren(this);
-    return null;
-  }
-
-  @override
   R? visitAwaitExpression(AwaitExpression node) {
     node.visitChildren(this);
     return null;
@@ -1123,12 +1089,6 @@ class RecursiveAstVisitor<R> implements AstVisitor<R> {
 
   @override
   R? visitExtensionDeclaration(ExtensionDeclaration node) {
-    node.visitChildren(this);
-    return null;
-  }
-
-  @override
-  R? visitExtensionOnClause(ExtensionOnClause node) {
     node.visitChildren(this);
     return null;
   }
@@ -1440,12 +1400,6 @@ class RecursiveAstVisitor<R> implements AstVisitor<R> {
   }
 
   @override
-  R? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
-  @override
   R? visitNamedExpression(NamedExpression node) {
     node.visitChildren(this);
     return null;
@@ -1476,12 +1430,6 @@ class RecursiveAstVisitor<R> implements AstVisitor<R> {
   }
 
   @override
-  R? visitNullAwareElement(NullAwareElement node) {
-    node.visitChildren(this);
-    return null;
-  }
-
-  @override
   R? visitNullCheckPattern(NullCheckPattern node) {
     node.visitChildren(this);
     return null;
@@ -1499,7 +1447,6 @@ class RecursiveAstVisitor<R> implements AstVisitor<R> {
     return null;
   }
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   R? visitOnClause(OnClause node) {
     node.visitChildren(this);
@@ -1909,12 +1856,6 @@ class SimpleAstVisitor<R> implements AstVisitor<R> {
   R? visitAugmentationImportDirective(AugmentationImportDirective node) => null;
 
   @override
-  R? visitAugmentedExpression(AugmentedExpression node) => null;
-
-  @override
-  R? visitAugmentedInvocation(AugmentedInvocation node) => null;
-
-  @override
   R? visitAwaitExpression(AwaitExpression node) => null;
 
   @override
@@ -2036,9 +1977,6 @@ class SimpleAstVisitor<R> implements AstVisitor<R> {
 
   @override
   R? visitExtensionDeclaration(ExtensionDeclaration node) => null;
-
-  @override
-  R? visitExtensionOnClause(ExtensionOnClause node) => null;
 
   @override
   R? visitExtensionOverride(ExtensionOverride node) => null;
@@ -2199,12 +2137,6 @@ class SimpleAstVisitor<R> implements AstVisitor<R> {
   R? visitMixinDeclaration(MixinDeclaration node) => null;
 
   @override
-  R? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
-  @override
   R? visitNamedExpression(NamedExpression node) => null;
 
   @override
@@ -2220,9 +2152,6 @@ class SimpleAstVisitor<R> implements AstVisitor<R> {
   R? visitNullAssertPattern(NullAssertPattern node) => null;
 
   @override
-  R? visitNullAwareElement(NullAwareElement node) => null;
-
-  @override
   R? visitNullCheckPattern(NullCheckPattern node) => null;
 
   @override
@@ -2231,7 +2160,6 @@ class SimpleAstVisitor<R> implements AstVisitor<R> {
   @override
   R? visitObjectPattern(ObjectPattern node) => null;
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   R? visitOnClause(OnClause node) => null;
 
@@ -2467,12 +2395,6 @@ class ThrowingAstVisitor<R> implements AstVisitor<R> {
       _throw(node);
 
   @override
-  R? visitAugmentedExpression(AugmentedExpression node) => _throw(node);
-
-  @override
-  R? visitAugmentedInvocation(AugmentedInvocation node) => _throw(node);
-
-  @override
   R? visitAwaitExpression(AwaitExpression node) => _throw(node);
 
   @override
@@ -2595,9 +2517,6 @@ class ThrowingAstVisitor<R> implements AstVisitor<R> {
 
   @override
   R? visitExtensionDeclaration(ExtensionDeclaration node) => _throw(node);
-
-  @override
-  R? visitExtensionOnClause(ExtensionOnClause node) => _throw(node);
 
   @override
   R? visitExtensionOverride(ExtensionOverride node) => _throw(node);
@@ -2763,12 +2682,6 @@ class ThrowingAstVisitor<R> implements AstVisitor<R> {
   R? visitMixinDeclaration(MixinDeclaration node) => _throw(node);
 
   @override
-  R? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
-  @override
   R? visitNamedExpression(NamedExpression node) => _throw(node);
 
   @override
@@ -2784,9 +2697,6 @@ class ThrowingAstVisitor<R> implements AstVisitor<R> {
   R? visitNullAssertPattern(NullAssertPattern node) => _throw(node);
 
   @override
-  R? visitNullAwareElement(NullAwareElement node) => _throw(node);
-
-  @override
   R? visitNullCheckPattern(NullCheckPattern node) => _throw(node);
 
   @override
@@ -2795,7 +2705,6 @@ class ThrowingAstVisitor<R> implements AstVisitor<R> {
   @override
   R? visitObjectPattern(ObjectPattern node) => _throw(node);
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   R? visitOnClause(OnClause node) => _throw(node);
 
@@ -3086,22 +2995,6 @@ class TimedAstVisitor<T> implements AstVisitor<T> {
   T? visitAugmentationImportDirective(AugmentationImportDirective node) {
     stopwatch.start();
     T? result = _baseVisitor.visitAugmentationImportDirective(node);
-    stopwatch.stop();
-    return result;
-  }
-
-  @override
-  T? visitAugmentedExpression(AugmentedExpression node) {
-    stopwatch.start();
-    T? result = _baseVisitor.visitAugmentedExpression(node);
-    stopwatch.stop();
-    return result;
-  }
-
-  @override
-  T? visitAugmentedInvocation(AugmentedInvocation node) {
-    stopwatch.start();
-    T? result = _baseVisitor.visitAugmentedInvocation(node);
     stopwatch.stop();
     return result;
   }
@@ -3430,14 +3323,6 @@ class TimedAstVisitor<T> implements AstVisitor<T> {
   T? visitExtensionDeclaration(ExtensionDeclaration node) {
     stopwatch.start();
     T? result = _baseVisitor.visitExtensionDeclaration(node);
-    stopwatch.stop();
-    return result;
-  }
-
-  @override
-  T? visitExtensionOnClause(ExtensionOnClause node) {
-    stopwatch.start();
-    T? result = _baseVisitor.visitExtensionOnClause(node);
     stopwatch.stop();
     return result;
   }
@@ -3851,12 +3736,6 @@ class TimedAstVisitor<T> implements AstVisitor<T> {
   }
 
   @override
-  T? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
-  @override
   T? visitNamedExpression(NamedExpression node) {
     stopwatch.start();
     T? result = _baseVisitor.visitNamedExpression(node);
@@ -3897,14 +3776,6 @@ class TimedAstVisitor<T> implements AstVisitor<T> {
   }
 
   @override
-  T? visitNullAwareElement(NullAwareElement node) {
-    stopwatch.start();
-    T? result = _baseVisitor.visitNullAwareElement(node);
-    stopwatch.stop();
-    return result;
-  }
-
-  @override
   T? visitNullCheckPattern(NullCheckPattern node) {
     stopwatch.start();
     T? result = _baseVisitor.visitNullCheckPattern(node);
@@ -3928,7 +3799,6 @@ class TimedAstVisitor<T> implements AstVisitor<T> {
     return result;
   }
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   T? visitOnClause(OnClause node) {
     stopwatch.start();
@@ -4467,12 +4337,6 @@ class UnifyingAstVisitor<R> implements AstVisitor<R> {
       visitNode(node);
 
   @override
-  R? visitAugmentedExpression(AugmentedExpression node) => visitNode(node);
-
-  @override
-  R? visitAugmentedInvocation(AugmentedInvocation node) => visitNode(node);
-
-  @override
   R? visitAwaitExpression(AwaitExpression node) => visitNode(node);
 
   @override
@@ -4600,9 +4464,6 @@ class UnifyingAstVisitor<R> implements AstVisitor<R> {
 
   @override
   R? visitExtensionDeclaration(ExtensionDeclaration node) => visitNode(node);
-
-  @override
-  R? visitExtensionOnClause(ExtensionOnClause node) => visitNode(node);
 
   @override
   R? visitExtensionOverride(ExtensionOverride node) => visitNode(node);
@@ -4771,12 +4632,6 @@ class UnifyingAstVisitor<R> implements AstVisitor<R> {
   R? visitMixinDeclaration(MixinDeclaration node) => visitNode(node);
 
   @override
-  R? visitMixinOnClause(MixinOnClause node) {
-    // ignore:deprecated_member_use_from_same_package
-    return visitOnClause(node);
-  }
-
-  @override
   R? visitNamedExpression(NamedExpression node) => visitNode(node);
 
   @override
@@ -4797,9 +4652,6 @@ class UnifyingAstVisitor<R> implements AstVisitor<R> {
   R? visitNullAssertPattern(NullAssertPattern node) => visitNode(node);
 
   @override
-  R? visitNullAwareElement(NullAwareElement node) => visitNode(node);
-
-  @override
   R? visitNullCheckPattern(NullCheckPattern node) => visitNode(node);
 
   @override
@@ -4808,7 +4660,6 @@ class UnifyingAstVisitor<R> implements AstVisitor<R> {
   @override
   R? visitObjectPattern(ObjectPattern node) => visitNode(node);
 
-  @Deprecated('Use visitMixinOnClause() instead')
   @override
   R? visitOnClause(OnClause node) => visitNode(node);
 

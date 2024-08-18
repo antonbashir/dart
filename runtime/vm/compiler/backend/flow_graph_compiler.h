@@ -273,17 +273,10 @@ class NullErrorSlowPath : public ThrowErrorSlowPathCode {
 class RangeErrorSlowPath : public ThrowErrorSlowPathCode {
  public:
   explicit RangeErrorSlowPath(GenericCheckBoundInstr* instruction)
-      : ThrowErrorSlowPathCode(
-            instruction,
-            GenericCheckBoundInstr::UseUnboxedRepresentation()
-                ? kRangeErrorUnboxedInt64RuntimeEntry
-                : kRangeErrorRuntimeEntry) {}
+      : ThrowErrorSlowPathCode(instruction, kRangeErrorRuntimeEntry) {}
   virtual const char* name() { return "check bound"; }
 
   virtual intptr_t GetNumberOfArgumentsForRuntimeCall() {
-    if (GenericCheckBoundInstr::UseUnboxedRepresentation()) {
-      return 0;  // Unboxed arguments are passed through Thread.
-    }
     return 2;  // length and index
   }
 
@@ -301,12 +294,6 @@ class WriteErrorSlowPath : public ThrowErrorSlowPathCode {
 
   virtual void EmitSharedStubCall(FlowGraphCompiler* compiler,
                                   bool save_fpu_registers);
-
-  virtual void PushArgumentsForRuntimeCall(FlowGraphCompiler* compiler);
-
-  virtual intptr_t GetNumberOfArgumentsForRuntimeCall() {
-    return 2;  // receiver, kind
-  }
 };
 
 class LateInitializationErrorSlowPath : public ThrowErrorSlowPathCode {
@@ -392,6 +379,7 @@ class FlowGraphCompiler : public ValueObject {
 
   ~FlowGraphCompiler();
 
+  static bool SupportsUnboxedDoubles();
   static bool SupportsUnboxedSimd128();
   static bool CanConvertInt64ToDouble();
 
@@ -1093,6 +1081,11 @@ class FlowGraphCompiler : public ValueObject {
   void GenerateBoolToJump(Register bool_reg,
                           compiler::Label* is_true,
                           compiler::Label* is_false);
+
+  void GenerateMethodExtractorIntrinsic(const Function& extracted_method,
+                                        intptr_t type_arguments_field_offset);
+
+  void GenerateGetterIntrinsic(const Function& accessor, const Field& field);
 
   // Perform a greedy local register allocation.  Consider all registers free.
   void AllocateRegistersLocally(Instruction* instr);

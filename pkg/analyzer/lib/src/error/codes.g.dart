@@ -214,87 +214,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
-  static const CompileTimeErrorCode
-      AUGMENTATION_EXTENDS_CLAUSE_ALREADY_PRESENT = CompileTimeErrorCode(
-    'AUGMENTATION_EXTENDS_CLAUSE_ALREADY_PRESENT',
-    "The augmentation has an 'extends' clause, but an augmentation target "
-        "already includes an 'extends' clause and it isn't allowed to be "
-        "repeated or changed.",
-    correctionMessage:
-        "Try removing the 'extends' clause, either here or in the augmentation "
-        "target.",
-  );
-
-  ///  Parameters:
-  ///  0: the lexeme of the modifier.
-  static const CompileTimeErrorCode AUGMENTATION_MODIFIER_EXTRA =
-      CompileTimeErrorCode(
-    'AUGMENTATION_MODIFIER_EXTRA',
-    "The augmentation has the '{0}' modifier that the declaration doesn't "
-        "have.",
-    correctionMessage:
-        "Try removing the '{0}' modifier, or adding it to the declaration.",
-  );
-
-  ///  Parameters:
-  ///  0: the lexeme of the modifier.
-  static const CompileTimeErrorCode AUGMENTATION_MODIFIER_MISSING =
-      CompileTimeErrorCode(
-    'AUGMENTATION_MODIFIER_MISSING',
-    "The augmentation is missing the '{0}' modifier that the declaration has.",
-    correctionMessage:
-        "Try adding the '{0}' modifier, or removing it from the declaration.",
-  );
-
-  ///  Parameters:
-  ///  0: the name of the declaration kind.
-  ///  1: the name of the augmentation kind.
-  static const CompileTimeErrorCode AUGMENTATION_OF_DIFFERENT_DECLARATION_KIND =
-      CompileTimeErrorCode(
-    'AUGMENTATION_OF_DIFFERENT_DECLARATION_KIND',
-    "Can't augment a {0} with a {1}.",
-    correctionMessage:
-        "Try changing the augmentation to match the declaration kind.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTATION_TYPE_PARAMETER_BOUND =
-      CompileTimeErrorCode(
-    'AUGMENTATION_TYPE_PARAMETER_BOUND',
-    "The augmentation type parameter must have the same bound as the "
-        "corresponding type parameter of the declaration.",
-    correctionMessage:
-        "Try changing the augmentation to match the declaration type "
-        "parameters.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTATION_TYPE_PARAMETER_COUNT =
-      CompileTimeErrorCode(
-    'AUGMENTATION_TYPE_PARAMETER_COUNT',
-    "The augmentation must have the same number of type parameters as the "
-        "declaration.",
-    correctionMessage:
-        "Try changing the augmentation to match the declaration type "
-        "parameters.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTATION_TYPE_PARAMETER_NAME =
-      CompileTimeErrorCode(
-    'AUGMENTATION_TYPE_PARAMETER_NAME',
-    "The augmentation type parameter must have the same name as the "
-        "corresponding type parameter of the declaration.",
-    correctionMessage:
-        "Try changing the augmentation to match the declaration type "
-        "parameters.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTATION_WITHOUT_DECLARATION =
-      CompileTimeErrorCode(
-    'AUGMENTATION_WITHOUT_DECLARATION',
-    "The declaration being augmented doesn't exist.",
-    correctionMessage:
-        "Try changing the augmentation to match an existing declaration.",
-  );
-
   static const CompileTimeErrorCode AUGMENTATION_WITHOUT_IMPORT =
       CompileTimeErrorCode(
     'AUGMENTATION_WITHOUT_IMPORT',
@@ -308,31 +227,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     'AUGMENTATION_WITHOUT_LIBRARY',
     "The URI does not resolve to a library.",
     correctionMessage:
-        "Try updating the URI to reference the augmented library.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTED_EXPRESSION_IS_NOT_SETTER =
-      CompileTimeErrorCode(
-    'AUGMENTED_EXPRESSION_IS_NOT_SETTER',
-    "The augmented declaration is not a setter, it can't be used to write a "
-        "value.",
-    correctionMessage: "Try assigning a value to a setter.",
-  );
-
-  static const CompileTimeErrorCode AUGMENTED_EXPRESSION_IS_SETTER =
-      CompileTimeErrorCode(
-    'AUGMENTED_EXPRESSION_IS_SETTER',
-    "The augmented declaration is a setter, it can't be used to read a value.",
-    correctionMessage: "Try assigning a value to the augmented setter.",
-  );
-
-  ///  Parameters:
-  ///  0: the lexeme of the operator.
-  static const CompileTimeErrorCode AUGMENTED_EXPRESSION_NOT_OPERATOR =
-      CompileTimeErrorCode(
-    'AUGMENTED_EXPRESSION_NOT_OPERATOR',
-    "The enclosing augmentation doesn't augment the operator '{0}'.",
-    correctionMessage: "Try augmenting or invoking the correct operator.",
+        "Try updating the URI to reference the augmented library",
   );
 
   ///  No parameters.
@@ -358,9 +253,9 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
         "Try marking the function body with either 'async' or 'async*'.",
   );
 
-  static const CompileTimeErrorCode AWAIT_OF_INCOMPATIBLE_TYPE =
+  static const CompileTimeErrorCode AWAIT_OF_EXTENSION_TYPE_NOT_FUTURE =
       CompileTimeErrorCode(
-    'AWAIT_OF_INCOMPATIBLE_TYPE',
+    'AWAIT_OF_EXTENSION_TYPE_NOT_FUTURE',
     "The 'await' expression can't be used for an expression with an extension "
         "type that is not a subtype of 'Future'.",
     correctionMessage:
@@ -485,6 +380,16 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     correctionMessage: "Try choosing a different name for the type parameter.",
     hasPublishedDocs: true,
     uniqueName: 'BUILT_IN_IDENTIFIER_AS_TYPE_PARAMETER_NAME',
+  );
+
+  ///  No parameters.
+  static const CompileTimeErrorCode CASE_BLOCK_NOT_TERMINATED =
+      CompileTimeErrorCode(
+    'CASE_BLOCK_NOT_TERMINATED',
+    "The last statement of the 'case' should be 'break', 'continue', "
+        "'rethrow', 'return', or 'throw'.",
+    correctionMessage: "Try adding one of the required statements.",
+    hasPublishedDocs: true,
   );
 
   ///  Parameters:
@@ -751,19 +656,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
 
   ///  Parameters:
   ///  0: the name of the type variable
-  static const CompileTimeErrorCode
-      CONFLICTING_TYPE_VARIABLE_AND_EXTENSION_TYPE = CompileTimeErrorCode(
-    'CONFLICTING_TYPE_VARIABLE_AND_CONTAINER',
-    "'{0}' can't be used to name both a type variable and the extension type "
-        "in which the type variable is defined.",
-    correctionMessage:
-        "Try renaming either the type variable or the extension.",
-    hasPublishedDocs: true,
-    uniqueName: 'CONFLICTING_TYPE_VARIABLE_AND_EXTENSION_TYPE',
-  );
-
-  ///  Parameters:
-  ///  0: the name of the type variable
   static const CompileTimeErrorCode CONFLICTING_TYPE_VARIABLE_AND_MEMBER_CLASS =
       CompileTimeErrorCode(
     'CONFLICTING_TYPE_VARIABLE_AND_MEMBER',
@@ -796,19 +688,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     correctionMessage: "Try renaming either the type variable or the member.",
     hasPublishedDocs: true,
     uniqueName: 'CONFLICTING_TYPE_VARIABLE_AND_MEMBER_EXTENSION',
-  );
-
-  ///  Parameters:
-  ///  0: the name of the type variable
-  static const CompileTimeErrorCode
-      CONFLICTING_TYPE_VARIABLE_AND_MEMBER_EXTENSION_TYPE =
-      CompileTimeErrorCode(
-    'CONFLICTING_TYPE_VARIABLE_AND_MEMBER',
-    "'{0}' can't be used to name both a type variable and a member in this "
-        "extension type.",
-    correctionMessage: "Try renaming either the type variable or the member.",
-    hasPublishedDocs: true,
-    uniqueName: 'CONFLICTING_TYPE_VARIABLE_AND_MEMBER_EXTENSION_TYPE',
   );
 
   ///  Parameters:
@@ -993,24 +872,10 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     "The assertion in this constant expression failed.",
   );
 
-  ///  Parameters:
-  ///  0: the message of the assertion
-  static const CompileTimeErrorCode CONST_EVAL_ASSERTION_FAILURE_WITH_MESSAGE =
-      CompileTimeErrorCode(
-    'CONST_EVAL_ASSERTION_FAILURE_WITH_MESSAGE',
-    "An assertion failed with message '{0}'.",
-  );
-
   static const CompileTimeErrorCode CONST_EVAL_EXTENSION_METHOD =
       CompileTimeErrorCode(
     'CONST_EVAL_EXTENSION_METHOD',
     "Extension methods can't be used in constant expressions.",
-  );
-
-  static const CompileTimeErrorCode CONST_EVAL_EXTENSION_TYPE_METHOD =
-      CompileTimeErrorCode(
-    'CONST_EVAL_EXTENSION_TYPE_METHOD',
-    "Extension type methods can't be used in constant expressions.",
   );
 
   static const CompileTimeErrorCode CONST_EVAL_FOR_ELEMENT =
@@ -1054,17 +919,18 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
         "IntegerDivisionByZeroException.",
   );
 
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "An expression of the form !e1", "An expression of the form
-  ///  e1 && e2", and "An expression of the form e1 || e2".
+  ///  16.12.2 Const: An expression of one of the forms !e, e1 && e2 or e1 || e2,
+  ///  where e, e1 and e2 are constant expressions that evaluate to a boolean
+  ///  value.
   static const CompileTimeErrorCode CONST_EVAL_TYPE_BOOL = CompileTimeErrorCode(
     'CONST_EVAL_TYPE_BOOL',
     "In constant expressions, operands of this operator must be of type "
         "'bool'.",
   );
 
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "An expression of the form e1 & e2".
+  ///  16.12.2 Const: An expression of one of the forms !e, e1 && e2 or e1 || e2,
+  ///  where e, e1 and e2 are constant expressions that evaluate to a boolean
+  ///  value.
   static const CompileTimeErrorCode CONST_EVAL_TYPE_BOOL_INT =
       CompileTimeErrorCode(
     'CONST_EVAL_TYPE_BOOL_INT',
@@ -1072,8 +938,9 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
         "or 'int'.",
   );
 
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "A literal string".
+  ///  16.12.2 Const: An expression of one of the forms e1 == e2 or e1 != e2 where
+  ///  e1 and e2 are constant expressions that evaluate to a numeric, string or
+  ///  boolean value or to null.
   static const CompileTimeErrorCode CONST_EVAL_TYPE_BOOL_NUM_STRING =
       CompileTimeErrorCode(
     'CONST_EVAL_TYPE_BOOL_NUM_STRING',
@@ -1081,28 +948,21 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
         "'bool', 'num', 'String' or 'null'.",
   );
 
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "An expression of the form ~e1", "An expression of one of
-  ///  the forms e1 >> e2".
+  ///  16.12.2 Const: An expression of one of the forms ~e, e1 ^ e2, e1 & e2,
+  ///  e1 | e2, e1 >> e2 or e1 << e2, where e, e1 and e2 are constant expressions
+  ///  that evaluate to an integer value or to null.
   static const CompileTimeErrorCode CONST_EVAL_TYPE_INT = CompileTimeErrorCode(
     'CONST_EVAL_TYPE_INT',
     "In constant expressions, operands of this operator must be of type 'int'.",
   );
 
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "An expression of the form e1 - e2".
+  ///  16.12.2 Const: An expression of one of the forms e, e1 + e2, e1 - e2, e1
+  ///  e2, e1 / e2, e1 ~/ e2, e1 > e2, e1 < e2, e1 >= e2, e1 <= e2 or e1 % e2,
+  ///  where e, e1 and e2 are constant expressions that evaluate to a numeric
+  ///  value or to null.
   static const CompileTimeErrorCode CONST_EVAL_TYPE_NUM = CompileTimeErrorCode(
     'CONST_EVAL_TYPE_NUM',
     "In constant expressions, operands of this operator must be of type 'num'.",
-  );
-
-  ///  See https://spec.dart.dev/DartLangSpecDraft.pdf#constants, "Constants",
-  ///  for text about "An expression of the form e1 + e2".
-  static const CompileTimeErrorCode CONST_EVAL_TYPE_NUM_STRING =
-      CompileTimeErrorCode(
-    'CONST_EVAL_TYPE_NUM_STRING',
-    "In constant expressions, operands of this operator must be of type 'num' "
-        "or 'String'.",
   );
 
   ///  No parameters.
@@ -1519,14 +1379,14 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   static const CompileTimeErrorCode ENUM_CONSTANT_INVOKES_FACTORY_CONSTRUCTOR =
       CompileTimeErrorCode(
     'ENUM_CONSTANT_INVOKES_FACTORY_CONSTRUCTOR',
-    "An enum value can't invoke a factory constructor.",
+    "An enum constant can't invoke a factory constructor.",
     correctionMessage: "Try using a generative constructor.",
   );
 
   static const CompileTimeErrorCode ENUM_CONSTANT_SAME_NAME_AS_ENCLOSING =
       CompileTimeErrorCode(
     'ENUM_CONSTANT_SAME_NAME_AS_ENCLOSING',
-    "The name of the enum value can't be the same as the enum's name.",
+    "The name of the enum constant can't be the same as the enum's name.",
     correctionMessage: "Try renaming the constant.",
     hasPublishedDocs: true,
   );
@@ -1544,13 +1404,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     "Mixins applied to enums can't have instance variables.",
     correctionMessage: "Try replacing the instance variables with getters.",
     hasPublishedDocs: true,
-  );
-
-  static const CompileTimeErrorCode ENUM_WITHOUT_CONSTANTS =
-      CompileTimeErrorCode(
-    'ENUM_WITHOUT_CONSTANTS',
-    "The enum must have at least one constant.",
-    correctionMessage: "Try declaring a constant.",
   );
 
   ///  Parameters:
@@ -1655,6 +1508,17 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
       CompileTimeErrorCode(
     'EXPORT_INTERNAL_LIBRARY',
     "The library '{0}' is internal and can't be exported.",
+    hasPublishedDocs: true,
+  );
+
+  ///  Parameters:
+  ///  0: the name of a symbol defined in a legacy library
+  static const CompileTimeErrorCode EXPORT_LEGACY_SYMBOL = CompileTimeErrorCode(
+    'EXPORT_LEGACY_SYMBOL',
+    "The symbol '{0}' is defined in a legacy library, and can't be re-exported "
+        "from a library with null safety enabled.",
+    correctionMessage:
+        "Try removing the export or migrating the legacy library.",
     hasPublishedDocs: true,
   );
 
@@ -2193,10 +2057,10 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   static const CompileTimeErrorCode GENERIC_FUNCTION_TYPE_CANNOT_BE_BOUND =
       CompileTimeErrorCode(
     'GENERIC_FUNCTION_TYPE_CANNOT_BE_BOUND',
-    "Generic function types can't be used as type parameter bounds.",
+    "Generic function types can't be used as type parameter bounds",
     correctionMessage:
         "Try making the free variable in the function type part of the larger "
-        "declaration signature.",
+        "declaration signature",
   );
 
   ///  It is a compile-time error if a generic function type is used as an actual
@@ -2464,7 +2328,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     'IMPORT_OF_NOT_AUGMENTATION',
     "The imported file '{0}' isn't an augmentation of this library.",
     correctionMessage:
-        "Try adding an 'augment library' directive referencing this library to "
+        "Try adding a 'library augment' directive referencing this library to "
         "the imported file.",
   );
 
@@ -2933,14 +2797,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   );
 
   ///  Parameters:
-  ///  0: the list of target kind names
-  static const CompileTimeErrorCode INVALID_MACRO_APPLICATION_TARGET =
-      CompileTimeErrorCode(
-    'INVALID_MACRO_APPLICATION_TARGET',
-    "The macro can be applied only to a {0}.",
-  );
-
-  ///  Parameters:
   ///  0: the invalid modifier
   static const CompileTimeErrorCode INVALID_MODIFIER_ON_CONSTRUCTOR =
       CompileTimeErrorCode(
@@ -2989,7 +2845,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
       INVALID_REFERENCE_TO_GENERATIVE_ENUM_CONSTRUCTOR = CompileTimeErrorCode(
     'INVALID_REFERENCE_TO_GENERATIVE_ENUM_CONSTRUCTOR',
     "Generative enum constructors can only be used as targets of redirection.",
-    correctionMessage: "Try using an enum value, or a factory constructor.",
+    correctionMessage: "Try using an enum constant, or a factory constructor.",
     hasPublishedDocs: true,
   );
 
@@ -3159,68 +3015,11 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
-  ///  Reported when there is an issue converting a macro application argument
-  ///  into a value. So, we cannot instantiate the macro, and run it.
-  ///  Parameters:
-  ///  0: the message
-  static const CompileTimeErrorCode MACRO_APPLICATION_ARGUMENT_ERROR =
-      CompileTimeErrorCode(
-    'MACRO_APPLICATION_ARGUMENT_ERROR',
-    "{0}",
-  );
-
-  ///  Parameters:
-  ///  0: the name of the introspected declaration
-  static const CompileTimeErrorCode
-      MACRO_DECLARATIONS_PHASE_INTROSPECTION_CYCLE = CompileTimeErrorCode(
-    'MACRO_DECLARATIONS_PHASE_INTROSPECTION_CYCLE',
-    "The declaration '{0}' can't be introspected because there is a cycle of "
-        "macro applications.",
-    correctionMessage:
-        "Try removing one or more macro applications to break the cycle.",
-  );
-
-  ///  Parameters:
-  ///  0: the name of the macro class
-  static const CompileTimeErrorCode
-      MACRO_DEFINITION_APPLICATION_SAME_LIBRARY_CYCLE = CompileTimeErrorCode(
-    'MACRO_DEFINITION_APPLICATION_SAME_LIBRARY_CYCLE',
-    "The macro '{0}' can't be applied in the same library cycle where it is "
-        "defined.",
-    correctionMessage:
-        "Try moving it to a different library that does not import the one "
-        "where it is applied.",
-  );
-
-  ///  Reported when the macro uses `Builder.report()` with `Severity.error`.
   ///  Parameters:
   ///  0: the message
   static const CompileTimeErrorCode MACRO_ERROR = CompileTimeErrorCode(
     'MACRO_ERROR',
     "{0}",
-  );
-
-  ///  Reported when there is an exception inside the analyzer when running
-  ///  macros. Should not happen, but just in case.
-  ///  Parameters:
-  ///  0: the message
-  ///  1: the stack trace
-  static const CompileTimeErrorCode MACRO_INTERNAL_EXCEPTION =
-      CompileTimeErrorCode(
-    'MACRO_INTERNAL_EXCEPTION',
-    "{0} {1}",
-  );
-
-  ///  Parameters:
-  ///  0: the macro phase
-  ///  1: the list of ranges in the code
-  ///  2: the generated code
-  static const CompileTimeErrorCode MACRO_NOT_ALLOWED_DECLARATION =
-      CompileTimeErrorCode(
-    'MACRO_NOT_ALLOWED_DECLARATION',
-    "The macro attempted to add declaration(s) not allowed during the {0} "
-        "phase.\nLocations: {1}\n---\n{2}\n---",
-    correctionMessage: "Try adding these declaration during an earlier phase.",
   );
 
   ///  No parameters.
@@ -3909,26 +3708,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   );
 
   ///  No parameters.
-  static const CompileTimeErrorCode NON_CONSTANT_RECORD_FIELD =
-      CompileTimeErrorCode(
-    'NON_CONSTANT_RECORD_FIELD',
-    "The fields in a const record literal must be constants.",
-    correctionMessage:
-        "Try removing the keyword 'const' from the record literal.",
-  );
-
-  ///  No parameters.
-  static const CompileTimeErrorCode
-      NON_CONSTANT_RECORD_FIELD_FROM_DEFERRED_LIBRARY = CompileTimeErrorCode(
-    'NON_CONSTANT_RECORD_FIELD_FROM_DEFERRED_LIBRARY',
-    "Constant values from a deferred library can't be used as fields in a "
-        "'const' record literal.",
-    correctionMessage:
-        "Try removing the keyword 'const' from the record literal or removing "
-        "the keyword 'deferred' from the import.",
-  );
-
-  ///  No parameters.
   static const CompileTimeErrorCode NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION =
       CompileTimeErrorCode(
     'NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION',
@@ -4312,7 +4091,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   static const CompileTimeErrorCode NULLABLE_TYPE_IN_IMPLEMENTS_CLAUSE =
       CompileTimeErrorCode(
     'NULLABLE_TYPE_IN_IMPLEMENTS_CLAUSE',
-    "A class, mixin, or extension type can't implement a nullable type.",
+    "A class or mixin can't implement a nullable type.",
     correctionMessage: "Try removing the question mark.",
     hasPublishedDocs: true,
   );
@@ -4590,15 +4369,6 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
         "unassigned at this point.",
     correctionMessage:
         "Ensure that it is assigned on necessary execution paths.",
-    hasPublishedDocs: true,
-  );
-
-  static const CompileTimeErrorCode
-      RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA = CompileTimeErrorCode(
-    'RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA',
-    "A record literal with exactly one positional field requires a trailing "
-        "comma.",
-    correctionMessage: "Try adding a trailing comma.",
     hasPublishedDocs: true,
   );
 
@@ -4917,8 +4687,8 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   static const CompileTimeErrorCode RETURN_OF_INVALID_TYPE_FROM_CLOSURE =
       CompileTimeErrorCode(
     'RETURN_OF_INVALID_TYPE_FROM_CLOSURE',
-    "The returned type '{0}' isn't returnable from a '{1}' function, as "
-        "required by the closure's context.",
+    "The return type '{0}' isn't a '{1}', as required by the closure's "
+        "context.",
     hasPublishedDocs: true,
   );
 
@@ -4949,7 +4719,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   );
 
   ///  Parameters:
-  ///  0: the type of the expression in the return statement
+  ///  0: the return type as declared in the return statement
   ///  1: the expected return type as defined by the method
   ///  2: the name of the method
   static const CompileTimeErrorCode RETURN_OF_INVALID_TYPE_FROM_METHOD =
@@ -5155,6 +4925,17 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
     'SWITCH_CASE_COMPLETES_NORMALLY',
     "The 'case' shouldn't complete normally.",
     correctionMessage: "Try adding 'break', 'return', or 'throw'.",
+    hasPublishedDocs: true,
+  );
+
+  ///  Parameters:
+  ///  0: the static type of the switch expression
+  ///  1: the static type of the case expressions
+  static const CompileTimeErrorCode SWITCH_EXPRESSION_NOT_ASSIGNABLE =
+      CompileTimeErrorCode(
+    'SWITCH_EXPRESSION_NOT_ASSIGNABLE',
+    "Type '{0}' of the switch expression isn't assignable to the type '{1}' of "
+        "case expressions.",
     hasPublishedDocs: true,
   );
 
@@ -5433,7 +5214,7 @@ class CompileTimeErrorCode extends AnalyzerErrorCode {
   );
 
   ///  Parameters:
-  ///  0: the name of the enum value that is not defined
+  ///  0: the name of the enum constant that is not defined
   ///  1: the name of the enum used to access the constant
   static const CompileTimeErrorCode UNDEFINED_ENUM_CONSTANT =
       CompileTimeErrorCode(
@@ -6288,19 +6069,6 @@ class WarningCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
-  ///  No parameters.
-  static const WarningCode DEAD_CODE_LATE_WILDCARD_VARIABLE_INITIALIZER =
-      WarningCode(
-    'DEAD_CODE',
-    "Dead code: The assigned-to wildcard variable is marked late and can never "
-        "be referenced so this initializer will never be evaluated.",
-    correctionMessage:
-        "Try removing the code, removing the late modifier or changing the "
-        "variable to a non-wildcard.",
-    hasPublishedDocs: true,
-    uniqueName: 'DEAD_CODE_LATE_WILDCARD_VARIABLE_INITIALIZER',
-  );
-
   ///  Dead code is code that is never reached. This case covers cases where the
   ///  user has an on-catch clause such as `on A catch (e)`, where a supertype of
   ///  `A` was already caught.
@@ -6653,6 +6421,13 @@ class WarningCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
+  ///  This warning is generated anywhere a @factory annotation is associated
+  ///  with anything other than a method.
+  static const WarningCode INVALID_FACTORY_ANNOTATION = WarningCode(
+    'INVALID_FACTORY_ANNOTATION',
+    "Only methods can be annotated as factories.",
+  );
+
   ///  Parameters:
   ///  0: The name of the method
   static const WarningCode INVALID_FACTORY_METHOD_DECL = WarningCode(
@@ -6667,6 +6442,13 @@ class WarningCode extends AnalyzerErrorCode {
     'INVALID_FACTORY_METHOD_IMPL',
     "Factory method '{0}' doesn't return a newly allocated object.",
     hasPublishedDocs: true,
+  );
+
+  ///  This warning is generated anywhere an @immutable annotation is associated
+  ///  with anything other than a class.
+  static const WarningCode INVALID_IMMUTABLE_ANNOTATION = WarningCode(
+    'INVALID_IMMUTABLE_ANNOTATION',
+    "Only classes can be annotated as being immutable.",
   );
 
   ///  No parameters.
@@ -6871,6 +6653,17 @@ class WarningCode extends AnalyzerErrorCode {
     correctionMessage: "Remove @required.",
   );
 
+  ///  This warning is generated anywhere where `@sealed` annotates something
+  ///  other than a class.
+  ///
+  ///  No parameters.
+  static const WarningCode INVALID_SEALED_ANNOTATION = WarningCode(
+    'INVALID_SEALED_ANNOTATION',
+    "The annotation '@sealed' can only be applied to classes.",
+    correctionMessage: "Try removing the '@sealed' annotation.",
+    hasPublishedDocs: true,
+  );
+
   ///  Parameters:
   ///  0: the name of the member
   static const WarningCode INVALID_USE_OF_INTERNAL_MEMBER = WarningCode(
@@ -6957,7 +6750,6 @@ class WarningCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
-  ///  Reported when the macro uses `Builder.report()` with `Severity.warning`.
   ///  Parameters:
   ///  0: the message
   static const WarningCode MACRO_WARNING = WarningCode(
@@ -7025,6 +6817,17 @@ class WarningCode extends AnalyzerErrorCode {
     uniqueName: 'MISSING_REQUIRED_PARAM_WITH_DETAILS',
   );
 
+  ///  Parameters:
+  ///  0: the name of the declared return type
+  static const WarningCode MISSING_RETURN = WarningCode(
+    'MISSING_RETURN',
+    "This function has a return type of '{0}', but doesn't end with a return "
+        "statement.",
+    correctionMessage:
+        "Try adding a return statement, or changing the return type to 'void'.",
+    hasPublishedDocs: true,
+  );
+
   ///  This warning is generated anywhere where a `@sealed` class is used as a
   ///  a superclass constraint of a mixin.
   ///
@@ -7060,15 +6863,6 @@ class WarningCode extends AnalyzerErrorCode {
     'MUST_CALL_SUPER',
     "This method overrides a method annotated as '@mustCallSuper' in '{0}', "
         "but doesn't invoke the overridden method.",
-    hasPublishedDocs: true,
-  );
-
-  ///  Parameters:
-  ///  0: the name of the argument
-  static const WarningCode NON_CONST_ARGUMENT_FOR_CONST_PARAMETER = WarningCode(
-    'NON_CONST_ARGUMENT_FOR_CONST_PARAMETER',
-    "Argument '{0}' must be a constant.",
-    correctionMessage: "Try replacing the argument with a constant.",
     hasPublishedDocs: true,
   );
 
@@ -7215,6 +7009,15 @@ class WarningCode extends AnalyzerErrorCode {
         "Try checking for throw expressions or type errors in the receiver",
   );
 
+  static const WarningCode RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA =
+      WarningCode(
+    'RECORD_LITERAL_ONE_POSITIONAL_NO_TRAILING_COMMA',
+    "A record literal with exactly one positional field requires a trailing "
+        "comma.",
+    correctionMessage: "Try adding a trailing comma.",
+    hasPublishedDocs: true,
+  );
+
   ///  An error code indicating the use of a redeclare annotation on a member that does not redeclare.
   ///
   ///  Parameters:
@@ -7306,6 +7109,15 @@ class WarningCode extends AnalyzerErrorCode {
     'SDK_VERSION_GT_GT_GT_OPERATOR',
     "The operator '>>>' wasn't supported until version 2.14.0, but this code "
         "is required to be able to run on earlier versions.",
+    correctionMessage: "Try updating the SDK constraints.",
+    hasPublishedDocs: true,
+  );
+
+  ///  No parameters.
+  static const WarningCode SDK_VERSION_NEVER = WarningCode(
+    'SDK_VERSION_NEVER',
+    "The type 'Never' wasn't supported until version 2.12.0, but this code is "
+        "required to be able to run on earlier versions.",
     correctionMessage: "Try updating the SDK constraints.",
     hasPublishedDocs: true,
   );
@@ -7426,13 +7238,8 @@ class WarningCode extends AnalyzerErrorCode {
         "this is the only name in the list.",
   );
 
-  ///  No parameters.
-  static const WarningCode UNNECESSARY_CAST = WarningCode(
-    'UNNECESSARY_CAST',
-    "Unnecessary cast.",
-    correctionMessage: "Try removing the cast.",
-    hasPublishedDocs: true,
-  );
+  ///  This is the new replacement for [HintCode.UNNECESSARY_CAST].
+  static const HintCode UNNECESSARY_CAST = HintCode.UNNECESSARY_CAST;
 
   ///  No parameters.
   static const WarningCode UNNECESSARY_CAST_PATTERN = WarningCode(
@@ -7573,24 +7380,12 @@ class WarningCode extends AnalyzerErrorCode {
     hasPublishedDocs: true,
   );
 
-  ///  Parameters:
-  ///  0: the name that is declared but not referenced
-  static const WarningCode UNUSED_ELEMENT = WarningCode(
-    'UNUSED_ELEMENT',
-    "The declaration '{0}' isn't referenced.",
-    correctionMessage: "Try removing the declaration of '{0}'.",
-    hasPublishedDocs: true,
-  );
+  ///  This is the new replacement for [HintCode.UNUSED_ELEMENT].
+  static const HintCode UNUSED_ELEMENT = HintCode.UNUSED_ELEMENT;
 
-  ///  Parameters:
-  ///  0: the name of the parameter that is declared but not used
-  static const WarningCode UNUSED_ELEMENT_PARAMETER = WarningCode(
-    'UNUSED_ELEMENT',
-    "A value for optional parameter '{0}' isn't ever given.",
-    correctionMessage: "Try removing the unused parameter.",
-    hasPublishedDocs: true,
-    uniqueName: 'UNUSED_ELEMENT_PARAMETER',
-  );
+  ///  This is the new replacement for [HintCode.UNUSED_ELEMENT_PARAMETER].
+  static const HintCode UNUSED_ELEMENT_PARAMETER =
+      HintCode.UNUSED_ELEMENT_PARAMETER;
 
   ///  Parameters:
   ///  0: the name of the unused field
@@ -7664,25 +7459,6 @@ class WarningCode extends AnalyzerErrorCode {
     'UNUSED_SHOWN_NAME',
     "The name {0} is shown, but isn't used.",
     correctionMessage: "Try removing the name from the list of shown members.",
-    hasPublishedDocs: true,
-  );
-
-  ///  Parameters:
-  ///  0: the URI pointing to a nonexistent file
-  static const WarningCode URI_DOES_NOT_EXIST_IN_DOC_IMPORT = WarningCode(
-    'URI_DOES_NOT_EXIST_IN_DOC_IMPORT',
-    "Target of URI doesn't exist: '{0}'.",
-    correctionMessage:
-        "Try creating the file referenced by the URI, or try using a URI for a "
-        "file that does exist.",
-  );
-
-  ///  Parameters:
-  ///  0: the name of the member
-  static const WarningCode invalid_use_of_do_not_submit_member = WarningCode(
-    'invalid_use_of_do_not_submit_member',
-    "Uses of '{0}' should not be submitted to source control.",
-    correctionMessage: "Try removing the reference to '{0}'.",
     hasPublishedDocs: true,
   );
 

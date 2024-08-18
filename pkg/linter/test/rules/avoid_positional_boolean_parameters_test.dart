@@ -25,56 +25,6 @@ void f(List<bool> list) {
 ''');
   }
 
-  test_augmentationConstructor() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-import augment 'test.dart';
-
-class A {
-  A(bool b);
-}
-''');
-
-    await assertNoDiagnostics(r'''
-augment library 'a.dart';
-
-augment class A {
-  augment A(bool b);
-}
-''');
-  }
-
-  test_augmentationFunction() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-import augment 'test.dart';
-
-void f(bool b) { }
-''');
-
-    await assertNoDiagnostics(r'''
-augment library 'a.dart';
-
-augment void f(bool b) { }
-''');
-  }
-
-  test_augmentationMethod() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-import augment 'test.dart';
-
-class A {
-  void f(bool b) { }
-}
-''');
-
-    await assertNoDiagnostics(r'''
-augment library 'a.dart';
-
-augment class A {
-  augment void f(bool b) { }
-}
-''');
-  }
-
   test_constructor_fieldFormalParameter_named() async {
     await assertNoDiagnostics(r'''
 class C {
@@ -84,7 +34,7 @@ class C {
 ''');
   }
 
-  test_constructor_fieldFormalParameter_positional() async {
+  test_constructor_fieldFormalParameter_postional() async {
     await assertDiagnostics(r'''
 class C {
   bool p;

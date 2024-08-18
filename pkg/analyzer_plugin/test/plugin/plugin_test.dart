@@ -80,10 +80,11 @@ void main(List<String> args, SendPort sendPort) {
   receivePort.listen((msg) => sendPort.send('ECHO: $msg'));
 }
         ''';
-    var isolateUri = Uri.dataFromString(isolateSource, encoding: utf8);
-    var receivePort = ReceivePort();
-    var isolate = await Isolate.spawnUri(isolateUri, [], receivePort.sendPort);
-    var sendPort = (await receivePort.first) as SendPort;
+    final isolateUri = Uri.dataFromString(isolateSource, encoding: utf8);
+    final receivePort = ReceivePort();
+    final isolate =
+        await Isolate.spawnUri(isolateUri, [], receivePort.sendPort);
+    final sendPort = (await receivePort.first) as SendPort;
     try {
       sendPort.send(params.toJson());
     } catch (e) {
@@ -349,9 +350,9 @@ void main(List<String> args, SendPort sendPort) {
   }
 
   Future<void> test_onRequest_analysisSetContextRoots() async {
-    var plugin = this.plugin as _TestServerPlugin;
+    final plugin = this.plugin as _TestServerPlugin;
 
-    var analyzedPaths = <String>[];
+    final analyzedPaths = <String>[];
     plugin.analyzeFileHandler = ({
       required AnalysisContext analysisContext,
       required String path,

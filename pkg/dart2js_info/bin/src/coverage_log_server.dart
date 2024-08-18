@@ -19,7 +19,7 @@
 ///      flag provided to dart2js.
 ///    * start this server, and proxy requests from your normal frontend
 ///      server to this one.
-library;
+library dart2js_info.bin.coverage_log_server;
 
 import 'dart:async';
 import 'dart:convert';

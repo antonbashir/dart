@@ -29,24 +29,6 @@ class B extends A {}
     ]);
   }
 
-  test_class_extends_inAugmentation() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-augment class B extend A {}
-''');
-
-    await assertErrorsInCode(r'''
-import augment 'a.dart';
-final class A {}
-class B {}
-''', [
-      error(CompileTimeErrorCode.SUBTYPE_OF_FINAL_IS_NOT_BASE_FINAL_OR_SEALED,
-          48, 1,
-          text:
-              "The type 'B' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'."),
-    ]);
-  }
-
   test_class_extends_outside() async {
     // No [SUBTYPE_OF_FINAL_IS_NOT_BASE_FINAL_OR_SEALED] reported outside of
     // library.
@@ -64,7 +46,7 @@ class B extends A {}
   }
 
   test_class_extends_outside_viaLanguage219AndCore() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 // @dart=2.19
 import 'dart:core';
 class A implements MapEntry<int, int> {
@@ -122,7 +104,7 @@ class B implements A {}
     // No [SUBTYPE_OF_FINAL_IS_NOT_BASE_FINAL_OR_SEALED] reported outside of
     // library to avoid over-reporting when we have a
     // [FINAL_CLASS_IMPLEMENTED_OUTSIDE_OF_LIBRARY] error.
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 // @dart=2.19
 import 'dart:core';
 class A implements MapEntry<int, int> {
@@ -178,7 +160,7 @@ class C extends B {}
         text:
             "The type 'C' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 12, 1,
+          ExpectedContextMessage(testFile.path, 12, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -200,7 +182,7 @@ class D extends C {}
         text:
             "The type 'D' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 12, 1,
+          ExpectedContextMessage(testFile.path, 12, 1,
               text:
                   "The type 'C' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -238,7 +220,7 @@ final class A {}
         text:
             "The type 'C' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 61, 1,
+          ExpectedContextMessage(testFile.path, 61, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -259,7 +241,7 @@ class C implements B {}
         text:
             "The type 'C' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 12, 1,
+          ExpectedContextMessage(testFile.path, 12, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -281,7 +263,7 @@ class D extends C {}
         text:
             "The type 'D' must be 'base', 'final' or 'sealed' because the supertype 'B' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 23, 1,
+          ExpectedContextMessage(testFile.path, 23, 1,
               text:
                   "The type 'C' is a subtype of 'B', and 'B' is defined here.")
         ],
@@ -329,7 +311,7 @@ class C = Object with B implements AA;
         text:
             "The type 'C' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 12, 1,
+          ExpectedContextMessage(testFile.path, 12, 1,
               text:
                   "The type 'AA' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -351,7 +333,7 @@ interface class C = Object with B implements AA;
         text:
             "The type 'C' must be 'base', 'final' or 'sealed' because the supertype 'A' is 'final'.",
         contextMessages: [
-          ExpectedContextMessage(testFile, 12, 1,
+          ExpectedContextMessage(testFile.path, 12, 1,
               text:
                   "The type 'AA' is a subtype of 'A', and 'A' is defined here.")
         ],

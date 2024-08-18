@@ -7,7 +7,7 @@
 /// performance, scalability, and stability characteristics.
 ///
 /// Call with `--help` to see all of the args.
-library;
+library generate_testing_package;
 
 import 'dart:io';
 import 'dart:math';
@@ -39,8 +39,10 @@ void main(List<String> args) async {
       defaultsTo: '1',
       help: 'the number of parameters per method',
     )
-    ..addFlag('use-barrel-file', help: 'Whether to add a barrel import')
+    ..addFlag('use-barrel-file',
+        defaultsTo: false, help: 'Whether to add a barrel import')
     ..addFlag('use-json-serializable',
+        defaultsTo: false,
         help: 'Whether to declare @JsonSerializable classes');
   var argResults = argParser.parse(args);
   var libraryCount = int.parse(argResults['library-count'] as String);
@@ -100,12 +102,12 @@ void main(List<String> args) async {
           content.writeln(import(testPackageLibUri('lib$importIndex.dart')));
         }
       }
-      content.writeln();
+      content.writeln('');
     }
 
     if (useJsonSerializable) {
       content.writeln("part '$libraryName.g.dart';");
-      content.writeln();
+      content.writeln('');
     }
 
     // Add top-level variables above tier 0.
@@ -119,7 +121,7 @@ void main(List<String> args) async {
             .writeln('var x$topLevelVariableIndex = C$classReferenceIndex();');
         topLevelVariableIndex++;
       }
-      content.writeln();
+      content.writeln('');
     }
 
     for (var cIndex = 1; cIndex <= classCount; cIndex++) {

@@ -16,27 +16,27 @@ void main() {
 @reflectiveTest
 class TestCodeFormatTest {
   void test_noMarkers() {
-    var markedCode = '''
+    final rawCode = '''
 int a = 1;
 ''';
-    var code = TestCode.parse(markedCode);
-    expect(code.markedCode, markedCode);
-    expect(code.code, markedCode); // no difference
+    final code = TestCode.parse(rawCode);
+    expect(code.rawCode, rawCode);
+    expect(code.code, rawCode); // no difference
     expect(code.positions, isEmpty);
     expect(code.ranges, isEmpty);
   }
 
   void test_positions() {
-    var markedCode = '''
+    final rawCode = '''
 int /*0*/a = 1;/*1*/
 int b/*2*/ = 2;
 ''';
-    var expectedCode = '''
+    final expectedCode = '''
 int a = 1;
 int b = 2;
 ''';
-    var code = TestCode.parse(markedCode);
-    expect(code.markedCode, markedCode);
+    final code = TestCode.parse(rawCode);
+    expect(code.rawCode, rawCode);
     expect(code.code, expectedCode);
     expect(code.ranges, isEmpty);
 
@@ -46,14 +46,14 @@ int b = 2;
   }
 
   void test_positions_nonShorthandCaret() {
-    var markedCode = '''
+    final rawCode = '''
 String /*0*/a = '^^^';
     ''';
-    var expectedCode = '''
+    final expectedCode = '''
 String a = '^^^';
     ''';
-    var code = TestCode.parse(markedCode, positionShorthand: false);
-    expect(code.markedCode, markedCode);
+    final code = TestCode.parse(rawCode, positionShorthand: false);
+    expect(code.rawCode, rawCode);
     expect(code.code, expectedCode);
 
     expect(code.positions, hasLength(1));
@@ -64,21 +64,21 @@ String a = '^^^';
   }
 
   void test_positions_numberReused() {
-    var markedCode = '''
+    final rawCode = '''
 /*0*/ /*1*/ /*0*/
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_positions_shorthand() {
-    var markedCode = '''
+    final rawCode = '''
 int ^a = 1
     ''';
-    var expectedCode = '''
+    final expectedCode = '''
 int a = 1
     ''';
-    var code = TestCode.parse(markedCode);
-    expect(code.markedCode, markedCode);
+    final code = TestCode.parse(rawCode);
+    expect(code.rawCode, rawCode);
     expect(code.code, expectedCode);
 
     expect(code.positions, hasLength(1));
@@ -89,30 +89,30 @@ int a = 1
   }
 
   void test_positions_shorthandReused() {
-    var markedCode = '''
+    final rawCode = '''
 ^ ^
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_positions_shorthandReusedNumber() {
-    var markedCode = '''
+    final rawCode = '''
 /*0*/ ^
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges() {
-    var markedCode = '''
+    final rawCode = '''
 int /*[0*/a = 1;/*0]*/
 /*[1*/int b = 2;/*1]*/
 ''';
-    var expectedCode = '''
+    final expectedCode = '''
 int a = 1;
 int b = 2;
 ''';
-    var code = TestCode.parse(markedCode);
-    expect(code.markedCode, markedCode);
+    final code = TestCode.parse(rawCode);
+    expect(code.rawCode, rawCode);
     expect(code.code, expectedCode);
     expect(code.positions, isEmpty);
 
@@ -125,43 +125,43 @@ int b = 2;
   }
 
   void test_ranges_endReused() {
-    var markedCode = '''
+    final rawCode = '''
 /*[0*/ /*0]*/
 /*[1*/ /*0]*/
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges_endWithoutStart() {
-    var markedCode = '''
+    final rawCode = '''
 /*0]*/
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges_nonShorthandMarkers() {
-    var markedCode = '''
+    final rawCode = '''
 String a = '[!not markers!]';
     ''';
-    var code = TestCode.parse(markedCode, rangeShorthand: false);
-    expect(code.markedCode, markedCode);
-    expect(code.code, markedCode); // No change.
+    final code = TestCode.parse(rawCode, rangeShorthand: false);
+    expect(code.rawCode, rawCode);
+    expect(code.code, rawCode); // No change.
 
     expect(code.positions, isEmpty);
     expect(code.ranges, isEmpty);
   }
 
   void test_ranges_shorthand() {
-    var markedCode = '''
+    final rawCode = '''
 int [!a = 1;!]
 int b = 2;
 ''';
-    var expectedCode = '''
+    final expectedCode = '''
 int a = 1;
 int b = 2;
 ''';
-    var code = TestCode.parse(markedCode);
-    expect(code.markedCode, markedCode);
+    final code = TestCode.parse(rawCode);
+    expect(code.rawCode, rawCode);
     expect(code.code, expectedCode);
     expect(code.positions, isEmpty);
 
@@ -172,33 +172,33 @@ int b = 2;
   }
 
   void test_ranges_shorthandReused() {
-    var markedCode = '''
+    final rawCode = '''
 int [!a = 1;!]
 int [!b = 2!];
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges_shorthandReusedNumber() {
-    var markedCode = '''
+    final rawCode = '''
 int [!a = 1;!]
 int /*[0*/b = 2/*0]*/;
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges_startReused() {
-    var markedCode = '''
+    final rawCode = '''
 /*[0*/ /*0]*/
 /*[0*/ /*1]*/
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 
   void test_ranges_startWithoutEnd() {
-    var markedCode = '''
+    final rawCode = '''
 /*[0*/
 ''';
-    expect(() => TestCode.parse(markedCode), throwsArgumentError);
+    expect(() => TestCode.parse(rawCode), throwsArgumentError);
   }
 }

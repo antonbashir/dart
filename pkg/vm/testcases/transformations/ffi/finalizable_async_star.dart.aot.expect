@@ -12,15 +12,9 @@ class MyFinalizable extends core::Object implements ffi::Finalizable {
     : super core::Object::•()
     ;
 }
-
-[@vm.inferred-return-type.metadata=dart.core::_Smi (value: 3)]
-[@vm.unboxing-info.metadata=()->i]
-static method doSomething() → core::int
+[@vm.unboxing-info.metadata=()->i]static method doSomething() → core::int
   return 3;
-
-[@vm.inferred-return-type.metadata=!]
-[@vm.closure-id=1]
-static method useFinalizableAsyncStar([@vm.inferred-arg-type.metadata=#lib::MyFinalizable] ffi::Finalizable finalizable) → asy::Stream<core::int> async* /* emittedValueType= core::int */ {
+[@vm.closure-id=1]static method useFinalizableAsyncStar([@vm.inferred-arg-type.metadata=#lib::MyFinalizable] ffi::Finalizable finalizable) → asy::Stream<core::int> async* {
   final self::MyFinalizable finalizable2 = new self::MyFinalizable::•();
   yield block {
     final synthesized core::int :expressionValueWrappedFinalizable = self::doSomething();
@@ -56,9 +50,7 @@ static method useFinalizableAsyncStar([@vm.inferred-arg-type.metadata=#lib::MyFi
   _in::reachabilityFence(finalizable4);
   _in::reachabilityFence(finalizable);
 }
-
-[@vm.inferred-return-type.metadata=dart.async::_Future]
-static method main() → void async /* emittedValueType= void */ {
+static method main() → void async /* futureValueType= void */ {
   final self::MyFinalizable finalizable = new self::MyFinalizable::•();
   final asy::Stream<core::int> asyncStarResult = [@vm.inferred-type.metadata=!] self::useFinalizableAsyncStar(finalizable);
   {

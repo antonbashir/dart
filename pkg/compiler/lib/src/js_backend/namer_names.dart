@@ -16,7 +16,7 @@ abstract class _NamerName extends jsAst.Name {
     return _NameReference(underlying, newSourceInformation);
   }
 
-  int _compareSameKind(covariant _NamerName name);
+  int _compareSameKind(covariant _NamerName);
 
   @override
   String toString() {
@@ -59,7 +59,7 @@ class StringBackedName extends _NamerName {
   String get key => name;
 
   @override
-  bool operator ==(Object other) {
+  operator ==(Object other) {
     if (other is _NameReference) return this == other._target;
     if (identical(this, other)) return true;
     return other is StringBackedName && name == other.name;

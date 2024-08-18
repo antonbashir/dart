@@ -6,32 +6,29 @@ import 'dart:io';
 
 import 'package:front_end/src/api_prototype/compiler_options.dart' as api;
 import 'package:front_end/src/api_prototype/file_system.dart' as api;
-import 'package:front_end/src/api_prototype/incremental_kernel_generator.dart';
-import 'package:front_end/src/base/compiler_context.dart';
-import 'package:front_end/src/base/constant_context.dart';
-import 'package:front_end/src/base/incremental_compiler.dart';
-import 'package:front_end/src/base/local_scope.dart';
 import 'package:front_end/src/base/processed_options.dart';
-import 'package:front_end/src/base/scope.dart';
-import 'package:front_end/src/base/ticker.dart';
-import 'package:front_end/src/base/uri_translator.dart';
 import 'package:front_end/src/compute_platform_binaries_location.dart'
     show computePlatformBinariesLocation;
-import 'package:front_end/src/dill/dill_target.dart';
-import 'package:front_end/src/kernel/body_builder.dart';
-import 'package:front_end/src/kernel/body_builder_context.dart';
-import 'package:front_end/src/kernel/kernel_target.dart';
-import 'package:front_end/src/source/diet_listener.dart';
-import 'package:front_end/src/source/offset_map.dart';
-import 'package:front_end/src/source/source_library_builder.dart';
-import 'package:front_end/src/source/source_loader.dart';
-import 'package:front_end/src/type_inference/type_inferrer.dart';
+import 'package:front_end/src/fasta/compiler_context.dart';
+import 'package:front_end/src/fasta/constant_context.dart';
+import 'package:front_end/src/fasta/dill/dill_target.dart';
+import 'package:front_end/src/fasta/kernel/body_builder.dart';
+import 'package:front_end/src/fasta/kernel/body_builder_context.dart';
+import 'package:front_end/src/fasta/kernel/kernel_target.dart';
+import 'package:front_end/src/fasta/scope.dart';
+import 'package:front_end/src/fasta/source/diet_listener.dart';
+import 'package:front_end/src/fasta/source/source_library_builder.dart';
+import 'package:front_end/src/fasta/source/source_loader.dart';
+import 'package:front_end/src/fasta/ticker.dart';
+import 'package:front_end/src/fasta/type_inference/type_inference_engine.dart';
+import 'package:front_end/src/fasta/type_inference/type_inferrer.dart';
+import 'package:front_end/src/fasta/uri_translator.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/kernel.dart';
 import 'package:kernel/target/targets.dart';
 import 'package:testing/testing.dart';
-import "package:vm/modular/target/vm.dart" show VmTarget;
+import "package:vm/target/vm.dart" show VmTarget;
 
 api.CompilerOptions getOptions(
     {void Function(api.DiagnosticMessage message)? onDiagnostic,
@@ -57,10 +54,6 @@ api.CompilerOptions getOptions(
   return options;
 }
 
-/// [splitCompileAndCompileLess] Will use the incremental compiler to compile
-/// an outline of everything, then compile the bodies of the [input]. This also
-/// makes the compile pipeline skip transformations as for instance the VMs
-/// mixin transformation isn't compatible (and will actively crash).
 Future<BuildResult> compile(
     {required List<Uri> inputs,
     void Function(api.DiagnosticMessage message)? onDiagnostic,
@@ -69,8 +62,7 @@ Future<BuildResult> compile(
     bool compileSdk = false,
     KernelTargetCreator kernelTargetCreator = KernelTargetTest.new,
     BodyBuilderCreator bodyBuilderCreator = defaultBodyBuilderCreator,
-    api.FileSystem? fileSystem,
-    bool splitCompileAndCompileLess = false}) async {
+    api.FileSystem? fileSystem}) async {
   Ticker ticker = new Ticker(isVerbose: false);
   api.CompilerOptions compilerOptions = getOptions(
       repoDir: repoDir,
@@ -84,129 +76,52 @@ Future<BuildResult> compile(
 
   return await CompilerContext.runWithOptions(processedOptions,
       (CompilerContext c) async {
-    if (splitCompileAndCompileLess) {
-      TestIncrementalCompiler outlineIncrementalCompiler =
-          new TestIncrementalCompiler(bodyBuilderCreator, c, outlineOnly: true);
-      // Outline
-      IncrementalCompilerResult outlineResult = await outlineIncrementalCompiler
-          .computeDelta(entryPoints: c.options.inputs);
-      print("Build outline of "
-          "${outlineResult.component.libraries.length} libraries");
+    UriTranslator uriTranslator = await c.options.getUriTranslator();
+    DillTarget dillTarget =
+        new DillTarget(ticker, uriTranslator, c.options.target);
+    KernelTarget kernelTarget = kernelTargetCreator(
+        c.fileSystem, false, dillTarget, uriTranslator, bodyBuilderCreator);
 
-      // Full of the asked inputs.
-      TestIncrementalCompiler incrementalCompiler =
-          new TestIncrementalCompiler.fromComponent(
-              bodyBuilderCreator, c, outlineResult.component);
-      for (Uri uri in c.options.inputs) {
-        incrementalCompiler.invalidate(uri);
-      }
-      IncrementalCompilerResult result = await incrementalCompiler.computeDelta(
-          entryPoints: c.options.inputs, fullComponent: true);
-      print("Build bodies of "
-          "${incrementalCompiler.recorderForTesting.rebuildBodiesCount} "
-          "libraries.");
-
-      return new BuildResult(component: result.component);
-    } else {
-      UriTranslator uriTranslator = await c.options.getUriTranslator();
-      DillTarget dillTarget =
-          new DillTarget(c, ticker, uriTranslator, c.options.target);
-      KernelTarget kernelTarget = kernelTargetCreator(c, c.fileSystem, false,
-          dillTarget, uriTranslator, bodyBuilderCreator);
-
-      Uri? platform = c.options.sdkSummary;
-      if (platform != null) {
-        var bytes = new File.fromUri(platform).readAsBytesSync();
-        var platformComponent = loadComponentFromBytes(bytes);
-        dillTarget.loader
-            .appendLibraries(platformComponent, byteCount: bytes.length);
-      }
-
-      kernelTarget.setEntryPoints(c.options.inputs);
-      dillTarget.buildOutlines();
-      BuildResult buildResult = await kernelTarget.buildOutlines();
-      buildResult = await kernelTarget.buildComponent(
-          macroApplications: buildResult.macroApplications);
-      buildResult.macroApplications?.close();
-      return buildResult;
+    Uri? platform = c.options.sdkSummary;
+    if (platform != null) {
+      var bytes = new File.fromUri(platform).readAsBytesSync();
+      var platformComponent = loadComponentFromBytes(bytes);
+      dillTarget.loader
+          .appendLibraries(platformComponent, byteCount: bytes.length);
     }
+
+    kernelTarget.setEntryPoints(c.options.inputs);
+    dillTarget.buildOutlines();
+    BuildResult buildResult = await kernelTarget.buildOutlines();
+    buildResult = await kernelTarget.buildComponent(
+        macroApplications: buildResult.macroApplications);
+    buildResult.macroApplications?.close();
+    return buildResult;
   });
 }
 
-class TestIncrementalCompiler extends IncrementalCompiler {
-  final BodyBuilderCreator bodyBuilderCreator;
-
-  @override
-  final TestRecorderForTesting recorderForTesting =
-      new TestRecorderForTesting();
-
-  TestIncrementalCompiler(
-    this.bodyBuilderCreator,
-    CompilerContext context, {
-    Uri? initializeFromDillUri,
-    required bool outlineOnly,
-  }) : super(context, initializeFromDillUri, outlineOnly);
-
-  TestIncrementalCompiler.fromComponent(
-      this.bodyBuilderCreator, super.context, super._componentToInitializeFrom)
-      : super.fromComponent();
-
-  @override
-  bool get skipExperimentalInvalidationChecksForTesting => true;
-
-  @override
-  IncrementalKernelTarget createIncrementalKernelTarget(
-      api.FileSystem fileSystem,
-      bool includeComments,
-      DillTarget dillTarget,
-      UriTranslator uriTranslator) {
-    return new KernelTargetTest(context, fileSystem, includeComments,
-        dillTarget, uriTranslator, bodyBuilderCreator)
-      ..skipTransformations = true;
-  }
-}
-
-class TestRecorderForTesting extends RecorderForTesting {
-  int rebuildBodiesCount = 0;
-
-  @override
-  void recordRebuildBodiesCount(int count) {
-    rebuildBodiesCount = count;
-  }
-}
-
 typedef KernelTargetCreator = KernelTargetTest Function(
-    CompilerContext compilerContext,
     api.FileSystem fileSystem,
     bool includeComments,
     DillTarget dillTarget,
     UriTranslator uriTranslator,
     BodyBuilderCreator bodyBuilderCreator);
 
-class KernelTargetTest extends IncrementalKernelTarget {
+class KernelTargetTest extends KernelTarget {
   final BodyBuilderCreator bodyBuilderCreator;
-  bool skipTransformations = false;
 
   KernelTargetTest(
-    CompilerContext compilerContext,
-    api.FileSystem fileSystem,
-    bool includeComments,
-    DillTarget dillTarget,
-    UriTranslator uriTranslator,
-    this.bodyBuilderCreator,
-  ) : super(compilerContext, fileSystem, includeComments, dillTarget,
-            uriTranslator);
+      api.FileSystem fileSystem,
+      bool includeComments,
+      DillTarget dillTarget,
+      UriTranslator uriTranslator,
+      this.bodyBuilderCreator)
+      : super(fileSystem, includeComments, dillTarget, uriTranslator);
 
   @override
   SourceLoader createLoader() {
     return new SourceLoaderTest(
         fileSystem, includeComments, this, bodyBuilderCreator);
-  }
-
-  @override
-  void runBuildTransformations() {
-    if (skipTransformations) return;
-    super.runBuildTransformations();
   }
 }
 
@@ -218,19 +133,18 @@ class SourceLoaderTest extends SourceLoader {
       : super(fileSystem, includeComments, target);
 
   @override
-  DietListener createDietListener(
-      SourceLibraryBuilder library, OffsetMap offsetMap) {
-    return new DietListenerTest(library, hierarchy, coreTypes,
-        typeInferenceEngine, offsetMap, bodyBuilderCreator);
+  DietListener createDietListener(SourceLibraryBuilder library) {
+    return new DietListenerTest(
+        library, hierarchy, coreTypes, typeInferenceEngine, bodyBuilderCreator);
   }
 
   @override
   BodyBuilder createBodyBuilderForOutlineExpression(
       SourceLibraryBuilder library,
       BodyBuilderContext bodyBuilderContext,
-      LookupScope scope,
+      Scope scope,
       Uri fileUri,
-      {LocalScope? formalParameterScope}) {
+      {Scope? formalParameterScope}) {
     return bodyBuilderCreator.createForOutlineExpression(
         library, bodyBuilderContext, scope, fileUri,
         formalParameterScope: formalParameterScope);
@@ -240,7 +154,7 @@ class SourceLoaderTest extends SourceLoader {
   BodyBuilder createBodyBuilderForField(
       SourceLibraryBuilder libraryBuilder,
       BodyBuilderContext bodyBuilderContext,
-      LookupScope enclosingScope,
+      Scope enclosingScope,
       TypeInferrer typeInferrer,
       Uri uri) {
     return bodyBuilderCreator.createForField(
@@ -251,14 +165,19 @@ class SourceLoaderTest extends SourceLoader {
 class DietListenerTest extends DietListener {
   final BodyBuilderCreator bodyBuilderCreator;
 
-  DietListenerTest(super.library, super.hierarchy, super.coreTypes,
-      super.typeInferenceEngine, super.offsetMap, this.bodyBuilderCreator);
+  DietListenerTest(
+      SourceLibraryBuilder library,
+      ClassHierarchy hierarchy,
+      CoreTypes coreTypes,
+      TypeInferenceEngine typeInferenceEngine,
+      this.bodyBuilderCreator)
+      : super(library, hierarchy, coreTypes, typeInferenceEngine);
 
   @override
   BodyBuilder createListenerInternal(
       BodyBuilderContext bodyBuilderContext,
-      LookupScope memberScope,
-      LocalScope? formalParameterScope,
+      Scope memberScope,
+      Scope? formalParameterScope,
       VariableDeclaration? extensionThis,
       List<TypeParameter>? extensionTypeParameters,
       TypeInferrer typeInferrer,
@@ -281,8 +200,8 @@ class DietListenerTest extends DietListener {
 typedef BodyBuilderCreatorUnnamed = BodyBuilderTest Function(
     {required SourceLibraryBuilder libraryBuilder,
     required BodyBuilderContext context,
-    required LookupScope enclosingScope,
-    LocalScope? formalParameterScope,
+    required Scope enclosingScope,
+    Scope? formalParameterScope,
     required ClassHierarchy hierarchy,
     required CoreTypes coreTypes,
     VariableDeclaration? thisVariable,
@@ -293,16 +212,16 @@ typedef BodyBuilderCreatorUnnamed = BodyBuilderTest Function(
 typedef BodyBuilderCreatorForField = BodyBuilderTest Function(
     SourceLibraryBuilder libraryBuilder,
     BodyBuilderContext bodyBuilderContext,
-    LookupScope enclosingScope,
+    Scope enclosingScope,
     TypeInferrer typeInferrer,
     Uri uri);
 
 typedef BodyBuilderCreatorForOutlineExpression = BodyBuilderTest Function(
     SourceLibraryBuilder library,
     BodyBuilderContext bodyBuilderContext,
-    LookupScope scope,
+    Scope scope,
     Uri fileUri,
-    {LocalScope? formalParameterScope});
+    {Scope? formalParameterScope});
 
 typedef BodyBuilderCreator = ({
   BodyBuilderCreatorUnnamed create,
@@ -321,8 +240,8 @@ class BodyBuilderTest extends BodyBuilder {
   BodyBuilderTest(
       {required SourceLibraryBuilder libraryBuilder,
       required BodyBuilderContext context,
-      required LookupScope enclosingScope,
-      LocalScope? formalParameterScope,
+      required Scope enclosingScope,
+      Scope? formalParameterScope,
       required ClassHierarchy hierarchy,
       required CoreTypes coreTypes,
       VariableDeclaration? thisVariable,
@@ -332,7 +251,7 @@ class BodyBuilderTest extends BodyBuilder {
       : super(
             libraryBuilder: libraryBuilder,
             context: context,
-            enclosingScope: new EnclosingLocalScope(enclosingScope),
+            enclosingScope: enclosingScope,
             formalParameterScope: formalParameterScope,
             hierarchy: hierarchy,
             coreTypes: coreTypes,
@@ -345,7 +264,7 @@ class BodyBuilderTest extends BodyBuilder {
   BodyBuilderTest.forField(
       SourceLibraryBuilder libraryBuilder,
       BodyBuilderContext bodyBuilderContext,
-      LookupScope enclosingScope,
+      Scope enclosingScope,
       TypeInferrer typeInferrer,
       Uri uri)
       : super.forField(libraryBuilder, bodyBuilderContext, enclosingScope,
@@ -353,8 +272,8 @@ class BodyBuilderTest extends BodyBuilder {
 
   @override
   BodyBuilderTest.forOutlineExpression(SourceLibraryBuilder library,
-      BodyBuilderContext bodyBuilderContext, LookupScope scope, Uri fileUri,
-      {LocalScope? formalParameterScope})
+      BodyBuilderContext bodyBuilderContext, Scope scope, Uri fileUri,
+      {Scope? formalParameterScope})
       : super.forOutlineExpression(library, bodyBuilderContext, scope, fileUri,
             formalParameterScope: formalParameterScope);
 }

@@ -9,30 +9,37 @@ import '../constants/values.dart' show ConstantValue, PrimitiveConstantValue;
 import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart' show DartType;
+import '../ir/static_type.dart';
 import '../serialization/serialization.dart';
 import '../universe/member_hierarchy.dart';
 import '../universe/record_shape.dart';
 import '../universe/selector.dart';
 
-/// Abstract booleans used for reporting known and unknown truth values.
-enum AbstractBool {
-  /// Used when the property is known _never_ to be true.
-  False,
+/// Enum-like values used for reporting known and unknown truth values.
+class AbstractBool {
+  final bool? _value;
 
-  /// Used when the property is known _always_ to be true.
-  True,
+  const AbstractBool._(this._value);
 
-  /// Used when the property might or might not be true.
-  Maybe,
-  ;
+  bool get isDefinitelyTrue => _value == true;
 
-  bool get isDefinitelyTrue => this == True;
+  bool get isPotentiallyTrue => _value != false;
 
-  bool get isPotentiallyTrue => this != False;
+  bool get isDefinitelyFalse => _value == false;
 
-  bool get isDefinitelyFalse => this == False;
+  bool get isPotentiallyFalse => _value != true;
 
-  bool get isPotentiallyFalse => this != True;
+  /// A value of `Abstract.True` is used when the property is known _always_ to
+  /// be true.
+  static const AbstractBool True = AbstractBool._(true);
+
+  /// A value of `Abstract.False` is used when the property is known _never_ to
+  /// be true.
+  static const AbstractBool False = AbstractBool._(false);
+
+  /// A value of `Abstract.Maybe` is used when the property might or might not
+  /// be true.
+  static const AbstractBool Maybe = AbstractBool._(null);
 
   static AbstractBool trueOrMaybe(bool value) => value ? True : Maybe;
 
@@ -64,6 +71,10 @@ enum AbstractBool {
     if (isDefinitelyFalse) return AbstractBool.True;
     return AbstractBool.Maybe;
   }
+
+  @override
+  String toString() =>
+      'AbstractBool.${_value == null ? 'Maybe' : (_value! ? 'True' : 'False')}';
 }
 
 /// A value in an abstraction of runtime values.
@@ -238,7 +249,8 @@ mixin AbstractValueDomain {
   /// interpreted as nullable. This is passed as `false` for is-tests and `true`
   /// for as-checks and other contexts (e.g. parameter checks).
   AbstractValueWithPrecision createFromStaticType(DartType type,
-      {required bool nullable});
+      {ClassRelation classRelation = ClassRelation.subtype,
+      required bool nullable});
 
   /// Creates an [AbstractValue] for a non-null exact instance of [cls].
   AbstractValue createNonNullExact(ClassEntity cls);
@@ -285,6 +297,12 @@ mixin AbstractValueDomain {
   /// Returns an [AbstractBool] that describes whether [value] only contains
   /// subtypes of [cls] or `null` at runtime.
   AbstractBool containsOnlyType(covariant AbstractValue value, ClassEntity cls);
+
+  /// Returns an [AbstractBool] that describes whether [value] is an instance of
+  /// [cls] or `null` at runtime.
+  // TODO(johnniwinther): Merge this with [isInstanceOf].
+  AbstractBool isInstanceOfOrNull(
+      covariant AbstractValue value, ClassEntity cls);
 
   /// Returns an [AbstractBool] that describes whether [value] is known to be an
   /// instance of [cls] at runtime.

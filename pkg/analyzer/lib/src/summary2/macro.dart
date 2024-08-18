@@ -6,14 +6,17 @@ import 'dart:io' as io;
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:analyzer/src/summary2/kernel_compilation_service.dart';
-import 'package:macros/src/bootstrap.dart' as macro;
-import 'package:macros/src/executor.dart' as macro;
-import 'package:macros/src/executor/isolated_executor.dart'
+import 'package:_fe_analyzer_shared/src/macros/bootstrap.dart' as macro;
+import 'package:_fe_analyzer_shared/src/macros/executor.dart' as macro;
+import 'package:_fe_analyzer_shared/src/macros/executor/isolated_executor.dart'
     as isolated_executor;
-import 'package:macros/src/executor/multi_executor.dart' as macro;
-import 'package:macros/src/executor/process_executor.dart' as process_executor;
-import 'package:macros/src/executor/serialization.dart' as macro;
+import 'package:_fe_analyzer_shared/src/macros/executor/multi_executor.dart'
+    as macro;
+import 'package:_fe_analyzer_shared/src/macros/executor/process_executor.dart'
+    as process_executor;
+import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart'
+    as macro;
+import 'package:analyzer/src/summary2/kernel_compilation_service.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as package_path;
 
@@ -74,39 +77,15 @@ class ExecutableMacroSupport extends MacroSupport {
     required io.File executable,
     required Set<Uri> libraries,
   }) {
-    var bundleExecutor = ExecutableBundleMacroExecutor(
+    final bundleExecutor = ExecutableBundleMacroExecutor(
       support: this,
       executable: executable,
       libraries: libraries,
     );
 
-    for (var libraryUri in libraries) {
+    for (final libraryUri in libraries) {
       _bundleExecutors[libraryUri] = bundleExecutor;
     }
-  }
-}
-
-final class ExecutableMacroSupportFactory extends MacroSupportFactory {
-  final void Function(ExecutableMacroSupport macroSupport) configure;
-  final List<ExecutableMacroSupport> _instances = [];
-
-  ExecutableMacroSupportFactory({
-    required this.configure,
-  });
-
-  @override
-  Future<void> dispose() async {
-    for (var instance in _instances) {
-      await instance.dispose();
-    }
-  }
-
-  @override
-  MacroSupport newInstance() {
-    var instance = ExecutableMacroSupport();
-    configure(instance);
-    _instances.add(instance);
-    return instance;
   }
 }
 
@@ -140,7 +119,7 @@ class KernelBundleMacroExecutor extends BundleMacroExecutor {
   @override
   void dispose() {
     support.executor.unregisterExecutorFactory(_executorFactoryToken);
-    var kernelUriCached = _kernelUriCached;
+    final kernelUriCached = _kernelUriCached;
     if (kernelUriCached != null) {
       // ignore: avoid_dynamic_calls
       (Isolate.current as dynamic).unregisterKernelBlobUri(kernelUriCached);
@@ -168,33 +147,15 @@ class KernelMacroSupport extends MacroSupport {
     required Uint8List kernelBytes,
     required Set<Uri> libraries,
   }) {
-    var bundleExecutor = KernelBundleMacroExecutor(
+    final bundleExecutor = KernelBundleMacroExecutor(
       support: this,
       kernelBytes: kernelBytes,
       libraries: libraries,
     );
 
-    for (var libraryUri in libraries) {
+    for (final libraryUri in libraries) {
       _bundleExecutors[libraryUri] = bundleExecutor;
     }
-  }
-}
-
-final class KernelMacroSupportFactory extends MacroSupportFactory {
-  final List<KernelMacroSupport> _instances = [];
-
-  @override
-  Future<void> dispose() async {
-    for (var instance in _instances) {
-      await instance.dispose();
-    }
-  }
-
-  @override
-  MacroSupport newInstance() {
-    var instance = KernelMacroSupport();
-    _instances.add(instance);
-    return instance;
   }
 }
 
@@ -227,26 +188,24 @@ class MacroKernelBuilder {
 
   Future<Uint8List> build({
     required MacroFileSystem fileSystem,
-    required String packageFilePath,
     required List<MacroLibrary> libraries,
   }) async {
-    var macroMainContent = macro.bootstrapMacroIsolate(
+    final macroMainContent = macro.bootstrapMacroIsolate(
       {
-        for (var library in libraries)
+        for (final library in libraries)
           library.uri.toString(): {
-            for (var c in library.classes) c.name: c.constructors
+            for (final c in library.classes) c.name: c.constructors
           },
       },
       macro.SerializationMode.byteData,
     );
 
-    var macroMainPath = '${libraries.first.path}.macro';
-    var overlayFileSystem = _OverlayMacroFileSystem(fileSystem);
+    final macroMainPath = '${libraries.first.path}.macro';
+    final overlayFileSystem = _OverlayMacroFileSystem(fileSystem);
     overlayFileSystem.overlays[macroMainPath] = macroMainContent;
 
     return KernelCompilationService.compile(
       fileSystem: overlayFileSystem,
-      packageFilePath: packageFilePath,
       path: macroMainPath,
     );
   }
@@ -286,7 +245,7 @@ class MacroSupport {
 
   /// Removes and disposes executors for all libraries.
   void removeLibraries() {
-    for (var bundleExecutor in _bundleExecutors.values) {
+    for (final bundleExecutor in _bundleExecutors.values) {
       bundleExecutor.dispose();
     }
     _bundleExecutors.clear();
@@ -294,35 +253,8 @@ class MacroSupport {
 
   /// Removes and disposes the executor for the library.
   void removeLibrary(Uri uri) {
-    var bundleExecutor = _bundleExecutors.remove(uri);
+    final bundleExecutor = _bundleExecutors.remove(uri);
     bundleExecutor?.dispose();
-  }
-}
-
-/// Each analysis context has to have its own [MacroSupport] instance.
-/// The content collection is configured with this factory.
-sealed class MacroSupportFactory {
-  Future<void> dispose();
-
-  MacroSupport newInstance();
-}
-
-// TODO(scheglov): remove after migration.
-final class SingleInstanceMacroSupportFactory extends MacroSupportFactory {
-  final MacroSupport instance;
-
-  SingleInstanceMacroSupportFactory({
-    required this.instance,
-  });
-
-  @override
-  Future<void> dispose() async {
-    await instance.dispose();
-  }
-
-  @override
-  MacroSupport newInstance() {
-    return instance;
   }
 }
 
@@ -352,7 +284,7 @@ class _OverlayMacroFileSystem implements MacroFileSystem {
 
   @override
   MacroFileEntry getFile(String path) {
-    var overlayContent = overlays[path];
+    final overlayContent = overlays[path];
     if (overlayContent != null) {
       return _OverlayMacroFileEntry(overlayContent);
     }

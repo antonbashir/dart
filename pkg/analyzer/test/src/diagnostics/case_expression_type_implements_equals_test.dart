@@ -12,6 +12,9 @@ main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(CaseExpressionTypeImplementsEqualsTest);
     defineReflectiveTests(CaseExpressionTypeImplementsEqualsTest_Language219);
+    defineReflectiveTests(
+      CaseExpressionTypeImplementsEqualsWithoutNullSafetyTest,
+    );
   });
 }
 
@@ -71,8 +74,13 @@ void f(e) {
   }
 
   test_classInstance_implements() async {
-    List<ExpectedError> expectedErrors;
+    final List<ExpectedError> expectedErrors;
     switch (_variant) {
+      case _Variants.legacy:
+        expectedErrors = [
+          error(CompileTimeErrorCode.CASE_EXPRESSION_TYPE_IMPLEMENTS_EQUALS,
+              128, 6),
+        ];
       case _Variants.nullSafe:
         expectedErrors = [
           error(CompileTimeErrorCode.CASE_EXPRESSION_TYPE_IMPLEMENTS_EQUALS,
@@ -125,4 +133,12 @@ void f(e) {
   }
 }
 
-enum _Variants { nullSafe, patterns }
+@reflectiveTest
+class CaseExpressionTypeImplementsEqualsWithoutNullSafetyTest
+    extends PubPackageResolutionTest
+    with WithoutNullSafetyMixin, CaseExpressionTypeImplementsEqualsTestCases {
+  @override
+  _Variants get _variant => _Variants.legacy;
+}
+
+enum _Variants { legacy, nullSafe, patterns }

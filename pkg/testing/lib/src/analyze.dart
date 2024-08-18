@@ -105,7 +105,7 @@ class AnalyzerDiagnostic {
     List<String> parts = <String>[];
     int start = 0;
     int index = line.indexOf(potentialSplitPattern);
-    void addPart() {
+    addPart() {
       parts.add(line
           .substring(start, index == -1 ? null : index)
           .replaceAllMapped(unescapePattern, (Match m) => m[1]!));
@@ -240,13 +240,12 @@ Future<void> analyzeUris(
   Process process = await startDart(
       analyzer, const <String>["--batch"], dartArguments..remove("-c"));
   process.stdin.writeln(arguments.join(" "));
-  await process.stdin.close();
+  process.stdin.close();
 
   bool hasOutput = false;
   Set<String> seen = <String>{};
 
-  Future<void> processAnalyzerOutput(
-      Stream<AnalyzerDiagnostic> diagnostics) async {
+  processAnalyzerOutput(Stream<AnalyzerDiagnostic> diagnostics) async {
     await for (AnalyzerDiagnostic diagnostic in diagnostics) {
       if (diagnostic.uri != null) {
         String path = toFilePath(diagnostic.uri!);

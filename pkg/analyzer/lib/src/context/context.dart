@@ -4,7 +4,6 @@
 
 import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options_map.dart';
 import 'package:analyzer/src/dart/element/type_provider.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/generated/engine.dart';
@@ -12,7 +11,7 @@ import 'package:analyzer/src/generated/source.dart';
 
 /// An [AnalysisContext] in which analysis can be performed.
 class AnalysisContextImpl implements AnalysisContext {
-  AnalysisOptionsMap _analysisOptionsMap;
+  AnalysisOptionsImpl _analysisOptions;
 
   @override
   final DeclaredVariables declaredVariables;
@@ -20,58 +19,80 @@ class AnalysisContextImpl implements AnalysisContext {
   @override
   final SourceFactory sourceFactory;
 
-  TypeProviderImpl? _typeProvider;
-  TypeSystemImpl? _typeSystem;
+  TypeProviderImpl? _typeProviderLegacy;
+  TypeProviderImpl? _typeProviderNonNullableByDefault;
+
+  TypeSystemImpl? _typeSystemLegacy;
+  TypeSystemImpl? _typeSystemNonNullableByDefault;
 
   AnalysisContextImpl({
-    required AnalysisOptionsMap analysisOptionsMap,
+    required AnalysisOptionsImpl analysisOptions,
     required this.declaredVariables,
     required this.sourceFactory,
-  }) : _analysisOptionsMap = analysisOptionsMap;
+  }) : _analysisOptions = analysisOptions;
 
   @Deprecated("Use 'getAnalysisOptionsForFile(file)' instead")
   @override
   AnalysisOptionsImpl get analysisOptions {
-    return _analysisOptionsMap.firstOrDefault;
+    return _analysisOptions;
   }
 
   // TODO(scheglov): Remove it, exists only for Cider.
   set analysisOptions(AnalysisOptionsImpl analysisOptions) {
-    _analysisOptionsMap = AnalysisOptionsMap.forSharedOptions(analysisOptions);
+    _analysisOptions = analysisOptions;
   }
 
   bool get hasTypeProvider {
-    return _typeProvider != null;
+    return _typeProviderNonNullableByDefault != null;
   }
 
-  TypeProviderImpl get typeProvider {
-    return _typeProvider!;
+  TypeProviderImpl get typeProviderLegacy {
+    return _typeProviderLegacy!;
   }
 
-  TypeSystemImpl get typeSystem {
-    return _typeSystem!;
+  TypeProviderImpl get typeProviderNonNullableByDefault {
+    return _typeProviderNonNullableByDefault!;
+  }
+
+  TypeSystemImpl get typeSystemLegacy {
+    return _typeSystemLegacy!;
+  }
+
+  TypeSystemImpl get typeSystemNonNullableByDefault {
+    return _typeSystemNonNullableByDefault!;
   }
 
   void clearTypeProvider() {
-    _typeProvider = null;
-    _typeSystem = null;
+    _typeProviderLegacy = null;
+    _typeProviderNonNullableByDefault = null;
+
+    _typeSystemLegacy = null;
+    _typeSystemNonNullableByDefault = null;
   }
 
   @override
-  AnalysisOptionsImpl getAnalysisOptionsForFile(File file) =>
-      _analysisOptionsMap.getOptions(file);
+  AnalysisOptionsImpl getAnalysisOptionsForFile(File file) => _analysisOptions;
 
   void setTypeProviders({
-    required TypeProviderImpl typeProvider,
+    required TypeProviderImpl legacy,
+    required TypeProviderImpl nonNullableByDefault,
   }) {
-    if (_typeProvider != null) {
-      throw StateError('TypeProvider can be set only once.');
+    if (_typeProviderLegacy != null ||
+        _typeProviderNonNullableByDefault != null) {
+      throw StateError('TypeProvider(s) can be set only once.');
     }
 
-    _typeProvider = typeProvider;
-
-    _typeSystem = TypeSystemImpl(
-      typeProvider: typeProvider,
+    _typeSystemLegacy = TypeSystemImpl(
+      isNonNullableByDefault: false,
+      typeProvider: legacy,
     );
+
+    _typeSystemNonNullableByDefault = TypeSystemImpl(
+      isNonNullableByDefault: true,
+      typeProvider: nonNullableByDefault,
+    );
+
+    _typeProviderLegacy = legacy;
+    _typeProviderNonNullableByDefault = nonNullableByDefault;
   }
 }

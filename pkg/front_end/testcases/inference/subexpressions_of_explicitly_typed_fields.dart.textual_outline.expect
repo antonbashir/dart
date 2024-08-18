@@ -5,5 +5,4 @@ class C {
 }
 
 List<num> y = [0];
-
 main() {}

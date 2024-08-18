@@ -2,10 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// Tests uses of `@JSExport` and `createDartExport` or `createJSInteropWrapper`.
+// Tests uses of `@JSExport` and `createDartExport`.
 
-import 'dart:js_interop';
-
+import 'package:js/js.dart';
 import 'package:js/js_util.dart';
 
 // You can either have a @JSExport annotation on the entire class or select
@@ -109,20 +108,6 @@ void testNumberOfExports() {
   createDartExport(NoExportWithExportSuperclass());
 //^
 // [web] Class 'NoExportWithExportSuperclass' does not have a `@JSExport` on it or any of its members.
-
-  // Same method with different name and type.
-  createJSInteropWrapper(ExportAll());
-  createJSInteropWrapper(ExportSome());
-  createJSInteropWrapper(NoAnnotations());
-//^
-// [web] Class 'NoAnnotations' does not have a `@JSExport` on it or any of its members.
-  createJSInteropWrapper(ExportNoneQualify());
-  createJSInteropWrapper(ExportEmpty());
-  createJSInteropWrapper(ExportWithNoExportSuperclass());
-  createJSInteropWrapper(ExportWithEmptyExportSuperclass());
-  createJSInteropWrapper(NoExportWithExportSuperclass());
-//^
-// [web] Class 'NoExportWithExportSuperclass' does not have a `@JSExport` on it or any of its members.
 }
 
 @JS()
@@ -141,15 +126,6 @@ void testUseDartInterface() {
 
   // Can't use an interop class.
   createDartExport(StaticInterop());
-//^
-// [web] Type argument 'StaticInterop' needs to be a non-JS interop type.
-
-  createJSInteropWrapper<InvalidType>(() {});
-//^
-// [web] Type argument 'void Function()' needs to be an interface type.
-
-  // Can't use an interop class.
-  createJSInteropWrapper(StaticInterop());
 //^
 // [web] Type argument 'StaticInterop' needs to be a non-JS interop type.
 }
@@ -185,9 +161,6 @@ class GetSetNoCollision {
 void testCollisions() {
   createDartExport(RenameCollision());
   createDartExport(GetSetNoCollision());
-
-  createJSInteropWrapper(RenameCollision());
-  createJSInteropWrapper(GetSetNoCollision());
 }
 
 // Class annotation values are warnings, not values, so they don't show up in
@@ -204,8 +177,6 @@ mixin MixinWithValue {
 
 void testClassExportWithValue() {
   createDartExport(ClassWithValue());
-
-  createJSInteropWrapper(ClassWithValue());
 }
 
 // `JSExport` classes can't export methods that define type parameters as those
@@ -233,10 +204,6 @@ void testClassWithGenerics() {
   createDartExport(GenericAll());
   createDartExport(GenericSome());
   createDartExport(GenericSome<int>());
-
-  createJSInteropWrapper(GenericAll());
-  createJSInteropWrapper(GenericSome());
-  createJSInteropWrapper(GenericSome<int>());
 }
 
 void main() {

@@ -5,7 +5,6 @@
 import 'package:analysis_server/lsp_protocol/protocol.dart' hide Element;
 import 'package:analysis_server/protocol/protocol_generated.dart'
     hide AnalysisGetNavigationParams;
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -21,6 +20,7 @@ import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
 import 'package:analyzer_plugin/src/utilities/navigation/navigation.dart';
 import 'package:analyzer_plugin/utilities/analyzer_converter.dart';
 import 'package:analyzer_plugin/utilities/navigation/navigation_dart.dart';
+import 'package:collection/collection.dart';
 
 typedef StaticOptions = Either2<bool, DefinitionOptions>;
 
@@ -40,8 +40,8 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
   ) async {
     // LSP requests must be converted to DAS-protocol requests for compatibility
     // with plugins.
-    var requestParams = plugin.AnalysisGetNavigationParams(path, offset, 0);
-    var responses = await requestFromPlugins(path, requestParams);
+    final requestParams = plugin.AnalysisGetNavigationParams(path, offset, 0);
+    final responses = await requestFromPlugins(path, requestParams);
 
     return responses
         .map((response) =>
@@ -51,16 +51,19 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
         .toList();
   }
 
-  Future<AnalysisNavigationParams> getServerResult(ResolvedUnitResult result,
-      String path, bool supportsLocationLink, int offset) async {
-    var collector = NavigationCollectorImpl();
+  Future<AnalysisNavigationParams> getServerResult(
+      bool supportsLocationLink, String path, int offset) async {
+    final collector = NavigationCollectorImpl();
 
-    computeDartNavigation(
-        server.resourceProvider, collector, result, offset, 0);
-    if (supportsLocationLink) {
-      await _updateTargetsWithCodeLocations(collector);
+    final result = await server.getResolvedUnit(path);
+    if (result != null) {
+      computeDartNavigation(
+          server.resourceProvider, collector, result, offset, 0);
+      if (supportsLocationLink) {
+        await _updateTargetsWithCodeLocations(collector);
+      }
+      collector.createRegions();
     }
-    collector.createRegions();
 
     return AnalysisNavigationParams(
         path, collector.regions, collector.targets, collector.files);
@@ -71,41 +74,36 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
       TextDocumentPositionParams params,
       MessageInfo message,
       CancellationToken token) async {
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return serverNotInitializedError;
     }
 
-    var supportsLocationLink = clientCapabilities.definitionLocationLink;
+    final supportsLocationLink = clientCapabilities.definitionLocationLink;
 
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
 
     return path.mapResult((path) async {
-      // Always prefer a LineInfo from a resolved unit than server.getLineInfo.
-      var resolvedUnit = (await requireResolvedUnit(path)).resultOrNull;
-      var lineInfo = resolvedUnit?.lineInfo ?? server.getLineInfo(path);
-
+      final lineInfo = server.getLineInfo(path);
       // If there is no lineInfo, the request cannot be translated from LSP line/col
       // to server offset/length.
       if (lineInfo == null) {
         return success(TextDocumentDefinitionResult.t2(const []));
       }
 
-      var offset = toOffset(lineInfo, pos);
+      final offset = toOffset(lineInfo, pos);
 
       return offset.mapResult((offset) async {
-        var allResults = [
-          if (resolvedUnit != null)
-            await getServerResult(
-                resolvedUnit, path, supportsLocationLink, offset),
+        final allResults = [
+          await getServerResult(supportsLocationLink, path, offset),
           ...await getPluginResults(path, offset),
         ];
 
-        var merger = ResultMerger();
-        var mergedResults = merger.mergeNavigation(allResults);
-        var mergedTargets = mergedResults?.targets ?? [];
+        final merger = ResultMerger();
+        final mergedResults = merger.mergeNavigation(allResults);
+        final mergedTargets = mergedResults?.targets ?? [];
 
         if (mergedResults == null) {
           return success(TextDocumentDefinitionResult.t2(const []));
@@ -114,13 +112,13 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
         // Convert and filter the results using the correct type of Location class
         // depending on the client capabilities.
         if (supportsLocationLink) {
-          var convertedResults = convert(
+          final convertedResults = convert(
             mergedTargets,
             (NavigationTarget target) =>
                 _toLocationLink(mergedResults, lineInfo, target),
-          ).nonNulls.toList();
+          ).whereNotNull().toList();
 
-          var results = _filterResults(
+          final results = _filterResults(
             convertedResults,
             params.textDocument.uri,
             pos.line,
@@ -130,12 +128,12 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
 
           return success(TextDocumentDefinitionResult.t2(results));
         } else {
-          var convertedResults = convert(
+          final convertedResults = convert(
             mergedTargets,
             (NavigationTarget target) => _toLocation(mergedResults, target),
-          ).nonNulls.toList();
+          ).whereNotNull().toList();
 
-          var results = _filterResults(
+          final results = _filterResults(
             convertedResults,
             params.textDocument.uri,
             pos.line,
@@ -166,7 +164,7 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
     // adjacent to the var keyword, so providing navigation to it is not useful).
     // To prevent this, filter the list to only those on different lines (or
     // different files).
-    var otherResults = results
+    final otherResults = results
         .where((element) =>
             uriSelector(element) != sourceUri ||
             rangeSelector(element).start.line != sourceLineNumber)
@@ -177,20 +175,11 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
 
   /// Get the location of the code (excluding leading doc comments) for this element.
   Future<protocol.Location?> _getCodeLocation(Element element) async {
-    Element? codeElement = element;
+    var codeElement = element;
     // For synthetic getters created for fields, we need to access the associated
     // variable to get the codeOffset/codeLength.
-    if (codeElement is PropertyAccessorElementImpl && codeElement.isSynthetic) {
-      codeElement = codeElement.variable2!;
-    }
-
-    // For extension types, the primary constructor has a range that covers only
-    // the parameters / representation type but we want the whole declaration
-    // for the code range because otherwise previews will just show `(int a)`
-    // which is not what the user expects.
-    if (codeElement.enclosingElement case ExtensionTypeElement enclosingElement
-        when enclosingElement.primaryConstructor == codeElement) {
-      codeElement = enclosingElement;
+    if (codeElement.isSynthetic && codeElement is PropertyAccessorElementImpl) {
+      codeElement = codeElement.variable;
     }
 
     // Read the main codeOffset from the element. This may include doc comments
@@ -206,20 +195,13 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
     }
 
     // Read the declaration so we can get the offset after the doc comments.
-    var declaration = await _parsedDeclaration(codeElement);
+    // TODO(dantup): Skip this for parts (getParsedLibrary will throw), but find
+    // a better solution.
+    final declaration = await _parsedDeclaration(codeElement);
     var node = declaration?.node;
-
     if (node is VariableDeclaration) {
-      // For variables, expand to the variable declaration list if this is the
-      // only variable so that the target range can include keywords/type.
-      // Don't do this when there are multiple becaues it may include other
-      // variables in the range.
-      var parent = node.parent;
-      if (parent is VariableDeclarationList && parent.variables.length == 1) {
-        node = node.parent;
-      }
+      node = node.parent;
     }
-
     if (node is AnnotatedNode) {
       var offsetAfterDocs = node.firstTokenAfterCommentAndMetadata.offset;
 
@@ -234,9 +216,9 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
 
   Location? _toLocation(
       AnalysisNavigationParams mergedResults, NavigationTarget target) {
-    var targetFilePath = mergedResults.files[target.fileIndex];
-    var targetFileUri = uriConverter.toClientUri(targetFilePath);
-    var targetLineInfo = server.getLineInfo(targetFilePath);
+    final targetFilePath = mergedResults.files[target.fileIndex];
+    final targetFileUri = pathContext.toUri(targetFilePath);
+    final targetLineInfo = server.getLineInfo(targetFilePath);
     return targetLineInfo != null
         ? navigationTargetToLocation(targetFileUri, target, targetLineInfo)
         : null;
@@ -244,10 +226,10 @@ class DefinitionHandler extends LspMessageHandler<TextDocumentPositionParams,
 
   LocationLink? _toLocationLink(AnalysisNavigationParams mergedResults,
       LineInfo sourceLineInfo, NavigationTarget target) {
-    var region = mergedResults.regions.first;
-    var targetFilePath = mergedResults.files[target.fileIndex];
-    var targetFileUri = uriConverter.toClientUri(targetFilePath);
-    var targetLineInfo = server.getLineInfo(targetFilePath);
+    final region = mergedResults.regions.first;
+    final targetFilePath = mergedResults.files[target.fileIndex];
+    final targetFileUri = pathContext.toUri(targetFilePath);
+    final targetLineInfo = server.getLineInfo(targetFilePath);
 
     return targetLineInfo != null
         ? navigationTargetToLocationLink(

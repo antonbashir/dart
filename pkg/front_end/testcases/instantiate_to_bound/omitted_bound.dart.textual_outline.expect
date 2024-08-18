@@ -3,7 +3,6 @@ import 'dart:collection';
 class A<T> {}
 
 A a = throw '';
-
 DoubleLinkedQueue c = throw '';
 
 class C {

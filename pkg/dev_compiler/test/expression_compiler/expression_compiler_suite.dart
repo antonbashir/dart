@@ -60,7 +60,7 @@ class ExpressionCompilerTestDriver {
     required String expression,
   }) async {
     return compiler.compileExpression(
-        libraryUri: input,
+        input: input,
         line: line,
         column: 1,
         scope: scope,

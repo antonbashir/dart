@@ -1,547 +1,15 @@
-## 3.6.0
-
-### Language
-
-Dart 3.6 adds [digit separators] to the language. To use them, set your
-package's [SDK constraint][language version] lower bound to 3.6 or greater
-(`sdk: '^3.6.0'`).
-
-#### Digit separators
-
-[digit separators]: https://github.com/dart-lang/language/issues/2
-
-Digits in number literals (decimal integer literals, double literals,
-scientific notation literals, and hexadecimal literals) can now include
-underscores between digits, as "digit separators." The separators do not change
-the value of a literal, but can serve to make the number more readable.
-
-```dart
-100__000_000__000_000__000_000  // one hundred million million millions!
-0x4000_0000_0000_0000
-0.000_000_000_01
-0x00_14_22_01_23_45  // MAC address
-```
-
-Separators are not allowed at the start of a number (this would be parsed as an
-identifier), at the end of a number, or adjacent to another character in a
-number, like `.`, `x`, or the `e` in scientific notation.
-
-- **Breaking Change** [#56065][]: The context used by the compiler and analyzer
-  to perform type inference on the operand of a `throw` expression has been
-  changed from the "unknown type" to `Object`. This makes the type system more
-  self-consistent, because it reflects the fact that it's not legal to throw
-  `null`. This change is not expected to make any difference in practice.
-
-[#56065]: https://github.com/dart-lang/sdk/issues/56065
-
-### Libraries
-
-#### `dart:io`
-
-- **Breaking Change** [#52444][]: Removed the `Platform()` constructor, which
-  has been deprecated since Dart 3.1.
-
-- **Breaking Change** [#53618][]: `HttpClient` now responds to a redirect
-  that is missing a "Location" header by throwing `RedirectException`, instead
-  of `StateError`.
-
-[#52444]: https://github.com/dart-lang/sdk/issues/52444
-[#53618]: https://github.com/dart-lang/sdk/issues/53618
-
-#### `dart:js_interop`
-
-- Added constructors for `JSArrayBuffer`, `JSDataView`, and concrete typed array
-  types e.g. `JSInt8Array`.
-- Added `length` and `[]`/`[]=` operators to `JSArray`.
-- Added `toJSCaptureThis` so `this` is passed in from JavaScript to the
-  callback as the first parameter.
-
-### Tools
-
-#### Wasm compiler (dart2wasm)
-
-- The condition `dart.library.js` is now false on conditional imports in
-  dart2wasm. Note that it was already a static error to import `dart:js`
-  directly (see [#55266][]).
-
-[#55266]: https://github.com/dart-lang/sdk/issues/55266
-
-## 3.5.0
-
-### Language
-
-- **Breaking Change** [#55418][]: The context used by the compiler to perform
-  type inference on the operand of an `await` expression has been changed to
-  match the behavior of the analyzer. This change is not expected to make any
-  difference in practice.
-
-- **Breaking Change** [#55436][]: The context used by the compiler to perform
-  type inference on the right hand side of an "if-null" expression (`e1 ?? e2`)
-  has been changed to match the behavior of the analyzer. change is expected to
-  have low impact on real-world code. But in principle it could cause
-  compile-time errors or changes in runtime behavior by changing inferred
-  types. The old behavior can be restored by supplying explicit types.
-
-[#55418]: https://github.com/dart-lang/sdk/issues/55418
-[#55436]: https://github.com/dart-lang/sdk/issues/55436
-
-### Libraries
-
-#### `dart:core`
-
-- **Breaking Change** [#44876][]: `DateTime` on the web platform now stores
-  microseconds. The web implementation is now practically compatible with the
-  native implementation, where it is possible to round-trip a timestamp in
-  microseconds through a `DateTime` value without rounding the lower
-  digits. This change might be breaking for apps that rely in some way on the
-  `.microsecond` component always being zero, for example, expecting only three
-  fractional second digits in the `toString()` representation. Small
-  discrepancies in arithmetic due to rounding of web integers may still occur
-  for extreme values, (1) `microsecondsSinceEpoch` outside the safe range,
-  corresponding to dates with a year outside of 1685..2255, and (2) arithmetic
-  (`add`, `subtract`, `difference`) where the `Duration` argument or result
-  exceeds 570 years.
-
-[#44876]: https://github.com/dart-lang/sdk/issues/44876
-
-#### `dart:io`
-
-- **Breaking Change** [#55786][]: `SecurityContext` is now `final`. This means
-  that `SecurityContext` can no longer be subclassed. `SecurityContext`
-  subclasses were never able to interoperate with other parts of `dart:io`.
-
-- A `ConnectionTask` can now be created using an existing `Future<Socket>`.
-  Fixes [#55562].
-
-[#55786]: https://github.com/dart-lang/sdk/issues/55786
-[#55562]: https://github.com/dart-lang/sdk/issues/55562
-
-#### `dart:typed_data`
-
-- **Breaking Change** [#53785][]: The unmodifiable view classes for typed data
-  have been removed. These classes were deprecated in Dart 3.4.
-
-  To create an unmodifiable view of a typed-data object, use the
-  `asUnmodifiableView()` methods added in Dart 3.3.
-
-- Added superinterface `TypedDataList` to typed data lists, implementing both
-  `List` and `TypedData`. Allows abstracting over all such lists without losing
-  access to either the `List` or the `TypedData` members.
-  A `ByteData` is still only a `TypedData`, not a list.
-
-[#53785]: https://github.com/dart-lang/sdk/issues/53785
-
-#### `dart:js_interop`
-
-- **Breaking Change** [#55508][]: `importModule` now accepts a `JSAny` instead
-  of a `String` to support other JS values as well, like `TrustedScriptURL`s.
-
-- **Breaking Change** [#55267][]: `isTruthy` and `not` now return `JSBoolean`
-  instead of `bool` to be consistent with the other operators.
-
-- **Breaking Change** `ExternalDartReference` no longer implements `Object`.
-  `ExternalDartReference` now accepts a type parameter `T` with a bound of
-  `Object?` to capture the type of the Dart object that is externalized.
-  `ExternalDartReferenceToObject.toDartObject` now returns a `T`.
-  `ExternalDartReferenceToObject` and `ObjectToExternalDartReference` are now
-  extensions on `T` and `ExternalDartReference<T>`, respectively, where `T
-  extends Object?`. See [#55342][] and [#55536][] for more details.
-
-- Fixed some consistency issues with `Function.toJS` across all compilers.
-  Specifically, calling `Function.toJS` on the same function gives you a new JS
-  function (see issue [#55515][]), the maximum number of arguments that are
-  passed to the JS function is determined by the static type of the Dart
-  function, and extra arguments are dropped when passed to the JS function in
-  all compilers (see [#48186][]).
-
-[#55508]: https://github.com/dart-lang/sdk/issues/55508
-[#55267]: https://github.com/dart-lang/sdk/issues/55267
-[#55342]: https://github.com/dart-lang/sdk/issues/55342
-[#55536]: https://github.com/dart-lang/sdk/issues/55536
-[#55515]: https://github.com/dart-lang/sdk/issues/55515
-[#48186]: https://github.com/dart-lang/sdk/issues/48186
-
-### Tools
-
-#### Linter
-
-- Added the [`unintended_html_in_doc_comment`][] lint.
-- Added the [`invalid_runtime_check_with_js_interop_types`][] lint.
-- Added the [`document_ignores`][] lint.
-
-[`unintended_html_in_doc_comment`]: https://dart.dev/lints/unintended_html_in_doc_comment
-[`invalid_runtime_check_with_js_interop_types`]: https://dart.dev/lints/invalid_runtime_check_with_js_interop_types
-[`document_ignores`]: https://dart.dev/lints/document_ignores
-
-#### Pub
-
-- New flag `dart pub downgrade --tighten` to restrict lower bounds of
-  dependencies' constraints to the minimum that can be resolved.
-
-### Dart Runtime
-
-- The Dart VM only executes sound null safe code, running of unsound null
-  safe code using the option `--no-sound-null-safety` has been removed.
-
-- `Dart_NewListOf` and `Dart_IsLegacyType` functions are
-  removed from Dart C API.
-
-- `Dart_DefaultCanonicalizeUrl` is removed from the Dart C API.
-
-## 3.4.0
-
-### Language
-
-Dart 3.4 makes improvements to the type analysis of conditional expressions
-(`e1 ? e2 : e3`), if-null expressions (`e1 ?? e2`), if-null assignments
-(`e1 ??= e2`), and switch expressions (`switch (e) { p1 => e1, ... }`). To take
-advantage of these improvements, set your package's
-[SDK constraint][language version] lower bound to 3.4 or greater
-(`sdk: '^3.4.0'`).
-
-[language version]: https://dart.dev/guides/language/evolution
-
-- **Breaking Change** [#54640][]: The pattern context type schema for
-  cast patterns has been changed from `Object?` to `_` (the unknown
-  type), to align with the specification. This change is not expected
-  to make any difference in practice.
-
-- **Breaking Change** [#54828][]: The type schema used by the compiler front end
-  to perform type inference on the operand of a null-aware spread operator
-  (`...?`) in map and set literals has been made nullable, to match what
-  currently happens in list literals. This makes the compiler front end behavior
-  consistent with that of the analyzer. This change is expected to be very low
-  impact.
-
-[#54640]: https://github.com/dart-lang/sdk/issues/54640
-[#54828]: https://github.com/dart-lang/sdk/issues/54828
-
-### Libraries
-
-#### `dart:async`
-
-- Added option for `ParallelWaitError` to get some meta-information that
-  it can expose in its `toString`, and the `Iterable<Future>.wait` and
-  `(Future,...,Future).wait` extension methods now provide that information.
-  Should make a `ParallelWaitError` easier to log.
-
-#### `dart:cli`
-
-- **Breaking change** [#52121][]: `waitFor` is removed in 3.4.
-
-#### `dart:ffi`
-
-- Added `Struct.create` and `Union.create` to create struct and union views
-  of the sequence of bytes stored in a subtype of `TypedData`.
-
-#### `dart:io`
-
-- **Breaking change** [#53863][]: `Stdout` has a new field `lineTerminator`,
-  which allows developers to control the line ending used by `stdout` and
-  `stderr`. Classes that `implement Stdout` must define the `lineTerminator`
-  field. The default semantics of `stdout` and `stderr` are not changed.
-
-- Deprecates `FileSystemDeleteEvent.isDirectory`, which always returns
-  `false`.
-
-[#53863]: https://github.com/dart-lang/sdk/issues/53863
-
-#### `dart:js_interop`
-
-- Fixes an issue with several comparison operators in `JSAnyOperatorExtension`
-  that were declared to return `JSBoolean` but really returned `bool`. This led
-  to runtime errors when trying to use the return values. The implementation now
-  returns a `JSBoolean` to align with the interface. See issue [#55024] for
-  more details.
-
-- Added `ExternalDartReference` and related conversion functions
-  `toExternalReference` and `toDartObject`. This is a faster alternative to
-  `JSBoxedDartObject`, but with fewer safety guarantees and fewer
-  interoperability capabilities. See [#55187] for more details.
-
-- On dart2wasm, `JSBoxedDartObject` now is an actual JS object that wraps the
-  opaque Dart value instead of only externalizing the value. Like the JS
-  backends, you'll now get a more useful error when trying to use it in another
-  Dart runtime.
-
-- Added `isA` helper to make type checks easier with interop types. See
-  [#54138][] for more details.
-
-[#54138]: https://github.com/dart-lang/sdk/issues/54138
-[#55024]: https://github.com/dart-lang/sdk/issues/55024
-[#55187]: https://github.com/dart-lang/sdk/issues/55187
-
-#### `dart:typed_data`
-
-- **BREAKING CHANGE** [#53218][] [#53785][]: The unmodifiable view classes for
-  typed data are deprecated.
-
-  To create an unmodifiable view of a typed-data object, use the
-  `asUnmodifiableView()` methods added in Dart 3.3:
-
-  ```dart
-  Uint8List data = ...;
-  final readOnlyView = data.asUnmodifiableView();
-  // readOnlyView has type Uint8List, and throws if attempted modified.
-  ```
-
-  The reason for this change is to allow more flexibility in the implementation
-  of typed data, so the native and web platforms can use different strategies
-  to ensure that typed data has good performance.
-
-  The deprecated types will be removed in Dart 3.5.
-
-[#53218]: https://github.com/dart-lang/sdk/issues/53218
-[#53785]: https://github.com/dart-lang/sdk/issues/53785
-
-### Tools
-
-#### Analyzer
-
-- Improved code completion. Fixed over 50% of completion correctness bugs,
-  tagged `analyzer-completion-correctness` in the [issue
-  tracker][analyzer-completion-correction-issues].
-
-- Support for new annotations introduced in version 1.14.0 of the [meta]
-  package.
-
-  - Support for the [`@doNotSubmit`] annotation, noting that any usage of an
-    annotated member should not be submitted to source control.
-
-  - Support for the [`@mustBeConst`] annotation, which indicates that an
-    annotated parameter only accepts constant arguments.
-
-[analyzer-completion-correction-issues]: https://github.com/dart-lang/sdk/labels/analyzer-completion-correctness
-[meta]: https://pub.dev/packages/meta
-[`@doNotSubmit`]: https://pub.dev/documentation/meta/latest/meta/doNotSubmit-constant.html
-[`@mustBeConst`]: https://pub.dev/documentation/meta/latest/meta/mustBeConst-constant.html
-
-#### Linter
-
-- Added the [`unnecessary_library_name`][] lint.
-- Added the [`missing_code_block_language_in_doc_comment`][] lint.
-
-[`unnecessary_library_name`]: https://dart.dev/lints/unnecessary_library_name
-[`missing_code_block_language_in_doc_comment`]: https://dart.dev/lints/missing_code_block_language_in_doc_comment
-
-#### Compilers
-
-- The compilation environment will no longer pretend to contain entries with
-  value `""` for all `dart.library.foo` strings, where `dart:foo` is not an
-  available library. Instead there will only be entries for the available
-  libraries, like `dart.library.core`, where the value was, and still is,
-  `"true"`. This should have no effect on `const bool.fromEnvironment(...)` or
-  `const String.fromEnvironment(...)` without a `defaultValue` argument, an
-  argument which was always ignored previously. It changes the behavior of
-  `const bool.hasEnvironment(...)` on such an input, away from always being
-  `true` and therefore useless.
-
-#### DevTools
-
-- Updated DevTools to version 2.33.0 from 2.31.1.
-  To learn more, check out the release notes for versions
-  [2.32.0][devtools-2-32-0] and [2.33.0][devtools-2-33-0].
-
-[devtools-2-32-0]: https://docs.flutter.dev/tools/devtools/release-notes/release-notes-2.32.0
-[devtools-2-33-0]: https://docs.flutter.dev/tools/devtools/release-notes/release-notes-2.33.0
-
-#### Pub
-
-- Dependency resolution and `dart pub outdated` will now surface if a dependency
-  is affected by a security advisory, unless the advisory is listed under a
-  `ignored_advisories` section in the `pubspec.yaml` file. To learn more about
-  pub's support for security advisories, visit
-  [dart.dev/go/pub-security-advisories][pub-security-advisories].
-
-- `path`-dependencies inside `git`-dependencies are now resolved relative to the
-  git repo.
-
-- All `dart pub` commands can now be run from any subdirectory of a project. Pub
-  will find the first parent directory with a `pubspec.yaml` and operate
-  relative it.
-
-- New command `dart pub unpack` that downloads a package from pub.dev and
-  extracts it to a subfolder of the current directory.
-
-  This can be useful for inspecting the code, or playing with examples.
-
-[pub-security-advisories]: https://dart.dev/go/pub-security-advisories
-
-### Dart Runtime
-
-- Dart VM flags and options can now be provided to any executable generated
-  using `dart compile exe` via the `DART_VM_OPTIONS` environment variable.
-  `DART_VM_OPTIONS` should be set to a list of comma-separated flags and options
-  with no whitespace. Options that allow for multiple values to be provided as
-  comma-separated values are not supported (e.g.,
-  `--timeline-streams=Dart,GC,Compiler`).
-
-  Example of a valid `DART_VM_OPTIONS` environment variable:
-
-  ```bash
-  DART_VM_OPTIONS=--random_seed=42,--verbose_gc
-  ```
-
-- Dart VM no longer supports external strings: `Dart_IsExternalString`,
-  `Dart_NewExternalLatin1String` and `Dart_NewExternalUTF16String` functions are
-  removed from Dart C API.
-
-## 3.3.4 - 2024-04-17
-
-This is a patch release that:
-
-- Fixes an issue with JS interop in dart2wasm where JS interop methods that used
-  the enclosing library's `@JS` annotation were actually using the invocation's
-  enclosing library's `@JS` annotation. (issue [#55430]).
-
-[#55430]: https://github.com/dart-lang/sdk/issues/55430
-
-## 3.3.3 - 2024-03-27
-
-This is a patch release that:
-
-- Fixes an issue where dart vm crashed when running on pre-SSE41 older CPUs on Windows (issue [#55211][]).
-
-[#55211]: https://github.com/dart-lang/sdk/issues/55211
-
-## 3.3.2 - 2024-03-20
-
-This is a patch release that:
-
-- Fixes an issue in the CFE that placed some structural parameter references out
-  of their context in the code restored from dill files, causing crashes in the
-  incremental compiler whenever it restored a typedef from dill such that the
-  typedef contained a generic function type on its right-hand side (issue
-  [#55158][]).
-- Fixes an issue in the CFE that prevented redirecting factories from being
-  resolved in initializers of extension types (issue [#55194][]).
-- Fixes an issues with VM's implementation of `DateTime.timeZoneName`
-  on Windows, which was checking whether current date is in the summer or
-  standard time rather than checking if the given moment is in the summer or
-  standard time (issue [#55240][]).
-
-[#55158]: https://github.com/dart-lang/sdk/issues/55158
-[#55194]: https://github.com/dart-lang/sdk/issues/55194
-[#55240]: https://github.com/dart-lang/sdk/issues/55240
-
-## 3.3.1 - 2024-03-06
-
-This is a patch release that:
-
-- Fixes an issue in dart2js where object literal constructors in interop
-  extension types would fail to compile without an `@JS` annotation on the
-  library (issue [#55057][]).
-- Disallows certain types involving extension types from being used as the
-  operand of an `await` expression, unless the extension type itself implements
-  `Future` (issue [#55095][]).
-
-[#55057]: https://github.com/dart-lang/sdk/issues/55057
-[#55095]: https://github.com/dart-lang/sdk/issues/55095
-
 ## 3.3.0
 
 ### Language
 
-Dart 3.3 adds [extension types] to the language. To use them, set your
-package's [SDK constraint][language version] lower bound to 3.3 or greater
-(`sdk: '^3.3.0'`).
-
-#### Extension types
-
-[extension types]: https://github.com/dart-lang/language/issues/2727
-
-An _extension type_ wraps an existing type with a different, static-only
-interface. It works in a way which is in many ways similar to a class that
-contains a single final instance variable holding the wrapped object, but
-without the space and time overhead of an actual wrapper object.
-
-Extension types are introduced by _extension type declarations_. Each
-such declaration declares a new named type (not just a new name for the
-same type). It declares a _representation variable_ whose type is the
-_representation type_. The effect of using an extension type is that the
-_representation_ (that is, the value of the representation variable) has
-the members declared by the extension type rather than the members declared
-by its "own" type (the representation type). Example:
-
-```dart
-extension type Meters(int value) {
-  String get label => '${value}m';
-  Meters operator +(Meters other) => Meters(value + other.value);
-}
-
-void main() {
-  var m = Meters(42); // Has type `Meters`.
-  var m2 = m + m; // OK, type `Meters`.
-  // int i = m; // Compile-time error, wrong type.
-  // m.isEven; // Compile-time error, no such member.
-  assert(identical(m, m.value)); // Succeeds.
-}
-```
-
-The declaration `Meters` is an extension type that has representation type
-`int`. It introduces an implicit constructor `Meters(int value);` and a
-getter `int get value`. `m` and `m.value` is the very same object, but `m`
-has type `Meters` and `m.value` has type `int`. The point is that `m`
-has the members of `Meters` and `m.value` has the members of `int`.
-
-Extension types are entirely static, they do not exist at run time. If `o`
-is the value of an expression whose static type is an extension type `E`
-with representation type `R`, then `o` is just a normal object whose
-run-time type is a subtype of `R`, exactly like the value of an expression
-of type `R`. Also the run-time value of `E` is `R` (for example, `E == R`
-is true). In short: At run time, an extension type is erased to the
-corresponding representation type.
-
-A method call on an expression of an extension type is resolved at
-compile-time, based on the static type of the receiver, similar to how
-extension method calls work. There is no virtual or dynamic dispatch. This,
-combined with no memory overhead, means that extension types are zero-cost
-wrappers around their representation value.
-
-While there is thus no performance cost to using extension types, there is
-a safety cost. Since extension types are erased at compile time, run-time
-type tests on values that are statically typed as an extension type will
-check the type of the representation object instead, and if the type check
-looks like it tests for an extension type, like `is Meters`, it actually
-checks for the representation type, that is, it works exactly like `is int`
-at run time. Moreover, as mentioned above, if an extension type is used as
-a type argument to a generic class or function, the type variable will be
-bound to the representation type at run time. For example:
-
-```dart
-void main() {
-  var meters = Meters(3);
-
-  // At run time, `Meters` is just `int`.
-  print(meters is int); // Prints "true".
-  print(<Meters>[] is List<int>); // Prints "true".
-
-  // An explicit cast is allowed and succeeds as well:
-  List<Meters> meterList = <int>[1, 2, 3] as List<Meters>;
-  print(meterList[1].label); // Prints "2m".
-}
-```
-
-Extension types are useful when you are willing to sacrifice some run-time
-encapsulation in order to avoid the overhead of wrapping values in
-instances of wrapper classes, but still want to provide a different
-interface than the wrapped object. An example of that is interop, where you
-may have data that are not Dart objects to begin with (for example, raw
-JavaScript objects when using JavaScript interop), and you may have large
-collections of objects where it's not efficient to allocate an extra object
-for each element.
-
-#### Other changes
-
 - **Breaking Change** [#54056][]: The rules for private field promotion have
   been changed so that an abstract getter is considered promotable if there are
-  no conflicting declarations. There are no conflicting declarations if
-  there are no non-final fields, external fields, concrete getters, or
-  `noSuchMethod` forwarding getters with the same name in the same library.
-  This makes the implementation more consistent and allows
-  type promotion in a few rare scenarios where it wasn't previously allowed.
-  It is unlikely, but this change could cause a breakage by changing
-  an inferred type in a way that breaks later code. For example:
+  no conflicting declarations (i.e., there are no non-final fields, external
+  fields, concrete getters, or `noSuchMethod` forwarding getters with the same
+  name in the same library). This makes the implementation more consistent and
+  allows type promotion in a few rare scenarios where it wasn't prevoiusly
+  allowed. It is unlikely, but this change could in principle cause a breakage
+  by changing an inferred type in a way that breaks later code. For example:
 
   ```dart
   class A {
@@ -560,25 +28,21 @@ for each element.
   }
   ```
 
-  Affected code can be fixed by adding an explicit type annotation.
-  For example, in the above snippet, `var x` can be changed to `int? x`.
+  Affected code can be fixed by adding an explicit type annotation (e.g., in the
+  above example `var x` can be changed to `int? x`).
 
   It's also possible that some continuous integration configurations might fail
   if they have been configured to treat warnings as errors, because the expanded
   type promotion could lead to one of the following warnings:
 
-  - `unnecessary_non_null_assertion`
-  - `unnecessary_cast`
-  - `invalid_null_aware_operator`
+  - unnecessary_non_null_assertion
+  - unnecessary_cast
+  - invalid_null_aware_operator
 
   These warnings can be addressed in the usual way, by removing the unnecessary
-  operation in the first two cases, or changing `?.` to `.` in the third case.
-
-  To learn more about other rules surrounding type promotion,
-  check out the guide on [Fixing type promotion failures][].
+  operation in the first two cases, or changing `?.` to `.` in the second case.
 
 [#54056]: https://github.com/dart-lang/sdk/issues/54056
-[Fixing type promotion failures]: https://dart.dev/tools/non-promotion-reasons
 
 ### Libraries
 
@@ -592,11 +56,15 @@ for each element.
 - In addition to functions, `@Native` can now be used on fields.
 - Allow taking the address of native functions and fields via
   `Native.addressOf`.
-- The `elementAt` pointer arithmetic extension methods on
-  core `Pointer` types are now deprecated.
-  Migrate to the new `-` and `+` operators instead.
-- The experimental and deprecated `@FfiNative` annotation has been removed.
-  Usages should be updated to use the `@Native` annotation.
+
+#### `dart:nativewrappers`
+
+- **Breaking Change** [#51896][]: The NativeWrapperClasses are marked `base` so
+  that none of their subtypes can be implemented. Implementing subtypes can lead
+  to crashes when passing such native wrapper to a native call, as it will try to
+  unwrap a native field that doesn't exist.
+
+[#51896]: https://github.com/dart-lang/sdk/issues/51896
 
 #### `dart:js_interop`
 
@@ -613,19 +81,8 @@ for each element.
   types whose type parameter is a subtype of `JSAny?`. Conversions to and from
   these types are changed to account for the type parameters of the Dart or JS
   type, respectively.
-- **Breaking Change in names of extensions**: Some `dart:js_interop` extension
-  members are moved to different extensions on the same type or a supertype to
-  better organize the API surface. See `JSAnyUtilityExtension` and
-  `JSAnyOperatorExtension` for the new extensions. This shouldn't make a
-  difference unless the extension names were explicitly used.
-- Add `importModule` to allow users to dynamically import modules using the JS
-  `import()` expression.
 
 [#52687]: https://github.com/dart-lang/sdk/issues/52687
-
-#### `dart:js_interop_unsafe`
-
-- Add `has` helper to make `hasProperty` calls more concise.
 
 #### `dart:typed_data`
 
@@ -635,10 +92,10 @@ for each element.
 
   ```dart
   Uint8List data = ...
-  final readOnlyView = UnmodifiableUint8ListView(data);
+  final readOnlyView = UnmodifableUint8ListView(data);
   ```
 
-  use the new `asUnmodifiableView()` methods:
+  use the new `asUnmodifiableView()` method:
 
   ```dart
   Uint8List data = ...
@@ -649,16 +106,7 @@ for each element.
   of typed data so the native and web platforms can use different strategies
   for ensuring typed data has good performance.
 
-  The deprecated types will be removed in a future Dart version.
-
-#### `dart:nativewrappers`
-
-- **Breaking Change** [#51896][]: The NativeWrapperClasses are marked `base` so
-  that none of their subtypes can be implemented. Implementing subtypes can lead
-  to crashes when passing such native wrapper to a native call, as it will try
-  to unwrap a native field that doesn't exist.
-
-[#51896]: https://github.com/dart-lang/sdk/issues/51896
+  The deprecated types will be removed in the next Dart version.
 
 ### Tools
 
@@ -670,25 +118,6 @@ for each element.
   check out the `package:lints` [3.0.0 changelog entry][lints-3-0].
 
 [lints-3-0]: https://pub.dev/packages/lints/changelog#300
-
-#### DevTools
-
-- Updated DevTools to version 2.31.1 from 2.28.1.
-  To learn more, check out the release notes for versions
-  [2.29.0][devtools-2-29-0], [2.30.0][devtools-2-30-0],
-  and [2.31.0][devtools-2-31-0].
-
-[devtools-2-29-0]: https://docs.flutter.dev/tools/devtools/release-notes/release-notes-2.29.0
-[devtools-2-30-0]: https://docs.flutter.dev/tools/devtools/release-notes/release-notes-2.30.0
-[devtools-2-31-0]: https://docs.flutter.dev/tools/devtools/release-notes/release-notes-2.31.0
-
-#### Wasm compiler (dart2wasm)
-
-- **Breaking Change** [#54004][]: `dart:js_util`, `package:js`, and `dart:js`
-  are now disallowed from being imported when compiling with `dart2wasm`. Prefer
-  using `dart:js_interop` and `dart:js_interop_unsafe`.
-
-[#54004]: https://github.com/dart-lang/sdk/issues/54004
 
 #### Development JavaScript compiler (DDC)
 
@@ -710,25 +139,12 @@ for each element.
 
 [#54201]: https://github.com/dart-lang/sdk/issues/54201
 
-#### Analyzer
-
-- You can now suppress diagnostics in `pubspec.yaml` files by
-  adding an `# ignore: <diagnostic_id>` comment.
-- Invalid `dart doc` comment directives are now reported.
-- The [`flutter_style_todos`][] lint now has a quick fix.
-
-[`flutter_style_todos`]: https://dart.dev/lints/flutter_style_todos
-
 #### Linter
 
 - Removed the `iterable_contains_unrelated_type` and
   `list_remove_unrelated_type` lints.
   Consider migrating to the expanded
   [`collection_methods_unrelated_type`][] lint.
-- Removed various lints that are no longer necessary with sound null safety:
-  - `always_require_non_null_named_parameters`
-  - `avoid_returning_null`,
-  - `avoid_returning_null_for_future`
 
 [`collection_methods_unrelated_type`]: https://dart.dev/lints/collection_methods_unrelated_type
 
@@ -738,11 +154,11 @@ This is a patch release that:
 
 - Disallows final fields to be used in a constant context during analysis
   (issue [#54232][]).
-- Upgrades Dart DevTools to version 2.28.4 (issue [#54213][]).
+- Upgrades Dart DevTools to version 2.28.4 (issue [#54213][])
 - Fixes new AOT snapshots in the SDK failing with SIGILL in ARM
   environments that don't support the integer division
   instructions or x86-64 environments that don't support
-  SSE4.1 (issue [#54215][]).
+  SSE4.1  (issue [#54215][]).
 
 [#54232]: https://github.com/dart-lang/sdk/issues/54232
 [#54213]: https://github.com/dart-lang/sdk/issues/54213
@@ -753,10 +169,10 @@ This is a patch release that:
 This is a patch release that:
 
 - Adjusts the nullablity computations in the implementation of the
-  upper bound algorithm in the compiler frontend (issue [#53999][]).
+  upper bound algorithm in the CFE (issue [#53999][]).
 
 - Fixes missing closure code completion entries for function parameters
-  for LSP-based editors like VS Code (issue [#54112][]).
+  (issue [#54112][]) for LSP-based editors like VS Code.
 
 [#53999]: https://github.com/dart-lang/sdk/issues/53999
 [#54112]: https://github.com/dart-lang/sdk/issues/54112
@@ -768,15 +184,14 @@ This is a patch release that:
 - Fixes the left/mobile sidebar being empty on non-class pages
   in documentation generated with `dart doc` (issue [#54073][]).
 
-- Fixes a JSON array parsing bug that causes a segmentation fault when
-  `flutter test` is invoked with the `--coverage` flag
-  (SDK issue [#54059][], Flutter issue [#124145][]).
+- Fixes a JSON array parsing bug that causes seg fault when --coverage is used.
+  This bug has been reported by flutter customers here
+  https://github.com/flutter/flutter/issues/124145 (issue [#54059][])
 
-- Upgrades Dart DevTools to version 2.28.3 (issue [#54085][]).
+- Upgrades Dart DevTools to version 2.28.3 (issue [#54085][])
 
 [#54073]: https://github.com/dart-lang/sdk/issues/54073
 [#54059]: https://github.com/dart-lang/sdk/issues/54059
-[#124145]: https://github.com/flutter/flutter/issues/124145
 [#54085]: https://github.com/dart-lang/sdk/issues/54085
 
 ## 3.2.0 - 2023-11-15
@@ -890,8 +305,6 @@ constraint][language version] lower bound to 3.2 or greater (`sdk: '^3.2.0'`).
   error if is called after the `NativeCallable` has already been `close`d. Calls
   to `close` after the first are now ignored.
 
-[#53311]: https://github.com/dart-lang/sdk/issues/53311
-
 #### `dart:io`
 
 - **Breaking change** [#53005][]: The headers returned by
@@ -937,7 +350,7 @@ constraint][language version] lower bound to 3.2 or greater (`sdk: '^3.2.0'`).
   JavaScript's `globalThis` as the global context. This is relevant to things
   like external top-level members or external constructors, as this is the root
   context we expect those members to reside in. Historically, this was not the
-  case in dart2js and DDC. We used either `self` or DDC's `global` in non-static
+  case in Dart2JS and DDC. We used either `self` or DDC's `global` in non-static
   interop APIs with `package:js`. So, static interop APIs will now use one of
   those global contexts. Functionally, this should matter in only a very small
   number of cases, like when using older browser versions. `dart:js_interop`'s
@@ -945,7 +358,7 @@ constraint][language version] lower bound to 3.2 or greater (`sdk: '^3.2.0'`).
   context used in the lowerings.
 - **Breaking Change on Types of `dart:js_interop` External APIs**:
   External JS interop APIs when using `dart:js_interop` are restricted to a set
-  of allowed types. Namely, this includes the primitive types like `String`, JS
+  of allowed types. Namely, this include the primitive types like `String`, JS
   types from `dart:js_interop`, and other static interop types (either through
   `@staticInterop` or extension types).
 - **Breaking Change on `dart:js_interop` `isNull` and `isUndefined`**:
@@ -1025,7 +438,7 @@ constraint][language version] lower bound to 3.2 or greater (`sdk: '^3.2.0'`).
 #### Pub
 
 - New option `dart pub upgrade --tighten` which will update dependencies' lower
-  bounds in `pubspec.yaml` to match the current version.
+  bounds in pubspec.yaml to match the current version.
 - The commands `dart pub get`/`add`/`upgrade` will now show if a dependency
   changed between direct, dev and transitive dependency.
 - The command `dart pub upgrade` no longer shows unchanged dependencies.
@@ -1036,7 +449,7 @@ This is a patch release that:
 
 - Fixes an issue affecting Dart compiled to JavaScript running in Node.js 21. A
   change in Node.js 21 affected the Dart Web compiler runtime. This patch
-  release accommodates for those changes (issue #53810).
+  release accomodates for those changes (issue #53810).
 
 [#53810]: https://github.com/dart-lang/sdk/issues/53810
 
@@ -1634,11 +1047,6 @@ constraint][language version] lower bound to 3.0 or greater (`sdk: '^3.0.0'`).
 [`Metric`]: https://api.dart.dev/stable/2.18.2/dart-developer/Metric-class.html
 [`Counter`]: https://api.dart.dev/stable/2.18.2/dart-developer/Counter-class.html
 [`Gauge`]: https://api.dart.dev/stable/2.18.2/dart-developer/Gauge-class.html
-
-#### `dart:ffi`
-
-- The experimental `@FfiNative` annotation is now deprecated.
-  Usages should be replaced with the new `@Native` annotation.
 
 #### `dart:html`
 

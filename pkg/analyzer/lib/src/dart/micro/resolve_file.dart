@@ -5,7 +5,6 @@
 import 'dart:typed_data';
 
 import 'package:analyzer/dart/analysis/declared_variables.dart';
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
@@ -14,11 +13,11 @@ import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/analysis_options/analysis_options_provider.dart';
 import 'package:analyzer/src/analysis_options/apply_options.dart';
 import 'package:analyzer/src/context/packages.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options_map.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/cache.dart';
 import 'package:analyzer/src/dart/analysis/context_root.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart' show ErrorEncoding;
+import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/dart/analysis/feature_set_provider.dart';
 import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/dart/analysis/info_declaration_store.dart';
@@ -30,7 +29,6 @@ import 'package:analyzer/src/dart/analysis/search.dart';
 import 'package:analyzer/src/dart/analysis/unlinked_unit_store.dart';
 import 'package:analyzer/src/dart/micro/analysis_context.dart';
 import 'package:analyzer/src/dart/micro/utils.dart';
-import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/generated/engine.dart' show AnalysisOptionsImpl;
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/summary/api_signature.dart';
@@ -58,7 +56,7 @@ class CiderFileContent implements FileContent {
 
   @override
   String get content {
-    var contentWithDigest = _getContent();
+    final contentWithDigest = _getContent();
 
     if (contentWithDigest.digestStr != digestStr) {
       throw StateError('File was changed, but not invalidated: $path');
@@ -76,13 +74,13 @@ class CiderFileContent implements FileContent {
   _ContentWithDigest _getContent() {
     String content;
     try {
-      var file = strategy.resourceProvider.getFile(path);
+      final file = strategy.resourceProvider.getFile(path);
       content = file.readAsStringSync();
     } catch (_) {
       content = '';
     }
 
-    var digestStr = strategy.getFileDigest(path);
+    final digestStr = strategy.getFileDigest(path);
     return _ContentWithDigest(
       content: content,
       digestStr: digestStr,
@@ -105,7 +103,7 @@ class CiderFileContentStrategy implements FileContentStrategy {
 
   @override
   CiderFileContent get(String path) {
-    var digestStr = getFileDigest(path);
+    final digestStr = getFileDigest(path);
     return CiderFileContent(
       strategy: this,
       path: path,
@@ -227,13 +225,13 @@ class FileResolver {
     cachedResults.clear();
 
     // Remove the specified files and files that transitively depend on it.
-    var removedFiles = <FileState>{};
-    for (var path in paths) {
+    final removedFiles = <FileState>{};
+    for (final path in paths) {
       fsState!.changeFile(path, removedFiles);
     }
 
     // Schedule disposing references to cached unlinked data.
-    for (var removedFile in removedFiles) {
+    for (final removedFile in removedFiles) {
       removedCacheKeys.add(removedFile.unlinkedKey);
     }
 
@@ -270,7 +268,7 @@ class FileResolver {
       Future<void> collectReferences2(
           String path, OperationPerformanceImpl performance) async {
         await performance.runAsync('collectReferences', (_) async {
-          var resolved = await resolve(path: path);
+          var resolved = await resolve2(path: path);
           var collector = ReferencesCollector(element);
           resolved.unit.accept(collector);
           var matches = collector.references;
@@ -321,22 +319,22 @@ class FileResolver {
         performance: performance!,
       );
       var file = fileContext.file;
-      var kind = file.kind.library ?? file.kind.asLibrary;
+      final kind = file.kind.library ?? file.kind.asLibrary;
 
-      var errorsSignatureBuilder = ApiSignature();
+      final errorsSignatureBuilder = ApiSignature();
       errorsSignatureBuilder.addString(kind.libraryCycle.apiSignature);
       errorsSignatureBuilder.addString(file.contentHash);
-      var errorsKey = '${errorsSignatureBuilder.toHex()}.errors';
+      final errorsKey = '${errorsSignatureBuilder.toHex()}.errors';
 
-      List<AnalysisError> errors;
-      var bytes = _errorResultsCache.get(errorsKey);
+      final List<AnalysisError> errors;
+      final bytes = _errorResultsCache.get(errorsKey);
       if (bytes != null) {
         var data = CiderUnitErrors.fromBuffer(bytes);
         errors = data.errors.map((error) {
           return ErrorEncoding.decode(file.source, error)!;
         }).toList();
       } else {
-        var unitResult = await resolve(
+        var unitResult = await resolve2(
           path: path,
           performance: performance,
         );
@@ -353,15 +351,13 @@ class FileResolver {
       return ErrorsResultImpl(
         session: contextObjects!.analysisSession,
         file: file.resource,
-        content: file.content,
         uri: file.uri,
         lineInfo: file.lineInfo,
         isAugmentation: file.kind is AugmentationFileKind,
         isLibrary: file.kind is LibraryFileKind,
-        isMacroAugmentation: file.isMacroPart,
+        isMacroAugmentation: file.isMacroAugmentation,
         isPart: file.kind is PartFileKind,
         errors: errors,
-        analysisOptions: file.analysisOptions,
       );
     });
   }
@@ -383,7 +379,10 @@ class FileResolver {
       });
 
       var file = performance.run('fileForPath', (performance) {
-        return fsState!.getFileForPath(path);
+        return fsState!.getFileForPath2(
+          path: path,
+          performance: performance,
+        );
       });
 
       return FileContext(analysisOptions, file);
@@ -392,7 +391,7 @@ class FileResolver {
 
   /// Return files that have a top-level declaration with the [name].
   List<FileState> getFilesWithTopLevelDeclarations(String name) {
-    var fsState = this.fsState;
+    final fsState = this.fsState;
     if (fsState == null) {
       return const [];
     }
@@ -418,7 +417,7 @@ class FileResolver {
     );
     var file = fileContext.file;
 
-    var kind = file.kind;
+    final kind = file.kind;
     if (kind is! LibraryFileKind) {
       throw ArgumentError('$uri is not a library.');
     }
@@ -433,13 +432,19 @@ class FileResolver {
     return libraryContext!.elementFactory.libraryOfUri2(uri);
   }
 
-  String getLibraryLinkedSignature(String path) {
+  String getLibraryLinkedSignature({
+    required String path,
+    required OperationPerformanceImpl performance,
+  }) {
     _throwIfNotAbsoluteNormalizedPath(path);
 
-    var file = fsState!.getFileForPath(path);
+    var file = fsState!.getFileForPath2(
+      path: path,
+      performance: performance,
+    );
 
     // TODO(scheglov): Casts are unsafe.
-    var kind = file.kind as LibraryFileKind;
+    final kind = file.kind as LibraryFileKind;
     return kind.libraryCycle.apiSignature;
   }
 
@@ -474,7 +479,7 @@ class FileResolver {
       performance: performance,
     );
     var file = fileContext.file;
-    var libraryKind = file.kind.library ?? file.kind.asLibrary;
+    final libraryKind = file.kind.library ?? file.kind.asLibrary;
 
     // Load the library, link if necessary.
     await libraryContext!.load(
@@ -484,7 +489,7 @@ class FileResolver {
 
     // Unload libraries, but don't release the linked data.
     // If we are the only consumer of it, we will lose it.
-    var linkedKeysToRelease = libraryContext!.unloadAll();
+    final linkedKeysToRelease = libraryContext!.unloadAll();
 
     // Load the library again, the reference count is `>= 2`.
     await libraryContext!.load(
@@ -519,7 +524,7 @@ class FileResolver {
     releaseAndClearRemovedIds();
   }
 
-  Future<ResolvedUnitResult> resolve({
+  Future<ResolvedUnitResult> resolve2({
     required String path,
     OperationPerformanceImpl? performance,
   }) async {
@@ -534,8 +539,8 @@ class FileResolver {
       );
       var file = fileContext.file;
 
-      var libraryKind = file.kind.library ?? file.kind.asLibrary;
-      var libraryFile = libraryKind.file;
+      final libraryKind = file.kind.library ?? file.kind.asLibrary;
+      final libraryFile = libraryKind.file;
 
       var libraryResult = await resolveLibrary2(
         path: libraryFile.path,
@@ -565,15 +570,15 @@ class FileResolver {
     performance ??= OperationPerformanceImpl('<default>');
 
     return logger.runAsync('Resolve $path', () async {
-      var fileContext = getFileContext(
+      final fileContext = getFileContext(
         path: path,
         performance: performance!,
       );
-      var file = fileContext.file;
-      var libraryKind = file.kind.library ?? file.kind.asLibrary;
+      final file = fileContext.file;
+      final libraryKind = file.kind.library ?? file.kind.asLibrary;
 
-      var lineOffset = file.lineInfo.getOffsetOfLine(completionLine);
-      var completionOffset = lineOffset + completionColumn;
+      final lineOffset = file.lineInfo.getOffsetOfLine(completionLine);
+      final completionOffset = lineOffset + completionColumn;
 
       await performance.runAsync('libraryContext', (performance) async {
         await libraryContext!.load(
@@ -582,28 +587,22 @@ class FileResolver {
         );
       });
 
-      var unitElement = libraryContext!.computeUnitElement(libraryKind, file);
+      final unitElement = libraryContext!.computeUnitElement(libraryKind, file);
 
       return logger.run('Compute analysis results', () {
-        var elementFactory = libraryContext!.elementFactory;
-        var analysisSession = elementFactory.analysisSession;
-
-        var libraryElement = elementFactory.libraryOfUri2(libraryKind.file.uri);
-
-        var typeSystemOperations = TypeSystemOperations(
-            libraryElement.typeSystem,
-            strictCasts: fileContext.analysisOptions.strictCasts);
+        final elementFactory = libraryContext!.elementFactory;
+        final analysisSession = elementFactory.analysisSession;
 
         var libraryAnalyzer = LibraryAnalyzer(
           fileContext.analysisOptions,
           contextObjects!.declaredVariables,
-          libraryElement,
+          elementFactory.libraryOfUri2(libraryKind.file.uri),
           analysisSession.inheritanceManager,
           libraryKind,
-          typeSystemOperations: typeSystemOperations,
+          resourceProvider.pathContext,
         );
 
-        var analysisResult = performance!.run('analyze', (performance) {
+        final analysisResult = performance!.run('analyze', (performance) {
           return libraryAnalyzer.analyzeForCompletion(
             file: file,
             offset: completionOffset,
@@ -614,7 +613,6 @@ class FileResolver {
 
         return ResolvedForCompletionResultImpl(
           analysisSession: analysisSession,
-          fileState: analysisResult.fileState,
           path: path,
           uri: file.uri,
           exists: file.exists,
@@ -647,7 +645,7 @@ class FileResolver {
         performance: performance!,
       );
       var file = fileContext.file;
-      var libraryKind = file.kind.library ?? file.kind.asLibrary;
+      final libraryKind = file.kind.library ?? file.kind.asLibrary;
 
       await performance.runAsync('libraryContext', (performance) async {
         await libraryContext!.load(
@@ -661,20 +659,13 @@ class FileResolver {
       late List<UnitAnalysisResult> results;
 
       logger.run('Compute analysis results', () {
-        var libraryElement =
-            libraryContext!.elementFactory.libraryOfUri2(libraryKind.file.uri);
-
-        var typeSystemOperations = TypeSystemOperations(
-            libraryElement.typeSystem,
-            strictCasts: fileContext.analysisOptions.strictCasts);
-
         var libraryAnalyzer = LibraryAnalyzer(
           fileContext.analysisOptions,
           contextObjects!.declaredVariables,
-          libraryElement,
+          libraryContext!.elementFactory.libraryOfUri2(libraryKind.file.uri),
           libraryContext!.elementFactory.analysisSession.inheritanceManager,
           libraryKind,
-          typeSystemOperations: typeSystemOperations,
+          resourceProvider.pathContext,
         );
 
         results = performance!.run('analyze', (performance) {
@@ -687,6 +678,7 @@ class FileResolver {
         return ResolvedUnitResultImpl(
           session: contextObjects!.analysisSession,
           fileState: file,
+          content: file.content,
           unit: fileResult.unit,
           errors: fileResult.errors,
         );
@@ -724,18 +716,20 @@ class FileResolver {
     }
 
     var analysisOptions = AnalysisOptionsImpl()
-      ..strictInference = fileAnalysisOptions.strictInference
-      ..contextFeatures = FeatureSet.latestLanguageVersion()
-      ..nonPackageFeatureSet = FeatureSet.latestLanguageVersion();
+      ..strictInference = fileAnalysisOptions.strictInference;
 
     if (fsState == null) {
       var featureSetProvider = FeatureSetProvider.build(
         sourceFactory: sourceFactory,
         resourceProvider: resourceProvider,
         packages: Packages.empty,
+        packageDefaultFeatureSet: analysisOptions.contextFeatures,
+        nonPackageDefaultLanguageVersion: ExperimentStatus.currentVersion,
+        nonPackageDefaultFeatureSet: analysisOptions.nonPackageFeatureSet,
       );
 
       fsState = FileSystemState(
+        logger,
         byteStore,
         resourceProvider,
         'contextName',
@@ -745,7 +739,6 @@ class FileResolver {
         Uint32List(0), // _saltForUnlinked
         Uint32List(0), // _saltForElements
         featureSetProvider,
-        AnalysisOptionsMap.forSharedOptions(analysisOptions),
         fileContentStrategy: CiderFileContentStrategy(
           resourceProvider: resourceProvider,
           getFileDigest: getFileDigest,
@@ -775,15 +768,13 @@ class FileResolver {
         declaredVariables: contextObjects!.declaredVariables,
         byteStore: byteStore,
         infoDeclarationStore: const NoOpInfoDeclarationStore(),
-        analysisOptionsMap: AnalysisOptionsMap.forSharedOptions(
-            contextObjects!.analysisOptions),
+        analysisOptions: contextObjects!.analysisOptions,
         analysisSession: contextObjects!.analysisSession,
         logger: logger,
         fileSystemState: fsState!,
         sourceFactory: sourceFactory,
         externalSummaries: SummaryDataStore(),
         macroSupport: null,
-        packagesFile: null,
         testData: testData?.libraryContext,
       );
 
@@ -873,7 +864,7 @@ class FileResolver {
     LibraryElement libraryElement = element.library;
     for (CompilationUnitElement unitElement in libraryElement.units) {
       String unitPath = unitElement.source.fullName;
-      var unitResult = await resolve(path: unitPath);
+      var unitResult = await resolve2(path: unitPath);
       var visitor = ImportElementReferencesVisitor(element, unitElement);
       unitResult.unit.accept(visitor);
       var lineInfo = unitResult.lineInfo;

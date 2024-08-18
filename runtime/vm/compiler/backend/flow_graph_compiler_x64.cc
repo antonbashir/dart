@@ -63,6 +63,10 @@ FlowGraphCompiler::~FlowGraphCompiler() {
   }
 }
 
+bool FlowGraphCompiler::SupportsUnboxedDoubles() {
+  return true;
+}
+
 bool FlowGraphCompiler::SupportsUnboxedSimd128() {
   return FLAG_enable_simd_inline;
 }
@@ -217,6 +221,48 @@ void FlowGraphCompiler::GenerateBoolToJump(Register bool_register,
   __ j(true_condition, is_true);
   __ jmp(is_false);
   __ Bind(&fall_through);
+}
+
+void FlowGraphCompiler::GenerateMethodExtractorIntrinsic(
+    const Function& extracted_method,
+    intptr_t type_arguments_field_offset) {
+  // No frame has been setup here.
+  ASSERT(!__ constant_pool_allowed());
+  DEBUG_ASSERT(extracted_method.IsNotTemporaryScopedHandle());
+
+  const Code& build_method_extractor =
+      Code::ZoneHandle(extracted_method.IsGeneric()
+                           ? isolate_group()
+                                 ->object_store()
+                                 ->build_generic_method_extractor_code()
+                           : isolate_group()
+                                 ->object_store()
+                                 ->build_nongeneric_method_extractor_code());
+  ASSERT(!build_method_extractor.IsNull());
+
+  const intptr_t stub_index =
+      __ object_pool_builder().FindObject(build_method_extractor);
+  const intptr_t function_index =
+      __ object_pool_builder().FindObject(extracted_method);
+
+  // We use a custom pool register to preserve caller PP.
+  Register kPoolReg = RAX;
+
+  // RBX = extracted function
+  // RDX = offset of type argument vector (or 0 if class is not generic)
+  if (FLAG_precompiled_mode) {
+    kPoolReg = PP;
+  } else {
+    __ movq(kPoolReg,
+            compiler::FieldAddress(CODE_REG, Code::object_pool_offset()));
+  }
+  __ movq(RDX, compiler::Immediate(type_arguments_field_offset));
+  __ movq(RBX, compiler::FieldAddress(
+                   kPoolReg, ObjectPool::element_offset(function_index)));
+  __ movq(CODE_REG, compiler::FieldAddress(
+                        kPoolReg, ObjectPool::element_offset(stub_index)));
+  __ jmp(compiler::FieldAddress(
+      CODE_REG, Code::entry_point_offset(Code::EntryKind::kUnchecked)));
 }
 
 // NOTE: If the entry code shape changes, ReturnAddressLocator in profiler.cc
@@ -546,11 +592,20 @@ void FlowGraphCompiler::EmitInstanceCallAOT(const ICData& ic_data,
   __ Comment("InstanceCallAOT (%s)", switchable_call_mode);
   __ movq(RDX, compiler::Address(
                    RSP, (ic_data.SizeWithoutTypeArgs() - 1) * kWordSize));
-  // The AOT runtime will replace the slot in the object pool with the
-  // entrypoint address - see app_snapshot.cc.
-  const auto snapshot_behavior =
-      compiler::ObjectPoolBuilderEntry::kResetToSwitchableCallMissEntryPoint;
-  __ LoadUniqueObject(RCX, initial_stub, snapshot_behavior);
+  if (FLAG_precompiled_mode) {
+    // The AOT runtime will replace the slot in the object pool with the
+    // entrypoint address - see app_snapshot.cc.
+    const auto snapshot_behavior =
+        compiler::ObjectPoolBuilderEntry::kResetToSwitchableCallMissEntryPoint;
+    __ LoadUniqueObject(RCX, initial_stub, snapshot_behavior);
+  } else {
+    const intptr_t entry_point_offset =
+        entry_kind == Code::EntryKind::kNormal
+            ? Code::entry_point_offset(Code::EntryKind::kMonomorphic)
+            : Code::entry_point_offset(Code::EntryKind::kMonomorphicUnchecked);
+    __ LoadUniqueObject(CODE_REG, initial_stub);
+    __ movq(RCX, compiler::FieldAddress(CODE_REG, entry_point_offset));
+  }
   __ LoadUniqueObject(RBX, data);
   __ call(RCX);
 

@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart=2.19
+
 class SuperClass {
   const SuperClass();
 
@@ -37,8 +39,8 @@ main() {
     default:
   }
   switch (null as dynamic) {
-    case const SubClass():
-      break;
+    case const SubClass(): //# 01: compile-time error
+      break; //# 01: continued
     default:
   }
   switch (null) {

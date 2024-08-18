@@ -6,13 +6,8 @@ class C {
 }
 
 var c = C();
-
 void main() {}
-
 void testInitializedFinalInstanceField() {}
-
 void testInitializedNonFinalInstanceField() {}
-
 void testUninitializedFinalInstanceField() {}
-
 void testUninitializedNonFinalInstanceField() {}

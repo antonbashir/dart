@@ -24,7 +24,7 @@ class AnnotationVerifier {
 
   /// Whether [_currentLibrary] is part of its containing package's public API.
   late final bool _inPackagePublicApi = _workspacePackage != null &&
-      _workspacePackage.sourceIsInPublicApi(_currentLibrary.source);
+      _workspacePackage!.sourceIsInPublicApi(_currentLibrary.source);
 
   AnnotationVerifier(
     this._errorReporter,
@@ -40,16 +40,24 @@ class AnnotationVerifier {
     var parent = node.parent;
     if (element.isFactory) {
       _checkFactory(node);
+    } else if (element.isImmutable) {
+      _checkImmutable(node);
     } else if (element.isInternal) {
       _checkInternal(node);
     } else if (element.isLiteral) {
       _checkLiteral(node);
+    } else if (element.isMustBeOverridden) {
+      _checkMustBeOverridden(node);
+    } else if (element.isMustCallSuper) {
+      _checkMustCallSuper(node);
     } else if (element.isNonVirtual) {
       _checkNonVirtual(node);
     } else if (element.isReopen) {
       _checkReopen(node);
     } else if (element.isRedeclare) {
       _checkRedeclare(node);
+    } else if (element.isSealed) {
+      _checkSealed(node);
     } else if (element.isUseResult) {
       _checkUseResult(node, element);
     } else if (element.isVisibleForTemplate ||
@@ -64,21 +72,21 @@ class AnnotationVerifier {
     _checkKinds(node, parent, element);
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for a
+  /// Reports a warning if the annotation's parent is not a valid target for a
   /// `@factory` annotation.
-  void _checkFactory(Annotation node) {
+  void _checkFactory(AstNode node) {
     var parent = node.parent;
     if (parent is! MethodDeclaration) {
-      // Warning reported by `_checkKinds`.
+      _errorReporter
+          .reportErrorForNode(WarningCode.INVALID_FACTORY_ANNOTATION, node, []);
       return;
     }
     var returnType = parent.returnType?.type;
     if (returnType is VoidType) {
-      _errorReporter.atToken(
-        parent.name,
-        WarningCode.INVALID_FACTORY_METHOD_DECL,
-        arguments: [parent.name.lexeme],
-      );
+      _errorReporter.reportErrorForToken(
+          WarningCode.INVALID_FACTORY_METHOD_DECL,
+          parent.name,
+          [parent.name.lexeme]);
       return;
     }
 
@@ -104,16 +112,27 @@ class AnnotationVerifier {
       }
     }
 
-    _errorReporter.atToken(
-      parent.name,
-      WarningCode.INVALID_FACTORY_METHOD_IMPL,
-      arguments: [parent.name.lexeme],
-    );
+    _errorReporter.reportErrorForToken(WarningCode.INVALID_FACTORY_METHOD_IMPL,
+        parent.name, [parent.name.lexeme]);
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for an
+  /// Reports a warning at [node] if it's parent is not a valid target for an
+  /// `@immutable` annotation.
+  void _checkImmutable(AstNode node) {
+    // TODO(srawlins): Switch this annotation to use `TargetKinds`.
+    var parent = node.parent;
+    if (parent is! ClassDeclaration &&
+        parent is! ClassTypeAlias &&
+        parent is! ExtensionTypeDeclaration &&
+        parent is! MixinDeclaration) {
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_IMMUTABLE_ANNOTATION, node, []);
+    }
+  }
+
+  /// Reports a warning at [node] if it's parent is not a valid target for an
   /// `@internal` annotation.
-  void _checkInternal(Annotation node) {
+  void _checkInternal(AstNode node) {
     var parent = node.parent;
     var parentElement = parent is Declaration ? parent.declaredElement : null;
     var parentElementIsPrivate = parentElement?.isPrivate ?? false;
@@ -121,40 +140,30 @@ class AnnotationVerifier {
       for (var variable in parent.variables.variables) {
         var element = variable.declaredElement as TopLevelVariableElement;
         if (Identifier.isPrivateName(element.name)) {
-          _errorReporter.atNode(
-            variable,
-            WarningCode.INVALID_INTERNAL_ANNOTATION,
-          );
+          _errorReporter.reportErrorForNode(
+              WarningCode.INVALID_INTERNAL_ANNOTATION, variable, []);
         }
       }
     } else if (parent is FieldDeclaration) {
       for (var variable in parent.fields.variables) {
         var element = variable.declaredElement as FieldElement;
         if (Identifier.isPrivateName(element.name)) {
-          _errorReporter.atNode(
-            variable,
-            WarningCode.INVALID_INTERNAL_ANNOTATION,
-          );
+          _errorReporter.reportErrorForNode(
+              WarningCode.INVALID_INTERNAL_ANNOTATION, variable, []);
         }
       }
     } else if (parent is ConstructorDeclaration) {
       var class_ = parent.declaredElement!.enclosingElement;
       if (class_.isPrivate || parentElementIsPrivate) {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_INTERNAL_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_INTERNAL_ANNOTATION, node, []);
       }
     } else if (parentElementIsPrivate) {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_INTERNAL_ANNOTATION,
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_INTERNAL_ANNOTATION, node, []);
     } else if (_inPackagePublicApi) {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_INTERNAL_ANNOTATION,
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_INTERNAL_ANNOTATION, node, []);
     }
   }
 
@@ -175,74 +184,99 @@ class AnnotationVerifier {
         var kindNames = kinds.map((kind) => kind.displayString).toList()
           ..sort();
         var validKinds = kindNames.commaSeparatedWithOr;
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_ANNOTATION_TARGET,
-          arguments: [name!, validKinds],
-        );
+        // Annotations always refer to named elements, so we can safely assume
+        // that `name` is non-`null`.
+        _errorReporter.reportErrorForNode(WarningCode.INVALID_ANNOTATION_TARGET,
+            node.name, [name!, validKinds]);
         return;
       }
     }
   }
 
-  /// Reports a warning if at [node] if its parent is not a valid target for a
+  /// Reports a warning if at [node] if it's parent is not a valid target for a
   /// `@literal` annotation.
-  void _checkLiteral(Annotation node) {
+  void _checkLiteral(AstNode node) {
     var parent = node.parent;
     if (parent is! ConstructorDeclaration || parent.constKeyword == null) {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_LITERAL_ANNOTATION,
+      _errorReporter
+          .reportErrorForNode(WarningCode.INVALID_LITERAL_ANNOTATION, node, []);
+    }
+  }
+
+  /// Reports a warning if [parent] is not a valid target for a
+  /// `@mustBeOverridden` annotation.
+  void _checkMustBeOverridden(Annotation node) {
+    var parent = node.parent;
+    if ((parent is MethodDeclaration && parent.isStatic) ||
+        (parent is FieldDeclaration && parent.isStatic) ||
+        parent.parent is ExtensionDeclaration ||
+        parent.parent is ExtensionTypeDeclaration ||
+        parent.parent is EnumDeclaration) {
+      _errorReporter.reportErrorForNode(
+        WarningCode.INVALID_ANNOTATION_TARGET,
+        node,
+        [node.name.name, 'instance members of classes and mixins'],
       );
     }
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for a
+  /// Reports a warning at [node] if it's parent is not a valid target for a
+  /// `@mustCallSuper` annotation.
+  void _checkMustCallSuper(Annotation node) {
+    var parent = node.parent;
+    if ((parent is MethodDeclaration && parent.isStatic) ||
+        (parent is FieldDeclaration && parent.isStatic) ||
+        parent.parent is ExtensionDeclaration ||
+        parent.parent is ExtensionTypeDeclaration ||
+        parent.parent is EnumDeclaration) {
+      _errorReporter.reportErrorForNode(
+        WarningCode.INVALID_ANNOTATION_TARGET,
+        node,
+        [node.name.name, 'instance members of classes and mixins'],
+      );
+    }
+  }
+
+  /// Reports a warning at [node if it's parent is not a valid target for a
   /// `@nonVirtual` annotation.
-  void _checkNonVirtual(Annotation node) {
+  void _checkNonVirtual(AstNode node) {
     var parent = node.parent;
     if (parent is FieldDeclaration) {
       if (parent.isStatic) {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_NON_VIRTUAL_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_NON_VIRTUAL_ANNOTATION, node);
       }
     } else if (parent is MethodDeclaration) {
       if (parent.parent is ExtensionDeclaration ||
           parent.parent is ExtensionTypeDeclaration ||
           parent.isStatic ||
           parent.isAbstract) {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_NON_VIRTUAL_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_NON_VIRTUAL_ANNOTATION, node);
       }
     } else {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_NON_VIRTUAL_ANNOTATION,
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_NON_VIRTUAL_ANNOTATION, node);
     }
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for a
+  /// Reports a warning if [parent] is not a valid target for a
   /// `@redeclare` annotation.
   void _checkRedeclare(Annotation node) {
     var parent = node.parent;
     if (parent.parent is! ExtensionTypeDeclaration ||
         parent is MethodDeclaration && parent.isStatic) {
-      _errorReporter.atNode(
-        node.name,
+      _errorReporter.reportErrorForNode(
         WarningCode.INVALID_ANNOTATION_TARGET,
-        arguments: [node.name.name, 'instance members of extension types'],
+        node,
+        [node.name.name, 'instance members of extension types'],
       );
     }
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for a
-  /// `@reopen` annotation.
-  void _checkReopen(Annotation node) {
+  /// Reports a warning if [parent] is not a valid target for a `@reopen`
+  /// annotation.
+  void _checkReopen(AstNode node) {
     ClassElement? classElement;
     InterfaceElement? superElement;
 
@@ -254,8 +288,8 @@ class AnnotationVerifier {
       classElement = parent.declaredElement;
       superElement = classElement?.supertype?.element;
     } else {
-      // If `parent` is neither of the above types, then `_checkKinds` will
-      // report a warning.
+      // If [parent] is neither of the above types, then [_checkKinds] will report
+      // a warning.
       return;
     }
 
@@ -268,25 +302,19 @@ class AnnotationVerifier {
     if (classElement.isFinal ||
         classElement.isMixinClass ||
         classElement.isSealed) {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_REOPEN_ANNOTATION,
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_REOPEN_ANNOTATION, node);
       return;
     }
     if (classElement.library != superElement.library) {
-      _errorReporter.atNode(
-        node.name,
-        WarningCode.INVALID_REOPEN_ANNOTATION,
-      );
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_REOPEN_ANNOTATION, node);
       return;
     }
     if (classElement.isBase) {
       if (!superElement.isFinal && !superElement.isInterface) {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_REOPEN_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_REOPEN_ANNOTATION, node);
         return;
       }
     } else if (!classElement.isBase &&
@@ -294,12 +322,20 @@ class AnnotationVerifier {
         !classElement.isInterface &&
         !classElement.isSealed) {
       if (!superElement.isInterface) {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_REOPEN_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_REOPEN_ANNOTATION, node);
         return;
       }
+    }
+  }
+
+  /// Reports a warning if [parent] is not a valid target for a `@sealed`
+  /// annotation.
+  void _checkSealed(AstNode node) {
+    var parent = node.parent;
+    if (!(parent is ClassDeclaration || parent is ClassTypeAlias)) {
+      _errorReporter.reportErrorForNode(
+          WarningCode.INVALID_SEALED_ANNOTATION, node);
     }
   }
 
@@ -320,11 +356,10 @@ class AnnotationVerifier {
         var parameterName = undefinedParameter is SimpleStringLiteral
             ? undefinedParameter.value
             : undefinedParameter.staticParameterElement?.name;
-        _errorReporter.atNode(
-          undefinedParameter,
-          WarningCode.UNDEFINED_REFERENCED_PARAMETER,
-          arguments: [parameterName ?? undefinedParameter, name],
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.UNDEFINED_REFERENCED_PARAMETER,
+            undefinedParameter,
+            [parameterName ?? undefinedParameter, name]);
       }
     }
   }
@@ -338,18 +373,15 @@ class AnnotationVerifier {
       void reportInvalidAnnotation(String name) {
         // This method is only called on named elements, so it is safe to
         // assume that `declaredElement.name` is non-`null`.
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_VISIBILITY_ANNOTATION,
-          arguments: [name, node.name.name],
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_VISIBILITY_ANNOTATION,
+            node,
+            [name, node.name.name]);
       }
 
       void reportInvalidVisibleForOverriding() {
-        _errorReporter.atNode(
-          node.name,
-          WarningCode.INVALID_VISIBLE_FOR_OVERRIDING_ANNOTATION,
-        );
+        _errorReporter.reportErrorForNode(
+            WarningCode.INVALID_VISIBLE_FOR_OVERRIDING_ANNOTATION, node);
       }
 
       if (parent is TopLevelVariableDeclaration) {
@@ -380,7 +412,7 @@ class AnnotationVerifier {
           }
         }
       } else if (parent.declaredElement != null) {
-        var declaredElement = parent.declaredElement!;
+        final declaredElement = parent.declaredElement!;
         if (element.isVisibleForOverriding &&
             (!declaredElement.isInstanceMember ||
                 declaredElement.enclosingElement is ExtensionTypeElement)) {
@@ -400,17 +432,17 @@ class AnnotationVerifier {
     }
   }
 
-  /// Reports a warning at [node] if its parent is not a valid target for an
+  /// Reports a warning at [node] if it's parent is not a valid target for an
   /// `@visibleOutsideTemplate` annotation.
   void _checkVisibleOutsideTemplate(Annotation node) {
     void reportError() {
-      _errorReporter.atNode(
-        node.name,
+      _errorReporter.reportErrorForNode(
         WarningCode.INVALID_VISIBLE_OUTSIDE_TEMPLATE_ANNOTATION,
+        node,
       );
     }
 
-    AstNode? containedDeclaration;
+    final AstNode? containedDeclaration;
     switch (node.parent) {
       case ConstructorDeclaration constructorDeclaration:
         containedDeclaration = constructorDeclaration;
@@ -425,7 +457,7 @@ class AnnotationVerifier {
         return;
     }
 
-    InterfaceElement? declaredElement;
+    final InterfaceElement? declaredElement;
     switch (containedDeclaration.parent) {
       case ClassDeclaration classDeclaration:
         declaredElement = classDeclaration.declaredElement;
@@ -443,7 +475,7 @@ class AnnotationVerifier {
       return;
     }
 
-    for (var annotation in declaredElement.metadata) {
+    for (final annotation in declaredElement.metadata) {
       if (annotation.isVisibleForTemplate) {
         return;
       }
@@ -511,60 +543,51 @@ class AnnotationVerifier {
   /// when the annotation is marked as being valid for the given [kinds] of
   /// targets.
   bool _isValidTarget(AstNode target, Set<TargetKind> kinds) {
-    // `TargetKind.overridableMember` is complex, so we handle it separately.
-    if (kinds.contains(TargetKind.overridableMember)) {
-      if ((target is FieldDeclaration && !target.isStatic) ||
-          target is MethodDeclaration && !target.isStatic) {
-        var parent = target.parent;
-        if (parent is ClassDeclaration ||
-            parent is ExtensionTypeDeclaration ||
-            parent is MixinDeclaration) {
-          // Members of `EnumDeclaration`s and `ExtensionDeclaration`s are not
-          // overridable.
-          return true;
-        }
+    if (target is ClassDeclaration) {
+      return kinds.contains(TargetKind.classType) ||
+          kinds.contains(TargetKind.type);
+    } else if (target is ClassTypeAlias) {
+      return kinds.contains(TargetKind.classType) ||
+          kinds.contains(TargetKind.type);
+    } else if (target is Directive) {
+      return (target.parent as CompilationUnit).directives.first == target &&
+          kinds.contains(TargetKind.library);
+    } else if (target is EnumDeclaration) {
+      return kinds.contains(TargetKind.enumType) ||
+          kinds.contains(TargetKind.type);
+    } else if (target is ExtensionTypeDeclaration) {
+      return kinds.contains(TargetKind.extensionType);
+    } else if (target is ExtensionDeclaration) {
+      return kinds.contains(TargetKind.extension);
+    } else if (target is FieldDeclaration) {
+      return kinds.contains(TargetKind.field);
+    } else if (target is FunctionDeclaration) {
+      if (target.isGetter) {
+        return kinds.contains(TargetKind.getter);
       }
+      if (target.isSetter) {
+        return kinds.contains(TargetKind.setter);
+      }
+      return kinds.contains(TargetKind.function);
+    } else if (target is MethodDeclaration) {
+      if (target.isGetter) {
+        return kinds.contains(TargetKind.getter);
+      }
+      if (target.isSetter) {
+        return kinds.contains(TargetKind.setter);
+      }
+      return kinds.contains(TargetKind.method);
+    } else if (target is MixinDeclaration) {
+      return kinds.contains(TargetKind.mixinType) ||
+          kinds.contains(TargetKind.type);
+    } else if (target is FormalParameter) {
+      return kinds.contains(TargetKind.parameter);
+    } else if (target is FunctionTypeAlias || target is GenericTypeAlias) {
+      return kinds.contains(TargetKind.typedefType) ||
+          kinds.contains(TargetKind.type);
+    } else if (target is TopLevelVariableDeclaration) {
+      return kinds.contains(TargetKind.topLevelVariable);
     }
-
-    return switch (target) {
-      ClassDeclaration() =>
-        kinds.contains(TargetKind.classType) || kinds.contains(TargetKind.type),
-      ClassTypeAlias() =>
-        kinds.contains(TargetKind.classType) || kinds.contains(TargetKind.type),
-      ConstructorDeclaration() => kinds.contains(TargetKind.constructor),
-      Directive() => kinds.contains(TargetKind.directive) ||
-          (target.parent as CompilationUnit).directives.first == target &&
-              kinds.contains(TargetKind.library),
-      EnumConstantDeclaration() => kinds.contains(TargetKind.enumValue),
-      EnumDeclaration() =>
-        kinds.contains(TargetKind.enumType) || kinds.contains(TargetKind.type),
-      ExtensionTypeDeclaration() => kinds.contains(TargetKind.extensionType),
-      ExtensionDeclaration() => kinds.contains(TargetKind.extension),
-      FieldDeclaration() => kinds.contains(TargetKind.field),
-      FunctionDeclaration(isGetter: true) => kinds.contains(TargetKind.getter),
-      FunctionDeclaration(isSetter: true) => kinds.contains(TargetKind.setter),
-      FunctionDeclaration() => kinds.contains(TargetKind.function),
-      MethodDeclaration(isGetter: true) => kinds.contains(TargetKind.getter),
-      MethodDeclaration(isSetter: true) => kinds.contains(TargetKind.setter),
-      MethodDeclaration() => kinds.contains(TargetKind.method),
-      MixinDeclaration() =>
-        kinds.contains(TargetKind.mixinType) || kinds.contains(TargetKind.type),
-      FormalParameter() => kinds.contains(TargetKind.parameter) ||
-          (target.isOptional && kinds.contains(TargetKind.optionalParameter)),
-      FunctionTypeAlias() ||
-      GenericTypeAlias() =>
-        kinds.contains(TargetKind.typedefType) ||
-            kinds.contains(TargetKind.type),
-      TopLevelVariableDeclaration() =>
-        kinds.contains(TargetKind.topLevelVariable),
-      TypeParameter() => kinds.contains(TargetKind.typeParameter),
-      // extension type Foo (int bar) {}
-      //                     ^^^^^^^
-      // This is not a parameter in the *traditional sense, but assume you want
-      // to apply an annotation such as @mustBeConst to it; it makes sense that
-      // this is a valid target.
-      RepresentationDeclaration() => kinds.contains(TargetKind.parameter),
-      _ => false,
-    };
+    return false;
   }
 }

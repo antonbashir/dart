@@ -9,5 +9,4 @@ class C {
 }
 
 main() {}
-
 throws(void Function() f) {}

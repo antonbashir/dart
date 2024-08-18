@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/messages/diagnostic_message.dart';
-import 'package:front_end/src/api_prototype/testing.dart';
+import 'package:front_end/src/testing/analysis_helper.dart';
+import 'package:front_end/src/testing/dynamic_analysis.dart';
 import 'package:kernel/ast.dart';
 
 Future<void> main(List<String> args) async {

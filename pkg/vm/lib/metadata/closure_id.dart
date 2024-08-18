@@ -46,7 +46,7 @@ class ClosureIdMetadataRepository extends MetadataRepository<int> {
   }
 }
 
-class _ClosureIndexer extends RecursiveVisitor {
+class _ClosureIndexer extends RecursiveVisitor<void> {
   // Zero is reserved for tear-offs.
   static int firstClosureIndex = 1;
 

@@ -3,12 +3,11 @@ name: analysis_server
 publish_to: none
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.2.0-edge <4.0.0'
 
 # Use 'any' constraints here; we get our versions from the DEPS file.
 dependencies:
   _fe_analyzer_shared: any
-  analysis_server_plugin: any
   analyzer: any
   analyzer_plugin: any
   args: any
@@ -44,8 +43,6 @@ dev_dependencies:
 dependency_overrides:
   _fe_analyzer_shared:
     path: ../_fe_analyzer_shared
-  analysis_server_plugin:
-    path: ../analysis_server_plugin
   analyzer:
     path: ../analyzer
   analyzer_plugin:
@@ -148,6 +145,8 @@ dependency_overrides:
     path: ../../third_party/pkg/typed_data
   unified_analytics:
     path: ../../third_party/pkg/tools/pkgs/unified_analytics
+  usage:
+    path: ../../third_party/pkg/usage
   vm_service:
     path: ../vm_service
   watcher:

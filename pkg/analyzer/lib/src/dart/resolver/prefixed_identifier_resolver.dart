@@ -11,7 +11,6 @@ import 'package:analyzer/src/dart/element/type_provider.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inference_helper.dart';
 import 'package:analyzer/src/dart/resolver/property_element_resolver.dart';
 import 'package:analyzer/src/error/codes.dart';
-import 'package:analyzer/src/generated/inference_log.dart';
 import 'package:analyzer/src/generated/resolver.dart';
 
 class PrefixedIdentifierResolver {
@@ -25,19 +24,19 @@ class PrefixedIdentifierResolver {
 
   PropertyAccessImpl? resolve(
     PrefixedIdentifierImpl node, {
-    required DartType contextType,
+    required DartType? contextType,
   }) {
     node.prefix.accept(_resolver);
 
-    var prefixElement = node.prefix.staticElement;
+    final prefixElement = node.prefix.staticElement;
     if (prefixElement is! PrefixElement) {
-      var prefixType = node.prefix.staticType;
+      final prefixType = node.prefix.staticType;
       // TODO(scheglov): It would be nice to rewrite all such cases.
       if (prefixType != null) {
-        var prefixTypeResolved =
+        final prefixTypeResolved =
             _resolver.typeSystem.resolveToBound(prefixType);
         if (prefixTypeResolved is RecordType) {
-          var propertyAccess = PropertyAccessImpl(
+          final propertyAccess = PropertyAccessImpl(
             target: node.prefix,
             operator: node.period,
             propertyName: node.identifier,
@@ -66,8 +65,10 @@ class PrefixedIdentifierResolver {
     }
 
     if (identical(node.prefix.staticType, NeverTypeImpl.instance)) {
-      identifier.setPseudoExpressionStaticType(NeverTypeImpl.instance);
-      node.recordStaticType(NeverTypeImpl.instance, resolver: _resolver);
+      _inferenceHelper.recordStaticType(identifier, NeverTypeImpl.instance,
+          contextType: contextType);
+      _inferenceHelper.recordStaticType(node, NeverTypeImpl.instance,
+          contextType: contextType);
       return null;
     }
 
@@ -79,24 +80,22 @@ class PrefixedIdentifierResolver {
     } else if (element is InterfaceElement) {
       if (_isExpressionIdentifier(node)) {
         var type = _typeProvider.typeType;
-        node.recordStaticType(type, resolver: _resolver);
-        identifier.setPseudoExpressionStaticType(type);
-      } else {
-        inferenceLogWriter?.recordExpressionWithNoType(node);
+        node.staticType = type;
+        identifier.staticType = type;
       }
       return null;
     } else if (element is DynamicElementImpl) {
       var type = _typeProvider.typeType;
-      node.recordStaticType(type, resolver: _resolver);
-      identifier.setPseudoExpressionStaticType(type);
+      node.staticType = type;
+      identifier.staticType = type;
       return null;
     } else if (element is TypeAliasElement) {
       if (node.parent is NamedType) {
         // no type
       } else {
         var type = _typeProvider.typeType;
-        node.recordStaticType(type, resolver: _resolver);
-        identifier.setPseudoExpressionStaticType(type);
+        node.staticType = type;
+        identifier.staticType = type;
       }
       return null;
     } else if (element is MethodElement) {
@@ -123,8 +122,8 @@ class PrefixedIdentifierResolver {
       type = _inferenceHelper.inferTearOff(node, identifier, type,
           contextType: contextType);
     }
-    identifier.setPseudoExpressionStaticType(type);
-    node.recordStaticType(type, resolver: _resolver);
+    _inferenceHelper.recordStaticType(identifier, type, contextType: null);
+    _inferenceHelper.recordStaticType(node, type, contextType: contextType);
     return null;
   }
 
@@ -168,21 +167,20 @@ class PrefixedIdentifierResolver {
         parent is MethodInvocation && parent.target == node ||
         parent is PrefixedIdentifierImpl && parent.prefix == node ||
         parent is PropertyAccess && parent.target == node) {
-      inferenceLogWriter?.recordExpressionWithNoType(node);
       return;
     }
 
-    _resolver.errorReporter.atNode(
-      node,
+    _resolver.errorReporter.reportErrorForNode(
       CompileTimeErrorCode.EXTENSION_AS_EXPRESSION,
-      arguments: [node.name],
+      node,
+      [node.name],
     );
 
     if (node is PrefixedIdentifierImpl) {
-      node.identifier.setPseudoExpressionStaticType(DynamicTypeImpl.instance);
-      node.recordStaticType(DynamicTypeImpl.instance, resolver: _resolver);
+      node.identifier.staticType = DynamicTypeImpl.instance;
+      node.staticType = DynamicTypeImpl.instance;
     } else if (node is SimpleIdentifier) {
-      node.recordStaticType(DynamicTypeImpl.instance, resolver: _resolver);
+      node.staticType = DynamicTypeImpl.instance;
     }
   }
 }

@@ -65,32 +65,36 @@ class ErrorParserTest extends FastaParserTestCase {
 
   void test_abstractEnum() {
     parseCompilationUnit("abstract enum E {ONE}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+        errors: [expectedError(ParserErrorCode.ABSTRACT_ENUM, 0, 8)]);
   }
 
   void test_abstractTopLevelFunction_function() {
-    parseCompilationUnit("abstract f(v) {}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+    parseCompilationUnit("abstract f(v) {}", errors: [
+      expectedError(ParserErrorCode.ABSTRACT_TOP_LEVEL_FUNCTION, 0, 8)
+    ]);
   }
 
   void test_abstractTopLevelFunction_getter() {
-    parseCompilationUnit("abstract get m {}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+    parseCompilationUnit("abstract get m {}", errors: [
+      expectedError(ParserErrorCode.ABSTRACT_TOP_LEVEL_FUNCTION, 0, 8)
+    ]);
   }
 
   void test_abstractTopLevelFunction_setter() {
-    parseCompilationUnit("abstract set m(v) {}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+    parseCompilationUnit("abstract set m(v) {}", errors: [
+      expectedError(ParserErrorCode.ABSTRACT_TOP_LEVEL_FUNCTION, 0, 8)
+    ]);
   }
 
   void test_abstractTopLevelVariable() {
-    parseCompilationUnit("abstract C f;",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+    parseCompilationUnit("abstract C f;", errors: [
+      expectedError(ParserErrorCode.ABSTRACT_TOP_LEVEL_VARIABLE, 0, 8)
+    ]);
   }
 
   void test_abstractTypeDef() {
     parseCompilationUnit("abstract typedef F();",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 8)]);
+        errors: [expectedError(ParserErrorCode.ABSTRACT_TYPEDEF, 0, 8)]);
   }
 
   void test_await_missing_async2_issue36048() {
@@ -555,7 +559,7 @@ main() { // missing async
     var member = parseFullCompilationUnitMember() as ClassDeclaration;
     expectNotNullIfNoErrors(member);
     listener.assertErrors(
-        [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 9)]);
+        [expectedError(ParserErrorCode.COVARIANT_TOP_LEVEL_DECLARATION, 0, 9)]);
   }
 
   void test_covariantTopLevelDeclaration_enum() {
@@ -563,12 +567,13 @@ main() { // missing async
     var member = parseFullCompilationUnitMember() as EnumDeclaration;
     expectNotNullIfNoErrors(member);
     listener.assertErrors(
-        [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 9)]);
+        [expectedError(ParserErrorCode.COVARIANT_TOP_LEVEL_DECLARATION, 0, 9)]);
   }
 
   void test_covariantTopLevelDeclaration_typedef() {
-    parseCompilationUnit("covariant typedef F();",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 9)]);
+    parseCompilationUnit("covariant typedef F();", errors: [
+      expectedError(ParserErrorCode.COVARIANT_TOP_LEVEL_DECLARATION, 0, 9)
+    ]);
   }
 
   void test_defaultValueInFunctionType_named_colon() {
@@ -684,7 +689,7 @@ main() { // missing async
     var declaration = parseFullCompilationUnitMember() as EnumDeclaration;
     expectNotNullIfNoErrors(declaration);
     // TODO(brianwilkerson): Convert codes to errors when highlighting is fixed.
-    listener.assertErrorsWithCodes([]);
+    listener.assertErrorsWithCodes([ParserErrorCode.EMPTY_ENUM_BODY]);
 //    listener
 //        .assertErrors([expectedError(ParserErrorCode.EMPTY_ENUM_BODY, 7, 2),]);
   }
@@ -923,6 +928,13 @@ class Foo {
   void test_exportAsType_inClass() {
     parseCompilationUnit('class C { export<dynamic> foo; }', errors: [
       expectedError(CompileTimeErrorCode.BUILT_IN_IDENTIFIER_AS_TYPE, 10, 6)
+    ]);
+  }
+
+  void test_exportDirectiveAfterPartDirective() {
+    parseCompilationUnit("part 'a.dart'; export 'b.dart';", errors: [
+      expectedError(
+          ParserErrorCode.EXPORT_DIRECTIVE_AFTER_PART_DIRECTIVE, 15, 6)
     ]);
   }
 
@@ -1387,6 +1399,13 @@ class Wrong<T> {
         errors: [expectedError(ParserErrorCode.IMPLEMENTS_BEFORE_WITH, 31, 4)]);
   }
 
+  void test_importDirectiveAfterPartDirective() {
+    parseCompilationUnit("part 'a.dart'; import 'b.dart';", errors: [
+      expectedError(
+          ParserErrorCode.IMPORT_DIRECTIVE_AFTER_PART_DIRECTIVE, 15, 6)
+    ]);
+  }
+
   void test_initializedVariableInForEach() {
     var statement = parseStatement('for (int a = 0 in foo) {}');
     expectNotNullIfNoErrors(statement);
@@ -1816,9 +1835,9 @@ class Wrong<T> {
   }
 
   void test_missing_closing_bracket_issue37528() {
-    var code = '\${foo';
+    final code = '\${foo';
     createParser(code);
-    var result = fasta.scanString(code);
+    final result = fasta.scanString(code);
     expect(result.hasErrors, isTrue);
     var token = parserProxy.fastaParser.syntheticPreviousToken(result.tokens);
     try {
@@ -1849,18 +1868,6 @@ class Wrong<T> {
 
   void test_missingAssignableSelector_selector() {
     parseExpression("x(y)(z).a++");
-  }
-
-  void test_missingAssignableSelector_superAsExpressionFunctionBody() {
-    CompilationUnit unit = parseCompilationUnit('main() => super;', errors: [
-      error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 10, 5),
-    ]);
-    var declaration = unit.declarations.first as FunctionDeclaration;
-    var body = declaration.functionExpression.body as ExpressionFunctionBody;
-    var expression = body.expression;
-    expect(expression, isSuperExpression);
-    var superExpression = expression as SuperExpression;
-    expect(superExpression.superKeyword, isNotNull);
   }
 
   void test_missingAssignableSelector_superPrimaryExpression() {
@@ -2363,6 +2370,21 @@ class Wrong<T> {
     expect(unit, isNotNull);
   }
 
+  void test_nonPartOfDirectiveInPart_after() {
+    parseCompilationUnit("part of l; part 'f.dart';", errors: [
+      expectedError(ParserErrorCode.NON_PART_OF_DIRECTIVE_IN_PART, 11, 4)
+    ]);
+  }
+
+  void test_nonPartOfDirectiveInPart_before() {
+    // TODO(brianwilkerson): Remove codes when highlighting is fixed.
+    parseCompilationUnit("part 'f.dart'; part of m;", codes: [
+      ParserErrorCode.NON_PART_OF_DIRECTIVE_IN_PART
+    ], errors: [
+      expectedError(ParserErrorCode.NON_PART_OF_DIRECTIVE_IN_PART, 0, 4)
+    ]);
+  }
+
   void test_nonUserDefinableOperator() {
     createParser('operator +=(int x) => x + 1;');
     ClassMember member = parser.parseClassMember('C');
@@ -2547,28 +2569,33 @@ class Wrong<T> {
   }
 
   void test_staticTopLevelDeclaration_class() {
-    parseCompilationUnit("static class C {}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 6)]);
+    parseCompilationUnit("static class C {}", errors: [
+      expectedError(ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION, 0, 6)
+    ]);
   }
 
   void test_staticTopLevelDeclaration_enum() {
-    parseCompilationUnit("static enum E { v }",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 6)]);
+    parseCompilationUnit("static enum E { v }", errors: [
+      expectedError(ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION, 0, 6)
+    ]);
   }
 
   void test_staticTopLevelDeclaration_function() {
-    parseCompilationUnit("static f() {}",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 6)]);
+    parseCompilationUnit("static f() {}", errors: [
+      expectedError(ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION, 0, 6)
+    ]);
   }
 
   void test_staticTopLevelDeclaration_typedef() {
-    parseCompilationUnit("static typedef F();",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 6)]);
+    parseCompilationUnit("static typedef F();", errors: [
+      expectedError(ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION, 0, 6)
+    ]);
   }
 
   void test_staticTopLevelDeclaration_variable() {
-    parseCompilationUnit("static var x;",
-        errors: [expectedError(ParserErrorCode.EXTRANEOUS_MODIFIER, 0, 6)]);
+    parseCompilationUnit("static var x;", errors: [
+      expectedError(ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION, 0, 6)
+    ]);
   }
 
   void test_string_unterminated_interpolation_block() {

@@ -5,9 +5,6 @@ class C<T> {
 }
 
 main() {}
-
 void g1(dynamic d) {}
-
 void g2(dynamic d) {}
-
 void test() {}

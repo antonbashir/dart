@@ -7,12 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid returning `null` for `void`.';
+const _desc = r'Avoid returning null for void.';
 
 const _details = r'''
-**AVOID** returning `null` for `void`.
+**AVOID** returning null for void.
 
 In a large variety of languages `void` as return type is used to indicate that
 a function doesn't return anything. Dart allows returning `null` in functions
@@ -43,18 +42,23 @@ Future<void> f2() async {
 ''';
 
 class AvoidReturningNullForVoid extends LintRule {
+  static const LintCode fromFunction = LintCode('avoid_returning_null_for_void',
+      "Don't return 'null' from a function with a return type of 'void'.",
+      correctionMessage: "Try removing the 'null'.");
+
+  static const LintCode fromMethod = LintCode('avoid_returning_null_for_void',
+      "Don't return 'null' from a method with a return type of 'void'.",
+      correctionMessage: "Try removing the 'null'.");
+
   AvoidReturningNullForVoid()
       : super(
             name: 'avoid_returning_null_for_void',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.avoid_returning_null_for_void_from_function,
-        LinterLintCode.avoid_returning_null_for_void_from_method
-      ];
+  List<LintCode> get lintCodes => [fromFunction, fromMethod];
 
   @override
   void registerNodeProcessors(
@@ -97,11 +101,11 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (parent is FunctionExpression) {
       type = parent.declaredElement?.returnType;
       isAsync = parent.body.isAsynchronous;
-      code = LinterLintCode.avoid_returning_null_for_void_from_function;
+      code = AvoidReturningNullForVoid.fromFunction;
     } else if (parent is MethodDeclaration) {
       type = parent.declaredElement?.returnType;
       isAsync = parent.body.isAsynchronous;
-      code = LinterLintCode.avoid_returning_null_for_void_from_method;
+      code = AvoidReturningNullForVoid.fromMethod;
     } else {
       throw StateError('unexpected type');
     }

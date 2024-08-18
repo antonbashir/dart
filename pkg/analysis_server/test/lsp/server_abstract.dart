@@ -7,23 +7,22 @@ import 'dart:async';
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/analytics/analytics_manager.dart';
 import 'package:analysis_server/src/legacy_analysis_server.dart';
-import 'package:analysis_server/src/lsp/client_capabilities.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/lsp_analysis_server.dart';
 import 'package:analysis_server/src/plugin/plugin_manager.dart';
 import 'package:analysis_server/src/server/crash_reporting_attachments.dart';
-import 'package:analysis_server/src/server/error_notifier.dart';
 import 'package:analysis_server/src/services/user_prompts/dart_fix_prompt_manager.dart';
 import 'package:analysis_server/src/utilities/mocks.dart';
+import 'package:analyzer/instrumentation/instrumentation.dart';
+import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
+import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer_plugin/protocol/protocol.dart' as plugin;
 import 'package:analyzer_plugin/src/protocol/protocol_internal.dart' as plugin;
-import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:collection/collection.dart';
 import 'package:language_server_protocol/json_parsing.dart';
 import 'package:path/path.dart' as path;
@@ -32,8 +31,7 @@ import 'package:unified_analytics/unified_analytics.dart';
 
 import '../mocks.dart';
 import '../mocks_lsp.dart';
-import '../support/configuration_files.dart';
-import '../test_macros.dart';
+import '../src/utilities/mock_packages.dart';
 import 'change_verifier.dart';
 import 'request_helpers_mixin.dart';
 
@@ -51,11 +49,8 @@ abstract class AbstractLspAnalysisServerTest
         LspEditHelpersMixin,
         LspVerifyEditHelpersMixin,
         LspAnalysisServerTestMixin,
-        MockPackagesMixin,
-        ConfigurationFilesMixin,
-        TestMacros {
+        ConfigurationFilesMixin {
   late MockLspServerChannel channel;
-  late ErrorNotifier errorNotifier;
   late TestPluginManager pluginManager;
   late LspAnalysisServer server;
   late MockProcessRunner processRunner;
@@ -67,19 +62,13 @@ abstract class AbstractLspAnalysisServerTest
 
   DartFixPromptManager? get dartFixPromptManager => null;
 
-  String get mainFileAugmentationPath => fromUri(mainFileAugmentationUri);
-
-  /// The path that is not in [projectFolderPath], contains external packages.
   @override
-  String get packagesRootPath => resourceProvider.convertPath('/packages');
+  path.Context get pathContext => server.resourceProvider.pathContext;
 
   AnalysisServerOptions get serverOptions => AnalysisServerOptions();
 
   @override
   Stream<Message> get serverToClient => channel.serverToClient;
-
-  @override
-  ClientUriConverter get uriConverter => server.uriConverter;
 
   DiscoveredPluginInfo configureTestPlugin({
     plugin.ResponseResult? respondWith,
@@ -87,13 +76,13 @@ abstract class AbstractLspAnalysisServerTest
     plugin.ResponseResult? Function(plugin.RequestParams)? handler,
     Duration respondAfter = Duration.zero,
   }) {
-    var info = DiscoveredPluginInfo('a', 'b', 'c', server.notificationManager,
+    final info = DiscoveredPluginInfo('a', 'b', 'c', server.notificationManager,
         server.instrumentationService);
     pluginManager.plugins.add(info);
 
     if (handler != null) {
       pluginManager.handleRequest = (request) {
-        var response = handler(request);
+        final response = handler(request);
         return response == null
             ? null
             : <PluginInfo, Future<plugin.Response>>{
@@ -128,7 +117,7 @@ abstract class AbstractLspAnalysisServerTest
   }) async {
     ApplyWorkspaceEditParams? editParams;
 
-    var commandResponse = await handleExpectedRequest<Object?,
+    final commandResponse = await handleExpectedRequest<Object?,
         ApplyWorkspaceEditParams, ApplyWorkspaceEditResult>(
       Method.workspace_applyEdit,
       ApplyWorkspaceEditParams.fromJson,
@@ -145,9 +134,9 @@ abstract class AbstractLspAnalysisServerTest
 
     // Ensure the edit came back, and using the expected change type.
     expect(editParams, isNotNull);
-    var edit = editParams!.edit;
+    final edit = editParams!.edit;
 
-    var expectDocumentChanges =
+    final expectDocumentChanges =
         workspaceCapabilities.workspaceEdit?.documentChanges ?? false;
     expect(edit.documentChanges, expectDocumentChanges ? isNotNull : isNull);
     expect(edit.changes, expectDocumentChanges ? isNull : isNotNull);
@@ -168,8 +157,8 @@ abstract class AbstractLspAnalysisServerTest
   @override
   Future<T> expectSuccessfulResponseTo<T, R>(
       RequestMessage request, T Function(R) fromJson) async {
-    var resp = await sendRequestToServer(request);
-    var error = resp.error;
+    final resp = await sendRequestToServer(request);
+    final error = resp.error;
     if (error != null) {
       throw error;
     } else {
@@ -190,7 +179,7 @@ abstract class AbstractLspAnalysisServerTest
               (textDocEdit) => textDocEdit,
             ),
           )
-          .nonNulls
+          .whereNotNull()
           .toList();
 
   @override
@@ -229,7 +218,7 @@ abstract class AbstractLspAnalysisServerTest
     Method method,
   ) {
     bool includesDart(Registration r) {
-      var options = TextDocumentRegistrationOptions.fromJson(
+      final options = TextDocumentRegistrationOptions.fromJson(
           r.registerOptions as Map<String, Object?>);
 
       return options.documentSelector?.any((selector) =>
@@ -276,7 +265,6 @@ abstract class AbstractLspAnalysisServerTest
       root: sdkRoot,
     );
 
-    errorNotifier = ErrorNotifier();
     pluginManager = TestPluginManager();
     server = LspAnalysisServer(
         channel,
@@ -285,11 +273,10 @@ abstract class AbstractLspAnalysisServerTest
         DartSdkManager(sdkRoot.path),
         AnalyticsManager(NoOpAnalytics()),
         CrashReportingAttachmentsBuilder.empty,
-        errorNotifier,
+        InstrumentationService.NULL_SERVICE,
         httpClient: httpClient,
         processRunner: processRunner,
         dartFixPromptManager: dartFixPromptManager);
-    errorNotifier.server = server;
     server.pluginManager = pluginManager;
 
     projectFolderPath = convertPath('/home/my_project');
@@ -301,19 +288,17 @@ abstract class AbstractLspAnalysisServerTest
     newFile(join(projectFolderPath, 'lib', 'file.dart'), '');
     mainFilePath = join(projectFolderPath, 'lib', 'main.dart');
     mainFileUri = toUri(mainFilePath);
-    nonExistentFilePath = join(projectFolderPath, 'lib', 'not_existing.dart');
-    nonExistentFileUri = toUri(nonExistentFilePath);
     pubspecFilePath = join(projectFolderPath, file_paths.pubspecYaml);
     pubspecFileUri = toUri(pubspecFilePath);
     analysisOptionsPath = join(projectFolderPath, 'analysis_options.yaml');
     newFile(analysisOptionsPath, '''
 analyzer:
   enable-experiment:
-    - macros
+    - inline-class
 ''');
 
     analysisOptionsUri = pathContext.toUri(analysisOptionsPath);
-    writeTestPackageConfig();
+    writePackageConfig(projectFolderPath);
   }
 
   Future<void> tearDown() async {
@@ -329,7 +314,7 @@ analyzer:
     String expectedContent, {
     ProgressToken? workDoneToken,
   }) async {
-    var verifier = await executeCommandForEdits(
+    final verifier = await executeCommandForEdits(
       command,
       workDoneToken: workDoneToken,
     );
@@ -343,12 +328,12 @@ analyzer:
     String expected, {
     Map<Uri, int>? expectedVersions,
   }) {
-    var expectDocumentChanges =
+    final expectDocumentChanges =
         workspaceCapabilities.workspaceEdit?.documentChanges ?? false;
     expect(edit.documentChanges, expectDocumentChanges ? isNotNull : isNull);
     expect(edit.changes, expectDocumentChanges ? isNull : isNotNull);
 
-    var verifier = LspChangeVerifier(this, edit);
+    final verifier = LspChangeVerifier(this, edit);
     verifier.verifyFiles(expected, expectedVersions: expectedVersions);
     return verifier;
   }
@@ -364,7 +349,7 @@ analyzer:
   ///
   /// Throws if the path already has a trailing slash.
   String withTrailingSlash(String path) {
-    var pathSeparator = server.resourceProvider.pathContext.separator;
+    final pathSeparator = server.resourceProvider.pathContext.separator;
     expect(path, isNot(endsWith(pathSeparator)));
     return '$path$pathSeparator';
   }
@@ -405,7 +390,7 @@ mixin ClientCapabilitiesHelperMixin {
     TextDocumentClientCapabilities source,
     Map<String, dynamic> textDocumentCapabilities,
   ) {
-    var json = source.toJson();
+    final json = source.toJson();
     mergeJson(textDocumentCapabilities, json);
     return TextDocumentClientCapabilities.fromJson(json);
   }
@@ -414,7 +399,7 @@ mixin ClientCapabilitiesHelperMixin {
     WindowClientCapabilities source,
     Map<String, dynamic> windowCapabilities,
   ) {
-    var json = source.toJson();
+    final json = source.toJson();
     mergeJson(windowCapabilities, json);
     return WindowClientCapabilities.fromJson(json);
   }
@@ -423,7 +408,7 @@ mixin ClientCapabilitiesHelperMixin {
     WorkspaceClientCapabilities source,
     Map<String, dynamic> workspaceCapabilities,
   ) {
-    var json = source.toJson();
+    final json = source.toJson();
     mergeJson(workspaceCapabilities, json);
     return WorkspaceClientCapabilities.fromJson(json);
   }
@@ -479,23 +464,6 @@ mixin ClientCapabilitiesHelperMixin {
   void setApplyEditSupport([bool supported = true]) {
     workspaceCapabilities = extendWorkspaceCapabilities(
         workspaceCapabilities, {'applyEdit': supported});
-  }
-
-  void setChangeAnnotationSupport([bool supported = true]) {
-    workspaceCapabilities = extendWorkspaceCapabilities(workspaceCapabilities, {
-      'workspaceEdit': {
-        'changeAnnotationSupport': supported
-            ? <String, Object?>{
-                // This is set to an empty object to indicate support. We don't
-                // currently use any of the child properties.
-              }
-            : null
-      }
-    });
-  }
-
-  void setClientSupportedCommands(List<String>? supportedCommands) {
-    experimentalCapabilities['commands'] = supportedCommands;
   }
 
   void setCompletionItemDeprecatedFlagSupport() {
@@ -585,18 +553,6 @@ mixin ClientCapabilitiesHelperMixin {
   void setConfigurationSupport() {
     workspaceCapabilities = extendWorkspaceCapabilities(
         workspaceCapabilities, {'configuration': true});
-  }
-
-  void setDartTextDocumentContentProviderSupport([bool supported = true]) {
-    // These are temporarily versioned with a suffix during dev so if we ship
-    // as an experiment (not LSP standard) without the suffix it will only be
-    // active for matching server/clients.
-    const key = dartExperimentalTextDocumentContentProviderKey;
-    if (supported) {
-      experimentalCapabilities[key] = true;
-    } else {
-      experimentalCapabilities.remove(key);
-    }
   }
 
   void setDiagnosticCodeDescriptionSupport() {
@@ -746,7 +702,7 @@ mixin ClientCapabilitiesHelperMixin {
   void setTextDocumentDynamicRegistration(
     String name,
   ) {
-    var json = name == 'semanticTokens'
+    final json = name == 'semanticTokens'
         ? SemanticTokensClientCapabilities(
             dynamicRegistration: true,
             requests: SemanticTokensClientCapabilitiesRequests(),
@@ -791,6 +747,66 @@ mixin ClientCapabilitiesHelperMixin {
   }
 }
 
+mixin ConfigurationFilesMixin on ResourceProviderMixin {
+  String get latestLanguageVersion =>
+      '${ExperimentStatus.currentVersion.major}.'
+      '${ExperimentStatus.currentVersion.minor}';
+
+  String get testPackageLanguageVersion => latestLanguageVersion;
+
+  void writePackageConfig(
+    String projectFolderPath, {
+    PackageConfigFileBuilder? config,
+    String? languageVersion,
+    bool flutter = false,
+    bool meta = false,
+    bool pedantic = false,
+    bool vector_math = false,
+  }) {
+    if (config == null) {
+      config = PackageConfigFileBuilder();
+    } else {
+      config = config.copy();
+    }
+
+    config.add(
+      name: 'test',
+      rootPath: projectFolderPath,
+      languageVersion: languageVersion ?? testPackageLanguageVersion,
+    );
+
+    if (meta || flutter) {
+      var libFolder = MockPackages.instance.addMeta(resourceProvider);
+      config.add(name: 'meta', rootPath: libFolder.parent.path);
+    }
+
+    if (flutter) {
+      {
+        var libFolder = MockPackages.instance.addUI(resourceProvider);
+        config.add(name: 'ui', rootPath: libFolder.parent.path);
+      }
+      {
+        var libFolder = MockPackages.instance.addFlutter(resourceProvider);
+        config.add(name: 'flutter', rootPath: libFolder.parent.path);
+      }
+    }
+
+    if (pedantic) {
+      var libFolder = MockPackages.instance.addPedantic(resourceProvider);
+      config.add(name: 'pedantic', rootPath: libFolder.parent.path);
+    }
+
+    if (vector_math) {
+      var libFolder = MockPackages.instance.addVectorMath(resourceProvider);
+      config.add(name: 'vector_math', rootPath: libFolder.parent.path);
+    }
+
+    var path = '$projectFolderPath/.dart_tool/package_config.json';
+    var content = config.toContent(toUriStr: toUriStr);
+    newFile(path, content);
+  }
+}
+
 mixin LspAnalysisServerTestMixin
     on LspRequestHelpersMixin, LspEditHelpersMixin
     implements ClientCapabilitiesHelperMixin {
@@ -800,14 +816,9 @@ mixin LspAnalysisServerTestMixin
 
   late String projectFolderPath,
       mainFilePath,
-      nonExistentFilePath,
       pubspecFilePath,
       analysisOptionsPath;
-  late Uri projectFolderUri,
-      mainFileUri,
-      nonExistentFileUri,
-      pubspecFileUri,
-      analysisOptionsUri;
+  late Uri projectFolderUri, mainFileUri, pubspecFileUri, analysisOptionsUri;
   final String simplePubspecContent = 'name: my_project';
 
   /// The client capabilities sent to the server during initialization.
@@ -832,26 +843,12 @@ mixin LspAnalysisServerTestMixin
   /// A file that has never had diagnostics will not be in the map. A file that
   /// has ever had diagnostics will be in the map, even if the entry is an empty
   /// list.
-  final diagnostics = <Uri, List<Diagnostic>>{};
-
-  /// Whether to fail tests if any error notifications are received from the
-  /// server.
-  ///
-  /// This does not need to be set when using [expectErrorNotification].
-  bool failTestOnAnyErrorNotification = true;
-
-  /// Whether to fail tests if any error diagnostics are received from the
-  /// server.
-  bool failTestOnErrorDiagnostic = true;
+  final diagnostics = <String, List<Diagnostic>>{};
 
   /// A stream of [NotificationMessage]s from the server that may be errors.
   Stream<NotificationMessage> get errorNotificationsFromServer {
     return notificationsFromServer.where(_isErrorNotification);
   }
-
-  /// The experimental capabilities returned from the server during initialization.
-  Map<String, Object?> get experimentalServerCapabilities =>
-      serverCapabilities.experimental as Map<String, Object?>? ?? {};
 
   /// A [Future] that completes with the first analysis after initialization.
   Future<void> get initialAnalysis =>
@@ -859,15 +856,7 @@ mixin LspAnalysisServerTestMixin
 
   bool get initialized => _clientCapabilities != null;
 
-  /// The URI for an augmentation for [mainFileUri].
-  Uri get mainFileAugmentationUri => mainFileUri.replace(
-      path: mainFileUri.path.replaceFirst('.dart', '_augmentation.dart'));
-
-  /// The URI for the macro-generated contents for [mainFileUri].
-  Uri get mainFileMacroUri => mainFileUri.replace(scheme: macroClientUriScheme);
-
   /// A stream of [NotificationMessage]s from the server.
-  @override
   Stream<NotificationMessage> get notificationsFromServer {
     return serverToClient
         .where((m) => m is NotificationMessage)
@@ -898,20 +887,7 @@ mixin LspAnalysisServerTestMixin
         .cast<RequestMessage>();
   }
 
-  /// The capabilities returned from the server during initialization.
-  ServerCapabilities get serverCapabilities => _serverCapabilities!;
-
   Stream<Message> get serverToClient;
-
-  /// A stream of [ShowMessageParams] for any `window/logMessage` notifications.
-  Stream<ShowMessageParams> get showMessageNotifications =>
-      notificationsFromServer
-          .where((notification) =>
-              notification.method == Method.window_showMessage)
-          .map((message) => ShowMessageParams.fromJson(
-              message.params as Map<String, Object?>));
-
-  String get testPackageRootPath => projectFolderPath;
 
   Future<void> changeFile(
     int newVersion,
@@ -954,7 +930,7 @@ mixin LspAnalysisServerTestMixin
 
   Future<Object?> executeCodeAction(
       Either2<Command, CodeAction> codeAction) async {
-    var command = codeAction.map(
+    final command = codeAction.map(
       (command) => command,
       (codeAction) => codeAction.command!,
     );
@@ -966,13 +942,13 @@ mixin LspAnalysisServerTestMixin
     T Function(Map<String, Object?>)? decoder,
     ProgressToken? workDoneToken,
   }) async {
-    var supportedCommands =
+    final supportedCommands =
         _serverCapabilities?.executeCommandProvider?.commands ?? [];
     if (!supportedCommands.contains(command.command)) {
       throw ArgumentError('Server does not support ${command.command}. '
           'Is it missing from serverSupportedCommands?');
     }
-    var request = makeRequest(
+    final request = makeRequest(
       Method.workspace_executeCommand,
       ExecuteCommandParams(
         command: command.command,
@@ -988,14 +964,10 @@ mixin LspAnalysisServerTestMixin
     FutureOr<void> Function() f, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    var firstError = errorNotificationsFromServer.first;
-
-    failTestOnAnyErrorNotification = false;
-
+    final firstError = errorNotificationsFromServer.first;
     await f();
-    var notificationFromServer = await firstError.timeout(timeout);
 
-    failTestOnAnyErrorNotification = true;
+    final notificationFromServer = await firstError.timeout(timeout);
 
     expect(notificationFromServer, isNotNull);
     return ShowMessageParams.fromJson(
@@ -1007,10 +979,10 @@ mixin LspAnalysisServerTestMixin
     FutureOr<void> Function() f, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    var firstError = notificationsFromServer.firstWhere(test);
+    final firstError = notificationsFromServer.firstWhere(test);
     await f();
 
-    var notificationFromServer = await firstError.timeout(timeout);
+    final notificationFromServer = await firstError.timeout(timeout);
 
     expect(notificationFromServer, isNotNull);
     return notificationFromServer.params as T;
@@ -1022,10 +994,11 @@ mixin LspAnalysisServerTestMixin
     FutureOr<void> Function() f, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    var firstRequest = requestsFromServer.firstWhere((n) => n.method == method);
+    final firstRequest =
+        requestsFromServer.firstWhere((n) => n.method == method);
     await f();
 
-    var requestFromServer = await firstRequest.timeout(timeout);
+    final requestFromServer = await firstRequest.timeout(timeout);
 
     expect(requestFromServer, isNotNull);
     return requestFromServer;
@@ -1067,7 +1040,7 @@ mixin LspAnalysisServerTestMixin
     late Future<T> outboundRequest;
 
     // Run [f] and wait for the incoming request from the server.
-    var incomingRequest = await expectRequest(method, () {
+    final incomingRequest = await expectRequest(method, () {
       // Don't return/await the response yet, as this may not complete until
       // after we have handled the request that comes from the server.
       outboundRequest = f();
@@ -1084,7 +1057,7 @@ mixin LspAnalysisServerTestMixin
     });
 
     // Handle the request from the server and send the response back.
-    var clientsResponse =
+    final clientsResponse =
         await handler(fromJson(incomingRequest.params as Map<String, Object?>));
     respondTo(incomingRequest, clientsResponse);
 
@@ -1106,28 +1079,18 @@ mixin LspAnalysisServerTestMixin
     Map<String, Object?>? initializationOptions,
     bool throwOnFailure = true,
     bool allowEmptyRootUri = false,
+    bool failTestOnAnyErrorNotification = true,
     bool includeClientRequestTime = false,
-    void Function()? immediatelyAfterInitialized,
   }) async {
     this.includeClientRequestTime = includeClientRequestTime;
 
-    errorNotificationsFromServer.listen((NotificationMessage error) {
-      // Always subscribe to this and check the flag here so it can be toggled
-      // during tests (for example automatically by expectErrorNotification).
-      if (failTestOnAnyErrorNotification) {
+    if (failTestOnAnyErrorNotification) {
+      errorNotificationsFromServer.listen((NotificationMessage error) {
         fail('${error.toJson()}');
-      }
-    });
+      });
+    }
 
-    publishedDiagnostics.listen((diagnostics) {
-      if (failTestOnErrorDiagnostic &&
-          diagnostics.diagnostics.any((diagnostic) =>
-              diagnostic.severity == DiagnosticSeverity.Error)) {
-        fail('Unexpected diagnostics: ${diagnostics.toJson()}');
-      }
-    });
-
-    var clientCapabilities = ClientCapabilities(
+    final clientCapabilities = ClientCapabilities(
       workspace: workspaceCapabilities,
       textDocument: textDocumentCapabilities,
       window: windowCapabilities,
@@ -1161,7 +1124,7 @@ mixin LspAnalysisServerTestMixin
         !allowEmptyRootUri) {
       rootUri = pathContext.toUri(projectFolderPath);
     }
-    var request = makeRequest(
+    final request = makeRequest(
         Method.initialize,
         InitializeParams(
           rootPath: rootPath,
@@ -1171,21 +1134,18 @@ mixin LspAnalysisServerTestMixin
           capabilities: clientCapabilities,
           workspaceFolders: workspaceFolders?.map(toWorkspaceFolder).toList(),
         ));
-    var response = await sendRequestToServer(request);
+    final response = await sendRequestToServer(request);
     expect(response.id, equals(request.id));
 
-    var error = response.error;
+    final error = response.error;
     if (error == null) {
-      var result =
+      final result =
           InitializeResult.fromJson(response.result as Map<String, Object?>);
       _serverCapabilities = result.capabilities;
 
-      var notification =
+      final notification =
           makeNotification(Method.initialized, InitializedParams());
-
-      var initializedNotification = sendNotificationToServer(notification);
-      immediatelyAfterInitialized?.call();
-      await initializedNotification;
+      await sendNotificationToServer(notification);
       await pumpEventQueue();
     } else if (throwOnFailure) {
       throw 'Error during initialize request: '
@@ -1208,10 +1168,10 @@ mixin LspAnalysisServerTestMixin
 
   RequestMessage makeRenameRequest(
       int? version, Uri uri, Position pos, String newName) {
-    var docIdentifier = version != null
+    final docIdentifier = version != null
         ? VersionedTextDocumentIdentifier(version: version, uri: uri)
         : TextDocumentIdentifier(uri: uri);
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_rename,
       RenameParams(
           newName: newName, textDocument: docIdentifier, position: pos),
@@ -1296,7 +1256,7 @@ mixin LspAnalysisServerTestMixin
     FutureOr<Map<String, Object?>> globalConfig, {
     FutureOr<Map<String, Map<String, Object?>>>? folderConfig,
   }) {
-    var self = this;
+    final self = this;
     if (self is AbstractLspAnalysisServerTest) {
       self.setConfigurationSupport();
     }
@@ -1311,12 +1271,12 @@ mixin LspAnalysisServerTestMixin
         // the global config. For any item in the request with a folder we will
         // return the config for that item in the map, or fall back to the global
         // config if it does not exist.
-        var global = await globalConfig;
-        var folders = await folderConfig;
+        final global = await globalConfig;
+        final folders = await folderConfig;
         return configurationParams.items.map(
           (requestedConfig) {
-            var uri = requestedConfig.scopeUri;
-            var path = uri != null ? pathContext.fromUri(uri) : null;
+            final uri = requestedConfig.scopeUri;
+            final path = uri != null ? pathContext.fromUri(uri) : null;
             // Use the config the test provided for this path, or fall back to
             // global.
             return (folders != null ? folders[path] : null) ?? global;
@@ -1328,8 +1288,8 @@ mixin LspAnalysisServerTestMixin
 
   /// Returns the range of [pattern] in [code].
   Range rangeOfPattern(TestCode code, Pattern pattern) {
-    var content = code.code;
-    var match = pattern.allMatches(content).first;
+    final content = code.code;
+    final match = pattern.allMatches(content).first;
     return Range(
       start: positionFromOffset(match.start, content),
       end: positionFromOffset(match.end, content),
@@ -1339,15 +1299,6 @@ mixin LspAnalysisServerTestMixin
   /// Returns the range of [searchText] in [code].
   Range rangeOfString(TestCode code, String searchText) =>
       rangeOfPattern(code, searchText);
-
-  /// Returns the range of [searchText] in [content].
-  Range rangeOfStringInString(String content, String searchText) {
-    var match = searchText.allMatches(content).first;
-    return Range(
-      start: positionFromOffset(match.start, content),
-      end: positionFromOffset(match.end, content),
-    );
-  }
 
   /// Returns a [Range] that covers the entire of [content].
   Range rangeOfWholeContent(String content) {
@@ -1360,8 +1311,8 @@ mixin LspAnalysisServerTestMixin
   /// Gets the range in [content] that beings with the string [prefix] and
   /// has a length matching [text].
   Range rangeStartingAtString(String content, String prefix, String text) {
-    var offset = content.indexOf(prefix);
-    var end = offset + text.length;
+    final offset = content.indexOf(prefix);
+    final end = offset + text.length;
     return Range(
       start: positionFromOffset(offset, content),
       end: positionFromOffset(end, content),
@@ -1374,7 +1325,7 @@ mixin LspAnalysisServerTestMixin
     Position pos,
     String newName,
   ) {
-    var request = makeRenameRequest(version, uri, pos, newName);
+    final request = makeRenameRequest(version, uri, pos, newName);
     return expectSuccessfulResponseTo(request, WorkspaceEdit.fromJson);
   }
 
@@ -1384,7 +1335,7 @@ mixin LspAnalysisServerTestMixin
     Position pos,
     String newName,
   ) {
-    var request = makeRenameRequest(version, uri, pos, newName);
+    final request = makeRenameRequest(version, uri, pos, newName);
     return sendRequestToServer(request);
   }
 
@@ -1407,7 +1358,7 @@ mixin LspAnalysisServerTestMixin
   }
 
   Future<ResponseMessage> sendDidChangeConfiguration() {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.workspace_didChangeConfiguration,
       DidChangeConfigurationParams(),
     );
@@ -1415,7 +1366,7 @@ mixin LspAnalysisServerTestMixin
   }
 
   void sendExit() {
-    var request = makeRequest(Method.exit, null);
+    final request = makeRequest(Method.exit, null);
     sendRequestToServer(request);
   }
 
@@ -1429,7 +1380,7 @@ mixin LspAnalysisServerTestMixin
   // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#:~:text=Response%3A-,result%3A%20null,-error%3A%20code%20and
   // ignore: prefer_void_to_null
   Future<Null> sendShutdown() {
-    var request = makeRequest(Method.shutdown, null);
+    final request = makeRequest(Method.shutdown, null);
     return expectSuccessfulResponseTo(request, (result) => result as Null);
   }
 
@@ -1461,11 +1412,13 @@ mixin LspAnalysisServerTestMixin
 
   /// Records the latest diagnostics for each file in [latestDiagnostics].
   ///
-  /// [latestDiagnostics] maps from a URI to the set of current diagnostics.
+  /// [latestDiagnostics] maps from a file path to the set of current
+  /// diagnostics.
   StreamSubscription<PublishDiagnosticsParams> trackDiagnostics(
-      Map<Uri, List<Diagnostic>> latestDiagnostics) {
+      Map<String, List<Diagnostic>> latestDiagnostics) {
     return publishedDiagnostics.listen((diagnostics) {
-      latestDiagnostics[diagnostics.uri] = diagnostics.diagnostics;
+      latestDiagnostics[pathContext.fromUri(diagnostics.uri)] =
+          diagnostics.diagnostics;
     });
   }
 
@@ -1491,7 +1444,7 @@ mixin LspAnalysisServerTestMixin
               'but client supports workDoneProgress');
         }
 
-        var params = AnalyzerStatusParams.fromJson(
+        final params = AnalyzerStatusParams.fromJson(
             message.params as Map<String, Object?>);
         return params.isAnalyzing == analyzing;
       } else if (message.method == Method.progress) {
@@ -1501,7 +1454,7 @@ mixin LspAnalysisServerTestMixin
               'but client supports workDoneProgress');
         }
 
-        var params =
+        final params =
             ProgressParams.fromJson(message.params as Map<String, Object?>);
 
         // Skip unrelated progress notifications.
@@ -1510,7 +1463,7 @@ mixin LspAnalysisServerTestMixin
         }
 
         if (params.value is Map<String, dynamic>) {
-          var isDesiredStatusMessage = analyzing
+          final isDesiredStatusMessage = analyzing
               ? WorkDoneProgressBegin.canParse(
                   params.value, nullLspJsonReporter)
               : WorkDoneProgressEnd.canParse(params.value, nullLspJsonReporter);
@@ -1575,7 +1528,7 @@ mixin LspAnalysisServerTestMixin
   }
 
   Future<void> _handleProgress(NotificationMessage request) async {
-    var params =
+    final params =
         ProgressParams.fromJson(request.params as Map<String, Object?>);
     if (params.token != clientProvidedTestWorkDoneToken &&
         !validProgressTokens.contains(params.token)) {
@@ -1593,7 +1546,7 @@ mixin LspAnalysisServerTestMixin
       throw Exception('Server sent ${Method.window_workDoneProgress_create} '
           'but client capabilities do not allow');
     }
-    var params = WorkDoneProgressCreateParams.fromJson(
+    final params = WorkDoneProgressCreateParams.fromJson(
         request.params as Map<String, Object?>);
     if (validProgressTokens.contains(params.token)) {
       throw Exception('Server tried to create already-active progress token');
@@ -1606,14 +1559,7 @@ mixin LspAnalysisServerTestMixin
   /// ensure no errors come from the server in response to notifications (which
   /// don't have their own responses).
   bool _isErrorNotification(NotificationMessage notification) {
-    var method = notification.method;
-    var params = notification.params as Map<String, Object?>?;
-    if (method == Method.window_logMessage && params != null) {
-      return LogMessageParams.fromJson(params).type == MessageType.Error;
-    } else if (method == Method.window_showMessage && params != null) {
-      return ShowMessageParams.fromJson(params).type == MessageType.Error;
-    } else {
-      return false;
-    }
+    return notification.method == Method.window_logMessage ||
+        notification.method == Method.window_showMessage;
   }
 }

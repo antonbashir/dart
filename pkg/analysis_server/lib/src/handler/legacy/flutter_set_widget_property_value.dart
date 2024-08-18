@@ -17,8 +17,7 @@ class FlutterSetWidgetPropertyValueHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = FlutterSetWidgetPropertyValueParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = FlutterSetWidgetPropertyValueParams.fromRequest(request);
 
     var result = await server.flutterWidgetDescriptions.setPropertyValue(
       params.id,

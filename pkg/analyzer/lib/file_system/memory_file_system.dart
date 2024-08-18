@@ -7,9 +7,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
-import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
+import 'package:analyzer/src/source/source_resource.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as pathos;
 import 'package:watcher/watcher.dart' hide Watcher;
@@ -44,7 +43,7 @@ class MemoryResourceProvider implements ResourceProvider {
     this.delayWatcherInitialization,
   }) : _pathContext = context ??= pathos.style == pathos.Style.windows
             // On Windows, ensure that the current drive matches
-            // the drive inserted by ResourceProvider.convertPath
+            // the drive inserted by MemoryResourceProvider.convertPath
             // so that packages are mapped to the correct drive
             ? pathos.Context(current: 'C:\\')
             : pathos.context;
@@ -56,8 +55,15 @@ class MemoryResourceProvider implements ResourceProvider {
   ///
   /// This is a utility method for testing; paths passed in to other methods in
   /// this class are never converted automatically.
-  String convertPath(String filePath) =>
-      ResourceProviderExtensions(this).convertPath(filePath);
+  String convertPath(String path) {
+    if (pathContext.style == pathos.windows.style) {
+      if (path.startsWith(pathos.posix.separator)) {
+        path = r'C:' + path;
+      }
+      path = path.replaceAll(pathos.posix.separator, pathos.windows.separator);
+    }
+    return path;
+  }
 
   /// Delete the file with the given path.
   void deleteFile(String path) {
@@ -118,12 +124,6 @@ class MemoryResourceProvider implements ResourceProvider {
   }
 
   @override
-  Link getLink(String path) {
-    _ensureAbsoluteAndNormalized(path);
-    return _MemoryLink(this, path);
-  }
-
-  @override
   Resource getResource(String path) {
     _ensureAbsoluteAndNormalized(path);
     var data = _pathToData[path];
@@ -144,8 +144,11 @@ class MemoryResourceProvider implements ResourceProvider {
       throw FileSystemException(path, 'Not a file.');
     }
 
-    var bytes = const Utf8Encoder().convert(content);
-    _setFileContent(path, bytes);
+    _pathToData[path] = _FileData(
+      bytes: const Utf8Encoder().convert(content),
+      timeStamp: nextStamp++,
+    );
+    _notifyWatchers(path, ChangeType.MODIFY);
   }
 
   File newFile(String path, String content) {
@@ -157,7 +160,17 @@ class MemoryResourceProvider implements ResourceProvider {
     _ensureAbsoluteAndNormalized(path);
     bytes = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
 
-    return _setFileContent(path, bytes);
+    var parentPath = pathContext.dirname(path);
+    var parentData = _newFolder(parentPath);
+    _addToParentFolderData(parentData, path);
+
+    _pathToData[path] = _FileData(
+      bytes: bytes,
+      timeStamp: nextStamp++,
+    );
+    _notifyWatchers(path, ChangeType.ADD);
+
+    return _MemoryFile(this, path);
   }
 
   Folder newFolder(String path) {
@@ -290,19 +303,16 @@ class MemoryResourceProvider implements ResourceProvider {
     return result;
   }
 
-  File _setFileContent(String path, Uint8List bytes) {
+  void _setFileContent(String path, Uint8List bytes) {
     var parentPath = pathContext.dirname(path);
     var parentData = _newFolder(parentPath);
     _addToParentFolderData(parentData, path);
 
-    var exists = _pathToData.containsKey(path);
     _pathToData[path] = _FileData(
       bytes: bytes,
       timeStamp: nextStamp++,
     );
-    _notifyWatchers(path, exists ? ChangeType.MODIFY : ChangeType.ADD);
-
-    return _MemoryFile(this, path);
+    _notifyWatchers(path, ChangeType.MODIFY);
   }
 }
 
@@ -354,7 +364,6 @@ class _MemoryFile extends _MemoryResource implements File {
     return destination;
   }
 
-  @Deprecated('Get Source instances from analysis results')
   @override
   Source createSource([Uri? uri]) {
     uri ??= provider.pathContext.toUri(path);
@@ -555,24 +564,6 @@ class _MemoryFolder extends _MemoryResource implements Folder {
   Uri toUri() => provider.pathContext.toUri('$path/');
 }
 
-/// An in-memory implementation of [File].
-class _MemoryLink implements Link {
-  final MemoryResourceProvider provider;
-  final String path;
-
-  _MemoryLink(this.provider, this.path);
-
-  @override
-  bool get exists {
-    return provider._pathToLinkedPath.containsKey(path);
-  }
-
-  @override
-  void create(String target) {
-    provider.newLink(path, target);
-  }
-}
-
 /// An in-memory implementation of [Resource].
 abstract class _MemoryResource implements Resource {
   @override
@@ -623,8 +614,8 @@ abstract class _MemoryResource implements Resource {
   /// watcher.
   @override
   ResourceWatcher watch() {
-    var streamController = StreamController<WatchEvent>.broadcast();
-    var ready = Completer<void>();
+    final streamController = StreamController<WatchEvent>();
+    final ready = Completer<void>();
 
     /// A helper that sets up the watcher that may be called synchronously
     /// or delayed, depending on the value of
@@ -645,7 +636,7 @@ abstract class _MemoryResource implements Resource {
       }
     }
 
-    var delayWatcherInitialization = provider.delayWatcherInitialization;
+    final delayWatcherInitialization = provider.delayWatcherInitialization;
     if (delayWatcherInitialization != null) {
       // Wrap this inside onListen so that (like the real watcher) it will only
       // fire after a listener is attached.
@@ -659,7 +650,7 @@ abstract class _MemoryResource implements Resource {
       setupWatcher();
     }
 
-    return ResourceWatcher(streamController.stream, () => ready.future);
+    return ResourceWatcher(streamController.stream, ready.future);
   }
 }
 

@@ -6,11 +6,10 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:collection/collection.dart';
+import 'package:analyzer/error/error.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use late for private members with a non-nullable type.';
 
@@ -55,57 +54,42 @@ bool _isPrivateExtension(AstNode parent) {
 }
 
 class UseLateForPrivateFieldsAndVariables extends LintRule {
+  static const LintCode code = LintCode(
+      'use_late_for_private_fields_and_variables',
+      "Use 'late' for private members with a non-nullable type.",
+      correctionMessage: "Try making adding the modifier 'late'.");
+
   UseLateForPrivateFieldsAndVariables()
       : super(
           name: 'use_late_for_private_fields_and_variables',
           description: _desc,
           details: _details,
           state: State.experimental(),
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.use_late_for_private_fields_and_variables;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
     var visitor = _Visitor(this, context);
     registry.addCompilationUnit(this, visitor);
-    registry.afterLibrary(this, () => visitor.afterLibrary());
   }
 }
 
 class _Visitor extends RecursiveAstVisitor<void> {
-  final lateables = <CompilationUnitElement, List<VariableDeclaration>>{};
+  static final lateables =
+      <CompilationUnitElement, List<VariableDeclaration>>{};
 
-  final nullableAccess = <Element>{};
-
+  static final nullableAccess = <CompilationUnitElement, Set<Element>>{};
   final LintRule rule;
+
   final LinterContext context;
 
-  /// The "current" [CompilationUnitElement], which is set by
-  /// [visitCompilationUnit].
-  late CompilationUnitElement currentUnit;
-
+  CompilationUnitElement? currentUnit;
   _Visitor(this.rule, this.context);
-
-  void afterLibrary() {
-    for (var contextUnit in context.allUnits) {
-      var unit = contextUnit.unit.declaredElement;
-      var variables = lateables[unit];
-      if (variables == null) continue;
-      for (var variable in variables) {
-        if (!nullableAccess.contains(variable.declaredElement)) {
-          var contextUnit = context.allUnits
-              .firstWhereOrNull((u) => u.unit.declaredElement == unit);
-          if (contextUnit == null) continue;
-          contextUnit.errorReporter.atNode(variable, rule.lintCode);
-        }
-      }
-    }
-  }
 
   @override
   void visitAssignmentExpression(AssignmentExpression node) {
@@ -120,7 +104,7 @@ class _Visitor extends RecursiveAstVisitor<void> {
           context.typeSystem.isNonNullable(rhsType)) {
         // This is OK; non-null access.
       } else {
-        nullableAccess.add(element);
+        nullableAccess[currentUnit]?.add(element);
       }
     }
     super.visitAssignmentExpression(node);
@@ -141,10 +125,30 @@ class _Visitor extends RecursiveAstVisitor<void> {
   @override
   void visitCompilationUnit(CompilationUnit node) {
     var declaredElement = node.declaredElement;
-    if (declaredElement == null) return;
+    if (declaredElement == null) {
+      return;
+    }
+    lateables.putIfAbsent(declaredElement, () => []);
+    nullableAccess.putIfAbsent(declaredElement, () => {});
     currentUnit = declaredElement;
 
     super.visitCompilationUnit(node);
+
+    var unitsInContext =
+        context.allUnits.map((e) => e.unit.declaredElement).toSet();
+    var libraryUnitsInContext =
+        declaredElement.library.units.where(unitsInContext.contains).toSet();
+    var areAllLibraryUnitsVisited =
+        libraryUnitsInContext.every(lateables.containsKey);
+    if (areAllLibraryUnitsVisited) {
+      _checkAccess(libraryUnitsInContext);
+
+      // Clean up.
+      for (var unit in libraryUnitsInContext) {
+        lateables.remove(unit);
+        nullableAccess.remove(unit);
+      }
+    }
   }
 
   @override
@@ -205,15 +209,35 @@ class _Visitor extends RecursiveAstVisitor<void> {
     super.visitTopLevelVariableDeclaration(node);
   }
 
+  void _checkAccess(Iterable<CompilationUnitElement> units) {
+    var allNullableAccess =
+        units.expand((unit) => nullableAccess[unit] ?? const {}).toSet();
+    for (var unit in units) {
+      for (var variable in lateables[unit] ?? const <VariableDeclaration>[]) {
+        if (!allNullableAccess.contains(variable.declaredElement)) {
+          rule.reporter.reportError(AnalysisError.tmp(
+              source: unit.source,
+              offset: variable.offset,
+              length: variable.length,
+              errorCode: rule.lintCode));
+        }
+      }
+    }
+  }
+
   void _visit(VariableDeclaration variable) {
-    if (variable.isLate) return;
-    if (variable.isSynthetic) return;
+    if (variable.isLate) {
+      return;
+    }
+    if (variable.isSynthetic) {
+      return;
+    }
     var declaredElement = variable.declaredElement;
     if (declaredElement == null ||
         context.typeSystem.isNonNullable(declaredElement.type)) {
       return;
     }
-    lateables.putIfAbsent(currentUnit, () => []).add(variable);
+    lateables[currentUnit]?.add(variable);
   }
 
   /// Checks whether [expression], which must be an [Identifier] or
@@ -221,20 +245,20 @@ class _Visitor extends RecursiveAstVisitor<void> {
   void _visitIdentifierOrPropertyAccess(
       Expression expression, Element? canonicalElement) {
     assert(expression is Identifier || expression is PropertyAccess);
-    if (canonicalElement == null) return;
-
-    var parent = expression.parent;
-    if (parent is Expression) {
-      parent = parent.unParenthesized;
-    }
-    if (expression is SimpleIdentifier && expression.inDeclarationContext()) {
-      // This is OK.
-    } else if (parent is PostfixExpression &&
-        parent.operand == expression &&
-        parent.operator.type == TokenType.BANG) {
-      // This is OK; non-null access.
-    } else {
-      nullableAccess.add(canonicalElement);
+    if (canonicalElement != null) {
+      var parent = expression.parent;
+      if (parent is Expression) {
+        parent = parent.unParenthesized;
+      }
+      if (expression is SimpleIdentifier && expression.inDeclarationContext()) {
+        // This is OK.
+      } else if (parent is PostfixExpression &&
+          parent.operand == expression &&
+          parent.operator.type == TokenType.BANG) {
+        // This is OK; non-null access.
+      } else {
+        nullableAccess[currentUnit]?.add(canonicalElement);
+      }
     }
   }
 }

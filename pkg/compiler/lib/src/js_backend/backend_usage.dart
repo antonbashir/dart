@@ -51,6 +51,10 @@ abstract class BackendUsage {
 
   /// `true` if `noSuchMethod` is used.
   bool get isNoSuchMethodUsed;
+
+  /// `true` if the `dart:html` is loaded.
+  // TODO(johnniwinther): This is always `true` with the CFE.
+  bool get isHtmlLoaded;
 }
 
 class BackendUsageBuilder {
@@ -81,6 +85,8 @@ class BackendUsageBuilder {
 
   /// `true` if `noSuchMethod` is used.
   bool isNoSuchMethodUsed = false;
+
+  bool _isHtmlLoaded = false;
 
   BackendUsageBuilder(this._frontendStrategy);
 
@@ -220,6 +226,11 @@ class BackendUsageBuilder {
     _runtimeTypeUses.add(runtimeTypeUse);
   }
 
+  /// Register that `dart:html` is loaded.
+  void registerHtmlIsLoaded() {
+    _isHtmlLoaded = true;
+  }
+
   BackendUsage close() {
     return BackendUsageImpl(
         globalFunctionDependencies: _globalFunctionDependencies,
@@ -232,7 +243,8 @@ class BackendUsageBuilder {
         requiresStartupMetrics: _requiresStartupMetrics,
         runtimeTypeUses: _runtimeTypeUses,
         isFunctionApplyUsed: _isFunctionApplyUsed,
-        isNoSuchMethodUsed: isNoSuchMethodUsed);
+        isNoSuchMethodUsed: isNoSuchMethodUsed,
+        isHtmlLoaded: _isHtmlLoaded);
   }
 }
 
@@ -270,6 +282,9 @@ class BackendUsageImpl implements BackendUsage {
   @override
   final bool isNoSuchMethodUsed;
 
+  @override
+  final bool isHtmlLoaded;
+
   BackendUsageImpl(
       {required Set<FunctionEntity>? globalFunctionDependencies,
       required Set<ClassEntity>? globalClassDependencies,
@@ -281,7 +296,8 @@ class BackendUsageImpl implements BackendUsage {
       required this.requiresStartupMetrics,
       required Set<RuntimeTypeUse> runtimeTypeUses,
       required this.isFunctionApplyUsed,
-      required this.isNoSuchMethodUsed})
+      required this.isNoSuchMethodUsed,
+      required this.isHtmlLoaded})
       : this._globalFunctionDependencies = globalFunctionDependencies,
         this._globalClassDependencies = globalClassDependencies,
         this._helperFunctionsUsed = helperFunctionsUsed,
@@ -308,6 +324,7 @@ class BackendUsageImpl implements BackendUsage {
     bool requiresStartupMetrics = source.readBool();
     bool isFunctionApplyUsed = source.readBool();
     bool isNoSuchMethodUsed = source.readBool();
+    bool isHtmlLoaded = source.readBool();
     source.end(tag);
     return BackendUsageImpl(
         globalFunctionDependencies: globalFunctionDependencies,
@@ -320,7 +337,8 @@ class BackendUsageImpl implements BackendUsage {
         requiresPreamble: requiresPreamble,
         requiresStartupMetrics: requiresStartupMetrics,
         isFunctionApplyUsed: isFunctionApplyUsed,
-        isNoSuchMethodUsed: isNoSuchMethodUsed);
+        isNoSuchMethodUsed: isNoSuchMethodUsed,
+        isHtmlLoaded: isHtmlLoaded);
   }
 
   @override
@@ -341,6 +359,7 @@ class BackendUsageImpl implements BackendUsage {
     sink.writeBool(requiresStartupMetrics);
     sink.writeBool(isFunctionApplyUsed);
     sink.writeBool(isNoSuchMethodUsed);
+    sink.writeBool(isHtmlLoaded);
     sink.end(tag);
   }
 

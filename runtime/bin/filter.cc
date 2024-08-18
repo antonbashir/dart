@@ -344,12 +344,11 @@ intptr_t ZLibDeflateFilter::Processed(uint8_t* buffer,
   stream_.avail_out = length;
   stream_.next_out = buffer;
   bool error = false;
-  switch (deflate(&stream_, end     ? Z_FINISH
-                            : flush ? Z_SYNC_FLUSH
-                                    : Z_NO_FLUSH)) {
-    case Z_OK:
+  switch (
+      deflate(&stream_, end ? Z_FINISH : flush ? Z_SYNC_FLUSH : Z_NO_FLUSH)) {
     case Z_STREAM_END:
-    case Z_BUF_ERROR: {
+    case Z_BUF_ERROR:
+    case Z_OK: {
       intptr_t processed = length - stream_.avail_out;
       if (processed == 0) {
         break;
@@ -410,27 +409,12 @@ intptr_t ZLibInflateFilter::Processed(uint8_t* buffer,
   stream_.next_out = buffer;
   bool error = false;
   int v;
-  switch (v = inflate(&stream_, end     ? Z_FINISH
-                                : flush ? Z_SYNC_FLUSH
-                                        : Z_NO_FLUSH)) {
-    case Z_OK:
+  switch (v = inflate(&stream_,
+                      end ? Z_FINISH : flush ? Z_SYNC_FLUSH : Z_NO_FLUSH)) {
     case Z_STREAM_END:
-    case Z_BUF_ERROR: {
+    case Z_BUF_ERROR:
+    case Z_OK: {
       intptr_t processed = length - stream_.avail_out;
-
-      if (v == Z_STREAM_END) {
-        // Allow for concatenated compressed blocks. For example:
-        // final data = [
-        //  ...gzip.encode([1, 2, 3]),
-        //  ...gzip.encode([4, 5, 6]),
-        // ];
-        // final decoded = gzip.decode(data);  // [1, 2, 3, 4, 5, 6]
-
-        // The return code for `inflateReset` can be ignored because, if the
-        // result is an error, the same error will be returned in the next
-        // call to `inflate`.
-        inflateReset(&stream_);
-      }
       if (processed == 0) {
         break;
       }

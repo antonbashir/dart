@@ -7,12 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r"Don't explicitly catch `Error` or types that implement it.";
+const _desc = r"Don't explicitly catch Error or types that implement it.";
 
 const _details = r'''
-**DON'T** explicitly catch `Error` or types that implement it.
+**DON'T** explicitly catch Error or types that implement it.
 
 Errors differ from Exceptions in that Errors can be analyzed and prevented prior
 to runtime.  It should almost never be necessary to catch an error at runtime.
@@ -38,18 +37,23 @@ try {
 ''';
 
 class AvoidCatchingErrors extends LintRule {
+  static const LintCode classCode = LintCode(
+      'avoid_catching_errors', "The type 'Error' should not be caught.",
+      uniqueName: 'LintCode.avoid_catching_errors_class');
+
+  static const LintCode subclassCode = LintCode('avoid_catching_errors',
+      "The type '{0}' should not be caught because it is a subclass of 'Error'.",
+      uniqueName: 'LintCode.avoid_catching_errors_subclass');
+
   AvoidCatchingErrors()
       : super(
             name: 'avoid_catching_errors',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.avoid_catching_errors_class,
-        LinterLintCode.avoid_catching_errors_subclass
-      ];
+  List<LintCode> get lintCodes => [classCode, subclassCode];
 
   @override
   void registerNodeProcessors(
@@ -69,12 +73,13 @@ class _Visitor extends SimpleAstVisitor<void> {
     var exceptionType = node.exceptionType?.type;
     if (exceptionType.implementsInterface('Error', 'dart.core')) {
       if (exceptionType.isSameAs('Error', 'dart.core')) {
-        rule.reportLint(node,
-            errorCode: LinterLintCode.avoid_catching_errors_class);
+        rule.reportLint(node, errorCode: AvoidCatchingErrors.classCode);
       } else {
         rule.reportLint(node,
-            errorCode: LinterLintCode.avoid_catching_errors_subclass,
-            arguments: [exceptionType!.getDisplayString()]);
+            errorCode: AvoidCatchingErrors.subclassCode,
+            arguments: [
+              exceptionType!.getDisplayString(withNullability: false)
+            ]);
       }
     }
   }

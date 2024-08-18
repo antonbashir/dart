@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/ascii_utils.dart';
 
 const _desc = r'Name source files using `lowercase_with_underscores`.';
@@ -44,15 +43,20 @@ library.
 ''';
 
 class FileNames extends LintRule {
+  static const LintCode code = LintCode(
+      'file_names', "The file name '{0}' isn't a snake_case identifier.",
+      correctionMessage:
+          'Try changing the name to follow the snake_case style.');
+
   FileNames()
       : super(
             name: 'file_names',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.file_names;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

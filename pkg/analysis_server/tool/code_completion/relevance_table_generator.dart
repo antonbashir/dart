@@ -8,7 +8,7 @@ import 'dart:io' as io;
 import 'package:_fe_analyzer_shared/src/base/syntactic_entity.dart';
 import 'package:analysis_server/src/protocol_server.dart' show ElementKind;
 import 'package:analysis_server/src/services/completion/dart/feature_computer.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/context_root.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -649,7 +649,7 @@ class RelevanceDataCollector extends RecursiveAstVisitor<void> {
 
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
-    _recordDataForNode('ExtensionDeclaration_onClause', node.onClause);
+    _recordDataForNode('ExtensionDeclaration_extendedType', node.extendedType);
     for (var member in node.members) {
       _recordDataForNode('ExtensionDeclaration_member', member,
           allowedKeywords: memberKeywords);
@@ -967,14 +967,6 @@ class RelevanceDataCollector extends RecursiveAstVisitor<void> {
   }
 
   @override
-  void visitMixinOnClause(MixinOnClause node) {
-    for (var constraint in node.superclassConstraints) {
-      _recordDataForNode('OnClause_superclassConstraint', constraint);
-    }
-    super.visitMixinOnClause(node);
-  }
-
-  @override
   void visitNamedExpression(NamedExpression node) {
     // Named expressions only occur in argument lists and are handled there.
     super.visitNamedExpression(node);
@@ -1002,6 +994,14 @@ class RelevanceDataCollector extends RecursiveAstVisitor<void> {
   void visitNullLiteral(NullLiteral node) {
     // There are no completions.
     super.visitNullLiteral(node);
+  }
+
+  @override
+  void visitOnClause(OnClause node) {
+    for (var constraint in node.superclassConstraints) {
+      _recordDataForNode('OnClause_superclassConstraint', constraint);
+    }
+    super.visitOnClause(node);
   }
 
   @override
@@ -1276,7 +1276,7 @@ class RelevanceDataCollector extends RecursiveAstVisitor<void> {
       } else if (parent is FunctionExpressionInvocation) {
         return 'function';
       } else if (parent is InstanceCreationExpression) {
-        if (parent.staticType.isWidgetType) {
+        if (Flutter.isWidgetType(parent.staticType)) {
           return 'widgetConstructor';
         }
         return 'constructor';
@@ -1430,11 +1430,11 @@ class RelevanceMetricsComputer {
   /// If [corpus] is true, treat rootPath as a container of packages, creating
   /// a new context collection for each subdirectory.
   Future<void> compute(String rootPath, {required bool verbose}) async {
-    var collection = AnalysisContextCollection(
+    final collection = AnalysisContextCollection(
       includedPaths: [rootPath],
       resourceProvider: PhysicalResourceProvider.INSTANCE,
     );
-    var collector = RelevanceDataCollector(data);
+    final collector = RelevanceDataCollector(data);
     for (var context in collection.contexts) {
       await _computeInContext(context.contextRoot, collector, verbose: verbose);
     }
@@ -1448,7 +1448,7 @@ class RelevanceMetricsComputer {
       ContextRoot root, RelevanceDataCollector collector,
       {required bool verbose}) async {
     // Create a new collection to avoid consuming large quantities of memory.
-    var collection = AnalysisContextCollection(
+    final collection = AnalysisContextCollection(
       includedPaths: root.includedPaths.toList(),
       excludedPaths: root.excludedPaths.toList(),
       resourceProvider: PhysicalResourceProvider.INSTANCE,

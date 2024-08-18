@@ -2,16 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart';
 import 'package:analyzer/dart/analysis/features.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/line_info.dart';
+import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/analysis/session.dart';
-import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
+import 'package:analyzer/src/dart/resolver/variance.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/source.dart' show NonExistingSource;
 import 'package:analyzer/src/generated/utilities_dart.dart';
@@ -36,7 +37,7 @@ class ElementFactory {
   static InterfaceType get objectType {
     return _objectType ??= object.instantiate(
       typeArguments: const [],
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
   }
 
@@ -102,6 +103,18 @@ class ElementFactory {
           [List<String>? parameterNames]) =>
       classTypeAlias(typeName, objectType, parameterNames);
 
+  static CompilationUnitElementImpl compilationUnit({
+    required Source source,
+    Source? librarySource,
+    LineInfo? lineInfo,
+  }) {
+    return CompilationUnitElementImpl(
+      source: source,
+      librarySource: librarySource ?? source,
+      lineInfo: lineInfo ?? LineInfo([0]),
+    );
+  }
+
   static ConstLocalVariableElementImpl constLocalVariableElement(String name) =>
       ConstLocalVariableElementImpl(name, 0);
 
@@ -138,7 +151,7 @@ class ElementFactory {
 
   static FieldElementImpl fieldElement(
       String name, bool isStatic, bool isFinal, bool isConst, DartType type,
-      {ExpressionImpl? initializer}) {
+      {Expression? initializer}) {
     FieldElementImpl field =
         isConst ? ConstFieldElementImpl(name, 0) : FieldElementImpl(name, 0);
     field.isConst = isConst;
@@ -180,7 +193,7 @@ class ElementFactory {
     PropertyAccessorElementImpl getter = PropertyAccessorElementImpl(name, 0);
     getter.isSynthetic = false;
     getter.isGetter = true;
-    getter.variable2 = field;
+    getter.variable = field;
     getter.returnType = type;
     getter.isStatic = isStatic;
     field.getter = getter;
@@ -191,6 +204,9 @@ class ElementFactory {
       {FeatureSet? featureSet}) {
     FeatureSet features = featureSet ?? FeatureSet.latestLanguageVersion();
     String fileName = "/$libraryName.dart";
+    CompilationUnitElementImpl unit = compilationUnit(
+      source: NonExistingSource(fileName, toUri(fileName)),
+    );
     LibraryElementImpl library = LibraryElementImpl(
       context,
       _MockAnalysisSession(),
@@ -199,11 +215,7 @@ class ElementFactory {
       libraryName.length,
       features,
     );
-    library.definingCompilationUnit = CompilationUnitElementImpl(
-      library: library,
-      source: NonExistingSource(fileName, toUri(fileName)),
-      lineInfo: LineInfo([0]),
-    );
+    library.definingCompilationUnit = unit;
     return library;
   }
 
@@ -319,14 +331,14 @@ class ElementFactory {
     field.type = type;
     PropertyAccessorElementImpl getter = PropertyAccessorElementImpl(name, -1);
     getter.isGetter = true;
-    getter.variable2 = field;
+    getter.variable = field;
     getter.returnType = type;
     field.getter = getter;
     ParameterElementImpl parameter = requiredParameter2("a", type);
     PropertyAccessorElementImpl setter = PropertyAccessorElementImpl(name, -1);
     setter.isSetter = true;
     setter.isSynthetic = true;
-    setter.variable2 = field;
+    setter.variable = field;
     setter.parameters = <ParameterElement>[parameter];
     setter.returnType = VoidTypeImpl.instance;
     setter.isStatic = isStatic;

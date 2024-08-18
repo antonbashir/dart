@@ -26,6 +26,7 @@ import 'package:analyzer/src/summary/idl.dart' as idl;
 import 'package:analyzer/src/util/comment.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/utilities/uri_cache.dart';
+import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
 import 'package:meta/meta.dart';
 import 'package:yaml/yaml.dart';
@@ -398,52 +399,13 @@ class DeclarationsContext {
     }
   }
 
-  bool _isLibSrcPath(String path) {
-    var parts = _tracker._resourceProvider.pathContext.split(path);
-    for (var i = 0; i < parts.length - 1; ++i) {
-      if (parts[i] == 'lib' && parts[i + 1] == 'src') return true;
-    }
-    return false;
-  }
-
-  List<String> _resolvePackageNamesToLibPaths(List<String> packageNames) {
-    return packageNames.map(_resolvePackageNameToLibPath).nonNulls.toList();
-  }
-
-  String? _resolvePackageNameToLibPath(String packageName) {
-    try {
-      var uri = Uri.parse('package:$packageName/ref.dart');
-
-      var path = _resolveUri(uri);
-      if (path == null) return null;
-
-      return _tracker._resourceProvider.pathContext.dirname(path);
-    } on FormatException {
-      return null;
-    }
-  }
-
-  String? _resolveUri(Uri uri) {
-    var uriConverter = _analysisContext.currentSession.uriConverter;
-    return uriConverter.uriToPath(uri);
-  }
-
-  Uri? _restoreUri(String path) {
-    var uriConverter = _analysisContext.currentSession.uriConverter;
-    return uriConverter.pathToUri(path);
-  }
-
-  /// Schedule all analyzed files and fill [_packages] in a single iteration of
-  /// `contextRoot.analyzedFiles`;  use `pubspec.yaml` files to set `Pub`
-  /// dependencies.
-  void _scheduleContextFilesAndFindPackages() {
+  /// Traverse the folders of this context and fill [_packages];  use
+  /// `pubspec.yaml` files to set `Pub` dependencies.
+  void _findPackages() {
     var pathContext = _tracker._resourceProvider.pathContext;
     var pubPathPrefixToPathList = <String, List<String>>{};
 
     for (var path in _analysisContext.contextRoot.analyzedFiles()) {
-      _contextPathSet.add(path);
-      _tracker._addFile(this, path);
-
       if (file_paths.isBlazeBuild(pathContext, path)) {
         var file = _tracker._resourceProvider.getFile(path);
         var packageFolder = file.parent;
@@ -477,6 +439,52 @@ class DeclarationsContext {
     });
   }
 
+  bool _isLibSrcPath(String path) {
+    var parts = _tracker._resourceProvider.pathContext.split(path);
+    for (var i = 0; i < parts.length - 1; ++i) {
+      if (parts[i] == 'lib' && parts[i + 1] == 'src') return true;
+    }
+    return false;
+  }
+
+  List<String> _resolvePackageNamesToLibPaths(List<String> packageNames) {
+    return packageNames
+        .map(_resolvePackageNameToLibPath)
+        .whereNotNull()
+        .toList();
+  }
+
+  String? _resolvePackageNameToLibPath(String packageName) {
+    try {
+      var uri = Uri.parse('package:$packageName/ref.dart');
+
+      var path = _resolveUri(uri);
+      if (path == null) return null;
+
+      return _tracker._resourceProvider.pathContext.dirname(path);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  String? _resolveUri(Uri uri) {
+    var uriConverter = _analysisContext.currentSession.uriConverter;
+    return uriConverter.uriToPath(uri);
+  }
+
+  Uri? _restoreUri(String path) {
+    var uriConverter = _analysisContext.currentSession.uriConverter;
+    return uriConverter.pathToUri(path);
+  }
+
+  void _scheduleContextFiles() {
+    var contextFiles = _analysisContext.contextRoot.analyzedFiles();
+    for (var path in contextFiles) {
+      _contextPathSet.add(path);
+      _tracker._addFile(this, path);
+    }
+  }
+
   void _scheduleDependencyFolder(List<String> files, Folder folder) {
     if (_isLibSrcPath(folder.path)) return;
     try {
@@ -496,8 +504,7 @@ class DeclarationsContext {
   }
 
   void _scheduleKnownFiles() {
-    for (var file in _analysisDriver.knownFiles) {
-      var path = file.path;
+    for (var path in _analysisDriver.knownFiles) {
       if (_knownPathSet.add(path)) {
         if (!path.contains(r'/lib/src/') && !path.contains(r'\lib\src\')) {
           _knownPathList.add(path);
@@ -607,8 +614,9 @@ class DeclarationsTracker {
     var declarationsContext = DeclarationsContext(this, analysisContext);
     _contexts[analysisContext] = declarationsContext;
 
-    declarationsContext._scheduleContextFilesAndFindPackages();
+    declarationsContext._scheduleContextFiles();
     declarationsContext._scheduleSdkLibraries();
+    declarationsContext._findPackages();
     return declarationsContext;
   }
 
@@ -1110,6 +1118,8 @@ class _DeclarationStorage {
         return DeclarationKind.TYPE_ALIAS;
       case idl.AvailableDeclarationKind.VARIABLE:
         return DeclarationKind.VARIABLE;
+      default:
+        throw StateError('Unknown kind: $kind');
     }
   }
 
@@ -1145,6 +1155,8 @@ class _DeclarationStorage {
         return idl.AvailableDeclarationKind.TYPE_ALIAS;
       case DeclarationKind.VARIABLE:
         return idl.AvailableDeclarationKind.VARIABLE;
+      default:
+        throw StateError('Unknown kind: $kind');
     }
   }
 
@@ -2103,7 +2115,7 @@ class _LibraryNode extends graph.Node<_LibraryNode> {
   List<_LibraryNode> computeDependencies() {
     return file.exports
         .map((export) => export.file)
-        .nonNulls
+        .whereNotNull()
         .where((file) => file.isLibrary)
         .map(walker.getNode)
         .toList();

@@ -23,7 +23,7 @@ class Snapshot {
  public:
   enum Kind {
     kFull,      // Full snapshot of an application.
-    kFullCore,  // Full snapshot of core libraries.
+    kFullCore,  // Full snapshot of core libraries. Agnostic to null safety.
     kFullJIT,   // Full + JIT code
     kFullAOT,   // Full + AOT code
     kNone,      // gen_snapshot
@@ -64,6 +64,7 @@ class Snapshot {
     return (kind == kFull) || (kind == kFullCore) || (kind == kFullJIT) ||
            (kind == kFullAOT);
   }
+  static bool IsAgnosticToNullSafety(Kind kind) { return (kind == kFullCore); }
   static bool IncludesCode(Kind kind) {
     return (kind == kFullJIT) || (kind == kFullAOT);
   }

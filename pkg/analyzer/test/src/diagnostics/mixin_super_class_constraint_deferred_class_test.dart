@@ -25,18 +25,18 @@ mixin M on math.Random {}
           48, 11),
     ]);
 
-    var node = findNode.singleMixinOnClause;
+    final node = findNode.singleOnClause;
     assertResolvedNodeText(node, r'''
-MixinOnClause
+OnClause
   onKeyword: on
   superclassConstraints
     NamedType
       importPrefix: ImportPrefixReference
         name: math
         period: .
-        element: <testLibraryFragment>::@prefix::math
+        element: self::@prefix::math
       name: Random
-      element: dart:math::<fragment>::@class::Random
+      element: dart:math::@class::Random
       type: Random
 ''');
   }

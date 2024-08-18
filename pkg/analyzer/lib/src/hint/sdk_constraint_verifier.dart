@@ -8,6 +8,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/dart/element/type_provider.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:analyzer/src/utilities/extensions/version.dart';
@@ -19,6 +20,12 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
   /// The error reporter to be used to report errors.
   final ErrorReporter _errorReporter;
 
+  /// The element representing the library containing the unit to be verified.
+  final LibraryElement _containingLibrary;
+
+  /// The typ provider used to access SDK types.
+  final TypeProvider _typeProvider;
+
   /// The version constraint for the SDK.
   final VersionConstraint _versionConstraint;
 
@@ -28,25 +35,36 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
 
   /// Initialize a newly created verifier to use the given [_errorReporter] to
   /// report errors.
-  SdkConstraintVerifier(this._errorReporter, this._versionConstraint);
+  SdkConstraintVerifier(this._errorReporter, this._containingLibrary,
+      this._typeProvider, this._versionConstraint);
 
   /// Return a range covering every version up to, but not including, 2.14.0.
-  VersionRange get before_2_14_0 => VersionRange(max: Version.parse('2.14.0'));
+  VersionRange get before_2_14_0 =>
+      VersionRange(max: Version.parse('2.14.0'), includeMax: false);
 
   /// Return a range covering every version up to, but not including, 2.1.0.
-  VersionRange get before_2_1_0 => VersionRange(max: Version.parse('2.1.0'));
+  VersionRange get before_2_1_0 =>
+      VersionRange(max: Version.parse('2.1.0'), includeMax: false);
 
   /// Return a range covering every version up to, but not including, 2.2.0.
-  VersionRange get before_2_2_0 => VersionRange(max: Version.parse('2.2.0'));
+  VersionRange get before_2_2_0 =>
+      VersionRange(max: Version.parse('2.2.0'), includeMax: false);
 
   /// Return a range covering every version up to, but not including, 2.2.2.
-  VersionRange get before_2_2_2 => VersionRange(max: Version.parse('2.2.2'));
+  VersionRange get before_2_2_2 =>
+      VersionRange(max: Version.parse('2.2.2'), includeMax: false);
 
   /// Return a range covering every version up to, but not including, 2.5.0.
-  VersionRange get before_2_5_0 => VersionRange(max: Version.parse('2.5.0'));
+  VersionRange get before_2_5_0 =>
+      VersionRange(max: Version.parse('2.5.0'), includeMax: false);
 
   /// Return a range covering every version up to, but not including, 2.6.0.
-  VersionRange get before_2_6_0 => VersionRange(max: Version.parse('2.6.0'));
+  VersionRange get before_2_6_0 =>
+      VersionRange(max: Version.parse('2.6.0'), includeMax: false);
+
+  /// Return `true` if references to the non-nullable features need to be
+  /// checked.
+  bool get checkNnbd => !_containingLibrary.isNonNullableByDefault;
 
   /// Return `true` if references to the constant-update-2018 features need to
   /// be checked.
@@ -57,9 +75,9 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
   void visitArgumentList(ArgumentList node) {
     // Check (optional) positional arguments.
     // Named arguments are checked in [NamedExpression].
-    for (var argument in node.arguments) {
+    for (final argument in node.arguments) {
       if (argument is! NamedExpression) {
-        var parameter = argument.staticParameterElement;
+        final parameter = argument.staticParameterElement;
         _checkSinceSdkVersion(parameter, node, errorEntity: argument);
       }
     }
@@ -79,10 +97,8 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
     if (checkTripleShift) {
       TokenType operatorType = node.operator.type;
       if (operatorType == TokenType.GT_GT_GT) {
-        _errorReporter.atToken(
-          node.operator,
-          WarningCode.SDK_VERSION_GT_GT_GT_OPERATOR,
-        );
+        _errorReporter.reportErrorForToken(
+            WarningCode.SDK_VERSION_GT_GT_GT_OPERATOR, node.operator);
       }
     }
     super.visitBinaryExpression(node);
@@ -114,10 +130,8 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     if (checkTripleShift && node.isOperator && node.name.lexeme == '>>>') {
-      _errorReporter.atToken(
-        node.name,
-        WarningCode.SDK_VERSION_GT_GT_GT_OPERATOR,
-      );
+      _errorReporter.reportErrorForToken(
+          WarningCode.SDK_VERSION_GT_GT_GT_OPERATOR, node.name);
     }
     super.visitMethodDeclaration(node);
   }
@@ -130,6 +144,10 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
 
   @override
   void visitNamedType(NamedType node) {
+    if (checkNnbd && node.element == _typeProvider.neverType.element) {
+      _errorReporter.reportErrorForNode(WarningCode.SDK_VERSION_NEVER, node);
+    }
+
     _checkSinceSdkVersion(node.element, node);
     super.visitNamedType(node);
   }
@@ -165,7 +183,7 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
     SyntacticEntity? errorEntity,
   }) {
     if (element != null) {
-      var sinceSdkVersion = element.sinceSdkVersion;
+      final sinceSdkVersion = element.sinceSdkVersion;
       if (sinceSdkVersion != null) {
         if (!_versionConstraint.requiresAtLeast(sinceSdkVersion)) {
           if (errorEntity == null) {
@@ -197,10 +215,11 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
               throw UnimplementedError('(${target.runtimeType}) $target');
             }
           }
-          _errorReporter.atEntity(
-            errorEntity,
+          _errorReporter.reportErrorForOffset(
             WarningCode.SDK_VERSION_SINCE,
-            arguments: [
+            errorEntity.offset,
+            errorEntity.length,
+            [
               sinceSdkVersion.toString(),
               _versionConstraint.toString(),
             ],
@@ -226,7 +245,7 @@ class SdkConstraintVerifier extends RecursiveAstVisitor<void> {
         targetType = node.realTarget.staticType;
       }
       if (targetType != null) {
-        var targetElement = targetType.element;
+        final targetElement = targetType.element;
         return targetElement is ClassElement && targetElement.isDartCoreEnum;
       }
       return false;

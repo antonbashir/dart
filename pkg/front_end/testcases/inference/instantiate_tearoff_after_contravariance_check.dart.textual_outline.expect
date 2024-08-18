@@ -5,5 +5,4 @@ class C<T> {
 }
 
 void test(C<String> c) {}
-
 main() {}

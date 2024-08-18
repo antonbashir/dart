@@ -17,25 +17,25 @@ class ConstructorReferenceResolver {
 
   ConstructorReferenceResolver(this._resolver);
 
-  void resolve(ConstructorReferenceImpl node, {required DartType contextType}) {
+  void resolve(ConstructorReferenceImpl node,
+      {required DartType? contextType}) {
     if (!_resolver.isConstructorTearoffsEnabled &&
         node.constructorName.type.typeArguments == null) {
       // Only report this if [node] has no explicit type arguments; otherwise
       // the parser has already reported an error.
-      _resolver.errorReporter.atNode(
-        node,
-        WarningCode.SDK_VERSION_CONSTRUCTOR_TEAROFFS,
-      );
+      _resolver.errorReporter.reportErrorForNode(
+          WarningCode.SDK_VERSION_CONSTRUCTOR_TEAROFFS, node, []);
     }
     node.constructorName.accept(_resolver);
     var element = node.constructorName.staticElement;
     if (element != null && !element.isFactory) {
-      var enclosingElement = element.enclosingElement;
+      final enclosingElement = element.enclosingElement;
       if (enclosingElement is ClassElement && enclosingElement.isAbstract) {
-        _resolver.errorReporter.atNode(
-          node,
+        _resolver.errorReporter.reportErrorForNode(
           CompileTimeErrorCode
               .TEAROFF_OF_GENERATIVE_CONSTRUCTOR_OF_ABSTRACT_CLASS,
+          node,
+          [],
         );
       }
     }
@@ -52,7 +52,7 @@ class ConstructorReferenceResolver {
       // to avoid reporting redundant errors.
       var enclosingElement = node.constructorName.type.element;
       if (enclosingElement is TypeAliasElement) {
-        var aliasedType = enclosingElement.aliasedType;
+        final aliasedType = enclosingElement.aliasedType;
         enclosingElement =
             aliasedType is InterfaceType ? aliasedType.element : null;
       }
@@ -68,16 +68,16 @@ class ConstructorReferenceResolver {
               ? CompileTimeErrorCode.CLASS_INSTANTIATION_ACCESS_TO_STATIC_MEMBER
               : CompileTimeErrorCode
                   .CLASS_INSTANTIATION_ACCESS_TO_INSTANCE_MEMBER;
-          _resolver.errorReporter.atNode(
-            node,
+          _resolver.errorReporter.reportErrorForNode(
             error,
-            arguments: [name.name],
+            node,
+            [name.name],
           );
         } else if (!name.isSynthetic) {
-          _resolver.errorReporter.atNode(
-            node,
+          _resolver.errorReporter.reportErrorForNode(
             CompileTimeErrorCode.CLASS_INSTANTIATION_ACCESS_TO_UNKNOWN_MEMBER,
-            arguments: [enclosingElement.name, name.name],
+            node,
+            [enclosingElement.name, name.name],
           );
         }
       }
@@ -86,7 +86,7 @@ class ConstructorReferenceResolver {
   }
 
   void _inferArgumentTypes(ConstructorReferenceImpl node,
-      {required DartType contextType}) {
+      {required DartType? contextType}) {
     var constructorName = node.constructorName;
     var elementToInfer = _resolver.inferenceHelper.constructorElementToInfer(
       constructorName: constructorName,
@@ -129,17 +129,17 @@ class ConstructorReferenceResolver {
 
         constructorName.staticElement = constructorElement.declaration;
         constructorName.name?.staticElement = constructorElement.declaration;
-        node.recordStaticType(inferred, resolver: _resolver);
+        node.staticType = inferred;
         // The NamedType child of `constructorName` doesn't have a static type.
         constructorName.type.type = null;
       }
     } else {
       var constructorElement = constructorName.staticElement;
-      node.recordStaticType(
-          constructorElement == null
-              ? InvalidTypeImpl.instance
-              : constructorElement.type,
-          resolver: _resolver);
+      if (constructorElement == null) {
+        node.staticType = InvalidTypeImpl.instance;
+      } else {
+        node.staticType = constructorElement.type;
+      }
       // The NamedType child of `constructorName` doesn't have a static type.
       constructorName.type.type = null;
     }

@@ -24,14 +24,14 @@ mixin M {
       error(ParserErrorCode.MIXIN_DECLARES_CONSTRUCTOR, 12, 7),
     ]);
 
-    var node = findNode.singleMixinDeclaration;
+    final node = findNode.singleMixinDeclaration;
     assertResolvedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
   name: M
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M
+  declaredElement: self::@mixin::M
 ''');
   }
 
@@ -44,14 +44,14 @@ mixin M {
       error(ParserErrorCode.MIXIN_DECLARES_CONSTRUCTOR, 12, 7),
     ]);
 
-    var node = findNode.singleMixinDeclaration;
+    final node = findNode.singleMixinDeclaration;
     assertResolvedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
   name: M
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M
+  declaredElement: self::@mixin::M
 ''');
   }
 
@@ -64,14 +64,14 @@ mixin M {
       error(ParserErrorCode.MIXIN_DECLARES_CONSTRUCTOR, 12, 1),
     ]);
 
-    var node = findNode.singleMixinDeclaration;
+    final node = findNode.singleMixinDeclaration;
     assertResolvedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
   name: M
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M
+  declaredElement: self::@mixin::M
 ''');
   }
 
@@ -84,14 +84,14 @@ mixin M {
       error(ParserErrorCode.MIXIN_DECLARES_CONSTRUCTOR, 12, 1),
     ]);
 
-    var node = findNode.singleMixinDeclaration;
+    final node = findNode.singleMixinDeclaration;
     assertResolvedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin
   name: M
   leftBracket: {
   rightBracket: }
-  declaredElement: <testLibraryFragment>::@mixin::M
+  declaredElement: self::@mixin::M
 ''');
   }
 }

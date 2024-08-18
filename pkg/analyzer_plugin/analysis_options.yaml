@@ -4,7 +4,6 @@ analyzer:
   language:
     strict-casts: true
   errors:
-    todo: ignore
     # Remove from lints/recommended:
     constant_identifier_names: ignore
     implementation_imports: ignore
@@ -15,6 +14,7 @@ analyzer:
 linter:
   rules:
     - always_declare_return_types
+    - enable_null_safety
     - flutter_style_todos
     - library_annotations
     - omit_local_variable_types

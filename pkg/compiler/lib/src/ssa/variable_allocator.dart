@@ -225,15 +225,14 @@ class SsaLiveIntervalBuilder extends HBaseVisitor<void> with CodegenPhase {
   // not on the checked instruction t1.
   // When looking for the checkedInstructionOrNonGenerateAtUseSite of t3 we must
   // return t2.
-  HInstruction checkedInstructionOrNonGenerateAtUseSite(
-      HOutputConstrainedToAnInput check) {
-    HInstruction constraint = check.constrainedInput;
-    while (constraint is HOutputConstrainedToAnInput) {
-      HInstruction next = constraint.constrainedInput;
+  HInstruction checkedInstructionOrNonGenerateAtUseSite(HCheck check) {
+    HInstruction checked = check.checkedInput;
+    while (checked is HCheck) {
+      HInstruction next = checked.checkedInput;
       if (generateAtUseSite.contains(next)) break;
-      constraint = next;
+      checked = next;
     }
-    return constraint;
+    return checked;
   }
 
   void markAsLiveInEnvironment(
@@ -245,11 +244,11 @@ class SsaLiveIntervalBuilder extends HBaseVisitor<void> with CodegenPhase {
       // Special case the HCheck instruction to mark the actual
       // checked instruction live. The checked instruction and the
       // [HCheck] will share the same live ranges.
-      if (instruction is HOutputConstrainedToAnInput) {
-        HInstruction constraint =
-            checkedInstructionOrNonGenerateAtUseSite(instruction);
-        if (!generateAtUseSite.contains(constraint)) {
-          environment.add(constraint, instructionId);
+      if (instruction is HCheck) {
+        HCheck check = instruction;
+        HInstruction checked = checkedInstructionOrNonGenerateAtUseSite(check);
+        if (!generateAtUseSite.contains(checked)) {
+          environment.add(checked, instructionId);
         }
       }
     }
@@ -260,15 +259,15 @@ class SsaLiveIntervalBuilder extends HBaseVisitor<void> with CodegenPhase {
     environment.remove(instruction, instructionId);
     // Special case the HCheck instruction to have the same live
     // interval as the instruction it is checking.
-    if (instruction is HOutputConstrainedToAnInput) {
-      HInstruction constraint =
-          checkedInstructionOrNonGenerateAtUseSite(instruction);
-      if (!generateAtUseSite.contains(constraint)) {
-        liveIntervals.putIfAbsent(constraint, () => LiveInterval());
+    if (instruction is HCheck) {
+      HCheck check = instruction;
+      HInstruction checked = checkedInstructionOrNonGenerateAtUseSite(check);
+      if (!generateAtUseSite.contains(checked)) {
+        liveIntervals.putIfAbsent(checked, () => LiveInterval());
         // Unconditionally force the live ranges of the HCheck to
         // be the live ranges of the instruction it is checking.
         liveIntervals[instruction] =
-            LiveInterval.forCheck(instructionId, liveIntervals[constraint]!);
+            LiveInterval.forCheck(instructionId, liveIntervals[checked]!);
       }
     }
   }
@@ -494,14 +493,14 @@ class VariableNamer {
 
   String allocateName(HInstruction instruction) {
     String? name;
-    if (instruction is HOutputConstrainedToAnInput) {
-      // Special case this instruction to use the name of its input if it has
-      // one.
+    if (instruction is HCheck) {
+      // Special case this instruction to use the name of its
+      // input if it has one.
       HInstruction temp = instruction;
       do {
-        temp = (temp as HOutputConstrainedToAnInput).constrainedInput;
+        temp = (temp as HCheck).checkedInput;
         name = names.ownName[temp];
-      } while (name == null && temp is HOutputConstrainedToAnInput);
+      } while (name == null && temp is HCheck);
       if (name != null) return addAllocatedName(instruction, name);
     }
 

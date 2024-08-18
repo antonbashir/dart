@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _cr = '\r';
 
@@ -43,15 +42,19 @@ final _uriRegExp = RegExp(r'[/\\]');
 bool _looksLikeUriOrPath(String value) => _uriRegExp.hasMatch(value);
 
 class LinesLongerThan80Chars extends LintRule {
+  static const LintCode code = LintCode('lines_longer_than_80_chars',
+      'The line length exceeds the 80-character limit.',
+      correctionMessage: 'Try breaking the line across multiple lines.');
+
   LinesLongerThan80Chars()
       : super(
             name: 'lines_longer_than_80_chars',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.lines_longer_than_80_chars;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -192,10 +195,8 @@ class _Visitor extends SimpleAstVisitor {
         end = lineInfo.getOffsetOfLine(i + 1) - 1;
         var length = end - start;
         if (length > 80) {
-          var content = node.declaredElement?.source.contents.data;
-          if (content != null &&
-              content[end] == _lf &&
-              content[end - 1] == _cr) {
+          if (context.currentUnit.content[end] == _lf &&
+              context.currentUnit.content[end - 1] == _cr) {
             end--;
           }
         }
@@ -224,7 +225,8 @@ class _Visitor extends SimpleAstVisitor {
 
     for (var line in longLines) {
       if (allowedLines.contains(line.index + 1)) continue;
-      rule.reportLintForOffset(line.offset, line.length);
+      rule.reporter
+          .reportErrorForOffset(rule.lintCode, line.offset, line.length);
     }
   }
 }

@@ -23,6 +23,7 @@ import 'package:analysis_server/src/services/completion/yaml/yaml_completion_gen
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:analyzer_plugin/protocol/protocol.dart' as plugin;
+import 'package:analyzer_plugin/protocol/protocol_common.dart';
 import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
 
 /// The handler for the `completion.getSuggestions2` request.
@@ -42,7 +43,8 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
     required CompletionBudget budget,
     required OperationPerformanceImpl performance,
     required DartCompletionRequest request,
-    required int maxSuggestions,
+    Set<ElementKind>? includedElementKinds,
+    Set<String>? includedElementNames,
     NotImportedSuggestions? notImportedSuggestions,
     required bool useFilter,
   }) async {
@@ -60,6 +62,8 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
     await performance.runAsync('computeSuggestions', (performance) async {
       var manager = DartCompletionManager(
         budget: budget,
+        includedElementKinds: includedElementKinds,
+        includedElementNames: includedElementNames,
         notImportedSuggestions: notImportedSuggestions,
       );
 
@@ -67,7 +71,6 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
         await manager.computeSuggestions(
           request,
           performance,
-          maxSuggestions: maxSuggestions,
           useFilter: useFilter,
         ),
       );
@@ -112,8 +115,7 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
     }
 
     var requestLatency = request.timeSinceRequest;
-    var params = CompletionGetSuggestions2Params.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = CompletionGetSuggestions2Params.fromRequest(request);
     var file = params.file;
     var offset = params.offset;
 
@@ -128,14 +130,14 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
     var pathContext = provider.pathContext;
 
     if (file.endsWith('.yaml')) {
-      var suggestions = computeYamlSuggestions(file, offset);
+      final suggestions = computeYamlSuggestions(file, offset);
       server.sendResponse(
         CompletionGetSuggestions2Result(
           suggestions.replacementOffset,
           suggestions.replacementLength,
           suggestions.suggestions,
           false,
-        ).toResponse(request.id, clientUriConverter: server.uriConverter),
+        ).toResponse(request.id),
       );
       return;
     }
@@ -143,7 +145,7 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
     if (!file_paths.isDart(pathContext, file)) {
       server.sendResponse(
         CompletionGetSuggestions2Result(offset, 0, [], false)
-            .toResponse(request.id, clientUriConverter: server.uriConverter),
+            .toResponse(request.id),
       );
       return;
     }
@@ -175,7 +177,7 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
           return;
         }
 
-        var completionPerformance = CompletionPerformance(
+        final completionPerformance = CompletionPerformance(
           performance: performance,
           path: file,
           requestLatency: requestLatency,
@@ -189,7 +191,6 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
 
         var completionRequest = DartCompletionRequest(
           analysisSession: analysisSession,
-          fileState: resolvedUnit.fileState,
           filePath: resolvedUnit.path,
           fileContent: resolvedUnit.content,
           unitElement: resolvedUnit.unitElement,
@@ -208,7 +209,6 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
             budget: budget,
             performance: performance,
             request: completionRequest,
-            maxSuggestions: params.maxResults,
             notImportedSuggestions: notImportedSuggestions,
             useFilter: true,
           );
@@ -219,7 +219,7 @@ class CompletionGetSuggestions2Handler extends CompletionHandler
               completionRequest.replacementLength,
               [],
               true,
-            ).toResponse(request.id, clientUriConverter: server.uriConverter),
+            ).toResponse(request.id),
           );
         }
 

@@ -262,7 +262,6 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
   final Uri _scriptUri;
   final int _offset;
   final List<DartScope2> findScopes = [];
-  final Set<int> foundOffsets = {};
 
   final Set<VariableDeclaration> hoistedUnwritten = {};
   final List<List<VariableDeclaration>> scopes = [];
@@ -514,6 +513,13 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
   }
 
   @override
+  void visitTypedefTearOff(TypedefTearOff node) {
+    typeParameterScopes.add([...node.typeParameters]);
+    super.visitTypedefTearOff(node);
+    typeParameterScopes.removeLast();
+  }
+
+  @override
   void visitVariableSet(VariableSet node) {
     super.visitVariableSet(node);
     if (node.variable.isHoisted) {
@@ -531,14 +537,12 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
 
   void _checkOffset(TreeNode node) {
     if (_currentUri == _scriptUri) {
-      foundOffsets.add(node.fileOffset);
       if (node.fileOffset == _offset) {
         addFound(node);
       } else {
         List<int>? allOffsets = node.fileOffsetsIfMultiple;
         if (allOffsets != null) {
           for (final int offset in allOffsets) {
-            foundOffsets.add(offset);
             if (offset == _offset) {
               addFound(node);
               break;
@@ -551,40 +555,7 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
 
   static DartScope findScopeFromOffsetAndClass(
       Library library, Uri scriptUri, Class? cls, int offset) {
-    DartScopeBuilder2 data = _raw(library, scriptUri, cls, offset);
-    if (data.findScopes.isEmpty) {
-      int? closestMatchingOrSmallerOffset =
-          _findClosestMatchingOrSmallerOffset(data, offset);
-      if (closestMatchingOrSmallerOffset != null) {
-        offset = closestMatchingOrSmallerOffset;
-        data = _raw(library, scriptUri, cls, offset);
-      }
-    }
-    return _findScopePick(data.findScopes, library, cls, offset);
-  }
-
-  static int? _findClosestMatchingOrSmallerOffset(
-      DartScopeBuilder2 data, int offset) {
-    List<int> foundOffsets = data.foundOffsets.toList()..sort();
-    if (foundOffsets.isEmpty) return null;
-    int low = 0;
-    int high = foundOffsets.length - 1;
-    while (low < high) {
-      int mid = high - ((high - low) >> 1); // Get middle, rounding up.
-      int pivot = foundOffsets[mid];
-      if (pivot <= offset) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-    int result = foundOffsets[low];
-    if (result < 0) return null;
-    return result;
-  }
-
-  static DartScope _findScopePick(
-      List<DartScope2> scopes, Library library, Class? cls, int offset) {
+    List<DartScope2> scopes = _raw(library, scriptUri, cls, offset);
     DartScope2 scope;
     if (scopes.length == 0) {
       // This shouldn't happen.
@@ -615,27 +586,10 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
         scope.typeParameters);
   }
 
-  static DartScope findScopeFromOffset(
-      Library library, Uri scriptUri, int offset) {
-    DartScopeBuilder2 data = _rawNoClass(library, scriptUri, offset);
-    if (data.findScopes.isEmpty) {
-      int? closestMatchingOrSmallerOffset =
-          _findClosestMatchingOrSmallerOffset(data, offset);
-      if (closestMatchingOrSmallerOffset != null) {
-        offset = closestMatchingOrSmallerOffset;
-        data = _rawNoClass(library, scriptUri, offset);
-      }
-    }
-    return _findScopePick(data.findScopes, library, null, offset);
-  }
-
   static List<DartScope2> _filterAll(
       List<DartScope2> rawScopes, Library library, int offset) {
     List<DartScope2> firstFilteredScopes =
         _filterScopesWithArtificialNodes(rawScopes, library);
-    if (firstFilteredScopes.isEmpty) {
-      return rawScopes;
-    }
     if (_allHaveTheSameDefinitions(firstFilteredScopes)) {
       return [firstFilteredScopes.first];
     }
@@ -1188,7 +1142,7 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
     return null;
   }
 
-  static DartScopeBuilder2 _raw(
+  static List<DartScope2> _raw(
       Library library, Uri scriptUri, Class? cls, int offset) {
     DartScopeBuilder2 builder = DartScopeBuilder2._(library, scriptUri, offset);
     if (cls != null) {
@@ -1198,17 +1152,10 @@ class DartScopeBuilder2 extends VisitorDefault<void> with VisitorVoidMixin {
       builder.visitLibrary(library);
     }
 
-    return builder;
-  }
-
-  static DartScopeBuilder2 _rawNoClass(
-      Library library, Uri scriptUri, int offset) {
-    DartScopeBuilder2 builder = DartScopeBuilder2._(library, scriptUri, offset);
-    builder.visitLibrary(library);
-    return builder;
+    return builder.findScopes;
   }
 
   static List<DartScope2> findScopeFromOffsetAndClassRawForTesting(
           Library library, Uri scriptUri, Class? cls, int offset) =>
-      _raw(library, scriptUri, cls, offset).findScopes;
+      _raw(library, scriptUri, cls, offset);
 }

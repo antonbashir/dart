@@ -17,13 +17,13 @@ void main() {
 @reflectiveTest
 class DocumentSymbolsTest extends LspOverLegacyTest {
   Future<void> test_symbols() async {
-    var content = '''
+    final content = '''
 class Aaa {}
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var results = await getDocumentSymbols(testFileUri);
-    var names = results.map(
+    final results = await getDocumentSymbols(testFileUri);
+    final names = results.map(
       (documentSymbols) =>
           documentSymbols.map((documentSymbol) => documentSymbol.name),
       (symbolInformation) =>

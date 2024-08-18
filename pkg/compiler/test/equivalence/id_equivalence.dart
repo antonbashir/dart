@@ -8,11 +8,10 @@ import 'package:compiler/src/ir/util.dart';
 import 'package:compiler/src/js_model/locals.dart';
 import 'package:expect/expect.dart';
 import 'package:kernel/ast.dart' as ir;
-import 'package:front_end/src/api_prototype/testing.dart';
+import 'package:front_end/src/testing/id_extractor.dart';
 
 export 'package:_fe_analyzer_shared/src/testing/id.dart';
-export 'package:front_end/src/api_prototype/testing.dart'
-    show computeMemberId, computeTreeNodeWithOffset;
+export 'package:front_end/src/testing/id_extractor.dart';
 
 SourceSpan computeSourceSpanFromUriOffset(Uri uri, int offset) {
   return offset != -1

@@ -25,8 +25,7 @@ class ReanalyzeTest extends PubPackageAnalysisServerTest {
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_ERRORS) {
-      var decoded = AnalysisErrorsParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var decoded = AnalysisErrorsParams.fromNotification(notification);
       filesErrors[getFile(decoded.file)] = decoded.errors;
     }
   }
@@ -54,8 +53,7 @@ var b = B();
 
     // Reanalyze.
     await handleSuccessfulRequest(
-      AnalysisReanalyzeParams()
-          .toRequest('0', clientUriConverter: server.uriConverter),
+      AnalysisReanalyzeParams().toRequest('0'),
     );
     await waitForTasksFinished();
 

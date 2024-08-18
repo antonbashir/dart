@@ -10,25 +10,37 @@ import '../elements/entities.dart';
 import '../elements/entity_utils.dart' as utils;
 import '../elements/names.dart';
 import '../elements/operators.dart';
-import '../kernel/invocation_mirror.dart';
+import '../kernel/invocation_mirror_constants.dart';
 import '../serialization/serialization.dart';
 import '../util/util.dart' show Hashing;
 import 'call_structure.dart' show CallStructure;
 
-enum SelectorKind {
-  GETTER('getter'),
-  SETTER('setter'),
-  CALL('call'),
-  OPERATOR('operator'),
-  INDEX('index'),
-  SPECIAL('special'),
-  ;
-
+class SelectorKind {
   final String name;
-  const SelectorKind(this.name);
+  final int index;
+  const SelectorKind(this.name, this.index);
+
+  static const SelectorKind GETTER = SelectorKind('getter', 0);
+  static const SelectorKind SETTER = SelectorKind('setter', 1);
+  static const SelectorKind CALL = SelectorKind('call', 2);
+  static const SelectorKind OPERATOR = SelectorKind('operator', 3);
+  static const SelectorKind INDEX = SelectorKind('index', 4);
+  static const SelectorKind SPECIAL = SelectorKind('special', 5);
+
+  @override
+  int get hashCode => index;
 
   @override
   String toString() => name;
+
+  static const List<SelectorKind> values = [
+    GETTER,
+    SETTER,
+    CALL,
+    OPERATOR,
+    INDEX,
+    SPECIAL
+  ];
 }
 
 class Selector {
@@ -198,11 +210,7 @@ class Selector {
   bool get isGetter => kind == SelectorKind.GETTER;
   bool get isSetter => kind == SelectorKind.SETTER;
   bool get isCall => kind == SelectorKind.CALL;
-
-  /// Whether this selector might be invoking a closure. In some cases this
-  /// selector is used to invoke a getter named 'call' and then invoke it. This
-  /// can have different semantics than invoking a 'call' method.
-  bool get isMaybeClosureCall => isCall && memberName == Names.CALL_NAME;
+  bool get isClosureCall => isCall && memberName == Names.CALL_NAME;
 
   bool get isIndex => kind == SelectorKind.INDEX && argumentCount == 1;
   bool get isIndexSet => kind == SelectorKind.INDEX && argumentCount == 2;
@@ -213,12 +221,12 @@ class Selector {
   /// The member name for invocation mirrors created from this selector.
   String get invocationMirrorMemberName => isSetter ? '$name=' : name;
 
-  InvocationMirrorKind get invocationMirrorKind {
-    var kind = InvocationMirrorKind.method;
+  int get invocationMirrorKind {
+    int kind = invocationMirrorMethodKind;
     if (isGetter) {
-      kind = InvocationMirrorKind.getter;
+      kind = invocationMirrorGetterKind;
     } else if (isSetter) {
-      kind = InvocationMirrorKind.setter;
+      kind = invocationMirrorSetterKind;
     }
     return kind;
   }
@@ -243,8 +251,7 @@ class Selector {
     return signatureApplies(element as FunctionEntity);
   }
 
-  /// Whether this [Selector] could be a valid selector on `Null` without
-  /// throwing.
+  /// Whether [this] could be a valid selector on `Null` without throwing.
   bool appliesToNullWithoutThrow() {
     var name = this.name;
     if (isOperator && name == "==") return true;

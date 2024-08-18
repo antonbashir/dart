@@ -24,24 +24,24 @@ class C {
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    final node = findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
   period: .
   constructorName: SimpleIdentifier
     token: named
-    staticElement: <testLibraryFragment>::@class::C::@constructor::named
+    staticElement: self::@class::C::@constructor::named
     staticType: null
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::C::@constructor::named::@parameter::a
+        parameter: self::@class::C::@constructor::named::@parameter::a
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::C::@constructor::named
+  staticElement: self::@class::C::@constructor::named
 ''');
   }
 
@@ -55,7 +55,7 @@ class C {
           13),
     ]);
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    final node = findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
@@ -84,7 +84,7 @@ class C {
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    final node = findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
@@ -93,10 +93,10 @@ RedirectingConstructorInvocation
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::C::@constructor::new::@parameter::a
+        parameter: self::@class::C::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::C::@constructor::new
+  staticElement: self::@class::C::@constructor::new
 ''');
   }
 
@@ -111,7 +111,7 @@ class C {
           7),
     ]);
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    final node = findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this

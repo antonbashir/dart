@@ -136,15 +136,7 @@ abstract class OnlinePositionSourceInformationStrategy
   @override
   SourceInformationProcessor createProcessor(
       SourceMapperProvider provider, SourceInformationReader reader) {
-    var sourceMapper =
-        provider.createSourceMapper(OnlineSourceInformationProcessor.id);
-    final inliningListener = InliningTraceListener(sourceMapper, reader);
-    final List<TraceListener> traceListeners = [
-      PositionTraceListener(sourceMapper, reader),
-      inliningListener,
-    ];
-    return OnlineSourceInformationProcessor(provider, reader, traceListeners,
-        onComplete: inliningListener.finish);
+    return OnlineSourceInformationProcessor(provider, reader);
   }
 
   @override
@@ -319,15 +311,20 @@ class OnlineSourceInformationProcessor extends SourceInformationProcessor {
   static const String id = 'v2';
 
   late final OnlineJavaScriptTracer tracer =
-      OnlineJavaScriptTracer(reader, traceListeners, onComplete: onComplete);
+      OnlineJavaScriptTracer(reader, traceListeners, onComplete: () {
+    inliningListener.finish();
+  });
   final SourceInformationReader reader;
   late final List<TraceListener> traceListeners;
   late final InliningTraceListener inliningListener;
-  final void Function()? onComplete;
 
-  OnlineSourceInformationProcessor(
-      SourceMapperProvider provider, this.reader, this.traceListeners,
-      {this.onComplete});
+  OnlineSourceInformationProcessor(SourceMapperProvider provider, this.reader) {
+    var sourceMapper = provider.createSourceMapper(id);
+    traceListeners = [
+      PositionTraceListener(sourceMapper, reader),
+      inliningListener = InliningTraceListener(sourceMapper, reader),
+    ];
+  }
 
   @override
   void onStartPosition(js.Node node, int startPosition) {
@@ -860,6 +857,479 @@ abstract class TraceListener {
   void onStep(js.Node node, Offset offset, StepKind kind) {}
 }
 
+/// Visitor that computes the [js.Node]s the are part of the JavaScript
+/// steppable execution and thus needs source mapping locations.
+class JavaScriptTracer extends js.BaseVisitorVoid {
+  final CodePositionMap codePositions;
+  final SourceInformationReader reader;
+  final List<TraceListener> listeners;
+
+  /// The steps added by subexpressions.
+  List steps = [];
+
+  /// The offset of the current statement.
+  int? statementOffset;
+
+  /// The current offset in left-to-right progression.
+  int? leftToRightOffset;
+
+  /// The offset of the surrounding statement, used for the first subexpression.
+  int? offsetPosition;
+
+  bool active;
+
+  JavaScriptTracer(this.codePositions, this.reader, this.listeners,
+      {this.active = false});
+
+  void notifyStart(js.Node node) {
+    listeners.forEach((listener) => listener.onStart(node));
+  }
+
+  void notifyEnd(js.Node node) {
+    listeners.forEach((listener) => listener.onEnd(node));
+  }
+
+  void notifyPushBranch(BranchKind kind, [int? value]) {
+    if (active) {
+      listeners.forEach((listener) => listener.pushBranch(kind, value));
+    }
+  }
+
+  void notifyPopBranch() {
+    if (active) {
+      listeners.forEach((listener) => listener.popBranch());
+    }
+  }
+
+  void notifyStep(js.Node node, Offset offset, StepKind kind,
+      {bool force = false}) {
+    if (active || force) {
+      listeners.forEach((listener) => listener.onStep(node, offset, kind));
+    }
+  }
+
+  void apply(js.Node node) {
+    notifyStart(node);
+
+    int? startPosition = getSyntaxOffset(node, kind: CodePositionKind.START);
+    Offset startOffset = getOffsetForNode(node, startPosition);
+    notifyStep(node, startOffset, StepKind.NO_INFO, force: true);
+
+    node.accept(this);
+    notifyEnd(node);
+  }
+
+  @override
+  void visitNode(js.Node node) {
+    node.visitChildren(this);
+  }
+
+  visit(js.Node? node, [BranchKind? branch, int? value]) {
+    if (node != null) {
+      if (branch != null) {
+        notifyPushBranch(branch, value);
+        node.accept(this);
+        notifyPopBranch();
+      } else {
+        node.accept(this);
+      }
+    }
+  }
+
+  void visitList(List<js.Node> nodeList) {
+    for (js.Node node in nodeList) {
+      visit(node);
+    }
+  }
+
+  void _handleFunction(js.Node node, js.Node body) {
+    bool activeBefore = active;
+    if (!active) {
+      active = reader.getSourceInformation(node) != null;
+    }
+    leftToRightOffset =
+        statementOffset = getSyntaxOffset(node, kind: CodePositionKind.START);
+    Offset entryOffset = getOffsetForNode(node, statementOffset);
+    notifyStep(node, entryOffset, StepKind.FUN_ENTRY);
+
+    visit(body);
+
+    leftToRightOffset =
+        statementOffset = getSyntaxOffset(node, kind: CodePositionKind.CLOSING);
+    Offset exitOffset = getOffsetForNode(node, statementOffset);
+    notifyStep(node, exitOffset, StepKind.FUN_EXIT);
+    if (active && !activeBefore) {
+      int? endPosition = getSyntaxOffset(node, kind: CodePositionKind.END);
+      Offset endOffset = getOffsetForNode(node, endPosition);
+      notifyStep(node, endOffset, StepKind.NO_INFO);
+    }
+    active = activeBefore;
+  }
+
+  @override
+  visitFunctionExpression(js.FunctionExpression node) {
+    _handleFunction(node, node.body);
+  }
+
+  @override
+  visitNamedFunction(js.NamedFunction node) {
+    _handleFunction(node, node.function.body);
+  }
+
+  @override
+  visitBlock(js.Block node) {
+    for (js.Statement statement in node.statements) {
+      visit(statement);
+    }
+  }
+
+  int? getSyntaxOffset(js.Node node,
+      {CodePositionKind kind = CodePositionKind.START}) {
+    CodePosition? codePosition = codePositions[node];
+    if (codePosition != null) {
+      return codePosition.getPosition(kind);
+    }
+    return null;
+  }
+
+  visitSubexpression(
+      js.Node parent, js.Expression child, int? codeOffset, StepKind kind) {
+    var oldSteps = steps;
+    steps = [];
+    offsetPosition = codeOffset;
+    visit(child);
+    if (steps.isEmpty) {
+      notifyStep(parent, getOffsetForNode(parent, offsetPosition), kind);
+      // The [offsetPosition] should only be used by the first subexpression.
+      offsetPosition = null;
+    }
+    steps = oldSteps;
+  }
+
+  @override
+  visitExpressionStatement(js.ExpressionStatement node) {
+    statementOffset = getSyntaxOffset(node);
+    visitSubexpression(
+        node, node.expression, statementOffset, StepKind.EXPRESSION_STATEMENT);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitEmptyStatement(js.EmptyStatement node) {}
+
+  @override
+  visitCall(js.Call node) {
+    visit(node.target);
+    int? oldPosition = offsetPosition;
+    offsetPosition = null;
+    visitList(node.arguments);
+    offsetPosition = oldPosition;
+    CallPosition callPosition = CallPosition.getSemanticPositionForCall(node);
+    js.Node positionNode = callPosition.node;
+    int? callOffset =
+        getSyntaxOffset(positionNode, kind: callPosition.codePositionKind);
+    if (offsetPosition == null) {
+      // Use the call offset if this is not the first subexpression.
+      offsetPosition = callOffset;
+    }
+    Offset offset = getOffsetForNode(positionNode, offsetPosition);
+    notifyStep(node, offset, StepKind.CALL);
+    steps.add(node);
+    offsetPosition = null;
+  }
+
+  @override
+  visitNew(js.New node) {
+    visit(node.target);
+    int? oldPosition = offsetPosition;
+    offsetPosition = null;
+    visitList(node.arguments);
+    offsetPosition = oldPosition;
+    if (offsetPosition == null) {
+      // Use the syntax offset if this is not the first subexpression.
+      offsetPosition = getSyntaxOffset(node);
+    }
+    notifyStep(node, getOffsetForNode(node, offsetPosition), StepKind.NEW);
+    steps.add(node);
+    offsetPosition = null;
+  }
+
+  @override
+  visitAccess(js.PropertyAccess node) {
+    visit(node.receiver);
+    notifyStep(
+        node,
+        // Technically we'd like to use the offset of the `.` in the property
+        // access, but the js_ast doesn't expose it. Since this is only used to
+        // search backwards for inlined frames, we use the receiver's END offset
+        // instead as an approximation. Note that the END offset points one
+        // character after the end of the node, so it is likely always the
+        // offset we want.
+        getOffsetForNode(
+            node, getSyntaxOffset(node.receiver, kind: CodePositionKind.END)),
+        StepKind.ACCESS);
+    steps.add(node);
+    visit(node.selector);
+  }
+
+  @override
+  visitVariableUse(js.VariableUse node) {}
+
+  @override
+  visitLiteralBool(js.LiteralBool node) {}
+
+  @override
+  visitLiteralString(js.LiteralString node) {}
+
+  @override
+  visitLiteralNumber(js.LiteralNumber node) {}
+
+  @override
+  visitLiteralNull(js.LiteralNull node) {}
+
+  @override
+  visitName(js.Name node) {}
+
+  @override
+  visitVariableDeclarationList(js.VariableDeclarationList node) {
+    visitList(node.declarations);
+  }
+
+  @override
+  visitVariableDeclaration(js.VariableDeclaration node) {}
+
+  @override
+  visitVariableInitialization(js.VariableInitialization node) {
+    visit(node.declaration);
+    visit(node.value);
+  }
+
+  @override
+  visitAssignment(js.Assignment node) {
+    visit(node.leftHandSide);
+    visit(node.value);
+  }
+
+  @override
+  visitIf(js.If node) {
+    statementOffset = getSyntaxOffset(node);
+    visitSubexpression(
+        node, node.condition, statementOffset, StepKind.IF_CONDITION);
+    statementOffset = null;
+    visit(node.then, BranchKind.CONDITION, 1);
+    visit(node.otherwise, BranchKind.CONDITION, 0);
+  }
+
+  @override
+  visitFor(js.For node) {
+    int? offset = statementOffset = getSyntaxOffset(node);
+    statementOffset = offset;
+    leftToRightOffset = null;
+    final init = node.init;
+    if (init != null) {
+      visitSubexpression(
+          node, init, getSyntaxOffset(node), StepKind.FOR_INITIALIZER);
+    }
+
+    final condition = node.condition;
+    if (condition != null) {
+      visitSubexpression(
+          node, condition, getSyntaxOffset(condition), StepKind.FOR_CONDITION);
+    }
+
+    notifyPushBranch(BranchKind.LOOP);
+    visit(node.body);
+
+    statementOffset = offset;
+    final update = node.update;
+    if (update != null) {
+      visitSubexpression(
+          node, update, getSyntaxOffset(update), StepKind.FOR_UPDATE);
+    }
+
+    notifyPopBranch();
+  }
+
+  @override
+  visitWhile(js.While node) {
+    statementOffset = getSyntaxOffset(node);
+    visitSubexpression(
+        node, node.condition, getSyntaxOffset(node), StepKind.WHILE_CONDITION);
+    statementOffset = null;
+    leftToRightOffset = null;
+
+    visit(node.body, BranchKind.LOOP);
+  }
+
+  @override
+  visitDo(js.Do node) {
+    statementOffset = getSyntaxOffset(node);
+    visit(node.body);
+    final condition = node.condition;
+    visitSubexpression(
+        node, condition, getSyntaxOffset(condition), StepKind.DO_CONDITION);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitBinary(js.Binary node) {
+    visit(node.left);
+    visit(node.right);
+  }
+
+  @override
+  visitThis(js.This node) {}
+
+  @override
+  visitReturn(js.Return node) {
+    statementOffset = getSyntaxOffset(node);
+    visit(node.value);
+    notifyStep(
+        node, getOffsetForNode(node, getSyntaxOffset(node)), StepKind.RETURN);
+    Offset exitOffset = getOffsetForNode(
+        node, getSyntaxOffset(node, kind: CodePositionKind.CLOSING));
+    notifyStep(node, exitOffset, StepKind.FUN_EXIT);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitThrow(js.Throw node) {
+    statementOffset = getSyntaxOffset(node);
+    // Do not use [offsetPosition] for the subexpression.
+    offsetPosition = null;
+    visit(node.expression);
+    notifyStep(
+        node, getOffsetForNode(node, getSyntaxOffset(node)), StepKind.THROW);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitContinue(js.Continue node) {
+    statementOffset = getSyntaxOffset(node);
+    notifyStep(
+        node, getOffsetForNode(node, getSyntaxOffset(node)), StepKind.CONTINUE);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitBreak(js.Break node) {
+    statementOffset = getSyntaxOffset(node);
+    notifyStep(
+        node, getOffsetForNode(node, getSyntaxOffset(node)), StepKind.BREAK);
+    statementOffset = null;
+    leftToRightOffset = null;
+  }
+
+  @override
+  visitTry(js.Try node) {
+    visit(node.body);
+    visit(node.catchPart, BranchKind.CATCH);
+    visit(node.finallyPart, BranchKind.FINALLY);
+  }
+
+  @override
+  visitCatch(js.Catch node) {
+    visit(node.body);
+  }
+
+  @override
+  visitConditional(js.Conditional node) {
+    visit(node.condition);
+    visit(node.then, BranchKind.CONDITION, 1);
+    visit(node.otherwise, BranchKind.CONDITION, 0);
+  }
+
+  @override
+  visitPrefix(js.Prefix node) {
+    visit(node.argument);
+  }
+
+  @override
+  visitPostfix(js.Postfix node) {
+    visit(node.argument);
+  }
+
+  @override
+  visitObjectInitializer(js.ObjectInitializer node) {
+    visitList(node.properties);
+  }
+
+  @override
+  visitProperty(js.Property node) {
+    visit(node.name);
+    visit(node.value);
+  }
+
+  @override
+  visitRegExpLiteral(js.RegExpLiteral node) {}
+
+  @override
+  visitSwitch(js.Switch node) {
+    statementOffset = getSyntaxOffset(node);
+    visitSubexpression(
+        node, node.key, getSyntaxOffset(node), StepKind.SWITCH_EXPRESSION);
+    statementOffset = null;
+    leftToRightOffset = null;
+    for (int i = 0; i < node.cases.length; i++) {
+      visit(node.cases[i], BranchKind.CASE, i);
+    }
+  }
+
+  @override
+  visitCase(js.Case node) {
+    visit(node.expression);
+    visit(node.body);
+  }
+
+  @override
+  visitDefault(js.Default node) {
+    visit(node.body);
+  }
+
+  @override
+  visitArrayInitializer(js.ArrayInitializer node) {
+    visitList(node.elements);
+  }
+
+  @override
+  visitArrayHole(js.ArrayHole node) {}
+
+  @override
+  visitLabeledStatement(js.LabeledStatement node) {
+    statementOffset = getSyntaxOffset(node);
+    visit(node.body);
+    statementOffset = null;
+  }
+
+  @override
+  visitDeferredExpression(js.DeferredExpression node) {
+    visit(node.value);
+  }
+
+  Offset getOffsetForNode(js.Node node, int? codeOffset) {
+    if (codeOffset == null) {
+      CodePosition? codePosition = codePositions[node];
+      if (codePosition != null) {
+        codeOffset = codePosition.startPosition;
+      }
+    }
+    if (leftToRightOffset != null &&
+        codeOffset != null &&
+        leftToRightOffset! < codeOffset) {
+      leftToRightOffset = codeOffset;
+    }
+    if (leftToRightOffset == null) {
+      leftToRightOffset = statementOffset;
+    }
+    return Offset(statementOffset, codeOffset);
+  }
+}
+
 /// Flags indicating how [_PositionInfoNode.offsetPosition] should evolve as the
 /// associated node starts and ends.
 enum OffsetPositionMode {
@@ -1077,29 +1547,28 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitNode(js.Node node, _) {}
+  visitNode(js.Node node, _) {}
 
-  void _handleFunction(_PositionInfoNode node, js.Node body, int start) {
-    _currentNode.active = _currentNode.active ||
-        reader.getSourceInformation(node.astNode) != null;
-    Offset entryOffset = getOffsetForNode(node.statementOffset, start);
-    notifyStep(node.astNode, entryOffset, StepKind.FUN_ENTRY);
+  void _handleFunction(js.Node node, js.Node body, int start) {
+    _currentNode.active =
+        _currentNode.active || reader.getSourceInformation(node) != null;
+    Offset entryOffset = getOffsetForNode(_currentNode.statementOffset, start);
+    notifyStep(node, entryOffset, StepKind.FUN_ENTRY);
 
     visit(body, statementOffset: start);
 
-    node.addNotifyStep(StepKind.FUN_EXIT);
+    _currentNode.addNotifyStep(StepKind.FUN_EXIT);
   }
 
-  void _handleFunctionExpression(js.FunctionExpression node, int start) {
-    final parentNode = _currentNode.parent;
-    final parentAstNode = _currentNode.parent?.astNode;
-    _PositionInfoNode functionNode = _currentNode;
+  _handleFunctionExpression(js.FunctionExpression node, int start) {
+    final parentNode = _currentNode.parent!.astNode;
+    js.NamedFunction? namedParent;
     js.Expression? declaration;
-    if (parentAstNode is js.NamedFunction) {
-      functionNode = parentNode!;
-      declaration = parentAstNode.name;
-    } else if (parentAstNode is js.FunctionDeclaration) {
-      declaration = parentAstNode.name;
+    if (parentNode is js.NamedFunction) {
+      namedParent = parentNode;
+      declaration = parentNode.name;
+    } else if (parentNode is js.FunctionDeclaration) {
+      declaration = parentNode.name;
     }
 
     visit(declaration);
@@ -1107,30 +1576,30 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
       visit(param);
     }
     // For named functions we treat the named parent as the main node.
-    _handleFunction(functionNode, node.body, start);
+    _handleFunction(namedParent ?? node, node.body, start);
   }
 
   @override
-  void visitFunctionDeclaration(js.FunctionDeclaration node, int start) {
+  visitFunctionDeclaration(js.FunctionDeclaration node, int start) {
     visit(node.function);
   }
 
   @override
-  void visitNamedFunction(js.NamedFunction node, int start) {
+  visitNamedFunction(js.NamedFunction node, int start) {
     visit(node.function);
   }
 
   @override
-  void visitFun(js.Fun node, int start) {
+  visitFun(js.Fun node, int start) {
     _handleFunctionExpression(node, start);
   }
 
   @override
-  void visitArrowFunction(js.ArrowFunction node, int start) {
+  visitArrowFunction(js.ArrowFunction node, int start) {
     _handleFunctionExpression(node, start);
   }
 
-  void visitSubexpression(js.Node parent, js.Expression child, StepKind kind,
+  visitSubexpression(js.Node parent, js.Expression child, StepKind kind,
       {required int statementOffset,
       required OffsetPositionMode offsetPositionMode,
       BranchKind? branchKind,
@@ -1147,14 +1616,14 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitExpressionStatement(js.ExpressionStatement node, int start) {
+  visitExpressionStatement(js.ExpressionStatement node, int start) {
     visitSubexpression(node, node.expression, StepKind.EXPRESSION_STATEMENT,
         statementOffset: start,
         offsetPositionMode: OffsetPositionMode.subexpressionParentOffset);
   }
 
   @override
-  void visitCall(js.Call node, _) {
+  visitCall(js.Call node, _) {
     visit(node.target, offsetPositionMode: OffsetPositionMode.invocationTarget);
     for (js.Node argument in node.arguments) {
       visit(argument, offsetPositionMode: OffsetPositionMode.resetBefore);
@@ -1179,7 +1648,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitNew(js.New node, _) {
+  visitNew(js.New node, _) {
     visit(node.target, offsetPositionMode: OffsetPositionMode.invocationTarget);
     for (js.Node node in node.arguments) {
       visit(node, offsetPositionMode: OffsetPositionMode.resetBefore);
@@ -1189,7 +1658,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitAccess(js.PropertyAccess node, _) {
+  visitAccess(js.PropertyAccess node, _) {
     final receiverNode = visit(node.receiver);
     // Technically we'd like to use the offset of the `.` in the property
     // access, but the js_ast doesn't expose it. Since this is only used to
@@ -1202,7 +1671,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitIf(js.If node, int start) {
+  visitIf(js.If node, int start) {
     visitSubexpression(node, node.condition, StepKind.IF_CONDITION,
         statementOffset: start,
         offsetPositionMode: OffsetPositionMode.subexpressionParentOffset);
@@ -1219,7 +1688,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitFor(js.For node, int start) {
+  visitFor(js.For node, int start) {
     final init = node.init;
     if (init != null) {
       visitSubexpression(node, init, StepKind.FOR_INITIALIZER,
@@ -1251,7 +1720,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitWhile(js.While node, int start) {
+  visitWhile(js.While node, int start) {
     visitSubexpression(node, node.condition, StepKind.WHILE_CONDITION,
         statementOffset: start,
         offsetPositionMode: OffsetPositionMode.subexpressionParentOffset);
@@ -1260,7 +1729,7 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitDo(js.Do node, int start) {
+  visitDo(js.Do node, int start) {
     visit(node.body, statementOffset: start);
     final condition = node.condition;
     visitSubexpression(node, condition, StepKind.DO_CONDITION,
@@ -1269,13 +1738,13 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitReturn(js.Return node, int start) {
+  visitReturn(js.Return node, int start) {
     visit(node.value, statementOffset: start);
     _currentNode.addNotifyStep(StepKind.RETURN);
   }
 
   @override
-  void visitThrow(js.Throw node, int start) {
+  visitThrow(js.Throw node, int start) {
     // Do not use [offsetPosition] for the subexpression.
     visit(node.expression,
         statementOffset: start,
@@ -1284,31 +1753,31 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitContinue(js.Continue node, _) {
+  visitContinue(js.Continue node, _) {
     _currentNode.addNotifyStep(StepKind.CONTINUE);
   }
 
   @override
-  void visitBreak(js.Break node, _) {
+  visitBreak(js.Break node, _) {
     _currentNode.addNotifyStep(StepKind.BREAK);
   }
 
   @override
-  void visitTry(js.Try node, _) {
+  visitTry(js.Try node, _) {
     visit(node.body);
     visit(node.catchPart, branchKind: BranchKind.CATCH);
     visit(node.finallyPart, branchKind: BranchKind.FINALLY);
   }
 
   @override
-  void visitConditional(js.Conditional node, _) {
+  visitConditional(js.Conditional node, _) {
     visit(node.condition);
     visit(node.then, branchKind: BranchKind.CONDITION, branchToken: 1);
     visit(node.otherwise, branchKind: BranchKind.CONDITION, branchToken: 0);
   }
 
   @override
-  void visitSwitch(js.Switch node, int start) {
+  visitSwitch(js.Switch node, int start) {
     visitSubexpression(node, node.key, StepKind.SWITCH_EXPRESSION,
         statementOffset: start,
         offsetPositionMode: OffsetPositionMode.subexpressionParentOffset);
@@ -1318,12 +1787,12 @@ class OnlineJavaScriptTracer extends js.BaseVisitor1Void<int>
   }
 
   @override
-  void visitLabeledStatement(js.LabeledStatement node, int start) {
+  visitLabeledStatement(js.LabeledStatement node, int start) {
     visit(node.body, statementOffset: start);
   }
 
   @override
-  void visitDeferredExpression(js.DeferredExpression node, _) {
+  visitDeferredExpression(js.DeferredExpression node, _) {
     visit(node.value);
   }
 

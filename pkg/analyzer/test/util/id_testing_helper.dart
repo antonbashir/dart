@@ -97,19 +97,19 @@ Future<TestResult<T>> runTestForConfig<T>(MarkerOptions markerOptions,
   MemberAnnotations<IdValue> memberAnnotations =
       testData.expectedMaps[config.marker]!;
 
-  var resourceProvider = MemoryResourceProvider();
-  var testFiles = <_TestFile>[];
-  for (var entry in testData.memorySourceFiles.entries) {
-    var uri = _toTestUri(entry.key);
-    var path = resourceProvider.convertPath(uri.path);
-    var file = resourceProvider.getFile(path);
+  final resourceProvider = MemoryResourceProvider();
+  final testFiles = <_TestFile>[];
+  for (final entry in testData.memorySourceFiles.entries) {
+    final uri = _toTestUri(entry.key);
+    final path = resourceProvider.convertPath(uri.path);
+    final file = resourceProvider.getFile(path);
     testFiles.add(
       _TestFile(uri: uri, file: file),
     );
     file.writeAsStringSync(entry.value);
   }
 
-  var sdkRoot = resourceProvider.newFolder(
+  final sdkRoot = resourceProvider.newFolder(
     resourceProvider.convertPath('/sdk'),
   );
   createMockSdk(
@@ -117,7 +117,7 @@ Future<TestResult<T>> runTestForConfig<T>(MarkerOptions markerOptions,
     root: sdkRoot,
   );
 
-  var contextCollection = AnalysisContextCollectionImpl(
+  final contextCollection = AnalysisContextCollectionImpl(
     includedPaths: testFiles.map((e) => e.path).toList(),
     resourceProvider: resourceProvider,
     retainDataForTesting: true,
@@ -127,9 +127,9 @@ Future<TestResult<T>> runTestForConfig<T>(MarkerOptions markerOptions,
       analysisOptions.contextFeatures = config.featureSet;
     },
   );
-  var analysisContext = contextCollection.contexts.single;
-  var analysisSession = analysisContext.currentSession;
-  var driver = analysisContext.driver;
+  final analysisContext = contextCollection.contexts.single;
+  final analysisSession = analysisContext.currentSession;
+  final driver = analysisContext.driver;
 
   Map<Uri, Map<Id, ActualData<T>>> actualMaps = <Uri, Map<Id, ActualData<T>>>{};
   Map<Id, ActualData<T>> globalData = <Id, ActualData<T>>{};
@@ -139,9 +139,9 @@ Future<TestResult<T>> runTestForConfig<T>(MarkerOptions markerOptions,
   }
 
   var results = <Uri, ResolvedUnitResult>{};
-  for (var testFile in testFiles) {
-    var testUri = testFile.uri;
-    var result = await analysisSession.getResolvedUnit(testFile.path);
+  for (final testFile in testFiles) {
+    final testUri = testFile.uri;
+    final result = await analysisSession.getResolvedUnit(testFile.path);
     result as ResolvedUnitResult;
     var errors =
         result.errors.where((e) => e.severity == Severity.error).toList();

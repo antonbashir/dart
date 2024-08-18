@@ -2,15 +2,15 @@ library;
 //
 // Problems in library:
 //
-// org-dartlang-test:///a/b/c/main.dart:17:2: Error: This macro application didn't apply correctly due to an unhandled send.
+// org-dartlang-test:///a/b/c/main.dart:17:2: Error: This macro application didn't apply correctly.
 // @AnnotationsMacro(UserClass())
 //  ^
 //
-// org-dartlang-test:///a/b/c/main.dart:11:2: Error: This macro application didn't apply correctly due to an unhandled send.
+// org-dartlang-test:///a/b/c/main.dart:11:2: Error: This macro application didn't apply correctly.
 // @AnnotationsMacro(UserClass())
 //  ^
 //
-// org-dartlang-test:///a/b/c/main.dart:13:4: Error: This macro application didn't apply correctly due to an unhandled send.
+// org-dartlang-test:///a/b/c/main.dart:13:4: Error: This macro application didn't apply correctly.
 //   @AnnotationsMacro(UserClass())
 //    ^
 //
@@ -25,19 +25,18 @@ class UserClass extends core::Object /*hasConstConstructor*/  {
     : super core::Object::•()
     ;
 }
-@#C3
+@#C2
 class Class extends core::Object {
   synthetic constructor •() → self::Class
     : super core::Object::•()
     ;
-  @#C3
+  @#C2
   method method() → dynamic {}
 }
-@#C3
+@#C2
 static method method() → dynamic {}
 
 constants  {
   #C1 = self::UserClass {}
-  #C2 = null
-  #C3 = ann::AnnotationsMacro {object:#C1, additional:#C2}
+  #C2 = ann::AnnotationsMacro {object:#C1}
 }

@@ -54,7 +54,7 @@ void matchIL$main_foo(FlowGraph graph) {
     'B4' <<
         match.block('Target', [
           'v27' << match.BoxInt64('v5'),
-          match.DartReturn('v27'),
+          match.Return('v27'),
         ]),
   ]);
 }

@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
 import 'package:analysis_server/src/lsp/source_edits.dart';
@@ -26,18 +25,12 @@ class TextDocumentChangeHandler
   @override
   FutureOr<ErrorOr<void>> handle(DidChangeTextDocumentParams params,
       MessageInfo message, CancellationToken token) {
-    var doc = params.textDocument;
-    // Editors should never try to change our macro files, but just in case
-    // we get these requests, ignore them.
-    if (!isEditableDocument(doc.uri)) {
-      return success(null);
-    }
-
-    var path = pathOfDoc(doc);
-    return path.mapResultSync((path) => _changeFile(path, params));
+    final path = pathOfDoc(params.textDocument);
+    return path.mapResult((path) => _changeFile(path, params));
   }
 
-  ErrorOr<void> _changeFile(String path, DidChangeTextDocumentParams params) {
+  FutureOr<ErrorOr<void>> _changeFile(
+      String path, DidChangeTextDocumentParams params) {
     String? oldContents;
     if (server.resourceProvider.hasOverlay(path)) {
       oldContents = server.resourceProvider.getFile(path).readAsStringSync();
@@ -48,12 +41,13 @@ class TextDocumentChangeHandler
       return error(
         ServerErrorCodes.ClientServerInconsistentState,
         'Unable to edit document because the file was not previously opened: $path',
+        null,
       );
     }
-    var newContents = applyAndConvertEditsToServer(
+    final newContents = applyAndConvertEditsToServer(
         oldContents, params.contentChanges,
         failureIsCritical: true);
-    return newContents.mapResultSync((result) {
+    return newContents.mapResult((result) {
       server.documentVersions[path] = params.textDocument;
       server.onOverlayUpdated(path, result.edits, newContent: result.content);
       return success(null);
@@ -75,17 +69,13 @@ class TextDocumentCloseHandler
   @override
   FutureOr<ErrorOr<void>> handle(DidCloseTextDocumentParams params,
       MessageInfo message, CancellationToken token) {
-    var doc = params.textDocument;
-    var path = pathOfDoc(doc);
+    final path = pathOfDoc(params.textDocument);
     return path.mapResult((path) async {
-      if (isEditableDocument(doc.uri)) {
-        // It's critical overlays are processed synchronously because other
-        // requests that sneak in when we `await` rely on them being
-        // correct.
-        server.onOverlayDestroyed(path);
-        server.documentVersions.remove(path);
-      }
-
+      // It's critical overlays are processed synchronously because other
+      // requests that sneak in when we `await` rely on them being
+      // correct.
+      server.onOverlayDestroyed(path);
+      server.documentVersions.remove(path);
       // This is async because if onlyAnalyzeProjectsWithOpenFiles is true
       // it can trigger a change of analysis roots.
       await server.removePriorityFile(path);
@@ -109,21 +99,19 @@ class TextDocumentOpenHandler
   @override
   FutureOr<ErrorOr<void>> handle(DidOpenTextDocumentParams params,
       MessageInfo message, CancellationToken token) {
-    var doc = params.textDocument;
-    var path = pathOfDocItem(doc);
+    final doc = params.textDocument;
+    final path = pathOfDocItem(doc);
     return path.mapResult((path) async {
-      if (isEditableDocument(doc.uri)) {
-        // We don't get a OptionalVersionedTextDocumentIdentifier with a didOpen but we
-        // do get the necessary info to create one.
-        server.documentVersions[path] = VersionedTextDocumentIdentifier(
-          version: params.textDocument.version,
-          uri: params.textDocument.uri,
-        );
-        // It's critical overlays are processed synchronously because other
-        // requests that sneak in when we `await` rely on them being
-        // correct.
-        server.onOverlayCreated(path, doc.text);
-      }
+      // We don't get a OptionalVersionedTextDocumentIdentifier with a didOpen but we
+      // do get the necessary info to create one.
+      server.documentVersions[path] = VersionedTextDocumentIdentifier(
+        version: params.textDocument.version,
+        uri: params.textDocument.uri,
+      );
+      // It's critical overlays are processed synchronously because other
+      // requests that sneak in when we `await` rely on them being
+      // correct.
+      server.onOverlayCreated(path, doc.text);
 
       // This is async because if onlyAnalyzeProjectsWithOpenFiles is true
       // it can trigger a change of analysis roots.
@@ -164,6 +152,7 @@ class TextDocumentRegistrations extends FeatureRegistration
         change: TextDocumentSyncKind.Incremental,
         willSave: false,
         willSaveWaitUntil: false,
+        save: null,
       ));
 
   @override

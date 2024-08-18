@@ -5,9 +5,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use matching super parameter names.';
 
@@ -59,15 +59,23 @@ class ColoredRectangle extends Rectangle {
 ''';
 
 class MatchingSuperParameters extends LintRule {
+  static const LintCode code = LintCode(
+      'matching_super_parameters',
+      "The super parameter named '{0}'' does not share the same name as the "
+          "corresponding parameter in the super constructor, '{1}'.",
+      correctionMessage:
+          'Try using the name of the corresponding parameter in the super '
+          'constructor.');
+
   MatchingSuperParameters()
       : super(
             name: 'matching_super_parameters',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.matching_super_parameters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

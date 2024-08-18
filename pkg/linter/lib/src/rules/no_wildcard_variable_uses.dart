@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/ascii_utils.dart';
 
 const _desc = r"Don't use wildcard parameters or variables.";
@@ -46,18 +45,19 @@ var [a, _, b, _] = [1, 2, 3, 4];
 ''';
 
 class NoWildcardVariableUses extends LintRule {
+  static const LintCode code = LintCode(
+      'no_wildcard_variable_uses', 'The referenced identifier is a wildcard.',
+      correctionMessage: 'Use an identifier name that is not a wildcard.');
+
   NoWildcardVariableUses()
       : super(
             name: 'no_wildcard_variable_uses',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.languageFeatureUsage,
-              LintRuleCategory.unintentional
-            });
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.no_wildcard_variable_uses;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

@@ -9,5 +9,4 @@ class Const {
 }
 
 expect(expected, actual) {}
-
 main() {}

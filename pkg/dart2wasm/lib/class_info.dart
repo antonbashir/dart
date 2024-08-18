@@ -4,10 +4,12 @@
 
 import 'dart:math';
 
-import 'package:kernel/ast.dart';
-import 'package:wasm_builder/wasm_builder.dart' as w;
+import 'package:dart2wasm/translator.dart';
 
-import 'translator.dart';
+import 'package:kernel/ast.dart';
+import 'package:kernel/library_index.dart';
+
+import 'package:wasm_builder/wasm_builder.dart' as w;
 
 /// Wasm struct field indices for fields that are accessed explicitly from Wasm
 /// code, e.g. in intrinsics.
@@ -38,8 +40,7 @@ class FieldIndex {
   static const closureRuntimeType = 4;
   static const vtableDynamicCallEntry = 0;
   static const vtableInstantiationTypeComparisonFunction = 1;
-  static const vtableInstantiationTypeHashFunction = 2;
-  static const vtableInstantiationFunction = 3;
+  static const vtableInstantiationFunction = 2;
   static const instantiationContextInner = 0;
   static const instantiationContextTypeArgumentsBase = 1;
   static const typeIsDeclaredNullable = 2;
@@ -50,8 +51,6 @@ class FieldIndex {
   static const suspendStateIterator = 4;
   static const suspendStateContext = 5;
   static const suspendStateTargetIndex = 6;
-  static const suspendStateCurrentException = 7;
-  static const suspendStateCurrentExceptionStackTrace = 8;
   static const syncStarIteratorCurrent = 3;
   static const syncStarIteratorYieldStarIterable = 4;
   static const recordFieldBase = 2;
@@ -90,7 +89,8 @@ class FieldIndex {
     }
     check(translator.listBaseClass, "_length", FieldIndex.listLength);
     check(translator.listBaseClass, "_data", FieldIndex.listArray);
-    check(translator.hashFieldBaseClass, "_index", FieldIndex.hashBaseIndex);
+    check(translator.hashFieldBaseClass, "_indexNullable",
+        FieldIndex.hashBaseIndex);
     check(translator.hashFieldBaseClass, "_data", FieldIndex.hashBaseData);
     check(translator.closureClass, "context", FieldIndex.closureContext);
     check(translator.typeClass, "isDeclaredNullable",
@@ -108,10 +108,6 @@ class FieldIndex {
         FieldIndex.suspendStateContext);
     check(translator.suspendStateClass, "_targetIndex",
         FieldIndex.suspendStateTargetIndex);
-    check(translator.suspendStateClass, "_currentException",
-        FieldIndex.suspendStateCurrentException);
-    check(translator.suspendStateClass, "_currentExceptionStackTrace",
-        FieldIndex.suspendStateCurrentExceptionStackTrace);
     check(translator.syncStarIteratorClass, "_current",
         FieldIndex.syncStarIteratorCurrent);
     check(translator.syncStarIteratorClass, "_yieldStarIterable",
@@ -123,9 +119,6 @@ class FieldIndex {
 /// by `Object._objectHashCode` wich updates the field first time it's read.
 const int initialIdentityHash = 0;
 
-/// We do not assign real class ids to anonymous mixin classes.
-const int anonymousMixinClassId = -1;
-
 /// Information about the Wasm representation for a class.
 class ClassInfo {
   /// The Dart class that this info corresponds to. The top type does not have
@@ -133,14 +126,7 @@ class ClassInfo {
   final Class? cls;
 
   /// The Class ID of this class, stored in every instance of the class.
-  int get classId {
-    if (_classId == anonymousMixinClassId) {
-      throw 'Tried to access class ID of anonymous mixin $cls';
-    }
-    return _classId;
-  }
-
-  final int _classId;
+  final int classId;
 
   /// Depth of this class in the Wasm type hierarchy.
   final int depth;
@@ -155,7 +141,7 @@ class ClassInfo {
   final ClassInfo? superInfo;
 
   /// The class that this class masquerades as via `runtimeType`, if any.
-  ClassInfo? masquerade;
+  ClassInfo? masquerade = null;
 
   /// For every type parameter which is directly mapped to a type parameter in
   /// the superclass, this contains the corresponding superclass type
@@ -165,9 +151,11 @@ class ClassInfo {
 
   /// The class whose struct is used as the type for variables of this type.
   /// This is a type which is a superclass of all subtypes of this type.
-  ClassInfo get repr => _repr!;
+  late final ClassInfo repr = upperBound(
+      implementedBy.map((c) => identical(c, this) ? this : c.repr).toSet());
 
-  ClassInfo? _repr;
+  /// All classes which implement this class. This is used to compute `repr`.
+  final List<ClassInfo> implementedBy = [];
 
   /// Nullabe Wasm ref type for this class.
   final w.RefType nullableType;
@@ -179,10 +167,12 @@ class ClassInfo {
   w.RefType typeWithNullability(bool nullable) =>
       nullable ? nullableType : nonNullableType;
 
-  ClassInfo(this.cls, this._classId, this.depth, this.struct, this.superInfo,
+  ClassInfo(this.cls, this.classId, this.depth, this.struct, this.superInfo,
       {this.typeParameterMatch = const {}})
       : nullableType = w.RefType.def(struct, nullable: true),
-        nonNullableType = w.RefType.def(struct, nullable: false);
+        nonNullableType = w.RefType.def(struct, nullable: false) {
+    implementedBy.add(this);
+  }
 
   void _addField(w.FieldType fieldType, [int? expectedIndex]) {
     assert(expectedIndex == null || expectedIndex == struct.fields.length);
@@ -197,52 +187,53 @@ class ClassInfo {
       ];
 }
 
-ClassInfo upperBound(ClassInfo a, ClassInfo b) {
-  if (a.depth < b.depth) {
-    while (b.depth > a.depth) {
-      b = b.superInfo!;
+ClassInfo upperBound(Set<ClassInfo> classes) {
+  while (classes.length > 1) {
+    Set<ClassInfo> newClasses = {};
+    int minDepth = 999999999;
+    int maxDepth = 0;
+    for (ClassInfo info in classes) {
+      minDepth = min(minDepth, info.depth);
+      maxDepth = max(maxDepth, info.depth);
     }
-  } else {
-    while (a.depth > b.depth) {
-      a = a.superInfo!;
+    int targetDepth = minDepth == maxDepth ? minDepth - 1 : minDepth;
+    for (ClassInfo info in classes) {
+      while (info.depth > targetDepth) {
+        info = info.superInfo!;
+      }
+      newClasses.add(info);
     }
+    classes = newClasses;
   }
-  assert(a.depth == b.depth);
-  while (a != b) {
-    a = a.superInfo!;
-    b = b.superInfo!;
-  }
-  return a;
+  return classes.single;
 }
 
 /// Constructs the Wasm type hierarchy.
 class ClassInfoCollector {
   final Translator translator;
+  int _nextClassId = 0;
   late final ClassInfo topInfo;
 
   /// Maps number of record fields to the struct type to be used for a record
   /// shape class with that many fields.
   final Map<int, w.StructType> _recordStructs = {};
 
-  /// Any subtype of these needs to masqueraded (modulo special js-compatibility
-  /// mode semantics) or specially treated due to being from a different type
-  /// (e.g. record, closure)
-  late final Set<Class> masqueraded = _computeMasquerades();
+  /// Masquerades for implementation classes. For each entry of the map, all
+  /// subtypes of the key masquerade as the value.
+  late final Map<Class, Class> _masquerades = _computeMasquerades();
 
-  Set<Class> _computeMasquerades() {
-    final values = {
-      translator.coreTypes.boolClass,
-      translator.coreTypes.intClass,
-      translator.coreTypes.doubleClass,
-      translator.coreTypes.stringClass,
-      translator.coreTypes.functionClass,
-      translator.coreTypes.recordClass,
-      translator.index.getClass("dart:core", "_Type"),
-      translator.index.getClass("dart:_list", "WasmListBase"),
+  Map<Class, Class> _computeMasquerades() {
+    final map = {
+      translator.coreTypes.boolClass: translator.coreTypes.boolClass,
+      translator.coreTypes.intClass: translator.coreTypes.intClass,
+      translator.coreTypes.doubleClass: translator.coreTypes.doubleClass,
+      translator.coreTypes.stringClass: translator.coreTypes.stringClass,
+      translator.index.getClass("dart:core", "_Type"):
+          translator.coreTypes.typeClass,
+      translator.index.getClass("dart:core", "_ListBase"):
+          translator.coreTypes.listClass
     };
     for (final name in const <String>[
-      "ByteBuffer",
-      "ByteData",
       "Int8List",
       "Uint8List",
       "Uint8ClampedList",
@@ -259,9 +250,49 @@ class ClassInfoCollector {
       "Float64x2List",
     ]) {
       final Class? cls = translator.index.tryGetClass("dart:typed_data", name);
-      if (cls != null) values.add(cls);
+      if (cls != null) {
+        map[cls] = cls;
+      }
     }
-    return values;
+    return map;
+  }
+
+  late final Set<Class> _neverMasquerades = _computeNeverMasquerades();
+
+  /// These types switch from properly reified non-masquerading types in regular
+  /// Dart2Wasm mode to masquerading types in js compatibility mode.
+  final Set<String> jsCompatibilityTypes = {
+    "JSStringImpl",
+    "JSArrayBufferImpl",
+    "JSDataViewImpl",
+    "JSInt8ArrayImpl",
+    "JSUint8ArrayImpl",
+    "JSUint8ClampedArrayImpl",
+    "JSInt16ArrayImpl",
+    "JSUint16ArrayImpl",
+    "JSInt32ArrayImpl",
+    "JSInt32x4ArrayImpl",
+    "JSUint32ArrayImpl",
+    "JSBigUint64ArrayImpl",
+    "JSBigInt64ArrayImpl",
+    "JSFloat32ArrayImpl",
+    "JSFloat32x4ArrayImpl",
+    "JSFloat64ArrayImpl",
+    "JSFloat64x2ArrayImpl",
+  };
+
+  Set<Class> _computeNeverMasquerades() {
+    // The JS types do not masquerade in regular Dart2Wasm, but they aren't
+    // always used so we have to construct this set programmatically.
+    final jsTypesLibraryIndex =
+        LibraryIndex(translator.component, ["dart:_js_types"]);
+    final neverMasquerades = [
+      if (!translator.options.jsCompatibility) ...jsCompatibilityTypes,
+    ]
+        .map((name) => jsTypesLibraryIndex.tryGetClass("dart:_js_types", name))
+        .toSet();
+    neverMasquerades.removeWhere((c) => c == null);
+    return neverMasquerades.cast<Class>();
   }
 
   /// Wasm field type for fields with type [_Type]. Fields of this type are
@@ -280,41 +311,43 @@ class ClassInfoCollector {
 
   TranslatorOptions get options => translator.options;
 
-  void _createStructForClassTop(int classCount) {
+  void _initializeTop() {
     final w.StructType struct = m.types.defineStruct("#Top");
-    topInfo = ClassInfo(null, 0, 0, struct, null);
+    topInfo = ClassInfo(null, _nextClassId++, 0, struct, null);
+    translator.classes.add(topInfo);
     translator.classForHeapType[struct] = topInfo;
   }
 
-  void _createStructForClass(Map<Class, int> classIds, Class cls) {
+  void _initialize(Class cls) {
     ClassInfo? info = translator.classInfo[cls];
     if (info != null) return;
 
-    final classId = classIds[cls]!;
     Class? superclass = cls.superclass;
     if (superclass == null) {
       ClassInfo superInfo = topInfo;
       final w.StructType struct =
           m.types.defineStruct(cls.name, superType: superInfo.struct);
-      info = ClassInfo(cls, classId, superInfo.depth + 1, struct, superInfo);
+      info = ClassInfo(
+          cls, _nextClassId++, superInfo.depth + 1, struct, superInfo);
       // Mark Top type as implementing Object to force the representation
       // type of Object to be Top.
+      info.implementedBy.add(topInfo);
     } else {
       // Recursively initialize all supertypes before initializing this class.
-      _createStructForClass(classIds, superclass);
+      _initialize(superclass);
       for (Supertype interface in cls.implementedTypes) {
-        _createStructForClass(classIds, interface.classNode);
+        _initialize(interface.classNode);
       }
 
       // In the Wasm type hierarchy, Object, bool and num sit directly below
-      // the Top type. The implementation classes WasmStringBase and _Type sit
+      // the Top type. The implementation classes _StringBase and _Type sit
       // directly below the public classes they implement.
       // All other classes sit below their superclass.
       ClassInfo superInfo = cls == translator.coreTypes.boolClass ||
               cls == translator.coreTypes.numClass
           ? topInfo
           : (!translator.options.jsCompatibility &&
-                      cls == translator.wasmStringBaseClass) ||
+                      cls == translator.stringBaseClass) ||
                   cls == translator.typeClass
               ? translator.classInfo[cls.implementedTypes.single.classNode]!
               : translator.classInfo[superclass]!;
@@ -328,10 +361,8 @@ class ClassInfoCollector {
             : cls.implementedTypes.single;
         for (TypeParameter parameter in cls.typeParameters) {
           for (int i = 0; i < supertype.typeArguments.length; i++) {
-            DartType superTypeArg = supertype.typeArguments[i];
-            if (superTypeArg is TypeParameterType &&
-                superTypeArg.parameter == parameter &&
-                superTypeArg.nullability != Nullability.nullable) {
+            DartType arg = supertype.typeArguments[i];
+            if (arg is TypeParameterType && arg.parameter == parameter) {
               typeParameterMatch[parameter] = superInfo.cls!.typeParameters[i];
               break;
             }
@@ -341,18 +372,49 @@ class ClassInfoCollector {
 
       w.StructType struct =
           m.types.defineStruct(cls.name, superType: superInfo.struct);
-      info = ClassInfo(cls, classId, superInfo.depth + 1, struct, superInfo,
+      info = ClassInfo(
+          cls, _nextClassId++, superInfo.depth + 1, struct, superInfo,
           typeParameterMatch: typeParameterMatch);
+
+      // Mark all interfaces as being implemented by this class. This is
+      // needed to calculate representation types.
+      for (Supertype interface in cls.implementedTypes) {
+        ClassInfo? interfaceInfo = translator.classInfo[interface.classNode];
+        while (interfaceInfo != null) {
+          interfaceInfo.implementedBy.add(info);
+          interfaceInfo = interfaceInfo.superInfo;
+        }
+      }
     }
-    translator.classesSupersFirst.add(info);
+    translator.classes.add(info);
     translator.classInfo[cls] = info;
     translator.classForHeapType.putIfAbsent(info.struct, () => info!);
-    if (classId != anonymousMixinClassId) {
-      translator.classes[classId] = info;
+
+    ClassInfo? computeMasquerade() {
+      if (_neverMasquerades.contains(cls)) {
+        return null;
+      }
+      if (info!.superInfo?.masquerade != null) {
+        return info.superInfo!.masquerade;
+      }
+      for (Supertype implemented in cls.implementedTypes) {
+        ClassInfo? implementedMasquerade =
+            translator.classInfo[implemented.classNode]!.masquerade;
+        if (implementedMasquerade != null) {
+          return implementedMasquerade;
+        }
+      }
+      Class? selfMasquerade = _masquerades[cls];
+      if (selfMasquerade != null) {
+        return translator.classInfo[selfMasquerade]!;
+      }
+      return null;
     }
+
+    info.masquerade = computeMasquerade();
   }
 
-  void _createStructForRecordClass(Map<Class, int> classIds, Class cls) {
+  void _initializeRecordClass(Class cls) {
     final numFields = cls.fields.length;
 
     final struct = _recordStructs.putIfAbsent(
@@ -364,12 +426,10 @@ class ClassInfoCollector {
 
     final ClassInfo superInfo = translator.recordInfo;
 
-    final classId = classIds[cls]!;
     final info =
-        ClassInfo(cls, classId, superInfo.depth + 1, struct, superInfo);
+        ClassInfo(cls, _nextClassId++, superInfo.depth + 1, struct, superInfo);
 
-    translator.classesSupersFirst.add(info);
-    translator.classes[classId] = info;
+    translator.classes.add(info);
     translator.classInfo[cls] = info;
     translator.classForHeapType.putIfAbsent(info.struct, () => info);
   }
@@ -404,7 +464,7 @@ class ClassInfoCollector {
       // Add fields for Dart instance fields
       for (Field field in info.cls!.fields) {
         if (field.isInstanceMember) {
-          final w.ValueType wasmType = translator.translateTypeOfField(field);
+          w.ValueType wasmType = translator.translateType(field.type);
           translator.fieldIndex[field] = info.struct.fields.length;
           info._addField(w.FieldType(wasmType, mutable: !field.isFinal));
         }
@@ -438,68 +498,46 @@ class ClassInfoCollector {
 
   /// Create class info and Wasm struct for all classes.
   void collect() {
-    // `0` is occupied by artificial non-Dart top class.
-    const int firstClassId = 1;
+    _initializeTop();
 
-    final classIdNumbering = translator.classIdNumbering =
-        ClassIdNumbering._number(translator, masqueraded, firstClassId);
-    final classIds = translator.classIdNumbering.classIds;
-    final dfsOrder = translator.classIdNumbering.dfsOrder;
-
-    _createStructForClassTop(dfsOrder.length);
-
-    // Class infos by class-id, will be populated by the calls to
-    // [_createStructForClass] and [_createStructForRecordClass] below.
-    translator.classes =
-        List<ClassInfo>.filled(classIdNumbering.maxClassId + 1, topInfo);
-
-    // Class infos in different order: Infos of super class and super interfaces
-    // before own info.
-    translator.classesSupersFirst = [topInfo];
+    // Initialize the record base class early to give enough space for special
+    // values in the type category table before the first masquerade class
+    // (which is `Type`).
+    _initialize(translator.coreTypes.recordClass);
 
     // Subclasses of the `_Closure` class are generated on the fly as fields
     // with function types are encountered. Therefore, `_Closure` class must
     // be early in the initialization order.
-    _createStructForClass(classIds, translator.closureClass);
+    _initialize(translator.closureClass);
 
     // Similarly `_Type` is needed for type parameter fields in classes and
     // needs to be initialized before we encounter a class with type
     // parameters.
-    _createStructForClass(classIds, translator.typeClass);
+    _initialize(translator.typeClass);
 
-    // Similarly the `Record` class needs to be handled before the loop below as
-    // the [_createStructForRecordClass] needs it.
-    _createStructForClass(classIds, translator.coreTypes.recordClass);
-
-    for (final cls in dfsOrder) {
-      if (cls.superclass == translator.coreTypes.recordClass) {
-        _createStructForRecordClass(classIds, cls);
-      } else {
-        _createStructForClass(classIds, cls);
-      }
+    // Initialize value classes to make sure they have low class IDs.
+    for (Class cls in translator.valueClasses.keys) {
+      _initialize(cls);
     }
 
-    // Create representations of the classes (i.e. wasm representation used to
-    // represent objects of that dart type).
-    for (final cls in dfsOrder) {
-      ClassInfo? representation;
-      for (final range in classIdNumbering.getConcreteClassIdRanges(cls)) {
-        for (int classId = range.start; classId <= range.end; ++classId) {
-          final current = translator.classes[classId];
-          if (representation == null) {
-            representation = current;
-            continue;
-          }
-          representation = upperBound(representation, current);
+    // Initialize masquerade classes to make sure they have low class IDs.
+    for (Class cls in _masquerades.values) {
+      _initialize(cls);
+    }
+
+    for (Library library in translator.component.libraries) {
+      for (Class cls in library.classes) {
+        if (cls.superclass == translator.coreTypes.recordClass) {
+          _initializeRecordClass(cls);
+        } else {
+          _initialize(cls);
         }
       }
-      final info = translator.classInfo[cls]!;
-      info._repr = representation ?? info;
     }
 
     // Now that the representation types for all classes have been computed,
     // fill in the types of the fields in the generated Wasm structs.
-    for (final info in translator.classesSupersFirst) {
+    for (ClassInfo info in translator.classes) {
       if (info.superInfo == translator.recordInfo) {
         _generateRecordFields(info);
       } else {
@@ -509,279 +547,5 @@ class ClassInfoCollector {
 
     // Validate that all internally used fields have the expected indices.
     FieldIndex.validate(translator);
-  }
-}
-
-class ClassIdNumbering {
-  final Map<Class, List<Class>> _subclasses;
-  final Map<Class, List<Class>> _implementors;
-  final Map<Class, Range> _concreteSubclassIdRange;
-  final Set<Class> _masqueraded;
-
-  final List<Class> dfsOrder;
-  final Map<Class, int> classIds;
-  final int maxConcreteClassId;
-  final int maxClassId;
-
-  ClassIdNumbering._(
-      this._subclasses,
-      this._implementors,
-      this._concreteSubclassIdRange,
-      this._masqueraded,
-      this.dfsOrder,
-      this.classIds,
-      this.maxConcreteClassId,
-      this.maxClassId);
-
-  final Map<Class, Set<Class>> _transitiveImplementors = {};
-  Set<Class> _getTransitiveImplementors(Class klass) {
-    var transitiveImplementors = _transitiveImplementors[klass];
-    if (transitiveImplementors != null) return transitiveImplementors;
-
-    transitiveImplementors = {};
-
-    List<Class>? classes = _subclasses[klass];
-    if (classes != null) {
-      for (final cls in classes) {
-        transitiveImplementors.addAll(_getTransitiveImplementors(cls));
-      }
-    }
-    classes = _implementors[klass];
-    if (classes != null) {
-      for (final cls in classes) {
-        transitiveImplementors.add(cls);
-        transitiveImplementors.addAll(_getTransitiveImplementors(cls));
-      }
-    }
-
-    return _transitiveImplementors[klass] = transitiveImplementors;
-  }
-
-  // Maps a class to a list of class id ranges that implement/extend the given
-  // class directly or transitively.
-  final Map<Class, List<Range>> _concreteClassIdRanges = {};
-  List<Range> getConcreteClassIdRanges(Class klass) {
-    var ranges = _concreteClassIdRanges[klass];
-    if (ranges != null) return ranges;
-
-    ranges = [];
-    final transitiveImplementors = _getTransitiveImplementors(klass);
-    final range = _concreteSubclassIdRange[klass]!;
-    if (!range.isEmpty) ranges.add(range);
-    for (final implementor in transitiveImplementors) {
-      final range = _concreteSubclassIdRange[implementor]!;
-      if (!range.isEmpty) ranges.add(range);
-    }
-    ranges.normalize();
-
-    return _concreteClassIdRanges[klass] = ranges;
-  }
-
-  late final int firstNonMasqueradedInterfaceClassCid = (() {
-    int lastMasqueradedClassId = 0;
-    for (final cls in _masqueraded) {
-      final ranges = getConcreteClassIdRanges(cls);
-      if (ranges.isNotEmpty) {
-        lastMasqueradedClassId = max(lastMasqueradedClassId, ranges.last.end);
-      }
-    }
-    return lastMasqueradedClassId + 1;
-  })();
-
-  static ClassIdNumbering _number(
-      Translator translator, Set<Class> masqueraded, int firstClassId) {
-    // Make graph from class to its subclasses.
-    late final Class root;
-    final subclasses = <Class, List<Class>>{};
-    final implementors = <Class, List<Class>>{};
-    int concreteClassCount = 0;
-    int abstractClassCount = 0;
-    int anonymousMixinClassCount = 0;
-    for (final library in translator.component.libraries) {
-      for (final cls in library.classes) {
-        if (cls.isAnonymousMixin) {
-          assert(cls.isAbstract);
-          anonymousMixinClassCount++;
-        } else if (cls.isAbstract) {
-          abstractClassCount++;
-        } else {
-          concreteClassCount++;
-        }
-        final superClass = cls.superclass;
-        if (superClass == null) {
-          root = cls;
-        } else {
-          subclasses.putIfAbsent(superClass, () => []).add(cls);
-        }
-        for (final interface in cls.implementedTypes) {
-          implementors.putIfAbsent(interface.classNode, () => []).add(cls);
-        }
-      }
-    }
-
-    // We have a preference in which order we explore the direct subclasses of
-    // `Object` as that allows us to keep class ids of certain hierarchies
-    // low.
-    // TODO: If we had statistics (e.g. number of class allocations, number of
-    // times class is mentioned in type, ...) we'd have an estimate of how often
-    // we have to encode a class-id. Then we could reorder the subclasses
-    // depending on usage count of the subclass trees.
-    final fixedOrder = <Class, int>{
-      translator.coreTypes.boolClass: -10,
-      translator.coreTypes.numClass: -9,
-      if (!translator.options.jsCompatibility)
-        translator.wasmStringBaseClass: -8,
-      translator.jsStringClass: -7,
-      translator.typeClass: -6,
-      translator.listBaseClass: -5,
-      translator.hashFieldBaseClass: -4,
-    };
-    int order(Class klass) {
-      final order = fixedOrder[klass];
-      if (order != null) return order;
-
-      final importUri = klass.enclosingLibrary.importUri.toString();
-      if (importUri.startsWith('dart:')) {
-        if (masqueraded.contains(klass)) return -1;
-        // Bundle the typed data and collection together, they may not have
-        // common base class except for `Object` but most of them have similar
-        // selectors.
-        if (importUri.startsWith('dart:typed_data')) return 0;
-        if (importUri.startsWith('dart:collection')) return 1;
-        if (importUri.startsWith('dart:core')) return 2;
-
-        // The dart:wasm classes are marked as entrypoints, therefore retained by
-        // TFA but they can never be instantiated, as they represent raw wasm
-        // types that aren't part of the dart object hierarchy.
-        // Move them to the very end of the class table.
-        if (klass.name.startsWith('_WasmBase')) return 0xffffff;
-        return 3;
-      }
-      return 10;
-    }
-
-    subclasses[root]!.sort((Class a, Class b) => order(a).compareTo(order(b)));
-
-    // Traverse class inheritence graph in depth-first pre-order.
-    void dfs(
-        Class root, int Function(Class) pre, void Function(Class, int) post) {
-      final classId = pre(root);
-      final children = subclasses[root];
-      if (children != null) {
-        for (final sub in children) {
-          dfs(sub, pre, post);
-        }
-      }
-      post(root, classId);
-    }
-
-    // Make a list of the depth-first pre-order traversal.
-    final dfsOrder = <Class>[];
-    final classIds = <Class, int>{};
-
-    // Maps any class to a dense range of concrete class ids that are subclasses
-    // of that class.
-    final concreteSubclassRange = <Class, Range>{};
-
-    int nextConcreteClassId = firstClassId;
-    int nextAbstractClassId = firstClassId + concreteClassCount;
-    dfs(root, (Class cls) {
-      dfsOrder.add(cls);
-      if (cls.isAnonymousMixin) {
-        classIds[cls] = anonymousMixinClassId;
-        return nextConcreteClassId;
-      }
-      if (cls.isAbstract) {
-        var classId = classIds[cls];
-        if (classId == null) classIds[cls] = nextAbstractClassId++;
-        return nextConcreteClassId;
-      }
-
-      assert(classIds[cls] == null);
-      classIds[cls] = nextConcreteClassId++;
-      return nextConcreteClassId - 1;
-    }, (Class cls, int firstClassId) {
-      final range = Range(firstClassId, nextConcreteClassId - 1);
-      concreteSubclassRange[cls] = range;
-    });
-
-    assert(dfsOrder.length ==
-        (concreteClassCount + abstractClassCount + anonymousMixinClassCount));
-
-    return ClassIdNumbering._(
-        subclasses,
-        implementors,
-        concreteSubclassRange,
-        masqueraded,
-        dfsOrder,
-        classIds,
-        firstClassId + concreteClassCount - 1,
-        firstClassId + concreteClassCount + abstractClassCount - 1);
-  }
-}
-
-// A range of class ids, both ends inclusive.
-class Range {
-  final int start;
-  final int end;
-
-  Range._(this.start, this.end) : assert(start <= end);
-  const Range.empty()
-      : start = 0,
-        end = -1;
-  factory Range(int start, int end) {
-    if (end < start) return Range.empty();
-    return Range._(start, end);
-  }
-
-  int get length => 1 + (end - start);
-  bool get isEmpty => length == 0;
-
-  bool contains(int id) => start <= id && id <= end;
-  bool containsRange(Range other) => start <= other.start && other.end <= end;
-
-  Range shiftBy(int offset) {
-    if (isEmpty) return this;
-    return Range(start + offset, end + offset);
-  }
-
-  @override
-  int get hashCode => Object.hash(start, end);
-
-  @override
-  bool operator ==(other) =>
-      other is Range && other.start == start && other.end == end;
-
-  @override
-  String toString() => isEmpty ? '[]' : '[$start, $end]';
-}
-
-extension RangeListExtention on List<Range> {
-  void normalize() {
-    if (isEmpty) return;
-
-    // Ensure we sort ranges by start of the range.
-    sort((a, b) => a.start.compareTo(b.start));
-
-    int current = 0;
-    Range currentRange = this[0];
-    for (int read = 1; read < length; ++read) {
-      final nextRange = this[read];
-      if (currentRange.isEmpty) {
-        currentRange = nextRange;
-        continue;
-      }
-      if (nextRange.isEmpty) continue;
-      if (currentRange.containsRange(nextRange)) continue;
-      if (currentRange.contains(nextRange.start)) {
-        currentRange = Range(currentRange.start, nextRange.end);
-        continue;
-      }
-
-      this[current++] = currentRange;
-      currentRange = nextRange;
-    }
-    this[current++] = currentRange;
-    length = current;
   }
 }

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -11,14 +11,7 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ConvertToOnType extends ResolvedCorrectionProducer {
   @override
-  final List<String> fixArguments = [];
-
-  ConvertToOnType({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
+  final List<Object> fixArguments = [];
 
   @override
   FixKind get fixKind => DartFixKind.CONVERT_TO_ON_TYPE;
@@ -36,7 +29,7 @@ class ConvertToOnType extends ResolvedCorrectionProducer {
             catchClause.exceptionParameter == exceptionParameter &&
             rightParenthesis != null) {
           var exceptionTypeName = exceptionParameter.name;
-          fixArguments.add(exceptionTypeName.toString());
+          fixArguments.add(exceptionTypeName);
           await builder.addDartFileEdit(file, (builder) {
             var stackTraceParameter = catchClause.stackTraceParameter;
             if (stackTraceParameter != null) {

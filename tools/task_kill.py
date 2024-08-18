@@ -25,7 +25,6 @@ EXECUTABLE_NAMES = {
     'win32': {
         'chrome': 'chrome.exe',
         'dart': 'dart.exe',
-        'dartaotruntime': 'dartaotruntime.exe',
         'dart_precompiled_runtime': 'dart_precompiled_runtime.exe',
         'firefox': 'firefox.exe',
         'gen_snapshot': 'gen_snapshot.exe',
@@ -37,7 +36,6 @@ EXECUTABLE_NAMES = {
     'linux': {
         'chrome': 'chrome',
         'dart': 'dart',
-        'dartaotruntime': 'dartaotruntime',
         'dart_precompiled_runtime': 'dart_precompiled_runtime',
         'firefox': 'firefox',
         'gen_snapshot': 'gen_snapshot',
@@ -48,7 +46,6 @@ EXECUTABLE_NAMES = {
         'chrome': 'Chrome',
         'chrome_helper': 'Chrome Helper',
         'dart': 'dart',
-        'dartaotruntime': 'dartaotruntime',
         'dart_precompiled_runtime': 'dart_precompiled_runtime',
         'firefox': 'firefox',
         'gen_snapshot': 'gen_snapshot',
@@ -260,7 +257,6 @@ def KillVSBuild():
 def KillDart():
     status = Kill("dart", dump_stacks=True)
     status += Kill("gen_snapshot", dump_stacks=True)
-    status += Kill("dartaotruntime", dump_stacks=True)
     status += Kill("dart_precompiled_runtime", dump_stacks=True)
     status += Kill("flutter_tester", dump_stacks=True)
     return status

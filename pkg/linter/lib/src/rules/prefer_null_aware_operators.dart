@@ -7,12 +7,11 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Prefer using `null`-aware operators.';
+const _desc = r'Prefer using null aware operators.';
 
 const _details = r'''
-**PREFER** using `null`-aware operators instead of `null` checks in conditional
+**PREFER** using null aware operators instead of null checks in conditional
 expressions.
 
 **BAD:**
@@ -28,15 +27,21 @@ v = a?.b;
 ''';
 
 class PreferNullAwareOperators extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_null_aware_operators',
+      "Use the null-aware operator '?.' rather than an explicit 'null' "
+          'comparison.',
+      correctionMessage: "Try using '?.'.");
+
   PreferNullAwareOperators()
       : super(
             name: 'prefer_null_aware_operators',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_null_aware_operators;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

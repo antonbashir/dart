@@ -578,143 +578,21 @@ void f() {
       'hasFix': false
     };
 
-    group('default', () {
-      test('emits correct format', () {
-        final logger = TestLogger(false);
-        final errors = [AnalysisError(sampleInfoJson)];
+    test('default', () {
+      final logger = TestLogger(false);
+      final errors = [AnalysisError(sampleInfoJson)];
 
-        AnalyzeCommand.emitDefaultFormat(logger, errors);
+      AnalyzeCommand.emitDefaultFormat(logger, errors);
 
-        expect(logger.stderrBuffer, isEmpty);
-        final stdout = logger.stdoutBuffer.toString().trim();
-        expect(stdout, contains('info'));
-        expect(stdout, contains('lib${path.separator}test.dart:15:4'));
-        expect(stdout, contains('Foo bar baz.'));
-        expect(stdout, contains('dead_code'));
-      });
-
-      test('prioritizes errors in analysis_options.yaml (with other errors)',
-          () async {
-        p = project(
-            mainSrc: 'int get foo => null;\n',
-            analysisOptions: 'include: package:lints/recommended.yaml\nf');
-        var result = await p.runAnalyze([]);
-
-        expect(result.exitCode, 3);
-        expect(result.stderr, isEmpty);
-
-        final stdout = result.stdout;
-        final expectedOutput = '''
-Analyzing myapp...
-
-Errors were found in 'pubspec.yaml' and/or 'analysis_options.yaml' which might result in either invalid diagnostics being produced or valid diagnostics being missed.
-
-  error - analysis_options.yaml:2:1 - Could not find expected ':' for simple key. - parse_error
-
-Errors in remaining files.
-
-  error - lib${path.separator}main.dart:1:16 - A value of type 'Null' can't be returned from the function 'foo' because it has a return type of 'int'. - return_of_invalid_type
-
-2 issues found.
-''';
-        expect(stdout.trim(), expectedOutput.trim());
-      });
-
-      test('prioritizes errors in analysis_options.yaml (without other errors)',
-          () async {
-        p = project(
-            mainSrc: 'int get foo => 1;\n',
-            analysisOptions: 'include: package:lints/recommended.yaml\nf');
-        var result = await p.runAnalyze([]);
-
-        expect(result.exitCode, 3);
-        expect(result.stderr, isEmpty);
-
-        final stdout = result.stdout;
-        final expectedOutput = '''
-Analyzing myapp...
-
-Errors were found in 'pubspec.yaml' and/or 'analysis_options.yaml' which might result in either invalid diagnostics being produced or valid diagnostics being missed.
-
-  error - analysis_options.yaml:2:1 - Could not find expected ':' for simple key. - parse_error
-
-1 issue found.
-''';
-        expect(stdout.trim(), expectedOutput.trim());
-      });
-
-      test('does not prioritize warnings in analysis_options.yaml', () async {
-        p = project(
-            mainSrc: 'int get foo => null;\n',
-            analysisOptions: 'include: package:lints/recommended.yaml');
-        var result = await p.runAnalyze([]);
-
-        expect(result.exitCode, 3);
-        expect(result.stderr, isEmpty);
-
-        final stdout = replacePathsWithMatchingCase(
-          result.stdout.toString(),
-          filePath: p.dirPath,
-        );
-        final expectedOutput = '''
-Analyzing myapp...
-
-  error - lib${path.separator}main.dart:1:16 - A value of type 'Null' can't be returned from the function 'foo' because it has a return type of 'int'. - return_of_invalid_type
-warning - analysis_options.yaml:1:10 - The include file 'package:lints/recommended.yaml' in '${p.analysisOptionsPath}' can't be found when analyzing '${p.dirPath}'. - include_file_not_found
-
-2 issues found.
-''';
-        expect(stdout.trim(), expectedOutput.trim());
-      });
+      expect(logger.stderrBuffer, isEmpty);
+      final stdout = logger.stdoutBuffer.toString().trim();
+      expect(stdout, contains('info'));
+      expect(stdout, contains('lib${path.separator}test.dart:15:4'));
+      expect(stdout, contains('Foo bar baz.'));
+      expect(stdout, contains('dead_code'));
     });
 
     group('json', () {
-      group('--format=json', () {
-        test('no errors', () async {
-          p = project(mainSrc: 'int get foo => 1;\n');
-          var result = await p.runAnalyze([
-            '--format=json',
-            p.mainPath,
-          ]);
-
-          expect(result.exitCode, 0);
-          expect(result.stderr, isEmpty);
-
-          final stdout = result.stdout.trim();
-          expect(stdout, '{"version":1,"diagnostics":[]}');
-        });
-        test('one error', () async {
-          p = project(mainSrc: "int get foo => 'str';\n");
-          var result = await p.runAnalyze([
-            '--format=json',
-            p.mainPath,
-          ]);
-
-          expect(result.exitCode, 3);
-          expect(result.stderr, isEmpty);
-
-          final escapedSeparator = path.separator.replaceAll('\\', '\\\\');
-          final stdout = result.stdout.trim();
-          expect(
-              stdout,
-              startsWith(
-                  '{"version":1,"diagnostics":[{"code":"return_of_invalid_type",'));
-          expect(stdout, endsWith('}'));
-          expect(stdout, contains('lib${escapedSeparator}main.dart'));
-          expect(stdout, contains('"line":1,"column":16'));
-          expect(stdout, contains('"problemMessage":"A value of type '));
-        });
-      });
-      test('empty', () {
-        final logger = TestLogger(false);
-        const List<AnalysisError> errors = [];
-
-        AnalyzeCommand.emitJsonFormat(logger, errors, null);
-
-        expect(logger.stderrBuffer, isEmpty);
-        final stdout = logger.stdoutBuffer.toString().trim();
-        expect(stdout, '{"version":1,"diagnostics":[]}');
-      });
       test('short', () {
         final logger = TestLogger(false);
         final errors = [AnalysisError(sampleInfoJson)];
@@ -756,49 +634,18 @@ warning - analysis_options.yaml:1:10 - The include file 'package:lints/recommend
             '"https:://dart.dev/diagnostics/referenced_before_declaration"}]}');
       });
     });
-    group('machine', () {
-      group('--format=machine', () {
-        test('no errors', () async {
-          p = project(mainSrc: 'int get foo => 1;\n');
-          var result = await p.runAnalyze([
-            '--format=machine',
-            p.mainPath,
-          ]);
 
-          expect(result.exitCode, 0);
-          expect(result.stderr, isEmpty);
+    test('machine', () {
+      final logger = TestLogger(false);
+      final errors = [AnalysisError(sampleInfoJson)];
 
-          final stdout = result.stdout.trim();
-          expect(stdout, isEmpty);
-        });
-        test('one error', () async {
-          p = project(mainSrc: "int get foo => 'str';\n");
-          var result = await p.runAnalyze([
-            '--format=machine',
-            p.mainPath,
-          ]);
+      AnalyzeCommand.emitMachineFormat(logger, errors);
 
-          expect(result.exitCode, 3);
-          expect(result.stderr, isEmpty);
-
-          final escapedSeparator = path.separator.replaceAll('\\', '\\\\');
-          final stdout = result.stdout.trim();
-          expect(stdout, contains('|A value of type '));
-          expect(stdout, contains('lib${escapedSeparator}main.dart|1|16|'));
-        });
-      });
-      test('short', () {
-        final logger = TestLogger(false);
-        final errors = [AnalysisError(sampleInfoJson)];
-
-        AnalyzeCommand.emitMachineFormat(logger, errors);
-
-        expect(logger.stderrBuffer, isEmpty);
-        expect(
-          logger.stdoutBuffer.toString().trim(),
-          'INFO|TODO|DEAD_CODE|lib/test.dart|15|4|72|Foo bar baz.',
-        );
-      });
+      expect(logger.stderrBuffer, isEmpty);
+      expect(
+        logger.stdoutBuffer.toString().trim(),
+        'INFO|TODO|DEAD_CODE|lib/test.dart|15|4|72|Foo bar baz.',
+      );
     });
   });
 }

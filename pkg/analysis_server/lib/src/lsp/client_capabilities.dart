@@ -4,26 +4,6 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 
-/// The key in the client capabilities experimental object that enables the Dart
-/// TextDocumentContentProvider.
-///
-/// The presence of this key indicates that the client supports our
-/// (non-standard) way of using TextDocumentContentProvider. This will need to
-/// continue to be supported after switching to standard LSP support for some
-/// period to support outdated extensions.
-const dartExperimentalTextDocumentContentProviderKey =
-    'supportsDartTextDocumentContentProvider';
-
-/// The original key used for [dartExperimentalTextDocumentContentProviderKey].
-///
-/// This is temporarily supported to avoid the macro support vanishing for users
-/// for a period if their SDK is updated before Dart-Code passes the standard
-/// flag.
-///
-const dartExperimentalTextDocumentContentProviderLegacyKey =
-    // TODO(dantup): Remove this after the next beta branch.
-    'supportsDartTextDocumentContentProviderEXP1';
-
 /// Wraps the client (editor) capabilities to improve performance.
 ///
 /// Sets transferred as arrays in JSON will be converted to Sets for faster
@@ -77,7 +57,6 @@ class LspClientCapabilities {
 
   final ClientCapabilities raw;
   final bool documentChanges;
-  final bool changeAnnotations;
   final bool configuration;
   final bool createResourceOperations;
   final bool renameResourceOperations;
@@ -110,88 +89,94 @@ class LspClientCapabilities {
   final Set<String> codeActionCommandParameterSupportedKinds;
   final bool supportsShowMessageRequest;
 
-  /// Whether the client supports the custom Dart TextDocumentContentProvider,
-  /// meaning it can request file contents from the server for custom URI
-  /// schemes.
-  final bool supportsDartExperimentalTextDocumentContentProvider;
-
-  /// A set of commands that exist on the client that the server may call.
-  final Set<String> supportedCommands;
-
-  /// User-friendly error messages from parsing the experimental capabilities.
-  final List<String> experimentalCapabilitiesErrors;
-
   factory LspClientCapabilities(ClientCapabilities raw) {
-    var workspace = raw.workspace;
-    var workspaceEdit = workspace?.workspaceEdit;
-    var resourceOperations = workspaceEdit?.resourceOperations;
-    var textDocument = raw.textDocument;
-    var completion = textDocument?.completion;
-    var completionItem = completion?.completionItem;
-    var completionList = completion?.completionList;
-    var completionDefaults = _listToSet(completionList?.itemDefaults);
-    var codeAction = textDocument?.codeAction;
-    var codeActionLiteral = codeAction?.codeActionLiteralSupport;
-    var documentSymbol = textDocument?.documentSymbol;
-    var publishDiagnostics = textDocument?.publishDiagnostics;
-    var signatureHelp = textDocument?.signatureHelp;
-    var signatureInformation = signatureHelp?.signatureInformation;
-    var hover = textDocument?.hover;
-    var definition = textDocument?.definition;
-    var typeDefinition = textDocument?.typeDefinition;
-    var workspaceSymbol = workspace?.symbol;
+    final workspace = raw.workspace;
+    final workspaceEdit = workspace?.workspaceEdit;
+    final resourceOperations = workspaceEdit?.resourceOperations;
+    final textDocument = raw.textDocument;
+    final completion = textDocument?.completion;
+    final completionItem = completion?.completionItem;
+    final completionList = completion?.completionList;
+    final completionDefaults = _listToSet(completionList?.itemDefaults);
+    final codeAction = textDocument?.codeAction;
+    final codeActionLiteral = codeAction?.codeActionLiteralSupport;
+    final documentSymbol = textDocument?.documentSymbol;
+    final publishDiagnostics = textDocument?.publishDiagnostics;
+    final signatureHelp = textDocument?.signatureHelp;
+    final signatureInformation = signatureHelp?.signatureInformation;
+    final hover = textDocument?.hover;
+    final definition = textDocument?.definition;
+    final typeDefinition = textDocument?.typeDefinition;
+    final workspaceSymbol = workspace?.symbol;
+    final experimental = _mapOrEmpty(raw.experimental);
+    final experimentalActions = _mapOrEmpty(experimental['dartCodeAction']);
 
-    var applyEdit = workspace?.applyEdit ?? false;
-    var codeActionKinds =
+    final applyEdit = workspace?.applyEdit ?? false;
+    final codeActionKinds =
         _listToSet(codeActionLiteral?.codeActionKind.valueSet);
-    var completionDeprecatedFlag = completionItem?.deprecatedSupport ?? false;
-    var completionDocumentationFormats =
+    final completionDeprecatedFlag = completionItem?.deprecatedSupport ?? false;
+    final completionDocumentationFormats =
         _listToNullableSet(completionItem?.documentationFormat);
-    var completionInsertTextModes =
+    final completionInsertTextModes =
         _listToSet(completionItem?.insertTextModeSupport?.valueSet);
-    var completionItemKinds = _listToSet(
+    final completionItemKinds = _listToSet(
         completion?.completionItemKind?.valueSet,
         defaults: defaultSupportedCompletionKinds);
-    var completionLabelDetails = completionItem?.labelDetailsSupport ?? false;
-    var completionSnippets = completionItem?.snippetSupport ?? false;
-    var completionDefaultEditRange = completionDefaults.contains('editRange');
-    var completionDefaultTextMode =
+    final completionLabelDetails = completionItem?.labelDetailsSupport ?? false;
+    final completionSnippets = completionItem?.snippetSupport ?? false;
+    final completionDefaultEditRange = completionDefaults.contains('editRange');
+    final completionDefaultTextMode =
         completionDefaults.contains('insertTextMode');
-    var configuration = workspace?.configuration ?? false;
-    var createResourceOperations =
+    final configuration = workspace?.configuration ?? false;
+    final createResourceOperations =
         resourceOperations?.contains(ResourceOperationKind.Create) ?? false;
-    var renameResourceOperations =
+    final renameResourceOperations =
         resourceOperations?.contains(ResourceOperationKind.Rename) ?? false;
-    var definitionLocationLink = definition?.linkSupport ?? false;
-    var typeDefinitionLocationLink = typeDefinition?.linkSupport ?? false;
-    var completionItemTags = _listToSet(completionItem?.tagSupport?.valueSet);
-    var diagnosticTags = _listToSet(publishDiagnostics?.tagSupport?.valueSet);
-    var documentChanges = workspaceEdit?.documentChanges ?? false;
-    var changeAnnotations = workspaceEdit?.changeAnnotationSupport != null;
-    var documentSymbolKinds = _listToSet(documentSymbol?.symbolKind?.valueSet,
+    final definitionLocationLink = definition?.linkSupport ?? false;
+    final typeDefinitionLocationLink = typeDefinition?.linkSupport ?? false;
+    final completionItemTags = _listToSet(completionItem?.tagSupport?.valueSet);
+    final diagnosticTags = _listToSet(publishDiagnostics?.tagSupport?.valueSet);
+    final documentChanges = workspaceEdit?.documentChanges ?? false;
+    final documentSymbolKinds = _listToSet(documentSymbol?.symbolKind?.valueSet,
         defaults: defaultSupportedSymbolKinds);
-    var hierarchicalSymbols =
+    final hierarchicalSymbols =
         documentSymbol?.hierarchicalDocumentSymbolSupport ?? false;
-    var diagnosticCodeDescription =
+    final diagnosticCodeDescription =
         publishDiagnostics?.codeDescriptionSupport ?? false;
-    var hoverContentFormats = _listToNullableSet(hover?.contentFormat);
-    var insertReplaceCompletionRanges =
+    final hoverContentFormats = _listToNullableSet(hover?.contentFormat);
+    final insertReplaceCompletionRanges =
         completionItem?.insertReplaceSupport ?? false;
-    var lineFoldingOnly = textDocument?.foldingRange?.lineFoldingOnly ?? false;
-    var literalCodeActions = codeActionLiteral != null;
-    var renameValidation = textDocument?.rename?.prepareSupport ?? false;
-    var signatureHelpDocumentationFormats =
+    final lineFoldingOnly =
+        textDocument?.foldingRange?.lineFoldingOnly ?? false;
+    final literalCodeActions = codeActionLiteral != null;
+    final renameValidation = textDocument?.rename?.prepareSupport ?? false;
+    final signatureHelpDocumentationFormats =
         _listToNullableSet(signatureInformation?.documentationFormat);
-    var workDoneProgress = raw.window?.workDoneProgress ?? false;
-    var workspaceSymbolKinds = _listToSet(workspaceSymbol?.symbolKind?.valueSet,
+    final workDoneProgress = raw.window?.workDoneProgress ?? false;
+    final workspaceSymbolKinds = _listToSet(
+        workspaceSymbol?.symbolKind?.valueSet,
         defaults: defaultSupportedSymbolKinds);
+    final experimentalSnippetTextEdit = experimental['snippetTextEdit'] == true;
+    final commandParameterSupport =
+        _mapOrEmpty(experimentalActions['commandParameterSupport']);
+    final commandParameterSupportedKinds =
+        _listToSet(commandParameterSupport['supportedKinds'] as List?)
+            .cast<String>();
 
-    var experimental = _ExperimentalClientCapabilities.parse(raw.experimental);
+    /// At the time of writing (2023-02-01) there is no official capability for
+    /// supporting 'showMessageRequest' because LSP assumed all clients
+    /// supported it.
+    ///
+    /// This turned out to not be the case, so to avoid sending prompts that
+    /// might not be seen, we will only use this functionality if we _know_ the
+    /// client supports it via a custom flag in 'experimental' that is passed by
+    /// the Dart-Code VS Code extension since version v3.58.0 (2023-01-25).
+    final supportsShowMessageRequest =
+        experimental['supportsWindowShowMessageRequest'] == true;
 
     return LspClientCapabilities._(
       raw,
       documentChanges: documentChanges,
-      changeAnnotations: changeAnnotations,
       configuration: configuration,
       createResourceOperations: createResourceOperations,
       renameResourceOperations: renameResourceOperations,
@@ -220,21 +205,15 @@ class LspClientCapabilities {
       completionLabelDetails: completionLabelDetails,
       completionDefaultEditRange: completionDefaultEditRange,
       completionDefaultTextMode: completionDefaultTextMode,
-      experimentalSnippetTextEdit: experimental.snippetTextEdit,
-      codeActionCommandParameterSupportedKinds:
-          experimental.commandParameterKinds,
-      supportsShowMessageRequest: experimental.showMessageRequest,
-      supportsDartExperimentalTextDocumentContentProvider:
-          experimental.dartTextDocumentContentProvider,
-      supportedCommands: experimental.commands,
-      experimentalCapabilitiesErrors: experimental.errors,
+      experimentalSnippetTextEdit: experimentalSnippetTextEdit,
+      codeActionCommandParameterSupportedKinds: commandParameterSupportedKinds,
+      supportsShowMessageRequest: supportsShowMessageRequest,
     );
   }
 
   LspClientCapabilities._(
     this.raw, {
     required this.documentChanges,
-    required this.changeAnnotations,
     required this.configuration,
     required this.createResourceOperations,
     required this.renameResourceOperations,
@@ -266,9 +245,6 @@ class LspClientCapabilities {
     required this.experimentalSnippetTextEdit,
     required this.codeActionCommandParameterSupportedKinds,
     required this.supportsShowMessageRequest,
-    required this.supportsDartExperimentalTextDocumentContentProvider,
-    required this.supportedCommands,
-    required this.experimentalCapabilitiesErrors,
   });
 
   /// Converts a list to a `Set`, returning null if the list is null.
@@ -282,120 +258,8 @@ class LspClientCapabilities {
   static Set<T> _listToSet<T>(List<T>? items, {Set<T> defaults = const {}}) {
     return items != null ? {...items} : defaults;
   }
-}
 
-/// A helper for parsing experimental capabilities and collecting any errors
-/// because their values do not match the types expected by the server.
-class _ExperimentalClientCapabilities {
-  /// User-friendly error messages from parsing the experimental capabilities.
-  final List<String> errors;
-
-  final bool snippetTextEdit;
-  final Set<String> commandParameterKinds;
-  final bool dartTextDocumentContentProvider;
-  final Set<String> commands;
-  final bool showMessageRequest;
-
-  _ExperimentalClientCapabilities({
-    required this.snippetTextEdit,
-    required this.commandParameterKinds,
-    required this.dartTextDocumentContentProvider,
-    required this.commands,
-    required this.showMessageRequest,
-    required this.errors,
-  });
-
-  /// Parse the experimental capabilities.
-  ///
-  /// Unlike the capabilities above the spec doesn't define any types for
-  /// these, so we may see types we don't expect (whereas the above would have
-  /// failed to deserialize if the types are invalid). So, check the types
-  /// carefully and report a warning to the client if something looks wrong.
-  ///
-  /// Example: https://github.com/dart-lang/sdk/issues/55935
-  factory _ExperimentalClientCapabilities.parse(Object? raw) {
-    var errors = <String>[];
-
-    /// Helper to ensure [object] is type [T] and otherwise records an error in
-    /// [errors] and returns `null`.
-    T? expectType<T>(String suffix, Object? object, [String? typeDescription]) {
-      if (object is! T) {
-        errors.add(
-            'ClientCapabilities.experimental$suffix must be a ${typeDescription ?? T}');
-        return null;
-      }
-      return object;
-    }
-
-    var expectMap = expectType<Map<String, Object?>?>;
-    var expectBool = expectType<bool?>;
-    var expectString = expectType<String>;
-
-    /// Helper to expect a nullable list of strings and return them as a set.
-    Set<String>? expectNullableStringSet(String name, Object? object) {
-      return expectType<List<Object?>?>(name, object, 'List<String>?')
-          ?.map((item) => expectString('$name[]', item))
-          .nonNulls
-          .toSet();
-    }
-
-    var experimental = expectMap('', raw) ?? const {};
-
-    // Snippets.
-    var snippetTextEdit = expectBool(
-      '.snippetTextEdit',
-      experimental['snippetTextEdit'],
-    );
-
-    // Refactor command parameters.
-    var experimentalActions = expectMap(
-      '.dartCodeAction',
-      experimental['dartCodeAction'],
-    );
-    experimentalActions ??= const {};
-    var commandParameters = expectMap(
-      '.dartCodeAction.commandParameterSupport',
-      experimentalActions['commandParameterSupport'],
-    );
-    commandParameters ??= {};
-    var commandParameterKinds = expectNullableStringSet(
-      '.dartCodeAction.commandParameterSupport.supportedKinds',
-      commandParameters['supportedKinds'],
-    );
-
-    // Macro/Augmentation content.
-    var dartContentValue =
-        experimental[dartExperimentalTextDocumentContentProviderKey] ??
-            experimental[dartExperimentalTextDocumentContentProviderLegacyKey];
-    var dartTextDocumentContentProvider = expectBool(
-      '.$dartExperimentalTextDocumentContentProviderKey',
-      dartContentValue,
-    );
-
-    // Executable commands.
-    var commands =
-        expectNullableStringSet('.commands', experimental['commands']);
-
-    /// At the time of writing (2023-02-01) there is no official capability for
-    /// supporting 'showMessageRequest' because LSP assumed all clients
-    /// supported it.
-    ///
-    /// This turned out to not be the case, so to avoid sending prompts that
-    /// might not be seen, we will only use this functionality if we _know_ the
-    /// client supports it via a custom flag in 'experimental' that is passed by
-    /// the Dart-Code VS Code extension since version v3.58.0 (2023-01-25).
-    var showMessageRequest = expectBool(
-      '.supportsWindowShowMessageRequest',
-      experimental['supportsWindowShowMessageRequest'],
-    );
-
-    return _ExperimentalClientCapabilities(
-      snippetTextEdit: snippetTextEdit ?? false,
-      commandParameterKinds: commandParameterKinds ?? {},
-      dartTextDocumentContentProvider: dartTextDocumentContentProvider ?? false,
-      commands: commands ?? {},
-      showMessageRequest: showMessageRequest ?? false,
-      errors: errors,
-    );
+  static Map<String, Object?> _mapOrEmpty(Object? item) {
+    return item is Map<String, Object?> ? item : const {};
   }
 }

@@ -5,7 +5,6 @@
 import 'package:analysis_server/lsp_protocol/protocol.dart' hide Element;
 import 'package:analysis_server/src/computer/computer_hover.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -37,7 +36,7 @@ class CompletionResolveHandler
     MessageInfo message,
     CancellationToken token,
   ) async {
-    var resolutionInfo = params.data;
+    final resolutionInfo = params.data;
 
     if (resolutionInfo is DartCompletionResolutionInfo) {
       return resolveDartCompletion(params, resolutionInfo, token);
@@ -53,17 +52,17 @@ class CompletionResolveHandler
     DartCompletionResolutionInfo data,
     CancellationToken token,
   ) async {
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return error(ErrorCodes.ServerNotInitialized,
           'Requests not before server is initialized');
     }
 
-    var file = data.file;
-    var importUris = data.importUris.map(Uri.parse).toList();
-    var elementLocationReference = data.ref;
-    var elementLocation = elementLocationReference != null
+    final file = data.file;
+    final importUris = data.importUris.map(Uri.parse).toList();
+    final elementLocationReference = data.ref;
+    final elementLocation = elementLocationReference != null
         ? ElementLocationImpl.con2(elementLocationReference)
         : null;
 
@@ -72,7 +71,7 @@ class CompletionResolveHandler
     _latestCompletionItem = item;
     while (item == _latestCompletionItem && timer.elapsed < timeout) {
       try {
-        var session = await server.getAnalysisSession(file);
+        final session = await server.getAnalysisSession(file);
 
         // We shouldn't not get a driver/session, but if we did perhaps the file
         // was removed from the analysis set so assume the request is no longer
@@ -81,7 +80,7 @@ class CompletionResolveHandler
           return cancelled();
         }
 
-        var result = await session.getResolvedUnit(file);
+        final result = await session.getResolvedUnit(file);
         if (result is! ResolvedUnitResult) {
           return cancelled();
         }
@@ -90,9 +89,9 @@ class CompletionResolveHandler
           return cancelled();
         }
 
-        var builder = ChangeBuilder(session: session);
+        final builder = ChangeBuilder(session: session);
         await builder.addDartFileEdit(file, (builder) {
-          for (var uri in importUris) {
+          for (final uri in importUris) {
             builder.importLibraryElement(uri);
           }
         });
@@ -101,17 +100,17 @@ class CompletionResolveHandler
           return cancelled();
         }
 
-        var changes = builder.sourceChange;
-        var thisFilesChanges =
+        final changes = builder.sourceChange;
+        final thisFilesChanges =
             changes.edits.where((e) => e.file == file).toList();
-        var otherFilesChanges =
+        final otherFilesChanges =
             changes.edits.where((e) => e.file != file).toList();
 
         // If this completion involves editing other files, we'll need to build
         // a command that the client will call to apply those edits later.
         Command? command;
         if (otherFilesChanges.isNotEmpty) {
-          var workspaceEdit =
+          final workspaceEdit =
               createPlainWorkspaceEdit(server, otherFilesChanges);
           command = Command(
               title: 'Add import',
@@ -123,13 +122,13 @@ class CompletionResolveHandler
 
         // Look up documentation if we can get an element for this item.
         Either2<MarkupContent, String>? documentation;
-        var element = elementLocation != null
+        final element = elementLocation != null
             ? await session.locateElement(elementLocation)
             : null;
         if (element != null) {
-          var formats = clientCapabilities.completionDocumentationFormats;
-          var dartDocInfo = server.getDartdocDirectiveInfoForSession(session);
-          var dartDoc = DartUnitHoverComputer.computePreferredDocumentation(
+          final formats = clientCapabilities.completionDocumentationFormats;
+          final dartDocInfo = server.getDartdocDirectiveInfoForSession(session);
+          final dartDoc = DartUnitHoverComputer.computePreferredDocumentation(
               dartDocInfo,
               element,
               server.lspClientConfiguration.global.preferredDocumentation);
@@ -142,16 +141,21 @@ class CompletionResolveHandler
         String? detail = item.detail;
         if (changes.edits.isNotEmpty && importUris.isNotEmpty) {
           if (importUris.length == 1) {
-            var libraryUri = importUris.first;
-            var autoImportDisplayUriString = getCompletionDisplayUriString(
-              uriConverter: server.uriConverter,
-              pathContext: server.pathContext,
-              elementLibraryUri: libraryUri,
-              completionFilePath: file,
-            );
+            // If the only URI we have is a file:// URI, display it as relative to
+            // the file we're importing into, rather than the full URI.
+            final pathContext = server.pathContext;
+            final libraryUri = importUris.first;
+            final autoImportDisplayUri = libraryUri.isScheme('file')
+                // Compute the relative path and then put into a URI so the display
+                // always uses forward slashes (as a URI) regardless of platform.
+                ? pathContext.toUri(pathContext.relative(
+                    pathContext.fromUri(libraryUri),
+                    from: pathContext.dirname(file),
+                  ))
+                : libraryUri;
 
             detail =
-                "Auto import from '$autoImportDisplayUriString'\n\n${item.detail ?? ''}"
+                "Auto import from '$autoImportDisplayUri'\n\n${item.detail ?? ''}"
                     .trim();
           } else {
             detail = "Auto import required URIs\n\n${item.detail ?? ''}".trim();
@@ -190,6 +194,7 @@ class CompletionResolveHandler
     return error(
       ErrorCodes.RequestCancelled,
       'Request was cancelled for taking too long or another request being received',
+      null,
     );
   }
 
@@ -200,14 +205,14 @@ class CompletionResolveHandler
   ) async {
     // Fetch details for this package. This may come from the cache or trigger
     // a real web request to the Pub API.
-    var packageDetails =
+    final packageDetails =
         await server.pubPackageService.packageDetails(data.packageName);
 
     if (token.isCancellationRequested) {
       return cancelled();
     }
 
-    var description = packageDetails?.description;
+    final description = packageDetails?.description;
     return success(CompletionItem(
       label: item.label,
       kind: item.kind,

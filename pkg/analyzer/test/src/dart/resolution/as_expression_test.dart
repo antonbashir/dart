@@ -29,12 +29,12 @@ const int b = a as int;
 AsExpression
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: num
   asOperator: as
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   staticType: int
 ''');
@@ -58,7 +58,7 @@ AsExpression
   asOperator: as
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   staticType: int
 ''');
@@ -75,7 +75,7 @@ class A<T> {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 30, 5),
     ]);
 
-    var node = findNode.singleAsExpression;
+    final node = findNode.singleAsExpression;
     assertResolvedNodeText(node, r'''
 AsExpression
   expression: SuperExpression
@@ -99,7 +99,7 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.singleAsExpression;
+    final node = findNode.singleAsExpression;
     assertResolvedNodeText(node, r'''
 AsExpression
   expression: SwitchExpression
@@ -107,7 +107,7 @@ AsExpression
     leftParenthesis: (
     expression: SimpleIdentifier
       token: x
-      staticElement: <testLibraryFragment>::@function::f::@parameter::x
+      staticElement: self::@function::f::@parameter::x
       staticType: Object?
     rightParenthesis: )
     leftBracket: {
@@ -126,7 +126,7 @@ AsExpression
   asOperator: as
   type: NamedType
     name: double
-    element: dart:core::<fragment>::@class::double
+    element: dart:core::@class::double
     type: double
   staticType: double
 ''');

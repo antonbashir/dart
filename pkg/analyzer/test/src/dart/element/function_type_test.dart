@@ -42,7 +42,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeParameters = isEmpty}) {
     // DartType properties
     expect(
-      f.getDisplayString(),
+      f.getDisplayString(withNullability: false),
       displayName,
       reason: 'displayName',
     );
@@ -64,13 +64,13 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
 
   DartType listOf(DartType elementType) => listElement.instantiate(
         typeArguments: [elementType],
-        nullabilitySuffix: NullabilitySuffix.none,
+        nullabilitySuffix: NullabilitySuffix.star,
       );
 
   DartType mapOf(DartType keyType, DartType valueType) =>
       mapElement.instantiate(
         typeArguments: [keyType, valueType],
-        nullabilitySuffix: NullabilitySuffix.none,
+        nullabilitySuffix: NullabilitySuffix.star,
       );
 
   test_equality_leftRequired_rightPositional() {
@@ -260,7 +260,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: const [],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f);
   }
@@ -273,7 +273,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: [t],
       parameters: [x],
       returnType: typeParameterTypeNone(t),
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     FunctionType instantiated = f.instantiate([objectType]);
     basicChecks(instantiated,
@@ -291,7 +291,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: [t],
       parameters: const [],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     expect(() => f.instantiate([]), throwsA(TypeMatcher<ArgumentError>()));
   }
@@ -301,7 +301,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: const [],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     expect(f.instantiate([]), same(f));
   }
@@ -312,7 +312,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: [p],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f,
         displayName: 'dynamic Function({Object x})',
@@ -329,7 +329,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: [p],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f,
         displayName: 'dynamic Function(Object)',
@@ -347,7 +347,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: [p],
       returnType: dynamicType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f,
         displayName: 'dynamic Function([Object])',
@@ -364,7 +364,7 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
       typeFormals: const [],
       parameters: const [],
       returnType: objectType,
-      nullabilitySuffix: NullabilitySuffix.none,
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f,
         displayName: 'Object Function()', returnType: same(objectType));
@@ -375,12 +375,12 @@ class FunctionTypeTest extends AbstractTypeSystemTest {
     FunctionType f = FunctionTypeImpl(
       typeFormals: [t],
       parameters: const [],
-      returnType: typeParameterTypeNone(t),
-      nullabilitySuffix: NullabilitySuffix.none,
+      returnType: typeParameterTypeStar(t),
+      nullabilitySuffix: NullabilitySuffix.star,
     );
     basicChecks(f,
         displayName: 'T Function<T>()',
-        returnType: typeParameterTypeNone(t),
+        returnType: typeParameterTypeStar(t),
         typeFormals: [same(t)]);
   }
 }

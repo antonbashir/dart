@@ -66,6 +66,7 @@ SocketAddress::SocketAddress(struct sockaddr* sa, bool unnamed_unix_socket) {
   memmove(reinterpret_cast<void*>(&addr_), sa, salen);
 }
 
+
 bool SocketBase::Initialize() {
   // Nothing to do on Fuchsia.
   return true;

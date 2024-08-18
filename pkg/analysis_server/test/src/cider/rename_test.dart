@@ -5,10 +5,10 @@
 import 'package:analysis_server/src/cider/rename.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../utilities/mock_packages.dart';
 import 'cider_service.dart';
 
 void main() {
@@ -636,7 +636,7 @@ void f() {
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 foo() {}
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
     var result = await _rename(r'''
 import 'a.dart';
 void f() {
@@ -797,7 +797,7 @@ class A {
   foo() {}
 }
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
     var result = await _rename(r'''
 import 'a.dart';
 void f() {

@@ -4,10 +4,9 @@
 // Test basic integer operations.
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 main() {
-  if (!v.jsNumbers) {
+  if (!webNumbers) {
     Expect.equals("0.0", (0.0).toString());
     Expect.equals("9.0", (9.0).toString());
     Expect.equals("90.0", (90.0).toString());

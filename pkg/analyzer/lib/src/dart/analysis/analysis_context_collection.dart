@@ -3,13 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/context_locator.dart';
 import 'package:analyzer/dart/analysis/context_root.dart';
 import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/context_builder.dart';
-import 'package:analyzer/src/dart/analysis/context_locator.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
 import 'package:analyzer/src/dart/analysis/file_content_cache.dart';
@@ -28,13 +28,10 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
   final ResourceProvider resourceProvider;
 
   /// The support for executing macros.
-  late final MacroSupportFactory macroSupportFactory;
+  late final MacroSupport macroSupport;
 
   /// The shared container into which drivers record files ownership.
   final OwnedFiles ownedFiles = OwnedFiles();
-
-  /// The scheduler used for all analysis contexts.
-  late final AnalysisDriverScheduler scheduler;
 
   /// The list of analysis contexts.
   @override
@@ -60,38 +57,31 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
     FileContentCache? fileContentCache,
     UnlinkedUnitStore? unlinkedUnitStore,
     InfoDeclarationStore? infoDeclarationStore,
+    @Deprecated('Use updateAnalysisOptions2, which must be a function that '
+        'accepts a second parameter')
+    void Function(AnalysisOptionsImpl)? updateAnalysisOptions,
     void Function({
       required AnalysisOptionsImpl analysisOptions,
       required ContextRoot contextRoot,
       required DartSdk sdk,
     })? updateAnalysisOptions2,
-    MacroSupportFactory? macroSupportFactory,
+    MacroSupport? macroSupport,
   }) : resourceProvider =
             resourceProvider ?? PhysicalResourceProvider.INSTANCE {
     sdkPath ??= getSdkPath();
 
-    performanceLog ??= PerformanceLog(null);
-
-    if (scheduler == null) {
-      scheduler = AnalysisDriverScheduler(performanceLog);
-      if (drainStreams) {
-        scheduler.events.drain<void>();
-      }
-      scheduler.start();
-    }
-    // TODO(scheglov): https://github.com/dart-lang/linter/issues/3134
-    // ignore: prefer_initializing_formals
-    this.scheduler = scheduler;
-
     _throwIfAnyNotAbsoluteNormalizedPath(includedPaths);
     _throwIfNotAbsoluteNormalizedPath(sdkPath);
 
-    macroSupportFactory ??= KernelMacroSupportFactory();
-    // TODO(scheglov): https://github.com/dart-lang/linter/issues/3134
-    // ignore: prefer_initializing_formals
-    this.macroSupportFactory = macroSupportFactory;
+    if (updateAnalysisOptions != null && updateAnalysisOptions2 != null) {
+      throw ArgumentError(
+          'Either updateAnalysisOptions or updateAnalysisOptions2 must be '
+          'given, but not both.');
+    }
 
-    var contextLocator = ContextLocatorImpl(
+    this.macroSupport = macroSupport ??= KernelMacroSupport();
+
+    var contextLocator = ContextLocator(
       resourceProvider: this.resourceProvider,
     );
     var roots = contextLocator.locateRoots(
@@ -100,15 +90,13 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
       optionsFile: optionsFile,
       packagesFile: packagesFile,
     );
-    var contextBuilder = ContextBuilderImpl(
-      resourceProvider: this.resourceProvider,
-    );
     for (var root in roots) {
-      var macroSupport = macroSupportFactory.newInstance();
+      var contextBuilder = ContextBuilderImpl(
+        resourceProvider: this.resourceProvider,
+      );
       var context = contextBuilder.createContext(
         byteStore: byteStore,
         contextRoot: root,
-        definedOptionsFile: optionsFile != null,
         declaredVariables: DeclaredVariables.fromMap(declaredVariables ?? {}),
         drainStreams: drainStreams,
         enableIndex: enableIndex,
@@ -118,6 +106,8 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
         sdkPath: sdkPath,
         sdkSummaryPath: sdkSummaryPath,
         scheduler: scheduler,
+        // ignore: deprecated_member_use_from_same_package
+        updateAnalysisOptions: updateAnalysisOptions,
         updateAnalysisOptions2: updateAnalysisOptions2,
         fileContentCache: fileContentCache,
         unlinkedUnitStore: unlinkedUnitStore ?? UnlinkedUnitStoreImpl(),
@@ -156,14 +146,13 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
     throw StateError('Unable to find the context to $path');
   }
 
-  @override
   Future<void> dispose({
     bool forTesting = false,
   }) async {
-    for (var analysisContext in contexts) {
+    for (final analysisContext in contexts) {
       await analysisContext.driver.dispose2();
     }
-    await macroSupportFactory.dispose();
+    await macroSupport.dispose();
     // If there are other collections, they will have to start it again.
     if (!forTesting) {
       await KernelCompilationService.dispose();

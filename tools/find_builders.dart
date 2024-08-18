@@ -9,7 +9,7 @@
 //
 // ```
 // $ tools/find_builders.dart ffi/regress_51504_test ffi/regress_51913_test
-// Cq-Include-Trybots: dart/try:vm-kernel-linux-debug-x64,...
+// Cq-Include-Trybots: luci.dart.try:vm-kernel-linux-debug-x64,...
 // ```
 
 import 'dart:convert';
@@ -33,7 +33,7 @@ Future<void> main(List<String> args) async {
     ..sort();
 
   final gerritTryList = builders.map((b) => '$b-try').join(',');
-  print('Cq-Include-Trybots: dart/try:$gerritTryList');
+  print('Cq-Include-Trybots: luci.dart.try:$gerritTryList');
 }
 
 Future<List<String>> _testGetConfigurations(String testName) async {
@@ -44,11 +44,8 @@ Future<List<String>> _testGetConfigurations(String testName) async {
     queryParameters: {'filter': testName},
   );
   final response = await _get(requestUrl);
-  final object = jsonDecode(response) as Map<String, dynamic>;
-  return [
-    for (final result in ((object['results'] as List)).cast<Map>())
-      result['configuration']
-  ];
+  final object = jsonDecode(response);
+  return [for (final result in object['results']) result['configuration']];
 }
 
 Future<String> _get(Uri requestUrl) async {
@@ -78,17 +75,13 @@ Iterable<String> _filterConfigurations(Set<String> configs) {
 }
 
 Iterable<String> _filterBuilders(Iterable<String> builders) {
-  return builders.where(
-    (b) => !_ciOnlyBuilders.contains(b) && !_denyListedBuilders.contains(b),
-  );
+  return builders.where((b) => !_ciOnlyBuilders.contains(b));
 }
 
 const _ciOnlyBuilders = {
   'vm-aot-linux-release-arm64',
   'vm-linux-release-arm64',
 };
-
-const _denyListedBuilders = <String>{};
 
 Stream<Map<String, dynamic>> _configurationDocuments() async* {
   String? nextPageToken;
@@ -103,9 +96,9 @@ Stream<Map<String, dynamic>> _configurationDocuments() async* {
       },
     );
     final response = await _get(requestUrl);
-    final object = jsonDecode(response) as Map<String, dynamic>;
+    final object = jsonDecode(response);
     yield* Stream.fromIterable(
-        (object['documents'] as List).cast<Map<String, dynamic>>());
+        object['documents'].cast<Map<String, dynamic>>());
 
     nextPageToken = object['nextPageToken'];
   } while (nextPageToken != null);
@@ -129,6 +122,6 @@ A script to find all try jobs for a set of tests.
 
   Usage: tools/find_builders.dart [selector] [selector2] [...]
 
-Sample output: Cq-Include-Trybots: dart/try:vm-kernel-linux-debug-x64,...
+Sample output: Cq-Include-Trybots: luci.dart.try:vm-kernel-linux-debug-x64,...
 ''');
 }

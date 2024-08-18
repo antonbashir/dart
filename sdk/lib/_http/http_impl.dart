@@ -24,22 +24,25 @@ abstract final class HttpProfiler {
 
   static void clear() => _profile.clear();
 
-  /// Returns a list of Maps, where each map conforms to the @HttpProfileRequest
-  /// type defined in the dart:io service extension spec.
-  static List<Map<String, dynamic>> serializeHttpProfileRequests(
-      int? updatedSince) {
-    return _profile.values
-        .where(
-          (e) => (updatedSince == null) || e.lastUpdateTime >= updatedSince,
-        )
-        .map((e) => e.toJson(ref: true))
-        .toList();
+  static String toJson(int? updatedSince) {
+    return json.encode({
+      'type': _kType,
+      'timestamp': Timeline.now,
+      'requests': [
+        for (final request in _profile.values.where(
+          (e) {
+            return (updatedSince == null) || e.lastUpdateTime >= updatedSince;
+          },
+        ))
+          request.toJson(),
+      ],
+    });
   }
 }
 
 class _HttpProfileEvent {
   _HttpProfileEvent(this.name, this.arguments);
-  final int timestamp = DateTime.now().microsecondsSinceEpoch;
+  final int timestamp = Timeline.now;
   final String name;
   final Map? arguments;
 
@@ -63,7 +66,7 @@ class _HttpProfileData {
     // to the timeline.
     id = _timeline.pass().toString();
     requestInProgress = true;
-    requestStartTimestamp = DateTime.now().microsecondsSinceEpoch;
+    requestStartTimestamp = Timeline.now;
     _timeline.start('HTTP CLIENT $method', arguments: {
       'method': method.toUpperCase(),
       'uri': uri.toString(),
@@ -116,7 +119,7 @@ class _HttpProfileData {
   }) {
     // TODO(bkonyi): include encoding?
     requestInProgress = false;
-    requestEndTimestamp = DateTime.now().microsecondsSinceEpoch;
+    requestEndTimestamp = Timeline.now;
     requestDetails = <String, dynamic>{
       // TODO(bkonyi): consider exposing certificate information?
       // 'certificate': response.certificate,
@@ -173,7 +176,7 @@ class _HttpProfileData {
       filterKey: 'HTTP/client',
     );
 
-    responseStartTimestamp = DateTime.now().microsecondsSinceEpoch;
+    responseStartTimestamp = Timeline.now;
     _responseTimeline.start(
       'HTTP CLIENT response of $method',
       arguments: {
@@ -186,7 +189,7 @@ class _HttpProfileData {
 
   void finishRequestWithError(String error) {
     requestInProgress = false;
-    requestEndTimestamp = DateTime.now().microsecondsSinceEpoch;
+    requestEndTimestamp = Timeline.now;
     requestError = error;
     _timeline.finish(arguments: {
       'error': error,
@@ -195,11 +198,8 @@ class _HttpProfileData {
   }
 
   void finishResponse() {
-    // Guard against the response being completed more than once or being
-    // completed before the response actually finished starting.
-    if (responseInProgress != true) return;
     responseInProgress = false;
-    responseEndTimestamp = DateTime.now().microsecondsSinceEpoch;
+    responseEndTimestamp = Timeline.now;
     requestEvent('Content Download');
     _responseTimeline.finish();
     _updated();
@@ -210,7 +210,7 @@ class _HttpProfileData {
     // the response stream is listened to with `cancelOnError: false`.
     if (!responseInProgress!) return;
     responseInProgress = false;
-    responseEndTimestamp = DateTime.now().microsecondsSinceEpoch;
+    responseEndTimestamp = Timeline.now;
     responseError = error;
     _responseTimeline.finish(arguments: {
       'error': error,
@@ -223,20 +223,20 @@ class _HttpProfileData {
     _updated();
   }
 
-  Map<String, dynamic> toJson({required bool ref}) {
+  Map<String, dynamic> toJson({bool ref = true}) {
     return <String, dynamic>{
       'type': '${ref ? '@' : ''}HttpProfileRequest',
       'id': id,
       'isolateId': isolateId,
       'method': method,
       'uri': uri.toString(),
-      'events': <Map<String, dynamic>>[
-        for (final event in requestEvents) event.toJson(),
-      ],
       'startTime': requestStartTimestamp,
       if (!requestInProgress) 'endTime': requestEndTimestamp,
       if (!requestInProgress)
         'request': {
+          'events': <Map<String, dynamic>>[
+            for (final event in requestEvents) event.toJson(),
+          ],
           if (proxyDetails != null) 'proxyDetails': proxyDetails!,
           if (requestDetails != null) ...requestDetails!,
           if (requestError != null) 'error': requestError,
@@ -255,7 +255,7 @@ class _HttpProfileData {
     };
   }
 
-  void _updated() => _lastUpdateTime = DateTime.now().microsecondsSinceEpoch;
+  void _updated() => _lastUpdateTime = Timeline.now;
 
   static final String isolateId = Service.getIsolateID(Isolate.current)!;
 
@@ -603,9 +603,6 @@ class _HttpClientResponse extends _HttpInboundMessageListInt
         super(_incoming) {
     // Set uri for potential exceptions.
     _incoming.uri = _httpRequest.uri;
-    // Ensure the response profile is completed, even if the response stream is
-    // never actually listened to.
-    _incoming.dataDone.then((_) => _profileData?.finishResponse());
   }
 
   static HttpClientResponseCompressionState _getCompressionState(
@@ -668,8 +665,7 @@ class _HttpClientResponse extends _HttpInboundMessageListInt
     if (url == null) {
       String? location = headers.value(HttpHeaders.locationHeader);
       if (location == null) {
-        throw RedirectException(
-            "Server response has no Location header for redirect", redirects);
+        throw StateError("Response has no Location header for redirect");
       }
       url = Uri.parse(location);
     }
@@ -715,22 +711,22 @@ class _HttpClientResponse extends _HttpInboundMessageListInt
         return data;
       });
     }
-    return stream.listen(
-      onData,
-      onError: (e, st) {
-        _profileData?.finishResponseWithError(e.toString());
-        if (onError == null) {
-          return;
-        }
-        if (onError is void Function(Object, StackTrace)) {
-          onError(e, st);
-        } else {
-          (onError as void Function(Object))(e);
-        }
-      },
-      onDone: onDone,
-      cancelOnError: cancelOnError,
-    );
+    return stream.listen(onData, onError: (e, st) {
+      _profileData?.finishResponseWithError(e.toString());
+      if (onError == null) {
+        return;
+      }
+      if (onError is void Function(Object, StackTrace)) {
+        onError(e, st);
+      } else {
+        (onError as void Function(Object))(e);
+      }
+    }, onDone: () {
+      _profileData?.finishResponse();
+      if (onDone != null) {
+        onDone();
+      }
+    }, cancelOnError: cancelOnError);
   }
 
   Future<Socket> detachSocket() {
@@ -1054,20 +1050,15 @@ class _IOSinkImpl extends _StreamSinkImpl<List<int>> implements IOSink {
     _encoding = value;
   }
 
-  void _writeString(String string) {
-    Uint8List? utf8Encoding;
-    _profileData?.appendRequestData(
-      utf8Encoding = utf8.encode(string),
-    );
-    super.add(utf8Encoding != null && identical(_encoding, utf8)
-        ? utf8Encoding
-        : _encoding.encode(string));
-  }
-
   void write(Object? obj) {
     String string = '$obj';
     if (string.isEmpty) return;
-    _writeString(string);
+    _profileData?.appendRequestData(
+      Uint8List.fromList(
+        utf8.encode(string),
+      ),
+    );
+    super.add(_encoding.encode(string));
   }
 
   void writeAll(Iterable objects, [String separator = ""]) {
@@ -1087,7 +1078,8 @@ class _IOSinkImpl extends _StreamSinkImpl<List<int>> implements IOSink {
   }
 
   void writeln([Object? object = ""]) {
-    _writeString('$object\n');
+    write(object);
+    write("\n");
   }
 
   void writeCharCode(int charCode) {
@@ -1804,7 +1796,6 @@ class _HttpOutgoing implements StreamConsumer<List<int>> {
         onError: controller.addError,
         onDone: controller.close,
         cancelOnError: true);
-    controller.onCancel = sub.cancel;
     controller.onPause = sub.pause;
     controller.onResume = sub.resume;
     // Write headers now that we are listening to the stream.

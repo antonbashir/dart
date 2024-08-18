@@ -1,11 +1,6 @@
 /// HTML elements and other resources for web-based applications that need to
 /// interact with the browser and the DOM (Document Object Model).
 ///
-/// > [!Note]
-/// > New projects should prefer to use
-/// > [package:web](https://pub.dev/packages/web). For existing projects, see
-/// > our [migration guide](https://dart.dev/go/package-web).
-///
 /// This library includes DOM element types, CSS styling, local storage,
 /// media, speech, events, and more.
 /// To get started,
@@ -14,7 +9,7 @@
 ///
 /// For information on writing web apps with Dart, see https://dart.dev/web.
 ///
-/// {@category Web (Legacy)}
+/// {@category Web}
 /// {@canonicalFor dart:_internal.HttpStatus}
 library dart.dom.html;
 
@@ -13220,7 +13215,9 @@ class Element extends Node
    * Called by the DOM when this element has been inserted into the live
    * document.
    *
-   * Warning: This API is part of multiple custom element APIs that are no [longer supported](https://github.com/dart-lang/sdk/issues/49536).
+   * More information can be found in the
+   * [Custom Elements](http://w3c.github.io/webcomponents/spec/custom/#dfn-attached-callback)
+   * draft specification.
    */
   void attached() {
     // For the deprecation period, call the old callback.
@@ -13231,7 +13228,8 @@ class Element extends Node
    * Called by the DOM when this element has been removed from the live
    * document.
    *
-   * Warning: This API is part of multiple custom element APIs that are no [longer supported](https://github.com/dart-lang/sdk/issues/49536).
+   * More information can be found in the
+   * [Custom Elements](http://w3c.github.io/webcomponents/spec/custom/#dfn-detached-callback)
    * draft specification.
    */
   void detached() {
@@ -16963,8 +16961,8 @@ class Geolocation extends JavaScriptObject {
         new StreamController<Geoposition>(
             sync: true,
             onCancel: () {
-              final id = watchId;
-              if (id != null) _clearWatch(id);
+              assert(watchId != null);
+              _clearWatch(watchId!);
             });
     controller.onListen = () {
       assert(watchId == null);
@@ -27717,8 +27715,7 @@ class SelectElement extends HtmlElement {
       var options = this.options.where((o) => o.selected).toList();
       return new UnmodifiableListView(options);
     } else {
-      var i = this.selectedIndex!;
-      return i < 0 ? [] : [this.options[i]];
+      return [this.options[this.selectedIndex!]];
     }
   }
 }
@@ -40614,7 +40611,9 @@ class _WrappedEvent implements Event {
    *
    * ## Other resources
    *
-   * * [Shadow trees](https://dom.spec.whatwg.org/#shadow-trees)
+   * * [Shadow DOM extensions to
+   *   Event](http://w3c.github.io/webcomponents/spec/shadow/#extensions-to-event)
+   *   from W3C.
    */
   // https://dvcs.w3.org/hg/webcomponents/raw-file/tip/spec/shadow/index.html#extensions-to-event
   List<Node> get path => wrapped.path as List<Node>;

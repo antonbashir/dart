@@ -9,7 +9,6 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Define case clauses for all constants in enum-like classes.';
 
@@ -76,15 +75,19 @@ void ok(EnumLike e) {
 ''';
 
 class ExhaustiveCases extends LintRule {
+  static const LintCode code = LintCode(
+      'exhaustive_cases', "Missing case clauses for some constants in '{0}'.",
+      correctionMessage: 'Try adding case clauses for the missing constants.');
+
   ExhaustiveCases()
       : super(
             name: 'exhaustive_cases',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.exhaustive_cases;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -161,12 +164,7 @@ class _Visitor extends SimpleAstVisitor {
 extension on Element? {
   Element? get variableElement {
     var self = this;
-    if (self is PropertyAccessorElement) {
-      var variable = self.variable2;
-      if (variable != null) {
-        return variable;
-      }
-    }
+    if (self is PropertyAccessorElement) return self.variable;
     return self;
   }
 }

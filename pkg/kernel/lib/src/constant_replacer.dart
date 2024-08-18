@@ -202,16 +202,11 @@ class ConstantReplacer implements ConstantVisitor<Constant?> {
     TearOffConstant? tearOffConstant =
         visitConstant(node.tearOffConstant) as TearOffConstant?;
     List<DartType>? types = visitDartTypeList(node.types);
-    List<StructuralParameter>? parameters;
+    List<TypeParameter>? parameters;
     for (int i = 0; i < node.parameters.length; i++) {
-      StructuralParameter parameter = node.parameters[i];
-      DartType? newBound = visitDartType(parameter.bound);
-      DartType? newDefaultType = visitDartType(parameter.defaultType);
-      if (newBound != null || newDefaultType != null) {
-        (parameters ??= List.of(node.parameters))[i] = new StructuralParameter(
-            parameter.name,
-            newBound ?? parameter.bound,
-            newDefaultType ?? parameter.defaultType);
+      TypeParameter result = visitTreeNode(node.parameters[i]) as TypeParameter;
+      if (result != node.parameters[i]) {
+        (parameters ??= List.of(node.parameters))[i] = result;
       }
     }
     if (tearOffConstant == null && types == null && parameters == null) {

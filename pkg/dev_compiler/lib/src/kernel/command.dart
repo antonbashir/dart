@@ -22,6 +22,7 @@ import 'package:source_maps/source_maps.dart' show SourceMapBuilder;
 import '../compiler/js_names.dart' as js_ast;
 import '../compiler/module_builder.dart';
 import '../compiler/shared_command.dart';
+import '../compiler/shared_compiler.dart';
 import '../js_ast/js_ast.dart' as js_ast;
 import '../js_ast/js_ast.dart' show js;
 import '../js_ast/source_map_printer.dart' show SourceMapPrintingContext;
@@ -331,8 +332,7 @@ Future<CompilerResult> _compile(List<String> args,
         environmentDefines: declaredVariables,
         trackNeededDillLibraries: recordUsedInputs,
         nnbdMode:
-            options.soundNullSafety ? fe.NnbdMode.Strong : fe.NnbdMode.Weak,
-        precompiledMacros: options.precompiledMacros);
+            options.soundNullSafety ? fe.NnbdMode.Strong : fe.NnbdMode.Weak);
     var incrementalCompiler = compilerState.incrementalCompiler!;
     var cachedSdkInput = compileSdk
         ? null
@@ -731,13 +731,13 @@ JSCode jsProgramToCode(js_ast.Program moduleTree, ModuleFormat format,
   var encodedMap = json.encode(builtMap);
   var rawSourceMap =
       inlineSourceMap ? js.escapedString(encodedMap, "'").value : 'null';
-  text = text.replaceFirst(ProgramCompiler.sourceMapLocationID, rawSourceMap);
+  text = text.replaceFirst(SharedCompiler.sourceMapLocationID, rawSourceMap);
 
   // This is intended to be used by our build/debug tools to gather metrics.
-  // See pkg/dev_compiler/lib/js/ddc/ddc_module_loader.js for runtime code that
+  // See pkg/dev_compiler/lib/js/legacy/dart_library.js for runtime code that
   // reads this.
   //
-  // These keys (see corresponding logic in ddc_module_loader.js) include:
+  // These keys (see corresponding logic in dart_library.js) include:
   // - dartSize: <size of Dart input code in bytes>
   // - sourceMapSize: <size of JS source map in bytes>
   //
@@ -749,7 +749,7 @@ JSCode jsProgramToCode(js_ast.Program moduleTree, ModuleFormat format,
     'sourceMapSize': encodedMap.length
   };
   text = text.replaceFirst(
-      ProgramCompiler.metricsLocationID, '$compileTimeStatistics');
+      SharedCompiler.metricsLocationID, '$compileTimeStatistics');
 
   var debugMetadata = emitDebugMetadata
       ? _emitMetadata(moduleTree, component, mapUrl!, jsUrl!, fullDillUri)

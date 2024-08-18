@@ -22,7 +22,7 @@ void main(List<String> args) async {
   parser.addFlag('no-forgive', help: 'Don\'t remove any flaky records');
 
   final options = parser.parse(args);
-  if (options.flag('help')) {
+  if (options['help']) {
     print('''
 Usage: update_flakiness.dart [OPTION]... [RESULT-FILE]...
 Update the flakiness data with a set of fresh results.
@@ -35,8 +35,8 @@ ${parser.usage}''');
   final parameters = options.rest;
 
   // Load the existing flakiness data, if any.
-  final data = options.option('input') != null
-      ? await loadResultsMap(options.option('input')!)
+  final data = options['input'] != null
+      ? await loadResultsMap(options['input'])
       : <String, Map<String, dynamic>>{};
 
   final resultsForInactiveFlakiness = {
@@ -59,7 +59,7 @@ ${parser.usage}''');
       testData['configuration'] = configuration;
       testData['name'] = name;
       testData['expected'] = resultObject['expected'];
-      final List<dynamic> outcomes = testData['outcomes'] ??= <dynamic>[];
+      final List<dynamic> outcomes = testData['outcomes'] ??= [];
       if (!outcomes.contains(result)) {
         outcomes
           ..add(result)
@@ -67,8 +67,7 @@ ${parser.usage}''');
         testData['last_new_result_seen'] = nowString;
       }
       if (testData['current'] == result) {
-        var currentCounter = testData['current_counter'] as int;
-        testData['current_counter'] = currentCounter + 1;
+        testData['current_counter']++;
       } else {
         testData['current'] = result;
         testData['current_counter'] = 1;
@@ -76,44 +75,43 @@ ${parser.usage}''');
       Map<String, dynamic> mapField(String key) =>
           testData[key] ??= <String, dynamic>{};
       mapField('occurrences')[result] =
-          (mapField('occurrences')[result] as int? ?? 0) + 1;
+          (mapField('occurrences')[result] ?? 0) + 1;
       mapField('first_seen')[result] ??= nowString;
       mapField('last_seen')[result] = nowString;
       mapField('matches')[result] = resultObject['matches'];
-      if (options.option('build-id') != null) {
-        mapField('build_ids')[result] = options.option('build-id')!;
+      if (options['build-id'] != null) {
+        mapField('build_ids')[result] = options['build-id'];
       }
-      if (options.option('commit') != null) {
-        mapField('commits')[result] = options.option('commit')!;
+      if (options['commit'] != null) {
+        mapField('commits')[result] = options['commit'];
       }
     }
   }
 
   // Write out the new flakiness data.
   final flakinessHorizon = now.subtract(Duration(days: 7));
-  final sink = options.option('output') != null
-      ? File(options.option('output')!).openWrite()
-      : stdout;
+  final sink =
+      options['output'] != null ? File(options['output']).openWrite() : stdout;
   final keys = data.keys.toList()..sort();
   for (final key in keys) {
     final testData = data[key]!;
-    if ((testData['outcomes'] as List).length < 2) continue;
+    if (testData['outcomes'].length < 2) continue;
     // Reactivate inactive flaky results that are flaky again.
     if (testData['active'] == false) {
       if (resultsForInactiveFlakiness[key]!.length > 1) {
         testData['active'] = true;
         testData['reactivation_count'] =
-            (testData['reactivation_count'] as int? ?? 0) + 1;
+            (testData['reactivation_count'] ?? 0) + 1;
       }
-    } else if (options.flag('no-forgive')) {
+    } else if (options['no-forgive']) {
       testData['active'] = true;
-    } else if (testData['current_counter'] as int >= 100) {
+    } else if (testData['current_counter'] >= 100) {
       // Forgive tests that have been stable for 100 builds.
       testData['active'] = false;
     } else {
       // Forgive tests that have been stable since flakiness horizon (one week).
       final resultTimes = [
-        for (final timeString in (testData['last_seen'] as Map).values)
+        for (final timeString in testData['last_seen'].values)
           DateTime.parse(timeString)
       ]..sort();
       // The latest timestamp is the current result. The one before that is the

@@ -29,39 +29,21 @@ import 'package:analyzer/src/summary2/types_builder.dart';
 /// it later).
 class ReferenceResolver extends ThrowingAstVisitor<void> {
   final Linker linker;
-  final TypeSystemImpl typeSystem;
+  final TypeSystemImpl _typeSystem;
   final NodesToBuildType nodesToBuildType;
+
+  /// Indicates whether the library is opted into NNBD.
+  final bool isNNBD;
 
   Scope scope;
 
   ReferenceResolver(
     this.linker,
     this.nodesToBuildType,
-    this.typeSystem,
-    this.scope,
-  );
-
-  @override
-  void visitAnnotation(covariant AnnotationImpl node) {
-    if (node.arguments != null) {
-      var identifier = node.name;
-      if (identifier is PrefixedIdentifierImpl) {
-        var prefixNode = identifier.prefix;
-        var prefixElement = scope.lookup(prefixNode.name).getter;
-        prefixNode.staticElement = prefixElement;
-
-        if (prefixElement is PrefixElement) {
-          var name = identifier.identifier.name;
-          var element = prefixElement.scope.lookup(name).getter;
-          identifier.identifier.staticElement = element;
-        }
-      } else if (identifier is SimpleIdentifierImpl) {
-        var element = scope.lookup(identifier.name).getter;
-        identifier.staticElement = element;
-        return;
-      }
-    }
-  }
+    LibraryOrAugmentationElementImpl container,
+  )   : _typeSystem = container.library.typeSystem,
+        scope = container.scope,
+        isNNBD = container.isNonNullableByDefault;
 
   @override
   void visitBlockFunctionBody(BlockFunctionBody node) {}
@@ -74,13 +56,12 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(scope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.extendsClause?.accept(this);
     node.withClause?.accept(this);
     node.implementsClause?.accept(this);
 
-    scope = InstanceScope(scope, element);
+    scope = InterfaceScope(scope, element);
     LinkingNodeContext(node, scope);
 
     node.members.accept(this);
@@ -98,7 +79,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     scope = TypeParameterScope(scope, element.typeParameters);
     LinkingNodeContext(node, scope);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.superclass.accept(this);
     node.withClause.accept(this);
@@ -123,7 +103,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     scope = TypeParameterScope(scope, element.typeParameters);
     LinkingNodeContext(node, scope);
 
-    node.metadata.accept(this);
     node.parameters.accept(this);
 
     scope = outerScope;
@@ -142,12 +121,11 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(scope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.implementsClause?.accept(this);
     node.withClause?.accept(this);
 
-    scope = InstanceScope(scope, element);
+    scope = InterfaceScope(scope, element);
     LinkingNodeContext(node, scope);
 
     node.members.accept(this);
@@ -172,9 +150,8 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(scope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
-    node.onClause?.accept(this);
+    node.extendedType.accept(this);
 
     scope = ExtensionScope(scope, element);
     LinkingNodeContext(node, scope);
@@ -186,11 +163,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitExtensionOnClause(ExtensionOnClause node) {
-    node.extendedType.accept(this);
-  }
-
-  @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
     var outerScope = scope;
 
@@ -198,12 +170,11 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(scope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.representation.accept(this);
     node.implementsClause?.accept(this);
 
-    scope = InstanceScope(scope, element);
+    scope = InterfaceScope(scope, element);
     LinkingNodeContext(node, scope);
     LinkingNodeContext(node.representation, scope);
 
@@ -215,7 +186,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
-    node.metadata.accept(this);
     node.fields.accept(this);
   }
 
@@ -249,7 +219,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     scope = TypeParameterScope(outerScope, element.typeParameters);
     LinkingNodeContext(node, scope);
 
-    node.metadata.accept(this);
     node.returnType?.accept(this);
     node.functionExpression.accept(this);
     nodesToBuildType.addDeclaration(node);
@@ -309,9 +278,8 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     node.parameters.accept(this);
 
     var nullabilitySuffix = _getNullabilitySuffix(node.question != null);
-    var builder = FunctionTypeBuilder.of(nodeImpl, nullabilitySuffix);
+    var builder = FunctionTypeBuilder.of(isNNBD, nodeImpl, nullabilitySuffix);
     nodeImpl.type = builder;
-    nodesToBuildType.addDeclaration(node);
     nodesToBuildType.addTypeBuilder(builder);
 
     scope = outerScope;
@@ -325,7 +293,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(outerScope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.type.accept(this);
     nodesToBuildType.addDeclaration(node);
@@ -354,7 +321,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     scope = TypeParameterScope(scope, element.typeParameters);
     LinkingNodeContext(node, scope);
 
-    node.metadata.accept(this);
     node.returnType?.accept(this);
     node.typeParameters?.accept(this);
     node.parameters?.accept(this);
@@ -371,12 +337,11 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
     scope = TypeParameterScope(scope, element.typeParameters);
 
-    node.metadata.accept(this);
     node.typeParameters?.accept(this);
     node.onClause?.accept(this);
     node.implementsClause?.accept(this);
 
-    scope = InstanceScope(scope, element);
+    scope = InterfaceScope(scope, element);
     LinkingNodeContext(node, scope);
 
     node.members.accept(this);
@@ -386,26 +351,21 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitMixinOnClause(MixinOnClause node) {
-    node.superclassConstraints.accept(this);
-  }
-
-  @override
   void visitNamedType(covariant NamedTypeImpl node) {
     Element? element;
-    var importPrefix = node.importPrefix;
+    final importPrefix = node.importPrefix;
     if (importPrefix != null) {
-      var prefixToken = importPrefix.name;
-      var prefixName = prefixToken.lexeme;
-      var prefixElement = scope.lookup(prefixName).getter;
+      final prefixToken = importPrefix.name;
+      final prefixName = prefixToken.lexeme;
+      final prefixElement = scope.lookup(prefixName).getter;
       importPrefix.element = prefixElement;
 
       if (prefixElement is PrefixElement) {
-        var name = node.name2.lexeme;
+        final name = node.name2.lexeme;
         element = prefixElement.scope.lookup(name).getter;
       }
     } else {
-      var name = node.name2.lexeme;
+      final name = node.name2.lexeme;
 
       if (name == 'void') {
         node.type = VoidTypeImpl.instance;
@@ -429,7 +389,7 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
     } else {
       var builder = NamedTypeBuilder.of(
         linker,
-        typeSystem,
+        _typeSystem,
         node,
         element,
         nullabilitySuffix,
@@ -440,11 +400,16 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
   }
 
   @override
+  void visitOnClause(OnClause node) {
+    node.superclassConstraints.accept(this);
+  }
+
+  @override
   void visitRecordTypeAnnotation(covariant RecordTypeAnnotationImpl node) {
     node.positionalFields.accept(this);
     node.namedFields?.accept(this);
 
-    var builder = RecordTypeBuilder.of(typeSystem, node);
+    final builder = RecordTypeBuilder.of(_typeSystem, node);
     node.type = builder;
     nodesToBuildType.addTypeBuilder(builder);
   }
@@ -499,7 +464,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
 
   @override
   void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
-    node.metadata.accept(this);
     node.variables.accept(this);
   }
 
@@ -515,7 +479,6 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
       bound.accept(this);
       var element = node.declaredElement as TypeParameterElementImpl;
       element.bound = bound.type;
-      nodesToBuildType.addDeclaration(node);
     }
   }
 
@@ -536,10 +499,14 @@ class ReferenceResolver extends ThrowingAstVisitor<void> {
   }
 
   NullabilitySuffix _getNullabilitySuffix(bool hasQuestion) {
-    if (hasQuestion) {
-      return NullabilitySuffix.question;
+    if (isNNBD) {
+      if (hasQuestion) {
+        return NullabilitySuffix.question;
+      } else {
+        return NullabilitySuffix.none;
+      }
     } else {
-      return NullabilitySuffix.none;
+      return NullabilitySuffix.star;
     }
   }
 }

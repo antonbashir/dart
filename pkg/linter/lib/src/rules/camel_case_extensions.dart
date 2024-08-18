@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../utils.dart';
 
 const _desc = r'Name extensions using UpperCamelCase.';
@@ -32,18 +31,20 @@ extension SmartIterable<T> on Iterable<T> {
 ''';
 
 class CamelCaseExtensions extends LintRule {
+  static const LintCode code = LintCode('camel_case_extensions',
+      "The extension name '{0}' isn't an UpperCamelCase identifier.",
+      correctionMessage:
+          'Try changing the name to follow the UpperCamelCase style.');
+
   CamelCaseExtensions()
       : super(
             name: 'camel_case_extensions',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.camel_case_extensions;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -60,9 +61,6 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
-    // Don't lint augmentations.
-    if (node.augmentKeyword != null) return;
-
     var name = node.name;
     if (name != null && !isCamelCase(name.lexeme)) {
       rule.reportLintForToken(name, arguments: [name.lexeme]);

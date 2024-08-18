@@ -4,17 +4,17 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/computer/computer_inlay_hint.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
+import 'package:analyzer/dart/analysis/results.dart';
 
 typedef StaticOptions
     = Either3<bool, InlayHintOptions, InlayHintRegistrationOptions>;
 
 class InlayHintHandler
-    extends LspMessageHandler<InlayHintParams, List<InlayHint>>
-    with LspHandlerHelperMixin {
+    extends LspMessageHandler<InlayHintParams, List<InlayHint>> {
   InlayHintHandler(super.server);
   @override
   Method get handlesMessage => Method.textDocument_inlayHint;
@@ -26,38 +26,34 @@ class InlayHintHandler
   @override
   Future<ErrorOr<List<InlayHint>>> handle(InlayHintParams params,
       MessageInfo message, CancellationToken token) async {
-    var textDocument = params.textDocument;
-    if (!isDartDocument(textDocument)) {
+    if (!isDartDocument(params.textDocument)) {
       return success([]);
     }
 
-    var path = pathOfDoc(textDocument);
-    return path.mapResult((path) async {
-      // Capture the document version so we can verify it hasn't changed after
-      // we've got a resolved unit (which is async and may wait for context
-      // rebuilds).
-      var docIdentifier = extractDocumentVersion(textDocument, path);
+    final path = pathOfDoc(params.textDocument);
 
-      var result = await requireResolvedUnit(path);
+    // It's particularly important to provide results consistent with the
+    // document in the client in this handler to avoid inlay hints "jumping
+    // around" while the user types, so ensure no other requests (content
+    // updates) are processed while we do async work to get the resolved unit.
+    late ErrorOr<ResolvedUnitResult> result;
+    await server.lockRequestsWhile(() async {
+      result = await path.mapResult(requireResolvedUnit);
+    });
 
-      if (fileHasBeenModified(path, docIdentifier.version)) {
-        return fileModifiedError;
+    if (token.isCancellationRequested) {
+      return cancelled();
+    }
+
+    return result.mapResult((result) async {
+      if (!result.exists) {
+        return success([]);
       }
 
-      if (token.isCancellationRequested) {
-        return cancelled();
-      }
+      final computer = DartInlayHintComputer(pathContext, result);
+      final hints = computer.compute();
 
-      return result.mapResult((result) async {
-        if (!result.exists) {
-          return success([]);
-        }
-
-        var computer = DartInlayHintComputer(pathContext, result);
-        var hints = computer.compute();
-
-        return success(hints);
-      });
+      return success(hints);
     });
   }
 }
@@ -68,7 +64,7 @@ class InlayHintRegistrations extends FeatureRegistration
 
   @override
   ToJsonable? get options => InlayHintRegistrationOptions(
-        documentSelector: dartFiles,
+        documentSelector: [dartFiles],
         resolveProvider: false,
       );
 

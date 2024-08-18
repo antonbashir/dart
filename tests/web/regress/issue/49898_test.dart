@@ -16,8 +16,8 @@ void main() {
 }
 
 class A {
-  final ByteData bytes;
-  A(ByteData bytes) : bytes = bytes.asUnmodifiableView();
+  final UnmodifiableByteDataView bytes;
+  A(ByteData bytes) : bytes = UnmodifiableByteDataView(bytes);
 
   int getUint16() {
     return bytes.getUint16(0);

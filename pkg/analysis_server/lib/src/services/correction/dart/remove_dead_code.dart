@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/source/source_range.dart';
@@ -14,16 +14,17 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveDeadCode extends ResolvedCorrectionProducer {
-  RemoveDeadCode({required super.context});
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
-  AstNode? get coveringNode {
-    var node = super.coveringNode;
+  AstNode? get coveredNode {
+    var node = super.coveredNode;
     if (node is BinaryExpression) {
       var problemMessage = diagnostic?.problemMessage;
       if (problemMessage != null) {
@@ -43,14 +44,14 @@ class RemoveDeadCode extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var coveringNode = this.coveringNode;
-    var parent = coveringNode?.parent;
+    final coveredNode = this.coveredNode;
+    var parent = coveredNode?.parent;
 
-    if (coveringNode is Expression) {
+    if (coveredNode is Expression) {
       if (parent is BinaryExpression) {
-        if (parent.rightOperand == coveringNode) {
+        if (parent.rightOperand == coveredNode) {
           await builder.addDartFileEdit(file, (builder) {
-            builder.addDeletion(range.endEnd(parent.leftOperand, coveringNode));
+            builder.addDeletion(range.endEnd(parent.leftOperand, coveredNode));
           });
         }
       } else if (parent is ForParts) {
@@ -58,7 +59,8 @@ class RemoveDeadCode extends ResolvedCorrectionProducer {
         if (forStatement is! ForStatement) return;
         await _computeForStatementParts(builder, forStatement, parent);
       }
-    } else if (coveringNode is Block) {
+    } else if (coveredNode is Block) {
+      var block = coveredNode;
       var statementsToRemove = <Statement>[];
       var problemMessage = diagnostic?.problemMessage;
       if (problemMessage == null) {
@@ -66,7 +68,7 @@ class RemoveDeadCode extends ResolvedCorrectionProducer {
       }
       var errorRange =
           SourceRange(problemMessage.offset, problemMessage.length);
-      for (var statement in coveringNode.statements) {
+      for (var statement in block.statements) {
         if (range.node(statement).intersects(errorRange)) {
           statementsToRemove.add(statement);
         }
@@ -77,44 +79,34 @@ class RemoveDeadCode extends ResolvedCorrectionProducer {
           builder.addDeletion(rangeToRemove);
         });
       }
-    } else if (coveringNode is Statement) {
-      if (coveringNode is EmptyStatement) {
+    } else if (coveredNode is Statement) {
+      if (coveredNode is EmptyStatement) {
         return;
       }
-      if (coveringNode is DoStatement &&
-          await _computeDoStatement(builder, coveringNode)) {
+      if (coveredNode is DoStatement &&
+          await _computeDoStatement(builder, coveredNode)) {
         return;
       }
 
-      var rangeToRemove = utils.getLinesRangeStatements([coveringNode]);
+      var rangeToRemove = utils.getLinesRangeStatements([coveredNode]);
       await builder.addDartFileEdit(file, (builder) {
         builder.addDeletion(rangeToRemove);
       });
-    } else if (coveringNode is CatchClause && parent is TryStatement) {
+    } else if (coveredNode is CatchClause && parent is TryStatement) {
       var catchClauses = parent.catchClauses;
-      var index = catchClauses.indexOf(coveringNode);
+      var index = catchClauses.indexOf(coveredNode);
       var previous = index == 0 ? parent.body : catchClauses[index - 1];
       await builder.addDartFileEdit(file, (builder) {
-        builder.addDeletion(range.endEnd(previous, coveringNode));
+        builder.addDeletion(range.endEnd(previous, coveredNode));
       });
-    } else if (coveringNode is ForParts) {
-      var forStatement = coveringNode.parent;
+    } else if (coveredNode is ForParts) {
+      var forStatement = coveredNode.parent;
       if (forStatement is! ForStatement) return;
 
-      await _computeForStatementParts(builder, forStatement, coveringNode);
-    } else if (coveringNode is SwitchMember) {
-      var parent = coveringNode.parent as SwitchStatement;
-      var memberIndex = parent.members.indexOf(coveringNode);
-      Token? overrideEnd;
-      if (memberIndex > 0 &&
-          parent.members[memberIndex - 1].statements.isEmpty) {
-        // Previous member "falls through" to the one being removed, so don't
-        // remove the statements.
-        overrideEnd = coveringNode.colon;
-      }
+      await _computeForStatementParts(builder, forStatement, coveredNode);
+    } else if (coveredNode is SwitchPatternCase) {
       await builder.addDartFileEdit(file, (builder) {
-        builder.addDeletion(
-            range.deletionRange(coveringNode, overrideEnd: overrideEnd));
+        builder.addDeletion(range.deletionRange(coveredNode));
       });
     }
   }
@@ -182,7 +174,7 @@ class RemoveDeadCode extends ResolvedCorrectionProducer {
 
   Future<void> _computeForStatementParts(ChangeBuilder builder,
       ForStatement forStatement, ForParts forParts) async {
-    var beginNode = coveringNode;
+    var beginNode = coveredNode;
     if (beginNode == null) return;
     var updaters = forParts.updaters;
     if (!updaters.contains(beginNode)) {

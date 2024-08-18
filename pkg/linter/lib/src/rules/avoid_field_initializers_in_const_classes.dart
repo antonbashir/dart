@@ -7,8 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid field initializers in const classes.';
 
@@ -38,18 +36,22 @@ class A {
 ''';
 
 class AvoidFieldInitializersInConstClasses extends LintRule {
-  AvoidFieldInitializersInConstClasses() : super(
+  static const LintCode code = LintCode(
+      'avoid_field_initializers_in_const_classes',
+      "Fields in 'const' classes should not have initializers.",
+      correctionMessage:
+          'Try converting the field to a getter or initialize the field in the '
+          'constructors.');
+
+  AvoidFieldInitializersInConstClasses()
+      : super(
             name: 'avoid_field_initializers_in_const_classes',
             description: _desc,
             details: _details,
-            // TODO(srawlins): This rule has nothing to do with style. It is to
-            // reduce runtime memory usage. But we don't have a Category for
-            // that yet.
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.avoid_field_initializers_in_const_classes;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -89,12 +91,10 @@ class _Visitor extends SimpleAstVisitor<void> {
       if (declaration.constKeyword == null) return;
       var classDecl = declaration.thisOrAncestorOfType<ClassDeclaration>();
       if (classDecl == null) return;
-
-      var element = classDecl.declaredElement;
-      if (element == null) return;
-
       // no lint if several constructors
-      if (element.allConstructors.length > 1) return;
+      var constructorCount =
+          classDecl.members.whereType<ConstructorDeclaration>().length;
+      if (constructorCount > 1) return;
 
       var visitor = HasParameterReferenceVisitor(
           declaration.parameters.parameterElements);
@@ -107,16 +107,16 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
-    if (node.isAugmentation) return;
     if (node.isStatic) return;
     if (!node.fields.isFinal) return;
     // only const class
     var parent = node.parent;
     if (parent is ClassDeclaration) {
       var declaredElement = parent.declaredElement;
-      if (declaredElement == null) return;
-
-      if (declaredElement.allConstructors.every((e) => !e.isConst)) {
+      if (declaredElement == null) {
+        return;
+      }
+      if (declaredElement.constructors.every((e) => !e.isConst)) {
         return;
       }
       for (var variable in node.fields.variables) {

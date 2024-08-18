@@ -4,7 +4,6 @@ class Foo extends Object with Mixin {
 }
 
 main() {}
-
 mixin Mixin {
   foo() => 87;
   var field;

@@ -34,7 +34,7 @@ class C {
 }
 ''');
 
-    var node = findNode.singleAssertInitializer;
+    final node = findNode.singleAssertInitializer;
     assertResolvedNodeText(node, r'''
 AssertInitializer
   assertKeyword: assert
@@ -42,7 +42,7 @@ AssertInitializer
   condition: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>(int)
     argumentList: ArgumentList
       leftParenthesis: (
@@ -50,7 +50,7 @@ AssertInitializer
         IntegerLiteral
           literal: 0
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::foo::@parameter::_
+            base: root::@parameter::_
             substitution: {T: bool}
           staticType: int
       rightParenthesis: )
@@ -62,7 +62,7 @@ AssertInitializer
   message: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>(int)
     argumentList: ArgumentList
       leftParenthesis: (
@@ -70,7 +70,7 @@ AssertInitializer
         IntegerLiteral
           literal: 1
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::foo::@parameter::_
+            base: root::@parameter::_
             substitution: {T: dynamic}
           staticType: int
       rightParenthesis: )
@@ -91,7 +91,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleAssertStatement;
+    final node = findNode.singleAssertStatement;
     assertResolvedNodeText(node, r'''
 AssertStatement
   assertKeyword: assert
@@ -99,7 +99,7 @@ AssertStatement
   condition: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>(int)
     argumentList: ArgumentList
       leftParenthesis: (
@@ -107,7 +107,7 @@ AssertStatement
         IntegerLiteral
           literal: 0
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::foo::@parameter::_
+            base: root::@parameter::_
             substitution: {T: bool}
           staticType: int
       rightParenthesis: )
@@ -119,7 +119,7 @@ AssertStatement
   message: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>(int)
     argumentList: ArgumentList
       leftParenthesis: (
@@ -127,7 +127,7 @@ AssertStatement
         IntegerLiteral
           literal: 1
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::foo::@parameter::_
+            base: root::@parameter::_
             substitution: {T: dynamic}
           staticType: int
       rightParenthesis: )
@@ -182,7 +182,7 @@ main() {
   var /*@type=B*/ v = topLevel += 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 152, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 152, 1),
     ]);
     _assertTypeAnnotations();
   }
@@ -333,13 +333,13 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    final node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -352,7 +352,7 @@ BinaryExpression
   rightOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -377,13 +377,13 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    final node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -396,7 +396,7 @@ BinaryExpression
   rightOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: foo
-      staticElement: <testLibraryFragment>::@function::foo
+      staticElement: self::@function::foo
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (

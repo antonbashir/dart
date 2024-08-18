@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
+import 'package:analyzer/src/source/source_resource.dart';
 import 'package:path/path.dart' as pathos;
 import 'package:watcher/watcher.dart';
 
@@ -39,9 +39,6 @@ class OverlayResourceProvider implements ResourceProvider {
   @override
   Folder getFolder(String path) =>
       _OverlayFolder(this, baseProvider.getFolder(path));
-
-  @override
-  Link getLink(String path) => baseProvider.getLink(path);
 
   @override
   Resource getResource(String path) {
@@ -167,7 +164,6 @@ class _OverlayFile extends _OverlayResource implements File {
     }
   }
 
-  @Deprecated('Get Source instances from analysis results')
   @override
   Source createSource([Uri? uri]) =>
       FileSource(this, uri ?? provider.pathContext.toUri(path));
@@ -299,7 +295,7 @@ class _OverlayFolder extends _OverlayResource implements Folder {
   List<Resource> getChildren() {
     Map<String, Resource> children = {};
     try {
-      for (var child in _folder.getChildren()) {
+      for (final child in _folder.getChildren()) {
         children[child.path] = _OverlayResource._from(provider, child);
       }
     } on FileSystemException {

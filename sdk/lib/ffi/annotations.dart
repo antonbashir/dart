@@ -21,7 +21,15 @@ final class DartRepresentationOf {
   /// [Pointer]<T>                         -> [Pointer]<T>
   /// [NativeFunction]<T1 Function(T2, T3) -> S1 Function(S2, S3)
   ///    where DartRepresentationOf(Tn) -> Sn
-  /// T extends Struct                     -> T
-  /// T extends Union                      -> T
+  /// T extends Struct                  -> T
   const DartRepresentationOf(String nativeType);
 }
+
+final class Unsized {
+  const Unsized();
+}
+
+/// This [NativeType] does not have predefined size.
+///
+/// Unsized NativeTypes do not support [sizeOf] because their size is unknown.
+const unsized = const Unsized();

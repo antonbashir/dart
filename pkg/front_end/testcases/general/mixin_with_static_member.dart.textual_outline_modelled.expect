@@ -5,7 +5,6 @@ class B {
 }
 
 main() {}
-
 mixin M {
   static Object m() => new Object();
 }

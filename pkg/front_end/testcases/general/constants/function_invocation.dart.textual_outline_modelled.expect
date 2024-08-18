@@ -1,7 +1,4 @@
 const invocation = tearOff();
-
 const tearOff = method;
-
 main() {}
-
 method() {}

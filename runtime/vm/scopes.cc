@@ -12,6 +12,7 @@
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
 
+
 namespace dart {
 
 DEFINE_FLAG(bool,
@@ -142,7 +143,7 @@ VariableIndex LocalScope::AllocateVariables(const Function& function,
   ASSERT(num_parameters >= 0);
   // Parameters must be listed first and must all appear in the top scope.
   ASSERT(num_parameters <= num_variables());
-  int pos = 0;  // Current variable position.
+  int pos = 0;                              // Current variable position.
   VariableIndex next_index =
       first_parameter_index;  // Current free frame index.
 
@@ -553,6 +554,28 @@ LocalScope* LocalScope::RestoreOuterScope(const ContextScope& context_scope) {
     ASSERT(variable->owner() == owner_scope);
   }
   return outer_scope;
+}
+
+void LocalScope::CaptureLocalVariables(LocalScope* top_scope) {
+  ASSERT(top_scope->function_level() == function_level());
+  LocalScope* scope = this;
+  while (scope != top_scope->parent()) {
+    for (intptr_t i = 0; i < scope->num_variables(); i++) {
+      LocalVariable* variable = scope->VariableAt(i);
+      if (variable->is_forced_stack() ||
+          (variable->name().ptr() == Symbols::ExceptionVar().ptr()) ||
+          (variable->name().ptr() == Symbols::SavedTryContextVar().ptr()) ||
+          (variable->name().ptr() == Symbols::ArgDescVar().ptr()) ||
+          (variable->name().ptr() ==
+           Symbols::FunctionTypeArgumentsVar().ptr())) {
+        // Don't capture those variables because the VM expects them to be on
+        // the stack.
+        continue;
+      }
+      scope->CaptureVariable(variable);
+    }
+    scope = scope->parent();
+  }
 }
 
 ContextScopePtr LocalScope::CreateImplicitClosureScope(const Function& func) {

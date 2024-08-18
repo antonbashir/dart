@@ -7,15 +7,13 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc =
-    r'Use trailing commas for all parameter lists and argument lists.';
+const _desc = r'Use trailing commas for all function calls and declarations.';
 
 const _details = r'''
-**DO** use trailing commas for all multi-line parameter lists and argument
-lists. A parameter list or argument list that fits on one line, including the
-opening parenthesis and closing parenthesis, does not require a trailing comma.
+**DO** use trailing commas for all function calls and declarations unless the
+function call or definition, from the start of the function name up to the
+closing parenthesis, fits in a single line.
 
 **BAD:**
 ```dart
@@ -35,28 +33,31 @@ void run() {
 }
 ```
 
-**EXCEPTION:** If the final argument in an argument list is positional (vs
-named) and is either a function literal with curly braces, a map literal, a set
-literal, or a list literal, then a trailing comma is not required.
-This exception only applies if the final argument does not fit entirely on one
-line.
+**EXCEPTION:** If the final parameter/argument is positional (vs named) and is
+either a function literal implemented using curly braces, a literal map, a
+literal set or a literal array. This exception only applies if the final
+parameter does not fit entirely on one line.
 
-**NOTE:** This lint rule assumes that code has been formatted with `dart format`
-and may produce false positives on unformatted code.
+**NOTE:** This lint rule assumes `dart format` has been run over the code and
+may produce false positives until that has happened.
 
 ''';
 
 class RequireTrailingCommas extends LintRule {
+  static const LintCode code = LintCode(
+      'require_trailing_commas', 'Missing trailing comma.',
+      correctionMessage: 'Try adding a trailing comma.');
+
   RequireTrailingCommas()
       : super(
           name: 'require_trailing_commas',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.require_trailing_commas;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -76,6 +77,11 @@ class RequireTrailingCommas extends LintRule {
 }
 
 class _Visitor extends SimpleAstVisitor<void> {
+  static const _trailingCommaCode = LintCode(
+    'require_trailing_commas',
+    'Missing a required trailing comma.',
+  );
+
   final LintRule rule;
 
   late LineInfo _lineInfo;
@@ -87,9 +93,9 @@ class _Visitor extends SimpleAstVisitor<void> {
     super.visitArgumentList(node);
     if (node.arguments.isEmpty) return;
     _checkTrailingComma(
-      openingToken: node.leftParenthesis,
-      closingToken: node.rightParenthesis,
-      lastNode: node.arguments.last,
+      node.leftParenthesis,
+      node.rightParenthesis,
+      node.arguments.last,
     );
   }
 
@@ -97,9 +103,9 @@ class _Visitor extends SimpleAstVisitor<void> {
   void visitAssertInitializer(AssertInitializer node) {
     super.visitAssertInitializer(node);
     _checkTrailingComma(
-      openingToken: node.leftParenthesis,
-      closingToken: node.rightParenthesis,
-      lastNode: node.message ?? node.condition,
+      node.leftParenthesis,
+      node.rightParenthesis,
+      node.message ?? node.condition,
     );
   }
 
@@ -107,9 +113,9 @@ class _Visitor extends SimpleAstVisitor<void> {
   void visitAssertStatement(AssertStatement node) {
     super.visitAssertStatement(node);
     _checkTrailingComma(
-      openingToken: node.leftParenthesis,
-      closingToken: node.rightParenthesis,
-      lastNode: node.message ?? node.condition,
+      node.leftParenthesis,
+      node.rightParenthesis,
+      node.message ?? node.condition,
     );
   }
 
@@ -121,10 +127,9 @@ class _Visitor extends SimpleAstVisitor<void> {
     super.visitFormalParameterList(node);
     if (node.parameters.isEmpty) return;
     _checkTrailingComma(
-      openingToken: node.leftParenthesis,
-      closingToken: node.rightParenthesis,
-      lastNode: node.parameters.last,
-      errorToken: node.rightDelimiter ?? node.rightParenthesis,
+      node.leftParenthesis,
+      node.rightParenthesis,
+      node.parameters.last,
     );
   }
 
@@ -133,9 +138,9 @@ class _Visitor extends SimpleAstVisitor<void> {
     super.visitListLiteral(node);
     if (node.elements.isNotEmpty) {
       _checkTrailingComma(
-        openingToken: node.leftBracket,
-        closingToken: node.rightBracket,
-        lastNode: node.elements.last,
+        node.leftBracket,
+        node.rightBracket,
+        node.elements.last,
       );
     }
   }
@@ -145,21 +150,18 @@ class _Visitor extends SimpleAstVisitor<void> {
     super.visitSetOrMapLiteral(node);
     if (node.elements.isNotEmpty) {
       _checkTrailingComma(
-        openingToken: node.leftBracket,
-        closingToken: node.rightBracket,
-        lastNode: node.elements.last,
+        node.leftBracket,
+        node.rightBracket,
+        node.elements.last,
       );
     }
   }
 
-  void _checkTrailingComma({
-    required Token openingToken,
-    required Token closingToken,
-    required AstNode lastNode,
-    Token? errorToken,
-  }) {
-    errorToken ??= closingToken;
-
+  void _checkTrailingComma(
+    Token leftParenthesis,
+    Token rightParenthesis,
+    AstNode lastNode,
+  ) {
     // Early exit if trailing comma is present.
     if (lastNode.endToken.next?.type == TokenType.COMMA) return;
 
@@ -168,12 +170,12 @@ class _Visitor extends SimpleAstVisitor<void> {
     // right parenthesis are on the same line is sufficient since `dart format`
     // places the left parenthesis right after the identifier (on the same
     // line).
-    if (_isSameLine(openingToken, closingToken)) return;
+    if (_isSameLine(leftParenthesis, rightParenthesis)) return;
 
     // Check the last parameter to determine if there are any exceptions.
     if (_shouldAllowTrailingCommaException(lastNode)) return;
 
-    rule.reportLintForToken(errorToken);
+    rule.reportLintForToken(rightParenthesis, errorCode: _trailingCommaCode);
   }
 
   bool _isSameLine(Token token1, Token token2) =>
@@ -192,8 +194,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       return true;
     }
 
-    // Exception is allowed if the last argument is a (multiline) string
-    // literal.
+    // Exception is allowed if the last argument is a (multiline) string literal.
     if (lastNode is StringLiteral) return true;
 
     // Exception is allowed if the last argument is a anonymous function call.

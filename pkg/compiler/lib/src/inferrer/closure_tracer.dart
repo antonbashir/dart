@@ -67,8 +67,7 @@ class ClosureTracerVisitor extends TracerVisitor {
   }
 
   @override
-  void visitClosureCallSiteTypeInformation(
-      ClosureCallSiteTypeInformation info) {
+  visitClosureCallSiteTypeInformation(ClosureCallSiteTypeInformation info) {
     super.visitClosureCallSiteTypeInformation(info);
     if (info.closure == currentUser) {
       _registerCallForLaterAnalysis(info);
@@ -78,7 +77,7 @@ class ClosureTracerVisitor extends TracerVisitor {
   }
 
   @override
-  void visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
+  visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
     super.visitStaticCallSiteTypeInformation(info);
     MemberEntity called = info.calledElement;
     if (inferrer.closedWorld.commonElements.isForeign(called)) {
@@ -113,8 +112,7 @@ class ClosureTracerVisitor extends TracerVisitor {
   }
 
   @override
-  void visitDynamicCallSiteTypeInformation(
-      DynamicCallSiteTypeInformation info) {
+  visitDynamicCallSiteTypeInformation(DynamicCallSiteTypeInformation info) {
     super.visitDynamicCallSiteTypeInformation(info);
     final selector = info.selector!;
     final user = currentUser;
@@ -145,12 +143,12 @@ class ClosureTracerVisitor extends TracerVisitor {
 }
 
 class StaticTearOffClosureTracerVisitor extends ClosureTracerVisitor {
-  StaticTearOffClosureTracerVisitor(FunctionEntity tracedElement,
-      ApplyableTypeInformation tracedType, InferrerEngine inferrer)
+  StaticTearOffClosureTracerVisitor(
+      FunctionEntity tracedElement, tracedType, inferrer)
       : super([tracedElement], tracedType, inferrer);
 
   @override
-  void visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
+  visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
     super.visitStaticCallSiteTypeInformation(info);
 
     final selector = info.selector;

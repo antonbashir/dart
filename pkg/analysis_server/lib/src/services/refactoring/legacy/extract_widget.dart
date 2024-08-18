@@ -10,8 +10,7 @@ import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring_internal.dart';
 import 'package:analysis_server/src/services/search/element_visitors.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -90,6 +89,8 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
     return resolveResult.unit.featureSet;
   }
 
+  bool get _isNonNullable => _featureSet.isEnabled(Feature.non_nullable);
+
   @override
   Future<RefactoringStatus> checkFinalConditions() async {
     var result = RefactoringStatus();
@@ -143,8 +144,8 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
     var builder =
         ChangeBuilder(session: sessionHelper.session, eol: utils.endOfLine);
     await builder.addDartFileEdit(resolveResult.path, (builder) {
-      var expression = _expression;
-      var statements = _statements;
+      final expression = _expression;
+      final statements = _statements;
       if (expression != null) {
         builder.addReplacement(range.node(expression), (builder) {
           _writeWidgetInstantiation(builder);
@@ -184,9 +185,9 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
     _enclosingClassNode = node?.thisOrAncestorOfType<ClassDeclaration>();
     _enclosingClassElement = _enclosingClassNode?.declaredElement;
 
-    // `new MyWidget(...)`
-    var newExpression = node.findInstanceCreationExpression;
-    if (newExpression?.isWidgetCreation ?? false) {
+    // new MyWidget(...)
+    var newExpression = Flutter.identifyNewExpression(node);
+    if (Flutter.isWidgetCreation(newExpression)) {
       _expression = newExpression;
       return RefactoringStatus();
     }
@@ -204,7 +205,7 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
       if (statements.isNotEmpty) {
         var lastStatement = statements.last;
         if (lastStatement is ReturnStatement &&
-            lastStatement.expression.isWidgetExpression) {
+            Flutter.isWidgetExpression(lastStatement.expression)) {
           _statements = statements;
           _statementsRange = range.startEnd(statements.first, statements.last);
           return RefactoringStatus();
@@ -222,7 +223,7 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
       }
       if (node is MethodDeclaration) {
         var returnType = node.returnType?.type;
-        if (returnType.isWidgetType) {
+        if (Flutter.isWidgetType(returnType)) {
           _method = node;
           return RefactoringStatus();
         }
@@ -239,9 +240,11 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
     var result = RefactoringStatus();
 
     Future<ClassElement?> getClass(String name) async {
-      var element = await sessionHelper.getFlutterClass(name);
+      var element = await sessionHelper.getClass(Flutter.widgetsUri, name);
       if (element == null) {
-        result.addFatalError("Unable to find '$name' in $widgetsUri");
+        result.addFatalError(
+          "Unable to find '$name' in ${Flutter.widgetsUri}",
+        );
       }
       return element;
     }
@@ -270,14 +273,14 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
   Future<RefactoringStatus> _initializeParameters() async {
     _ParametersCollector? collector;
 
-    var expression = _expression;
+    final expression = _expression;
     if (expression != null) {
       var localRange = range.node(expression);
       collector = _ParametersCollector(_enclosingClassElement, localRange);
       expression.accept(collector);
     }
 
-    var statements = _statements;
+    final statements = _statements;
     if (statements != null) {
       collector =
           _ParametersCollector(_enclosingClassElement, _statementsRange!);
@@ -286,7 +289,7 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
       }
     }
 
-    var method = _method;
+    final method = _method;
     if (method != null) {
       var localRange = range.node(method);
       collector = _ParametersCollector(_enclosingClassElement, localRange);
@@ -302,9 +305,11 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
       var parameterList = method.parameters;
       if (parameterList != null) {
         for (var parameter in parameterList.parameters) {
-          parameter = parameter.notDefault;
+          if (parameter is DefaultFormalParameter) {
+            parameter = parameter.parameter;
+          }
           if (parameter is NormalFormalParameter) {
-            var element = parameter.declaredElement!;
+            final element = parameter.declaredElement!;
             _parameters.add(_Parameter(element.name, element.type,
                 isMethodParameter: true));
           }
@@ -424,7 +429,9 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
                   'key',
                   type: classKey!.instantiate(
                     typeArguments: const [],
-                    nullabilitySuffix: NullabilitySuffix.question,
+                    nullabilitySuffix: _isNonNullable
+                        ? NullabilitySuffix.question
+                        : NullabilitySuffix.star,
                   ),
                 );
               }
@@ -432,7 +439,14 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
 
               // Add parameters for fields, local, and method parameters.
               for (var parameter in _parameters) {
-                builder.write('    required ');
+                builder.write('    ');
+                if (_isNonNullable) {
+                  builder.write('required');
+                } else {
+                  builder.write('@');
+                  builder.writeReference(accessorRequired!);
+                }
+                builder.write(' ');
                 if (parameter.constructorName != parameter.name) {
                   builder.writeType(parameter.type);
                   builder.write(' ');
@@ -499,7 +513,7 @@ class ExtractWidgetRefactoringImpl extends RefactoringImpl
               );
             },
             bodyWriter: () {
-              var expression = _expression;
+              final expression = _expression;
               if (expression != null) {
                 var indentOld = utils.getLinePrefix(expression.offset);
                 var indentNew = '    ';
@@ -628,10 +642,7 @@ class _ParametersCollector extends RecursiveAstVisitor<void> {
         }
       }
     } else if (element is PropertyAccessorElement) {
-      var field = element.variable2;
-      if (field == null) {
-        return;
-      }
+      var field = element.variable;
       if (_isMemberOfEnclosingClass(field)) {
         if (node.inSetterContext()) {
           status.addError("Write to '$elementName' cannot be extracted.");
@@ -651,9 +662,9 @@ class _ParametersCollector extends RecursiveAstVisitor<void> {
   /// Return `true` if the given [element] is a member of the [enclosingClass]
   /// or one of its supertypes, interfaces, or mixins.
   bool _isMemberOfEnclosingClass(Element element) {
-    var enclosingClass = this.enclosingClass;
+    final enclosingClass = this.enclosingClass;
     if (enclosingClass != null) {
-      var enclosingClasses = this.enclosingClasses ??= <InterfaceElement>[
+      final enclosingClasses = this.enclosingClasses ??= <InterfaceElement>[
         enclosingClass,
         ...enclosingClass.allSupertypes.map((t) => t.element)
       ];

@@ -26,14 +26,14 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 28, 5),
     ]);
 
-    var node = findNode.singleFieldDeclaration;
+    final node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
     lateKeyword: late
     type: NamedType
       name: Object
-      element: dart:core::<fragment>::@class::Object
+      element: dart:core::@class::Object
       type: Object
     variables
       VariableDeclaration
@@ -42,7 +42,7 @@ FieldDeclaration
         initializer: SuperExpression
           superKeyword: super
           staticType: A
-        declaredElement: <testLibraryFragment>::@class::A::@field::f
+        declaredElement: self::@class::A::@field::f
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -55,14 +55,14 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    final node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
     lateKeyword: late
     type: NamedType
       name: Object
-      element: dart:core::<fragment>::@class::Object
+      element: dart:core::@class::Object
       type: Object
     variables
       VariableDeclaration
@@ -71,7 +71,7 @@ FieldDeclaration
         initializer: ThisExpression
           thisKeyword: this
           staticType: A
-        declaredElement: <testLibraryFragment>::@class::A::@field::f
+        declaredElement: self::@class::A::@field::f
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -87,14 +87,14 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 45, 1),
     ]);
 
-    var node = findNode.fieldDeclaration('b =');
+    final node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
     keyword: final
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     variables
       VariableDeclaration
@@ -102,9 +102,9 @@ FieldDeclaration
         equals: =
         initializer: SimpleIdentifier
           token: a
-          staticElement: <testLibraryFragment>::@class::A::@getter::a
+          staticElement: self::@class::A::@getter::a
           staticType: int
-        declaredElement: <testLibraryFragment>::@class::A::@field::b
+        declaredElement: self::@class::A::@field::b
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -120,14 +120,14 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 44, 1),
     ]);
 
-    var node = findNode.fieldDeclaration('b =');
+    final node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
     keyword: final
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     variables
       VariableDeclaration
@@ -135,9 +135,9 @@ FieldDeclaration
         equals: =
         initializer: SimpleIdentifier
           token: a
-          staticElement: <testLibraryFragment>::@class::A::@getter::a
+          staticElement: self::@class::A::@getter::a
           staticType: int
-        declaredElement: <testLibraryFragment>::@class::A::@field::b
+        declaredElement: self::@class::A::@field::b
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -153,14 +153,14 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 42, 1),
     ]);
 
-    var node = findNode.fieldDeclaration('b =');
+    final node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
     keyword: final
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     variables
       VariableDeclaration
@@ -169,14 +169,14 @@ FieldDeclaration
         initializer: MethodInvocation
           methodName: SimpleIdentifier
             token: a
-            staticElement: <testLibraryFragment>::@class::A::@method::a
+            staticElement: self::@class::A::@method::a
             staticType: int Function()
           argumentList: ArgumentList
             leftParenthesis: (
             rightParenthesis: )
           staticInvokeType: int Function()
           staticType: int
-        declaredElement: <testLibraryFragment>::@class::A::@field::b
+        declaredElement: self::@class::A::@field::b
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -191,7 +191,7 @@ class A {
       error(CompileTimeErrorCode.INVALID_REFERENCE_TO_THIS, 22, 4),
     ]);
 
-    var node = findNode.singleFieldDeclaration;
+    final node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -203,7 +203,7 @@ FieldDeclaration
         initializer: ThisExpression
           thisKeyword: this
           staticType: A
-        declaredElement: <testLibraryFragment>::@class::A::@field::a
+        declaredElement: self::@class::A::@field::a
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -237,7 +237,13 @@ class A {
   var f = throw 42;
 }
 ''');
-    assertType(findElement.field('f').type, 'Never');
+    assertType(
+      findElement.field('f').type,
+      typeStringByNullability(
+        nullable: 'Never',
+        legacy: 'dynamic',
+      ),
+    );
   }
 
   test_type_inferred_noInitializer() async {
@@ -247,6 +253,25 @@ class A {
 }
 ''');
     assertType(findElement.field('f').type, 'dynamic');
+  }
+
+  test_type_inferred_nonNullify() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.7
+var a = 0;
+''');
+
+    await assertErrorsInCode('''
+import 'a.dart';
+
+class A {
+  var f = a;
+}
+''', [
+      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
+    ]);
+
+    assertType(findElement.field('f').type, 'int');
   }
 
   test_type_inferred_null() async {
@@ -265,7 +290,7 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    final node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -286,7 +311,7 @@ FieldDeclaration
           leftBracket: [
           rightBracket: ]
           staticType: List<T>
-        declaredElement: <testLibraryFragment>::@class::A::@field::f
+        declaredElement: self::@class::A::@field::f
   semicolon: ;
   declaredElement: <null>
 ''');

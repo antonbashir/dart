@@ -10,11 +10,7 @@ class B {
 }
 
 main() {}
-
 var v_postfix_mm = (new B().a--);
-
 var v_postfix_pp = (new B().a++);
-
 var v_prefix_mm = (--new B().a);
-
 var v_prefix_pp = (++new B().a);

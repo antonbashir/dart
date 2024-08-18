@@ -121,10 +121,6 @@ class BufferedSink {
     addByte(byte);
   }
 
-  void writeEnum(Enum e) {
-    writeByte(e.index);
-  }
-
   void writeIf<T extends Object>(
     bool condition,
     void Function() ifTrue,
@@ -149,11 +145,6 @@ class BufferedSink {
     }
   }
 
-  /// Writes [items], converts to [List] first.
-  void writeIterable<T>(Iterable<T> items, void Function(T x) writeItem) {
-    writeList(items.toList(), writeItem);
-  }
-
   void writeList<T>(List<T> items, void Function(T x) writeItem) {
     writeUInt30(items.length);
     for (var i = 0; i < items.length; i++) {
@@ -167,18 +158,6 @@ class BufferedSink {
     writeUInt30(typedItems.length);
     for (var i = 0; i < typedItems.length; i++) {
       writeItem(typedItems[i]);
-    }
-  }
-
-  void writeMap<K, V>(
-    Map<K, V> map, {
-    required void Function(K key) writeKey,
-    required void Function(V value) writeValue,
-  }) {
-    writeUInt30(map.length);
-    for (var entry in map.entries) {
-      writeKey(entry.key);
-      writeValue(entry.value);
     }
   }
 
@@ -211,7 +190,7 @@ class BufferedSink {
 
   /// Write the [value] as UTF8 encoded byte array.
   void writeStringUtf8(String value) {
-    var bytes = const Utf8Encoder().convert(value);
+    final bytes = const Utf8Encoder().convert(value);
     writeUint8List(bytes);
   }
 

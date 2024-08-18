@@ -23,12 +23,12 @@ class AnalyzerStatusTest extends AbstractLspAnalysisServerIntegrationTest {
     await initialAnalysis;
 
     // Set up futures to wait for the new events.
-    var startNotification = waitForAnalysisStart();
-    var completeNotification = waitForAnalysisComplete();
+    final startNotification = waitForAnalysisStart();
+    final completeNotification = waitForAnalysisComplete();
 
     // Send a modification
     await openFile(mainFileUri, initialContents);
-    await replaceFile(222, mainFileUri, 'int a = 2;');
+    await replaceFile(222, mainFileUri, 'String a = 1;');
 
     // Ensure the notifications come through again.
     await startNotification;
@@ -43,9 +43,9 @@ class AnalyzerStatusTest extends AbstractLspAnalysisServerIntegrationTest {
     // and track which event came first to ensure they arrived in the expected
     // order.
     bool? firstNotificationWasAnalyzing;
-    var startNotification = waitForAnalysisStart()
+    final startNotification = waitForAnalysisStart()
         .then((_) => firstNotificationWasAnalyzing ??= true);
-    var completeNotification = waitForAnalysisComplete()
+    final completeNotification = waitForAnalysisComplete()
         .then((_) => firstNotificationWasAnalyzing ??= false);
 
     await initialize();

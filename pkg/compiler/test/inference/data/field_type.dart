@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: main:[null]*/
 main() {
   test1();
@@ -25,6 +27,8 @@ main() {
   test19();
   test20();
   test20b();
+  test21();
+  test21b();
   test22();
   test23();
   test24();
@@ -39,7 +43,7 @@ main() {
 /*member: A1.:[exact=A1]*/
 class A1 {
   /*member: A1.f1:[null]*/
-  int? f1;
+  int f1;
 }
 
 /*member: test1:[null]*/
@@ -50,7 +54,7 @@ test1() {
 /*member: A2.:[exact=A2]*/
 class A2 {
   /*member: A2.f2a:[null]*/
-  int? f2a;
+  int f2a;
 
   /*member: A2.f2b:[exact=JSUInt31]*/
   int f2b = 1;
@@ -66,7 +70,7 @@ class A3 {
   int f3a;
 
   /*member: A3.f3b:[null|exact=JSUInt31]*/
-  int? f3b;
+  int f3b;
 
   /*member: A3.:[exact=A3]*/
   A3() : f3a = 1;
@@ -217,14 +221,14 @@ test9() {
 
 class A10 {
   /*member: A10.f10:[exact=JSUInt31]*/
-  int? f10;
+  int f10;
 
   /*member: A10.:[exact=A10]*/
   A10() {
     /*update: [exact=A10]*/ f10 = 1;
   }
   /*member: A10.m10:[subclass=JSUInt32]*/
-  m10() => /*[exact=A10]*/ f10! /*invoke: [exact=JSUInt31]*/ + 1;
+  m10() => /*[exact=A10]*/ f10 /*invoke: [exact=JSUInt31]*/ + 1;
 }
 
 /*member: f10:[null]*/
@@ -234,7 +238,7 @@ void f10(/*[null]*/ x) {
 
 /*member: test10:[null]*/
 test10() {
-  A10? a;
+  A10 a;
   f10(a);
   a = A10();
   a. /*invoke: [exact=A10]*/ m10();
@@ -285,7 +289,7 @@ test12() {
 
 class S13 {
 /*member: S13.fs13:[exact=JSUInt31]*/
-  int? fs13;
+  int fs13;
 
   /*member: S13.:[exact=S13]*/
   S13() {
@@ -515,6 +519,56 @@ test20b() {
   A20b();
 }
 
+class A21 {
+  /*member: A21.f21:[null|exact=JSUInt31]*/
+  var f21;
+
+  /*member: A21.:[exact=A21]*/
+  A21() {
+    dynamic a = this;
+    /*iterator: [exact=A21]*/
+    /*current: [empty]*/
+    /*moveNext: [empty]*/
+    for (
+        // ignore: unused_local_variable
+        var i in a) {}
+    /*update: [exact=A21]*/ f21 = 42;
+  }
+
+  get iterator => null;
+}
+
+/*member: test21:[null]*/
+test21() {
+  A21();
+}
+
+class A21b extends Iterable {
+  /*member: A21b.f21:[null|exact=JSUInt31]*/
+  var f21;
+
+  /*member: A21b.:[exact=A21b]*/
+  A21b() {
+    dynamic a = this;
+    /*iterator: [exact=A21b]*/
+    /*current: [null]*/
+    /*moveNext: [null]*/
+    for (
+        // ignore: unused_local_variable
+        var i in a) {}
+    /*update: [exact=A21b]*/ f21 = 42;
+  }
+
+  /*member: A21b.iterator:[null]*/
+  @override
+  get iterator => null;
+}
+
+/*member: test21b:[null]*/
+test21b() {
+  A21b();
+}
+
 class A22 {
   /*member: A22.f22a:[exact=JSUInt31]*/
   var f22a;
@@ -544,16 +598,16 @@ test22() {
 
 class A23 {
   /*member: A23.f23a:[null|exact=JSUInt31]*/
-  int? f23a = 42;
+  var f23a = 42;
 
   /*member: A23.f23b:[null|exact=JSUInt31]*/
-  int? f23b = 42;
+  var f23b = 42;
 
   /*member: A23.f23c:[null|exact=JSUInt31]*/
-  int? f23c = 42;
+  var f23c = 42;
 
   /*member: A23.f23d:[null|exact=JSUInt31]*/
-  int? f23d = 42;
+  var f23d = 42;
 
   /*member: A23.:[exact=A23]*/
   A23() {

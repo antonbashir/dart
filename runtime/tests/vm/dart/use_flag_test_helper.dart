@@ -5,11 +5,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:expect/config.dart';
 import 'package:expect/expect.dart';
 import 'package:path/path.dart' as path;
 
-final isAOTRuntime = isVmAotConfiguration;
+final isAOTRuntime = path.basenameWithoutExtension(Platform.executable) ==
+    'dart_precompiled_runtime';
 final buildDir = path.dirname(Platform.executable);
 final sdkDir = path.dirname(path.dirname(buildDir));
 late final platformDill = () {
@@ -53,15 +53,6 @@ final dartPrecompiledRuntime = path.join(
     buildDir, 'dart_precompiled_runtime' + (Platform.isWindows ? '.exe' : ''));
 final checkedInDartVM = path.join('tools', 'sdks', 'dart-sdk', 'bin',
     'dart' + (Platform.isWindows ? '.exe' : ''));
-// Lazily initialize 'lipo' so that tests that don't use it on platforms
-// that don't have it don't fail.
-late final lipo = () {
-  final path = "/usr/bin/lipo";
-  if (File(path).existsSync()) {
-    return path;
-  }
-  throw 'Could not find lipo binary at $path';
-}();
 
 final isSimulator = path.basename(buildDir).contains('SIM');
 
@@ -104,14 +95,18 @@ Future<void> assembleSnapshot(String assemblyPath, String snapshotPath,
     cc = 'clang';
   }
 
+  // TODO(49519): What do we need to change for SIMRISCV64?
   if (buildDir.endsWith('SIMARM')) {
     ccFlags.add('--target=armv7-linux-gnueabihf');
   } else if (buildDir.endsWith('SIMARM64')) {
     ccFlags.add('--target=aarch64-linux-gnu');
-  } else if (buildDir.endsWith('SIMRISCV64')) {
-    ccFlags.add('--target=riscv64-linux-gnu');
   } else if (Platform.isMacOS) {
     shared = '-dynamiclib';
+    if (buildDir.endsWith('ARM64')) {
+      // ld: dynamic main executables must link with libSystem.dylib for
+      // architecture arm64
+      ldFlags.add('-lSystem');
+    }
     // Tell Mac linker to give up generating eh_frame from dwarf.
     ldFlags.add('-Wl,-no_compact_unwind');
   }
@@ -127,7 +122,7 @@ Future<void> assembleSnapshot(String assemblyPath, String snapshotPath,
     ...ccFlags,
     ...ldFlags,
     shared,
-    if (!Platform.isMacOS) '-nostdlib',
+    '-nostdlib',
     '-o',
     snapshotPath,
     assemblyPath,

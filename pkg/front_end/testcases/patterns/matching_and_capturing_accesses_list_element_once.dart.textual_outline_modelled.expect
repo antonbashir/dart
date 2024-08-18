@@ -9,5 +9,4 @@ class A with ListMixin<int> {
 }
 
 expectEquals(x, y) {}
-
 main() {}

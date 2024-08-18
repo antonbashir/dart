@@ -90,7 +90,8 @@ abstract class ConstantValue {
 
   List<ConstantValue> getDependencies();
 
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg);
+  // TODO(48820): Add type parameters.
+  accept(ConstantValueVisitor visitor, arg);
 
   /// The value of this constant in Dart syntax, if possible.
   ///
@@ -147,8 +148,7 @@ class FunctionConstantValue extends ConstantValue {
   int get hashCode => (17 * element.hashCode) & 0x7fffffff;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitFunction(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitFunction(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.FUNCTION;
@@ -204,8 +204,7 @@ class NullConstantValue extends PrimitiveConstantValue {
   int get hashCode => 785965825;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitNull(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitNull(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.NULL;
@@ -273,8 +272,7 @@ class IntConstantValue extends NumConstantValue {
   int get hashCode => intValue.hashCode & Hashing.SMI_MASK;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitInt(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitInt(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.INT;
@@ -349,8 +347,7 @@ class DoubleConstantValue extends NumConstantValue {
   int get hashCode => doubleValue.hashCode;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitDouble(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitDouble(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.DOUBLE;
@@ -364,7 +361,7 @@ class DoubleConstantValue extends NumConstantValue {
 }
 
 abstract class BoolConstantValue extends PrimitiveConstantValue {
-  factory BoolConstantValue(bool value) {
+  factory BoolConstantValue(value) {
     return value ? TrueConstantValue() : FalseConstantValue();
   }
 
@@ -378,8 +375,7 @@ abstract class BoolConstantValue extends PrimitiveConstantValue {
   BoolConstantValue negate();
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitBool(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitBool(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.BOOL;
@@ -463,8 +459,7 @@ class StringConstantValue extends PrimitiveConstantValue {
   int get length => stringValue.length;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitString(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitString(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.STRING;
@@ -514,8 +509,7 @@ class TypeConstantValue extends ObjectConstantValue {
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitType(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitType(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.TYPE;
@@ -557,8 +551,7 @@ class ListConstantValue extends ObjectConstantValue {
   int get length => entries.length;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitList(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitList(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.LIST;
@@ -620,8 +613,7 @@ abstract class SetConstantValue extends ObjectConstantValue {
   int get length => values.length;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitSet(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitSet(this, arg);
 
   @override
   String toDartText(DartTypes? dartTypes) {
@@ -694,8 +686,7 @@ abstract class MapConstantValue extends ObjectConstantValue {
   }
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
-      visitor.visitMap(this, arg);
+  accept(ConstantValueVisitor visitor, arg) => visitor.visitMap(this, arg);
 
   @override
   ConstantValueKind get kind => ConstantValueKind.MAP;
@@ -751,7 +742,7 @@ class InterceptorConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitInterceptor(this, arg);
   }
 
@@ -786,13 +777,13 @@ class JsNameConstantValue extends ConstantValue {
   }
 
   @override
-  int get hashCode => name.hashCode * 17;
+  get hashCode => name.hashCode * 17;
 
   @override
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitJsName(this, arg);
   }
 
@@ -831,7 +822,7 @@ class DummyInterceptorConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitDummyInterceptor(this, arg);
   }
 
@@ -859,7 +850,7 @@ class LateSentinelConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitLateSentinel(this, arg);
   }
 
@@ -890,7 +881,7 @@ class UnreachableConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => const [];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitUnreachable(this, arg);
   }
 
@@ -936,7 +927,7 @@ class ConstructedConstantValue extends ObjectConstantValue {
   List<ConstantValue> getDependencies() => fields.values.toList();
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitConstructed(this, arg);
   }
 
@@ -1014,7 +1005,7 @@ class RecordConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => values;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) {
+  accept(ConstantValueVisitor visitor, arg) {
     return visitor.visitRecord(this, arg);
   }
 
@@ -1079,7 +1070,7 @@ class InstantiationConstantValue extends ConstantValue {
   List<ConstantValue> getDependencies() => [function];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
+  accept(ConstantValueVisitor visitor, arg) =>
       visitor.visitInstantiation(this, arg);
 
   @override
@@ -1134,7 +1125,7 @@ class JavaScriptObjectConstantValue extends ConstantValue {
   int get length => keys.length;
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
+  accept(ConstantValueVisitor visitor, arg) =>
       visitor.visitJavaScriptObject(this, arg);
 
   @override
@@ -1203,13 +1194,13 @@ class DeferredGlobalConstantValue extends ConstantValue {
   }
 
   @override
-  int get hashCode => (referenced.hashCode * 17 + unit.hashCode) & 0x3fffffff;
+  get hashCode => (referenced.hashCode * 17 + unit.hashCode) & 0x3fffffff;
 
   @override
   List<ConstantValue> getDependencies() => [referenced];
 
   @override
-  R accept<R, A>(ConstantValueVisitor<R, A> visitor, A arg) =>
+  accept(ConstantValueVisitor visitor, arg) =>
       visitor.visitDeferredGlobal(this, arg);
 
   @override

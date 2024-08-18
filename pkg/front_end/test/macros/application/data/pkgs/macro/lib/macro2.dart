@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 import 'macro1.dart';
 
 @Macro1()

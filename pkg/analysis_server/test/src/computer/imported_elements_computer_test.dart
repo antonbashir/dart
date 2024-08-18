@@ -360,16 +360,16 @@ String foo = '';
         ..add(name: 'foo', rootPath: '$workspaceRootPath/foo'),
     );
 
-    var selection = 'prefix.foo';
+    var selection = 'f.foo';
     var content = '''
-import 'package:foo/foo.dart' as prefix;
+import 'package:foo/foo.dart' as f;
 void f() {
   $selection = '';
 }
 ''';
     await _computeElements(content, selection);
     assertElements([
-      ImportedElements(fooPath, 'prefix', ['foo=']),
+      ImportedElements(fooPath, 'f', ['foo=']),
     ]);
   }
 
@@ -468,7 +468,7 @@ bool randomBool() {
 
   Future<void> _computeElements(String content, String selection) async {
     // TODO(brianwilkerson): Automatically extract the selection from the content.
-    var file = newFile(sourcePath, content);
+    final file = newFile(sourcePath, content);
     var result = await getResolvedUnit(file);
     var computer = ImportedElementsComputer(
         result.unit, content.indexOf(selection), selection.length);

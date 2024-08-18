@@ -72,24 +72,18 @@ int a = 0;
 }
 
 class _AvoidIntRule extends LintRule {
-  static const LintCode code = LintCode('avoid_int', 'Avoid int.',
-      correctionMessage: 'Try avoiding int.');
-
   _AvoidIntRule()
       : super(
           name: 'avoid_int',
           description: '',
           details: '',
-          categories: {LintRuleCategory.errors},
+          group: Group.errors,
         );
-
-  @override
-  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _AvoidIntVisitor(this);
+    final visitor = _AvoidIntVisitor(this);
     registry.addNamedType(this, visitor);
   }
 }

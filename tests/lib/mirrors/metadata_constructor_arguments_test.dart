@@ -4,6 +4,8 @@
 
 // Regression test for Issue 13817.
 
+library test.metadata_constructor_arguments;
+
 import 'dart:mirrors';
 import 'package:expect/expect.dart';
 
@@ -12,66 +14,59 @@ class Tag {
   const Tag({named}) : this.name = named;
 }
 
-@Tag(named: undefined)
-//          ^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [analyzer] COMPILE_TIME_ERROR.UNDEFINED_IDENTIFIER
-// [cfe] Undefined name 'undefined'.
+@Tag(named: undefined) // //# 01: compile-time error
 class A {}
 
-@Tag(named: D.instanceMethod())
-//          ^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_EVAL_METHOD_INVOCATION
-//            ^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.STATIC_ACCESS_TO_INSTANCE_MEMBER
-// [cfe] Member not found: 'D.instanceMethod'.
+@Tag(named: 'valid')
+class B {}
+
+@Tag(named: C.STATIC_FIELD)
+class C {
+  static const STATIC_FIELD = 3;
+}
+
+@Tag(named: D.instanceMethod()) // //# 02: compile-time error
 class D {
   instanceMethod() {}
 }
 
-@Tag(named: instanceField)
-//          ^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [analyzer] COMPILE_TIME_ERROR.UNDEFINED_IDENTIFIER
-// [cfe] Undefined name 'instanceField'.
+@Tag(named: instanceField) // //# 03: compile-time error
 class E {
   var instanceField;
 }
 
-@Tag(named: F.nonConstStaticField)
-// [error column 2]
-// [cfe] Constant evaluation error:
-//          ^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
+@Tag(named: F.nonConstStaticField) // //# 04: compile-time error
 class F {
   static var nonConstStaticField = 6;
 }
 
-@Tag(named: instanceMethod)
-//          ^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [analyzer] COMPILE_TIME_ERROR.UNDEFINED_IDENTIFIER
-// [cfe] Undefined name 'instanceMethod'.
+@Tag(named: instanceMethod) // //# 05: compile-time error
 class G {
   instanceMethod() {}
 }
 
-@Tag(named: this)
-//          ^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [analyzer] COMPILE_TIME_ERROR.INVALID_REFERENCE_TO_THIS
-// [cfe] Expected identifier, but got 'this'.
+@Tag(named: this) // //# 06: compile-time error
 class H {
   instanceMethod() {}
 }
 
-@Tag(named: super)
-//          ^^^^^
-// [analyzer] COMPILE_TIME_ERROR.CONST_WITH_NON_CONSTANT_ARGUMENT
-// [analyzer] COMPILE_TIME_ERROR.SUPER_IN_INVALID_CONTEXT
-// [cfe] Expected identifier, but got 'super'.
+@Tag(named: super) // //# 07: compile-time error
 class I {
   instanceMethod() {}
 }
 
-main() {}
+checkMetadata(DeclarationMirror mirror, List expectedMetadata) {
+  Expect.listEquals(expectedMetadata.map(reflect).toList(), mirror.metadata);
+}
+
+main() {
+  reflectClass(A).metadata;
+  checkMetadata(reflectClass(B), [const Tag(named: 'valid')]);
+  checkMetadata(reflectClass(C), [const Tag(named: C.STATIC_FIELD)]);
+  reflectClass(D).metadata;
+  reflectClass(E).metadata;
+  reflectClass(F).metadata;
+  reflectClass(G).metadata;
+  reflectClass(H).metadata;
+  reflectClass(I).metadata;
+}

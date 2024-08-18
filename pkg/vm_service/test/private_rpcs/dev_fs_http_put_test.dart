@@ -15,7 +15,7 @@ import 'private_rpc_common.dart';
 Future<String> readResponse(HttpClientResponse response) {
   final completer = Completer<String>();
   final contents = StringBuffer();
-  response.transform(utf8.decoder).listen(
+  response.cast<List<int>>().transform(utf8.decoder).listen(
     (String data) {
       contents.write(data);
     },

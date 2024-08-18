@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*library: 
  constant=[
   {
@@ -105,7 +107,7 @@
   "id": "outputUnit/1",
   "kind": "outputUnit",
   "name": "1",
-  "size": 1204,
+  "size": 1206,
   "filename": "out_1.part.js",
   "imports": [
     "lib"

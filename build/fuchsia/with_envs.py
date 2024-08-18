@@ -5,8 +5,10 @@
 
 import os
 import platform
+import signal
 import subprocess
 import sys
+import time
 
 sys.path.insert(
     0,
@@ -14,7 +16,7 @@ sys.path.insert(
         os.path.join(os.path.dirname(__file__),
                      '../../third_party/fuchsia/test_scripts/test/')))
 
-from common import catch_sigterm
+from common import catch_sigterm, wait_for_sigterm
 
 
 def Main():
@@ -41,10 +43,12 @@ def Main():
     os.environ['FUCHSIA_SDK_ROOT'] = os.path.join(os.environ['SRC_ROOT'],
                                                   'third_party', 'fuchsia',
                                                   'sdk', sdk_dir)
-
-    os.environ['FUCHSIA_GN_SDK_ROOT'] = os.path.join(os.environ['SRC_ROOT'],
-                                                     'third_party', 'fuchsia',
-                                                     'gn-sdk', 'src')
+    # TODO(zijiehe): Remove this experimental config after upgrading sdk to a
+    # version later than https://fxrev.dev/841540.
+    subprocess.call([
+        os.path.join(os.environ['FUCHSIA_SDK_ROOT'], 'tools', 'x64', 'ffx'),
+        'config', 'set', 'product.experimental', 'true'
+    ])
 
     with subprocess.Popen(sys.argv[1:]) as proc:
         try:
@@ -52,7 +56,6 @@ def Main():
         except:
             # Use terminate / SIGTERM to allow the subprocess exiting cleanly.
             proc.terminate()
-        return proc.returncode
 
 
 if __name__ == '__main__':

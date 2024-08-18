@@ -3,5 +3,4 @@ class A<X, Y> {
 }
 
 typedef F<X> = A<X, X Function()>;
-
 void main() => F<int>(0, () => 1);

@@ -63,8 +63,7 @@ void ThreadInterrupter::InterruptThread(OSThread* thread) {
     OS::PrintErr("ThreadInterrupter interrupting %p\n",
                  reinterpret_cast<void*>(thread->id()));
   }
-
-  int result = pthread_kill(thread->id(), SIGPROF);
+  int result = syscall(__NR_tgkill, getpid(), thread->id(), SIGPROF);
   ASSERT((result == 0) || (result == ESRCH));
 }
 

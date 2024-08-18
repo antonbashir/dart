@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// .dart_tool/package_config.json specifies %VERSION_MARKER1%, this library
-// tries to go above that, which is fine, except it still has to be within the
-// range of the sdk. The library stays on the .dart_tool/package_config.json
-// specified one (%VERSION_MARKER1%) and an error is issued.
+// .dart_tool/package_config.json specifies 2.5, this library tries to go above
+// that, which is fine, except it still has to be within the range of the sdk.
+// The library stays on the .dart_tool/package_config.json specified one (2.5)
+// and an error is issued.
 
 /*error: errors=LanguageVersionTooHigh*/
-// @dart = %TOO_HIGH_VERSION_MARKER%
+// @dart = 2.9
 
-/*library: languageVersion=%VERSION_MARKER1%*/
+/*library: languageVersion=2.5*/
 
 foo4() {
   print("Hello from foo4!");

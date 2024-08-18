@@ -1,5 +1,4 @@
 mixin GM<T> on Enum {}
-
 mixin M on Object {}
 
 abstract class I {}

@@ -3,9 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/experiments/flags.dart' as shared;
+import 'package:kernel/kernel.dart' show Version;
 import 'package:kernel/default_language_version.dart'
     show defaultLanguageVersion;
-import 'package:kernel/kernel.dart' show Version;
 
 part 'experimental_flags_generated.dart';
 
@@ -58,7 +58,6 @@ bool isExperimentEnabled(ExperimentalFlag flag,
     enabled = explicitExperimentalFlags[flag];
   }
   if (defaultExperimentFlagsForTesting != null) {
-    // Coverage-ignore-block(suite): Not run.
     enabled ??= defaultExperimentFlagsForTesting[flag];
   }
   enabled ??= flag.isEnabledByDefault;
@@ -87,7 +86,6 @@ bool isExperimentEnabledInLibrary(ExperimentalFlag flag, Uri canonicalUri,
     enabled = explicitExperimentalFlags[flag];
   }
   if (defaultExperimentFlagsForTesting != null) {
-    // Coverage-ignore-block(suite): Not run.
     enabled ??= defaultExperimentFlagsForTesting[flag];
   }
   enabled ??= flag.isEnabledByDefault;
@@ -139,7 +137,6 @@ Version getExperimentEnabledVersionInLibrary(ExperimentalFlag flag,
   Version? version;
   bool? enabledByDefault;
   if (defaultExperimentFlagsForTesting != null) {
-    // Coverage-ignore-block(suite): Not run.
     enabledByDefault = defaultExperimentFlagsForTesting[flag];
   }
   enabledByDefault ??= flag.isEnabledByDefault;
@@ -152,7 +149,6 @@ Version getExperimentEnabledVersionInLibrary(ExperimentalFlag flag,
     // If the feature is not enabled by default or is enabled by the allowed
     // list use the experiment release version.
     if (experimentReleasedVersionForTesting != null) {
-      // Coverage-ignore-block(suite): Not run.
       version = experimentReleasedVersionForTesting[flag];
     }
     version ??= flag.experimentReleasedVersion;
@@ -160,7 +156,6 @@ Version getExperimentEnabledVersionInLibrary(ExperimentalFlag flag,
     // If the feature is enabled by default and is not enabled by the allowed
     // list use the enabled version.
     if (experimentEnabledVersionForTesting != null) {
-      // Coverage-ignore-block(suite): Not run.
       version = experimentEnabledVersionForTesting[flag];
     }
     version ??= flag.experimentEnabledVersion;
@@ -177,7 +172,6 @@ bool isExperimentEnabledInLibraryByVersion(
     Map<ExperimentalFlag, Version>? experimentReleasedVersionForTesting}) {
   bool? enabledByDefault;
   if (defaultExperimentFlagsForTesting != null) {
-    // Coverage-ignore-block(suite): Not run.
     enabledByDefault = defaultExperimentFlagsForTesting[flag];
   }
   enabledByDefault ??= flag.isEnabledByDefault;
@@ -211,7 +205,6 @@ bool isExperimentEnabledInLibraryByVersion(
       // If the feature is not enabled by default or is enabled by the allowed
       // list, use the experiment release version.
       if (experimentReleasedVersionForTesting != null) {
-        // Coverage-ignore-block(suite): Not run.
         enabledVersion = experimentReleasedVersionForTesting[flag]!;
       }
       enabledVersion ??= flag.experimentReleasedVersion;
@@ -219,7 +212,6 @@ bool isExperimentEnabledInLibraryByVersion(
       // If the feature is enabled by default and is not enabled by the allowed
       // list use the enabled version.
       if (experimentEnabledVersionForTesting != null) {
-        // Coverage-ignore-block(suite): Not run.
         enabledVersion = experimentEnabledVersionForTesting[flag];
       }
       enabledVersion ??= flag.experimentEnabledVersion;

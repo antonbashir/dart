@@ -9,8 +9,9 @@ enum FormalParameterKind {
   requiredNamed,
   optionalNamed,
   optionalPositional,
-  ;
+}
 
+extension FormalParameterKindExtension on FormalParameterKind {
   bool get isRequiredPositional {
     return FormalParameterKind.requiredPositional == this;
   }

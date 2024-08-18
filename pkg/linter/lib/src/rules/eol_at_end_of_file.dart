@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Put a single newline at end of file.';
 
@@ -28,15 +27,19 @@ b {
 ''';
 
 class EolAtEndOfFile extends LintRule {
+  static const LintCode code = LintCode(
+      'eol_at_end_of_file', 'Missing a newline at the end of the file.',
+      correctionMessage: 'Try adding a newline at the end of the file.');
+
   EolAtEndOfFile()
       : super(
             name: 'eol_at_end_of_file',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.eol_at_end_of_file;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -54,11 +57,8 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitCompilationUnit(CompilationUnit node) {
-    var content = node.declaredElement?.source.contents.data;
-    if (content != null &&
-        content.isNotEmpty &&
-        // TODO(srawlins): Re-implement this check without iterating over
-        // various lists of strings.
+    var content = context.currentUnit.content;
+    if (content.isNotEmpty &&
         (!content.endsWithNewline || content.endsWithMultipleNewlines)) {
       rule.reportLintForOffset(content.trimRight().length, 1);
     }

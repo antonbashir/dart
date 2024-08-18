@@ -29,7 +29,7 @@ class ConstructorInitializerResolver {
           _constructor(
             unitElement,
             // TODO(scheglov): Avoid cast.
-            interfaceElement.augmented.declaration as InterfaceElementImpl,
+            interfaceElement.augmented!.declaration as InterfaceElementImpl,
             constructorElement,
           );
         }
@@ -53,7 +53,11 @@ class ConstructorInitializerResolver {
       element,
     );
 
-    var analysisOptions = _libraryBuilder.kind.file.analysisOptions;
+    var file = _libraryBuilder.kind.file.resource;
+    // TODO(pq): precache options in file state and fetch them from there
+    var analysisOptions =
+        _linker.analysisContext.getAnalysisOptionsForFile(file);
+
     var astResolver = AstResolver(
         _linker, unitElement, initializerScope, analysisOptions,
         enclosingClassElement: classElement,

@@ -10,8 +10,6 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/exception/exception.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/memory_file_system.dart';
-import 'package:analyzer/source/file_source.dart';
-import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/sdk/sdk_utils.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/java_engine_io.dart';
@@ -24,13 +22,13 @@ import 'package:yaml/yaml.dart';
 /// Returns the version of the SDK that runs the analyzer.
 Version? get runningSdkVersion {
   try {
-    var regExp = RegExp(r'^(\d+\.\d+\.\d+)');
-    var match = regExp.firstMatch(io.Platform.version);
+    final regExp = RegExp(r'^(\d+\.\d+\.\d+)');
+    final match = regExp.firstMatch(io.Platform.version);
     if (match == null) {
       return null;
     }
 
-    var sdkVersionStr = match.group(1)!;
+    final sdkVersionStr = match.group(1)!;
     return Version.parse(sdkVersionStr);
   } catch (_) {
     return null;
@@ -83,8 +81,7 @@ abstract class AbstractDartSdk implements DartSdk {
       return null;
     }
     try {
-      var uri = uriCache.parse(path);
-      return FileSource(file, uri);
+      return file.createSource(uriCache.parse(path));
     } on FormatException catch (exception, stackTrace) {
       AnalysisEngine.instance.instrumentationService.logInfo(
           "Failed to create URI: $path",
@@ -133,8 +130,7 @@ abstract class AbstractDartSdk implements DartSdk {
     String filePath = srcPath.replaceAll('/', separator);
     try {
       File file = resourceProvider.getFile(filePath);
-      var uri = uriCache.parse(dartUri);
-      return FileSource(file, uri);
+      return file.createSource(uriCache.parse(dartUri));
     } on FormatException {
       return null;
     }
@@ -172,21 +168,21 @@ abstract class AbstractDartSdk implements DartSdk {
     // an absolute path, not a relative `path`. For now, we do this only
     // for building SDK summary with `dart:ui`, included from outside
     // of the SDK root.
-    for (var library in libraryMap.sdkLibraries) {
-      var pathContext = resourceProvider.pathContext;
+    for (final library in libraryMap.sdkLibraries) {
+      final pathContext = resourceProvider.pathContext;
       if (pathContext.isAbsolute(library.path)) {
         if (library.path == file.path) {
           return library.shortName;
         }
       }
     }
-    for (var library in libraryMap.sdkLibraries) {
-      var pathContext = resourceProvider.pathContext;
+    for (final library in libraryMap.sdkLibraries) {
+      final pathContext = resourceProvider.pathContext;
       if (pathContext.isAbsolute(library.path)) {
         String? relativePathIfInside =
             getRelativePathIfInside(library.path, file.path);
         if (relativePathIfInside != null) {
-          var relPath = relativePathIfInside.replaceAll(separator, '/');
+          final relPath = relativePathIfInside.replaceAll(separator, '/');
           return '${library.shortName}/$relPath';
         }
       }
@@ -288,8 +284,7 @@ class EmbedderSdk extends AbstractDartSdk {
     String filePath = srcPath.replaceAll('/', separator);
     try {
       File file = resourceProvider.getFile(filePath);
-      var uri = uriCache.parse(dartUri);
-      return FileSource(file, uri);
+      return file.createSource(uriCache.parse(dartUri));
     } on FormatException {
       return null;
     }
@@ -544,13 +539,11 @@ class FolderBasedDartSdk extends AbstractDartSdk {
         if (relativeFile.path == file.path) {
           // The relative file is the library, so return a Source for the
           // library rather than the part format.
-          var uri = uriCache.parse(library.shortName);
-          return FileSource(file, uri);
+          return file.createSource(uriCache.parse(library.shortName));
         }
         file = relativeFile;
       }
-      var uri = uriCache.parse(dartUri);
-      return FileSource(file, uri);
+      return file.createSource(uriCache.parse(dartUri));
     } on FormatException {
       return null;
     }
@@ -581,7 +574,12 @@ class FolderBasedDartSdk extends AbstractDartSdk {
 class SdkLibrariesReader {
   /// Return the library map read from the given [file], given that the content
   /// of the file is already known to be [libraryFileContents].
-  LibraryMap readFromFile(File file, String libraryFileContents) {
+  LibraryMap readFromFile(File file, String libraryFileContents) =>
+      readFromSource(file.createSource(), libraryFileContents);
+
+  /// Return the library map read from the given [source], given that the
+  /// content of the file is already known to be [libraryFileContents].
+  LibraryMap readFromSource(Source source, String libraryFileContents) {
     // TODO(paulberry): initialize the feature set appropriately based on the
     // version of the SDK we are reading, and enable flags.
     var featureSet = FeatureSet.latestLanguageVersion();
@@ -590,7 +588,7 @@ class SdkLibrariesReader {
       content: libraryFileContents,
       featureSet: featureSet,
       throwIfDiagnostics: false,
-      path: file.path,
+      path: source.fullName,
     );
     var unit = parseResult.unit;
 

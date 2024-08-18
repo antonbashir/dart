@@ -9,7 +9,8 @@ void configureMemoryUsageTracking(
   List<String> arguments,
   UsageCallback callback,
 ) {
-  var config = UsageTrackingConfig(
+  final config = UsageTrackingConfig(
+    interval: const Duration(seconds: 1),
     usageEventsConfig: UsageEventsConfig(
       callback,
       deltaMb: 512,
@@ -35,24 +36,24 @@ AutoSnapshottingConfig? parseAutoSnapshottingConfig(List<String> args) {
   arg = arg.replaceAll('-', '=');
   arg = '--$arg';
 
-  var parser = ArgParser()..addMultiOption(argName);
-  var parsedArgs = parser.parse([arg]);
+  var parser = ArgParser()..addMultiOption(argName, splitCommas: true);
+  final parsedArgs = parser.parse([arg]);
   assert(parsedArgs.options.contains(argName));
-  var values = parsedArgs[argName] as List<String>;
+  final values = parsedArgs[argName] as List<String>;
 
   if (values.isEmpty) return null;
 
-  var items = Map.fromEntries(values.map((e) {
-    var keyValue = e.split('=');
+  final items = Map.fromEntries(values.map((e) {
+    final keyValue = e.split('=');
     if (keyValue.length != 2) {
       throw ArgumentError(
         'Invalid auto-snapshotting config: $values.\n'
         'Expected "key-value", got "$e".',
       );
     }
-    var keyString = keyValue[0];
+    final keyString = keyValue[0];
     try {
-      var key = _Keys.values.byName(keyString);
+      final key = _Keys.values.byName(keyString);
 
       return MapEntry(key, keyValue[1]);
     } on ArgumentError {
@@ -75,9 +76,9 @@ AutoSnapshottingConfig? parseAutoSnapshottingConfig(List<String> args) {
 }
 
 int _parseKey(_Keys key, Map<_Keys, String> items, int defaultValue) {
-  var value = items[key];
+  final value = items[key];
   if (value == null || value.trim().isEmpty) return defaultValue;
-  var result = int.tryParse(value);
+  final result = int.tryParse(value);
   if (result == null) {
     throw ArgumentError(
         'Invalid auto-snapshotting value for ${key.name}: $value.');

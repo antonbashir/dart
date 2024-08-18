@@ -5,13 +5,12 @@
 import 'package:test/test.dart';
 import 'package:vm_service/vm_service.dart';
 
-import 'common/service_test_common.dart';
 import 'common/test_helper.dart';
 
-final tests = <IsolateTest>[
-  hasPausedAtStart,
-  (VmService service, IsolateRef isolateRef) async {
-    final result = await service.getIsolate(isolateRef.id!);
+final tests = <VMTest>[
+  (VmService service) async {
+    final vm = await service.getVM();
+    final result = await service.getIsolate(vm.isolates!.first.id!);
     expect(result.id, startsWith('isolates/'));
     expect(result.number, isNotNull);
     expect(result.isolateFlags, isNotNull);
@@ -31,7 +30,7 @@ final tests = <IsolateTest>[
     expect(result.json!['_heaps']['old']['type'], 'HeapSpace');
   },
 
-  (VmService service, IsolateRef _) async {
+  (VmService service) async {
     bool caughtException = false;
     try {
       await service.getIsolate('badid');
@@ -45,7 +44,7 @@ final tests = <IsolateTest>[
   },
 
   // Plausible isolate id, not found.
-  (VmService service, IsolateRef _) async {
+  (VmService service) async {
     try {
       await service.getIsolate('isolates/9999999999');
       fail('successfully got isolate with bad ID');
@@ -56,9 +55,8 @@ final tests = <IsolateTest>[
   },
 ];
 
-void main([args = const <String>[]]) => runIsolateTests(
+void main([args = const <String>[]]) => runVMTests(
       args,
       tests,
       'get_isolate_rpc_test.dart',
-      pauseOnStart: true,
     );

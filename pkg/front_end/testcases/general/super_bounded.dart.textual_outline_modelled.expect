@@ -3,7 +3,5 @@ class A<T> {}
 class Class<T extends A<T>> {}
 
 main() {}
-
 method(Class c1, Class<dynamic> c2) {}
-
 typedef F<X> = X Function(X);

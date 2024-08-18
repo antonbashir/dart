@@ -29,7 +29,7 @@ void f() {
           CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS_EXTENSION, 54, 5),
     ]);
 
-    var node = findNode.extensionOverride('E<int>');
+    final node = findNode.extensionOverride('E<int>');
     assertResolvedNodeText(node, r'''
 ExtensionOverride
   name: E
@@ -38,7 +38,7 @@ ExtensionOverride
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -49,7 +49,7 @@ ExtensionOverride
         parameter: <null>
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@extension::E
+  element: self::@extension::E
   extendedType: int
   staticType: null
 ''');
@@ -69,7 +69,7 @@ void f() {
           CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS_EXTENSION, 60, 6),
     ]);
 
-    var node = findNode.extensionOverride('E<bool>');
+    final node = findNode.extensionOverride('E<bool>');
     assertResolvedNodeText(node, r'''
 ExtensionOverride
   name: E
@@ -78,7 +78,7 @@ ExtensionOverride
     arguments
       NamedType
         name: bool
-        element: dart:core::<fragment>::@class::bool
+        element: dart:core::@class::bool
         type: bool
     rightBracket: >
   argumentList: ArgumentList
@@ -89,7 +89,7 @@ ExtensionOverride
         parameter: <null>
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@extension::E
+  element: self::@extension::E
   extendedType: int
   staticType: null
   typeArgumentTypes
@@ -112,7 +112,7 @@ void f() {
           11),
     ]);
 
-    var node = findNode.extensionOverride('E<bool, int>');
+    final node = findNode.extensionOverride('E<bool, int>');
     assertResolvedNodeText(node, r'''
 ExtensionOverride
   name: E
@@ -121,11 +121,11 @@ ExtensionOverride
     arguments
       NamedType
         name: bool
-        element: dart:core::<fragment>::@class::bool
+        element: dart:core::@class::bool
         type: bool
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -136,7 +136,7 @@ ExtensionOverride
         parameter: <null>
         staticType: int
     rightParenthesis: )
-  element: <testLibraryFragment>::@extension::E
+  element: self::@extension::E
   extendedType: int
   staticType: null
   typeArgumentTypes

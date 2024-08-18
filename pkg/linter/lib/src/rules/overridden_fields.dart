@@ -9,8 +9,6 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r"Don't override fields.";
 
@@ -99,15 +97,21 @@ Iterable<InterfaceType> _findAllSupertypesInMixin(MixinElement mixinElement) {
 }
 
 class OverriddenFields extends LintRule {
+  static const LintCode code = LintCode(
+      'overridden_fields', "Field overrides a field inherited from '{0}'.",
+      correctionMessage:
+          'Try removing the field, overriding the getter and setter if '
+          'necessary.');
+
   OverriddenFields()
       : super(
             name: 'overridden_fields',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.overridden_fields;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -124,8 +128,9 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitFieldDeclaration(FieldDeclaration node) {
-    if (node.isAugmentation) return;
-    if (node.isStatic) return;
+    if (node.isStatic) {
+      return;
+    }
 
     for (var variable in node.fields.variables) {
       var declaredField = variable.declaredElement;

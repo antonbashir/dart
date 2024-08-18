@@ -439,9 +439,7 @@ class BinaryMdDillReader {
       Set<String> types = _generics[parent]!.toSet();
       if (types.contains(type)) return true;
       if (type.contains("[") &&
-          types.contains(type.substring(0, type.indexOf("[")))) {
-        return true;
-      }
+          types.contains(type.substring(0, type.indexOf("[")))) return true;
     }
     if (type.contains("<")) {
       List<String> types = _getGenerics(type);

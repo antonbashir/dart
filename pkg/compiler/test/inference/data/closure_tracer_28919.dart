@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 // Regression test for issue 28919.
 
 /*member: foo1:[null]*/
@@ -55,10 +57,10 @@ foo2(int /*[exact=JSUInt31]*/ choice) {
       i /*invoke: [subclass=JSPositiveInt]*/ ++) {
     methods. /*invoke: [exact=JSExtendableArray]*/ add(/*[null]*/ (int
         /*spec.[null|subclass=Object]*/
-        /*prod.[subclass=JSInt]*/
+        /*prod.[null|subclass=JSInt]*/
         x) {
       res = x;
-      sum = x /*invoke: [subclass=JSInt]*/ + i;
+      sum = x /*invoke: [null|subclass=JSInt]*/ + i;
     });
   }
   methods /*[exact=JSExtendableArray]*/ [0](499);

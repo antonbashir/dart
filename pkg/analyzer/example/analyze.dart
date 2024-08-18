@@ -18,23 +18,23 @@ void main(List<String> args) async {
   }
 
   var issueCount = 0;
-  var collection = AnalysisContextCollection(
+  final collection = AnalysisContextCollection(
       includedPaths: [entity.absolute.path],
       resourceProvider: PhysicalResourceProvider.INSTANCE);
 
   // Often one context is returned, but depending on the project structure we
   // can see multiple contexts.
-  for (var context in collection.contexts) {
+  for (final context in collection.contexts) {
     print('Analyzing ${context.contextRoot.root.path} ...');
 
-    for (var filePath in context.contextRoot.analyzedFiles()) {
+    for (final filePath in context.contextRoot.analyzedFiles()) {
       if (!filePath.endsWith('.dart')) {
         continue;
       }
 
-      var errorsResult = await context.currentSession.getErrors(filePath);
+      final errorsResult = await context.currentSession.getErrors(filePath);
       if (errorsResult is ErrorsResult) {
-        for (var error in errorsResult.errors) {
+        for (final error in errorsResult.errors) {
           if (error.errorCode.type != ErrorType.TODO) {
             print(
                 '  \u001b[1m${error.source.shortName}\u001b[0m ${error.message}');

@@ -5,11 +5,10 @@
 import 'dart:_internal';
 import 'dart:_js_helper';
 import 'dart:_js_types';
-import 'dart:_string';
 import 'dart:_wasm';
 
 @patch
-class BoxedInt {
+class _BoxedInt {
   @patch
   String toRadixString(int radix) {
     // We could also catch the `_JavaScriptError` here and convert it to
@@ -17,15 +16,11 @@ class BoxedInt {
     if (radix < 2 || 36 < radix) {
       throw RangeError.range(radix, 2, 36, "radix");
     }
-    return _jsBigIntToString(this, radix);
+    return JSStringImpl(JS<WasmExternRef?>(
+        '(n, r) => n.toString(r)', toDouble().toExternRef, radix.toDouble()));
   }
 
   @patch
-  String toString() => _jsBigIntToString(this, 10);
+  String toString() => JSStringImpl(
+      JS<WasmExternRef?>('(n) => n.toString()', toDouble().toExternRef));
 }
-
-@pragma("wasm:prefer-inline")
-String _jsBigIntToString(int i, int radix) => JSStringImpl(JS<WasmExternRef?>(
-    'Function.prototype.call.bind(BigInt.prototype.toString)',
-    WasmI64.fromInt(i),
-    WasmI32.fromInt(radix)));

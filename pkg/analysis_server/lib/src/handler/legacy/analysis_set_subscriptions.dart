@@ -20,8 +20,7 @@ class AnalysisSetSubscriptionsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = AnalysisSetSubscriptionsParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisSetSubscriptionsParams.fromRequest(request);
 
     for (var fileList in params.subscriptions.values) {
       for (var file in fileList) {

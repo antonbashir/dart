@@ -15,8 +15,8 @@ main() {
 @reflectiveTest
 class ThisExpressionResolutionTest extends PubPackageResolutionTest {
   test_class_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment class A {
   void f() {
@@ -35,18 +35,18 @@ class A {}
 
     nodeTextConfiguration.withInterfaceTypeElements = true;
 
-    var node = findNode.singleThisExpression;
+    final node = findNode.singleThisExpression;
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
   staticType: A
-    element: <testLibraryFragment>::@class::A
+    element: self::@class::A
 ''');
   }
 
   test_mixin_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment mixin M {
   void f() {
@@ -66,12 +66,12 @@ mixin M {}
 
     nodeTextConfiguration.withInterfaceTypeElements = true;
 
-    var node = findNode.singleThisExpression;
+    final node = findNode.singleThisExpression;
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
   staticType: M
-    element: <testLibraryFragment>::@mixin::M
+    element: self::@mixin::M
 ''');
   }
 }

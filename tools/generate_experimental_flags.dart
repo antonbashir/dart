@@ -15,13 +15,12 @@ void main() {
 
   YamlMap features = yaml['features'];
   for (var entry in features.entries) {
-    final value = entry.value as YamlMap;
-    final category = value['category'];
+    final category = (entry.value as YamlMap)['category'];
     if (category == null || category == "vm" || category == "language") {
-      final version = getAsVersionNumber(value['enabledIn']);
+      final version = getAsVersionNumber((entry.value as YamlMap)['enabledIn']);
       if (version != null) {
         final value = isGreaterOrEqualVersion(currentVersion, version);
-        final name = (entry.key as String).replaceAll('-', '_');
+        final name = entry.key.replaceAll('-', '_');
         enumNames.write('  $name,\n');
         featureValues.write('    $value,\n');
         featureNames.write('    "${entry.key}",\n');

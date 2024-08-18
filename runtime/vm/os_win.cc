@@ -112,11 +112,13 @@ const char* OS::GetTimeZoneName(int64_t seconds_since_epoch) {
   }
 
   // Figure out whether we're in standard or daylight.
-  tm local_time;
-  if (!LocalTime(seconds_since_epoch, &local_time)) {
-    return "";
+  bool daylight_savings = (status == TIME_ZONE_ID_DAYLIGHT);
+  if (status == TIME_ZONE_ID_UNKNOWN) {
+    tm local_time;
+    if (LocalTime(seconds_since_epoch, &local_time)) {
+      daylight_savings = (local_time.tm_isdst == 1);
+    }
   }
-  const bool daylight_savings = (local_time.tm_isdst == 1);
 
   // Convert the wchar string to a null-terminated utf8 string.
   wchar_t* wchar_name = daylight_savings ? zone_information.DaylightName

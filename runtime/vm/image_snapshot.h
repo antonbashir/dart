@@ -198,13 +198,11 @@ typedef DirectChainedHashMap<ObjectOffsetTrait> ObjectOffsetMap;
 //
 //   * emitting the instructions of a [Code] object
 //   * emitting a trampoline of a certain size
-//   * emitting a padding of a certain size
 //
 struct ImageWriterCommand {
   enum Opcode {
     InsertInstructionOfCode,
     InsertBytesOfTrampoline,
-    InsertPadding,
   };
 
   ImageWriterCommand(intptr_t expected_offset, CodePtr code)
@@ -219,11 +217,6 @@ struct ImageWriterCommand {
         op(ImageWriterCommand::InsertBytesOfTrampoline),
         insert_trampoline_bytes({trampoline_bytes, trampoline_length}) {}
 
-  ImageWriterCommand(intptr_t expected_offset, intptr_t padding_length)
-      : expected_offset(expected_offset),
-        op(ImageWriterCommand::InsertPadding),
-        insert_padding({padding_length}) {}
-
   // The offset (relative to the very first [ImageWriterCommand]) we expect
   // this [ImageWriterCommand] to have.
   intptr_t expected_offset;
@@ -237,10 +230,6 @@ struct ImageWriterCommand {
       uint8_t* buffer;
       intptr_t buffer_length;
     } insert_trampoline_bytes;
-
-    struct {
-      intptr_t padding_length;
-    } insert_padding;
   };
 };
 
@@ -559,7 +548,9 @@ class ImageWriter : public ValueObject {
 #endif
     uint8_t flags;
 
-    bool is_object() const { return IsObjectField::decode(flags); }
+    bool is_object() const {
+      return IsObjectField::decode(flags);
+    }
     bool is_original_object() const {
       return IsOriginalObjectField::decode(flags);
     }
@@ -718,7 +709,6 @@ class ImageWriter : public ValueObject {
   const char* const instructions_section_type_;
   const char* const instructions_type_;
   const char* const trampoline_type_;
-  const char* const padding_type_;
 
   template <class T>
   friend class TraceImageObjectScope;

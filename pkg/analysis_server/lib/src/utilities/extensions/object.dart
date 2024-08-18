@@ -5,7 +5,7 @@
 extension NullableObjectExtension on Object? {
   /// If the target is [T], return it, otherwise `null`.
   T? ifTypeOrNull<T>() {
-    var self = this;
+    final self = this;
     return self is T ? self : null;
   }
 }

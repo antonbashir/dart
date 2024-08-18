@@ -238,82 +238,6 @@ class A {
       );
     });
 
-    test('does not duplicate getters overriding fields', () async {
-      final client = dap.client;
-      final testFile = dap.createTestFile('''
-void main(List<String> args) {
-  final myVariable = A();
-  print('Hello!'); $breakpointMarker
-}
-
-class Base {
-  String aaa = 'nnn';
-}
-
-class A extends Base {
-  @override
-  String get aaa => 'yyy';
-}
-    ''');
-      final breakpointLine = lineWith(testFile, breakpointMarker);
-
-      final stop = await client.hitBreakpoint(
-        testFile,
-        breakpointLine,
-        launch: () => client.launch(
-          testFile.path,
-          evaluateGettersInDebugViews: true,
-        ),
-      );
-      await client.expectLocalVariable(
-        stop.threadId!,
-        expectedName: 'myVariable',
-        expectedDisplayString: 'A',
-        expectedVariables: '''
-            aaa: "yyy", eval: myVariable.aaa
-        ''',
-        ignore: {'runtimeType'},
-      );
-    });
-
-    test('does not duplicate fields overriding getters', () async {
-      final client = dap.client;
-      final testFile = dap.createTestFile('''
-void main(List<String> args) {
-  final myVariable = A();
-  print('Hello!'); $breakpointMarker
-}
-
-abstract class Base {
-  String get aaa => 'nnn';
-}
-
-class A extends Base {
-  @override
-  final String aaa = 'yyy';
-}
-    ''');
-      final breakpointLine = lineWith(testFile, breakpointMarker);
-
-      final stop = await client.hitBreakpoint(
-        testFile,
-        breakpointLine,
-        launch: () => client.launch(
-          testFile.path,
-          evaluateGettersInDebugViews: true,
-        ),
-      );
-      await client.expectLocalVariable(
-        stop.threadId!,
-        expectedName: 'myVariable',
-        expectedDisplayString: 'A',
-        expectedVariables: '''
-            aaa: "yyy", eval: myVariable.aaa
-        ''',
-        ignore: {'runtimeType'},
-      );
-    });
-
     test('includes record fields', () async {
       final client = dap.client;
       final testFile = dap.createTestFile('''
@@ -405,101 +329,13 @@ void main(List<String> args) {
       );
     });
 
-    test('only calls toString() for 100 items in a list', () async {
-      final client = dap.client;
-      // Generate a file that assigns a list of 150 items
-      // so we can request a subset and ensure only the first 100 items had
-      // toString() evaluated.
-      final testFile = dap.createTestFile('''
-class S {
-  final int i;
-  S(this.i);
-  @override
-  String toString() => 'Item \$i';
-}
-
-void main(List<String> args) {
-  final myList = List.generate(150, S.new);
-  print('Hello!'); $breakpointMarker
-}
-    ''');
-      final breakpointLine = lineWith(testFile, breakpointMarker);
-
-      final stop = await client.hitBreakpoint(
-        testFile,
-        breakpointLine,
-        evaluateToStringInDebugViews: true,
-      );
-      await client.expectLocalVariable(
-        stop.threadId!,
-        expectedName: 'myList',
-        expectedDisplayString: 'List (150 items)',
-        expectedIndexedItems: 150,
-        // Fetch 105 items starting at 5.
-        start: 5,
-        count: 105,
-        expectedVariables: [
-          for (int i = 5; i < 110; i++)
-            i < 105
-                // For items < 105 (100 from the start), toString() is called
-                // so we include "Item x"
-                ? '[$i]: S (Item $i), eval: myList[$i]'
-                // For rest, toString is skipped
-                : '[$i]: S, eval: myList[$i]',
-        ].join('\n'),
-      );
-    });
-
-    test(
-        'toString() throwing expired sentinel is handled per-item in variables',
-        () async {
-      final client = dap.client;
-      final testFile = dap.createTestFile('''
-class S {
-  final int i;
-  S(this.i);
-  @override
-  String toString() => 'Item \$i';
-}
-
-void main(List<String> args) {
-  final myList = List.generate(10000, S.new);
-  print('Hello!'); $breakpointMarker
-}
-    ''');
-
-      final breakpointLine = lineWith(testFile, breakpointMarker);
-      final stop = await client.hitBreakpoint(
-        testFile,
-        breakpointLine,
-        evaluateToStringInDebugViews: true,
-      );
-      final topFrameId = await client.getTopFrameId(stop.threadId!);
-
-      final listVariable = await client.expectEvalResult(
-          topFrameId, "myList", "List (10000 items)");
-      // Try to fetch all 10000 items (which is more than the buffer).
-      final variables = await client.getValidVariables(
-        listVariable.variablesReference,
-        start: 0,
-        count: 10000,
-      );
-      // Ensure we get all 10000 items (not just a single one with an error).
-      expect(variables.variables.length, equals(10000));
-      // toString() would have returned an expired sentinel and the error should
-      // have been inlined into the value.
-      expect(variables.variables.first.value, equals('S (<expired>)'));
-    });
-
     /// Helper to verify variables types of list.
     checkList(
       String typeName, {
       required String constructor,
       required List<String> expectedDisplayStrings,
-      ValueFormat? format,
     }) {
-      final testTypeName = '$typeName ${format?.toJson() ?? ''}'.trim();
-      test('renders a $testTypeName', () async {
+      test('renders a $typeName', () async {
         final client = dap.client;
         final testFile = dap.createTestFile('''
 import 'dart:typed_data';
@@ -522,11 +358,10 @@ void main(List<String> args) {
             [1]: ${expectedDisplayStrings[1]}, eval: myVariable[1]
             [2]: ${expectedDisplayStrings[2]}, eval: myVariable[2]
         ''',
-          format: format,
         );
       });
 
-      test('renders a $testTypeName subset', () async {
+      test('renders a $typeName subset', () async {
         final client = dap.client;
         final testFile = dap.createTestFile('''
 import 'dart:typed_data';
@@ -547,7 +382,6 @@ void main(List<String> args) {
           expectedVariables: '''
             [1]: ${expectedDisplayStrings[1]}, eval: myVariable[1]
         ''',
-          format: format,
           start: 1,
           count: 1,
         );
@@ -563,12 +397,6 @@ void main(List<String> args) {
       'Uint8List',
       constructor: 'Uint8List.fromList([1, 2, 3])',
       expectedDisplayStrings: ['1', '2', '3'],
-    );
-    checkList(
-      'Uint8List',
-      constructor: 'Uint8List.fromList([1, 2, 3])',
-      expectedDisplayStrings: ['0x1', '0x2', '0x3'],
-      format: ValueFormat(hex: true), // Hex display of typed_data lists.
     );
     checkList(
       'Uint16List',
@@ -823,38 +651,6 @@ void main() {
         'Locals',
         r'''
             myVariable: Foo (Bar!), eval: myVariable
-        ''',
-      );
-    });
-
-    test('uses truncated values from calling toString()', () async {
-      final client = dap.client;
-      final testFile = dap.createTestFile('''
-class Foo {
-  toString() => 'a' * 500 + 'b' * 500;
-}
-
-void main() {
-  final myVariable = Foo();
-  print('Hello!'); $breakpointMarker
-}
-    ''');
-      final breakpointLine = lineWith(testFile, breakpointMarker);
-
-      final stop = await client.hitBreakpoint(
-        testFile,
-        breakpointLine,
-        launch: () => client.launch(
-          testFile.path,
-          evaluateToStringInDebugViews: true,
-        ),
-      );
-
-      await client.expectScopeVariables(
-        await client.getTopFrameId(stop.threadId!),
-        'Locals',
-        '''
-            myVariable: Foo (${'a' * 128}…), eval: myVariable
         ''',
       );
     });

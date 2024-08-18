@@ -6,8 +6,11 @@ import 'dart:io' show File;
 
 import 'package:_fe_analyzer_shared/src/scanner/characters.dart'
     show $A, $MINUS, $a, $z;
+
 import 'package:_fe_analyzer_shared/src/sdk/allowed_experiments.dart';
+
 import 'package:dart_style/dart_style.dart' show DartFormatter;
+
 import 'package:yaml/yaml.dart' show YamlMap, loadYaml;
 
 import '../../test/utils/io_utils.dart' show computeRepoDirUri;
@@ -444,6 +447,9 @@ class LibraryFeatures {
         return ${identifier};''');
   }
   sb.write('''
+      default:
+        throw new UnsupportedError(
+            'LibraryFeatures.fromSharedExperimentalFlags(\$experimentalFlag)');
     }
   }
   ''');

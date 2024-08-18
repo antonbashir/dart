@@ -189,11 +189,10 @@ class TransformSetParser {
       }
       var endIndex = template.indexOf(_closeComponent, variableStart + 2);
       if (endIndex < 0) {
-        errorReporter.atOffset(
-          offset: templateOffset + variableStart,
-          length: 2,
-          errorCode: TransformSetErrorCode.missingTemplateEnd,
-        );
+        errorReporter.reportErrorForOffset(
+            TransformSetErrorCode.missingTemplateEnd,
+            templateOffset + variableStart,
+            2);
         // Ignore the invalid component, treating it as if it extended to the
         // end of the template.
         return components;
@@ -201,12 +200,11 @@ class TransformSetParser {
         var name = template.substring(variableStart + 2, endIndex).trim();
         var generator = variableScope.lookup(name);
         if (generator == null) {
-          errorReporter.atOffset(
-            offset: templateOffset + template.indexOf(name, variableStart),
-            length: name.length,
-            errorCode: TransformSetErrorCode.undefinedVariable,
-            arguments: [name],
-          );
+          errorReporter.reportErrorForOffset(
+              TransformSetErrorCode.undefinedVariable,
+              templateOffset + template.indexOf(name, variableStart),
+              name.length,
+              [name]);
           // Ignore the invalid component.
         } else {
           components.add(TemplateVariable(generator));
@@ -255,12 +253,8 @@ class TransformSetParser {
       var span = e.span;
       var offset = span?.start.offset ?? 0;
       var length = span?.length ?? 0;
-      errorReporter.atOffset(
-        offset: offset,
-        length: length,
-        errorCode: TransformSetErrorCode.yamlSyntaxError,
-        arguments: [e.message],
-      );
+      errorReporter.reportErrorForOffset(
+          TransformSetErrorCode.yamlSyntaxError, offset, length, [e.message]);
     }
     return null;
   }
@@ -271,12 +265,8 @@ class TransformSetParser {
   void _reportError(TransformSetErrorCode code, YamlNode node,
       [List<String> arguments = const []]) {
     var span = node.span;
-    errorReporter.atOffset(
-      offset: span.start.offset,
-      length: span.length,
-      errorCode: code,
-      arguments: arguments,
-    );
+    errorReporter.reportErrorForOffset(
+        code, span.start.offset, span.length, arguments);
   }
 
   /// Report that the value represented by the [node] does not have the
@@ -335,7 +325,7 @@ class TransformSetParser {
     bool required = true,
   }) {
     var entries = <_SingleKeyEntry<T>>[];
-    for (var entry in map.nodes.entries) {
+    for (final entry in map.nodes.entries) {
       Object? keyNode = entry.key;
       Object? valueNode = entry.value;
       if (keyNode is YamlScalar && valueNode is YamlNode) {
@@ -360,8 +350,9 @@ class TransformSetParser {
     var firstEntry = entries.firstOrNull;
     if (firstEntry == null) {
       if (required) {
-        var validKeysList =
-            translators.keys.flattenedToList.quotedAndCommaSeparatedWithOr;
+        var validKeysList = translators.keys
+            .expand((keys) => keys)
+            .quotedAndCommaSeparatedWithOr;
         _reportError(TransformSetErrorCode.missingOneOfMultipleKeys, errorNode,
             [validKeysList]);
       }
@@ -369,7 +360,7 @@ class TransformSetParser {
     }
 
     var firstKey = firstEntry.key;
-    for (var entry in entries.skip(1)) {
+    for (final entry in entries.skip(1)) {
       _reportError(
         TransformSetErrorCode.conflictingKey,
         entry.keyNode,
@@ -545,7 +536,7 @@ class TransformSetParser {
       map: node,
       translators: {
         const {_indexKey}: (key, value) {
-          var index = _translateInteger(
+          final index = _translateInteger(
             value,
             ErrorContext(key: _indexKey, parentNode: node),
           );
@@ -554,7 +545,7 @@ class TransformSetParser {
           }
         },
         const {_nameKey}: (key, value) {
-          var name = _translateString(
+          final name = _translateString(
             value,
             ErrorContext(key: _nameKey, parentNode: node),
           );
@@ -586,7 +577,8 @@ class TransformSetParser {
     }
     var argumentValueNode = node.valueAt(_argumentValueKey);
     var argumentValue = _translateCodeTemplate(argumentValueNode,
-        ErrorContext(key: _argumentValueKey, parentNode: node));
+        ErrorContext(key: _argumentValueKey, parentNode: node),
+        canBeConditionallyRequired: false);
     (_parameterModifications ??= []).add(
       ChangeParameterType(
         reference: reference,
@@ -746,7 +738,7 @@ class TransformSetParser {
       var uris = _translateList(urisNode,
           ErrorContext(key: _urisKey, parentNode: node), _translateUri);
 
-      var elementPair = _singleKey(
+      final elementPair = _singleKey(
         map: node,
         translators: {
           {
@@ -773,16 +765,16 @@ class TransformSetParser {
         // The error has already been reported.
         return null;
       }
-      var elementKey = elementPair.key;
-      var elementName = _translateString(
+      final elementKey = elementPair.key;
+      final elementName = _translateString(
           elementPair.value, ErrorContext(key: elementKey, parentNode: node));
       if (elementName == null) {
         // The error has already been reported.
         return null;
       }
-      var components = [elementName];
+      final components = [elementName];
       var isStatic = false;
-      var staticNode = node.valueAt(_staticKey);
+      final staticNode = node.valueAt(_staticKey);
       if (_containerKeyMap.containsKey(elementKey)) {
         var validContainerKeys = _containerKeyMap[elementKey]!;
         var containerName = _singleKey(
@@ -933,7 +925,7 @@ class TransformSetParser {
   /// Translate the [node] into a remove-parameter modification.
   void _translateRemoveParameterChange(YamlMap node) {
     _reportUnsupportedKeys(node, const {_indexKey, _kindKey, _nameKey});
-    var reference = _singleKey(
+    final reference = _singleKey(
       map: node,
       translators: {
         {_indexKey}: (key, value) {
@@ -1122,9 +1114,10 @@ class TransformSetParser {
       transformVariableScope = _translateTemplateVariables(
           node.valueAt(_variablesKey),
           ErrorContext(key: _variablesKey, parentNode: node));
-      var selector = _singleKey(
+      final selector = _singleKey(
         map: node,
         errorNode: context.parentNode,
+        required: true,
         translators: {
           const {_changesKey}: (key, value) {
             var changes = _translateList(

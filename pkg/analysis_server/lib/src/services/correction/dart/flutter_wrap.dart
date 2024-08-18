@@ -3,9 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/selection_analyzer.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source_range.dart';
@@ -15,26 +15,24 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class FlutterWrap extends MultiCorrectionProducer {
-  FlutterWrap({required super.context});
-
   @override
   Future<List<ResolvedCorrectionProducer>> get producers async {
     var producers = <ResolvedCorrectionProducer>[];
-    var widgetExpr = node.findWidgetExpression;
+    var widgetExpr = Flutter.identifyWidgetExpression(node);
     if (widgetExpr != null) {
       var widgetType = widgetExpr.typeOrThrow;
-      producers.add(_FlutterWrapGeneric(widgetExpr, context: context));
-      if (!widgetType.isExactWidgetTypeCenter) {
-        producers.add(_FlutterWrapCenter(widgetExpr, context: context));
+      producers.add(_FlutterWrapGeneric(widgetExpr));
+      if (!Flutter.isExactWidgetTypeCenter(widgetType)) {
+        producers.add(_FlutterWrapCenter(widgetExpr));
       }
-      if (!widgetType.isExactWidgetTypeContainer) {
-        producers.add(_FlutterWrapContainer(widgetExpr, context: context));
+      if (!Flutter.isExactWidgetTypeContainer(widgetType)) {
+        producers.add(_FlutterWrapContainer(widgetExpr));
       }
-      if (!widgetType.isExactWidgetTypePadding) {
-        producers.add(_FlutterWrapPadding(widgetExpr, context: context));
+      if (!Flutter.isExactWidgetTypePadding(widgetType)) {
+        producers.add(_FlutterWrapPadding(widgetExpr));
       }
-      if (!widgetType.isExactWidgetTypeSizedBox) {
-        producers.add(_FlutterWrapSizedBox(widgetExpr, context: context));
+      if (!Flutter.isExactWidgetTypeSizedBox(widgetType)) {
+        producers.add(_FlutterWrapSizedBox(widgetExpr));
       }
     }
     await _wrapMultipleWidgets(producers);
@@ -60,7 +58,8 @@ class FlutterWrap extends MultiCorrectionProducer {
             parent is InstanceCreationExpression) {
           selectedNode = parent;
         }
-        if (selectedNode is! Expression || !selectedNode.isWidgetExpression) {
+        if (selectedNode is! Expression ||
+            !Flutter.isWidgetExpression(selectedNode)) {
           return;
         }
         widgetExpressions.add(selectedNode);
@@ -78,7 +77,7 @@ class FlutterWrap extends MultiCorrectionProducer {
         coveringNode = coveringNode.parent;
       }
 
-      var widget = coveringNode.findWidgetExpression;
+      var widget = Flutter.identifyWidgetExpression(coveringNode);
       if (widget != null) {
         widgetExpressions.add(widget);
       }
@@ -89,16 +88,15 @@ class FlutterWrap extends MultiCorrectionProducer {
 
     var firstWidget = widgetExpressions.first;
     var lastWidget = widgetExpressions.last;
-    producers
-        .add(_FlutterWrapColumn(firstWidget, lastWidget, context: context));
-    producers.add(_FlutterWrapRow(firstWidget, lastWidget, context: context));
+    producers.add(_FlutterWrapColumn(firstWidget, lastWidget));
+    producers.add(_FlutterWrapRow(firstWidget, lastWidget));
   }
 }
 
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapCenter extends _WrapSingleWidget {
-  _FlutterWrapCenter(super.widgetExpr, {required super.context});
+  _FlutterWrapCenter(super.widgetExpr);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_CENTER;
@@ -107,14 +105,13 @@ class _FlutterWrapCenter extends _WrapSingleWidget {
   String get _parentClassName => 'Center';
 
   @override
-  String get _parentLibraryUri => widgetsUri;
+  String get _parentLibraryUri => Flutter.widgetsUri;
 }
 
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapColumn extends _WrapMultipleWidgets {
-  _FlutterWrapColumn(super.firstWidget, super.lastWidget,
-      {required super.context});
+  _FlutterWrapColumn(super.firstWidget, super.lastWidget);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_COLUMN;
@@ -126,7 +123,7 @@ class _FlutterWrapColumn extends _WrapMultipleWidgets {
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapContainer extends _WrapSingleWidget {
-  _FlutterWrapContainer(super.widgetExpr, {required super.context});
+  _FlutterWrapContainer(super.widgetExpr);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_CONTAINER;
@@ -135,13 +132,13 @@ class _FlutterWrapContainer extends _WrapSingleWidget {
   String get _parentClassName => 'Container';
 
   @override
-  String get _parentLibraryUri => widgetsUri;
+  String get _parentLibraryUri => Flutter.widgetsUri;
 }
 
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapGeneric extends _WrapSingleWidget {
-  _FlutterWrapGeneric(super.widgetExpr, {required super.context});
+  _FlutterWrapGeneric(super.widgetExpr);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_GENERIC;
@@ -150,7 +147,7 @@ class _FlutterWrapGeneric extends _WrapSingleWidget {
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapPadding extends _WrapSingleWidget {
-  _FlutterWrapPadding(super.widgetExpr, {required super.context});
+  _FlutterWrapPadding(super.widgetExpr);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_PADDING;
@@ -165,17 +162,13 @@ class _FlutterWrapPadding extends _WrapSingleWidget {
   String get _parentClassName => 'Padding';
 
   @override
-  String get _parentLibraryUri => widgetsUri;
+  String get _parentLibraryUri => Flutter.widgetsUri;
 }
 
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapRow extends _WrapMultipleWidgets {
-  _FlutterWrapRow(
-    super.firstWidget,
-    super.lastWidget, {
-    required super.context,
-  });
+  _FlutterWrapRow(super.firstWidget, super.lastWidget);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_ROW;
@@ -187,7 +180,7 @@ class _FlutterWrapRow extends _WrapMultipleWidgets {
 /// A correction processor that can make one of the possible changes computed by
 /// the [FlutterWrap] producer.
 class _FlutterWrapSizedBox extends _WrapSingleWidget {
-  _FlutterWrapSizedBox(super.widgetExpr, {required super.context});
+  _FlutterWrapSizedBox(super.widgetExpr);
 
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_SIZED_BOX;
@@ -196,7 +189,7 @@ class _FlutterWrapSizedBox extends _WrapSingleWidget {
   String get _parentClassName => 'SizedBox';
 
   @override
-  String get _parentLibraryUri => widgetsUri;
+  String get _parentLibraryUri => Flutter.widgetsUri;
 }
 
 /// A correction processor that can make one of the possible changes computed by
@@ -206,20 +199,11 @@ abstract class _WrapMultipleWidgets extends ResolvedCorrectionProducer {
 
   final Expression lastWidget;
 
-  _WrapMultipleWidgets(
-    this.firstWidget,
-    this.lastWidget, {
-    required super.context,
-  });
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
+  _WrapMultipleWidgets(this.firstWidget, this.lastWidget);
 
   String get _parentClassName;
 
-  String get _parentLibraryUri => widgetsUri;
+  String get _parentLibraryUri => Flutter.widgetsUri;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -227,7 +211,8 @@ abstract class _WrapMultipleWidgets extends ResolvedCorrectionProducer {
     var src = utils.getRangeText(selectedRange);
     var parentClassElement =
         await sessionHelper.getClass(_parentLibraryUri, _parentClassName);
-    var widgetClassElement = await sessionHelper.getFlutterClass('Widget');
+    var widgetClassElement =
+        await sessionHelper.getClass(Flutter.widgetsUri, 'Widget');
     if (parentClassElement == null || widgetClassElement == null) {
       return;
     }
@@ -238,8 +223,8 @@ abstract class _WrapMultipleWidgets extends ResolvedCorrectionProducer {
         builder.write('(');
 
         var indentOld = utils.getLinePrefix(firstWidget.offset);
-        var indentNew1 = indentOld + utils.oneIndent;
-        var indentNew2 = indentOld + utils.twoIndents;
+        var indentNew1 = indentOld + utils.getIndent(1);
+        var indentNew2 = indentOld + utils.getIndent(2);
 
         builder.write(eol);
         builder.write(indentNew1);
@@ -273,12 +258,7 @@ abstract class _WrapMultipleWidgets extends ResolvedCorrectionProducer {
 abstract class _WrapSingleWidget extends ResolvedCorrectionProducer {
   final Expression widgetExpr;
 
-  _WrapSingleWidget(this.widgetExpr, {required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
+  _WrapSingleWidget(this.widgetExpr);
 
   List<String> get _leadingLines => const [];
 
@@ -319,7 +299,7 @@ abstract class _WrapSingleWidget extends ResolvedCorrectionProducer {
         var leadingLines = _leadingLines;
         if (widgetSrc.contains(eol) || leadingLines.isNotEmpty) {
           var indentOld = utils.getLinePrefix(widgetExpr.offset);
-          var indentNew = '$indentOld${utils.oneIndent}';
+          var indentNew = '$indentOld${utils.getIndent(1)}';
 
           for (var leadingLine in leadingLines) {
             builder.write(eol);

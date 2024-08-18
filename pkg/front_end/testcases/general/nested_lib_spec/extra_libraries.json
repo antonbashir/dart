@@ -1,5 +1,5 @@
 {
-  "_vm": {
+  "_none": {
     "include": [
       {
         "path": "subfolder/sub_libraries.json",

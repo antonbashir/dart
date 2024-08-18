@@ -1,4 +1,4 @@
-# Dart VM Service Protocol Extension 4.0
+# Dart VM Service Protocol Extension 1.6
 
 This protocol describes service extensions that are made available through
 the Dart core libraries, but are not part of the core
@@ -10,7 +10,7 @@ invoked by prepending the service extension name (e.g.,
 
 ## dart:io Extensions
 
-This section describes _version 4.0_ of the dart:io service protocol extensions.
+This section describes _version 1.6_ of the dart:io service protocol extensions.
 
 ### getVersion
 
@@ -130,9 +130,8 @@ The returned `HttpProfile` will only include requests issued after
 `httpTimelineLogging` has been enabled or after the last
 `clearHttpProfile` invocation.
 
-If `updatedSince` is provided, only requests started or updated since the
-specified time will be reported. The specified time must be represented in
-microseconds since the "Unix epoch".
+If `updatedSince` is provided, only requests started or updated since
+the specified time will be reported.
 
 See [HttpProfile](#httpprofile).
 
@@ -173,7 +172,7 @@ class @OpenFile extends Response {
 }
 ```
 
-_@OpenFile_ is a reference to an _OpenFile_.
+_@File_ is a reference to a _File_.
 
 ```
 class OpenFile extends Response {
@@ -231,8 +230,7 @@ See [httpEnableTimelineLogging](#httpenabletimelinelogging).
 
 ```
 class HttpProfile extends Response {
-  // The time at which this HTTP profile was built, represented as microseconds
-  // since the "Unix epoch".
+  // The time at which this HTTP profile was built, in microseconds.
   int timestamp;
 
   // The set of recorded HTTP requests.
@@ -250,9 +248,8 @@ See [getHttpProfile](#gethttpprofile).
 class @HttpProfileRequest extends Response {
   // The ID associated with this request.
   //
-  // If the ID does not start with the prefix "from_package/", then there
-  // will be a corresponding timeline event with the same ID.
-  string id;
+  // This ID corresponds to the ID of the timeline event for this request.
+  int id;
 
   // The ID of the isolate this request was issued from.
   string isolateId;
@@ -260,28 +257,21 @@ class @HttpProfileRequest extends Response {
   // The HTTP request method associated with this request.
   string method;
 
-  // The URI to which this HTTP request was sent.
+  // The URI for this HTTP request.
   string uri;
 
-  // Events related to this HTTP request.
-  //
-  // Events which occurred before encountering an error will be reported.
-  HttpProfileRequestEvent[] events;
+  // The time at which this request was initiated, in microseconds.
+  final int startTime;
 
-  // The time at which this request was initiated, represented as microseconds
-  // since the "Unix epoch".
-  int startTime;
-
-  // The time at which this request was completed, represented as microseconds
-  // since the "Unix epoch".
+  // The time at which this request was completed, in microseconds.
   int endTime [optional];
 
-  // Details about the request.
+  // Information sent as part of the initial HTTP request.
   //
   // Will not be provided if the initial request has not yet completed.
   HttpProfileRequestData request [optional];
 
-  // Details about the response.
+  // Information received in response to the initial HTTP request.
   //
   // Will not be provided if the request has not yet been responded to.
   HttpProfileResponseData response [optional];
@@ -310,25 +300,35 @@ See [HttpProfile](#httpprofile).
 ```
 class HttpProfileRequestData {
   // Information about the client connection.
+  //
+  // This property can be null, regardless of error state.
   map<string, dynamic> connectionInfo [optional];
 
   // The content length of the request, in bytes.
   int contentLength [optional];
 
   // Cookies presented to the server (in the 'cookie' header).
-  string[] cookies [optional];
+  string[] cookies;
+
+  // Events that has occurred while issuing this HTTP request.
+  //
+  // Events which occurred before encountering an error will be reported.
+  HttpProfileRequestEvent[] events;
 
   // The error associated with the failed request.
   string error [optional];
 
-  // Whether automatic redirect following was enabled for the request.
+  // Whether to redirects are followed automatically.
   bool followRedirects [optional];
 
-  // The client request headers.
+  // Returns the client request headers.
   map<string, dynamic> headers [optional];
 
-  // The maximum number of redirects allowed during the request.
+  // The maximum number of redirects to follow when `followRedirects` is true.
   int maxRedirects [optional];
+
+  // The method of the request.
+  string method [optional];
 
   // The requested persistent connection state.
   bool persistentConnection [optional];
@@ -339,7 +339,8 @@ class HttpProfileRequestData {
 ```
 
 Information sent as part of the initial HTTP request. If `error` is present,
-the other properties will be null.
+other properties will be null. If `error` is not present, all other properties
+will be provided unless otherwise specified.
 
 See [HttpProfileRequest](#httpprofilerequest).
 
@@ -347,51 +348,49 @@ See [HttpProfileRequest](#httpprofilerequest).
 
 ```
 class HttpProfileResponseData {
-  // The series of redirects this connection has been through.
+  // Returns the series of redirects this connection has been through.
   //
-  // The list will be empty if no redirects were followed. Redirects will be
+  // The list will be empty if no redirects were followed. redirects will be
   // updated both in the case of an automatic and a manual redirect.
   map<string, dynamic>[] redirects;
 
   // Cookies set by the server (from the 'set-cookie' header).
-  string[] cookies [optional];
+  string[] cookies;
 
   // Information about the client connection.
   map<string, dynamic> connectionInfo [optional];
 
-  // The client response headers.
-  map<string, dynamic> headers [optional];
+  // Returns the client response headers.
+  map<string, dynamic> headers;
 
   // The compression state of the response.
   //
   // This specifies whether the response bytes were compressed when they were
   // received across the wire and whether callers will receive compressed or
   // uncompressed bytes when they listed to this response's byte stream.
-  string compressionState [optional];
+  string compressionState;
 
-  // The reason phrase associated with the status code.
-  string reasonPhrase [optional];
+  // Returns the reason phrase associated with the status code.
+  string reasonPhrase;
 
-  // Whether the status code is one of the normal redirect codes.
-  bool isRedirect [optional];
+  // Returns whether the status code is one of the normal redirect codes.
+  bool isRedirect;
 
   // The persistent connection state returned by the server.
-  bool persistentConnection [optional];
+  bool persistentConnection;
 
-  // The content length of the response body, in bytes.
+  // Returns the content length of the response body.
   //
   // Returns -1 if the size of the response body is not known in advance.
-  int contentLength [optional];
+  int contentLength;
 
-  // The status code.
-  int statusCode [optional];
+  // Returns the status code.
+  int statusCode;
 
-  // The time at which the initial response was received, represented as
-  // microseconds since the "Unix epoch".
-  int startTime [optional];
+  // The time at which the initial response was received, in microseconds.
+  int startTime;
 
-  // The time at which the response was completed, represented as
-  // microseconds since the "Unix epoch".
+  // The time at which the response was completed, in microseconds.
   int endTime [optional];
 
   // The error associated with the failed request.
@@ -409,12 +408,12 @@ See [HttpProfileRequest](#httpprofilerequest).
 class HttpProfileProxyData {
   string host [optional];
   string username [optional];
-  bool isDirect [optional];
+  bool isDirect;
   int port [optional];
 }
 ```
 
-Proxy authentication details associated with an HTTP request.
+Proxy authentication details associated with a HTTP request.
 
 See [HttpProfileRequestData](#httpprofilerequestdata).
 
@@ -425,8 +424,7 @@ class HttpProfileRequestEvent {
   // The title of the recorded event.
   string event;
 
-  // The time at which the event occurred, represented as microseconds since
-  // the "Unix epoch".
+  // The time at which the event occurred, in microseconds.
   int timestamp;
 
   // Any arguments recorded for the event.
@@ -434,7 +432,7 @@ class HttpProfileRequestEvent {
 }
 ```
 
-Describes an event related to an HTTP request.
+Describes an event that has occurred while issuing a HTTP request.
 
 See [HttpProfileRequestData](#httpprofilerequestdata).
 
@@ -592,31 +590,3 @@ version | comments
 1.5 | Added `socketProfilingEnabled` RPC and `SocketProfilingStateChanged` event, deprecated `startSocketProfiling` and `pauseSocketProfiling`.
 1.6 | Added `isSocketProfilingAvailable`, `isHttpTimelineLoggingAvailable`, `isHttpProfilingAvailable`, removed deprecated RPCs `startSocketProfiling`,
 `pauseSocketProfiling`, `getHttpEnableTimelineLogging`, and `setHttpEnableTimelineLogging`.
-2.0 | Changed the type of the `id` property of `@HttpProfileRequestRef` and
-`HttpProfileRequestRef` from `int` to `String`. Changed the type of
-`SocketStatistic.id` from `int` to `String`. Changed the type of the `id`
-parameter of `getHttpProfileRequest` from `int` to `String`. Changed the name of
-the `enable` parameter of `httpEnableTimelineLogging` to `enabled`.
-3.0 | Added `isSocketProfilingAvailable`, `isHttpTimelineLoggingAvailable`,
-and `isHttpProfilingAvailable` methods. Removed deprecated
-`startSocketProfiling`, `pauseSocketProfiling`, `getHttpEnableTimelineLogging`,
-and `setHttpEnableTimelineLogging` methods.
-4.0 | Made the `updatedSince` parameter of `getHttpProfile` require the time to
-be represented in microseconds since the "Unix epoch" instead of as a timestamp
-on the monotonic clock used by the timeline. Made the `timestamp` property of
-`HttpProfile` represent time in microseconds since the "Unix epoch" instead of
-as a timestamp on the monotonic clock used by the timeline. Added `events`
-property to `@HttpProfileRequest` and `HttpProfileRequest`. Made the `startTime`
-and `endTime` properties of `@HttpProfileRequest` and `HttpProfileRequest`
-represent time in microseconds since the "Unix epoch" instead of as timestamps
-on the monotonic clock used by the timeline. Removed the `events` and `method`
-properties from `HttpProfileRequestData`. Made the `cookies` property of
-`HttpProfileRequestData` optional. Made the `startTime` and `endTime` properties
-of `HttpProfileResponseData` represent time in microseconds since the "Unix
-epoch" instead of as timestamps on the monotonic clock used by the timeline.
-Made the `cookies`, `headers`, `compressionState`, `reasonPhrase`, `isRedirect`,
-`persistentConnection`, `contentLength`, `statusCode`, and `startTime`
-properties of `HttpProfileResponseData` optional. Made the `isDirect` property
-of `HttpProfileProxyData` optional. Made the `timestamp` property of
-`HttpProfileRequestEvent` represent time in microseconds since the "Unix epoch"
-instead of as a timestamp on the monotonic clock used by the timeline.

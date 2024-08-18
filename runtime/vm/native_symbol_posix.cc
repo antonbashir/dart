@@ -102,7 +102,7 @@ void NativeSymbolResolver::Cleanup() {
   }
 }
 
-const char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
+char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
   Dl_info info;
   int r = dladdr(reinterpret_cast<void*>(pc), &info);
   if (r == 0) {
@@ -122,7 +122,7 @@ const char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
       if (start != nullptr) {
         *start = symbol_start_offset + dso_base;
       }
-      return symbol_name;
+      return strdup(symbol_name);
     }
   }
 
@@ -137,21 +137,24 @@ const char* NativeSymbolResolver::LookupSymbolName(uword pc, uword* start) {
   int status = 0;
   size_t len = 0;
   char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, &len, &status);
+  MSAN_UNPOISON(demangled, len);
   if (status == 0) {
     return demangled;
   }
-  return info.dli_sname;
+  return strdup(info.dli_sname);
 #else
   // Never works on Fuchsia; avoid linking in cxa_demangle.
   return nullptr;
 #endif
 }
 
-void NativeSymbolResolver::FreeSymbolName(const char* name) {}
+void NativeSymbolResolver::FreeSymbolName(char* name) {
+  free(name);
+}
 
 bool NativeSymbolResolver::LookupSharedObject(uword pc,
                                               uword* dso_base,
-                                              const char** dso_name) {
+                                              char** dso_name) {
   Dl_info info;
   int r = dladdr(reinterpret_cast<void*>(pc), &info);
   if (r == 0) {
@@ -161,7 +164,7 @@ bool NativeSymbolResolver::LookupSharedObject(uword pc,
     *dso_base = reinterpret_cast<uword>(info.dli_fbase);
   }
   if (dso_name != nullptr) {
-    *dso_name = info.dli_fname;
+    *dso_name = strdup(info.dli_fname);
   }
   return true;
 }

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -11,11 +11,11 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveDeprecatedNewInCommentReference extends ResolvedCorrectionProducer {
-  RemoveDeprecatedNewInCommentReference({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_DEPRECATED_NEW_IN_COMMENT_REFERENCE;
@@ -26,12 +26,12 @@ class RemoveDeprecatedNewInCommentReference extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var comment = node;
+    final comment = node;
     if (comment is! CommentReference) {
       return;
     }
 
-    var newToken = comment.newKeyword;
+    final newToken = comment.newKeyword;
     if (newToken == null) {
       return;
     }
@@ -40,9 +40,9 @@ class RemoveDeprecatedNewInCommentReference extends ResolvedCorrectionProducer {
       builder.addDeletion(range.startStart(newToken, newToken.next!));
     });
 
-    var identifier = comment.expression;
+    final identifier = comment.expression;
     if (identifier is Identifier) {
-      var element = identifier.staticElement;
+      final element = identifier.staticElement;
       if (identifier is SimpleIdentifier && element is ConstructorElement) {
         await builder.addDartFileEdit(file, (builder) {
           builder.addSimpleInsertion(identifier.end, '.new');

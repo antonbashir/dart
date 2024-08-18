@@ -5,5 +5,4 @@ class I<X> {}
 class M1 implements I<int> {}
 
 main() {}
-
 mixin M0<X, Y extends void Function({String name})> on I<X> {}

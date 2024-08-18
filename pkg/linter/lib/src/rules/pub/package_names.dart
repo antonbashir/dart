@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import '../../analyzer.dart';
-import '../../linter_lint_codes.dart';
 import '../../utils.dart';
 
 const _desc = r'Use `lowercase_with_underscores` for package names.';
@@ -14,22 +13,27 @@ From the [Pubspec format description](https://dart.dev/tools/pub/pubspec):
 **DO** use `lowercase_with_underscores` for package names.
 
 Package names should be all lowercase, with underscores to separate words,
-`just_like_this`.  Use only basic Latin letters and Arabic digits: \[a-z0-9\_\].
+`just_like_this`.  Use only basic Latin letters and Arabic digits: [a-z0-9_].
 Also, make sure the name is a valid Dart identifier -- that it doesn't start
 with digits and isn't a reserved word.
 
 ''';
 
 class PackageNames extends LintRule {
+  static const LintCode code = LintCode(
+      'package_names', "The package name '{0}' isn't a snake_case identifier.",
+      correctionMessage:
+          'Try changing the name to follow the snake_case style.');
+
   PackageNames()
       : super(
             name: 'package_names',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.pub);
 
   @override
-  LintCode get lintCode => LinterLintCode.package_names;
+  LintCode get lintCode => code;
 
   @override
   PubspecVisitor getPubspecVisitor() => Visitor(this);

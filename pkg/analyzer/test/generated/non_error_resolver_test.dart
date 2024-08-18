@@ -7,6 +7,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:analyzer/src/generated/parser.dart' show ParserErrorCode;
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -1367,9 +1368,10 @@ test() {}
   }
 
   test_generic_staticParameterElement_annotation_implicitTypeArg() async {
+    var required = isNullSafetyEnabled ? 'required' : '';
     await assertNoErrorsInCode('''
 class C<T> {
-  const C.named({required T arg});
+  const C.named({$required T arg});
 }
 @C.named(arg: true)
 test() {}
@@ -1377,36 +1379,6 @@ test() {}
     var x = findNode.namedExpression('arg: true');
     var y = x.staticParameterElement!;
     expect(y, TypeMatcher<ParameterMember>());
-    expect(y.declaration, findElement.parameter('arg'));
-  }
-
-  test_generic_staticParameterElement_functionCall_explicitTypeArg() async {
-    await assertNoErrorsInCode('''
-void generic<T>({arg}) {}
-
-void test() {
-  generic<bool>(arg: true);
-}
-''');
-
-    var x = findNode.namedExpression('arg: true');
-    var y = x.staticParameterElement!;
-    expect(y.enclosingElement, isNotNull);
-    expect(y.declaration, findElement.parameter('arg'));
-  }
-
-  test_generic_staticParameterElement_functionCall_implicitTypeArg() async {
-    await assertNoErrorsInCode('''
-void generic<T>({arg}) {}
-
-void test() {
-  generic(arg: true);
-}
-''');
-
-    var x = findNode.namedExpression('arg: true');
-    var y = x.staticParameterElement!;
-    expect(y.enclosingElement, isNotNull);
     expect(y.declaration, findElement.parameter('arg'));
   }
 
@@ -1480,7 +1452,7 @@ test(C c) => c.method<bool>(arg: true);
 abstract class C {
   T method<T>({arg});
 }
-bool test(C c) => c.method(arg: true);
+bool test(C c) => c.method<bool>(arg: true);
 ''');
     var x = findNode.namedExpression('arg: true');
     var y = x.staticParameterElement!;
@@ -1488,38 +1460,38 @@ bool test(C c) => c.method(arg: true);
     expect(y.declaration, findElement.parameter('arg'));
   }
 
-  test_generic_staticParameterElement_staticMethodCall_explicitTypeArg() async {
+  test_genericTypeAlias_castsAndTypeChecks_hasTypeParameters() async {
+    noSoundNullSafety = false;
     await assertNoErrorsInCode('''
-class C {
-  static void generic<T>({arg}) {}
-}
+// @dart = 2.9
+typedef Foo<S> = S Function<T>(T x);
 
-void test() {
-  C.generic<bool>(arg: true);
+main(Object p) {
+  (p as Foo)<int>(3);
+  if (p is Foo) {
+    p<int>(3);
+  }
+  (p as Foo<String>)<int>(3);
+  if (p is Foo<String>) {
+    p<int>(3);
+  }
 }
 ''');
-
-    var x = findNode.namedExpression('arg: true');
-    var y = x.staticParameterElement!;
-    expect(y.enclosingElement, isNotNull);
-    expect(y.declaration, findElement.parameter('arg'));
   }
 
-  test_generic_staticParameterElement_staticMethodCall_implicitTypeArg() async {
+  test_genericTypeAlias_castsAndTypeChecks_noTypeParameters() async {
+    noSoundNullSafety = false;
     await assertNoErrorsInCode('''
-class C {
-  static void generic<T>({arg}) {}
-}
+// @dart = 2.9
+typedef Foo = T Function<T>(T x);
 
-void test() {
-  C.generic(arg: true);
+main(Object p) {
+  (p as Foo)<int>(3);
+  if (p is Foo) {
+    p<int>(3);
+  }
 }
 ''');
-
-    var x = findNode.namedExpression('arg: true');
-    var y = x.staticParameterElement!;
-    expect(y.enclosingElement, isNotNull);
-    expect(y.declaration, findElement.parameter('arg'));
   }
 
   test_genericTypeAlias_fieldAndReturnType_noTypeParameters() async {
@@ -2913,14 +2885,14 @@ import 'b.dart';
 main() {}
 ''');
     expect(result.unit.declarations, hasLength(1));
-    var mainDecl = result.unit.declarations[0];
+    final mainDecl = result.unit.declarations[0];
     expect(mainDecl.metadata, hasLength(8));
     for (var metadata in mainDecl.metadata) {
-      var value = metadata.elementAnnotation!.computeConstantValue()!;
+      final value = metadata.elementAnnotation!.computeConstantValue()!;
       expect(value, isNotNull);
       assertType(value.type, 'B');
-      var unbounded = value.getField('unbounded')!;
-      var bounded = value.getField('bounded')!;
+      final unbounded = value.getField('unbounded')!;
+      final bounded = value.getField('bounded')!;
       if (!unbounded.isNull) {
         expect(bounded.isNull, true);
         assertType(unbounded.type, 'Unbounded<dynamic>');
@@ -3269,6 +3241,25 @@ bool tt() => true;
 main(Object p) {
   if (tt() && p is String) {
     p.length;
+  }
+}
+''');
+  }
+
+  test_typePromotion_if_is_and_subThenSuper() async {
+    noSoundNullSafety = false;
+    await assertNoErrorsInCode(r'''
+// @dart = 2.9
+class A {
+  var a;
+}
+class B extends A {
+  var b;
+}
+main(Object p) {
+  if (p is B && p is A) {
+    p.a;
+    p.b;
   }
 }
 ''');

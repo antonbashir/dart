@@ -53,22 +53,6 @@ void f() {try {} on SomeException {} ^}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -81,7 +65,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -89,7 +79,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword
@@ -104,22 +104,6 @@ void f() {try {} catch (e) {} ^}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -132,7 +116,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -140,7 +130,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword
@@ -155,22 +155,6 @@ void f() {try {} on SomeException {} ^;}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -183,7 +167,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -191,7 +181,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword
@@ -206,22 +206,6 @@ void f() {try {} catch (e) {} ^;}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -234,7 +218,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -242,7 +232,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword
@@ -257,22 +257,6 @@ void f() {try {} on SomeException {} ^ Foo foo;}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -285,7 +269,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -293,7 +283,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword
@@ -309,22 +309,6 @@ void f() {try {} catch (e) {} ^ Foo foo;}
 ''');
     assertResponse(r'''
 suggestions
-  return
-    kind: keyword
-  if
-    kind: keyword
-  final
-    kind: keyword
-  var
-    kind: keyword
-  throw
-    kind: keyword
-  for
-    kind: keyword
-  switch
-    kind: keyword
-  try
-    kind: keyword
   assert
     kind: keyword
   catch
@@ -337,7 +321,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  final
+    kind: keyword
   finally
+    kind: keyword
+  for
+    kind: keyword
+  if
     kind: keyword
   late
     kind: keyword
@@ -345,7 +335,17 @@ suggestions
     kind: keyword
   on
     kind: keyword
+  return
+    kind: keyword
+  switch
+    kind: keyword
+  throw
+    kind: keyword
   true
+    kind: keyword
+  try
+    kind: keyword
+  var
     kind: keyword
   void
     kind: keyword

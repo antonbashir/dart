@@ -12,9 +12,15 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ExtensionMethodsDeclarationTest);
+    defineReflectiveTests(ExtensionMethodsDeclarationWithoutNullSafetyTest);
     defineReflectiveTests(ExtensionMethodsExtendedTypeTest);
+    defineReflectiveTests(ExtensionMethodsExtendedTypeWithoutNullSafetyTest);
     defineReflectiveTests(ExtensionMethodsExternalReferenceTest);
+    defineReflectiveTests(
+        ExtensionMethodsExternalReferenceWithoutNullSafetyTest);
     defineReflectiveTests(ExtensionMethodsInternalReferenceTest);
+    defineReflectiveTests(
+        ExtensionMethodsInternalReferenceWithoutNullSafetyTest);
   });
 }
 
@@ -22,6 +28,60 @@ main() {
 /// resolved correctly.
 @reflectiveTest
 class ExtensionMethodsDeclarationTest extends PubPackageResolutionTest {
+  test_this_type_interface() async {
+    await assertNoErrorsInCode('''
+extension E on int {
+  void foo() {
+    this;
+  }
+}
+''');
+    var node = findNode.this_('this;');
+    assertResolvedNodeText(node, r'''
+ThisExpression
+  thisKeyword: this
+  staticType: int
+''');
+  }
+
+  test_this_type_typeParameter() async {
+    await assertNoErrorsInCode('''
+extension E<T> on T {
+  void foo() {
+    this;
+  }
+}
+''');
+    var node = findNode.this_('this;');
+    assertResolvedNodeText(node, r'''
+ThisExpression
+  thisKeyword: this
+  staticType: T
+''');
+  }
+
+  test_this_type_typeParameter_withBound() async {
+    await assertNoErrorsInCode('''
+extension E<T extends Object> on T {
+  void foo() {
+    this;
+  }
+}
+''');
+    var node = findNode.this_('this;');
+    assertResolvedNodeText(node, r'''
+ThisExpression
+  thisKeyword: this
+  staticType: T
+''');
+  }
+}
+
+/// Tests that show that extension declarations and the members inside them are
+/// resolved correctly.
+@reflectiveTest
+class ExtensionMethodsDeclarationWithoutNullSafetyTest
+    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
   @override
   List<MockSdkLibrary> get additionalMockSdkLibraries => [
         MockSdkLibrary('test1', [
@@ -89,9 +149,9 @@ Annotation
   atSign: @
   name: SimpleIdentifier
     token: ann
-    staticElement: <testLibraryFragment>::@getter::ann
+    staticElement: self::@getter::ann
     staticType: null
-  element: <testLibraryFragment>::@getter::ann
+  element: self::@getter::ann
 ''');
   }
 
@@ -115,7 +175,7 @@ extension E on int {
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
-  staticType: int
+  staticType: int*
 ''');
   }
 
@@ -131,7 +191,7 @@ extension E<T> on T {
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
-  staticType: T
+  staticType: T*
 ''');
   }
 
@@ -147,7 +207,7 @@ extension E<T extends Object> on T {
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
-  staticType: T
+  staticType: T*
 ''');
   }
 
@@ -187,24 +247,6 @@ f(C c) {
     ]);
   }
 
-  test_visibility_private() async {
-    newFile('$testPackageLibPath/lib.dart', '''
-class C {}
-extension E on C {
-  int _a = 1;
-}
-''');
-    await assertErrorsInCode('''
-import 'lib.dart';
-
-f(C c) {
-  c._a;
-}
-''', [
-      error(CompileTimeErrorCode.UNDEFINED_GETTER, 33, 2),
-    ]);
-  }
-
   test_visibility_shadowed_byClass() async {
     newFile('$testPackageLibPath/lib.dart', '''
 class C {}
@@ -225,15 +267,15 @@ f(C c) {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
-    staticType: C
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-    staticType: int
-  staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-  staticType: int
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
+    staticType: int*
+  staticElement: package:test/lib.dart::@extension::E::@getter::a
+  staticType: int*
 ''');
   }
 
@@ -260,15 +302,15 @@ f(Object o, A a) {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: o
-    staticElement: <testLibraryFragment>::@function::f::@parameter::o
-    staticType: Object
+    staticElement: self::@function::f::@parameter::o
+    staticType: Object*
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: package:test/lib1.dart::<fragment>::@extension::E::@getter::a
-    staticType: int
-  staticElement: package:test/lib1.dart::<fragment>::@extension::E::@getter::a
-  staticType: int
+    staticElement: package:test/lib1.dart::@extension::E::@getter::a
+    staticType: int*
+  staticElement: package:test/lib1.dart::@extension::E::@getter::a
+  staticType: int*
 ''');
   }
 
@@ -287,22 +329,22 @@ f(C c) {
   c.a;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 38, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 38, 1),
     ]);
     var access = findNode.prefixed('c.a');
     assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
-    staticType: C
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-    staticType: int
-  staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-  staticType: int
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
+    staticType: int*
+  staticElement: package:test/lib.dart::@extension::E::@getter::a
+  staticType: int*
 ''');
   }
 
@@ -317,22 +359,22 @@ f(C c) {
   c.a;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 68, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 68, 1),
     ]);
     var access = findNode.prefixed('c.a');
     assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
-    staticType: C
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
-    staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
-  staticType: int
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
 ''');
   }
 
@@ -356,15 +398,15 @@ f(C c) {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
-    staticType: C
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-    staticType: int
-  staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
-  staticType: int
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
+    staticType: int*
+  staticElement: package:test/lib.dart::@extension::E::@getter::a
+  staticType: int*
 ''');
   }
 
@@ -403,14 +445,18 @@ f(p.C c) {
 }
 
 @reflectiveTest
-class ExtensionMethodsExtendedTypeTest extends PubPackageResolutionTest {
+class ExtensionMethodsExtendedTypeTest extends PubPackageResolutionTest
+    with ExtensionMethodsExtendedTypeTestCases {}
+
+mixin ExtensionMethodsExtendedTypeTestCases on PubPackageResolutionTest {
   test_named_generic() async {
     await assertNoErrorsInCode('''
 class C<T> {}
 extension E<S> on C<S> {}
 ''');
     var extendedType = findNode.typeAnnotation('C<S>');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: C
   typeArguments: TypeArgumentList
@@ -421,9 +467,25 @@ NamedType
         element: S@26
         type: S
     rightBracket: >
-  element: <testLibraryFragment>::@class::C
+  element: self::@class::C
   type: C<S>
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: C
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: S
+        element: S@26
+        type: S*
+    rightBracket: >
+  element: self::@class::C
+  type: C<S*>*
+''');
+    }
   }
 
   test_named_onDynamic() async {
@@ -431,12 +493,21 @@ NamedType
 extension E on dynamic {}
 ''');
     var extendedType = findNode.typeAnnotation('dynamic');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: dynamic
   element: dynamic@-1
   type: dynamic
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: dynamic
+  element: dynamic@-1
+  type: dynamic
+''');
+    }
   }
 
   test_named_onEnum() async {
@@ -445,12 +516,21 @@ enum A {a, b, c}
 extension E on A {}
 ''');
     var extendedType = findNode.typeAnnotation('A {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: A
-  element: <testLibraryFragment>::@enum::A
+  element: self::@enum::A
   type: A
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: A
+  element: self::@enum::A
+  type: A*
+''');
+    }
   }
 
   test_named_onFunctionType() async {
@@ -458,11 +538,12 @@ NamedType
 extension E on int Function(int) {}
 ''');
     var extendedType = findNode.typeAnnotation('Function');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 GenericFunctionType
   returnType: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   functionKeyword: Function
   parameters: FormalParameterList
@@ -470,7 +551,7 @@ GenericFunctionType
     parameter: SimpleFormalParameter
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       declaredElement: @-1
         type: int
@@ -484,6 +565,34 @@ GenericFunctionType
     type: int Function(int)
   type: int Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+GenericFunctionType
+  returnType: NamedType
+    name: int
+    element: dart:core::@class::int
+    type: int*
+  functionKeyword: Function
+  parameters: FormalParameterList
+    leftParenthesis: (
+    parameter: SimpleFormalParameter
+      type: NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int*
+      declaredElement: @-1
+        type: int*
+    rightParenthesis: )
+  declaredElement: GenericFunctionTypeElement
+    parameters
+      <empty>
+        kind: required positional
+        type: int*
+    returnType: int*
+    type: int* Function(int*)*
+  type: int* Function(int*)*
+''');
+    }
   }
 
   test_named_onInterface() async {
@@ -492,12 +601,21 @@ class C { }
 extension E on C {}
 ''');
     var extendedType = findNode.typeAnnotation('C {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: C
-  element: <testLibraryFragment>::@class::C
+  element: self::@class::C
   type: C
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: C
+  element: self::@class::C
+  type: C*
+''');
+    }
   }
 
   test_named_onMixin() async {
@@ -507,12 +625,21 @@ mixin M {
 extension E on M {}
 ''');
     var extendedType = findNode.typeAnnotation('M {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: M
-  element: <testLibraryFragment>::@mixin::M
+  element: self::@mixin::M
   type: M
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: M
+  element: self::@mixin::M
+  type: M*
+''');
+    }
   }
 
   test_unnamed_generic() async {
@@ -521,7 +648,8 @@ class C<T> {}
 extension<S> on C<S> {}
 ''');
     var extendedType = findNode.typeAnnotation('C<S>');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: C
   typeArguments: TypeArgumentList
@@ -532,9 +660,25 @@ NamedType
         element: S@24
         type: S
     rightBracket: >
-  element: <testLibraryFragment>::@class::C
+  element: self::@class::C
   type: C<S>
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: C
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: S
+        element: S@24
+        type: S*
+    rightBracket: >
+  element: self::@class::C
+  type: C<S*>*
+''');
+    }
   }
 
   test_unnamed_onDynamic() async {
@@ -542,12 +686,21 @@ NamedType
 extension on dynamic {}
 ''');
     var extendedType = findNode.typeAnnotation('dynamic');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: dynamic
   element: dynamic@-1
   type: dynamic
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: dynamic
+  element: dynamic@-1
+  type: dynamic
+''');
+    }
   }
 
   test_unnamed_onEnum() async {
@@ -556,12 +709,21 @@ enum A {a, b, c}
 extension on A {}
 ''');
     var extendedType = findNode.typeAnnotation('A {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: A
-  element: <testLibraryFragment>::@enum::A
+  element: self::@enum::A
   type: A
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: A
+  element: self::@enum::A
+  type: A*
+''');
+    }
   }
 
   test_unnamed_onFunctionType() async {
@@ -569,11 +731,12 @@ NamedType
 extension on int Function(String) {}
 ''');
     var extendedType = findNode.typeAnnotation('Function');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 GenericFunctionType
   returnType: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   functionKeyword: Function
   parameters: FormalParameterList
@@ -581,7 +744,7 @@ GenericFunctionType
     parameter: SimpleFormalParameter
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
       declaredElement: @-1
         type: String
@@ -595,6 +758,34 @@ GenericFunctionType
     type: int Function(String)
   type: int Function(String)
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+GenericFunctionType
+  returnType: NamedType
+    name: int
+    element: dart:core::@class::int
+    type: int*
+  functionKeyword: Function
+  parameters: FormalParameterList
+    leftParenthesis: (
+    parameter: SimpleFormalParameter
+      type: NamedType
+        name: String
+        element: dart:core::@class::String
+        type: String*
+      declaredElement: @-1
+        type: String*
+    rightParenthesis: )
+  declaredElement: GenericFunctionTypeElement
+    parameters
+      <empty>
+        kind: required positional
+        type: String*
+    returnType: int*
+    type: int* Function(String*)*
+  type: int* Function(String*)*
+''');
+    }
   }
 
   test_unnamed_onInterface() async {
@@ -603,12 +794,21 @@ class C { }
 extension on C {}
 ''');
     var extendedType = findNode.typeAnnotation('C {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: C
-  element: <testLibraryFragment>::@class::C
+  element: self::@class::C
   type: C
 ''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: C
+  element: self::@class::C
+  type: C*
+''');
+    }
   }
 
   test_unnamed_onMixin() async {
@@ -618,17 +818,619 @@ mixin M {
 extension on M {}
 ''');
     var extendedType = findNode.typeAnnotation('M {}');
-    assertResolvedNodeText(extendedType, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(extendedType, r'''
 NamedType
   name: M
-  element: <testLibraryFragment>::@mixin::M
+  element: self::@mixin::M
   type: M
+''');
+    } else {
+      assertResolvedNodeText(extendedType, r'''
+NamedType
+  name: M
+  element: self::@mixin::M
+  type: M*
+''');
+    }
+  }
+}
+
+/// Tests that show that extension declarations support all of the possible
+/// types in the `on` clause.
+@reflectiveTest
+class ExtensionMethodsExtendedTypeWithoutNullSafetyTest
+    extends PubPackageResolutionTest
+    with ExtensionMethodsExtendedTypeTestCases, WithoutNullSafetyMixin {}
+
+@reflectiveTest
+class ExtensionMethodsExternalReferenceTest extends PubPackageResolutionTest
+    with ExtensionMethodsExternalReferenceTestCases {
+  test_instance_getter_fromInstance_extensionType() async {
+    await assertNoErrorsInCode('''
+extension type A(int it) {}
+
+extension E on A {
+  int get foo => 0;
+}
+
+void f(A a) {
+  a.foo;
+}
+''');
+
+    final node = findNode.singlePrefixedIdentifier;
+    assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: A
+  period: .
+  identifier: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@getter::foo
+    staticType: int
+  staticElement: self::@extension::E::@getter::foo
+  staticType: int
+''');
+  }
+
+  test_instance_getter_fromInstance_Never() async {
+    await assertNoErrorsInCode('''
+extension E on Never {
+  int get foo => 0;
+}
+
+f(Never a) {
+  a.foo;
+}
+''');
+    var access = findNode.prefixed('a.foo');
+    assertResolvedNodeText(access, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: Never
+  period: .
+  identifier: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: Never
+  staticElement: <null>
+  staticType: Never
+''');
+  }
+
+  test_instance_getter_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+extension E on int? {
+  int get foo => 0;
+}
+
+f(int? a) {
+  a.foo;
+}
+''');
+    var access = findNode.prefixed('a.foo');
+    assertResolvedNodeText(access, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  period: .
+  identifier: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@getter::foo
+    staticType: int
+  staticElement: self::@extension::E::@getter::foo
+  staticType: int
+''');
+  }
+
+  test_instance_getter_fromInstance_nullAware() async {
+    await assertNoErrorsInCode('''
+extension E on int {
+  int get foo => 0;
+}
+
+f(int? a) {
+  a?.foo;
+}
+''');
+    var access = findNode.propertyAccess('foo;');
+    assertResolvedNodeText(access, r'''
+PropertyAccess
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  operator: ?.
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@getter::foo
+    staticType: int
+  staticType: int?
+''');
+  }
+
+  test_instance_method_fromInstance_extensionType() async {
+    await assertNoErrorsInCode('''
+extension type A(int it) {}
+
+extension E on A {
+  void foo() {}
+}
+
+void f(A a) {
+  a.foo();
+}
+''');
+
+    final node = findNode.singleMethodInvocation;
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: A
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@method::foo
+    staticType: void Function()
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()
+  staticType: void
+''');
+  }
+
+  test_instance_method_fromInstance_Never() async {
+    await assertErrorsInCode('''
+extension E on Never {
+  void foo() {}
+}
+
+f(Never a) {
+  a.foo();
+}
+''', [
+      error(WarningCode.RECEIVER_OF_TYPE_NEVER, 57, 1),
+      error(WarningCode.DEAD_CODE, 62, 3),
+    ]);
+
+    var node = findNode.methodInvocation('a.foo()');
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: Never
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: dynamic
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: dynamic
+  staticType: Never
+''');
+  }
+
+  test_instance_method_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+extension E on int? {
+  void foo() {}
+}
+
+f(int? a) {
+  a.foo();
+}
+''');
+    var invocation = findNode.methodInvocation('a.foo()');
+    assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@method::foo
+    staticType: void Function()
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()
+  staticType: void
+''');
+  }
+
+  test_instance_method_fromInstance_nullable_nullLiteral() async {
+    await assertNoErrorsInCode('''
+extension E on int? {
+  void foo() {}
+}
+
+f(int? a) {
+  null.foo();
+}
+''');
+    var invocation = findNode.methodInvocation('null.foo()');
+    assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: NullLiteral
+    literal: null
+    staticType: Null
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@method::foo
+    staticType: void Function()
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()
+  staticType: void
+''');
+  }
+
+  test_instance_method_fromInstance_nullAware() async {
+    await assertNoErrorsInCode('''
+extension E on int {
+  void foo() {}
+}
+
+f(int? a) {
+  a?.foo();
+}
+''');
+    var invocation = findNode.methodInvocation('a?.foo()');
+    assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  operator: ?.
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@method::foo
+    staticType: void Function()
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()
+  staticType: void
+''');
+  }
+
+  test_instance_method_fromInstance_nullLiteral() async {
+    await assertNoErrorsInCode('''
+extension E<T> on T {
+  void foo() {}
+}
+
+f() {
+  null.foo();
+}
+''');
+    var invocation = findNode.methodInvocation('null.foo()');
+    assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: NullLiteral
+    literal: null
+    staticType: Null
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    staticElement: MethodMember
+      base: self::@extension::E::@method::foo
+      substitution: {T: Null}
+    staticType: void Function()
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()
+  staticType: void
+''');
+  }
+
+  test_instance_operator_binary_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A? {
+  int operator +(int _) => 0;
+}
+
+f(A? a) {
+  a + 1;
+}
+''');
+    var binary = findNode.binary('a + 1');
+    assertResolvedNodeText(binary, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: A?
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@method::+::@parameter::_
+    staticType: int
+  staticElement: self::@extension::E::@method::+
+  staticInvokeType: int Function(int)
+  staticType: int
+''');
+  }
+
+  test_instance_operator_index_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+extension E on int? {
+  int operator [](int index) => 0;
+}
+
+f(int? a) {
+  a[0];
+}
+''');
+    var index = findNode.index('a[0]');
+    assertResolvedNodeText(index, r'''
+IndexExpression
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    parameter: self::@extension::E::@method::[]::@parameter::index
+    staticType: int
+  rightBracket: ]
+  staticElement: self::@extension::E::@method::[]
+  staticType: int
+''');
+  }
+
+  test_instance_operator_index_fromInstance_nullAware() async {
+    await assertNoErrorsInCode('''
+extension E on int {
+  int operator [](int index) => 0;
+}
+
+f(int? a) {
+  a?[0];
+}
+''');
+    var index = findNode.index('a?[0]');
+    assertResolvedNodeText(index, r'''
+IndexExpression
+  target: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: int?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    parameter: self::@extension::E::@method::[]::@parameter::index
+    staticType: int
+  rightBracket: ]
+  staticElement: self::@extension::E::@method::[]
+  staticType: int?
+''');
+  }
+
+  test_instance_operator_postfixInc_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A? {
+  A? operator +(int _) => this;
+}
+
+f(A? a) {
+  a++;
+}
+''');
+    var expression = findNode.postfix('a++');
+    assertResolvedNodeText(expression, r'''
+PostfixExpression
+  operand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: null
+  operator: ++
+  readElement: self::@function::f::@parameter::a
+  readType: A?
+  writeElement: self::@function::f::@parameter::a
+  writeType: A?
+  staticElement: self::@extension::E::@method::+
+  staticType: A?
+''');
+  }
+
+  test_instance_operator_prefixInc_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A? {
+  A? operator +(int _) => this;
+}
+
+f(A? a) {
+  ++a;
+}
+''');
+    var expression = findNode.prefix('++a');
+    assertResolvedNodeText(expression, r'''
+PrefixExpression
+  operator: ++
+  operand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: null
+  readElement: self::@function::f::@parameter::a
+  readType: A?
+  writeElement: self::@function::f::@parameter::a
+  writeType: A?
+  staticElement: self::@extension::E::@method::+
+  staticType: A?
+''');
+  }
+
+  test_instance_operator_unaryMinus_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A? {
+  A? operator -() => this;
+}
+
+f(A? a) {
+  -a;
+}
+''');
+    var expression = findNode.prefix('-a');
+    assertResolvedNodeText(expression, r'''
+PrefixExpression
+  operator: -
+  operand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: A?
+  staticElement: self::@extension::E::@method::unary-
+  staticType: A?
+''');
+  }
+
+  test_instance_setter_fromInstance_extensionType() async {
+    await assertNoErrorsInCode('''
+extension type A(int it) {}
+
+extension E on A {
+  set foo(int _) {}
+}
+
+void f(A a) {
+  a.foo = 0;
+}
+''');
+
+    final node = findNode.singleAssignmentExpression;
+    assertResolvedNodeText(node, r'''
+AssignmentExpression
+  leftHandSide: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: A
+    period: .
+    identifier: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: self::@extension::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_instance_setter_fromInstance_nullable() async {
+    await assertNoErrorsInCode('''
+extension E on int? {
+  set foo(int _) {}
+}
+
+f(int? a) {
+  a.foo = 1;
+}
+''');
+    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
+AssignmentExpression
+  leftHandSide: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: int?
+    period: .
+    identifier: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_instance_setter_fromInstance_nullAware() async {
+    await assertNoErrorsInCode('''
+extension E on int {
+  set foo(int _) {}
+}
+
+f(int? a) {
+  a?.foo = 1;
+}
+''');
+    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: int?
+    operator: ?.
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int?
 ''');
   }
 }
 
-@reflectiveTest
-class ExtensionMethodsExternalReferenceTest extends PubPackageResolutionTest {
+mixin ExtensionMethodsExternalReferenceTestCases on PubPackageResolutionTest {
   /// Corresponds to: extension_member_resolution_t07
   test_dynamicInvocation() async {
     await assertNoErrorsInCode(r'''
@@ -664,24 +1466,45 @@ f(C c) {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('c(2)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 2
-        parameter: <testLibraryFragment>::@class::C::@method::call::@parameter::x
+        parameter: self::@class::C::@method::call::@parameter::x
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::C::@method::call
+  staticElement: self::@class::C::@method::call
   staticInvokeType: int Function(int)
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 2
+        parameter: self::@class::C::@method::call::@parameter::x
+        staticType: int*
+    rightParenthesis: )
+  staticElement: self::@class::C::@method::call
+  staticInvokeType: int* Function(int*)*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_call_fromExtension() async {
@@ -697,24 +1520,45 @@ f(C c) {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('c(2)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 2
-        parameter: <testLibraryFragment>::@extension::E::@method::call::@parameter::x
+        parameter: self::@extension::E::@method::call::@parameter::x
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::E::@method::call
+  staticElement: self::@extension::E::@method::call
   staticInvokeType: int Function(int)
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 2
+        parameter: self::@extension::E::@method::call::@parameter::x
+        staticType: int*
+    rightParenthesis: )
+  staticElement: self::@extension::E::@method::call
+  staticInvokeType: int* Function(int*)*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_call_fromExtension_int() async {
@@ -728,7 +1572,8 @@ f() {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('1(2)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: IntegerLiteral
     literal: 1
@@ -738,13 +1583,32 @@ FunctionExpressionInvocation
     arguments
       IntegerLiteral
         literal: 2
-        parameter: <testLibraryFragment>::@extension::E::@method::call::@parameter::x
+        parameter: self::@extension::E::@method::call::@parameter::x
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::E::@method::call
+  staticElement: self::@extension::E::@method::call
   staticInvokeType: int Function(int)
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: IntegerLiteral
+    literal: 1
+    staticType: int*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 2
+        parameter: self::@extension::E::@method::call::@parameter::x
+        staticType: int*
+    rightParenthesis: )
+  staticElement: self::@extension::E::@method::call
+  staticInvokeType: int* Function(int*)*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_compoundAssignment_fromExtendedType() async {
@@ -760,24 +1624,45 @@ f(C c) {
 }
 ''');
     var assignment = findNode.assignment('+=');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::C::@method::+::@parameter::i
+    parameter: self::@class::C::@method::+::@parameter::i
     staticType: int
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@class::C::@method::+
+  staticElement: self::@class::C::@method::+
   staticType: C
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 2
+    parameter: self::@class::C::@method::+::@parameter::i
+    staticType: int*
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@class::C::@method::+
+  staticType: C*
+''');
+    }
   }
 
   test_instance_compoundAssignment_fromExtension() async {
@@ -791,24 +1676,45 @@ f(C c) {
 }
 ''');
     var assignment = findNode.assignment('+=');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
   operator: +=
   rightHandSide: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::+::@parameter::i
+    parameter: self::@extension::E::@method::+::@parameter::i
     staticType: int
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticType: C
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 2
+    parameter: self::@extension::E::@method::+::@parameter::i
+    staticType: int*
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@extension::E::@method::+
+  staticType: C*
+''');
+    }
   }
 
   test_instance_getter_fromDifferentExtension_usingBounds() async {
@@ -824,12 +1730,21 @@ extension E2<T extends B> on T {
 }
 ''');
     var identifier = findNode.simple('g;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: g
-  staticElement: <testLibraryFragment>::@extension::E1::@getter::g
+  staticElement: self::@extension::E1::@getter::g
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: g
+  staticElement: self::@extension::E1::@getter::g
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromDifferentExtension_withoutTarget() async {
@@ -845,12 +1760,21 @@ extension E2 on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E1::@getter::a
+  staticElement: self::@extension::E1::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E1::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromExtendedType_usingBounds() async {
@@ -865,12 +1789,21 @@ extension E<T extends B> on T {
 }
 ''');
     var identifier = findNode.simple('g;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: g
-  staticElement: <testLibraryFragment>::@class::B::@getter::g
+  staticElement: self::@class::B::@getter::g
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: g
+  staticElement: self::@class::B::@getter::g
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromExtendedType_withoutTarget() async {
@@ -885,12 +1818,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromExtension_functionType() async {
@@ -903,20 +1845,37 @@ g(int Function(int) f) {
 }
 ''');
     var access = findNode.prefixed('f.a');
-    assertResolvedNodeText(access, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
+    staticElement: self::@extension::E::@getter::a
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(access, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromInstance() async {
@@ -932,130 +1891,37 @@ f(C c) {
 }
 ''');
     var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
+    staticElement: self::@extension::E::@getter::a
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
-  }
-
-  test_instance_getter_fromInstance_extensionType() async {
-    await assertNoErrorsInCode('''
-extension type A(int it) {}
-
-extension E on A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  a.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
+    } else {
+      assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: A
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   period: .
   identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@getter::foo
-    staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::foo
-  staticType: int
-''');
-  }
-
-  test_instance_getter_fromInstance_Never() async {
-    await assertNoErrorsInCode('''
-extension E on Never {
-  int get foo => 0;
-}
-
-f(Never a) {
-  a.foo;
-}
-''');
-    var access = findNode.prefixed('a.foo');
-    assertResolvedNodeText(access, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: Never
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: Never
-  staticElement: <null>
-  staticType: Never
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
 ''');
-  }
-
-  test_instance_getter_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-extension E on int? {
-  int get foo => 0;
-}
-
-f(int? a) {
-  a.foo;
-}
-''');
-    var access = findNode.prefixed('a.foo');
-    assertResolvedNodeText(access, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@getter::foo
-    staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::foo
-  staticType: int
-''');
-  }
-
-  test_instance_getter_fromInstance_nullAware() async {
-    await assertNoErrorsInCode('''
-extension E on int {
-  int get foo => 0;
-}
-
-f(int? a) {
-  a?.foo;
-}
-''');
-    var access = findNode.propertyAccess('foo;');
-    assertResolvedNodeText(access, r'''
-PropertyAccess
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
-  operator: ?.
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@getter::foo
-    staticType: int
-  staticType: int?
-''');
+    }
   }
 
   test_instance_getter_methodInvocation() async {
@@ -1071,17 +1937,18 @@ f(C c) {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('c.a(0)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: PropertyAccess
     target: SimpleIdentifier
       token: c
-      staticElement: <testLibraryFragment>::@function::f::@parameter::c
+      staticElement: self::@function::f::@parameter::c
       staticType: C
     operator: .
     propertyName: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@extension::E::@getter::a
+      staticElement: self::@extension::E::@getter::a
       staticType: double Function(int)
     staticType: double Function(int)
   argumentList: ArgumentList
@@ -1096,6 +1963,33 @@ FunctionExpressionInvocation
   staticInvokeType: double Function(int)
   staticType: double
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: PropertyAccess
+    target: SimpleIdentifier
+      token: c
+      staticElement: self::@function::f::@parameter::c
+      staticType: C*
+    operator: .
+    propertyName: SimpleIdentifier
+      token: a
+      staticElement: self::@extension::E::@getter::a
+      staticType: double* Function(int*)*
+    staticType: double* Function(int*)*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: root::@parameter::
+        staticType: int*
+    rightParenthesis: )
+  staticElement: <null>
+  staticInvokeType: double* Function(int*)*
+  staticType: double*
+''');
+    }
   }
 
   test_instance_getter_specificSubtypeMatchLocal() async {
@@ -1115,20 +2009,37 @@ f(B b) {
 }
 ''');
     var access = findNode.prefixed('b.a');
-    assertResolvedNodeText(access, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(access, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: b
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: B
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::B_Ext::@getter::a
+    staticElement: self::@extension::B_Ext::@getter::a
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::B_Ext::@getter::a
+  staticElement: self::@extension::B_Ext::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(access, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: b
+    staticElement: self::@function::f::@parameter::b
+    staticType: B*
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::B_Ext::@getter::a
+    staticType: int*
+  staticElement: self::@extension::B_Ext::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getterInvoked_fromExtension_functionType() async {
@@ -1141,17 +2052,18 @@ g(int Function(int) f) {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('f.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: PropertyAccess
     target: SimpleIdentifier
       token: f
-      staticElement: <testLibraryFragment>::@function::g::@parameter::f
+      staticElement: self::@function::g::@parameter::f
       staticType: int Function(int)
     operator: .
     propertyName: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@extension::E::@getter::a
+      staticElement: self::@extension::E::@getter::a
       staticType: String Function()
     staticType: String Function()
   argumentList: ArgumentList
@@ -1161,6 +2073,28 @@ FunctionExpressionInvocation
   staticInvokeType: String Function()
   staticType: String
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: PropertyAccess
+    target: SimpleIdentifier
+      token: f
+      staticElement: self::@function::g::@parameter::f
+      staticType: int* Function(int*)*
+    operator: .
+    propertyName: SimpleIdentifier
+      token: a
+      staticElement: self::@extension::E::@getter::a
+      staticType: String* Function()*
+    staticType: String* Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticElement: <null>
+  staticInvokeType: String* Function()*
+  staticType: String*
+''');
+    }
   }
 
   test_instance_method_fromDifferentExtension_usingBounds() async {
@@ -1176,11 +2110,12 @@ extension E2<T extends B> on T {
 }
 ''');
     var invocation = findNode.methodInvocation('m();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@extension::E1::@method::m
+    staticElement: self::@extension::E1::@method::m
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1188,6 +2123,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: m
+    staticElement: self::@extension::E1::@method::m
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromDifferentExtension_withoutTarget() async {
@@ -1203,11 +2152,12 @@ extension E2 on B {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E1::@method::a
+    staticElement: self::@extension::E1::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1215,6 +2165,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E1::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromExtendedType_usingBounds() async {
@@ -1229,11 +2193,12 @@ extension E<T extends B> on T {
 }
 ''');
     var invocation = findNode.methodInvocation('m();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@class::B::@method::m
+    staticElement: self::@class::B::@method::m
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1241,6 +2206,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: m
+    staticElement: self::@class::B::@method::m
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromExtendedType_withoutTarget() async {
@@ -1255,11 +2234,12 @@ extension E on B {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1267,6 +2247,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromExtension_functionType() async {
@@ -1279,16 +2273,17 @@ g(int Function(int) f) {
 }
 ''');
     var invocation = findNode.methodInvocation('f.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1296,6 +2291,25 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromInstance() async {
@@ -1311,16 +2325,17 @@ f(B b) {
 }
 ''');
     var invocation = findNode.methodInvocation('b.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: b
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: B
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::A::@method::a
+    staticElement: self::@extension::A::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1328,193 +2343,25 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
-  }
-
-  test_instance_method_fromInstance_extensionType() async {
-    await assertNoErrorsInCode('''
-extension type A(int it) {}
-
-extension E on A {
-  void foo() {}
-}
-
-void f(A a) {
-  a.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
+    } else {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
+    token: b
+    staticElement: self::@function::f::@parameter::b
+    staticType: B*
+  operator: .
+  methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@method::foo
-    staticType: void Function()
+    staticElement: self::@extension::A::@method::a
+    staticType: void Function()*
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticInvokeType: void Function()
+  staticInvokeType: void Function()*
   staticType: void
 ''');
-  }
-
-  test_instance_method_fromInstance_Never() async {
-    await assertErrorsInCode('''
-extension E on Never {
-  void foo() {}
-}
-
-f(Never a) {
-  a.foo();
-}
-''', [
-      error(WarningCode.RECEIVER_OF_TYPE_NEVER, 57, 1),
-      error(WarningCode.DEAD_CODE, 62, 3),
-    ]);
-
-    var node = findNode.methodInvocation('a.foo()');
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: Never
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: dynamic
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: dynamic
-  staticType: Never
-''');
-  }
-
-  test_instance_method_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-extension E on int? {
-  void foo() {}
-}
-
-f(int? a) {
-  a.foo();
-}
-''');
-    var invocation = findNode.methodInvocation('a.foo()');
-    assertResolvedNodeText(invocation, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@method::foo
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  test_instance_method_fromInstance_nullable_nullLiteral() async {
-    await assertNoErrorsInCode('''
-extension E on int? {
-  void foo() {}
-}
-
-f(int? a) {
-  null.foo();
-}
-''');
-    var invocation = findNode.methodInvocation('null.foo()');
-    assertResolvedNodeText(invocation, r'''
-MethodInvocation
-  target: NullLiteral
-    literal: null
-    staticType: Null
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@method::foo
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  test_instance_method_fromInstance_nullAware() async {
-    await assertNoErrorsInCode('''
-extension E on int {
-  void foo() {}
-}
-
-f(int? a) {
-  a?.foo();
-}
-''');
-    var invocation = findNode.methodInvocation('a?.foo()');
-    assertResolvedNodeText(invocation, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
-  operator: ?.
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extension::E::@method::foo
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  test_instance_method_fromInstance_nullLiteral() async {
-    await assertNoErrorsInCode('''
-extension E<T> on T {
-  void foo() {}
-}
-
-f() {
-  null.foo();
-}
-''');
-    var invocation = findNode.methodInvocation('null.foo()');
-    assertResolvedNodeText(invocation, r'''
-MethodInvocation
-  target: NullLiteral
-    literal: null
-    staticType: Null
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: MethodMember
-      base: <testLibraryFragment>::@extension::E::@method::foo
-      substitution: {T: Null}
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
+    }
   }
 
   test_instance_method_specificSubtypeMatchLocal() async {
@@ -1535,16 +2382,17 @@ f(B b) {
 ''');
 
     var invocation = findNode.methodInvocation('b.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: b
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: B
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::B_Ext::@method::a
+    staticElement: self::@extension::B_Ext::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1552,6 +2400,25 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: b
+    staticElement: self::@function::f::@parameter::b
+    staticType: B*
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::B_Ext::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_specificSubtypeMatchLocalGenerics() async {
@@ -1575,17 +2442,18 @@ f(B<C> x, C o) {
 }
 ''');
     var invocation = findNode.methodInvocation('x.f(o)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: B<C>
   operator: .
   methodName: SimpleIdentifier
     token: f
     staticElement: MethodMember
-      base: <testLibraryFragment>::@extension::B_Ext::@method::f
+      base: self::@extension::B_Ext::@method::f
       substitution: {T: C}
     staticType: void Function(C)
   argumentList: ArgumentList
@@ -1594,12 +2462,39 @@ MethodInvocation
       SimpleIdentifier
         token: o
         parameter: root::@parameter::x
-        staticElement: <testLibraryFragment>::@function::f::@parameter::o
+        staticElement: self::@function::f::@parameter::o
         staticType: C
     rightParenthesis: )
   staticInvokeType: void Function(C)
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: x
+    staticElement: self::@function::f::@parameter::x
+    staticType: B<C*>*
+  operator: .
+  methodName: SimpleIdentifier
+    token: f
+    staticElement: MethodMember
+      base: self::@extension::B_Ext::@method::f
+      substitution: {T: C*}
+    staticType: void Function(C*)*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      SimpleIdentifier
+        token: o
+        parameter: root::@parameter::x
+        staticElement: self::@function::f::@parameter::o
+        staticType: C*
+    rightParenthesis: )
+  staticInvokeType: void Function(C*)*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_binary_fromExtendedType() async {
@@ -1615,21 +2510,39 @@ f(C c) {
 }
 ''');
     var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   operator: +
   rightOperand: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::C::@method::+::@parameter::i
+    parameter: self::@class::C::@method::+::@parameter::i
     staticType: int
-  staticElement: <testLibraryFragment>::@class::C::@method::+
+  staticElement: self::@class::C::@method::+
   staticInvokeType: void Function(int)
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(binary, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    parameter: self::@class::C::@method::+::@parameter::i
+    staticType: int*
+  staticElement: self::@class::C::@method::+
+  staticInvokeType: void Function(int*)*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_binary_fromExtension_functionType() async {
@@ -1642,21 +2555,39 @@ g(int Function(int) f) {
 }
 ''');
     var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
   operator: +
   rightOperand: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::+::@parameter::i
+    parameter: self::@extension::E::@method::+::@parameter::i
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticInvokeType: void Function(int)
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(binary, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    parameter: self::@extension::E::@method::+::@parameter::i
+    staticType: int*
+  staticElement: self::@extension::E::@method::+
+  staticInvokeType: void Function(int*)*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_binary_fromExtension_interfaceType() async {
@@ -1670,51 +2601,39 @@ f(C c) {
 }
 ''');
     var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   operator: +
   rightOperand: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::+::@parameter::i
+    parameter: self::@extension::E::@method::+::@parameter::i
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticInvokeType: void Function(int)
   staticType: void
 ''');
-  }
-
-  test_instance_operator_binary_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A? {
-  int operator +(int _) => 0;
-}
-
-f(A? a) {
-  a + 1;
-}
-''');
-    var binary = findNode.binary('a + 1');
-    assertResolvedNodeText(binary, r'''
+    } else {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: A?
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   operator: +
   rightOperand: IntegerLiteral
-    literal: 1
-    parameter: <testLibraryFragment>::@extension::E::@method::+::@parameter::_
-    staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
-  staticInvokeType: int Function(int)
-  staticType: int
+    literal: 2
+    parameter: self::@extension::E::@method::+::@parameter::i
+    staticType: int*
+  staticElement: self::@extension::E::@method::+
+  staticInvokeType: void Function(int*)*
+  staticType: void
 ''');
+    }
   }
 
   test_instance_operator_binary_undefinedTarget() async {
@@ -1741,21 +2660,39 @@ f(C c) {
 }
 ''');
     var index = findNode.index('c[2]');
-    assertResolvedNodeText(index, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   leftBracket: [
   index: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::C::@method::[]::@parameter::index
+    parameter: self::@class::C::@method::[]::@parameter::index
     staticType: int
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@class::C::@method::[]
+  staticElement: self::@class::C::@method::[]
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(index, r'''
+IndexExpression
+  target: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    parameter: self::@class::C::@method::[]::@parameter::index
+    staticType: int*
+  rightBracket: ]
+  staticElement: self::@class::C::@method::[]
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_index_fromExtension_functionType() async {
@@ -1768,21 +2705,39 @@ g(int Function(int) f) {
 }
 ''');
     var index = findNode.index('f[2]');
-    assertResolvedNodeText(index, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
   leftBracket: [
   index: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::[]::@parameter::index
+    parameter: self::@extension::E::@method::[]::@parameter::index
     staticType: int
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@extension::E::@method::[]
+  staticElement: self::@extension::E::@method::[]
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(index, r'''
+IndexExpression
+  target: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    parameter: self::@extension::E::@method::[]::@parameter::index
+    staticType: int*
+  rightBracket: ]
+  staticElement: self::@extension::E::@method::[]
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_index_fromExtension_interfaceType() async {
@@ -1796,77 +2751,39 @@ f(C c) {
 }
 ''');
     var index = findNode.index('c[2]');
-    assertResolvedNodeText(index, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   leftBracket: [
   index: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::[]::@parameter::index
+    parameter: self::@extension::E::@method::[]::@parameter::index
     staticType: int
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@extension::E::@method::[]
+  staticElement: self::@extension::E::@method::[]
   staticType: void
 ''');
-  }
-
-  test_instance_operator_index_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-extension E on int? {
-  int operator [](int index) => 0;
-}
-
-f(int? a) {
-  a[0];
-}
-''');
-    var index = findNode.index('a[0]');
-    assertResolvedNodeText(index, r'''
+    } else {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
   leftBracket: [
   index: IntegerLiteral
-    literal: 0
-    parameter: <testLibraryFragment>::@extension::E::@method::[]::@parameter::index
-    staticType: int
+    literal: 2
+    parameter: self::@extension::E::@method::[]::@parameter::index
+    staticType: int*
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@extension::E::@method::[]
-  staticType: int
+  staticElement: self::@extension::E::@method::[]
+  staticType: void
 ''');
-  }
-
-  test_instance_operator_index_fromInstance_nullAware() async {
-    await assertNoErrorsInCode('''
-extension E on int {
-  int operator [](int index) => 0;
-}
-
-f(int? a) {
-  a?[0];
-}
-''');
-    var index = findNode.index('a?[0]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: int?
-  leftBracket: [
-  index: IntegerLiteral
-    literal: 0
-    parameter: <testLibraryFragment>::@extension::E::@method::[]::@parameter::index
-    staticType: int
-  rightBracket: ]
-  staticElement: <testLibraryFragment>::@extension::E::@method::[]
-  staticType: int?
-''');
+    }
   }
 
   test_instance_operator_indexEquals_fromExtendedType() async {
@@ -1882,17 +2799,18 @@ f(C c) {
 }
 ''');
     var assignment = findNode.assignment('[2] =');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: c
-      staticElement: <testLibraryFragment>::@function::f::@parameter::c
+      staticElement: self::@function::f::@parameter::c
       staticType: C
     leftBracket: [
     index: IntegerLiteral
       literal: 2
-      parameter: <testLibraryFragment>::@class::C::@method::[]=::@parameter::index
+      parameter: self::@class::C::@method::[]=::@parameter::index
       staticType: int
     rightBracket: ]
     staticElement: <null>
@@ -1900,15 +2818,44 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@class::C::@method::[]=::@parameter::value
+    parameter: self::@class::C::@method::[]=::@parameter::value
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::C::@method::[]=
+  writeElement: self::@class::C::@method::[]=
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: IndexExpression
+    target: SimpleIdentifier
+      token: c
+      staticElement: self::@function::f::@parameter::c
+      staticType: C*
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      parameter: self::@class::C::@method::[]=::@parameter::index
+      staticType: int*
+    rightBracket: ]
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@class::C::@method::[]=::@parameter::value
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@class::C::@method::[]=
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_operator_indexEquals_fromExtension_functionType() async {
@@ -1921,17 +2868,18 @@ g(int Function(int) f) {
 }
 ''');
     var assignment = findNode.assignment('f[2]');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: f
-      staticElement: <testLibraryFragment>::@function::g::@parameter::f
+      staticElement: self::@function::g::@parameter::f
       staticType: int Function(int)
     leftBracket: [
     index: IntegerLiteral
       literal: 2
-      parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::index
+      parameter: self::@extension::E::@method::[]=::@parameter::index
       staticType: int
     rightBracket: ]
     staticElement: <null>
@@ -1939,15 +2887,44 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::value
+    parameter: self::@extension::E::@method::[]=::@parameter::value
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@method::[]=
+  writeElement: self::@extension::E::@method::[]=
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: IndexExpression
+    target: SimpleIdentifier
+      token: f
+      staticElement: self::@function::g::@parameter::f
+      staticType: int* Function(int*)*
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      parameter: self::@extension::E::@method::[]=::@parameter::index
+      staticType: int*
+    rightBracket: ]
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@method::[]=::@parameter::value
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@method::[]=
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_operator_indexEquals_fromExtension_interfaceType() async {
@@ -1961,17 +2938,18 @@ f(C c) {
 }
 ''');
     var assignment = findNode.assignment('c[2]');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: c
-      staticElement: <testLibraryFragment>::@function::f::@parameter::c
+      staticElement: self::@function::f::@parameter::c
       staticType: C
     leftBracket: [
     index: IntegerLiteral
       literal: 2
-      parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::index
+      parameter: self::@extension::E::@method::[]=::@parameter::index
       staticType: int
     rightBracket: ]
     staticElement: <null>
@@ -1979,15 +2957,44 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::value
+    parameter: self::@extension::E::@method::[]=::@parameter::value
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@method::[]=
+  writeElement: self::@extension::E::@method::[]=
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: IndexExpression
+    target: SimpleIdentifier
+      token: c
+      staticElement: self::@function::f::@parameter::c
+      staticType: C*
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      parameter: self::@extension::E::@method::[]=::@parameter::index
+      staticType: int*
+    rightBracket: ]
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@method::[]=::@parameter::value
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@method::[]=
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_operator_postfix_fromExtendedType() async {
@@ -2003,20 +3010,37 @@ f(C c) {
 }
 ''');
     var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(postfix, r'''
 PostfixExpression
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@class::C::@method::+
+  staticElement: self::@class::C::@method::+
   staticType: C
 ''');
+    } else {
+      assertResolvedNodeText(postfix, r'''
+PostfixExpression
+  operand: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: null
+  operator: ++
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@class::C::@method::+
+  staticType: C*
+''');
+    }
   }
 
   test_instance_operator_postfix_fromExtension_functionType() async {
@@ -2029,20 +3053,37 @@ g(int Function(int) f) {
 }
 ''');
     var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(postfix, r'''
 PostfixExpression
   operand: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::g::@parameter::f
+  readElement: self::@function::g::@parameter::f
   readType: int Function(int)
-  writeElement: <testLibraryFragment>::@function::g::@parameter::f
+  writeElement: self::@function::g::@parameter::f
   writeType: int Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticType: int Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(postfix, r'''
+PostfixExpression
+  operand: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: null
+  operator: ++
+  readElement: self::@function::g::@parameter::f
+  readType: int* Function(int*)*
+  writeElement: self::@function::g::@parameter::f
+  writeType: int* Function(int*)*
+  staticElement: self::@extension::E::@method::+
+  staticType: int* Function(int*)*
+''');
+    }
   }
 
   test_instance_operator_postfix_fromExtension_interfaceType() async {
@@ -2056,49 +3097,37 @@ f(C c) {
 }
 ''');
     var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(postfix, r'''
 PostfixExpression
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticType: C
 ''');
-  }
-
-  test_instance_operator_postfixInc_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A? {
-  A? operator +(int _) => this;
-}
-
-f(A? a) {
-  a++;
-}
-''');
-    var expression = findNode.postfix('a++');
-    assertResolvedNodeText(expression, r'''
+    } else {
+      assertResolvedNodeText(postfix, r'''
 PostfixExpression
   operand: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    token: c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
   operator: ++
-  readElement: <testLibraryFragment>::@function::f::@parameter::a
-  readType: A?
-  writeElement: <testLibraryFragment>::@function::f::@parameter::a
-  writeType: A?
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
-  staticType: A?
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@extension::E::@method::+
+  staticType: C*
 ''');
+    }
   }
 
   test_instance_operator_prefix_fromExtendedType() async {
@@ -2114,20 +3143,37 @@ f(C c) {
 }
 ''');
     var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@class::C::@method::+
+  staticElement: self::@class::C::@method::+
   staticType: C
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: ++
+  operand: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: null
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@class::C::@method::+
+  staticType: C*
+''');
+    }
   }
 
   test_instance_operator_prefix_fromExtension_functionType() async {
@@ -2140,20 +3186,37 @@ g(int Function(int) f) {
 }
 ''');
     var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: null
-  readElement: <testLibraryFragment>::@function::g::@parameter::f
+  readElement: self::@function::g::@parameter::f
   readType: int Function(int)
-  writeElement: <testLibraryFragment>::@function::g::@parameter::f
+  writeElement: self::@function::g::@parameter::f
   writeType: int Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticType: int Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: ++
+  operand: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: null
+  readElement: self::@function::g::@parameter::f
+  readType: int* Function(int*)*
+  writeElement: self::@function::g::@parameter::f
+  writeType: int* Function(int*)*
+  staticElement: self::@extension::E::@method::+
+  staticType: int* Function(int*)*
+''');
+    }
   }
 
   test_instance_operator_prefix_fromExtension_interfaceType() async {
@@ -2167,49 +3230,37 @@ f(C c) {
 }
 ''');
     var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
-  readElement: <testLibraryFragment>::@function::f::@parameter::c
+  readElement: self::@function::f::@parameter::c
   readType: C
-  writeElement: <testLibraryFragment>::@function::f::@parameter::c
+  writeElement: self::@function::f::@parameter::c
   writeType: C
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticType: C
 ''');
-  }
-
-  test_instance_operator_prefixInc_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A? {
-  A? operator +(int _) => this;
-}
-
-f(A? a) {
-  ++a;
-}
-''');
-    var expression = findNode.prefix('++a');
-    assertResolvedNodeText(expression, r'''
+    } else {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: ++
   operand: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    token: c
+    staticElement: self::@function::f::@parameter::c
     staticType: null
-  readElement: <testLibraryFragment>::@function::f::@parameter::a
-  readType: A?
-  writeElement: <testLibraryFragment>::@function::f::@parameter::a
-  writeType: A?
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
-  staticType: A?
+  readElement: self::@function::f::@parameter::c
+  readType: C*
+  writeElement: self::@function::f::@parameter::c
+  writeType: C*
+  staticElement: self::@extension::E::@method::+
+  staticType: C*
 ''');
+    }
   }
 
   test_instance_operator_unary_fromExtendedType() async {
@@ -2225,16 +3276,29 @@ f(C c) {
 }
 ''');
     var prefix = findNode.prefix('-c');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
-  staticElement: <testLibraryFragment>::@class::C::@method::unary-
+  staticElement: self::@class::C::@method::unary-
   staticType: C
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: -
+  operand: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  staticElement: self::@class::C::@method::unary-
+  staticType: C*
+''');
+    }
   }
 
   test_instance_operator_unary_fromExtension_functionType() async {
@@ -2247,16 +3311,29 @@ g(int Function(int) f) {
 }
 ''');
     var prefix = findNode.prefix('-f');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::unary-
+  staticElement: self::@extension::E::@method::unary-
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: -
+  operand: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  staticElement: self::@extension::E::@method::unary-
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_unary_fromExtension_interfaceType() async {
@@ -2270,41 +3347,29 @@ f(C c) {
 }
 ''');
     var prefix = findNode.prefix('-c');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
-  staticElement: <testLibraryFragment>::@extension::E::@method::unary-
+  staticElement: self::@extension::E::@method::unary-
   staticType: C
 ''');
-  }
-
-  test_instance_operator_unaryMinus_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A? {
-  A? operator -() => this;
-}
-
-f(A? a) {
-  -a;
-}
-''');
-    var expression = findNode.prefix('-a');
-    assertResolvedNodeText(expression, r'''
+    } else {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    staticType: A?
-  staticElement: <testLibraryFragment>::@extension::E::@method::unary-
-  staticType: A?
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  staticElement: self::@extension::E::@method::unary-
+  staticType: C*
 ''');
+    }
   }
 
   test_instance_setter_fromExtension_functionType() async {
@@ -2317,12 +3382,13 @@ g(int Function(int) f) {
 }
 ''');
     var assignment = findNode.assignment('a = 1');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: f
-      staticElement: <testLibraryFragment>::@function::g::@parameter::f
+      staticElement: self::@function::g::@parameter::f
       staticType: int Function(int)
     period: .
     identifier: SimpleIdentifier
@@ -2334,79 +3400,26 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::x
+    parameter: self::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
-  }
-
-  test_instance_setter_fromInstance_extensionType() async {
-    await assertNoErrorsInCode('''
-extension type A(int it) {}
-
-extension E on A {
-  set foo(int _) {}
-}
-
-void f(A a) {
-  a.foo = 0;
-}
-''');
-
-    var node = findNode.singleAssignmentExpression;
-    assertResolvedNodeText(node, r'''
+    } else {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
-      token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      staticType: A
+      token: f
+      staticElement: self::@function::g::@parameter::f
+      staticType: int* Function(int*)*
     period: .
     identifier: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticElement: <null>
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 0
-    parameter: <testLibraryFragment>::@extension::E::@setter::foo::@parameter::_
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int
-''');
-  }
-
-  test_instance_setter_fromInstance_nullable() async {
-    await assertNoErrorsInCode('''
-extension E on int? {
-  set foo(int _) {}
-}
-
-f(int? a) {
-  a.foo = 1;
-}
-''');
-    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
-AssignmentExpression
-  leftHandSide: PrefixedIdentifier
-    prefix: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      staticType: int?
-    period: .
-    identifier: SimpleIdentifier
-      token: foo
       staticElement: <null>
       staticType: null
     staticElement: <null>
@@ -2414,52 +3427,16 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@extension::E::@setter::foo::@parameter::_
-    staticType: int
+    parameter: self::@extension::E::@setter::a::@parameter::x
+    staticType: int*
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::foo
-  writeType: int
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
   staticElement: <null>
-  staticType: int
+  staticType: int*
 ''');
-  }
-
-  test_instance_setter_fromInstance_nullAware() async {
-    await assertNoErrorsInCode('''
-extension E on int {
-  set foo(int _) {}
-}
-
-f(int? a) {
-  a?.foo = 1;
-}
-''');
-    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SimpleIdentifier
-      token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      staticType: int?
-    operator: ?.
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: <testLibraryFragment>::@extension::E::@setter::foo::@parameter::_
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int?
-''');
+    }
   }
 
   test_instance_setter_oneMatch() async {
@@ -2475,12 +3452,13 @@ f(C c) {
 }
 ''');
     var assignment = findNode.assignment('a = 1');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: c
-      staticElement: <testLibraryFragment>::@function::f::@parameter::c
+      staticElement: self::@function::f::@parameter::c
       staticType: C
     period: .
     identifier: SimpleIdentifier
@@ -2492,15 +3470,43 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::x
+    parameter: self::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: c
+      staticElement: self::@function::f::@parameter::c
+      staticType: C*
+    period: .
+    identifier: SimpleIdentifier
+      token: a
+      staticElement: <null>
+      staticType: null
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@setter::a::@parameter::x
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_tearoff_fromExtension_functionType() async {
@@ -2511,20 +3517,37 @@ extension E on int Function(int) {
 g(int Function(int) f) => f.a;
 ''');
     var node = findNode.prefixed('a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::g::@parameter::f
+    staticElement: self::@function::g::@parameter::f
     staticType: int Function(int)
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: f
+    staticElement: self::@function::g::@parameter::f
+    staticType: int* Function(int*)*
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function(int*)*
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_instance_tearoff_fromExtension_interfaceType() async {
@@ -2538,20 +3561,37 @@ extension E on C {
 f(C c) => c.a;
 ''');
     var node = findNode.prefixed('a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
-    staticElement: <testLibraryFragment>::@function::f::@parameter::c
+    staticElement: self::@function::f::@parameter::c
     staticType: C
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: c
+    staticElement: self::@function::f::@parameter::c
+    staticType: C*
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function(int*)*
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_static_field_importedWithPrefix() async {
@@ -2570,27 +3610,51 @@ f() {
 }
 ''');
     var node = findNode.propertyAccess('p.E.a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PropertyAccess
   target: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
-      staticElement: <testLibraryFragment>::@prefix::p
+      staticElement: self::@prefix::p
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: E
-      staticElement: package:test/lib.dart::<fragment>::@extension::E
+      staticElement: package:test/lib.dart::@extension::E
       staticType: null
-    staticElement: package:test/lib.dart::<fragment>::@extension::E
+    staticElement: package:test/lib.dart::@extension::E
     staticType: null
   operator: .
   propertyName: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
     staticType: int
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: p
+      staticElement: self::@prefix::p
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: E
+      staticElement: package:test/lib.dart::@extension::E
+      staticType: null
+    staticElement: package:test/lib.dart::@extension::E
+    staticType: null
+  operator: .
+  propertyName: SimpleIdentifier
+    token: a
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
+    staticType: int*
+  staticType: int*
+''');
+    }
   }
 
   test_static_field_local() async {
@@ -2606,20 +3670,37 @@ f() {
 }
 ''');
     var node = findNode.prefixed('E.a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: E
-    staticElement: <testLibraryFragment>::@extension::E
+    staticElement: self::@extension::E
     staticType: null
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
+    staticElement: self::@extension::E::@getter::a
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: E
+    staticElement: self::@extension::E
+    staticType: null
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_getter_importedWithPrefix() async {
@@ -2638,27 +3719,51 @@ f() {
 }
 ''');
     var node = findNode.propertyAccess('p.E.a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PropertyAccess
   target: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
-      staticElement: <testLibraryFragment>::@prefix::p
+      staticElement: self::@prefix::p
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: E
-      staticElement: package:test/lib.dart::<fragment>::@extension::E
+      staticElement: package:test/lib.dart::@extension::E
       staticType: null
-    staticElement: package:test/lib.dart::<fragment>::@extension::E
+    staticElement: package:test/lib.dart::@extension::E
     staticType: null
   operator: .
   propertyName: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@getter::a
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
     staticType: int
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: p
+      staticElement: self::@prefix::p
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: E
+      staticElement: package:test/lib.dart::@extension::E
+      staticType: null
+    staticElement: package:test/lib.dart::@extension::E
+    staticType: null
+  operator: .
+  propertyName: SimpleIdentifier
+    token: a
+    staticElement: package:test/lib.dart::@extension::E::@getter::a
+    staticType: int*
+  staticType: int*
+''');
+    }
   }
 
   test_static_getter_local() async {
@@ -2674,20 +3779,37 @@ f() {
 }
 ''');
     var node = findNode.prefixed('E.a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: E
-    staticElement: <testLibraryFragment>::@extension::E
+    staticElement: self::@extension::E
     staticType: null
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
+    staticElement: self::@extension::E::@getter::a
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: E
+    staticElement: self::@extension::E
+    staticType: null
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_method_importedWithPrefix() async {
@@ -2706,24 +3828,25 @@ f() {
 }
 ''');
     var invocation = findNode.methodInvocation('E.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
-      staticElement: <testLibraryFragment>::@prefix::p
+      staticElement: self::@prefix::p
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: E
-      staticElement: package:test/lib.dart::<fragment>::@extension::E
+      staticElement: package:test/lib.dart::@extension::E
       staticType: null
-    staticElement: package:test/lib.dart::<fragment>::@extension::E
+    staticElement: package:test/lib.dart::@extension::E
     staticType: null
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: package:test/lib.dart::<fragment>::@extension::E::@method::a
+    staticElement: package:test/lib.dart::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -2731,6 +3854,33 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: p
+      staticElement: self::@prefix::p
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: E
+      staticElement: package:test/lib.dart::@extension::E
+      staticType: null
+    staticElement: package:test/lib.dart::@extension::E
+    staticType: null
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: package:test/lib.dart::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_static_method_local() async {
@@ -2746,16 +3896,17 @@ f() {
 }
 ''');
     var invocation = findNode.methodInvocation('E.a()');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: E
-    staticElement: <testLibraryFragment>::@extension::E
+    staticElement: self::@extension::E
     staticType: null
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -2763,6 +3914,25 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: SimpleIdentifier
+    token: E
+    staticElement: self::@extension::E
+    staticType: null
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_static_setter_importedWithPrefix() async {
@@ -2781,20 +3951,21 @@ f() {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: p
-        staticElement: <testLibraryFragment>::@prefix::p
+        staticElement: self::@prefix::p
         staticType: null
       period: .
       identifier: SimpleIdentifier
         token: E
-        staticElement: package:test/lib.dart::<fragment>::@extension::E
+        staticElement: package:test/lib.dart::@extension::E
         staticType: null
-      staticElement: package:test/lib.dart::<fragment>::@extension::E
+      staticElement: package:test/lib.dart::@extension::E
       staticType: null
     operator: .
     propertyName: SimpleIdentifier
@@ -2805,15 +3976,50 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: package:test/lib.dart::<fragment>::@extension::E::@setter::a::@parameter::x
+    parameter: package:test/lib.dart::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: package:test/lib.dart::<fragment>::@extension::E::@setter::a
+  writeElement: package:test/lib.dart::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: PrefixedIdentifier
+      prefix: SimpleIdentifier
+        token: p
+        staticElement: self::@prefix::p
+        staticType: null
+      period: .
+      identifier: SimpleIdentifier
+        token: E
+        staticElement: package:test/lib.dart::@extension::E
+        staticType: null
+      staticElement: package:test/lib.dart::@extension::E
+      staticType: null
+    operator: .
+    propertyName: SimpleIdentifier
+      token: a
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: package:test/lib.dart::@extension::E::@setter::a::@parameter::x
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: package:test/lib.dart::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_static_setter_local() async {
@@ -2829,12 +4035,13 @@ f() {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
-      staticElement: <testLibraryFragment>::@extension::E
+      staticElement: self::@extension::E
       staticType: null
     period: .
     identifier: SimpleIdentifier
@@ -2846,15 +4053,43 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::x
+    parameter: self::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: E
+      staticElement: self::@extension::E
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: a
+      staticElement: <null>
+      staticType: null
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@setter::a::@parameter::x
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_static_tearoff() async {
@@ -2868,20 +4103,37 @@ extension E on C {
 f() => E.a;
 ''');
     var node = findNode.prefixed('E.a;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: E
-    staticElement: <testLibraryFragment>::@extension::E
+    staticElement: self::@extension::E
     staticType: null
   period: .
   identifier: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function(int)
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: E
+    staticElement: self::@extension::E
+    staticType: null
+  period: .
+  identifier: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function(int*)*
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_thisAccessOnDynamic() async {
@@ -2914,8 +4166,18 @@ extension E on Function {
   }
 }
 
+/// Tests that extension members can be correctly resolved when referenced
+/// by code external to the extension declaration.
 @reflectiveTest
-class ExtensionMethodsInternalReferenceTest extends PubPackageResolutionTest {
+class ExtensionMethodsExternalReferenceWithoutNullSafetyTest
+    extends PubPackageResolutionTest
+    with ExtensionMethodsExternalReferenceTestCases, WithoutNullSafetyMixin {}
+
+@reflectiveTest
+class ExtensionMethodsInternalReferenceTest extends PubPackageResolutionTest
+    with ExtensionMethodsInternalReferenceTestCases {}
+
+mixin ExtensionMethodsInternalReferenceTestCases on PubPackageResolutionTest {
   test_instance_call() async {
     await assertNoErrorsInCode('''
 class C {}
@@ -2926,7 +4188,8 @@ extension E on C {
 }
 ''');
     var invocation = findNode.functionExpressionInvocation('this(2)');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 FunctionExpressionInvocation
   function: ThisExpression
     thisKeyword: this
@@ -2936,13 +4199,32 @@ FunctionExpressionInvocation
     arguments
       IntegerLiteral
         literal: 2
-        parameter: <testLibraryFragment>::@extension::E::@method::call::@parameter::x
+        parameter: self::@extension::E::@method::call::@parameter::x
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::E::@method::call
+  staticElement: self::@extension::E::@method::call
   staticInvokeType: int Function(int)
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+FunctionExpressionInvocation
+  function: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 2
+        parameter: self::@extension::E::@method::call::@parameter::x
+        staticType: int*
+    rightParenthesis: )
+  staticElement: self::@extension::E::@method::call
+  staticInvokeType: int* Function(int*)*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_asSetter() async {
@@ -2961,7 +4243,8 @@ extension E2 on int {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 104, 3),
     ]);
     var assignment = findNode.assignment('foo = 0');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: foo
@@ -2974,11 +4257,31 @@ AssignmentExpression
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E2::@getter::foo
+  writeElement: self::@extension::E2::@getter::foo
   writeType: InvalidType
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: <null>
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E2::@getter::foo
+  writeType: InvalidType
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromInstance() async {
@@ -2993,12 +4296,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromThis_fromExtendedType() async {
@@ -3013,7 +4325,8 @@ extension E on C {
 }
 ''');
     var access = findNode.propertyAccess('this.a');
-    assertResolvedNodeText(access, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(access, r'''
 PropertyAccess
   target: ThisExpression
     thisKeyword: this
@@ -3021,10 +4334,24 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@class::C::@getter::a
+    staticElement: self::@class::C::@getter::a
     staticType: int
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(access, r'''
+PropertyAccess
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: .
+  propertyName: SimpleIdentifier
+    token: a
+    staticElement: self::@class::C::@getter::a
+    staticType: int*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_getter_fromThis_fromExtension() async {
@@ -3037,8 +4364,9 @@ extension E on C {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
-    assertResolvedNodeText(node, r'''
+    final node = findNode.singlePropertyAccess;
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
     thisKeyword: this
@@ -3046,10 +4374,24 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@getter::a
+    staticElement: self::@extension::E::@getter::a
     staticType: int
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: .
+  propertyName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@getter::a
+    staticType: int*
+  staticType: int*
+''');
+    }
   }
 
   test_instance_method_fromInstance() async {
@@ -3063,11 +4405,12 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3075,6 +4418,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromThis_fromExtendedType() async {
@@ -3088,7 +4445,8 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('this.a');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: ThisExpression
     thisKeyword: this
@@ -3096,7 +4454,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@class::C::@method::a
+    staticElement: self::@class::C::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3104,6 +4462,24 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@class::C::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_method_fromThis_fromExtension() async {
@@ -3115,7 +4491,8 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('this.a');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   target: ThisExpression
     thisKeyword: this
@@ -3123,7 +4500,7 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3131,6 +4508,24 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: .
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_binary_fromThis_fromExtendedType() async {
@@ -3144,7 +4539,8 @@ extension E on C {
 }
 ''');
     var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: ThisExpression
     thisKeyword: this
@@ -3152,12 +4548,28 @@ BinaryExpression
   operator: +
   rightOperand: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::C::@method::+::@parameter::i
+    parameter: self::@class::C::@method::+::@parameter::i
     staticType: int
-  staticElement: <testLibraryFragment>::@class::C::@method::+
+  staticElement: self::@class::C::@method::+
   staticInvokeType: void Function(int)
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(binary, r'''
+BinaryExpression
+  leftOperand: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    parameter: self::@class::C::@method::+::@parameter::i
+    staticType: int*
+  staticElement: self::@class::C::@method::+
+  staticInvokeType: void Function(int*)*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_binary_fromThis_fromExtension() async {
@@ -3169,7 +4581,8 @@ extension E on C {
 }
 ''');
     var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(binary, r'''
 BinaryExpression
   leftOperand: ThisExpression
     thisKeyword: this
@@ -3177,12 +4590,28 @@ BinaryExpression
   operator: +
   rightOperand: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::+::@parameter::i
+    parameter: self::@extension::E::@method::+::@parameter::i
     staticType: int
-  staticElement: <testLibraryFragment>::@extension::E::@method::+
+  staticElement: self::@extension::E::@method::+
   staticInvokeType: void Function(int)
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(binary, r'''
+BinaryExpression
+  leftOperand: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    parameter: self::@extension::E::@method::+::@parameter::i
+    staticType: int*
+  staticElement: self::@extension::E::@method::+
+  staticInvokeType: void Function(int*)*
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_index_fromThis_fromExtendedType() async {
@@ -3196,7 +4625,8 @@ extension E on C {
 }
 ''');
     var index = findNode.index('this[2]');
-    assertResolvedNodeText(index, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: ThisExpression
     thisKeyword: this
@@ -3204,12 +4634,28 @@ IndexExpression
   leftBracket: [
   index: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@class::C::@method::[]::@parameter::index
+    parameter: self::@class::C::@method::[]::@parameter::index
     staticType: int
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@class::C::@method::[]
+  staticElement: self::@class::C::@method::[]
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(index, r'''
+IndexExpression
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    parameter: self::@class::C::@method::[]::@parameter::index
+    staticType: int*
+  rightBracket: ]
+  staticElement: self::@class::C::@method::[]
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_index_fromThis_fromExtension() async {
@@ -3221,7 +4667,8 @@ extension E on C {
 }
 ''');
     var index = findNode.index('this[2]');
-    assertResolvedNodeText(index, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(index, r'''
 IndexExpression
   target: ThisExpression
     thisKeyword: this
@@ -3229,12 +4676,28 @@ IndexExpression
   leftBracket: [
   index: IntegerLiteral
     literal: 2
-    parameter: <testLibraryFragment>::@extension::E::@method::[]::@parameter::index
+    parameter: self::@extension::E::@method::[]::@parameter::index
     staticType: int
   rightBracket: ]
-  staticElement: <testLibraryFragment>::@extension::E::@method::[]
+  staticElement: self::@extension::E::@method::[]
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(index, r'''
+IndexExpression
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    parameter: self::@extension::E::@method::[]::@parameter::index
+    staticType: int*
+  rightBracket: ]
+  staticElement: self::@extension::E::@method::[]
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_indexEquals_fromThis_fromExtendedType() async {
@@ -3248,7 +4711,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('this[2]');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
     target: ThisExpression
@@ -3257,7 +4721,7 @@ AssignmentExpression
     leftBracket: [
     index: IntegerLiteral
       literal: 2
-      parameter: <testLibraryFragment>::@class::C::@method::[]=::@parameter::index
+      parameter: self::@class::C::@method::[]=::@parameter::index
       staticType: int
     rightBracket: ]
     staticElement: <null>
@@ -3265,15 +4729,43 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 1
-    parameter: <testLibraryFragment>::@class::C::@method::[]=::@parameter::value
+    parameter: self::@class::C::@method::[]=::@parameter::value
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::C::@method::[]=
+  writeElement: self::@class::C::@method::[]=
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: IndexExpression
+    target: ThisExpression
+      thisKeyword: this
+      staticType: C*
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      parameter: self::@class::C::@method::[]=::@parameter::index
+      staticType: int*
+    rightBracket: ]
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@class::C::@method::[]=::@parameter::value
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@class::C::@method::[]=
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_operator_indexEquals_fromThis_fromExtension() async {
@@ -3285,7 +4777,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('this[2]');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
     target: ThisExpression
@@ -3294,7 +4787,7 @@ AssignmentExpression
     leftBracket: [
     index: IntegerLiteral
       literal: 2
-      parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::index
+      parameter: self::@extension::E::@method::[]=::@parameter::index
       staticType: int
     rightBracket: ]
     staticElement: <null>
@@ -3302,15 +4795,43 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@method::[]=::@parameter::value
+    parameter: self::@extension::E::@method::[]=::@parameter::value
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@method::[]=
+  writeElement: self::@extension::E::@method::[]=
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: IndexExpression
+    target: ThisExpression
+      thisKeyword: this
+      staticType: C*
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      parameter: self::@extension::E::@method::[]=::@parameter::index
+      staticType: int*
+    rightBracket: ]
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@method::[]=::@parameter::value
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@method::[]=
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_operator_unary_fromThis_fromExtendedType() async {
@@ -3324,15 +4845,27 @@ extension E on C {
 }
 ''');
     var prefix = findNode.prefix('-this');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: ThisExpression
     thisKeyword: this
     staticType: C
-  staticElement: <testLibraryFragment>::@class::C::@method::unary-
+  staticElement: self::@class::C::@method::unary-
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: -
+  operand: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  staticElement: self::@class::C::@method::unary-
+  staticType: void
+''');
+    }
   }
 
   test_instance_operator_unary_fromThis_fromExtension() async {
@@ -3344,15 +4877,27 @@ extension E on C {
 }
 ''');
     var prefix = findNode.prefix('-this');
-    assertResolvedNodeText(prefix, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(prefix, r'''
 PrefixExpression
   operator: -
   operand: ThisExpression
     thisKeyword: this
     staticType: C
-  staticElement: <testLibraryFragment>::@extension::E::@method::unary-
+  staticElement: self::@extension::E::@method::unary-
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(prefix, r'''
+PrefixExpression
+  operator: -
+  operand: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  staticElement: self::@extension::E::@method::unary-
+  staticType: void
+''');
+    }
   }
 
   test_instance_setter_asGetter() async {
@@ -3371,12 +4916,21 @@ extension E2 on int {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 104, 3),
     ]);
     var node = findNode.simple('foo;');
-    assertResolvedNodeText(node, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
   staticElement: <null>
   staticType: InvalidType
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: <null>
+  staticType: InvalidType
+''');
+    }
   }
 
   test_instance_setter_fromInstance() async {
@@ -3393,7 +4947,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -3402,15 +4957,35 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::_
+    parameter: self::@extension::E::@setter::a::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: a
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@setter::a::@parameter::_
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_setter_fromThis_fromExtendedType() async {
@@ -3427,7 +5002,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: ThisExpression
@@ -3442,15 +5018,41 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@class::C::@setter::a::@parameter::_
+    parameter: self::@class::C::@setter::a::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@class::C::@setter::a
+  writeElement: self::@class::C::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: ThisExpression
+      thisKeyword: this
+      staticType: C*
+    operator: .
+    propertyName: SimpleIdentifier
+      token: a
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@class::C::@setter::a::@parameter::_
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@class::C::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_setter_fromThis_fromExtension() async {
@@ -3465,7 +5067,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: ThisExpression
@@ -3480,15 +5083,41 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::_
+    parameter: self::@extension::E::@setter::a::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: ThisExpression
+      thisKeyword: this
+      staticType: C*
+    operator: .
+    propertyName: SimpleIdentifier
+      token: a
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@setter::a::@parameter::_
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_instance_tearoff_fromInstance() async {
@@ -3501,12 +5130,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_instance_tearoff_fromThis() async {
@@ -3519,7 +5157,8 @@ extension E on C {
 }
 ''');
     var identifier = findNode.propertyAccess('this.a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 PropertyAccess
   target: ThisExpression
     thisKeyword: this
@@ -3527,10 +5166,24 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function(int)
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+PropertyAccess
+  target: ThisExpression
+    thisKeyword: this
+    staticType: C*
+  operator: .
+  propertyName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function(int*)*
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_static_field_fromInstance() async {
@@ -3543,12 +5196,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_field_fromStatic() async {
@@ -3561,12 +5223,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_getter_fromInstance() async {
@@ -3579,12 +5250,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_getter_fromStatic() async {
@@ -3597,12 +5277,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@getter::a
+  staticElement: self::@extension::E::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_static_method_fromInstance() async {
@@ -3614,11 +5303,12 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3626,6 +5316,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_static_method_fromStatic() async {
@@ -3637,11 +5341,12 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@extension::E::@method::a
+    staticElement: self::@extension::E::@method::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3649,6 +5354,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@extension::E::@method::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_static_setter_fromInstance() async {
@@ -3663,7 +5382,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -3672,15 +5392,35 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::x
+    parameter: self::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: a
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@setter::a::@parameter::x
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_static_setter_fromStatic() async {
@@ -3695,7 +5435,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -3704,15 +5445,35 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 3
-    parameter: <testLibraryFragment>::@extension::E::@setter::a::@parameter::x
+    parameter: self::@extension::E::@setter::a::@parameter::x
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@extension::E::@setter::a
+  writeElement: self::@extension::E::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: a
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 3
+    parameter: self::@extension::E::@setter::a::@parameter::x
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_static_tearoff_fromInstance() async {
@@ -3725,12 +5486,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_static_tearoff_fromStatic() async {
@@ -3743,12 +5513,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@extension::E::@method::a
+  staticElement: self::@extension::E::@method::a
   staticType: void Function(int)
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@extension::E::@method::a
+  staticType: void Function(int*)*
+''');
+    }
   }
 
   test_topLevel_function_fromInstance() async {
@@ -3766,11 +5545,12 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3778,6 +5558,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@function::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_topLevel_function_fromStatic() async {
@@ -3795,11 +5589,12 @@ extension E on C {
 }
 ''');
     var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(invocation, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -3807,6 +5602,20 @@ MethodInvocation
   staticInvokeType: void Function()
   staticType: void
 ''');
+    } else {
+      assertResolvedNodeText(invocation, r'''
+MethodInvocation
+  methodName: SimpleIdentifier
+    token: a
+    staticElement: self::@function::a
+    staticType: void Function()*
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: void Function()*
+  staticType: void
+''');
+    }
   }
 
   test_topLevel_getter_fromInstance() async {
@@ -3824,12 +5633,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@getter::a
+  staticElement: self::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_topLevel_getter_fromStatic() async {
@@ -3847,12 +5665,21 @@ extension E on C {
 }
 ''');
     var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(identifier, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@getter::a
+  staticElement: self::@getter::a
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(identifier, r'''
+SimpleIdentifier
+  token: a
+  staticElement: self::@getter::a
+  staticType: int*
+''');
+    }
   }
 
   test_topLevel_setter_fromInstance() async {
@@ -3870,7 +5697,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 0');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -3879,15 +5707,35 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@setter::a::@parameter::_
+    parameter: self::@setter::a::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@setter::a
+  writeElement: self::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: a
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: self::@setter::a::@parameter::_
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 
   test_topLevel_setter_fromStatic() async {
@@ -3905,7 +5753,8 @@ extension E on C {
 }
 ''');
     var assignment = findNode.assignment('a = 0');
-    assertResolvedNodeText(assignment, r'''
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(assignment, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -3914,14 +5763,41 @@ AssignmentExpression
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibraryFragment>::@setter::a::@parameter::_
+    parameter: self::@setter::a::@parameter::_
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: <testLibraryFragment>::@setter::a
+  writeElement: self::@setter::a
   writeType: int
   staticElement: <null>
   staticType: int
 ''');
+    } else {
+      assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: a
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: self::@setter::a::@parameter::_
+    staticType: int*
+  readElement: <null>
+  readType: null
+  writeElement: self::@setter::a
+  writeType: int*
+  staticElement: <null>
+  staticType: int*
+''');
+    }
   }
 }
+
+/// Tests that extension members can be correctly resolved when referenced
+/// by code internal to (within) the extension declaration.
+@reflectiveTest
+class ExtensionMethodsInternalReferenceWithoutNullSafetyTest
+    extends PubPackageResolutionTest
+    with ExtensionMethodsInternalReferenceTestCases, WithoutNullSafetyMixin {}

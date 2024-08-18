@@ -14,5 +14,4 @@ class Subclass extends Class {
 }
 
 test(Subclass sub) {}
-
 main() {}

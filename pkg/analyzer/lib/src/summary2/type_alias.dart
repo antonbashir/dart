@@ -126,7 +126,7 @@ class _Finder {
       _formalParameterList(node.parameters);
       _visit(node.returnType);
     } else if (node is RecordTypeAnnotation) {
-      for (var field in node.fields) {
+      for (final field in node.fields) {
         _visit(field.type);
       }
     } else {

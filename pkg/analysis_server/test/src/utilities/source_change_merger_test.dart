@@ -18,26 +18,26 @@ void main() {
 @reflectiveTest
 class SourceChangeMergerTest {
   void test_multipleFiles_mergeIndividually() {
-    var original = [
+    final original = [
       SourceFileEdit('fileA', -1, edits: [SourceEdit(4, 1, '4')]),
       SourceFileEdit('fileB', -1, edits: [SourceEdit(3, 1, '3')]),
       SourceFileEdit('fileA', -1, edits: [SourceEdit(3, 1, '3')]),
       SourceFileEdit('fileB', -1, edits: [SourceEdit(2, 1, '2')]),
     ];
-    var expected = [
+    final expected = [
       SourceFileEdit('fileA', -1, edits: [SourceEdit(3, 2, '34')]),
       SourceFileEdit('fileB', -1, edits: [SourceEdit(2, 2, '23')]),
     ];
-    var merged = SourceChangeMerger().merge(original);
+    final merged = SourceChangeMerger().merge(original);
     expect(merged, expected);
   }
 
   void test_multipleFiles_noMerge() {
-    var original = [
+    final original = [
       SourceFileEdit('fileA', -1, edits: [SourceEdit(2, 1, '2')]),
       SourceFileEdit('fileB', -1, edits: [SourceEdit(1, 1, '1')]),
     ];
-    var merged = SourceChangeMerger().merge(original);
+    final merged = SourceChangeMerger().merge(original);
     // The resulting edits should be the same with no merging because they
     // are different files.
     expect(merged, original);
@@ -398,10 +398,10 @@ class SourceChangeMergerTest {
     );
 
     // Take a copy of the edits before merging to ensure they are not mutated.
-    var originalJson = jsonEncode(edits);
+    final originalJson = jsonEncode(edits);
 
-    var debugBuffer = StringBuffer();
-    var merged = SourceChangeMerger(debugBuffer: debugBuffer).merge(edits);
+    final debugBuffer = StringBuffer();
+    final merged = SourceChangeMerger(debugBuffer: debugBuffer).merge(edits);
 
     // Ensure the merger didn't mutate the originals.
     expect(jsonEncode(edits), originalJson);
@@ -433,9 +433,9 @@ class SourceChangeMergerTest {
       reason: 'All edits should be from the same file',
     );
 
-    for (var fileEdit in edits) {
+    for (final fileEdit in edits) {
       var lastOffset = fileEdit.edits.first.offset;
-      for (var edit in fileEdit.edits.skip(1)) {
+      for (final edit in fileEdit.edits.skip(1)) {
         expect(
           edit.end,
           lessThanOrEqualTo(lastOffset),
@@ -460,9 +460,9 @@ class SourceChangeMergerTest {
       reason: 'Merged edits should only contain one SourceFileEdit per file',
     );
 
-    for (var fileEdit in edits) {
+    for (final fileEdit in edits) {
       var lastOffset = fileEdit.edits.first.offset;
-      for (var edit in fileEdit.edits.skip(1)) {
+      for (final edit in fileEdit.edits.skip(1)) {
         expect(
           edit.end,
           lessThan(lastOffset),
@@ -482,7 +482,7 @@ class SourceChangeMergerTest {
     String expected,
     String reason,
   ) {
-    var result = edits.fold(
+    final result = edits.fold(
       content,
       (content, edit) => SourceEdit.applySequence(content, edit.edits),
     );

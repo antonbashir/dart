@@ -16,7 +16,7 @@ main() {
 @reflectiveTest
 class MixinDeclarationParserTest extends ParserDiagnosticsTest {
   test_constructor_named() {
-    var parseResult = parseStringWithErrors(r'''
+    final parseResult = parseStringWithErrors(r'''
 mixin A {
   A.named();
 }
@@ -27,7 +27,7 @@ mixin A {
 
     // Mixins cannot have constructors.
     // So, we don't put them into AST at all.
-    var node = parseResult.findNode.singleMixinDeclaration;
+    final node = parseResult.findNode.singleMixinDeclaration;
     assertParsedNodeText(node, r'''
 MixinDeclaration
   mixinKeyword: mixin

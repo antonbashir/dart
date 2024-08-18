@@ -36,8 +36,7 @@ class AnalysisNotificationOutlineTest extends PubPackageAnalysisServerTest {
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_OUTLINE) {
-      var params = AnalysisOutlineParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = AnalysisOutlineParams.fromNotification(notification);
       if (params.file == testFile.path) {
         fileKind = params.kind;
         libraryName = params.libraryName;
@@ -46,8 +45,7 @@ class AnalysisNotificationOutlineTest extends PubPackageAnalysisServerTest {
       }
     }
     if (notification.event == ANALYSIS_NOTIFICATION_HIGHLIGHTS) {
-      var params = AnalysisHighlightsParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = AnalysisHighlightsParams.fromNotification(notification);
       if (params.file == testFile.path) {
         _highlightsReceived?.complete();
         _highlightsReceived = null;

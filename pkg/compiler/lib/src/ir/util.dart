@@ -2,11 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:js_shared/variance.dart';
 import 'package:kernel/ast.dart' as ir;
 
 import '../common.dart';
-import '../elements/entities.dart' show AsyncMarker, MemberEntity;
+import '../elements/entities.dart' show AsyncMarker, MemberEntity, Variance;
 import '../universe/record_shape.dart';
 
 /// Returns a textual representation of [node] that include the runtime type and
@@ -77,6 +76,9 @@ AsyncMarker getAsyncMarker(ir.FunctionNode node) {
       return AsyncMarker.SYNC;
     case ir.AsyncMarker.SyncStar:
       return AsyncMarker.SYNC_STAR;
+    default:
+      throw UnsupportedError(
+          "Async marker ${node.asyncMarker} is not supported.");
   }
 }
 
@@ -90,7 +92,7 @@ Variance convertVariance(ir.TypeParameter node) {
       return Variance.contravariant;
     case ir.Variance.invariant:
       return Variance.invariant;
-    case ir.Variance.unrelated:
+    default:
       throw UnsupportedError("Variance ${node.variance} is not supported.");
   }
 }
@@ -99,6 +101,52 @@ Variance convertVariance(ir.TypeParameter node) {
 bool isNullLiteral(ir.Expression node) {
   return node is ir.NullLiteral ||
       (node is ir.ConstantExpression && node.constant is ir.NullConstant);
+}
+
+/// Kernel encodes a null-aware expression `a?.b` as
+///
+///     let final #1 = a in #1 == null ? null : #1.b
+///
+/// [getNullAwareExpression] recognizes such expressions storing the result in
+/// a [NullAwareExpression] object.
+///
+/// [syntheticVariable] holds the synthesized `#1` variable. [expression] holds
+/// the `#1.b` expression. [receiver] returns `a` expression. [parent] returns
+/// the parent of the let node, i.e. the parent node of the original null-aware
+/// expression. [let] returns the let node created for the encoding.
+class NullAwareExpression {
+  final ir.Let let;
+  final ir.VariableDeclaration syntheticVariable;
+  final ir.Expression expression;
+
+  NullAwareExpression(this.let, this.syntheticVariable, this.expression);
+
+  ir.Expression get receiver => syntheticVariable.initializer!;
+
+  ir.TreeNode get parent => let.parent!;
+
+  @override
+  String toString() => let.toString();
+}
+
+NullAwareExpression? getNullAwareExpression(ir.TreeNode node) {
+  if (node is ir.Let) {
+    ir.Expression body = node.body;
+    if (node.variable.name == null &&
+        node.variable.isFinal &&
+        body is ir.ConditionalExpression) {
+      final condition = body.condition;
+      if (condition is ir.EqualsNull) {
+        ir.Expression receiver = condition.expression;
+        if (receiver is ir.VariableGet && receiver.variable == node.variable) {
+          // We have
+          //   let #t1 = e0 in #t1 == null ? null : e1
+          return NullAwareExpression(node, node.variable, body.otherwise);
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /// Check whether [node] is immediately guarded by a
@@ -269,10 +317,15 @@ bool memberEntityIsInWebLibrary(MemberEntity entity) {
 ///
 /// See [ir.ProcedureStubKind.ConcreteMixinStub] for why concrete mixin stubs
 /// are inserted in the first place.
-ir.Member getEffectiveSuperTarget(ir.Member target) {
+ir.Member? getEffectiveSuperTarget(ir.Member? target) {
   if (target is ir.Procedure) {
     if (target.stubKind == ir.ProcedureStubKind.ConcreteMixinStub) {
-      return getEffectiveSuperTarget(target.stubTarget!);
+      return getEffectiveSuperTarget(target.stubTarget);
+    }
+    // TODO(johnniwinther): Remove this when the CFE reports an error on
+    // missing concrete super targets.
+    if (target.isAbstract) {
+      return null;
     }
   }
   return target;

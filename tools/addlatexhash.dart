@@ -2,7 +2,7 @@
 // Copyright (c) 2014, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-
+//
 // ----------------------------------------------------------------------
 // This is a very specialized tool which was created in order to support
 // adding hash values used as location markers in the LaTeX source of the
@@ -22,7 +22,7 @@
 // NB: This utility assumes UN*X style line endings, \n, in the LaTeX
 // source file received as input; it will not work with other styles.
 
-// ignore_for_file: constant_identifier_names, only_throw_errors
+// ignore_for_file: constant_identifier_names
 
 import 'dart:convert';
 import 'dart:io';
@@ -34,16 +34,15 @@ import 'package:crypto/crypto.dart';
 // Normalization of the text: removal or normalization of parts that
 // do not affect the output from latex, such as white space.
 
-final commentRE = RegExp(r'[^\\]%.*'); // NB: . does not match \n.
-final whitespaceAllRE = RegExp(r'^\s+$');
-final whitespaceRE = RegExp(r'(?:(?=\s).){2,}'); // \s except end-of-line
+final commentRE = RegExp(r"[^\\]%.*"); // NB: . does not match \n.
+final whitespaceAllRE = RegExp(r"^\s+$");
+final whitespaceRE = RegExp(r"(?:(?=\s).){2,}"); // \s except end-of-line
 
 /// Removes [match]ing part of [line], adjusting that part with the
 /// given [startOffset] and [endOffset], bounded to be valid indices
 /// into the string if needed, then inserts [glue] where text was
 /// removed.  If there is no match then [line] is returned.
-String cutMatch(String line, RegExpMatch? match,
-    {int startOffset = 0, int endOffset = 0, String glue = ''}) {
+cutMatch(line, match, {startOffset = 0, endOffset = 0, glue = ""}) {
   if (match == null) return line;
   var start = match.start + startOffset;
   var end = match.end + endOffset;
@@ -53,18 +52,31 @@ String cutMatch(String line, RegExpMatch? match,
   return line.substring(0, start) + glue + line.substring(end);
 }
 
-String cutRegexp(String line, RegExp re,
-    {int startOffset = 0, int endOffset = 0, String glue = ''}) {
+cutRegexp(line, re, {startOffset = 0, endOffset = 0, glue = ""}) {
   return cutMatch(line, re.firstMatch(line),
       startOffset: startOffset, endOffset: endOffset, glue: glue);
 }
 
-bool isWsOnly(String line) => line.contains(whitespaceAllRE);
-bool isCommentOnly(String line) => line.startsWith('%');
+/// Removes the rest of [line] starting from the beginning of the
+/// given [match], and adjusting with the given [offset].  If there
+/// is no match then [line] is returned.
+cutFromMatch(line, match, {offset = 0, glue = ""}) {
+  if (match == null) return line;
+  return line.substring(0, match.start + offset) + glue;
+}
+
+cutFromRegexp(line, re, {offset = 0, glue = ""}) {
+  return cutFromMatch(line, re.firstMatch(line), offset: offset, glue: glue);
+}
+
+isWsOnly(line) => line.contains(whitespaceAllRE);
+isCommentOnly(line) => line.startsWith("%");
 
 /// Returns the end-of-line character at the end of [line], if any,
 /// otherwise returns the empty string.
-String justEol(String line) => line.endsWith('\n') ? '\n' : '';
+justEol(line) {
+  return line.endsWith("\n") ? "\n" : "";
+}
 
 /// Removes the contents of the comment at the end of [line],
 /// leaving the "%" in place.  If no comment is present,
@@ -80,32 +92,32 @@ String justEol(String line) => line.endsWith('\n') ? '\n' : '';
 /// leave the '%' at the end of the line and let TeX manage its
 /// states in a way that does not differ from the file from before
 /// stripComment.
-String stripComment(String line) {
-  if (isCommentOnly(line)) return '%\n';
+stripComment(line) {
+  if (isCommentOnly(line)) return "%\n";
   return cutRegexp(line, commentRE, startOffset: 2);
 }
 
 /// Reduces a white-space-only [line] to its eol character,
 /// removes leading ws entirely, and reduces multiple
 /// white-space chars to one.
-String normalizeWhitespace(String line) {
+normalizeWhitespace(line) {
   var trimLine = line.trimLeft();
   if (trimLine.isEmpty) return justEol(line);
-  return trimLine.replaceAll(whitespaceRE, ' ');
+  return trimLine.replaceAll(whitespaceRE, " ");
 }
 
 /// Reduces sequences of >1 white-space-only lines in [lines] to 1,
 /// and sequences of >1 comment-only lines to 1.  Treats comment-only
 /// lines as white-space-only when they occur in white-space-only
 /// line blocks.
-List<String> multilineNormalize(List<String> lines) {
+multilineNormalize(lines) {
   var afterBlankLines = false; // Does [line] succeed >0 empty lines?
   var afterCommentLines = false; // Does [line] succeed >0 commentOnly lines?
-  var newLines = <String>[];
+  var newLines = [];
   for (var line in lines) {
     if (afterBlankLines && afterCommentLines) {
       // Previous line was both blank and a comment: not possible.
-      throw 'Bug, please report to eernst@';
+      throw "Bug, please report to eernst@";
     } else if (afterBlankLines && !afterCommentLines) {
       // At least one line before [line] is wsOnly.
       if (!isWsOnly(line)) {
@@ -157,31 +169,33 @@ List<String> multilineNormalize(List<String> lines) {
 }
 
 /// Selects the elements in the normalization pipeline.
-String normalize(String line) => normalizeWhitespace(stripComment(line));
+normalize(line) => normalizeWhitespace(stripComment(line));
 
 /// Selects the elements in the significant-spacing block
 /// normalization pipeline.
-String sispNormalize(String line) => stripComment(line);
+sispNormalize(line) => stripComment(line);
 
 // Managing fragments with significant spacing.
 
-final dartCodeBeginRE = RegExp(r'^\s*\\begin\s*\{dartCode\}');
-final dartCodeEndRE = RegExp(r'^\s*\\end\s*\{dartCode\}');
+final dartCodeBeginRE = RegExp(r"^\s*\\begin\s*\{dartCode\}");
+final dartCodeEndRE = RegExp(r"^\s*\\end\s*\{dartCode\}");
 
 /// Recognizes beginning of dartCode block.
-bool sispIsDartBegin(String line) => line.contains(dartCodeBeginRE);
+sispIsDartBegin(line) => line.contains(dartCodeBeginRE);
 
 /// Recognizes end of dartCode block.
-bool sispIsDartEnd(String line) => line.contains(dartCodeEndRE);
+sispIsDartEnd(line) => line.contains(dartCodeEndRE);
 
 // ----------------------------------------------------------------------
 // Analyzing the input to point out "interesting" lines
 
 /// Returns the event information for [lines] as determined by the
-/// given [analyzer].  The method [HashAnalyzer.analyze] indicates that a
-/// line is "uninteresting" by returning null (i.e., no events here).
-List<HashEvent> findEvents(List<String> lines, HashAnalyzer analyzer) {
-  var events = <HashEvent>[];
+/// given [analyzer].  The method [analyzer.analyze] indicates that a
+/// line is "uninteresting" by returning null (i.e., no events here),
+/// and "interesting" lines may be characterized by [analysisFunc] via
+/// the returned event object.
+findEvents(lines, analyzer) {
+  var events = [];
   for (var line in lines) {
     var event = analyzer.analyze(line);
     if (event != null) events.add(event);
@@ -192,48 +206,47 @@ List<HashEvent> findEvents(List<String> lines, HashAnalyzer analyzer) {
 /// Returns RegExp text for recognizing a command occupying a line
 /// of its own, given the part of the RegExp that recognizes the
 /// command name, [cmdNameRE]
-RegExp lineCommandRE(String cmdNameRE) =>
-    RegExp(r'^\s*\\' + cmdNameRE + r'\s*\{.*\}%?\s*$');
+lineCommandRE(cmdNameRE) => RegExp(r"^\s*\\" + cmdNameRE + r"\s*\{.*\}%?\s*$");
 
-final hashLabelStartRE = RegExp(r'^\s*\\LMLabel\s*\{');
-final hashLabelEndRE = RegExp(r'\}\s*$');
+final hashLabelStartRE = RegExp(r"^\s*\\LMLabel\s*\{");
+final hashLabelEndRE = RegExp(r"\}\s*$");
 
-final hashMarkRE = lineCommandRE('LMHash');
-final hashLabelRE = lineCommandRE('LMLabel');
-final sectioningRE = lineCommandRE('((|sub(|sub))section|paragraph)');
-final sectionRE = lineCommandRE('section');
-final subsectionRE = lineCommandRE('subsection');
-final subsubsectionRE = lineCommandRE('subsubsection');
-final paragraphRE = lineCommandRE('paragraph');
+final hashMarkRE = lineCommandRE("LMHash");
+final hashLabelRE = lineCommandRE("LMLabel");
+final sectioningRE = lineCommandRE("((|sub(|sub))section|paragraph)");
+final sectionRE = lineCommandRE("section");
+final subsectionRE = lineCommandRE("subsection");
+final subsubsectionRE = lineCommandRE("subsubsection");
+final paragraphRE = lineCommandRE("paragraph");
 
 /// Returns true iff [line] begins a block of lines that gets a hash value.
-bool isHashMarker(String line) => line.contains(hashMarkRE);
+isHashMarker(line) => line.contains(hashMarkRE);
 
 /// Returns true iff [line] defines a sectioning label.
-bool isHashLabel(String line) => line.contains(hashLabelRE);
+isHashLabel(line) => line.contains(hashLabelRE);
 
 /// Returns true iff [line] is a sectioning command resp. one of its
 /// more specific forms; note that it is assumed that sectioning commands
 /// do not contain a newline between the command name and the '{'.
-bool isSectioningCommand(String line) => line.contains(sectioningRE);
-bool isSectionCommand(String line) => line.contains(sectionRE);
-bool isSubsectionCommand(String line) => line.contains(subsectionRE);
-bool isSubsubsectionCommand(String line) => line.contains(subsubsectionRE);
-bool isParagraphCommand(String line) => line.contains(paragraphRE);
+isSectioningCommand(line) => line.contains(sectioningRE);
+isSectionCommand(line) => line.contains(sectionRE);
+isSubsectionCommand(line) => line.contains(subsectionRE);
+isSubsubsectionCommand(line) => line.contains(subsubsectionRE);
+isParagraphCommand(line) => line.contains(paragraphRE);
 
 /// Returns true iff [line] does not end a block of lines that gets
 /// a hash value.
-bool isntHashBlockTerminator(String line) => !isSectioningCommand(line);
+bool isntHashBlockTerminator(line) => !isSectioningCommand(line);
 
 /// Returns the label text part from [line], based on the assumption
 /// that isHashLabel(line) returns true.
-String extractHashLabel(String line) {
+extractHashLabel(line) {
   var startMatch = hashLabelStartRE.firstMatch(line);
   var endMatch = hashLabelEndRE.firstMatch(line);
   if (startMatch != null && endMatch != null) {
     return line.substring(startMatch.end, endMatch.start);
   } else {
-    throw 'Assertion failure (so this file is both valid nnbd and not)';
+    throw "Assertion failure (so this file is both valid nnbd and not)";
   }
 }
 
@@ -247,7 +260,7 @@ abstract class HashEvent {
   /// The endLineNumber specifies the end of the block of lines
   /// associated with a given event, for event types concerned with
   /// blocks of lines rather than single lines.
-  void setEndLineNumber(int n) {}
+  setEndLineNumber(int n) {}
 
   /// Returns null except for \LMHash{} events, where it returns
   /// the startLineNumber.  This serves to specify a boundary because
@@ -272,7 +285,7 @@ class HashMarkerEvent extends HashEvent {
   HashMarkerEvent(this.startLineNumber);
 
   @override
-  void setEndLineNumber(int n) {
+  setEndLineNumber(int n) {
     endLineNumber = n;
   }
 
@@ -294,45 +307,49 @@ class HashAnalyzer {
   static const PENDING_IS_SUBSUBSECTION = 3;
   static const PENDING_IS_PARAGRAPH = 1;
 
-  int lineNumber = 0;
-  int pendingSectioning = PENDING_IS_NONE;
+  var lineNumber = 0;
+  var pendingSectioning = PENDING_IS_NONE;
 
   HashAnalyzer();
 
-  void setPendingToSection() {
+  setPendingToSection() {
     pendingSectioning = PENDING_IS_SECTION;
   }
 
-  void setPendingToSubsection() {
+  setPendingToSubsection() {
     pendingSectioning = PENDING_IS_SUBSECTION;
   }
 
-  void setPendingToSubsubsection() {
+  setPendingToSubsubsection() {
     pendingSectioning = PENDING_IS_SUBSUBSECTION;
   }
 
-  void setPendingToParagraph() {
+  setPendingToParagraph() {
     pendingSectioning = PENDING_IS_PARAGRAPH;
   }
 
-  String sectioningPrefix() {
+  clearPending() {
+    pendingSectioning = PENDING_IS_NONE;
+  }
+
+  sectioningPrefix() {
     switch (pendingSectioning) {
       case PENDING_IS_SECTION:
-        return 'sec:';
+        return "sec:";
       case PENDING_IS_SUBSECTION:
-        return 'subsec:';
+        return "subsec:";
       case PENDING_IS_SUBSUBSECTION:
-        return 'subsubsec:';
+        return "subsubsec:";
       case PENDING_IS_NONE:
-        throw '\\LMHash{..} should only be used after a sectioning command '
-            '(\\section, \\subsection, \\subsubsection, \\paragraph)';
+        throw "\\LMHash{..} should only be used after a sectioning command "
+            "(\\section, \\subsection, \\subsubsection, \\paragraph)";
       default:
         // set of PENDING_IS_.. was extended, but updates here omitted
-        throw 'Bug, please report to eernst@';
+        throw "Bug, please report to eernst@";
     }
   }
 
-  HashEvent? analyze(String line) {
+  analyze(line) {
     var currentLineNumber = lineNumber++;
     if (isHashMarker(line)) {
       return HashMarkerEvent(currentLineNumber);
@@ -357,7 +374,7 @@ class HashAnalyzer {
   }
 }
 
-List<HashEvent> findHashEvents(List<String> lines) {
+findHashEvents(lines) {
   // Create the list of events, omitting endLineNumbers.
   var events = findEvents(lines, HashAnalyzer());
   // Set the endLineNumbers.
@@ -379,7 +396,7 @@ List<HashEvent> findHashEvents(List<String> lines) {
 /// and note that the end of the {..} block is found via brace matching
 /// (i.e., nested {..} blocks are handled), but it may break if '{' is
 /// made an active character etc.etc.
-String removeCommand(String line, String cmdName, int startIndex) {
+removeCommand(line, cmdName, startIndex) {
   const BACKSLASH = 92; // char code for '\\'.
   const BRACE_BEGIN = 123; // char code for '{'.
   const BRACE_END = 125; // char code for '}'.
@@ -391,7 +408,7 @@ String removeCommand(String line, String cmdName, int startIndex) {
   }
   blockStartIndex++;
   if (blockStartIndex > line.length) {
-    throw 'Bug, please report to eernst@';
+    throw "Bug, please report to eernst@";
   }
   // [blockStartIndex] has index just after '{'.
 
@@ -425,29 +442,29 @@ String removeCommand(String line, String cmdName, int startIndex) {
     }
   }
   // Removal failed; we consider this to mean that the input is ill-formed.
-  throw 'Unmatched braces';
+  throw "Unmatched braces";
 }
 
-final commentaryRE = RegExp(r'\\commentary\s*\{');
-final rationaleRE = RegExp(r'\\rationale\s*\{');
+final commentaryRE = RegExp(r"\\commentary\s*\{");
+final rationaleRE = RegExp(r"\\rationale\s*\{");
 
 /// Removes {}-balanced '\commentary{..}' commands from [line].
-String removeCommentary(String line) {
+removeCommentary(line) {
   var match = commentaryRE.firstMatch(line);
   if (match == null) return line;
-  return removeCommentary(removeCommand(line, r'commentary', match.start));
+  return removeCommentary(removeCommand(line, r"commentary", match.start));
 }
 
 /// Removes {}-balanced '\rationale{..}' commands from [line].
-String removeRationale(String line) {
+removeRationale(line) {
   var match = rationaleRE.firstMatch(line);
   if (match == null) return line;
-  return removeRationale(removeCommand(line, r'rationale', match.start));
+  return removeRationale(removeCommand(line, r"rationale", match.start));
 }
 
 /// Removes {}-balanced '\commentary{..}' and '\rationale{..}'
 /// commands from [line], then normalizes its white-space.
-String simplifyLine(String line) {
+simplifyLine(line) {
   var simplerLine = removeCommentary(line);
   simplerLine = removeRationale(simplerLine);
   simplerLine = normalizeWhitespace(simplerLine);
@@ -457,35 +474,32 @@ String simplifyLine(String line) {
 // ----------------------------------------------------------------------
 // Recognition of line blocks, insertion of block hash into \LMHash{}.
 
-final latexArgumentRE = RegExp(r'\{.*\}');
+final latexArgumentRE = RegExp(r"\{.*\}");
 
-String cleanupLine(String line) =>
-    cutRegexp(line, commentRE, startOffset: 1).trimRight();
+cleanupLine(line) => cutRegexp(line, commentRE, startOffset: 1).trimRight();
 
 /// Returns concatenation of all lines from [startIndex] in [lines] until
 /// a hash block terminator is encountered or [nextIndex] reached (if so,
 /// the line lines[nextIndex] itself is not included); each line is cleaned
 /// up using [cleanupLine], and " " is inserted between the lines gathered.
-String gatherLines(List<String> lines, int startIndex, int nextIndex) => lines
+gatherLines(lines, startIndex, nextIndex) => lines
     .getRange(startIndex, nextIndex)
     .takeWhile(isntHashBlockTerminator)
     .map(cleanupLine)
-    .join(' ');
+    .join(" ");
 
 /// Computes the hash value for the line block starting at [startIndex]
 /// in [lines], stopping just before [nextIndex].  SIDE EFFECT:
 /// Outputs the simplified text and its hash value to [listSink].
-List<int> computeHashValue(
-    List<String> lines, int startIndex, int nextIndex, IOSink listSink) {
+computeHashValue(lines, startIndex, nextIndex, listSink) {
   final gatheredLine = gatherLines(lines, startIndex, nextIndex);
   final simplifiedLine = simplifyLine(gatheredLine);
-  listSink.write('  % $simplifiedLine\n');
+  listSink.write("  % $simplifiedLine\n");
   var digest = sha1.convert(utf8.encode(simplifiedLine));
   return digest.bytes;
 }
 
-String computeHashString(
-        List<String> lines, int startIndex, int nextIndex, IOSink listSink) =>
+computeHashString(lines, startIndex, nextIndex, listSink) =>
     hex.encode(computeHashValue(lines, startIndex, nextIndex, listSink));
 
 /// Computes and adds hashes to \LMHash{} lines in [lines] (which
@@ -494,26 +508,25 @@ String computeHashString(
 /// "comments" containing the simplified text (using the format
 /// '  % <text>', where the text is one, long line, for easy grepping
 /// etc.).
-void addHashMarks(
-    List<String> lines, List<HashEvent> hashEvents, IOSink listSink) {
+addHashMarks(lines, hashEvents, listSink) {
   for (var hashEvent in hashEvents) {
     if (hashEvent is HashMarkerEvent) {
       var start = hashEvent.startLineNumber;
       var end = hashEvent.endLineNumber;
-      final hashValue = computeHashString(lines, start + 1, end!, listSink);
-      lines[start] = lines[start].replaceAll(latexArgumentRE, '{$hashValue}');
-      listSink.write('  $hashValue\n');
+      final hashValue = computeHashString(lines, start + 1, end, listSink);
+      lines[start] = lines[start].replaceAll(latexArgumentRE, "{$hashValue}");
+      listSink.write("  $hashValue\n");
     } else if (hashEvent is HashLabelEvent) {
-      listSink.write('${hashEvent.labelText}\n');
+      listSink.write("${hashEvent.labelText}\n");
     }
   }
 }
 
 /// Transforms LaTeX input to LaTeX output plus hash value list file.
-void main(List<String> args) {
+main([args]) {
   if (args.length != 3) {
-    print('Usage: addlatexhash.dart <input-file> <output-file> <list-file>');
-    throw 'Received ${args.length} arguments, expected three';
+    print("Usage: addlatexhash.dart <input-file> <output-file> <list-file>");
+    throw "Received ${args.length} arguments, expected three";
   }
 
   // Get LaTeX source.
@@ -530,7 +543,7 @@ void main(List<String> args) {
 
   // Perform single-line normalization.
   var inDartCode = false;
-  var normalizedLines = <String>[];
+  var normalizedLines = [];
 
   for (var line in lines) {
     if (sispIsDartBegin(line)) {
@@ -539,9 +552,9 @@ void main(List<String> args) {
       inDartCode = false;
     }
     if (inDartCode) {
-      normalizedLines.add(sispNormalize('$line\n'));
+      normalizedLines.add(sispNormalize("$line\n"));
     } else {
-      normalizedLines.add(normalize('$line\n'));
+      normalizedLines.add(normalize("$line\n"));
     }
   }
 

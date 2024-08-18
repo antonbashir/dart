@@ -112,7 +112,7 @@ class ImpliedTypeCollector extends RecursiveAstVisitor<void> {
         // Record the name with the type.
         data.recordImpliedType(
           node.name.lexeme,
-          rhsType.getDisplayString(),
+          rhsType.getDisplayString(withNullability: false),
         );
       }
     }
@@ -140,11 +140,11 @@ class ImpliedTypeComputer {
   /// If [corpus] is true, treat rootPath as a container of packages, creating
   /// a new context collection for each subdirectory.
   Future<void> compute(String rootPath, {required bool verbose}) async {
-    var collection = AnalysisContextCollection(
+    final collection = AnalysisContextCollection(
       includedPaths: [rootPath],
       resourceProvider: PhysicalResourceProvider.INSTANCE,
     );
-    var collector = ImpliedTypeCollector(data);
+    final collector = ImpliedTypeCollector(data);
     for (var context in collection.contexts) {
       await _computeInContext(context.contextRoot, collector, verbose: verbose);
     }
@@ -174,7 +174,7 @@ class ImpliedTypeComputer {
       ContextRoot root, ImpliedTypeCollector collector,
       {required bool verbose}) async {
     // Create a new collection to avoid consuming large quantities of memory.
-    var collection = AnalysisContextCollection(
+    final collection = AnalysisContextCollection(
       includedPaths: root.includedPaths.toList(),
       excludedPaths: root.excludedPaths.toList(),
       resourceProvider: PhysicalResourceProvider.INSTANCE,

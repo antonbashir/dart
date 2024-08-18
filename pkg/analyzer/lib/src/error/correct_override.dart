@@ -18,6 +18,7 @@ import 'package:analyzer/src/diagnostic/diagnostic_factory.dart';
 import 'package:analyzer/src/error/codes.dart';
 
 class CorrectOverrideHelper {
+  final LibraryElementImpl _library;
   final TypeSystemImpl _typeSystem;
 
   final ExecutableElement _thisMember;
@@ -26,9 +27,10 @@ class CorrectOverrideHelper {
   final DiagnosticFactory _diagnosticFactory = DiagnosticFactory();
 
   CorrectOverrideHelper({
-    required TypeSystemImpl typeSystem,
+    required LibraryElementImpl library,
     required ExecutableElement thisMember,
-  })  : _typeSystem = typeSystem,
+  })  : _library = library,
+        _typeSystem = library.typeSystem,
         _thisMember = thisMember {
     _computeThisTypeForSubtype();
   }
@@ -37,6 +39,8 @@ class CorrectOverrideHelper {
   bool isCorrectOverrideOf({
     required ExecutableElement superMember,
   }) {
+    superMember = _library.toLegacyElementIfOptOut(superMember);
+
     var superType = superMember.type;
     return _typeSystem.isSubtypeOf(_thisTypeForSubtype!, superType);
   }
@@ -79,7 +83,9 @@ class CorrectOverrideHelper {
       if (parameter.isCovariant) {
         newParameters ??= parameters.toList(growable: false);
         newParameters[i] = parameter.copyWith(
-          type: _typeSystem.objectQuestion,
+          type: _typeSystem.isNonNullableByDefault
+              ? _typeSystem.objectQuestion
+              : _typeSystem.objectStar,
         );
       }
     }
@@ -111,7 +117,7 @@ class CovariantParametersVerifier {
 
   void verify({
     required ErrorReporter errorReporter,
-    required SyntacticEntity errorEntity,
+    required SyntacticEntity errorNode,
   }) {
     var superParameters = _superParameters();
     for (var entry in superParameters.entries) {
@@ -126,10 +132,11 @@ class CovariantParametersVerifier {
           // always named, so we can safely assume
           // `_thisMember.enclosingElement3.name` and
           // `superMember.enclosingElement3.name` are non-`null`.
-          errorReporter.atEntity(
-            errorEntity,
+          errorReporter.reportErrorForOffset(
             CompileTimeErrorCode.INVALID_OVERRIDE,
-            arguments: [
+            errorNode.offset,
+            errorNode.length,
+            [
               _thisMember.name,
               _thisMember.enclosingElement.name!,
               _thisMember.type,
@@ -144,7 +151,7 @@ class CovariantParametersVerifier {
 
   List<_SuperMember> _superMembers() {
     var classHierarchy = _session.classHierarchy;
-    var classElement = _thisMember.enclosingElement as InterfaceElementImpl;
+    var classElement = _thisMember.enclosingElement as InterfaceElement;
     var interfaces = classHierarchy.implementedInterfaces(classElement);
 
     var superMembers = <_SuperMember>[];

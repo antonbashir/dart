@@ -300,9 +300,9 @@ class PreFragment {
   }
 
   String debugName() {
-    var outputUnitStrings = <String>[];
+    var outputUnitStrings = [];
     for (var emittedOutputUnit in emittedOutputUnits) {
-      var importString = <String?>[];
+      var importString = [];
       for (var import in emittedOutputUnit.outputUnit.imports) {
         importString.add(import.name);
       }
@@ -663,7 +663,7 @@ class FragmentMerger {
 
     outputUnitData.deferredImportDescriptions.keys
         .forEach((ImportEntity import) {
-      var importDeferName = outputUnitData.importDeferName[import]!;
+      var importDeferName = outputUnitData.importDeferName[import];
       final fragments = fragmentsToLoad[importDeferName]!;
       final description = outputUnitData.deferredImportDescriptions[import]!;
       String getName(LibraryEntity library) {
@@ -675,18 +675,17 @@ class FragmentMerger {
           description.importingUri,
           () => {
                 'name': getName(description.importingLibrary),
-                'imports': <String, List<String>>{},
-                'importPrefixToLoadId': <String, String>{},
+                'imports': {},
+                'importPrefixToLoadId': {},
               });
 
       List<String> partFileNames = fragments
           .map((fragment) =>
               deferredPartFileName(_options, fragment.canonicalOutputUnit.name))
           .toList();
-      (libraryMap['imports'] as Map<String, List<String>>)[importDeferName] =
-          partFileNames;
-      (libraryMap['importPrefixToLoadId']
-          as Map<String, String>)[import.name!] = importDeferName;
+      (libraryMap['imports'] as Map)[importDeferName] = partFileNames;
+      (libraryMap['importPrefixToLoadId'] as Map)[import.name] =
+          importDeferName;
     });
     return mapping;
   }

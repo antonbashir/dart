@@ -18,33 +18,21 @@ class ConvertAllFormalParametersToNamedTest extends RefactoringTest {
   @override
   String get refactoringName => ConvertAllFormalParametersToNamed.commandName;
 
-  Future<void> test_formalParameters_empty() async {
-    addTestSource(r'''
-void ^test() {}
-
-void f() {
-  test();
-}
-''');
-
-    await _assertNoRefactoring();
-  }
-
   Future<void> test_formalParameters_optionalNamed() async {
     addTestSource(r'''
-void ^test(int a, {int? b}) {}
+void ^test({int? a}) {}
 
 void f() {
-  test(0, b: 1);
+  test(a: 0);
 }
 ''');
 
     await verifyRefactoring(r'''
 >>>>>>>>>> lib/main.dart
-void test({required int a, int? b}) {}
+void test({required int? a}) {}
 
 void f() {
-  test(a: 0, b: 1);
+  test(a: 0);
 }
 ''');
   }
@@ -77,7 +65,14 @@ void f() {
 }
 ''');
 
-    await _assertNoRefactoring();
+    await verifyRefactoring(r'''
+>>>>>>>>>> lib/main.dart
+void test({required int? a}) {}
+
+void f() {
+  test(a: 0);
+}
+''');
   }
 
   Future<void> test_formalParameters_requiredPositional() async {
@@ -101,7 +96,7 @@ void f() {
 
   Future<void> test_multiple_files() async {
     // TODO(scheglov): Unify behind `testPackageLibPath`
-    var a = getFile('$projectFolderPath/lib/a.dart');
+    final a = getFile('$projectFolderPath/lib/a.dart');
     newFile(a.path, r'''
 import 'main.dart';
 
@@ -195,7 +190,7 @@ void f() {
   Future<void> verifyRefactoring(String expected) async {
     await initializeServer();
 
-    var codeAction = await expectCodeAction(
+    final codeAction = await expectCodeAction(
       ConvertAllFormalParametersToNamed.constTitle,
     );
 

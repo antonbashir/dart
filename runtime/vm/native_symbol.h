@@ -16,11 +16,11 @@ class NativeSymbolResolver : public AllStatic {
  public:
   static void Init();
   static void Cleanup();
-  static const char* LookupSymbolName(uword pc, uword* start);
+  static char* LookupSymbolName(uword pc, uword* start);
   static bool LookupSharedObject(uword pc,
                                  uword* dso_base = nullptr,
-                                 const char** dso_name = nullptr);
-  static void FreeSymbolName(const char* name);
+                                 char** dso_name = nullptr);
+  static void FreeSymbolName(char* name);
   static void AddSymbols(const char* dso_name, void* buffer, size_t size);
 };
 

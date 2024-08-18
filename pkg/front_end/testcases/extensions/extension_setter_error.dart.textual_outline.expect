@@ -5,7 +5,5 @@ extension GenericExtension<T> on GenericClass<T> {
 }
 
 main() {}
-
 error() {}
-
 expect(expected, actual) {}

@@ -98,13 +98,6 @@ final Map<String, FrontEndErrorCodeInfo> frontEndMessages =
 final String frontEndPkgPath =
     normalize(join(pkg_root.packageRoot, 'front_end'));
 
-/// The path to the `linter` package.
-final String linterPkgPath = normalize(join(pkg_root.packageRoot, 'linter'));
-
-/// Decoded messages from the linter's `messages.yaml` file.
-final Map<String, Map<String, AnalyzerErrorCodeInfo>> lintMessages =
-    _loadLintMessages();
-
 /// Pattern used by the front end to identify placeholders in error message
 /// strings.
 // TODO(paulberry): share this regexp (and the code for interpreting
@@ -119,16 +112,13 @@ String convertTemplate(Map<String, int> placeholderToIndexMap, String entry) {
       (match) => '{${placeholderToIndexMap[match.group(0)!]}}');
 }
 
-/// Decodes a YAML object (obtained from a `messages.yaml` file) into a
+/// Decodes a YAML object (obtained from `pkg/analyzer/messages.yaml`) into a
 /// two-level map of [ErrorCodeInfo], indexed first by class name and then by
 /// error name.
 Map<String, Map<String, AnalyzerErrorCodeInfo>> decodeAnalyzerMessagesYaml(
-    String packagePath) {
-  var yaml =
-      loadYaml(File(join(packagePath, 'messages.yaml')).readAsStringSync())
-          as Object?;
+    Object? yaml) {
   Never problem(String message) {
-    throw 'Problem in $packagePath/messages.yaml: $message';
+    throw 'Problem in pkg/analyzer/messages.yaml: $message';
   }
 
   var result = <String, Map<String, AnalyzerErrorCodeInfo>>{};
@@ -213,8 +203,11 @@ Map<String, FrontEndErrorCodeInfo> decodeCfeMessagesYaml(Object? yaml) {
 }
 
 /// Loads analyzer messages from the analyzer's `messages.yaml` file.
-Map<String, Map<String, AnalyzerErrorCodeInfo>> _loadAnalyzerMessages() =>
-    decodeAnalyzerMessagesYaml(analyzerPkgPath);
+Map<String, Map<String, AnalyzerErrorCodeInfo>> _loadAnalyzerMessages() {
+  Object? messagesYaml =
+      loadYaml(File(join(analyzerPkgPath, 'messages.yaml')).readAsStringSync());
+  return decodeAnalyzerMessagesYaml(messagesYaml);
+}
 
 /// Loads front end messages from the front end's `messages.yaml` file.
 Map<String, FrontEndErrorCodeInfo> _loadFrontEndMessages() {
@@ -222,10 +215,6 @@ Map<String, FrontEndErrorCodeInfo> _loadFrontEndMessages() {
       loadYaml(File(join(frontEndPkgPath, 'messages.yaml')).readAsStringSync());
   return decodeCfeMessagesYaml(messagesYaml);
 }
-
-/// Loads linter messages from the linter's `messages.yaml` file.
-Map<String, Map<String, AnalyzerErrorCodeInfo>> _loadLintMessages() =>
-    decodeAnalyzerMessagesYaml(linterPkgPath);
 
 /// Splits [text] on spaces using the given [maxWidth] (and [firstLineWidth] if
 /// given).
@@ -501,9 +490,7 @@ abstract class ErrorCodeInfo {
             hasPublishedDocs: yaml['hasPublishedDocs'] as bool? ?? false,
             isUnresolvedIdentifier:
                 yaml['isUnresolvedIdentifier'] as bool? ?? false,
-            problemMessage: yaml['removedIn'] == null
-                ? yaml['problemMessage'] as String
-                : yaml['problemMessage'] as String? ?? '',
+            problemMessage: yaml['problemMessage'] as String,
             sharedName: yaml['sharedName'] as String?,
             removedIn: yaml['removedIn'] as String?,
             previousName: yaml['previousName'] as String?);
@@ -540,12 +527,12 @@ abstract class ErrorCodeInfo {
     out.writeln('$className(');
     out.writeln("'${sharedName ?? errorCode}',");
     var maxWidth = 80 - 8 /* indentation */ - 2 /* quotes */ - 1 /* comma */;
-    var placeholderToIndexMap = computePlaceholderToIndexMap();
+    final placeholderToIndexMap = computePlaceholderToIndexMap();
     var messageAsCode = convertTemplate(placeholderToIndexMap, problemMessage);
     var messageLines = _splitText(messageAsCode,
         maxWidth: maxWidth, firstLineWidth: maxWidth + 4);
     out.writeln('${messageLines.map(json.encode).join('\n')},');
-    var correctionMessage = this.correctionMessage;
+    final correctionMessage = this.correctionMessage;
     if (correctionMessage is String) {
       out.write('correctionMessage: ');
       var code = convertTemplate(placeholderToIndexMap, correctionMessage);

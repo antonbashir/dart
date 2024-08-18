@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Property getter recursively returns itself.';
 
@@ -37,18 +36,19 @@ int get field => _field;
 ''';
 
 class RecursiveGetters extends LintRule {
+  static const LintCode code = LintCode(
+      'recursive_getters', "The getter '{0}' recursively returns itself.",
+      correctionMessage: 'Try changing the value being returned.');
+
   RecursiveGetters()
       : super(
             name: 'recursive_getters',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.errorProne,
-              LintRuleCategory.unintentional
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.recursive_getters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/*library: nnbd=true*/
 library expressions;
 
 import 'dart:math' deferred as prefix;
@@ -240,9 +241,6 @@ exprGenericInvocation2b(Class variable) =>
 /*member: exprDynamicInvocation:variable.method1()*/
 exprDynamicInvocation(variable) => variable.method1();
 
-/*member: exprDynamicInvocationImplicitCall:variable()*/
-exprDynamicInvocationImplicitCall(variable) => variable();
-
 /*normal|limited.member: exprObjectInvocation:variable.{Object.toString}()*/
 /*verbose.member: exprObjectInvocation:variable.{dart.core::Object.toString}()*/
 exprObjectInvocation(variable) => variable.toString();
@@ -348,11 +346,11 @@ exprNewGeneric() => new GenericClass<int, bool>();
 exprNewGenericNamed() => new GenericClass<int, bool>.named();
 
 /*normal|limited.member: exprIs:o is List<int>*/
-/*verbose.member: exprIs:o is dart.core::List<dart.core::int>*/
+/*verbose.member: exprIs:o is{ForNonNullableByDefault} dart.core::List<dart.core::int>*/
 exprIs(o) => o is List<int>;
 
 /*normal|limited.member: exprAs:o as List<int>*/
-/*verbose.member: exprAs:o as dart.core::List<dart.core::int>*/
+/*verbose.member: exprAs:o as{ForNonNullableByDefault} dart.core::List<dart.core::int>*/
 exprAs(o) => o as List<int>;
 
 /*member: exprNullCheck:o!*/

@@ -7,12 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid `double` and `int` checks.';
+const _desc = r'Avoid double and int checks.';
 
 const _details = r'''
-**AVOID** to check if type is `double` or `int`.
+**AVOID** to check if type is double or int.
 
 When compiled to JS, integer values are represented as floats. That can lead to
 some unexpected behavior when using either `is` or `is!` where the type is
@@ -43,15 +42,19 @@ f(dynamic x) {
 ''';
 
 class AvoidDoubleAndIntChecks extends LintRule {
+  static const LintCode code = LintCode(
+      'avoid_double_and_int_checks', 'Explicit check for double or int.',
+      correctionMessage: 'Try removing the check.');
+
   AvoidDoubleAndIntChecks()
       : super(
             name: 'avoid_double_and_int_checks',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne, LintRuleCategory.web});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_double_and_int_checks;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

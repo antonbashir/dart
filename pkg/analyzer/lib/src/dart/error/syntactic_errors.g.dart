@@ -197,10 +197,6 @@ final fastaAnalyzerErrorCodes = <ErrorCode?>[
   ParserErrorCode.EXPECTED_EXTENSION_BODY,
   ParserErrorCode.EXTRANEOUS_MODIFIER_IN_EXTENSION_TYPE,
   ParserErrorCode.EXTRANEOUS_MODIFIER_IN_PRIMARY_CONSTRUCTOR,
-  ParserErrorCode.ABSTRACT_FINAL_BASE_CLASS,
-  ParserErrorCode.ABSTRACT_FINAL_INTERFACE_CLASS,
-  ParserErrorCode.EXTERNAL_CONSTRUCTOR_WITH_FIELD_INITIALIZERS,
-  ParserErrorCode.EXTENSION_AUGMENTATION_HAS_ON_CLAUSE,
 ];
 
 class ParserErrorCode extends ErrorCode {
@@ -212,23 +208,16 @@ class ParserErrorCode extends ErrorCode {
         "keyword before the class declaration.",
   );
 
+  static const ParserErrorCode ABSTRACT_ENUM = ParserErrorCode(
+    'ABSTRACT_ENUM',
+    "Enums can't be declared to be 'abstract'.",
+    correctionMessage: "Try removing the keyword 'abstract'.",
+  );
+
   static const ParserErrorCode ABSTRACT_EXTERNAL_FIELD = ParserErrorCode(
     'ABSTRACT_EXTERNAL_FIELD',
     "Fields can't be declared both 'abstract' and 'external'.",
     correctionMessage: "Try removing the 'abstract' or 'external' keyword.",
-  );
-
-  static const ParserErrorCode ABSTRACT_FINAL_BASE_CLASS = ParserErrorCode(
-    'ABSTRACT_FINAL_BASE_CLASS',
-    "An 'abstract' class can't be declared as both 'final' and 'base'.",
-    correctionMessage: "Try removing either the 'final' or 'base' keyword.",
-  );
-
-  static const ParserErrorCode ABSTRACT_FINAL_INTERFACE_CLASS = ParserErrorCode(
-    'ABSTRACT_FINAL_INTERFACE_CLASS',
-    "An 'abstract' class can't be declared as both 'final' and 'interface'.",
-    correctionMessage:
-        "Try removing either the 'final' or 'interface' keyword.",
   );
 
   static const ParserErrorCode ABSTRACT_LATE_FIELD = ParserErrorCode(
@@ -254,6 +243,24 @@ class ParserErrorCode extends ErrorCode {
   static const ParserErrorCode ABSTRACT_STATIC_METHOD = ParserErrorCode(
     'ABSTRACT_STATIC_METHOD',
     "Static methods can't be declared to be 'abstract'.",
+    correctionMessage: "Try removing the keyword 'abstract'.",
+  );
+
+  static const ParserErrorCode ABSTRACT_TOP_LEVEL_FUNCTION = ParserErrorCode(
+    'ABSTRACT_TOP_LEVEL_FUNCTION',
+    "Top-level functions can't be declared to be 'abstract'.",
+    correctionMessage: "Try removing the keyword 'abstract'.",
+  );
+
+  static const ParserErrorCode ABSTRACT_TOP_LEVEL_VARIABLE = ParserErrorCode(
+    'ABSTRACT_TOP_LEVEL_VARIABLE',
+    "Top-level variables can't be declared to be 'abstract'.",
+    correctionMessage: "Try removing the keyword 'abstract'.",
+  );
+
+  static const ParserErrorCode ABSTRACT_TYPEDEF = ParserErrorCode(
+    'ABSTRACT_TYPEDEF',
+    "Typedefs can't be declared to be 'abstract'.",
     correctionMessage: "Try removing the keyword 'abstract'.",
   );
 
@@ -379,6 +386,12 @@ class ParserErrorCode extends ErrorCode {
     correctionMessage: "Try removing either the 'const' keyword or the body.",
   );
 
+  static const ParserErrorCode CONST_ENUM = ParserErrorCode(
+    'CONST_ENUM',
+    "Enums can't be declared to be 'const'.",
+    correctionMessage: "Try removing the 'const' keyword.",
+  );
+
   static const ParserErrorCode CONST_FACTORY = ParserErrorCode(
     'CONST_FACTORY',
     "Only redirecting factory constructors can be declared to be 'const'.",
@@ -390,6 +403,12 @@ class ParserErrorCode extends ErrorCode {
   static const ParserErrorCode CONST_METHOD = ParserErrorCode(
     'CONST_METHOD',
     "Getters, setters and methods can't be declared to be 'const'.",
+    correctionMessage: "Try removing the 'const' keyword.",
+  );
+
+  static const ParserErrorCode CONST_TYPEDEF = ParserErrorCode(
+    'CONST_TYPEDEF',
+    "Type aliases can't be declared to be 'const'.",
     correctionMessage: "Try removing the 'const' keyword.",
   );
 
@@ -426,12 +445,11 @@ class ParserErrorCode extends ErrorCode {
     correctionMessage: "Try removing the 'covariant' keyword.",
   );
 
-  static const ParserErrorCode DECLARATION_NAMED_AUGMENTED_INSIDE_AUGMENTATION =
+  static const ParserErrorCode COVARIANT_TOP_LEVEL_DECLARATION =
       ParserErrorCode(
-    'DECLARATION_NAMED_AUGMENTED_INSIDE_AUGMENTATION',
-    "The identifier 'augmented' has a special meaning inside augmenting "
-        "declarations.",
-    correctionMessage: "Try using a different name.",
+    'COVARIANT_TOP_LEVEL_DECLARATION',
+    "Top-level declarations can't be declared to be covariant.",
+    correctionMessage: "Try removing the keyword 'covariant'.",
   );
 
   ///  No parameters.
@@ -728,14 +746,6 @@ class ParserErrorCode extends ErrorCode {
   );
 
   ///  No parameters.
-  static const ParserErrorCode EXTENSION_AUGMENTATION_HAS_ON_CLAUSE =
-      ParserErrorCode(
-    'EXTENSION_AUGMENTATION_HAS_ON_CLAUSE',
-    "Extension augmentations can't have 'on' clauses.",
-    correctionMessage: "Try removing the 'on' clause.",
-  );
-
-  ///  No parameters.
   static const ParserErrorCode EXTENSION_DECLARES_ABSTRACT_MEMBER =
       ParserErrorCode(
     'EXTENSION_DECLARES_ABSTRACT_MEMBER',
@@ -789,15 +799,6 @@ class ParserErrorCode extends ErrorCode {
     "External constructors can't have a body.",
     correctionMessage:
         "Try removing the body of the constructor, or removing the keyword "
-        "'external'.",
-  );
-
-  static const ParserErrorCode EXTERNAL_CONSTRUCTOR_WITH_FIELD_INITIALIZERS =
-      ParserErrorCode(
-    'EXTERNAL_CONSTRUCTOR_WITH_FIELD_INITIALIZERS',
-    "An external constructor can't initialize fields.",
-    correctionMessage:
-        "Try removing the field initializers, or removing the keyword "
         "'external'.",
   );
 
@@ -956,6 +957,12 @@ class ParserErrorCode extends ErrorCode {
     correctionMessage: "Try removing the keyword 'var'.",
   );
 
+  static const ParserErrorCode FINAL_CLASS = ParserErrorCode(
+    'FINAL_CLASS',
+    "Classes can't be declared to be 'final'.",
+    correctionMessage: "Try removing the keyword 'final'.",
+  );
+
   static const ParserErrorCode FINAL_CONSTRUCTOR = ParserErrorCode(
     'FINAL_CONSTRUCTOR',
     "A constructor can't be declared to be 'final'.",
@@ -984,6 +991,12 @@ class ParserErrorCode extends ErrorCode {
     'FINAL_MIXIN_CLASS',
     "A mixin class can't be declared 'final'.",
     correctionMessage: "Try removing the 'final' keyword.",
+  );
+
+  static const ParserErrorCode FINAL_TYPEDEF = ParserErrorCode(
+    'FINAL_TYPEDEF',
+    "Typedefs can't be declared to be 'final'.",
+    correctionMessage: "Try removing the keyword 'final'.",
   );
 
   static const ParserErrorCode FUNCTION_TYPED_PARAMETER_VAR = ParserErrorCode(
@@ -1293,14 +1306,6 @@ class ParserErrorCode extends ErrorCode {
     "Can't have modifier '{0}' in an extension.",
     correctionMessage: "Try removing '{0}'.",
     hasPublishedDocs: true,
-  );
-
-  static const ParserErrorCode INVALID_USE_OF_IDENTIFIER_AUGMENTED =
-      ParserErrorCode(
-    'INVALID_USE_OF_IDENTIFIER_AUGMENTED',
-    "The identifier 'augmented' can only be used to reference the augmented "
-        "declaration inside an augmentation.",
-    correctionMessage: "Try using a different identifier.",
   );
 
   ///  No parameters.
@@ -1749,12 +1754,6 @@ class ParserErrorCode extends ErrorCode {
     correctionMessage: "Try moving the '{0}' clause before the '{1}' clause.",
   );
 
-  static const ParserErrorCode PART_OF_NAME = ParserErrorCode(
-    'PART_OF_NAME',
-    "The 'part of' directive can't use a name with the enhanced-parts feature.",
-    correctionMessage: "Try using 'part of' with a URI instead.",
-  );
-
   static const ParserErrorCode PATTERN_ASSIGNMENT_DECLARES_VARIABLE =
       ParserErrorCode(
     'PATTERN_ASSIGNMENT_DECLARES_VARIABLE',
@@ -1905,6 +1904,12 @@ class ParserErrorCode extends ErrorCode {
     "A 'static' setter must have a body.",
     correctionMessage:
         "Try adding a body to the setter, or removing the keyword 'static'.",
+  );
+
+  static const ParserErrorCode STATIC_TOP_LEVEL_DECLARATION = ParserErrorCode(
+    'STATIC_TOP_LEVEL_DECLARATION',
+    "Top-level declarations can't be declared to be static.",
+    correctionMessage: "Try removing the keyword 'static'.",
   );
 
   static const ParserErrorCode SWITCH_HAS_CASE_AFTER_DEFAULT_CASE =

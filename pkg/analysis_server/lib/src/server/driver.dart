@@ -24,7 +24,6 @@ import 'package:analysis_server/src/server/isolate_analysis_server.dart';
 import 'package:analysis_server/src/server/lsp_stdio_server.dart';
 import 'package:analysis_server/src/server/sdk_configuration.dart';
 import 'package:analysis_server/src/server/stdio_server.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/socket_server.dart';
 import 'package:analysis_server/src/utilities/request_statistics.dart';
 import 'package:analysis_server/starter.dart';
@@ -38,6 +37,7 @@ import 'package:analyzer/src/util/sdk.dart';
 import 'package:args/args.dart';
 import 'package:linter/src/rules.dart' as linter;
 import 'package:telemetry/crash_reporting.dart';
+import 'package:telemetry/telemetry.dart' as telemetry;
 import 'package:unified_analytics/unified_analytics.dart';
 
 import '../utilities/usage_tracking/usage_tracking.dart';
@@ -66,16 +66,6 @@ class Driver implements ServerStarter {
   /// The name of the option to disable the search feature.
   static const String DISABLE_SERVER_FEATURE_SEARCH =
       'disable-server-feature-search';
-
-  /// The name of the option to disable the debouncing of `server.status`
-  /// notifications.
-  static const String DISABLE_STATUS_NOTIFICATION_DEBOUNCING =
-      'disable-status-notification-debouncing';
-
-  /// The name of the option to prevent exceptions during analysis from being
-  /// silent.
-  static const String DISABLE_SILENT_ANALYSIS_EXCEPTIONS =
-      'disable-silent-analysis-exceptions';
 
   /// The name of the multi-option to enable one or more experiments.
   static const String ENABLE_EXPERIMENT = 'enable-experiment';
@@ -201,8 +191,25 @@ class Driver implements ServerStarter {
       disableAnalyticsForSession = true;
     }
 
-    var defaultSdkPath = _getSdkPath(results);
-    var dartSdkManager = DartSdkManager(defaultSdkPath);
+    // Use sdkConfig to optionally override legacy analytics settings.
+    final analyticsId = sdkConfig.analyticsId ?? 'UA-26406144-29';
+    final forceAnalyticsEnabled = sdkConfig.analyticsForceEnabled == true;
+    var analytics = telemetry.createAnalyticsInstance(
+      analyticsId,
+      'analysis-server',
+      disableForSession: disableAnalyticsForSession,
+      forceEnabled: forceAnalyticsEnabled,
+    );
+    analysisServerOptions.analytics = analytics;
+
+    // Record the client name as the application installer ID.
+    analytics.setSessionValue('aiid', analysisServerOptions.clientId);
+    if (analysisServerOptions.clientVersion != null) {
+      analytics.setSessionValue('cd1', analysisServerOptions.clientVersion);
+    }
+
+    final defaultSdkPath = _getSdkPath(results);
+    final dartSdkManager = DartSdkManager(defaultSdkPath);
 
     // TODO(brianwilkerson): It would be nice to avoid creating an SDK that
     // can't be re-used, but the SDK is needed to create a package map provider
@@ -238,9 +245,17 @@ class Driver implements ServerStarter {
     // Crash reporting
 
     // Use sdkConfig to optionally override analytics settings.
-    var crashProductId = sdkConfig.crashReportingId ?? 'Dart_analysis_server';
-    var crashReportSender =
+    final crashProductId = sdkConfig.crashReportingId ?? 'Dart_analysis_server';
+    final crashReportSender =
         CrashReportSender.prod(crashProductId, shouldSendCallback);
+
+    if (telemetry.showAnalyticsUI) {
+      if (results.wasParsed(ANALYTICS_FLAG)) {
+        analytics.enabled = results[ANALYTICS_FLAG] as bool;
+        print(telemetry.createAnalyticsStatusMessage(analytics.enabled));
+        return;
+      }
+    }
 
     {
       var disableCompletion =
@@ -255,7 +270,7 @@ class Driver implements ServerStarter {
     }
 
     if (results[HELP_OPTION] as bool) {
-      _printUsage(parser, fromHelp: true);
+      _printUsage(parser, analytics, fromHelp: true);
       return;
     }
 
@@ -281,10 +296,9 @@ class Driver implements ServerStarter {
     }
 
     var errorNotifier = ErrorNotifier();
-    allInstrumentationServices.add(errorNotifier);
     allInstrumentationServices
         .add(CrashReportingInstrumentation(crashReportSender));
-    var instrumentationService =
+    final instrumentationService =
         MulticastInstrumentationService(allInstrumentationServices);
     this.instrumentationService = instrumentationService;
 
@@ -300,7 +314,7 @@ class Driver implements ServerStarter {
     AnalysisEngine.instance.instrumentationService = instrumentationService;
 
     int? diagnosticServerPort;
-    var portValue =
+    final portValue =
         (results[DIAGNOSTIC_PORT] ?? results[DIAGNOSTIC_PORT_ALIAS]) as String?;
     if (portValue != null) {
       try {
@@ -308,15 +322,12 @@ class Driver implements ServerStarter {
       } on FormatException {
         print('Invalid port number: $portValue');
         print('');
-        _printUsage(parser);
+        _printUsage(parser, analytics);
         exitCode = 1;
         return;
       }
     }
 
-    // TODO(brianwilkerson): Pass the following value to the server and
-    // implement the debouncing when it hasn't been disabled.
-    // var disableDebouncing = results[DISABLE_STATUS_NOTIFICATION_DEBOUNCING] as bool;
     if (analysisServerOptions.useLanguageServerProtocol) {
       if (sendPort != null) {
         throw UnimplementedError(
@@ -340,6 +351,7 @@ class Driver implements ServerStarter {
           crashReportingAttachmentsBuilder,
           instrumentationService,
           RequestStatisticsHelper(),
+          analytics,
           diagnosticServerPort,
           errorNotifier,
           sendPort);
@@ -360,6 +372,7 @@ class Driver implements ServerStarter {
     CrashReportingAttachmentsBuilder crashReportingAttachmentsBuilder,
     InstrumentationService instrumentationService,
     RequestStatisticsHelper requestStatistics,
+    telemetry.Analytics analytics,
     int? diagnosticServerPort,
     ErrorNotifier errorNotifier,
     SendPort? sendPort,
@@ -375,15 +388,20 @@ class Driver implements ServerStarter {
         return;
       }
     }
+    //
+    // Register lint rules.
+    //
     linter.registerLintRules();
-    registerBuiltInProducers();
 
     var diagnosticServer = _DiagnosticServerImpl();
+
+    // Ping analytics with our initial call.
+    analytics.sendScreenView('home');
 
     //
     // Create the sockets and start listening for requests.
     //
-    var socketServer = SocketServer(
+    final socketServer = SocketServer(
         analysisServerOptions,
         dartSdkManager,
         crashReportingAttachmentsBuilder,
@@ -393,6 +411,8 @@ class Driver implements ServerStarter {
         analyticsManager,
         detachableFileSystemManager);
     httpServer = HttpAnalysisServer(socketServer);
+
+    errorNotifier.server = socketServer.analysisServer;
 
     diagnosticServer.httpServer = httpServer!;
     if (diagnosticServerPort != null) {
@@ -424,7 +444,7 @@ class Driver implements ServerStarter {
         exitCode = await devServer.processDirectories([trainDirectory]);
         if (exitCode != 0) exit(exitCode);
 
-        var httpServer = this.httpServer;
+        final httpServer = this.httpServer;
         if (httpServer != null) {
           httpServer.close();
         }
@@ -450,12 +470,8 @@ class Driver implements ServerStarter {
           var isolateAnalysisServer = IsolateAnalysisServer(socketServer);
           serveResult = isolateAnalysisServer.serveIsolate(sendPort);
         }
-        errorNotifier.server = socketServer.analysisServer;
-        if (results[DISABLE_SILENT_ANALYSIS_EXCEPTIONS] as bool) {
-          errorNotifier.sendSilentExceptionsToClient = true;
-        }
         serveResult.then((_) async {
-          var httpServer = this.httpServer;
+          final httpServer = this.httpServer;
           if (httpServer != null) {
             httpServer.close();
           }
@@ -484,11 +500,10 @@ class Driver implements ServerStarter {
         : _captureExceptions;
 
     linter.registerLintRules();
-    registerBuiltInProducers();
 
     var diagnosticServer = _DiagnosticServerImpl();
 
-    var socketServer = LspSocketServer(
+    final socketServer = LspSocketServer(
         analysisServerOptions,
         diagnosticServer,
         analyticsManager,
@@ -600,8 +615,6 @@ class Driver implements ServerStarter {
       DISABLE_SERVER_EXCEPTION_HANDLING,
       DISABLE_SERVER_FEATURE_COMPLETION,
       DISABLE_SERVER_FEATURE_SEARCH,
-      DISABLE_SILENT_ANALYSIS_EXCEPTIONS,
-      DISABLE_STATUS_NOTIFICATION_DEBOUNCING,
       'enable-completion-model',
       'enable-experiment',
       'enable-instrumentation',
@@ -649,18 +662,30 @@ class Driver implements ServerStarter {
 
   /// Print information about how to use the server.
   void _printUsage(
-    ArgParser parser, {
+    ArgParser parser,
+    telemetry.Analytics analytics, {
     bool fromHelp = false,
   }) {
     print('Usage: $BINARY_NAME [flags]');
     print('');
     print('Supported flags are:');
     print(parser.usage);
+
+    if (telemetry.showAnalyticsUI) {
+      // Print analytics status and information.
+      if (fromHelp) {
+        print('');
+        print(telemetry.analyticsNotice);
+      }
+      print('');
+      print(telemetry.createAnalyticsStatusMessage(analytics.enabled,
+          command: ANALYTICS_FLAG));
+    }
   }
 
   /// Read the UUID from disk, generating and storing a new one if necessary.
   String _readUuid(InstrumentationService service) {
-    var instrumentationLocation =
+    final instrumentationLocation =
         PhysicalResourceProvider.INSTANCE.getStateLocation('.instrumentation');
     if (instrumentationLocation == null) {
       return _generateUuidString();
@@ -742,6 +767,7 @@ class Driver implements ServerStarter {
     // This option is hidden but still accepted; it's effectively translated to
     // the 'protocol' option above.
     parser.addFlag(USE_LSP,
+        defaultsTo: false,
         negatable: false,
         help: 'Whether to use the Language Server Protocol (LSP).',
         hide: true);
@@ -770,7 +796,7 @@ class Driver implements ServerStarter {
     parser.addFlag(ANALYTICS_FLAG,
         help: 'Allow or disallow sending analytics information to '
             'Google for this session.',
-        hide: true);
+        hide: !telemetry.showAnalyticsUI);
     parser.addFlag(SUPPRESS_ANALYTICS_FLAG,
         negatable: false,
         help: 'Suppress analytics for this session.',
@@ -789,21 +815,15 @@ class Driver implements ServerStarter {
         // exception-nullifying runZoned() calls.
         help: 'disable analyzer exception capture for interactive debugging '
             'of the server',
+        defaultsTo: false,
         hide: true);
     parser.addFlag(DISABLE_SERVER_FEATURE_COMPLETION,
-        help: 'disable all completion features', hide: true);
+        help: 'disable all completion features', defaultsTo: false, hide: true);
     parser.addFlag(DISABLE_SERVER_FEATURE_SEARCH,
-        help: 'disable all search features', hide: true);
-    parser.addFlag(DISABLE_SILENT_ANALYSIS_EXCEPTIONS,
-        negatable: false,
-        help: 'Prevent exceptions during analysis from being silent',
-        hide: true);
-    parser.addFlag(DISABLE_STATUS_NOTIFICATION_DEBOUNCING,
-        negatable: false,
-        help: 'Suppress debouncing of status notifications.',
-        hide: true);
+        help: 'disable all search features', defaultsTo: false, hide: true);
     parser.addFlag(INTERNAL_PRINT_TO_CONSOLE,
         help: 'enable sending `print` output to the console',
+        defaultsTo: false,
         negatable: false,
         hide: true);
     parser.addOption(

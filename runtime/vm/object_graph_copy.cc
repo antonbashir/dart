@@ -33,7 +33,6 @@
   V(CodeSourceMap)                                                             \
   V(CompressedStackMaps)                                                       \
   V(ContextScope)                                                              \
-  V(Bytecode)                                                                  \
   V(DynamicLibrary)                                                            \
   V(Error)                                                                     \
   V(ExceptionHandlers)                                                         \
@@ -161,13 +160,10 @@ static bool CanShareObject(ObjectPtr obj, uword tags) {
           ->untag()
           ->IsImmutable();
     }
-
     // All other objects that have immutability bit set are deeply immutable.
     return true;
   }
 
-  // TODO(https://dartbug.com/55136): Mark Closures as shallowly imutable.
-  // And move this into the if above.
   if (cid == kClosureCid) {
     // We can share a closure iff it doesn't close over any state.
     return Closure::RawCast(obj)->untag()->context() == Object::null();
@@ -194,6 +190,8 @@ static bool MightNeedReHashing(ObjectPtr object) {
   // same hash codes.
   if (cid == kOneByteStringCid) return false;
   if (cid == kTwoByteStringCid) return false;
+  if (cid == kExternalOneByteStringCid) return false;
+  if (cid == kExternalTwoByteStringCid) return false;
   if (cid == kMintCid) return false;
   if (cid == kDoubleCid) return false;
   if (cid == kBoolCid) return false;
@@ -236,7 +234,7 @@ void SetNewSpaceTaggingWord(ObjectPtr to, classid_t cid, uint32_t size) {
   tags = UntaggedObject::NotMarkedBit::update(true, tags);
   tags = UntaggedObject::OldAndNotRememberedBit::update(false, tags);
   tags = UntaggedObject::CanonicalBit::update(false, tags);
-  tags = UntaggedObject::NewOrEvacuationCandidateBit::update(true, tags);
+  tags = UntaggedObject::NewBit::update(true, tags);
   tags = UntaggedObject::ImmutableBit::update(
       IsUnmodifiableTypedDataViewClassId(cid), tags);
 #if defined(HASH_IN_OBJECT_HEADER)
@@ -463,7 +461,7 @@ class IdentityMap {
   uint32_t GetHeaderHash(ObjectPtr object) {
     uint32_t hash = Object::GetCachedHash(object);
     if (hash == 0) {
-      switch (object->GetClassIdOfHeapObject()) {
+      switch (object->GetClassId()) {
         case kMintCid:
           hash = Mint::Value(static_cast<MintPtr>(object));
           // Don't write back: doesn't agree with dart:core's identityHash.
@@ -475,6 +473,8 @@ class IdentityMap {
           break;
         case kOneByteStringCid:
         case kTwoByteStringCid:
+        case kExternalOneByteStringCid:
+        case kExternalTwoByteStringCid:
           hash = String::Hash(static_cast<StringPtr>(object));
           hash = Object::SetCachedHashIfNotSet(object, hash);
           break;
@@ -498,7 +498,7 @@ class IdentityMap {
         malloc(hash_table_capacity_ * sizeof(uint32_t)));
     for (intptr_t i = 0; i < hash_table_capacity_; i++) {
       hash_table_[i] = 0;
-      if (check_for_safepoint && (((i + 1) % kSlotsPerInterruptCheck) == 0)) {
+      if (check_for_safepoint && (((i + 1) % KB) == 0)) {
         thread_->CheckForSafepoint();
       }
     }
@@ -514,7 +514,7 @@ class IdentityMap {
         }
         probe = (probe + 1) & mask;
       }
-      if (check_for_safepoint && (((id + 2) % kSlotsPerInterruptCheck) == 0)) {
+      if (check_for_safepoint && (((id + 2) % KB) == 0)) {
         thread_->CheckForSafepoint();
       }
     }
@@ -1022,7 +1022,7 @@ class RetainingPath {
       int length = working_list->length();
 
       do {  // This loop is here so that we can skip children processing
-        const intptr_t cid = raw->GetClassIdOfHeapObject();
+        const intptr_t cid = raw->GetClassId();
 
         if (traversal_rules_ == TraversalRules::kInternalToIsolateGroup) {
           if (CanShareObjectAcrossIsolates(raw)) {
@@ -1031,7 +1031,7 @@ class RetainingPath {
           if (cid == kClosureCid) {
             closure ^= raw;
             // Only context has to be checked.
-            working_list->Add(closure.RawContext());
+            working_list->Add(closure.context());
             break;
           }
           // These we are not expected to drill into as they can't be on
@@ -1729,12 +1729,12 @@ class ObjectCopy : public Base {
 
 #define COPY_TO(clazz) case kTypedData##clazz##Cid:
 
-        CLASS_LIST_TYPED_DATA(COPY_TO) {
-          typename Types::TypedData casted_from = Types::CastTypedData(from);
-          typename Types::TypedData casted_to = Types::CastTypedData(to);
-          CopyTypedData(casted_from, casted_to);
-          return;
-        }
+      CLASS_LIST_TYPED_DATA(COPY_TO) {
+        typename Types::TypedData casted_from = Types::CastTypedData(from);
+        typename Types::TypedData casted_to = Types::CastTypedData(to);
+        CopyTypedData(casted_from, casted_to);
+        return;
+      }
 #undef COPY_TO
 
       case kByteDataViewCid:
@@ -1965,7 +1965,7 @@ class ObjectCopy : public Base {
   void CopyTypedData(TypedDataPtr from, TypedDataPtr to) {
     auto raw_from = from.untag();
     auto raw_to = to.untag();
-    const intptr_t cid = Types::GetTypedDataPtr(from)->GetClassIdOfHeapObject();
+    const intptr_t cid = Types::GetTypedDataPtr(from)->GetClassId();
     raw_to->length_ = raw_from->length_;
     raw_to->RecomputeDataField();
     const intptr_t length =
@@ -1976,7 +1976,7 @@ class ObjectCopy : public Base {
   void CopyTypedData(const TypedData& from, const TypedData& to) {
     auto raw_from = from.ptr().untag();
     auto raw_to = to.ptr().untag();
-    const intptr_t cid = Types::GetTypedDataPtr(from)->GetClassIdOfHeapObject();
+    const intptr_t cid = Types::GetTypedDataPtr(from)->GetClassId();
     ASSERT(raw_to->length_ == raw_from->length_);
     raw_to->RecomputeDataField();
     const intptr_t length =
@@ -2096,16 +2096,14 @@ class ObjectCopy : public Base {
     Base::EnqueueWeakReference(from);
   }
 
-  // clang-format off
 #define DEFINE_UNSUPPORTED(clazz)                                              \
   void Copy##clazz(typename Types::clazz from, typename Types::clazz to) {     \
-      FATAL("Objects of type " #clazz " should not occur in object graphs");   \
+    FATAL("Objects of type " #clazz " should not occur in object graphs");     \
   }
 
   FOR_UNSUPPORTED_CLASSES(DEFINE_UNSUPPORTED)
 
 #undef DEFINE_UNSUPPORTED
-  // clang-format on
 
   UntaggedObject* UntagObject(typename Types::Object obj) {
     return Types::GetObjectPtr(obj).Decompress(Base::heap_base_).untag();

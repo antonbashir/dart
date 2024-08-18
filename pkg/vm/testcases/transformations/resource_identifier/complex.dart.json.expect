@@ -1,5 +1,5 @@
 {
-  "_comment": "Resources referenced by annotated resource identifiers",
+  "_comment": "Resources referenced by annotated resource identifers",
   "AppTag": "TBD",
   "environment": {
     "dart.tool.dart2js": false

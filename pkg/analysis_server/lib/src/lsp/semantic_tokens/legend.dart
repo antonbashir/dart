@@ -7,7 +7,6 @@ import 'dart:math' as math;
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/semantic_tokens/mapping.dart';
-import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 final semanticTokenLegend = SemanticTokenLegendLookup();
@@ -34,8 +33,8 @@ class SemanticTokenLegendLookup {
     _usedTokenTypes = Set.of(highlightRegionTokenTypes.values
             .followedBy(CustomSemanticTokenTypes.values))
         .toList();
-    _usedTokenModifiers = Set.of(highlightRegionTokenModifiers
-            .values.flattenedToList
+    _usedTokenModifiers = Set.of(highlightRegionTokenModifiers.values
+            .expand((v) => v)
             .followedBy(CustomSemanticTokenModifiers.values))
         .toList();
 
@@ -68,10 +67,10 @@ class SemanticTokenLegendLookup {
   /// Gets the [SemanticTokenModifiers] for a given index.
   @visibleForTesting
   List<SemanticTokenModifiers> modifiersForBitmask(int mask) {
-    var modifiers = <SemanticTokenModifiers>[];
+    final modifiers = <SemanticTokenModifiers>[];
     for (var i = 0; i < _usedTokenModifiers.length; i++) {
       // Check if the i'th bit is set
-      var modifierBit = 1 << i;
+      final modifierBit = 1 << i;
       if (mask & modifierBit != 0) {
         modifiers.add(_usedTokenModifiers[i]);
       }

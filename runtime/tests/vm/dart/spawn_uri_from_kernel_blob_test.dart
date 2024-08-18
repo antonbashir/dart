@@ -14,7 +14,7 @@ import 'package:front_end/src/api_unstable/vm.dart'
     show CompilerOptions, DiagnosticMessage, kernelForProgram, NnbdMode;
 import 'package:kernel/kernel.dart';
 import 'package:kernel/target/targets.dart';
-import 'package:vm/modular/target/vm.dart' show VmTarget;
+import 'package:vm/target/vm.dart' show VmTarget;
 
 import 'snapshot_test_helper.dart';
 
@@ -22,7 +22,7 @@ main() async {
   final sourceUri =
       Platform.script.resolve('spawn_uri_from_kernel_blob_script.dart');
   final options = new CompilerOptions()
-    ..target = VmTarget(TargetFlags())
+    ..target = VmTarget(TargetFlags(soundNullSafety: hasSoundNullSafety))
     ..additionalDills = <Uri>[Uri.file(platformDill)]
     ..environmentDefines = {}
     ..nnbdMode = hasSoundNullSafety ? NnbdMode.Strong : NnbdMode.Weak

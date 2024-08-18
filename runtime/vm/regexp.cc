@@ -826,9 +826,7 @@ ActionNode* ActionNode::EmptyMatchCheck(intptr_t start_register,
 }
 
 #define DEFINE_ACCEPT(Type)                                                    \
-  void Type##Node::Accept(NodeVisitor* visitor) {                              \
-    visitor->Visit##Type(this);                                                \
-  }
+  void Type##Node::Accept(NodeVisitor* visitor) { visitor->Visit##Type(this); }
 FOR_EACH_NODE_TYPE(DEFINE_ACCEPT)
 #undef DEFINE_ACCEPT
 
@@ -5306,7 +5304,8 @@ RegExpEngine::CompilationResult RegExpEngine::CompileIR(
   const Function& function = parsed_function->function();
   const intptr_t specialization_cid = function.string_specialization_cid();
   const bool is_sticky = function.is_sticky_specialization();
-  const bool is_one_byte = (specialization_cid == kOneByteStringCid);
+  const bool is_one_byte = (specialization_cid == kOneByteStringCid ||
+                            specialization_cid == kExternalOneByteStringCid);
   RegExp& regexp = RegExp::Handle(zone, function.regexp());
   const String& pattern = String::Handle(zone, regexp.pattern());
 
@@ -5589,7 +5588,8 @@ RegExpPtr RegExpEngine::CreateRegExp(Thread* thread,
     const Class& owner =
         Class::Handle(zone, lib.LookupClass(Symbols::RegExp()));
 
-    for (intptr_t cid = kOneByteStringCid; cid <= kTwoByteStringCid; cid++) {
+    for (intptr_t cid = kOneByteStringCid; cid <= kExternalTwoByteStringCid;
+         cid++) {
       CreateSpecializedFunction(thread, zone, regexp, cid, /*sticky=*/false,
                                 owner);
       CreateSpecializedFunction(thread, zone, regexp, cid, /*sticky=*/true,

@@ -411,7 +411,7 @@ class InternetAddress {
   @patch
   factory InternetAddress.fromRawAddress(Uint8List rawAddress,
       {InternetAddressType? type}) {
-    throw UnsupportedError("InternetAddress.fromRawAddress");
+    throw new UnsupportedError("InternetAddress.fromRawAddress");
   }
 
   @patch

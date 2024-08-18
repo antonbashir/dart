@@ -2,9 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/generated/error_verifier.dart';
@@ -12,13 +13,6 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class AddFieldFormalParameters extends ResolvedCorrectionProducer {
-  AddFieldFormalParameters({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   FixKind get fixKind => DartFixKind.ADD_FIELD_FORMAL_PARAMETERS;
 
@@ -46,12 +40,14 @@ class AddFieldFormalParameters extends ResolvedCorrectionProducer {
     fields.sort((a, b) => a.nameOffset - b.nameOffset);
 
     // Specialize for Flutter widgets.
-    if (superType.isExactlyStatelessWidgetType ||
-        superType.isExactlyStatefulWidgetType) {
+    if (Flutter.isExactlyStatelessWidgetType(superType) ||
+        Flutter.isExactlyStatefulWidgetType(superType)) {
       if (parameters.isNotEmpty && parameters.last.isNamed) {
+        var isNullSafe =
+            libraryElement.featureSet.isEnabled(Feature.non_nullable);
         String parameterForField(FieldElement field) {
           var prefix = '';
-          if (typeSystem.isPotentiallyNonNullable(field.type)) {
+          if (isNullSafe && typeSystem.isPotentiallyNonNullable(field.type)) {
             prefix = 'required ';
           }
           return '${prefix}this.${field.name}';

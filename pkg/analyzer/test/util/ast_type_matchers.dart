@@ -185,8 +185,6 @@ const isMethodReferenceExpression = TypeMatcher<MethodReferenceExpression>();
 
 const isMixinDeclaration = TypeMatcher<MixinDeclaration>();
 
-const isMixinOnClause = TypeMatcher<MixinOnClause>();
-
 const isNamedCompilationUnitMember = TypeMatcher<NamedCompilationUnitMember>();
 
 const isNamedExpression = TypeMatcher<NamedExpression>();
@@ -202,6 +200,8 @@ const isNativeFunctionBody = TypeMatcher<NativeFunctionBody>();
 const isNormalFormalParameter = TypeMatcher<NormalFormalParameter>();
 
 const isNullLiteral = TypeMatcher<NullLiteral>();
+
+const isOnClause = TypeMatcher<OnClause>();
 
 const isParenthesizedExpression = TypeMatcher<ParenthesizedExpression>();
 

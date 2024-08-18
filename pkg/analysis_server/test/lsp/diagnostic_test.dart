@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' as plugin;
 import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
@@ -26,15 +25,15 @@ typedef _VoidCallback = Future<void> Function();
 @reflectiveTest
 class DiagnosticTest extends AbstractLspAnalysisServerTest {
   Future<void> checkPluginErrorsForFile(String pluginAnalyzedFilePath) async {
-    var pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
+    final pluginAnalyzedUri = pathContext.toUri(pluginAnalyzedFilePath);
 
     newFile(pluginAnalyzedFilePath, '''String a = "Test";
 String b = "Test";
 ''');
     await initialize();
 
-    var diagnosticsUpdate = waitForDiagnostics(pluginAnalyzedUri);
-    var pluginError = plugin.AnalysisError(
+    final diagnosticsUpdate = waitForDiagnostics(pluginAnalyzedUri);
+    final pluginError = plugin.AnalysisError(
       plugin.AnalysisErrorSeverity.ERROR,
       plugin.AnalysisErrorType.STATIC_TYPE_WARNING,
       plugin.Location(pluginAnalyzedFilePath, 0, 6, 1, 1,
@@ -48,14 +47,14 @@ String b = "Test";
                 endLine: 2, endColumn: 17))
       ],
     );
-    var pluginResult =
+    final pluginResult =
         plugin.AnalysisErrorsParams(pluginAnalyzedFilePath, [pluginError]);
     configureTestPlugin(notification: pluginResult.toNotification());
 
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
 
-    var err = diagnostics!.first;
+    final err = diagnostics!.first;
     expect(err.severity, DiagnosticSeverity.Error);
     expect(err.message, equals('Test error from plugin'));
     expect(err.code, equals('ERR1'));
@@ -65,24 +64,12 @@ String b = "Test";
     expect(err.range.end.character, equals(6));
     expect(err.relatedInformation, hasLength(1));
 
-    var related = err.relatedInformation![0];
+    final related = err.relatedInformation![0];
     expect(related.message, equals('Related error'));
     expect(related.location.range.start.line, equals(1));
     expect(related.location.range.start.character, equals(12));
     expect(related.location.range.end.line, equals(1));
     expect(related.location.range.end.character, equals(16));
-  }
-
-  @override
-  void setUp() {
-    super.setUp();
-
-    if (Registry.ruleRegistry.isEmpty) {
-      registerLintRules();
-    }
-
-    // These tests deliberately generate diagnostics.
-    failTestOnErrorDiagnostic = false;
   }
 
   Future<void> test_afterDocumentEdits() async {
@@ -92,11 +79,11 @@ String b = "Test";
     await initialize();
     await openFile(mainFileUri, initialContents);
     await pumpEventQueue(times: 5000);
-    expect(diagnostics[mainFileUri], isNull);
+    expect(diagnostics[mainFilePath], isNull);
 
     await replaceFile(222, mainFileUri, 'String a = 1;');
     await pumpEventQueue(times: 5000);
-    expect(diagnostics[mainFileUri], isNotEmpty);
+    expect(diagnostics[mainFilePath], isNotEmpty);
   }
 
   Future<void> test_analysisOptionsFile() async {
@@ -106,9 +93,9 @@ linter:
     - invalid_lint_rule_name
 ''');
 
-    var firstDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
     await initialize();
-    var initialDiagnostics = await firstDiagnosticsUpdate;
+    final initialDiagnostics = await firstDiagnosticsUpdate;
     expect(initialDiagnostics, hasLength(1));
     expect(initialDiagnostics!.first.severity, DiagnosticSeverity.Warning);
     expect(initialDiagnostics.first.code, 'undefined_lint');
@@ -121,9 +108,9 @@ include: package:pedantic/analysis_options.yaml
 ''');
 
     // Verify there's an error for the import.
-    var firstDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
     await initialize();
-    var initialDiagnostics = await firstDiagnosticsUpdate;
+    final initialDiagnostics = await firstDiagnosticsUpdate;
     expect(initialDiagnostics, hasLength(1));
     expect(initialDiagnostics!.first.severity, DiagnosticSeverity.Warning);
     expect(initialDiagnostics.first.code, 'include_file_not_found');
@@ -133,31 +120,11 @@ include: package:pedantic/analysis_options.yaml
 
     // // Write a package file that allows resolving the include.
     // final secondDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
-    // writeTestPackageConfig(pedantic: true);
+    // writePackageConfig(projectFolderPath, pedantic: true);
     //
     // // Ensure the error disappeared.
     // final updatedDiagnostics = await secondDiagnosticsUpdate;
     // expect(updatedDiagnostics, hasLength(0));
-  }
-
-  /// Ensure the server can initialize correctly and send diagnostics when the
-  /// analysis_options file throws errors during parsing.
-  ///
-  /// https://github.com/dart-lang/sdk/issues/55987
-  Future<void> test_analysisOptionsFile_parseError() async {
-    newFile(analysisOptionsPath, '''
-include: package:lints/recommended.yaml
-f
-
-''');
-
-    var firstDiagnosticsUpdate = waitForDiagnostics(analysisOptionsUri);
-    await initialize();
-    var initialDiagnostics = await firstDiagnosticsUpdate;
-    var diagnostic = initialDiagnostics!.first;
-    expect(diagnostic.severity, DiagnosticSeverity.Error);
-    expect(diagnostic.code, 'parse_error');
-    expect(diagnostic.message, "Expected ':'.");
   }
 
   Future<void> test_contextMessage() async {
@@ -169,11 +136,11 @@ void f() {
 }
 ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.relatedInformation, hasLength(1));
   }
 
@@ -184,26 +151,26 @@ void f() {
 }
 ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.message, contains('\nTry'));
   }
 
   Future<void> test_deletedFile() async {
     newFile(mainFilePath, 'String a = 1;');
 
-    var firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var originalDiagnostics = await firstDiagnosticsUpdate;
+    final originalDiagnostics = await firstDiagnosticsUpdate;
     expect(originalDiagnostics, hasLength(1));
 
     // Deleting the file should result in an update to remove the diagnostics.
-    var secondDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final secondDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     deleteFile(mainFilePath);
-    var updatedDiagnostics = await secondDiagnosticsUpdate;
+    final updatedDiagnostics = await secondDiagnosticsUpdate;
     expect(updatedDiagnostics, hasLength(0));
   }
 
@@ -211,7 +178,8 @@ void f() {
     setDiagnosticTagSupport([DiagnosticTag.Deprecated]);
 
     var onePackagePath = convertPath('/home/one');
-    writeTestPackageConfig(
+    writePackageConfig(
+      projectFolderPath,
       config: PackageConfigFileBuilder()
         ..add(name: 'one', rootPath: onePackagePath),
     );
@@ -224,18 +192,19 @@ void f() {
     void f() => print(dep);
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('deprecated_member_use'));
     expect(diagnostic.tags, contains(DiagnosticTag.Deprecated));
   }
 
   Future<void> test_diagnosticTag_notSupported() async {
     var onePackagePath = convertPath('/home/one');
-    writeTestPackageConfig(
+    writePackageConfig(
+      projectFolderPath,
       config: PackageConfigFileBuilder()
         ..add(name: 'one', rootPath: onePackagePath),
     );
@@ -248,11 +217,11 @@ void f() {
     void f() => print(dep);
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('deprecated_member_use'));
     expect(diagnostic.tags, isNull);
   }
@@ -267,11 +236,11 @@ void f() {
     }
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('dead_code'));
     expect(diagnostic.tags, contains(DiagnosticTag.Unnecessary));
   }
@@ -284,11 +253,11 @@ void f() {
     import 'dart:async' as import; // produces BUILT_IN_IDENTIFIER_IN_DECLARATION
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('built_in_identifier_in_declaration'));
     expect(
       diagnostic.codeDescription!.href,
@@ -303,11 +272,11 @@ void f() {
     import 'dart:async' as import; // produces BUILT_IN_IDENTIFIER_IN_DECLARATION
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('built_in_identifier_in_declaration'));
     expect(diagnostic.codeDescription, isNull);
   }
@@ -339,7 +308,7 @@ void f() {
   Future<void> test_emptyDiagnostics_notInitial() async {
     newFile(mainFilePath, 'void f() {}');
 
-    var notifications = <PublishDiagnosticsParams>[];
+    final notifications = <PublishDiagnosticsParams>[];
     publishedDiagnostics.listen(notifications.add);
 
     await initialize();
@@ -351,7 +320,7 @@ void f() {
   /// Verify we only send diagnostic updates when a) they're not empty or
   /// b) they're empty, but the previous set was not empty.
   Future<void> test_emptyDiagnostics_onlyOnce() async {
-    var notifications = <PublishDiagnosticsParams>[];
+    final notifications = <PublishDiagnosticsParams>[];
     publishedDiagnostics.listen(notifications.add);
 
     await initialize();
@@ -388,9 +357,9 @@ void f() {
 version: latest
 ''').path;
 
-    var firstDiagnosticsUpdate = waitForDiagnostics(fixDataUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(fixDataUri);
     await initialize();
-    var initialDiagnostics = await firstDiagnosticsUpdate;
+    final initialDiagnostics = await firstDiagnosticsUpdate;
     expect(initialDiagnostics, hasLength(1));
     expect(initialDiagnostics!.first.severity, DiagnosticSeverity.Error);
     expect(initialDiagnostics.first.code, 'invalid_value');
@@ -406,82 +375,36 @@ version: latest
     // error.
     // https://github.com/dart-lang/sdk/issues/45678
     //
-    var serverErrorMessage =
+    final serverErrorMessage =
         "A value of type 'int' can't be assigned to a variable of type 'String'";
-    var pluginErrorMessage = 'Test error from plugin';
+    final pluginErrorMessage = 'Test error from plugin';
 
     newFile(mainFilePath, 'String a = 1;');
-    var initialDiagnosticsFuture = waitForDiagnostics(mainFileUri);
+    final initialDiagnosticsFuture = waitForDiagnostics(mainFileUri);
     await initialize();
-    var initialDiagnostics = await initialDiagnosticsFuture;
+    final initialDiagnostics = await initialDiagnosticsFuture;
     expect(initialDiagnostics, hasLength(1));
     expect(initialDiagnostics!.first.message, contains(serverErrorMessage));
 
-    var pluginTriggeredDiagnosticFuture = waitForDiagnostics(mainFileUri);
-    var pluginError = plugin.AnalysisError(
+    final pluginTriggeredDiagnosticFuture = waitForDiagnostics(mainFileUri);
+    final pluginError = plugin.AnalysisError(
       plugin.AnalysisErrorSeverity.ERROR,
       plugin.AnalysisErrorType.STATIC_TYPE_WARNING,
       plugin.Location(mainFilePath, 0, 1, 0, 0, endLine: 0, endColumn: 1),
       pluginErrorMessage,
       'ERR1',
     );
-    var pluginResult = plugin.AnalysisErrorsParams(mainFilePath, [pluginError]);
+    final pluginResult =
+        plugin.AnalysisErrorsParams(mainFilePath, [pluginError]);
     configureTestPlugin(notification: pluginResult.toNotification());
 
-    var pluginTriggeredDiagnostics = await pluginTriggeredDiagnosticFuture;
+    final pluginTriggeredDiagnostics = await pluginTriggeredDiagnosticFuture;
     expect(
         pluginTriggeredDiagnostics!.map((error) => error.message),
         containsAll([
           pluginErrorMessage,
           contains(serverErrorMessage),
         ]));
-  }
-
-  /// Test that when server has produced diagnostics for a file and it is
-  /// subsequently removed, that an update from the plugin does not cause
-  /// the last diagnostics from the server to re-appear (which happens if the
-  /// deletion does not clear the servers errors from the ErrorCollector).
-  ///
-  /// https://github.com/Dart-Code/Dart-Code/issues/5113
-  Future<void> test_fromPlugins_dartFile_producedAfterFileRemoved() async {
-    var serverErrorMessage =
-        "A value of type 'int' can't be assigned to a variable of type 'String'";
-    var pluginErrorMessage = 'Test error from plugin';
-
-    // First, trigger a diagnostic from the server.
-    newFile(mainFilePath, 'String a = 1;');
-    var diagnosticsFuture = waitForDiagnostics(mainFileUri);
-    await initialize();
-
-    // Expect only the server diagnostic.
-    expect((await diagnosticsFuture)!.single.message,
-        contains(serverErrorMessage));
-
-    // Delete the file, and expect diagnostics to be cleared.
-    diagnosticsFuture = waitForDiagnostics(mainFileUri);
-    deleteFile(mainFilePath);
-    expect((await diagnosticsFuture)!, hasLength(0));
-
-    // Trigger a plugin diagnostic. In reality, the plugin would probalby
-    // produce 0 diagnostics after the file is removed, but since the LSP server
-    // has an optimization to not send empty diagnostics if the last update was
-    // empty, we wouldn't be able wait for that so we just use a real diagnostic
-    // (which is still realistic since plugins might have not processed the
-    // remove yet).
-    diagnosticsFuture = waitForDiagnostics(mainFileUri);
-    var pluginError = plugin.AnalysisError(
-      plugin.AnalysisErrorSeverity.ERROR,
-      plugin.AnalysisErrorType.STATIC_TYPE_WARNING,
-      plugin.Location(mainFilePath, 0, 1, 0, 0, endLine: 0, endColumn: 1),
-      pluginErrorMessage,
-      'ERR1',
-    );
-    var pluginResult = plugin.AnalysisErrorsParams(mainFilePath, [pluginError]);
-    configureTestPlugin(notification: pluginResult.toNotification());
-
-    // Wait for the diagnostic updated and ensure it's still empty and no stale
-    // error has come back.
-    expect((await diagnosticsFuture)!.single.message, pluginErrorMessage);
   }
 
   Future<void> test_fromPlugins_nonDartFile() async {
@@ -491,11 +414,11 @@ version: latest
   Future<void> test_initialAnalysis() async {
     newFile(mainFilePath, 'String a = 1;');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = await diagnosticsUpdate;
+    final diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics!.first;
+    final diagnostic = diagnostics!.first;
     expect(diagnostic.code, equals('invalid_assignment'));
     expect(diagnostic.range.start.line, equals(0));
     expect(diagnostic.range.start.character, equals(11));
@@ -503,67 +426,24 @@ version: latest
     expect(diagnostic.range.end.character, equals(12));
   }
 
-  /// Ensure lints included from another package work when there are multiple
-  /// workspace folders.
-  Future<void> test_lints_includedFromPackage() async {
-    var rootWorkspacePath = '$packagesRootPath/root';
-
-    // Set up a project with an analysis_options that enables a lint.
-    var lintsPackagePath = '$rootWorkspacePath/my_lints';
-    newFile('$lintsPackagePath/pubspec.yaml', '''
-name: my_lints
-''');
-    newFile('$lintsPackagePath/lib/analysis_options.yaml', '''
-linter:
-  rules:
-    - avoid_dynamic_calls
-''');
-    writePackageConfig(convertPath(lintsPackagePath));
-
-    // Set up a project that imports the analysis_options and violates the lint.
-    var projectPackagePath = '$rootWorkspacePath/my_project';
-    writePackageConfig(
-      projectPackagePath,
-      config: PackageConfigFileBuilder()
-        ..add(name: 'my_lints', rootPath: lintsPackagePath),
-    );
-    newFile('$projectPackagePath/analysis_options.yaml', '''
-include: package:my_lints/analysis_options.yaml
-
-linter:
-  rules:
-    - prefer_single_quotes
-''');
-    newFile('$projectPackagePath/main.dart', '''
-void f(dynamic a) => a.foo();
-''');
-
-    // Verify there's an error for the import.
-    var diagnosticsUpdate =
-        waitForDiagnostics(toUri('$projectPackagePath/main.dart'));
-    await initialize(workspaceFolders: [toUri(rootWorkspacePath)]);
-    var diagnostics = await diagnosticsUpdate;
-    expect(diagnostics!.single.code, contains('avoid_dynamic_calls'));
-  }
-
   Future<void> test_looseFile_withoutPubpsec() async {
     await initialize(allowEmptyRootUri: true);
 
     // Opening the file should trigger diagnostics.
     {
-      var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+      final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
       await openFile(mainFileUri, 'final a = Bad();');
-      var diagnostics = await diagnosticsUpdate;
+      final diagnostics = await diagnosticsUpdate;
       expect(diagnostics, hasLength(1));
-      var diagnostic = diagnostics!.first;
+      final diagnostic = diagnostics!.first;
       expect(diagnostic.message, contains("The function 'Bad' isn't defined"));
     }
 
     // Closing the file should remove the diagnostics.
     {
-      var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+      final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
       await closeFile(mainFileUri);
-      var diagnostics = await diagnosticsUpdate;
+      final diagnostics = await diagnosticsUpdate;
       expect(diagnostics, hasLength(0));
     }
   }
@@ -587,6 +467,7 @@ void f() {
 }
 ''';
 
+    registerLintRules();
     newFile(analysisOptionsPath, '''
 linter:
   rules:
@@ -603,17 +484,17 @@ analyzer:
 
     // Collect the initial set of diagnostic to compare against.
     var docVersion = 1;
-    var originalDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final originalDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await replaceFile(docVersion++, mainFileUri, wrappedContent('final bar;'));
-    var originalDiagnostics = await originalDiagnosticsUpdate;
+    final originalDiagnostics = await originalDiagnosticsUpdate;
 
     // Helper to update the content and verify the same diagnostics are returned
     // in the same order, despite the changes to offset/message altering
     // hashcodes.
     Future<void> verifyDiagnostics(String content) async {
-      var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+      final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
       await replaceFile(docVersion++, mainFileUri, wrappedContent(content));
-      var diagnostics = await diagnosticsUpdate;
+      final diagnostics = await diagnosticsUpdate;
       expect(
         diagnostics!.map((d) => d.code),
         originalDiagnostics!.map((d) => d.code),
@@ -648,11 +529,11 @@ analyzer:
     ''';
     newFile(mainFilePath, contents);
 
-    var firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     // Don't set showTodos in config, because they should show even without this
     // setting if they are upgraded to warnings/errors.
     await initialize();
-    var initialDiagnostics = await firstDiagnosticsUpdate;
+    final initialDiagnostics = await firstDiagnosticsUpdate;
     expect(initialDiagnostics, hasLength(2));
     expect(initialDiagnostics!.map((d) => d.code).toSet(), {'todo', 'fixme'});
   }
@@ -670,7 +551,7 @@ analyzer:
       initialize,
       {'showTodos': true},
     );
-    expect(diagnostics[mainFileUri], hasLength(2));
+    expect(diagnostics[mainFilePath], hasLength(2));
   }
 
   Future<void> test_todos_disabled() async {
@@ -683,7 +564,7 @@ analyzer:
     // TODOs are disabled by default so we don't need to send any config.
     await initialize();
     await pumpEventQueue(times: 5000);
-    expect(diagnostics[mainFileUri], isNull);
+    expect(diagnostics[mainFilePath], isNull);
   }
 
   Future<void> test_todos_enabledAfterAnalysis() async {
@@ -695,11 +576,12 @@ analyzer:
     await provideConfig(initialize, {});
     await openFile(mainFileUri, contents);
     await initialAnalysis;
-    expect(diagnostics[mainFileUri], isNull);
+    expect(diagnostics[mainFilePath], isNull);
 
+    final nextAnalysis = waitForAnalysisComplete();
     await updateConfig({'showTodos': true});
-    await waitForAnalysisComplete();
-    expect(diagnostics[mainFileUri], hasLength(1));
+    await nextAnalysis;
+    expect(diagnostics[mainFilePath], hasLength(1));
   }
 
   Future<void> test_todos_specific() async {
@@ -722,7 +604,7 @@ analyzer:
     );
     await initialAnalysis;
 
-    var initialDiagnostics = diagnostics[mainFileUri]!;
+    final initialDiagnostics = diagnostics[mainFilePath]!;
     expect(initialDiagnostics, hasLength(2));
     expect(
       initialDiagnostics.map((e) => e.code!),

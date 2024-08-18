@@ -188,48 +188,16 @@ class DirectoryTest {
           buffer.write("/../${subDirName}");
         }
         var long = new Directory("${buffer.toString()}");
-        // Passes on Windows, fails everywhere else.
-        // Windows can handle path names up to 32k in length(provided that
-        // they are '\\?\'-prefixed, which they are internally in dart io),
-        // which is more than Linux or Mac can handle.
-        if (Platform.isWindows) {
-          long.delete().then((_) {
-            asyncEnd();
-          });
-        } else {
-          Future<void>.value(long.delete()).catchError((error) {
-            Expect.isTrue(error is FileSystemException);
-            asyncEnd();
-          });
+        var errors = 0;
+        onError(error) {
+          Expect.isTrue(error is FileSystemException);
+          if (++errors == 2) {
+            d.delete(recursive: true).then((_) => asyncEnd());
+          }
         }
-      });
-    });
-  }
 
-  static void testDeleteTooLongNameRecursive() {
-    asyncStart();
-    Directory.systemTemp.createTemp('dart_directory').then((d) {
-      var subDirName = 'subdir';
-      var subDir = new Directory("${d.path}/$subDirName");
-      subDir.create().then((ignore) {
-        // Construct a long string of the form
-        // 'tempdir/subdir/../subdir/../subdir'.
-        var buffer = new StringBuffer();
-        buffer.write(subDir.path);
-        for (var i = 0; i < 1000; i++) {
-          buffer.write("/../${subDirName}");
-        }
-        var long = new Directory("${buffer.toString()}");
-        // Works only on Windows.
-        long.delete(recursive: true).then((_) {
-          if (Platform.isWindows) {
-            asyncEnd();
-          }
-        }, onError: ((_) {
-          if (!Platform.isWindows) {
-            asyncEnd();
-          }
-        }));
+        Future<void>.value(long.delete()).catchError(onError);
+        Future<void>.value(long.delete(recursive: true)).catchError(onError);
       });
     });
   }
@@ -241,7 +209,8 @@ class DirectoryTest {
     Expect.throws(() => d.deleteSync(recursive: true));
   }
 
-  static StringBuffer createLongDirName(Directory d) {
+  static void testDeleteTooLongNameSync() {
+    Directory d = Directory.systemTemp.createTempSync('dart_directory_test');
     var subDirName = 'subdir';
     var subDir = new Directory("${d.path}/$subDirName");
     subDir.createSync();
@@ -252,34 +221,10 @@ class DirectoryTest {
     for (var i = 0; i < 1000; i++) {
       buffer.write("/../${subDirName}");
     }
-    return buffer;
-  }
-
-  static void testDeleteTooLongNameSync() {
-    {
-      Directory d = Directory.systemTemp.createTempSync('dart_directory_test');
-      StringBuffer buffer = createLongDirName(d);
-      var long = new Directory("${buffer.toString()}");
-      if (!Platform.isWindows) {
-        // Windows can handle path names up to 32k in length(provided that
-        // they are '\\?\'-prefixed, which they are internally in dart io),
-        // which is more than Linux or Mac can handle.
-        Expect.throws(long.deleteSync);
-      }
-      d.deleteSync(recursive: true);
-    }
-    {
-      Directory d = Directory.systemTemp.createTempSync('dart_directory_test');
-      StringBuffer buffer = createLongDirName(d);
-      var long = new Directory("${buffer.toString()}");
-      // Works only on Windows
-      if (Platform.isWindows) {
-        long.deleteSync(recursive: true);
-      } else {
-        Expect.throws(() => long.deleteSync(recursive: true));
-        d.deleteSync(recursive: true);
-      }
-    }
+    var long = new Directory("${buffer.toString()}");
+    Expect.throws(long.deleteSync);
+    Expect.throws(() => long.deleteSync(recursive: true));
+    d.deleteSync(recursive: true);
   }
 
   static void testExistsCreateDelete() {
@@ -304,38 +249,6 @@ class DirectoryTest {
         });
       });
     });
-  }
-
-  static void testExistsCreateDeleteWithTrailingBackslashSync() {
-    // Check that adding trailing backslash does not break anything on
-    // Windows.
-    if (!Platform.isWindows) {
-      return;
-    }
-    Directory d = Directory.systemTemp.createTempSync('dart_directory_test');
-    try {
-      Directory d2 = new Directory('${d.path}\\');
-      Expect.isTrue(d.existsSync());
-      Expect.isTrue(d2.existsSync());
-      Directory created1 = new Directory("${d.path}\\subdir\\");
-      Directory created2 = new Directory("${d.path}\\subdir\\subdir\\");
-      created1.createSync();
-      created2.createSync();
-      Expect.isTrue(created1.existsSync());
-      Expect.isTrue(created2.existsSync());
-      created2.deleteSync();
-      created1.deleteSync();
-      Expect.isFalse(created1.existsSync());
-      Expect.isFalse(created2.existsSync());
-      created1.createSync();
-      created2.createSync();
-      created1.deleteSync(recursive: true);
-      Expect.isFalse(created1.existsSync());
-      Expect.isFalse(created2.existsSync());
-    } finally {
-      d.deleteSync(recursive: true);
-      Expect.isFalse(d.existsSync());
-    }
   }
 
   static void testExistsCreateDeleteSync() {
@@ -520,12 +433,10 @@ class DirectoryTest {
     testListTooLongName();
     testDeleteNonExistent();
     testDeleteTooLongName();
-    testDeleteTooLongNameRecursive();
     testDeleteNonExistentSync();
     testDeleteTooLongNameSync();
     testExistsCreateDelete();
     testExistsCreateDeleteSync();
-    testExistsCreateDeleteWithTrailingBackslashSync();
     testDeleteLinkSync();
     testDeleteLinkAsFileSync();
     testDeleteBrokenLinkAsFileSync();

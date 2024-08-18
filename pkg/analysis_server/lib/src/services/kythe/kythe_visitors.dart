@@ -52,11 +52,11 @@ String _getPath(ResourceProvider provider, Element? e,
     return '';
   }
   if (sdkRootPath != null) {
-    var uri = source.uri;
+    final uri = source.uri;
     if (uri.isScheme('dart')) {
-      var pathSegments = uri.pathSegments;
+      final pathSegments = uri.pathSegments;
       if (pathSegments.length == 1) {
-        var libraryName = pathSegments.single;
+        final libraryName = pathSegments.single;
         return '$sdkRootPath/lib/$libraryName/$libraryName.dart';
       } else {
         return '$sdkRootPath/lib/${uri.path}';

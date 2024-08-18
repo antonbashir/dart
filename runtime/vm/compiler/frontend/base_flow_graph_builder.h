@@ -22,7 +22,6 @@ class InlineExitCollector;
 namespace kernel {
 
 class BaseFlowGraphBuilder;
-struct InferredTypeMetadata;
 class TryCatchBlock;
 
 class Fragment {
@@ -179,18 +178,19 @@ class BaseFlowGraphBuilder {
                            InnerPointerAccess loads_inner_pointer,
                            bool calls_initializer = false);
   Fragment LoadNativeField(const Slot& native_field,
-                           bool calls_initializer = false);
+                           bool calls_initializer = false) {
+    return LoadNativeField(native_field, InnerPointerAccess::kNotUntagged,
+                           calls_initializer);
+  }
   // Pass true for index_unboxed if indexing into external typed data.
   Fragment LoadIndexed(classid_t class_id,
                        intptr_t index_scale = compiler::target::kWordSize,
                        bool index_unboxed = false,
                        AlignmentType alignment = kAlignedAccess);
-  Fragment GenericCheckBound();
 
   Fragment LoadUntagged(intptr_t offset);
-  Fragment CalculateElementAddress(intptr_t index_scale);
-  Fragment ConvertUntaggedToUnboxed();
-  Fragment ConvertUnboxedToUntagged();
+  Fragment ConvertUntaggedToUnboxed(Representation to);
+  Fragment ConvertUnboxedToUntagged(Representation from);
   Fragment FloatToDouble();
   Fragment DoubleToFloat();
 
@@ -342,6 +342,9 @@ class BaseFlowGraphBuilder {
                       classid_t dest_cid,
                       bool unboxed_inputs,
                       bool can_overlap = true);
+  Fragment MemoryCopyUntagged(intptr_t element_size,
+                              bool unboxed_inputs,
+                              bool can_overlap = true);
   Fragment TailCall(const Code& code);
   Fragment Utf8Scan();
 
@@ -383,10 +386,7 @@ class BaseFlowGraphBuilder {
   Fragment BooleanNegate();
   Fragment AllocateContext(const ZoneGrowableArray<const Slot*>& scope);
   // Top of the stack should be the closure function.
-  Fragment AllocateClosure(TokenPosition position,
-                           bool has_instantiator_type_args,
-                           bool is_generic,
-                           bool is_tear_off);
+  Fragment AllocateClosure(TokenPosition position = TokenPosition::kNoSource);
   Fragment CreateArray();
   Fragment AllocateRecord(TokenPosition position, RecordShape shape);
   Fragment AllocateSmallRecord(TokenPosition position, RecordShape shape);
@@ -437,8 +437,6 @@ class BaseFlowGraphBuilder {
                               position);
   }
 
-  Fragment CheckNotDeeplyImmutable(CheckWritableInstr::Kind kind);
-
   // Records extra unchecked entry point 'unchecked_entry' in 'graph_entry'.
   void RecordUncheckedEntryPoint(GraphEntryInstr* graph_entry,
                                  FunctionEntryInstr* unchecked_entry);
@@ -457,8 +455,7 @@ class BaseFlowGraphBuilder {
                        TokenPosition position,
                        intptr_t type_args_len,
                        intptr_t argument_count,
-                       const Array& argument_names,
-                       const InferredTypeMetadata* result_type = nullptr);
+                       const Array& argument_names);
 
   // Pops function type arguments, instantiator type arguments, dst_type, and
   // value; and type checks value against the type arguments.
@@ -535,9 +532,7 @@ class BaseFlowGraphBuilder {
   const bool inlining_unchecked_entry_;
   const Array& saved_args_desc_array_;
 
-  // Mapping from token position to the index in the coverage array at which
-  // coverage state is stored.
-  IntMap<intptr_t> coverage_state_index_for_position_;
+  GrowableArray<intptr_t> coverage_array_positions_;
   Array& coverage_array_;
 
   friend class StreamingFlowGraphBuilder;

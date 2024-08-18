@@ -2,16 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// SharedOptions=--enable-experiment=inline-class
+
 @JS()
 library external_member_test;
 
 import 'dart:js_interop';
 
 import 'package:expect/expect.dart';
-import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
-import 'package:expect/variations.dart';
-
-const soundNullSafety = !unsoundNullSafety;
+import 'package:expect/minitest.dart';
 
 @JS()
 external void eval(String code);
@@ -41,8 +40,7 @@ extension type External<T extends JSAny?, U extends Nested>._(JSObject _) {
   @JS('addMethod')
   external T addMethodT(T a, T b);
   @JS('addMethod')
-  external R addMethodGeneric<R extends JSAny?, P extends JSAny?>(P a, P b,
-      [bool dontAddNull]);
+  external R addMethodGeneric<R extends JSAny?, P extends JSAny?>(P a, [P b]);
 
   external Nested nested;
   external Nested combineNested(Nested a, Nested b);
@@ -70,10 +68,7 @@ void main() {
       this.method = function() {
         return 'method';
       }
-      this.addMethod = function(a, b, dontAddNull) {
-        if (dontAddNull && (a == null || b == null)) {
-          return null;
-        }
+      this.addMethod = function(a, b) {
         return a + b;
       }
       this.combineNested = function(a, b) {
@@ -149,17 +144,12 @@ void main() {
   // extern ref, so we would only see that it's not a String when we call
   // methods on it.
   Expect.throws(() => external.fieldT.toDart.toLowerCase());
-  (external as External<JSNumber?, Nested>).fieldT = null;
-  Expect.throwsWhen(
-      soundNullSafety && checkedImplicitDowncasts, () => external.fieldT);
   Expect.throws(() => external
       .addMethodGeneric<JSNumber, JSString>(value.toJS, value.toJS)
-      .toDartInt);
+      .toDartInt
+      .isEven);
   Expect.throws(() => external
       .addMethodGeneric<JSString, JSNumber>(0.toJS, 0.toJS)
       .toDart
       .toLowerCase());
-  Expect.throwsWhen(soundNullSafety && checkedImplicitDowncasts,
-      () => external.addMethodGeneric<JSString, JSString?>(null, null, true));
-  external.addMethodGeneric<JSString?, JSString?>(''.toJS, null, true);
 }

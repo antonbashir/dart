@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Remove unnecessary backslashes in strings.';
 
@@ -29,18 +28,22 @@ Remove unnecessary backslashes in strings.
 ''';
 
 class UnnecessaryStringEscapes extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_string_escapes', 'Unnecessary escape in string literal.',
+      correctionMessage: "Remove the '\\' escape.");
+
   UnnecessaryStringEscapes()
       : super(
             name: 'unnecessary_string_escapes',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity, LintRuleCategory.style});
+            group: Group.style);
 
   @override
   bool get canUseParsedResult => true;
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_string_escapes;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -90,7 +93,7 @@ class _Visitor extends SimpleAstVisitor<void> {
         for (var index in escapeIndexes) {
           // case for '''___\'''' : without last backslash it leads a parsing error
           if (contentsEnd != token.end && index + 2 == contentsEnd) continue;
-          rule.reportLintForOffset(index, 1);
+          rule.reporter.reportErrorForOffset(rule.lintCode, index, 1);
         }
       }
     }
@@ -107,7 +110,8 @@ class _Visitor extends SimpleAstVisitor<void> {
         if (isSingleQuoted && current == '"' ||
             !isSingleQuoted && current == "'" ||
             !allowedEscapedChars.contains(current)) {
-          rule.reportLintForOffset(contentsOffset + i - 1, 1);
+          rule.reporter
+              .reportErrorForOffset(rule.lintCode, contentsOffset + i - 1, 1);
         }
       }
       if (isSingleQuoted ? current == "'" : current == '"') {

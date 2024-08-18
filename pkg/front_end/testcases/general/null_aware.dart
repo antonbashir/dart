@@ -2,12 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart=2.9
+
 class Foo {
   int field;
   static int staticField;
 }
 
-test() {
+main() {
   Foo foo = new Foo();
   foo?.field = 5;
   Foo?.staticField = 5;
@@ -19,5 +21,3 @@ test() {
   int intValue = foo.field ?? 6;
   num numValue = foo.field ?? 4.5;
 }
-
-main() {}

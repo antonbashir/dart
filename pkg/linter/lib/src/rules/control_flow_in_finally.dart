@@ -6,14 +6,13 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid control flow in `finally` blocks.';
+const _desc = r'Avoid control flow in finally blocks.';
 
 const _details = r'''
-**AVOID** control flow leaving `finally` blocks.
+**AVOID** control flow leaving finally blocks.
 
-Using control flow in `finally` blocks will inevitably cause unexpected behavior
+Using control flow in finally blocks will inevitably cause unexpected behavior
 that is hard to debug.
 
 **BAD:**
@@ -85,15 +84,19 @@ class Ok {
 ''';
 
 class ControlFlowInFinally extends LintRule {
+  static const LintCode code = LintCode(
+      'control_flow_in_finally', "Use of '{0}' in a 'finally' clause.",
+      correctionMessage: 'Try restructuring the code.');
+
   ControlFlowInFinally()
       : super(
             name: 'control_flow_in_finally',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.control_flow_in_finally;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

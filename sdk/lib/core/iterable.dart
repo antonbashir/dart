@@ -369,7 +369,6 @@ abstract mixin class Iterable<E> {
   /// final result = numbers.reduce((value, element) => value + element);
   /// print(result); // 17.5
   /// ```
-  /// Consider using [fold] if the iterable can be empty.
   E reduce(E combine(E value, E element)) {
     Iterator<E> iterator = this.iterator;
     if (!iterator.moveNext()) {
@@ -512,7 +511,7 @@ abstract mixin class Iterable<E> {
   /// ```
   Set<E> toSet() => Set<E>.of(this);
 
-  /// The number of elements in this [Iterable].
+  /// The number of elements in [this].
   ///
   /// Counting all elements may involve iterating through all elements and can
   /// therefore be slow.

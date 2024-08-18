@@ -23,17 +23,11 @@ class Strength {
 }
 
 const REQUIRED = const Strength(0, "required");
-
 const STRONG_PREFERRED = const Strength(1, "strongPreferred");
-
 const PREFERRED = const Strength(2, "preferred");
-
 const STRONG_DEFAULT = const Strength(3, "strongDefault");
-
 const NORMAL = const Strength(4, "normal");
-
 const WEAK_DEFAULT = const Strength(5, "weakDefault");
-
 const WEAKEST = const Strength(6, "weakest");
 
 abstract class Constraint {
@@ -82,9 +76,7 @@ class EditConstraint extends UnaryConstraint {
 }
 
 const int NONE = 1;
-
 const int FORWARD = 2;
-
 const int BACKWARD = 0;
 
 abstract class BinaryConstraint extends Constraint {
@@ -156,9 +148,6 @@ class Plan {
 }
 
 void chainTest(int n) {}
-
 void projectionTest(int n) {}
-
 void change(Variable v, int newValue) {}
-
 late Planner planner;

@@ -18,17 +18,25 @@ class B {
 
   test() {
     this?.field = 1;
-//      ^^
-// [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+//  ^
+// [cfe] The receiver 'this' cannot be null.
+    //  ^^
+    // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
     this?.field += 1;
-//      ^^
-// [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+//  ^
+// [cfe] The receiver 'this' cannot be null.
+    //  ^^
+    // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
     this?.field;
-//      ^^
-// [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+//  ^
+// [cfe] The receiver 'this' cannot be null.
+    //  ^^
+    // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
     this?.method();
-//      ^^
-// [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
+//  ^
+// [cfe] The receiver 'this' cannot be null.
+    //  ^^
+    // [analyzer] STATIC_WARNING.INVALID_NULL_AWARE_OPERATOR
   }
 }
 

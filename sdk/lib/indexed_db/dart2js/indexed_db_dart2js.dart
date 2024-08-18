@@ -1,10 +1,5 @@
 /// A client-side key-value store with support for indexes.
 ///
-/// > [!Note]
-/// > New projects should prefer to use
-/// > [package:web](https://pub.dev/packages/web). For existing projects, see
-/// > our [migration guide](https://dart.dev/go/package-web).
-///
 /// IndexedDB is a web standard API for client-side storage of
 /// structured data. By storing data on the client in an IndexedDB,
 /// apps can get advantages such as faster performance and
@@ -66,7 +61,7 @@
 /// MDN provides [API
 /// documentation](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API).
 ///
-/// {@category Web (Legacy)}
+/// {@category Web}
 library dart.dom.indexed_db;
 
 import 'dart:async';

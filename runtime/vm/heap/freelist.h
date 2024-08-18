@@ -125,6 +125,7 @@ class FreeList {
     uword new_top = top + size;
     if (new_top <= end_) {
       top_ = new_top;
+      unaccounted_size_ += size;
       *result = top;
       return true;
     }
@@ -145,15 +146,12 @@ class FreeList {
     }
   }
   // Returns the bump region to the free list.
-  DART_WARN_UNUSED_RESULT
-  intptr_t ReleaseBumpAllocation() {
-    intptr_t remaining = end_ - top_;
-    if (remaining != 0) {
-      Free(top_, remaining);
+  void AbandonBumpAllocation() {
+    if (top_ < end_) {
+      Free(top_, end_ - top_);
       top_ = 0;
       end_ = 0;
     }
-    return remaining;
   }
 
   uword top() const { return top_; }
@@ -208,8 +206,9 @@ class FreeList {
   uword top_ = 0;
   uword end_ = 0;
 
-  // Allocated from the free list, but not yet added to PageSpace::usage_. Used
-  // to avoid expensive atomic adds during parallel scavenge.
+  // Allocated from the bump pointer region, but not yet added to
+  // PageSpace::usage_. Used to avoid expensive atomic adds during parallel
+  // scavenge.
   intptr_t unaccounted_size_ = 0;
 
   // Lock protecting the free list data structures.
@@ -223,9 +222,6 @@ class FreeList {
 
   // The largest available small size in bytes, or negative if there is none.
   intptr_t last_free_small_size_;
-
-  friend class GCIncrementalCompactor;
-  friend class PrologueTask;
 
   DISALLOW_COPY_AND_ASSIGN(FreeList);
 };

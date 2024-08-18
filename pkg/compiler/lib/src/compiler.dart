@@ -7,6 +7,7 @@ library dart2js.compiler_base;
 import 'dart:async' show Future;
 import 'dart:convert' show jsonEncode;
 
+import 'package:compiler/src/serialization/indexed_sink_source.dart';
 import 'package:compiler/src/universe/use.dart' show StaticUse;
 import 'package:front_end/src/api_unstable/dart2js.dart' as fe;
 import 'package:kernel/ast.dart' as ir;
@@ -56,7 +57,7 @@ import 'kernel/front_end_adapter.dart' show CompilerFileSystem;
 import 'kernel/kernel_strategy.dart';
 import 'kernel/kernel_world.dart';
 import 'null_compiler_output.dart' show NullCompilerOutput;
-import 'options.dart' show CompilerOptions, CompilerStage;
+import 'options.dart' show CompilerOptions, Dart2JSStage;
 import 'phase/load_kernel.dart' as load_kernel;
 import 'resolution/enqueuer.dart';
 import 'serialization/serialization.dart';
@@ -67,12 +68,6 @@ import 'universe/selector.dart' show Selector;
 import 'universe/codegen_world_builder.dart';
 import 'universe/resolution_world_builder.dart';
 import 'universe/world_impact.dart' show WorldImpact, WorldImpactBuilderImpl;
-
-enum _ResolutionStatus {
-  resolving,
-  doneResolving,
-  compiling,
-}
 
 /// Implementation of the compiler using a [api.CompilerInput] for supplying
 /// the sources.
@@ -134,9 +129,13 @@ class Compiler {
 
   Progress progress = const Progress();
 
-  _ResolutionStatus? _resolutionStatus;
+  static const int RESOLUTION_STATUS_SCANNING = 0;
+  static const int RESOLUTION_STATUS_RESOLVING = 1;
+  static const int RESOLUTION_STATUS_DONE_RESOLVING = 2;
+  static const int RESOLUTION_STATUS_COMPILING = 3;
+  int? resolutionStatus;
 
-  CompilerStage get stage => options.stage;
+  Dart2JSStage get stage => options.stage;
 
   bool compilationFailed = false;
 
@@ -298,7 +297,7 @@ class Compiler {
     return trimmedComponent;
   }
 
-  Future<void> runInternal() async {
+  Future runInternal() async {
     clearState();
     var compilationTarget = options.compilationTarget;
     reporter.log('Compiling $compilationTarget (${options.buildId})');
@@ -363,7 +362,7 @@ class Compiler {
     // this until after the resolution queue is processed.
     deferredLoadTask.beforeResolution(rootLibraryUri, libraries);
 
-    _resolutionStatus = _ResolutionStatus.resolving;
+    resolutionStatus = RESOLUTION_STATUS_RESOLVING;
     resolutionEnqueuer.applyImpact(mainImpact);
     if (options.showInternalProgress) reporter.log('Computing closed world');
 
@@ -407,12 +406,12 @@ class Compiler {
       if (retainDataForTesting) {
         componentForTesting = component;
       }
-      if (options.features.newDumpInfo.isEnabled && stage.emitsDumpInfo) {
+      if (options.features.newDumpInfo.isEnabled && options.dumpInfo) {
         untrimmedComponentForDumpInfo = component;
       }
       if (stage.shouldOnlyComputeDill) {
         Set<Uri> includedLibraries = output.libraries!.toSet();
-        if (options.shouldLoadFromDill) {
+        if (stage.shouldLoadFromDill) {
           if (options.dumpUnusedLibraries) {
             dumpUnusedLibraries(component, includedLibraries);
           }
@@ -456,12 +455,7 @@ class Compiler {
       JClosedWorld closedWorld) {
     CodegenInputs codegenInputs = codegenResults.codegenInputs;
     CodegenEnqueuer codegenEnqueuer = backendStrategy.createCodegenEnqueuer(
-        enqueueTask,
-        closedWorld,
-        inferredData,
-        codegenInputs,
-        codegenResults,
-        sourceLookup)
+        enqueueTask, closedWorld, codegenInputs, codegenResults, sourceLookup)
       ..onEmptyForTesting = onCodegenQueueEmptyForTesting;
     if (retainDataForTesting) {
       codegenEnqueuerForTesting = codegenEnqueuer;
@@ -531,12 +525,8 @@ class Compiler {
       Uri rootLibraryUri = output.rootLibraryUri!;
       List<Uri> libraries = output.libraries!;
       closedWorld = computeClosedWorld(component, rootLibraryUri, libraries);
-      if (stage.shouldWriteClosedWorld && closedWorld != null) {
+      if (stage == Dart2JSStage.closedWorld && closedWorld != null) {
         serializationTask.serializeClosedWorld(closedWorld, indices);
-        if (options.producesModifiedDill) {
-          serializationTask.serializeComponent(component,
-              includeSourceBytes: false);
-        }
       } else if (options.testMode && closedWorld != null) {
         closedWorld = closedWorldTestMode(closedWorld);
         backendStrategy.registerJClosedWorld(closedWorld);
@@ -553,8 +543,8 @@ class Compiler {
 
   bool shouldStopAfterClosedWorld(JClosedWorld? closedWorld) =>
       closedWorld == null ||
-      stage.shouldWriteClosedWorld ||
-      stage.emitsDeferredLoadIds ||
+      stage == Dart2JSStage.closedWorld ||
+      stage == Dart2JSStage.deferredLoadIds ||
       stopAfterClosedWorldForTesting;
 
   Future<GlobalTypeInferenceResults> produceGlobalTypeInferenceResults(
@@ -564,7 +554,7 @@ class Compiler {
     GlobalTypeInferenceResults globalTypeInferenceResults;
     if (!stage.shouldReadGlobalInference) {
       globalTypeInferenceResults = performGlobalTypeInference(closedWorld);
-      if (stage.shouldWriteGlobalInference) {
+      if (stage == Dart2JSStage.globalInference) {
         serializationTask.serializeGlobalTypeInference(
             globalTypeInferenceResults, indices);
       } else if (options.testMode) {
@@ -585,14 +575,14 @@ class Compiler {
   }
 
   bool get shouldStopAfterGlobalTypeInference =>
-      stage.shouldWriteGlobalInference ||
+      stage == Dart2JSStage.globalInference ||
       stopAfterGlobalTypeInferenceForTesting;
 
   CodegenInputs initializeCodegen(
       GlobalTypeInferenceResults globalTypeInferenceResults) {
     backendStrategy
         .registerJClosedWorld(globalTypeInferenceResults.closedWorld);
-    _resolutionStatus = _ResolutionStatus.compiling;
+    resolutionStatus = RESOLUTION_STATUS_COMPILING;
     return backendStrategy.onCodegenStart(globalTypeInferenceResults);
   }
 
@@ -602,7 +592,17 @@ class Compiler {
       SerializationIndices indices) async {
     CodegenInputs codegenInputs = initializeCodegen(globalTypeInferenceResults);
     CodegenResults codegenResults;
-    if (stage.shouldReadCodegenShards && options.codegenShards != null) {
+    if (!stage.shouldReadCodegenShards) {
+      codegenResults = OnDemandCodegenResults(
+          codegenInputs, backendStrategy.functionCompiler);
+      if (stage == Dart2JSStage.codegenSharded) {
+        serializationTask.serializeCodegen(
+            backendStrategy,
+            globalTypeInferenceResults.closedWorld.abstractValueDomain,
+            codegenResults,
+            indices);
+      }
+    } else {
       codegenResults = await serializationTask.deserializeCodegen(
           backendStrategy,
           globalTypeInferenceResults.closedWorld,
@@ -610,23 +610,16 @@ class Compiler {
           useDeferredSourceReads,
           sourceLookup,
           indices);
-    } else {
-      codegenResults = OnDemandCodegenResults(
-          codegenInputs, backendStrategy.functionCompiler);
-      if (stage.shouldWriteCodegen) {
-        serializationTask.serializeCodegen(
-            backendStrategy,
-            globalTypeInferenceResults.closedWorld.abstractValueDomain,
-            codegenResults,
-            indices);
-      }
     }
     return codegenResults;
   }
 
-  bool get shouldStopAfterCodegen => stage.shouldWriteCodegen;
+  bool get shouldStopAfterCodegen => stage == Dart2JSStage.codegenSharded;
 
-  bool get useDeferredSourceReads => stage.shouldUseDeferredSourceReads;
+  // Only use deferred reads for the linker phase as most deferred entities will
+  // not be needed. In other stages we use most of this data so it's not worth
+  // deferring.
+  bool get useDeferredSourceReads => stage == Dart2JSStage.jsEmitter;
 
   Future<void> runSequentialPhases() async {
     // Load kernel.
@@ -652,16 +645,13 @@ class Compiler {
     GlobalTypeInferenceResults? globalTypeInferenceResultsForDumpInfo;
     AbstractValueDomain? abstractValueDomainForDumpInfo;
     OutputUnitData? outputUnitDataForDumpInfo;
-    DataSinkWriter? sinkForDumpInfo;
-    if (stage.emitsDumpInfo) {
+    if (options.dumpInfoWriteUri != null ||
+        options.dumpInfoReadUri != null ||
+        options.dumpInfo) {
       globalTypeInferenceResultsForDumpInfo = globalTypeInferenceResults;
       abstractValueDomainForDumpInfo = closedWorld.abstractValueDomain;
       outputUnitDataForDumpInfo = closedWorld.outputUnitData;
       indicesForDumpInfo = indices;
-    } else if (stage.shouldWriteDumpInfoData) {
-      sinkForDumpInfo = serializationTask.dataSinkWriterForDumpInfo(
-          closedWorld.abstractValueDomain, indices);
-      dumpInfoRegistry.registerDataSinkWriter(sinkForDumpInfo);
     }
 
     // Run codegen.
@@ -671,7 +661,7 @@ class Compiler {
     if (shouldStopAfterCodegen) return;
     final inferredData = globalTypeInferenceResults.inferredData;
 
-    if (stage.shouldReadDumpInfoData) {
+    if (options.dumpInfoReadUri != null) {
       final dumpInfoData =
           await serializationTask.deserializeDumpInfoProgramData(
               backendStrategy,
@@ -684,16 +674,16 @@ class Compiler {
       // Link.
       final programSize = runCodegenEnqueuer(
           codegenResults, inferredData, sourceLookup, closedWorld);
-      if (stage.emitsDumpInfo || stage.shouldWriteDumpInfoData) {
+      if (options.dumpInfo || options.dumpInfoWriteUri != null) {
         final dumpInfoData = DumpInfoProgramData.fromEmitterResults(
-            backendStrategy.emitterTask,
-            dumpInfoRegistry,
-            codegenResults,
-            programSize);
-        dumpInfoRegistry.close();
-        if (stage.shouldWriteDumpInfoData) {
-          serializationTask.serializeDumpInfoProgramData(sinkForDumpInfo!,
-              backendStrategy, dumpInfoData, dumpInfoRegistry);
+            backendStrategy, dumpInfoRegistry, programSize);
+        dumpInfoRegistry.clear();
+        if (options.dumpInfoWriteUri != null) {
+          serializationTask.serializeDumpInfoProgramData(
+              backendStrategy,
+              dumpInfoData,
+              abstractValueDomainForDumpInfo!,
+              indicesForDumpInfo!);
         } else {
           await runDumpInfo(codegenResults,
               globalTypeInferenceResultsForDumpInfo!, dumpInfoData);
@@ -715,12 +705,10 @@ class Compiler {
       dumpInfoState = await dumpInfoTask.dumpInfoNew(
           untrimmedComponentForDumpInfo!,
           closedWorld,
-          globalTypeInferenceResults,
-          codegenResults,
-          backendStrategy);
+          globalTypeInferenceResults);
     } else {
-      dumpInfoState = await dumpInfoTask.dumpInfo(closedWorld,
-          globalTypeInferenceResults, codegenResults, backendStrategy);
+      dumpInfoState =
+          await dumpInfoTask.dumpInfo(closedWorld, globalTypeInferenceResults);
     }
     if (retainDataForTesting) {
       dumpInfoStateForTesting = dumpInfoState;
@@ -730,11 +718,11 @@ class Compiler {
   /// Perform the steps needed to fully end the resolution phase.
   JClosedWorld? closeResolution(FunctionEntity mainFunction,
       ResolutionWorldBuilder resolutionWorldBuilder) {
-    _resolutionStatus = _ResolutionStatus.doneResolving;
+    resolutionStatus = RESOLUTION_STATUS_DONE_RESOLVING;
 
     KClosedWorld kClosedWorld = resolutionWorldBuilder.closeWorld(reporter);
     OutputUnitData result = deferredLoadTask.run(mainFunction, kClosedWorld);
-    if (stage.emitsDeferredLoadIds) return null;
+    if (options.stage == Dart2JSStage.deferredLoadIds) return null;
 
     // Impact data is no longer needed.
     if (!retainDataForTesting) {
@@ -782,13 +770,13 @@ class Compiler {
   /// Perform various checks of the queue. This includes checking that the
   /// queues are empty (nothing was added after we stopped processing the
   /// queues).
-  void checkQueue(Enqueuer enqueuer) {
+  checkQueue(Enqueuer enqueuer) {
     enqueuer.checkQueueIsEmpty();
   }
 
   void showResolutionProgress(Enqueuer enqueuer) {
-    assert(_resolutionStatus == _ResolutionStatus.resolving,
-        'Unexpected phase: $_resolutionStatus');
+    assert(resolutionStatus == RESOLUTION_STATUS_RESOLVING,
+        'Unexpected phase: $resolutionStatus');
     progress.showProgress(
         'Resolved ', enqueuer.processedEntities.length, ' elements.');
   }
@@ -802,7 +790,7 @@ class Compiler {
       List<DiagnosticMessage> infos, api.Diagnostic kind) {
     _reportDiagnosticMessage(message, kind);
     for (DiagnosticMessage info in infos) {
-      _reportDiagnosticMessage(info, api.Diagnostic.context);
+      _reportDiagnosticMessage(info, api.Diagnostic.CONTEXT);
     }
   }
 
@@ -836,8 +824,7 @@ class Compiler {
     }
   }
 
-  Future<api.Input<List<int>>> callUserProvider(
-      Uri uri, api.InputKind inputKind) {
+  Future<api.Input> callUserProvider(Uri uri, api.InputKind inputKind) {
     try {
       return userProviderTask
           .measureIo(() => provider.readFromUri(uri, inputKind: inputKind));
@@ -847,8 +834,7 @@ class Compiler {
     }
   }
 
-  void reportCrashInUserCode(
-      String message, Object exception, StackTrace stackTrace) {
+  void reportCrashInUserCode(String message, exception, stackTrace) {
     reporter.onCrashInUserCode(message, exception, stackTrace);
   }
 
@@ -881,7 +867,7 @@ class Compiler {
   /// context.
   SourceSpan spanFromSpannable(Spannable spannable, Entity? currentElement) {
     SourceSpan span;
-    if (_resolutionStatus == _ResolutionStatus.compiling) {
+    if (resolutionStatus == Compiler.RESOLUTION_STATUS_COMPILING) {
       span = backendStrategy.spanFromSpannable(spannable, currentElement);
     } else {
       span = frontendStrategy.spanFromSpannable(spannable, currentElement);
@@ -924,12 +910,12 @@ class Compiler {
   }
 
   void logInfo(String message) {
-    callUserHandler(null, null, null, null, message, api.Diagnostic.info);
+    callUserHandler(null, null, null, null, message, api.Diagnostic.INFO);
   }
 
   void logVerbose(String message) {
     callUserHandler(
-        null, null, null, null, message, api.Diagnostic.verboseInfo);
+        null, null, null, null, message, api.Diagnostic.VERBOSE_INFO);
   }
 
   String _formatMs(int ms) {

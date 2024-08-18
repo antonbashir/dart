@@ -29,9 +29,7 @@ class Utf8Decode extends BenchmarkBase {
     String name = 'Utf8Decode.$language.';
     name += size >= 1000000
         ? '${size ~/ 1000000}M'
-        : size >= 1000
-            ? '${size ~/ 1000}k'
-            : '$size';
+        : size >= 1000 ? '${size ~/ 1000}k' : '$size';
     if (allowMalformed) name += '.malformed';
     return name;
   }
@@ -93,6 +91,11 @@ class Utf8Decode extends BenchmarkBase {
   void exercise() {
     // Only a single run per measurement.
     run();
+  }
+
+  @override
+  void warmup() {
+    BenchmarkBase.measureFor(run, 1000);
   }
 
   @override

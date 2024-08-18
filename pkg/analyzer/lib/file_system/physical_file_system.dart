@@ -7,8 +7,8 @@ import 'dart:io' as io;
 import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
-import 'package:analyzer/source/source.dart';
+import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer/src/source/source_resource.dart';
 import 'package:path/path.dart';
 import 'package:watcher/watcher.dart';
 
@@ -22,12 +22,12 @@ const String _serverDir = ".dartServer";
 /// ANALYZER_STATE_LOCATION_OVERRIDE environment variable, in which case this
 /// method will return the contents of that environment variable.
 String? _getStandardStateLocation() {
-  Map<String, String> env = io.Platform.environment;
+  final Map<String, String> env = io.Platform.environment;
   if (env.containsKey('ANALYZER_STATE_LOCATION_OVERRIDE')) {
     return env['ANALYZER_STATE_LOCATION_OVERRIDE'];
   }
 
-  var home = io.Platform.isWindows ? env['LOCALAPPDATA'] : env['HOME'];
+  final home = io.Platform.isWindows ? env['LOCALAPPDATA'] : env['HOME'];
   return home != null && io.FileSystemEntity.isDirectorySync(home)
       ? join(home, _serverDir)
       : null;
@@ -59,12 +59,6 @@ class PhysicalResourceProvider implements ResourceProvider {
   }
 
   @override
-  Link getLink(String path) {
-    _ensureAbsoluteAndNormalized(path);
-    return _PhysicalLink(io.Link(path));
-  }
-
-  @override
   Resource getResource(String path) {
     _ensureAbsoluteAndNormalized(path);
     if (io.FileSystemEntity.isDirectorySync(path)) {
@@ -77,7 +71,7 @@ class PhysicalResourceProvider implements ResourceProvider {
   @override
   Folder? getStateLocation(String pluginId) {
     if (_stateLocation != null) {
-      io.Directory directory = io.Directory(join(_stateLocation, pluginId));
+      io.Directory directory = io.Directory(join(_stateLocation!, pluginId));
       directory.createSync(recursive: true);
       return _PhysicalFolder(directory);
     }
@@ -136,7 +130,6 @@ class _PhysicalFile extends _PhysicalResource implements File {
     return destination;
   }
 
-  @Deprecated('Get Source instances from analysis results')
   @override
   Source createSource([Uri? uri]) {
     return FileSource(this, uri ?? pathContext.toUri(path));
@@ -190,11 +183,8 @@ class _PhysicalFile extends _PhysicalResource implements File {
 
   @override
   ResourceWatcher watch() {
-    var watcher = FileWatcher(_entry.path);
-    return ResourceWatcher(
-      watcher.events.transform(_exceptionTransformer),
-      () => watcher.ready,
-    );
+    final watcher = FileWatcher(_entry.path);
+    return ResourceWatcher(_wrapWatcherStream(watcher.events), watcher.ready);
   }
 
   @override
@@ -284,7 +274,7 @@ class _PhysicalFolder extends _PhysicalResource implements Folder {
     try {
       List<Resource> children = <Resource>[];
       io.Directory directory = _entry as io.Directory;
-      List<io.FileSystemEntity> entries = directory.listSync();
+      List<io.FileSystemEntity> entries = directory.listSync(recursive: false);
       int numEntries = entries.length;
       for (int i = 0; i < numEntries; i++) {
         io.FileSystemEntity entity = entries[i];
@@ -323,55 +313,20 @@ class _PhysicalFolder extends _PhysicalResource implements Folder {
 
   @override
   ResourceWatcher watch() {
-    var watcher = DirectoryWatcher(_entry.path);
-    var events = watcher.events.handleError((Object error) {},
+    final watcher = DirectoryWatcher(_entry.path);
+    final events = watcher.events.handleError((Object error) {},
         test: (error) =>
             error is io.FileSystemException &&
             // Don't suppress "Directory watcher closed," so the outer
             // listener can see the interruption & act on it.
             !error.message.startsWith("Directory watcher closed unexpectedly"));
-    return ResourceWatcher(
-      events.transform(_exceptionTransformer),
-      () => watcher.ready,
-    );
-  }
-}
-
-/// A `dart:io` based implementation of [Link].
-class _PhysicalLink implements Link {
-  final io.Link _link;
-
-  _PhysicalLink(this._link);
-
-  @override
-  bool get exists {
-    try {
-      return _link.existsSync();
-    } on FileSystemException {
-      return false;
-    }
-  }
-
-  @override
-  void create(String target) {
-    _link.createSync(target, recursive: true);
+    return ResourceWatcher(_wrapWatcherStream(events), watcher.ready);
   }
 }
 
 /// A `dart:io` based implementation of [Resource].
 abstract class _PhysicalResource implements Resource {
   final io.FileSystemEntity _entry;
-
-  /// Wraps [FileSystemException]s in the stream through [_wrapException].
-  late final _exceptionTransformer =
-      StreamTransformer<WatchEvent, WatchEvent>.fromHandlers(
-    handleError: (error, stackTrace, sink) {
-      if (error is io.FileSystemException) {
-        error = _wrapException(error);
-      }
-      sink.addError(error);
-    },
-  );
 
   _PhysicalResource(this._entry);
 
@@ -434,7 +389,7 @@ abstract class _PhysicalResource implements Resource {
   /// https://support.microsoft.com/en-us/kb/74496
   void _throwIfWindowsDeviceDriver() {
     if (io.Platform.isWindows) {
-      var shortName = this.shortName.toUpperCase();
+      final shortName = this.shortName.toUpperCase();
       if (shortName == r'CON' ||
           shortName == r'PRN' ||
           shortName == r'AUX' ||
@@ -459,5 +414,23 @@ abstract class _PhysicalResource implements Resource {
     } else {
       return FileSystemException(e.path ?? path, e.message);
     }
+  }
+
+  /// Wraps a `Stream<WatchEvent>` to map all known errors through
+  /// [_wrapException] into server types.
+  Stream<WatchEvent> _wrapWatcherStream(Stream<WatchEvent> original) {
+    /// Helper to map thrown `FileSystemException`s to servers abstraction.
+    Object mapException(Object e) {
+      return e is io.FileSystemException ? _wrapException(e) : e;
+    }
+
+    final mappedEventsController = StreamController<WatchEvent>();
+    final subscription = original.listen(
+      mappedEventsController.add,
+      onError: (Object e) => mappedEventsController.addError(mapException(e)),
+      onDone: () => mappedEventsController.close(),
+    );
+    mappedEventsController.onCancel = subscription.cancel;
+    return mappedEventsController.stream;
   }
 }

@@ -9,14 +9,20 @@ import 'package:_fe_analyzer_shared/src/messages/severity.dart' show Severity;
 import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:front_end/src/api_prototype/incremental_kernel_generator.dart';
 import 'package:front_end/src/api_prototype/memory_file_system.dart';
-import 'package:front_end/src/util/outline_extractor.dart';
+import 'package:front_end/src/fasta/util/outline_extractor.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/src/equivalence.dart';
 import 'package:testing/testing.dart'
-    show Chain, ChainContext, ExpectationSet, Result, Step, TestDescription;
+    show
+        Chain,
+        ChainContext,
+        ExpectationSet,
+        Result,
+        Step,
+        TestDescription,
+        runMe;
 
-import 'fasta/suite_utils.dart';
-import 'fasta/testing/environment_keys.dart';
+import 'fasta/testing/suite.dart' show UPDATE_EXPECTATIONS;
 import 'incremental_suite.dart' as helper;
 import 'testing_utils.dart' show checkEnvironment;
 import 'utils/kernel_chain.dart' show MatchContext;
@@ -34,20 +40,17 @@ const String EXPECTATIONS = '''
 ]
 ''';
 
-void main([List<String> arguments = const []]) => internalMain(createContext,
-    arguments: arguments,
-    displayName: "outline extractor suite",
-    configurationPath: "../testing.json");
+void main([List<String> arguments = const []]) =>
+    runMe(arguments, createContext, configurationPath: "../testing.json");
 
 Future<Context> createContext(
     Chain suite, Map<String, String> environment) async {
   const Set<String> knownEnvironmentKeys = {
-    EnvironmentKeys.updateExpectations,
+    UPDATE_EXPECTATIONS,
   };
   checkEnvironment(environment, knownEnvironmentKeys);
 
-  bool updateExpectations =
-      environment[EnvironmentKeys.updateExpectations] == "true";
+  bool updateExpectations = environment[UPDATE_EXPECTATIONS] == "true";
 
   return new Context(suite.name, updateExpectations);
 }
@@ -57,8 +60,7 @@ class Context extends ChainContext with MatchContext {
   final bool updateExpectations;
 
   @override
-  String get updateExpectationsOption =>
-      '${EnvironmentKeys.updateExpectations}=true';
+  String get updateExpectationsOption => '${UPDATE_EXPECTATIONS}=true';
 
   @override
   bool get canBeFixWithUpdateExpectations => true;
@@ -76,6 +78,13 @@ class Context extends ChainContext with MatchContext {
   @override
   final ExpectationSet expectationSet =
       new ExpectationSet.fromJsonList(jsonDecode(EXPECTATIONS));
+
+  // Override special handling of negative tests.
+  @override
+  Result processTestResult(
+      TestDescription description, Result result, bool last) {
+    return result;
+  }
 }
 
 class OutlineExtractorStep

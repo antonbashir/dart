@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: main:[null]*/
 main() {
   missingGetter();
@@ -20,7 +22,7 @@ class Class1 {
   noSuchMethod(
           Invocation
               /*spec.[null|subclass=Object]*/
-              /*prod.[exact=JSInvocationMirror]*/
+              /*prod.[null|exact=JSInvocationMirror]*/
               _) =>
       42;
 
@@ -44,7 +46,7 @@ class Class2 {
   noSuchMethod(
           Invocation
               /*spec.[null|subclass=Object]*/
-              /*prod.[exact=JSInvocationMirror]*/
+              /*prod.[null|exact=JSInvocationMirror]*/
               _) =>
       42;
 
@@ -68,11 +70,11 @@ class Class3 {
   noSuchMethod(
       Invocation
           /*spec.[null|subclass=Object]*/
-          /*prod.[exact=JSInvocationMirror]*/
+          /*prod.[null|exact=JSInvocationMirror]*/
           invocation) {
     return invocation
         .
-        /*[exact=JSInvocationMirror]*/
+        /*[null|exact=JSInvocationMirror]*/
         positionalArguments
         .
         /*[exact=JSUnmodifiableArray]*/
@@ -103,11 +105,11 @@ class Class4 {
   noSuchMethod(
       Invocation
           /*spec.[null|subclass=Object]*/
-          /*prod.[exact=JSInvocationMirror]*/
+          /*prod.[null|exact=JSInvocationMirror]*/
           invocation) {
     this. /*update: [exact=Class4]*/ field = invocation
         .
-        /*[exact=JSInvocationMirror]*/
+        /*[null|exact=JSInvocationMirror]*/
         positionalArguments
         .
         /*[exact=JSUnmodifiableArray]*/

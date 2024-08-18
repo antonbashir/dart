@@ -71,7 +71,7 @@ void matchIL$test(FlowGraph graph) {
         ]),
     'LoopExit' <<
         match.block('Target', [
-          match.DartReturn(),
+          match.Return(),
         ]),
     'LoopBody' <<
         match.block('Target', [

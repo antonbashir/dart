@@ -30,7 +30,7 @@ class ElementReferencesTest extends AbstractSearchDomainTest {
     required ElementKind kind,
     required Map<int, SearchResultKind> resultKinds,
   }) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     expect(
       resultKinds,
       hasLength(code.ranges.length),
@@ -42,10 +42,10 @@ class ElementReferencesTest extends AbstractSearchDomainTest {
     await findElementReferences(offset: code.position.offset, false);
 
     expect(searchElement!.kind, kind);
-    var expected = resultKinds.entries.map((entry) {
-      var index = entry.key;
-      var kind = entry.value;
-      var range = code.ranges[index].sourceRange;
+    final expected = resultKinds.entries.map((entry) {
+      final index = entry.key;
+      final kind = entry.value;
+      final range = code.ranges[index].sourceRange;
       return {
         'kind': kind,
         'path': testFile.path,
@@ -53,7 +53,7 @@ class ElementReferencesTest extends AbstractSearchDomainTest {
         'length': range.length,
       };
     }).toSet();
-    var actual = results
+    final actual = results
         .map((result) => {
               'kind': result.kind,
               'path': result.location.file,
@@ -76,10 +76,9 @@ class ElementReferencesTest extends AbstractSearchDomainTest {
     await waitForTasksFinished();
     var request = SearchFindElementReferencesParams(
             testFile.path, offset, includePotential)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = SearchFindElementReferencesResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = SearchFindElementReferencesResult.fromResponse(response);
     searchId = result.id;
     searchElement = result.element;
     if (searchId != null) {
@@ -940,7 +939,8 @@ void f() {
 }
 ''');
     await findElementReferences(search: 'fff(p) {}', false);
-    expect(results, isEmpty);
+    expect(results, hasLength(1));
+    assertHasResult(SearchResultKind.INVOCATION, 'fff(10);');
   }
 
   Future<void> test_parameter() async {
@@ -1427,7 +1427,7 @@ void f() {
 }
 ''');
     await findElementReferences(search: 'ppp;', false);
-    var searchElement = this.searchElement!;
+    final searchElement = this.searchElement!;
     expect(searchElement.kind, ElementKind.PREFIX);
     expect(searchElement.name, 'ppp');
     expect(searchElement.location!.startLine, 1);

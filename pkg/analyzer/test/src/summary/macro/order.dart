@@ -4,14 +4,13 @@
 
 import 'dart:async';
 
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 
 /*macro*/ class AddClass
     implements
         ClassTypesMacro,
         EnumTypesMacro,
         EnumValueTypesMacro,
-        LibraryTypesMacro,
         MethodTypesMacro,
         MixinTypesMacro {
   final String name;
@@ -34,11 +33,6 @@ import 'package:macros/macros.dart';
   }
 
   @override
-  buildTypesForLibrary(declaration, builder) async {
-    _add(builder);
-  }
-
-  @override
   buildTypesForMethod(method, builder) {
     _add(builder);
   }
@@ -49,7 +43,7 @@ import 'package:macros/macros.dart';
   }
 
   void _add(TypeBuilder builder) {
-    var code = 'class $name {}';
+    final code = 'class $name {}';
     builder.declareType(name, DeclarationCode.fromString(code));
   }
 }
@@ -79,8 +73,8 @@ import 'package:macros/macros.dart';
   }
 
   void _add(DeclarationBuilder builder) {
-    var code = 'void $name() {}';
-    var declaration = DeclarationCode.fromString(code);
+    final code = 'void $name() {}';
+    final declaration = DeclarationCode.fromString(code);
     builder.declareInLibrary(declaration);
   }
 }
@@ -94,7 +88,7 @@ import 'package:macros/macros.dart';
     DeclarationPhaseIntrospector introspector,
     TypeDeclaration type,
   ) async {
-    var constructors = await introspector.constructorsOf(type);
+    final constructors = await introspector.constructorsOf(type);
     return constructors.map((constructor) => constructor.identifier.name);
   }
 }
@@ -107,7 +101,7 @@ import 'package:macros/macros.dart';
     DeclarationPhaseIntrospector introspector,
     TypeDeclaration type,
   ) async {
-    var fields = await introspector.fieldsOf(type);
+    final fields = await introspector.fieldsOf(type);
     return fields.map((field) => field.identifier.name);
   }
 }
@@ -120,7 +114,7 @@ import 'package:macros/macros.dart';
     DeclarationPhaseIntrospector introspector,
     TypeDeclaration type,
   ) async {
-    var methods = await introspector.methodsOf(type);
+    final methods = await introspector.methodsOf(type);
     return methods.map((method) => method.identifier.name);
   }
 }
@@ -133,13 +127,13 @@ abstract class _DeclarationsIntrospect implements ClassDeclarationsMacro {
   @override
   Future<void> buildDeclarationsForClass(declaration, builder) async {
     // ignore: deprecated_member_use
-    var identifier = await builder.resolveIdentifier(
+    final identifier = await builder.resolveIdentifier(
       declaration.library.uri,
       targetName,
     );
-    var type = await builder.typeDeclarationOf(identifier);
-    var memberNames = await getMemberNames(builder, type);
-    for (var memberName in memberNames) {
+    final type = await builder.typeDeclarationOf(identifier);
+    final memberNames = await getMemberNames(builder, type);
+    for (final memberName in memberNames) {
       builder.declareInType(
         DeclarationCode.fromString(
           '  void introspected_'

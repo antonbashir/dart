@@ -3,10 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/utilities/extensions/range_factory.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -22,14 +22,14 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 import 'package:collection/collection.dart';
 
 class ConvertClassToEnum extends ResolvedCorrectionProducer {
-  ConvertClassToEnum({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
-
   @override
   AssistKind get assistKind => DartAssistKind.CONVERT_CLASS_TO_ENUM;
+
+  @override
+  bool get canBeAppliedInBulk => true;
+
+  @override
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.CONVERT_CLASS_TO_ENUM;
@@ -51,7 +51,7 @@ class ConvertClassToEnum extends ResolvedCorrectionProducer {
       // the class.
       return;
     }
-    var declaration = node;
+    final declaration = node;
     if (declaration is ClassDeclaration && declaration.name == token) {
       var description = _EnumDescription.fromClass(declaration,
           strictCasts: analysisOptions.strictCasts);
@@ -178,7 +178,7 @@ class _EnumDescription {
         range.token(classDeclaration.classKeyword), 'enum');
 
     // Remove the extends clause if there is one.
-    var extendsClause = classDeclaration.extendsClause;
+    final extendsClause = classDeclaration.extendsClause;
     if (extendsClause != null) {
       var followingToken = extendsClause.endToken.next!;
       builder.addDeletion(range.startStart(extendsClause, followingToken));
@@ -187,7 +187,7 @@ class _EnumDescription {
     // Compute the declarations of the enum constants and delete the fields
     // being converted.
     var members = classDeclaration.members;
-    var indent = utils.oneIndent;
+    var indent = utils.getIndent(1);
     var eol = utils.endOfLine;
     var constantsBuffer = StringBuffer();
     var fieldsToConvert = fields.fieldsToConvert;
@@ -339,7 +339,7 @@ class _EnumDescription {
   /// the index field.
   void _transformConstructors(
       DartFileEditBuilder builder, ConstructorDeclaration? removedConstructor) {
-    var constructorMap = this.constructorMap;
+    final constructorMap = this.constructorMap;
     if (constructorMap == null) {
       return;
     }
@@ -644,7 +644,7 @@ class _EnumDescription {
   static bool _validateMethods(ClassDeclaration classDeclaration) {
     for (var member in classDeclaration.members) {
       if (member is MethodDeclaration) {
-        var name = member.name.lexeme;
+        final name = member.name.lexeme;
         if (name == '==' || name == 'hashCode') {
           return false;
         }

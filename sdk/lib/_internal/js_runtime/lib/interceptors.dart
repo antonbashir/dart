@@ -8,15 +8,7 @@ import 'dart:_js_embedded_names'
     show DISPATCH_PROPERTY_NAME, TYPE_TO_INTERCEPTOR_MAP;
 
 import 'dart:collection' hide LinkedList, LinkedListEntry;
-import 'dart:_foreign_helper'
-    show
-        JS_FALSE,
-        JS_GET_FLAG,
-        TYPE_REF,
-        ArrayFlags,
-        HArrayFlagsGet,
-        HArrayFlagsSet,
-        HArrayFlagsCheck;
+import 'dart:_foreign_helper' show JS_FALSE, JS_GET_FLAG, TYPE_REF;
 import 'dart:_internal' hide Symbol;
 import "dart:_internal" as _symbol_dev show Symbol;
 import 'dart:_js_helper'
@@ -155,7 +147,7 @@ getNativeInterceptor(object) {
       // instance-cached tag, defaulting to instance-cached if caching
       // unspecified.
       var discriminatedTag = JS('', '(#)(#, #)', proto, object, record);
-      throw UnimplementedError('Return interceptor for $discriminatedTag');
+      throw new UnimplementedError('Return interceptor for $discriminatedTag');
     }
   }
 
@@ -349,7 +341,7 @@ abstract class Interceptor {
   // calls to use interceptor calling convention).  If we did allow it, the
   // interceptor context would select the correct `this`.
   dynamic noSuchMethod(Invocation invocation) {
-    throw NoSuchMethodError.withInvocation(this, invocation);
+    throw new NoSuchMethodError.withInvocation(this, invocation);
   }
 
   Type get runtimeType =>

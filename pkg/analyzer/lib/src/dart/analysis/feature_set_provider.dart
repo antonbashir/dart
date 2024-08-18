@@ -16,7 +16,9 @@ class FeatureSetProvider {
   final AllowedExperiments _allowedExperiments;
   final ResourceProvider _resourceProvider;
   final Packages _packages;
-
+  final FeatureSet _packageDefaultFeatureSet;
+  final Version _nonPackageDefaultLanguageVersion;
+  final FeatureSet _nonPackageDefaultFeatureSet;
   final Map<String, FeatureSet> _cachedFeatureSets = {};
 
   FeatureSetProvider._({
@@ -24,10 +26,16 @@ class FeatureSetProvider {
     required AllowedExperiments allowedExperiments,
     required ResourceProvider resourceProvider,
     required Packages packages,
+    required FeatureSet packageDefaultFeatureSet,
+    required Version nonPackageDefaultLanguageVersion,
+    required FeatureSet nonPackageDefaultFeatureSet,
   })  : _sdkLanguageVersion = sdkLanguageVersion,
         _allowedExperiments = allowedExperiments,
         _resourceProvider = resourceProvider,
-        _packages = packages;
+        _packages = packages,
+        _packageDefaultFeatureSet = packageDefaultFeatureSet,
+        _nonPackageDefaultLanguageVersion = nonPackageDefaultLanguageVersion,
+        _nonPackageDefaultFeatureSet = nonPackageDefaultFeatureSet;
 
   FeatureSet featureSetForExperiments(List<String> experiments) {
     String key = experiments.join("|");
@@ -44,12 +52,7 @@ class FeatureSetProvider {
   /// [FeatureSet] of this version. The reason is that we allow libraries to
   /// "upgrade" to higher version than the default package language version,
   /// and want this to preserve experimental features.
-  FeatureSet getFeatureSet(
-    String path,
-    Uri uri, {
-    required FeatureSet contextFeatures,
-    required FeatureSet nonPackageFeatureSet,
-  }) {
+  FeatureSet getFeatureSet(String path, Uri uri) {
     if (uri.isScheme('dart')) {
       var pathSegments = uri.pathSegments;
       if (pathSegments.isNotEmpty) {
@@ -67,21 +70,18 @@ class FeatureSetProvider {
       if (experiments != null) {
         return featureSetForExperiments(experiments);
       }
-      return contextFeatures;
+
+      return _packageDefaultFeatureSet;
     }
 
-    return nonPackageFeatureSet;
+    return _nonPackageDefaultFeatureSet;
   }
 
   /// Return the language version for the package that contains the file.
   ///
   /// Each individual file might use `// @dart` to override this version, to
   /// be either lower, or higher than the package language version.
-  Version getLanguageVersion(
-    String path,
-    Uri uri, {
-    required Version nonPackageLanguageVersion,
-  }) {
+  Version getLanguageVersion(String path, Uri uri) {
     if (uri.isScheme('dart')) {
       return _sdkLanguageVersion;
     }
@@ -94,7 +94,7 @@ class FeatureSetProvider {
       return _sdkLanguageVersion;
     }
 
-    return nonPackageLanguageVersion;
+    return _nonPackageDefaultLanguageVersion;
   }
 
   /// Return the package corresponding to the [uri] or [path], `null` if none.
@@ -131,6 +131,9 @@ class FeatureSetProvider {
     required SourceFactory sourceFactory,
     required ResourceProvider resourceProvider,
     required Packages packages,
+    required FeatureSet packageDefaultFeatureSet,
+    required Version nonPackageDefaultLanguageVersion,
+    required FeatureSet nonPackageDefaultFeatureSet,
   }) {
     var sdk = sourceFactory.dartSdk!;
     var allowedExperiments = _experimentsForSdk(sdk);
@@ -139,6 +142,9 @@ class FeatureSetProvider {
       allowedExperiments: allowedExperiments,
       resourceProvider: resourceProvider,
       packages: packages,
+      packageDefaultFeatureSet: packageDefaultFeatureSet,
+      nonPackageDefaultLanguageVersion: nonPackageDefaultLanguageVersion,
+      nonPackageDefaultFeatureSet: nonPackageDefaultFeatureSet,
     );
   }
 

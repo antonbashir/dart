@@ -55,10 +55,16 @@ main(List<String> args) async {
       ''');
     }
 
+    // '--enable-asserts' is not available in product mode, so we skip the
+    // negative test.
+    final isProductMode = const bool.fromEnvironment('dart.vm.product');
+
     for (final basename in ['main', 'spawnee', 'spawnee_checked']) {
       final script = path.join(dir, '$basename.dart');
       final scriptDill = path.join(dir, '$basename.dart.dill');
       final bool checked = basename.endsWith('_checked');
+
+      if (isProductMode && checked) continue;
 
       await run(genKernel, <String>[
         if (checked) '--enable-asserts',
@@ -89,13 +95,18 @@ main(List<String> args) async {
       'success',
     ], result1);
 
-    // File exists and is AOT snapshot but was compiled with different flags
-    // (namely --enable-asserts)
-    final result2 = await runHelper(dartPrecompiledRuntime, [
-      path.join(dir, 'main.dart.dill.so'),
-      path.join(dir, 'spawnee_checked.dart.dill.so'),
-    ]);
-    Expect.equals(0, result2.exitCode);
+    if (!isProductMode) {
+      // File exists and is AOT snapshot but was compiled with different flags
+      // (namely --enable-asserts)
+      final result2 = await runHelper(dartPrecompiledRuntime, [
+        path.join(dir, 'main.dart.dill.so'),
+        path.join(dir, 'spawnee_checked.dart.dill.so'),
+      ]);
+      Expect.notEquals(0, result2.exitCode);
+      Expect.contains(
+          'Snapshot not compatible with the current VM configuration',
+          result2.stderr);
+    }
 
     // File does not exist.
     final result3 = await runHelper(dartPrecompiledRuntime, [
@@ -103,9 +114,8 @@ main(List<String> args) async {
       path.join(dir, 'does_not_exist.dart.dill.so'),
     ]);
     Expect.notEquals(0, result3.exitCode);
-    Expect.contains('The uri', result3.stderr);
     Expect.contains(
-        'provided to `Isolate.spawnUri()` does not contain a valid AOT '
+        'The uri provided to `Isolate.spawnUri()` does not contain a valid AOT '
         'snapshot',
         result3.stderr);
   });

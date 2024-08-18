@@ -194,19 +194,6 @@ class FundamentalType extends CType {
     }
     return primitiveSizesInBytes[primitive]!;
   }
-
-  String get zero {
-    if (isBool) return 'false';
-    if (isInteger) return '0';
-    if (isFloatingPoint) return '0.0';
-    throw 'Unknown type $primitive';
-  }
-
-  String get addAssignOp {
-    if (isBool) return '^=';
-    if (isInteger || isFloatingPoint) return '+=';
-    throw 'Unknown type $primitive';
-  }
 }
 
 class PointerType extends CType {
@@ -247,8 +234,7 @@ class Member {
     String postFix = "";
     if (type is FixedLengthArrayType) {
       final dimensions = (type as FixedLengthArrayType).dimensions;
-      postFix =
-          "[${dimensions.map((d) => d == 0 ? '' : d.toString()).join("][")}]";
+      postFix = "[${dimensions.join("][")}]";
     }
     return "${type.cType} $name$postFix;";
   }
@@ -480,26 +466,6 @@ class FixedLengthArrayType extends CType {
   bool get isOnlyBool => elementType.isOnlyBool;
 }
 
-class VariableLengthArrayType extends FixedLengthArrayType {
-  VariableLengthArrayType(
-    CType elementType,
-  ) : super(elementType, 0);
-
-  factory VariableLengthArrayType.multi(
-      CType elementType, List<int> fixedDimensions) {
-    final nestedArray =
-        FixedLengthArrayType.multi(elementType, fixedDimensions);
-    return VariableLengthArrayType(nestedArray);
-  }
-
-  String get dartStructFieldAnnotation {
-    if (dimensions.length > 5) {
-      return "@Array.variableMulti([${dimensions.skip(1).join(", ")}])";
-    }
-    return "@Array.variable(${dimensions.skip(1).join(", ")})";
-  }
-}
-
 class FunctionType extends CType {
   final List<Member> arguments;
   final int? varArgsIndex;
@@ -609,9 +575,7 @@ class FunctionType extends CType {
     }
 
     for (final group in argumentsGrouped) {
-      final dartCType =
-          group.first.type.dartCType.replaceAll('<', '').replaceAll('>', '');
-      result += dartCType;
+      result += group.first.type.dartCType;
       if (group.length > 1) {
         result += "x${group.length}";
       }
@@ -629,22 +593,8 @@ class FunctionType extends CType {
 }
 
 extension MemberList on List<Member> {
-  bool get containsComposites => map((m) {
-        final type = m.type;
-        switch (type) {
-          case CompositeType _:
-            return true;
-          case PointerType _:
-            final pointerTo = type.pointerTo;
-            switch (pointerTo) {
-              case CompositeType _:
-                return true;
-            }
-        }
-        return false;
-      }).contains(true);
-
-  bool get containsPointers => any((m) => m.type is PointerType);
+  bool get containsComposites =>
+      map((m) => m.type is CompositeType).contains(true);
 }
 
 extension ListT<T> on List<T> {

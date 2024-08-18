@@ -54,9 +54,9 @@ class OverrideVerifier extends RecursiveAstVisitor<void> {
         var setter = fieldElement.setter;
         if (setter != null && _isOverride(setter)) continue;
 
-        _errorReporter.atToken(
-          field.name,
+        _errorReporter.reportErrorForToken(
           WarningCode.OVERRIDE_ON_NON_OVERRIDING_FIELD,
+          field.name,
         );
       }
     }
@@ -67,20 +67,20 @@ class OverrideVerifier extends RecursiveAstVisitor<void> {
     var element = node.declaredElement!;
     if (element.hasOverride && !_isOverride(element)) {
       if (element is MethodElement) {
-        _errorReporter.atToken(
-          node.name,
+        _errorReporter.reportErrorForToken(
           WarningCode.OVERRIDE_ON_NON_OVERRIDING_METHOD,
+          node.name,
         );
       } else if (element is PropertyAccessorElement) {
         if (element.isGetter) {
-          _errorReporter.atToken(
-            node.name,
+          _errorReporter.reportErrorForToken(
             WarningCode.OVERRIDE_ON_NON_OVERRIDING_GETTER,
+            node.name,
           );
         } else {
-          _errorReporter.atToken(
-            node.name,
+          _errorReporter.reportErrorForToken(
             WarningCode.OVERRIDE_ON_NON_OVERRIDING_SETTER,
+            node.name,
           );
         }
       }
@@ -96,7 +96,7 @@ class OverrideVerifier extends RecursiveAstVisitor<void> {
 
   /// Return `true` if the [member] overrides a member from a superinterface.
   bool _isOverride(ExecutableElement member) {
-    var currentClass = _currentClass?.augmented.declaration;
+    var currentClass = _currentClass;
     if (currentClass != null) {
       var name = Name(_libraryUri, member.name);
       return _inheritance.getOverridden2(currentClass, name) != null;

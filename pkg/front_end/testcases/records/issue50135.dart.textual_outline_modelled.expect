@@ -3,5 +3,4 @@ class Bar {
 }
 
 main() {}
-
 void foo() => print('foo');

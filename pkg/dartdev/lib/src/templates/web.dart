@@ -50,39 +50,16 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  web: ^0.5.1
+  # path: ^1.8.0
 
 dev_dependencies:
-  build_runner: ^2.4.8
-  build_web_compilers: ^4.0.9
-  lints: ^4.0.0
+  build_runner: ^2.4.0
+  build_web_compilers: ^4.0.0
+  lints: ^3.0.0
 ''';
 
 final String _readme = '''
-A bare-bones Dart web app.
-
-Uses [`package:web`](https://pub.dev/packages/web)
-to interop with JS and the DOM.
-
-## Running and building
-
-To run the app,
-activate and use [`package:webdev`](https://dart.dev/tools/webdev):
-
-```
-dart pub global activate webdev
-webdev serve
-```
-
-To build a production version ready for deployment,
-use the `webdev build` command:
-
-```
-webdev build
-```
-
-To learn how to interop with web APIs and other JS libraries,
-check out https://dart.dev/interop/js-interop.
+An absolute bare-bones web app.
 ''';
 
 final String _index = '''
@@ -108,18 +85,15 @@ final String _index = '''
 ''';
 
 final String _main = '''
-import 'package:web/web.dart' as web;
+import 'dart:html';
 
 void main() {
-  final now = DateTime.now();
-  final element = web.document.querySelector('#output') as web.HTMLDivElement;
-  element.text = 'The time is \${now.hour}:\${now.minute} '
-      'and your Dart web app is running!';
+  querySelector('#output')?.text = 'Your Dart app is running.';
 }
 ''';
 
 final String _styles = '''
-@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+@import url(https://fonts.googleapis.com/css?family=Roboto);
 
 html, body {
   width: 100%;

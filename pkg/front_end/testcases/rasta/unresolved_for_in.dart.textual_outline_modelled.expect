@@ -5,5 +5,4 @@ class Fisk {
 }
 
 main(arguments) {}
-
 typedef void VoidFunction();

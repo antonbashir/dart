@@ -86,29 +86,6 @@ class LinesLongerThan80CharsTest extends LintRuleTest {
     );
   }
 
-  test_exactly80Characters() async {
-    await assertNoDiagnostics(r'''
-var p =
-    '                                                                         ';
-''');
-  }
-
-  test_lineEndsWithCrlf() async {
-    await assertNoDiagnostics('''
-var p =
-    '                                                                         ';\r\n
-''');
-  }
-
-  test_longerThan80Characters() async {
-    await assertDiagnostics(r'''
-var p =
-    '                                                                          ';
-''', [
-      lint(88, 1),
-    ]);
-  }
-
   test_multilineBlockComment_noSpaceAfter80() async {
     await assertNoDiagnostics(
       '/*\n'
@@ -145,33 +122,5 @@ var p =
         lint(83, 15),
       ],
     );
-  }
-
-  test_multilineString() async {
-    await assertNoDiagnostics(r'''
-var p = """
-This line is a long, very long, very very long, very very very long, very very very very long
-""";
-''');
-  }
-
-  test_shorterThan80Characters() async {
-    await assertNoDiagnostics(r'''
-var short = 'This is a short line';
-''');
-  }
-
-  test_stringContainsBackslash() async {
-    await assertNoDiagnostics(r'''
-var p =
-    r'C:\home\dart.dev\guides\language\effective-dart\style\avoid-lines-longer-than-80-characters';
-''');
-  }
-
-  test_stringContainsForwardSlash() async {
-    await assertNoDiagnostics(r'''
-var p =
-    '/home/dart.dev/guides/language/effective-dart/style#avoid-lines-longer-than-80-characters'; // OK
-''');
   }
 }

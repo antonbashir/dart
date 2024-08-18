@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Prefer intValue.isOdd/isEven instead of checking the result of % 2.';
@@ -30,15 +29,19 @@ bool isOdd = 13.isOdd;
 ''';
 
 class UseIsEvenRatherThanModulo extends LintRule {
+  static const LintCode code = LintCode(
+      'use_is_even_rather_than_modulo', "Use '{0}' rather than '% 2'.",
+      correctionMessage: "Try using '{0}'.");
+
   UseIsEvenRatherThanModulo()
       : super(
             name: 'use_is_even_rather_than_modulo',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.use_is_even_rather_than_modulo;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -55,9 +58,9 @@ class _Visitor extends SimpleAstVisitor<void> {
   @override
   void visitBinaryExpression(BinaryExpression node) {
     // This lint error only happens when the operator is equality.
-    if (node.operator.type != TokenType.EQ_EQ) return;
-    if (node.inConstantContext) return;
-
+    if (node.operator.type != TokenType.EQ_EQ) {
+      return;
+    }
     var left = node.leftOperand;
     var leftType = left.staticType;
     var right = node.rightOperand;
@@ -69,32 +72,19 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
     // The left side expression has to be modulo by 2 type.
-    if (left is! BinaryExpression) return;
-    if (left.operator.type != TokenType.PERCENT) return;
-
-    var rightChild = left.rightOperand;
-
-    if (rightChild is! IntegerLiteral) return;
-    if (rightChild.value != 2) return;
-
-    // Now we have `x % 2 == y`.
-    var rightChildType = rightChild.staticType;
-    if (rightChildType == null) return;
-    if (!rightChildType.isDartCoreInt) return;
-
-    var value = right.value;
-    if (value == null) return;
-    var parentAssertInitializer =
-        node.thisOrAncestorOfType<AssertInitializer>();
-    if (parentAssertInitializer != null) {
-      var constructor = parentAssertInitializer.parent;
-      // `isEven` is not allowed in a const constructor assert initializer.
-      if (constructor is ConstructorDeclaration &&
-          constructor.constKeyword != null) {
-        return;
+    if (left is BinaryExpression) {
+      var rightChild = left.rightOperand;
+      var rightChildType = rightChild.staticType;
+      if (left.operator.type == TokenType.PERCENT &&
+          rightChild is IntegerLiteral &&
+          rightChild.value == 2 &&
+          (rightChildType?.isDartCoreInt ?? false)) {
+        var value = right.value;
+        if (value == null) {
+          return;
+        }
+        rule.reportLint(node, arguments: [value == 0 ? 'isEven' : 'isOdd']);
       }
     }
-
-    rule.reportLint(node, arguments: [value == 0 ? 'isEven' : 'isOdd']);
   }
 }

@@ -215,9 +215,7 @@ extension Extension<
     W8 extends H<(int, int)>> on Class {}
 
 main() {}
-
 mixin Class<T> {}
-
 mixin Mixin1<
     T1 extends F,
     T2 extends F<dynamic>,
@@ -259,11 +257,8 @@ mixin Mixin1<
     W6 extends H<(Class<ConcreteClass>, int)>,
     W7 extends H<(Object, int)>,
     W8 extends H<(int, int)>> {}
-
 test() {}
-
 typedef F<X extends Class<X>> = X;
-
 typedef Typedef1<
         T1 extends F,
         T2 extends F<dynamic>,
@@ -306,7 +301,6 @@ typedef Typedef1<
         W7 extends H<(Object, int)>,
         W8 extends H<(int, int)>>
     = void Function();
-
 typedef Typedef2 = void Function<
     T1 extends F,
     T2 extends F<dynamic>,
@@ -348,7 +342,6 @@ typedef Typedef2 = void Function<
     W6 extends H<(Class<ConcreteClass>, int)>,
     W7 extends H<(Object, int)>,
     W8 extends H<(int, int)>>();
-
 typedef void Typedef3<
     T1 extends F,
     T2 extends F<dynamic>,
@@ -390,7 +383,6 @@ typedef void Typedef3<
     W6 extends H<(Class<ConcreteClass>, int)>,
     W7 extends H<(Object, int)>,
     W8 extends H<(int, int)>>();
-
 void method1<
     T1 extends F,
     T2 extends F<dynamic>,

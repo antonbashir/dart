@@ -14,21 +14,22 @@ import 'package:_fe_analyzer_shared/src/macros/compiler/request_channel.dart';
 import 'package:front_end/src/api_prototype/compiler_options.dart' as fe;
 import 'package:front_end/src/api_prototype/file_system.dart' as fe;
 import 'package:front_end/src/api_prototype/kernel_generator.dart' as fe;
-import 'package:front_end/src/api_unstable/frontend_server.dart' as fe;
+import 'package:front_end/src/base/nnbd_mode.dart' as fe;
+import 'package:front_end/src/fasta/kernel/utils.dart' as fe;
 import 'package:kernel/ast.dart' as fe;
 import 'package:kernel/target/targets.dart' as fe;
 import 'package:vm/kernel_front_end.dart' as vm;
-import 'package:vm/modular/target/vm.dart' as vm;
+import 'package:vm/target/vm.dart' as vm;
 
 Future<void> runBinaryProtocol(String addressStr) async {
-  final _ParsedAddress parsedAddress = new _ParsedAddress.parse(addressStr);
-  final io.Socket socket = await io.Socket.connect(
+  final parsedAddress = _ParsedAddress.parse(addressStr);
+  final socket = await io.Socket.connect(
     parsedAddress.host,
     parsedAddress.port,
   );
 
-  new _Client(
-    new RequestChannel(socket),
+  _Client(
+    RequestChannel(socket),
     () {
       socket.destroy();
     },
@@ -50,19 +51,19 @@ class _Client {
   }
 
   Future<void> _dillPut(Object? argumentObject) async {
-    final Map<Object?, Object?> arguments = argumentObject.argumentAsMap;
-    final String uriStr = arguments.required<String>('uri');
-    final Uint8List bytes = arguments.required<Uint8List>('bytes');
+    final arguments = argumentObject.argumentAsMap;
+    final uriStr = arguments.required<String>('uri');
+    final bytes = arguments.required<Uint8List>('bytes');
 
-    final Uri uri = Uri.parse(uriStr);
+    final uri = Uri.parse(uriStr);
     _dills[uri] = bytes;
   }
 
   Future<void> _dillRemove(Object? argumentObject) async {
-    final Map<Object?, Object?> arguments = argumentObject.argumentAsMap;
-    final String uriStr = arguments.required<String>('uri');
+    final arguments = argumentObject.argumentAsMap;
+    final uriStr = arguments.required<String>('uri');
 
-    final Uri uri = Uri.parse(uriStr);
+    final uri = Uri.parse(uriStr);
     _dills.remove(uri);
   }
 
@@ -71,17 +72,16 @@ class _Client {
   }
 
   fe.CompilerOptions _getCompilerOptions(Map<Object?, Object?> arguments) {
-    final String sdkSummaryUriStr = arguments.required<String>('sdkSummary');
+    final sdkSummaryUriStr = arguments.required<String>('sdkSummary');
 
-    final fe.CompilerOptions compilerOptions = new fe.CompilerOptions()
+    final compilerOptions = fe.CompilerOptions()
       ..environmentDefines = {}
-      ..fileSystem = new _FileSystem(_channel, _dills)
+      ..fileSystem = _FileSystem(_channel, _dills)
       ..nnbdMode = fe.NnbdMode.Strong
       ..sdkSummary = Uri.parse(sdkSummaryUriStr)
-      ..target = new vm.VmTarget(new fe.TargetFlags());
+      ..target = vm.VmTarget(fe.TargetFlags());
 
-    final List<String>? additionalDills =
-        arguments['additionalDills'].asListOf<String>();
+    final additionalDills = arguments['additionalDills'].asListOf<String>();
     if (additionalDills != null) {
       compilerOptions.additionalDills.addAll(
         additionalDills.map(Uri.parse),
@@ -92,19 +92,18 @@ class _Client {
   }
 
   Future<Object?> _kernelForModule(Object? argumentObject) async {
-    final Map<Object?, Object?> arguments = argumentObject.argumentAsMap;
-    final String packagesFileUriStr =
-        arguments.required<String>('packagesFileUri');
+    final arguments = argumentObject.argumentAsMap;
+    final packagesFileUriStr = arguments.required<String>('packagesFileUri');
 
-    final fe.CompilerOptions compilerOptions = _getCompilerOptions(arguments)
+    final compilerOptions = _getCompilerOptions(arguments)
       ..packagesFileUri = Uri.parse(packagesFileUriStr);
 
-    final List<String>? uriStrList = arguments['uris'].asListOf<String>();
+    final uriStrList = arguments['uris'].asListOf<String>();
     if (uriStrList == null) {
-      throw new ArgumentError('Missing field: uris');
+      throw ArgumentError('Missing field: uris');
     }
 
-    final fe.CompilerResult compilationResults = await fe.kernelForModule(
+    final compilationResults = await fe.kernelForModule(
       uriStrList.map(Uri.parse).toList(),
       compilerOptions,
     );
@@ -115,23 +114,22 @@ class _Client {
   }
 
   Future<Object?> _kernelForProgram(Object? argumentObject) async {
-    final Map<Object?, Object?> arguments = argumentObject.argumentAsMap;
+    final arguments = argumentObject.argumentAsMap;
 
-    final fe.CompilerOptions compilerOptions = _getCompilerOptions(arguments);
+    final compilerOptions = _getCompilerOptions(arguments);
 
-    final String? packagesFileUriStr =
-        arguments.optional<String>('packagesFileUri');
+    final packagesFileUriStr = arguments.optional<String>('packagesFileUri');
     if (packagesFileUriStr != null) {
       compilerOptions.packagesFileUri = Uri.parse(packagesFileUriStr);
     }
 
-    final String uriStr = arguments.required<String>('uri');
+    final uriStr = arguments.required<String>('uri');
 
-    final vm.KernelCompilationResults compilationResults =
-        await vm.compileToKernel(new vm.KernelCompilationArguments(
-      source: Uri.parse(uriStr),
-      options: compilerOptions,
-    ));
+    final compilationResults = await vm.compileToKernel(
+      Uri.parse(uriStr),
+      compilerOptions,
+      environmentDefines: {},
+    );
 
     return _serializeComponentWithoutPlatform(
       compilationResults.component!,
@@ -161,7 +159,7 @@ class _FileSystem implements fe.FileSystem {
 
   @override
   fe.FileSystemEntity entityForUri(Uri uri) {
-    return new _FileSystemEntity(this, uri);
+    return _FileSystemEntity(this, uri);
   }
 }
 
@@ -190,7 +188,7 @@ class _FileSystemEntity implements fe.FileSystemEntity {
 
   @override
   Future<List<int>> readAsBytes() async {
-    final Uint8List? storedBytes = _fileSystem._dills[uri];
+    final storedBytes = _fileSystem._dills[uri];
     if (storedBytes != null) {
       return storedBytes;
     }
@@ -212,12 +210,12 @@ class _ParsedAddress {
   final int port;
 
   factory _ParsedAddress.parse(String str) {
-    final int colonOffset = str.lastIndexOf(':');
+    final colonOffset = str.lastIndexOf(':');
     if (colonOffset == -1) {
-      throw new FormatException("Expected ':' in: $str");
+      throw FormatException("Expected ':' in: $str");
     }
 
-    return new _ParsedAddress._(
+    return _ParsedAddress._(
       str.substring(0, colonOffset),
       int.parse(str.substring(colonOffset + 1)),
     );
@@ -228,41 +226,41 @@ class _ParsedAddress {
 
 extension on Object? {
   Map<Object?, Object?> get argumentAsMap {
-    final Object? self = this;
+    final self = this;
     if (self is Map<Object?, Object?>) {
       return self;
     }
-    throw new ArgumentError('The argument must be a map.');
+    throw ArgumentError('The argument must be a map.');
   }
 }
 
 extension on Map<Object?, Object?> {
   T? optional<T extends Object>(String name) {
-    final Object? value = this[name];
+    final value = this[name];
     if (value == null) {
       return null;
     }
     if (value is T) {
       return value;
     }
-    throw new ArgumentError('Must be null or $T: $name');
+    throw ArgumentError('Must be null or $T: $name');
   }
 
   T required<T>(String name) {
-    final Object? value = this[name];
+    final value = this[name];
     if (value is T) {
       return value;
     }
-    throw new ArgumentError('Must be $T: $name');
+    throw ArgumentError('Must be $T: $name');
   }
 }
 
 extension on Object? {
   List<T>? asListOf<T>() {
-    final Object? self = this;
+    final self = this;
     if (self is List<Object?>) {
-      final List<T> result = [];
-      for (final Object? element in self) {
+      final result = <T>[];
+      for (final element in self) {
         if (element is T) {
           result.add(element);
         } else {

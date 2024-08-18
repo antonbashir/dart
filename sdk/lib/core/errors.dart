@@ -120,7 +120,6 @@ class Error {
     _throw(error, stackTrace);
   }
 
-  @pragma("wasm:entry-point")
   external static Never _throw(Object error, StackTrace stackTrace);
 }
 
@@ -155,7 +154,7 @@ class TypeError extends Error {}
 /// error to be throw, and avoid calling with those.
 ///
 /// It's almost always a good idea to provide the unacceptable value
-/// as part of the error, to help the user figure out what went wrong,
+/// as part of the error, to help the user figure out what vent wrong,
 /// so the [ArgumentError.value] constructor is the preferred constructor.
 /// Use [ArgumentError.new] only when the value cannot be provided for some
 /// reason.

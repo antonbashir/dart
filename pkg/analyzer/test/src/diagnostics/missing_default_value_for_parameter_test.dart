@@ -134,20 +134,6 @@ class B extends A{
 ''');
   }
 
-  test_constructor_generative_nonNullable_named_optional_super_hasDefault_fromSuper_extensionType() async {
-    await assertNoErrorsInCode('''
-extension type const E(int it) {}
-
-class A {
-  A({E a = const E(0)});
-}
-
-class B extends A {
-  B({super.a});
-}
-''');
-  }
-
   test_constructor_generative_nonNullable_named_optional_super_noDefault() async {
     await assertErrorsInCode('''
 class A {
@@ -248,42 +234,6 @@ class C {
 class C {
   int? f;
   C({this.f});
-}
-''');
-  }
-
-  test_constructor_generative_super_nonNullable_named_optional_noDefault() async {
-    await assertErrorsInCode('''
-class A {
-  final int a;
-  A({this.a = 0});
-}
-
-class B extends A {
-  B({required super.a});
-}
-
-class C extends B {
-  C({super.a});
-}
-''', [
-      error(CompileTimeErrorCode.MISSING_DEFAULT_VALUE_FOR_PARAMETER, 126, 1),
-    ]);
-  }
-
-  test_constructor_generative_super_nullable_named_optional_noDefault() async {
-    await assertNoErrorsInCode('''
-class A {
-  final int? a;
-  A({this.a});
-}
-
-class B extends A {
-  B({required super.a});
-}
-
-class C extends B {
-  C({super.a});
 }
 ''');
   }
@@ -719,20 +669,6 @@ class A<T extends Object?> {
       error(CompileTimeErrorCode.MISSING_DEFAULT_VALUE_FOR_PARAMETER_POSITIONAL,
           43, 1),
     ]);
-  }
-
-  test_super_forward_wildcards() async {
-    await assertNoErrorsInCode('''
-class A {
-  final int x, y;
-  A(this.x, [this.y = 0]);
-}
-
-class C extends A {
-  final int c;
-  C(this.c, super._, [super._]);
-}
-''');
   }
 }
 

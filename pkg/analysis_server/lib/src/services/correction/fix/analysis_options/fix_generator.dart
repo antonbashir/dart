@@ -4,10 +4,10 @@
 
 import 'dart:math' as math;
 
+import 'package:analysis_server/plugin/edit/fix/fix_core.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server/src/utilities/strings.dart';
 import 'package:analysis_server/src/utilities/yaml_node_locator.dart';
-import 'package:analysis_server_plugin/edit/fix/fix.dart';
-import 'package:analysis_server_plugin/src/correction/change_workspace.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/file_system.dart';
@@ -15,9 +15,9 @@ import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/analysis_options/error/option_codes.dart';
 import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/utilities/extensions/string.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_yaml.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_workspace.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:collection/collection.dart';
 import 'package:yaml/yaml.dart';
@@ -28,9 +28,6 @@ class AnalysisOptionsFixGenerator {
   static const List<ErrorCode> codesWithFixes = [
     AnalysisOptionsHintCode.DEPRECATED_LINT,
     AnalysisOptionsWarningCode.ANALYSIS_OPTION_DEPRECATED_WITH_REPLACEMENT,
-    AnalysisOptionsHintCode.DUPLICATE_RULE,
-    AnalysisOptionsWarningCode.REMOVED_LINT,
-    AnalysisOptionsWarningCode.UNDEFINED_LINT,
     AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITHOUT_VALUES,
   ];
 
@@ -72,7 +69,7 @@ class AnalysisOptionsFixGenerator {
 
     var errorCode = error.errorCode;
     // Check whether [errorCode] is within [codeWithFixes], which is (currently)
-    // the canonical list of analysis option error codes with fixes.
+    // the canonical list of analyis option error codes with fixes.
     // If we move analysis option fixes to the style of correction producers,
     // and a map from error codes to the correction producers that can fix
     // violations, we won't need this check.
@@ -100,10 +97,7 @@ class AnalysisOptionsFixGenerator {
         await _addFix_replaceWithStrictRawTypes(
             coveringNodePath, analyzerMap, strongModeMap);
       }
-    } else if (errorCode == AnalysisOptionsHintCode.DEPRECATED_LINT ||
-        errorCode == AnalysisOptionsHintCode.DUPLICATE_RULE ||
-        errorCode == AnalysisOptionsWarningCode.REMOVED_LINT ||
-        errorCode == AnalysisOptionsWarningCode.UNDEFINED_LINT) {
+    } else if (errorCode == AnalysisOptionsHintCode.DEPRECATED_LINT) {
       await _addFix_removeLint(coveringNodePath);
     } else if (errorCode ==
         AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITHOUT_VALUES) {
@@ -188,7 +182,7 @@ class AnalysisOptionsFixGenerator {
     }
     change.id = kind.id;
     change.message = formatList(kind.message, args);
-    fixes.add(Fix(kind: kind, change: change));
+    fixes.add(Fix(kind, change));
   }
 
   Future<ChangeBuilder?> _createScalarDeletionBuilder(
@@ -247,15 +241,15 @@ class AnalysisOptionsFixGenerator {
       workspace: _NonDartChangeWorkspace(resourceProvider),
     );
 
-    var deletionRange_final = deletionRange;
-    await builder.addYamlFileEdit(file, (builder) {
+    final deletionRange_final = deletionRange;
+    await builder.addGenericFileEdit(file, (builder) {
       builder.addDeletion(deletionRange_final);
     });
     return builder;
   }
 
   int _firstNonWhitespaceBefore(int offset) {
-    while (offset > 0 && content.codeUnitAt(offset - 1).isWhitespace) {
+    while (offset > 0 && isWhitespace(content.codeUnitAt(offset - 1))) {
       offset--;
     }
     return offset;

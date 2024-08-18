@@ -6,10 +6,12 @@
 import os
 import sys
 
+
 def main(args):
-    for file in sorted(os.listdir(args[0])):
+    for file in os.listdir(args[0]):
         if file.endswith('.cpp') or file.endswith('.h'):
-            print(file)
+            if not "suffix_tree" in file:
+                print(file)
 
 
 if __name__ == '__main__':

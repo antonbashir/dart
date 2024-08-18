@@ -7,7 +7,6 @@ import 'package:analysis_server/src/protocol_server.dart' hide Element;
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/element_locator.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
 import 'package:analyzer/src/dartdoc/dartdoc_directive_info.dart';
@@ -18,6 +17,7 @@ class DartUnitSignatureComputer {
   final DartdocDirectiveInfo _dartdocInfo;
   final AstNode? _node;
   late ArgumentList _argumentList;
+  final bool _isNonNullableByDefault;
   final DocumentationPreference documentationPreference;
 
   DartUnitSignatureComputer(
@@ -25,7 +25,8 @@ class DartUnitSignatureComputer {
     CompilationUnit unit,
     int offset, {
     this.documentationPreference = DocumentationPreference.full,
-  }) : _node = NodeLocator(offset).searchWithin(unit);
+  })  : _node = NodeLocator(offset).searchWithin(unit),
+        _isNonNullableByDefault = unit.isNonNullableByDefault;
 
   /// The [ArgumentList] node located by [compute].
   ArgumentList get argumentList => _argumentList;
@@ -39,53 +40,33 @@ class DartUnitSignatureComputer {
       return null;
     }
     String? name;
-    Element? element;
-    List<ParameterElement>? parameters;
-    var parent = argumentList.parent;
+    ExecutableElement? execElement;
+    final parent = argumentList.parent;
     if (parent is MethodInvocation) {
       name = parent.methodName.name;
-      element = ElementLocator.locate(parent);
-      parameters = element is FunctionTypedElement ? element.parameters : null;
+      var element = ElementLocator.locate(parent);
+      execElement = element is ExecutableElement ? element : null;
     } else if (parent is InstanceCreationExpression) {
       name = parent.constructorName.type.qualifiedName;
       var constructorName = parent.constructorName.name;
       if (constructorName != null) {
         name += '.${constructorName.name}';
       }
-      element = ElementLocator.locate(parent);
-      parameters = element is FunctionTypedElement ? element.parameters : null;
-    } else if (parent
-        case FunctionExpressionInvocation(function: Identifier function)) {
-      name = function.name;
-
-      if (function.staticType case FunctionType functionType) {
-        // Standard function expression.
-        element = function.staticElement;
-        parameters = functionType.parameters;
-      } else if (parent.staticElement case ExecutableElement staticElement) {
-        // Callable class instance (where we'll look at the `call` method).
-        element = staticElement;
-        parameters = staticElement.parameters;
-      }
+      execElement = ElementLocator.locate(parent) as ExecutableElement?;
     }
 
-    if (name == null || element == null || parameters == null) {
+    if (name == null || execElement == null) {
       return null;
     }
 
     _argumentList = argumentList;
-    var convertedParameters = parameters.map((p) => _convertParam(p)).toList();
-    var dartdoc = DartUnitHoverComputer.computePreferredDocumentation(
-      _dartdocInfo,
-      element,
-      documentationPreference,
-    );
 
-    return AnalysisGetSignatureResult(
-      name,
-      convertedParameters,
-      dartdoc: dartdoc,
-    );
+    final parameters =
+        execElement.parameters.map((p) => _convertParam(p)).toList();
+
+    return AnalysisGetSignatureResult(name, parameters,
+        dartdoc: DartUnitHoverComputer.computePreferredDocumentation(
+            _dartdocInfo, execElement, documentationPreference));
   }
 
   ParameterInfo _convertParam(ParameterElement param) {
@@ -98,7 +79,7 @@ class DartUnitSignatureComputer {
                     ? ParameterKind.REQUIRED_NAMED
                     : ParameterKind.REQUIRED_POSITIONAL,
         param.displayName,
-        param.type.getDisplayString(),
+        param.type.getDisplayString(withNullability: _isNonNullableByDefault),
         defaultValue: param.defaultValueCode);
   }
 

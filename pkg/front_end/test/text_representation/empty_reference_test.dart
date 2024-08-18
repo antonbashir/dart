@@ -4,7 +4,6 @@
 
 import 'package:expect/expect.dart';
 import 'package:kernel/ast.dart';
-
 import 'text_representation_test.dart';
 
 void testExpression(Expression node, String normal,

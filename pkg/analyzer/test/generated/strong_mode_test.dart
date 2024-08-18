@@ -246,7 +246,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
    ''';
     await assertErrorsInCode(code, [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 32, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 60, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 60, 1),
     ]);
 
     List<Statement> statements =
@@ -285,7 +285,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
    ''';
     await assertErrorsInCode(code, [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 46, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 76, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 76, 1),
     ]);
 
     List<Statement> statements =
@@ -308,7 +308,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
    ''';
     await assertErrorsInCode(code, [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 82, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 110, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 110, 1),
     ]);
 
     List<Statement> statements =
@@ -332,7 +332,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
    ''';
     await assertErrorsInCode(code, [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 82, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 110, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 110, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 114, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 119, 4),
     ]);
@@ -379,7 +379,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     var exp = stmt.expression as InstanceCreationExpression;
     ClassElement elementB = AstFinder.getClass(unit, "B").declaredElement!;
     ClassElement elementA = AstFinder.getClass(unit, "A").declaredElement!;
-    var type = exp.constructorName.type.typeOrThrow as InterfaceType;
+    final type = exp.constructorName.type.typeOrThrow as InterfaceType;
     expect(type.element, elementB);
     _isInstantiationOf(_hasElement(elementB))([
       _isType(elementA.typeParameters[0]
@@ -455,14 +455,14 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 91, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 91, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 107, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 144, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 200, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 144, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 200, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 205, 21),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 259, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 259, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 275, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 309, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 309, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 330, 1),
     ]);
 
@@ -495,13 +495,13 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 91, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 91, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 103, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 140, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 192, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 244, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 140, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 192, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 244, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 256, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 290, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 290, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 307, 1),
     ]);
 
@@ -533,12 +533,12 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 97, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 161, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 97, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 161, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 166, 23),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 228, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 228, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 245, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 286, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 286, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 308, 1),
     ]);
 
@@ -798,13 +798,13 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 88, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 131, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 179, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 88, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 131, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 179, 2),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CLOSURE, 191, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 225, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 225, 2),
       error(CompileTimeErrorCode.UNDEFINED_METHOD, 239, 11),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 288, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 288, 2),
     ]);
 
     List<Statement> statements =
@@ -1167,11 +1167,11 @@ void test() {
 }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 205, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 241, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 284, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 318, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 347, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 205, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 241, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 284, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 318, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 347, 2),
     ]);
 
     Element elementA = AstFinder.getClass(unit, "A").declaredElement!;
@@ -1201,7 +1201,7 @@ void test() {
         }
         ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 225, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 225, 1),
     ]);
 
     DartType cType = findElement.localVar('c').type;
@@ -1221,7 +1221,7 @@ test() {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 84, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 84, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 88, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 90, 15),
     ]);
@@ -1248,7 +1248,7 @@ test() {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 95, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 95, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 99, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 101, 15),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 118, 16),
@@ -1277,17 +1277,22 @@ test() {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 56, 5),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 56, 5),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 68, 1),
-      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 71, 1),
+      error(
+          isNullSafetyEnabled
+              ? CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE
+              : CompileTimeErrorCode.INVALID_CAST_LITERAL,
+          71,
+          1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: max
-    staticElement: <testLibraryFragment>::@function::max
+    staticElement: self::@function::max
     staticType: T Function<T extends num>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1295,13 +1300,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::max::@parameter::x
+          base: root::@parameter::x
           substitution: {T: Never}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::max::@parameter::y
+          base: root::@parameter::y
           substitution: {T: Never}
         staticType: int
     rightParenthesis: )
@@ -1322,7 +1327,7 @@ test() {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 94, 5),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 94, 5),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 102, 1),
     ]);
 
@@ -1352,7 +1357,7 @@ test(Iterable values) {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 158, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 158, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 195, 3),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 195, 3),
     ]);
@@ -1379,7 +1384,7 @@ test() {
 }
  ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 80, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 80, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 84, 1),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 84, 5),
     ]);
@@ -1403,8 +1408,8 @@ Consider passing explicit type argument(s) to the generic.
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 33, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 58, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 33, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 58, 2),
     ]);
   }
 
@@ -1424,7 +1429,7 @@ void _mergeSort<T>(T Function(T) list, int compare(T a, T b), T Function(T) targ
       error(WarningCode.UNUSED_ELEMENT, 5, 10),
     ]);
 
-    var node = findNode.singleBlock;
+    final node = findNode.singleBlock;
     assertResolvedNodeText(node, r'''
 Block
   leftBracket: {
@@ -1433,7 +1438,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T Function(T), int Function(T, T), T Function(T))
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1441,23 +1446,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T Function(T)
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T Function(T)
           rightParenthesis: )
         staticInvokeType: void Function(T Function(T), int Function(T, T), T Function(T))
@@ -1469,7 +1474,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T Function(T), int Function(T, T), T Function(T))
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1477,23 +1482,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T Function(T)
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T Function(T)
           rightParenthesis: )
         staticInvokeType: void Function(T Function(T), int Function(T, T), T Function(T))
@@ -1505,7 +1510,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T Function(T), int Function(T, T), T Function(T))
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1513,23 +1518,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T Function(T)
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T Function(T)
           rightParenthesis: )
         staticInvokeType: void Function(T Function(T), int Function(T, T), T Function(T))
@@ -1541,7 +1546,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T Function(T), int Function(T, T), T Function(T))
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1549,23 +1554,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T Function(T)
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T Function(T)
           rightParenthesis: )
         staticInvokeType: void Function(T Function(T), int Function(T, T), T Function(T))
@@ -1593,7 +1598,7 @@ void _mergeSort<T>(List<T> list, int compare(T a, T b), List<T> target) {
       error(WarningCode.UNUSED_ELEMENT, 5, 10),
     ]);
 
-    var node = findNode.singleBlock;
+    final node = findNode.singleBlock;
     assertResolvedNodeText(node, r'''
 Block
   leftBracket: {
@@ -1602,7 +1607,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(List<T>, int Function(T, T), List<T>)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1610,23 +1615,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: List<T>
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: List<T>
           rightParenthesis: )
         staticInvokeType: void Function(List<T>, int Function(T, T), List<T>)
@@ -1638,7 +1643,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(List<T>, int Function(T, T), List<T>)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1646,23 +1651,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: List<T>
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: List<T>
           rightParenthesis: )
         staticInvokeType: void Function(List<T>, int Function(T, T), List<T>)
@@ -1674,7 +1679,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(List<T>, int Function(T, T), List<T>)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1682,23 +1687,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: List<T>
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: List<T>
           rightParenthesis: )
         staticInvokeType: void Function(List<T>, int Function(T, T), List<T>)
@@ -1710,7 +1715,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(List<T>, int Function(T, T), List<T>)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1718,23 +1723,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: List<T>
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: List<T>
           rightParenthesis: )
         staticInvokeType: void Function(List<T>, int Function(T, T), List<T>)
@@ -1762,7 +1767,7 @@ void _mergeSort<T>(T list, int compare(T a, T b), T target) {
       error(WarningCode.UNUSED_ELEMENT, 5, 10),
     ]);
 
-    var node = findNode.singleBlock;
+    final node = findNode.singleBlock;
     assertResolvedNodeText(node, r'''
 Block
   leftBracket: {
@@ -1771,7 +1776,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T, int Function(T, T), T)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1779,23 +1784,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T
           rightParenthesis: )
         staticInvokeType: void Function(T, int Function(T, T), T)
@@ -1807,7 +1812,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T, int Function(T, T), T)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1815,23 +1820,23 @@ Block
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T
           rightParenthesis: )
         staticInvokeType: void Function(T, int Function(T, T), T)
@@ -1843,7 +1848,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T, int Function(T, T), T)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1851,23 +1856,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T
           rightParenthesis: )
         staticInvokeType: void Function(T, int Function(T, T), T)
@@ -1879,7 +1884,7 @@ Block
       expression: MethodInvocation
         methodName: SimpleIdentifier
           token: _mergeSort
-          staticElement: <testLibraryFragment>::@function::_mergeSort
+          staticElement: self::@function::_mergeSort
           staticType: void Function<T>(T, int Function(T, T), T)
         argumentList: ArgumentList
           leftParenthesis: (
@@ -1887,23 +1892,23 @@ Block
             SimpleIdentifier
               token: target
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+                base: root::@parameter::list
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+              staticElement: self::@function::_mergeSort::@parameter::target
               staticType: T
             SimpleIdentifier
               token: compare
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+                base: root::@parameter::compare
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::compare
+              staticElement: self::@function::_mergeSort::@parameter::compare
               staticType: int Function(T, T)
             SimpleIdentifier
               token: list
               parameter: ParameterMember
-                base: <testLibraryFragment>::@function::_mergeSort::@parameter::target
+                base: root::@parameter::target
                 substitution: {T: T}
-              staticElement: <testLibraryFragment>::@function::_mergeSort::@parameter::list
+              staticElement: self::@function::_mergeSort::@parameter::list
               staticType: T
           rightParenthesis: )
         staticInvokeType: void Function(T, int Function(T, T), T)
@@ -1926,15 +1931,15 @@ test() {
     ''';
     await assertErrorsInCode(code, [
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 22, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 61, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 61, 1),
     ]);
 
-    var node = findNode.methodInvocation('f(g)');
+    final node = findNode.methodInvocation('f(g)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@function::f
+    staticElement: self::@function::f
     staticType: T Function<T>(T Function(T))
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1942,10 +1947,10 @@ MethodInvocation
       FunctionReference
         function: SimpleIdentifier
           token: g
-          staticElement: <testLibraryFragment>::@function::g
+          staticElement: self::@function::g
           staticType: S Function<S>(S)
         parameter: ParameterMember
-          base: <testLibraryFragment>::@function::f::@parameter::x
+          base: root::@parameter::x
           substitution: {T: dynamic}
         staticType: dynamic Function(dynamic)
         typeArgumentTypes
@@ -1974,18 +1979,18 @@ num test(Iterable values) => values.fold(values.first as num, max);
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 190, 3),
     ]);
 
-    var node = findNode.methodInvocation('values.fold');
+    final node = findNode.methodInvocation('values.fold');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   target: SimpleIdentifier
     token: values
-    staticElement: <testLibraryFragment>::@function::test::@parameter::values
+    staticElement: self::@function::test::@parameter::values
     staticType: Iterable<dynamic>
   operator: .
   methodName: SimpleIdentifier
     token: fold
     staticElement: MethodMember
-      base: <testLibraryFragment>::@class::Iterable::@method::fold
+      base: self::@class::Iterable::@method::fold
       substitution: {T: dynamic, S: S}
     staticType: S Function<S>(S, S Function(S, dynamic))
   argumentList: ArgumentList
@@ -1995,23 +2000,23 @@ MethodInvocation
         expression: PrefixedIdentifier
           prefix: SimpleIdentifier
             token: values
-            staticElement: <testLibraryFragment>::@function::test::@parameter::values
+            staticElement: self::@function::test::@parameter::values
             staticType: Iterable<dynamic>
           period: .
           identifier: SimpleIdentifier
             token: first
             staticElement: PropertyAccessorMember
-              base: <testLibraryFragment>::@class::Iterable::@getter::first
+              base: self::@class::Iterable::@getter::first
               substitution: {T: dynamic}
             staticType: dynamic
           staticElement: PropertyAccessorMember
-            base: <testLibraryFragment>::@class::Iterable::@getter::first
+            base: self::@class::Iterable::@getter::first
             substitution: {T: dynamic}
           staticType: dynamic
         asOperator: as
         type: NamedType
           name: num
-          element: dart:core::<fragment>::@class::num
+          element: dart:core::@class::num
           type: num
         parameter: ParameterMember
           base: root::@parameter::s
@@ -2020,7 +2025,7 @@ MethodInvocation
       FunctionReference
         function: SimpleIdentifier
           token: max
-          staticElement: <testLibraryFragment>::@function::max
+          staticElement: self::@function::max
           staticType: T Function<T extends num>(T, T)
         parameter: ParameterMember
           base: root::@parameter::f
@@ -2175,69 +2180,69 @@ MethodInvocation
           692, 1),
       error(CompileTimeErrorCode.MISSING_DEFAULT_VALUE_FOR_PARAMETER_POSITIONAL,
           697, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 769, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 816, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 869, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 929, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 995, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 769, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 816, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 869, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 929, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 995, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 1000, 31),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1056, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1056, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 1061, 41),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1157, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1157, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1168, 7),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1177, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1204, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1204, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1221, 7),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1230, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1286, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1333, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1386, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1446, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1512, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1286, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1333, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1386, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1446, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1512, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 1517, 34),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1576, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1576, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 1581, 41),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1676, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1676, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1687, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1690, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1723, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1723, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1740, 1),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 1743, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1802, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1837, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1878, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1918, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 1964, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1802, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1837, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1878, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1918, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 1964, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 1969, 17),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2008, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2008, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 2013, 23),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2087, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2087, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 2098, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2128, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2128, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 2145, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2208, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2252, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2302, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2359, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2425, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2208, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2252, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2302, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2359, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2425, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 2430, 28),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2483, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2483, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 2488, 38),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2580, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2580, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 2591, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2618, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2618, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 2635, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2694, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2805, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2874, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2694, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2805, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2874, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 2901, 7),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 2914, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 2942, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 3007, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 3060, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 2942, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 3007, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 3060, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 3089, 7),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 3098, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 3125, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 3125, 2),
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 3154, 7),
     ]);
 
@@ -2386,10 +2391,10 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 45, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 84, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 124, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 165, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 45, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 84, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 124, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 165, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 172, 7),
     ]);
 
@@ -2429,11 +2434,11 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 39, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 66, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 94, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 39, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 66, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 94, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 100, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 128, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 128, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 134, 7),
     ]);
 
@@ -2464,11 +2469,11 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 45, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 84, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 124, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 45, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 84, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 124, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 136, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 170, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 170, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 182, 7),
     ]);
 
@@ -2499,13 +2504,13 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 39, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 39, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 44, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 71, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 71, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 76, 8),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 104, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 104, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 109, 17),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 146, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 146, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 151, 21),
     ]);
 
@@ -2534,11 +2539,11 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 43, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 74, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 106, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 43, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 74, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 106, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 112, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 144, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 144, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 150, 7),
     ]);
 
@@ -2570,13 +2575,13 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 52, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 92, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 144, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 52, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 92, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 144, 2),
       error(CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE, 150, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 202, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 202, 2),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 212, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 248, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 248, 2),
       error(CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE, 267, 7),
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 277, 1),
     ]);
@@ -2625,13 +2630,13 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 46, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 80, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 124, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 80, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 124, 2),
       error(CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE, 130, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 174, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 174, 2),
       error(CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE, 183, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 212, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 212, 2),
       error(CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE, 229, 7),
       error(CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE, 238, 1),
     ]);
@@ -2664,14 +2669,14 @@ MethodInvocation
      }
    ''';
     await assertErrorsInCode(code, [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 46, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 51, 16),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 94, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 94, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 99, 26),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 152, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 152, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 157, 32),
       error(CompileTimeErrorCode.MAP_KEY_TYPE_NOT_ASSIGNABLE, 172, 7),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 216, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 216, 2),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 221, 20),
     ]);
 
@@ -3002,7 +3007,7 @@ class B<T2, U2> {
 
     var constructorMember = redirected.staticElement!;
     expect(
-      constructorMember.getDisplayString(),
+      constructorMember.getDisplayString(withNullability: false),
       'A<T2, U2> A.named()',
     );
     expect(redirected.name!.staticElement, constructorMember);
@@ -3038,7 +3043,7 @@ class B<T2, U2> {
 
     expect(redirected.name, isNull);
     expect(
-      redirected.staticElement!.getDisplayString(),
+      redirected.staticElement!.getDisplayString(withNullability: false),
       'A<T2, U2> A()',
     );
   }
@@ -3243,7 +3248,7 @@ main() {
   var foo = a.hashCode;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
     ]);
     expectInitializerType('foo', 'int');
   }
@@ -3301,7 +3306,7 @@ void main() {
   x = 42;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 21, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 21, 1),
     ]);
   }
 
@@ -3310,7 +3315,7 @@ void main() {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 15, 4),
     ]);
 
-    var node = findNode.functionDeclaration('f<T>');
+    final node = findNode.functionDeclaration('f<T>');
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -3334,7 +3339,7 @@ FunctionDeclaration
           element: T@4
           type: T
         name: x
-        declaredElement: <testLibraryFragment>::@function::f::@parameter::x
+        declaredElement: self::@function::f::@parameter::x
           type: T
       rightParenthesis: )
     body: ExpressionFunctionBody
@@ -3343,10 +3348,10 @@ FunctionDeclaration
         literal: null
         staticType: Null
       semicolon: ;
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: T Function<T>(T)
     staticType: T Function<T>(T)
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: T Function<T>(T)
 ''');
   }
@@ -3356,7 +3361,7 @@ FunctionDeclaration
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 27, 4),
     ]);
 
-    var node = findNode.functionDeclaration('f<T');
+    final node = findNode.functionDeclaration('f<T');
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -3373,7 +3378,7 @@ FunctionDeclaration
           extendsKeyword: extends
           bound: NamedType
             name: num
-            element: dart:core::<fragment>::@class::num
+            element: dart:core::@class::num
             type: num
           declaredElement: T@4
       rightBracket: >
@@ -3385,7 +3390,7 @@ FunctionDeclaration
           element: T@4
           type: T
         name: x
-        declaredElement: <testLibraryFragment>::@function::f::@parameter::x
+        declaredElement: self::@function::f::@parameter::x
           type: T
       rightParenthesis: )
     body: ExpressionFunctionBody
@@ -3394,10 +3399,10 @@ FunctionDeclaration
         literal: null
         staticType: Null
       semicolon: ;
-    declaredElement: <testLibraryFragment>::@function::f
+    declaredElement: self::@function::f
       type: T Function<T extends num>(T)
     staticType: T Function<T extends num>(T)
-  declaredElement: <testLibraryFragment>::@function::f
+  declaredElement: self::@function::f
     type: T Function<T extends num>(T)
 ''');
   }
@@ -3407,7 +3412,7 @@ FunctionDeclaration
 void g(T f<T>(T x)) {}
 ''');
 
-    var fType = findElement.parameter('f').type;
+    final fType = findElement.parameter('f').type;
     fType as FunctionType;
     assertType(fType, 'T Function<T>(T)');
   }
@@ -3421,7 +3426,7 @@ class C<E> {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 37, 4),
     ]);
 
-    var node = findNode.methodDeclaration('f<T>');
+    final node = findNode.methodDeclaration('f<T>');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   modifierKeyword: static
@@ -3445,7 +3450,7 @@ MethodDeclaration
         element: T@26
         type: T
       name: x
-      declaredElement: <testLibraryFragment>::@class::C::@method::f::@parameter::x
+      declaredElement: self::@class::C::@method::f::@parameter::x
         type: T
     rightParenthesis: )
   body: ExpressionFunctionBody
@@ -3454,7 +3459,7 @@ MethodDeclaration
       literal: null
       staticType: Null
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::C::@method::f
+  declaredElement: self::@class::C::@method::f
     type: T Function<T>(T)
 ''');
   }
@@ -3557,7 +3562,7 @@ main() {
 }
 ''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 36, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 65, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 65, 9),
     ]);
     assertType(findElement.method('f').type, 'List<T> Function<T>(E)');
 
@@ -3579,7 +3584,7 @@ main() {
 }
 ''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 36, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 82, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 82, 1),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
@@ -3623,14 +3628,14 @@ void test<S>(T Function<T>(T) pf) {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 96, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 123, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 224, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 237, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 281, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 315, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 349, 15),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 388, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 423, 12),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 460, 9),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 492, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 281, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 315, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 349, 15),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 388, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 423, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 460, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 492, 9),
     ]);
     _assertLocalVarType('lambdaCall', "int");
     _assertLocalVarType('methodCall', "int");
@@ -3648,7 +3653,7 @@ void test<S>(T pf<T>(T e)) {
   var paramCall = (pf)<int>(3);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
     ]);
     _assertLocalVarType('paramCall', "int");
   }
@@ -3659,7 +3664,7 @@ void test<S>(T pf<T>(T e)) {
   var paramCall = (pf)(3);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
     ]);
     _assertLocalVarType('paramCall', "int");
   }
@@ -3693,14 +3698,14 @@ void test<S>(T Function<T>(T) pf) {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 96, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 123, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 224, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 237, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 276, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 305, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 334, 15),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 368, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 398, 12),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 430, 9),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 457, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 276, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 305, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 334, 15),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 368, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 398, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 430, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 457, 9),
     ]);
     _assertLocalVarType('lambdaCall', "int");
     _assertLocalVarType('methodCall', "int");
@@ -3739,13 +3744,13 @@ void test<S>(T Function<T>(T) pf) {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 96, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 123, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 224, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 236, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 268, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 300, 15),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 337, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 370, 12),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 405, 9),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 435, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 268, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 300, 15),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 337, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 370, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 435, 9),
     ]);
     _assertLocalVarType('methodCall', "int");
     _assertLocalVarType('staticCall', "int");
@@ -3762,7 +3767,7 @@ void test<S>(T pf<T>(T e)) {
   var paramCall = pf<int>(3);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
     ]);
     _assertLocalVarType('paramCall', "int");
   }
@@ -3773,7 +3778,7 @@ void test<S>(T pf<T>(T e)) {
   var paramCall = pf(3);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
     ]);
     _assertLocalVarType('paramCall', "int");
   }
@@ -3805,13 +3810,13 @@ void test<S>(T Function<T>(T) pf) {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 96, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 123, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 224, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 236, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 263, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 290, 15),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 322, 10),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 350, 12),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 380, 9),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 405, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 263, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 290, 15),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 322, 10),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 350, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 380, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 9),
     ]);
     _assertLocalVarType('methodCall', "int");
     _assertLocalVarType('staticCall', "int");
@@ -3832,7 +3837,7 @@ main() {
 }
 ''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 41, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 70, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 70, 9),
     ]);
     assertType(
         findElement.method('f').type, 'List<T> Function<T>(T Function(E))');
@@ -3850,7 +3855,7 @@ void test<S>(T pf<T>(T e)) {
   var paramTearOff = pf;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 12),
     ]);
     _assertLocalVarType('paramTearOff', "T Function<T>(T)");
   }
@@ -3872,7 +3877,7 @@ void foo() {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 75, 4),
     ]);
 
-    var node1 = findNode.methodInvocation('map((e) => e);');
+    final node1 = findNode.methodInvocation('map((e) => e);');
     assertResolvedNodeText(node1, r'''
 MethodInvocation
   target: SimpleIdentifier
@@ -3883,7 +3888,7 @@ MethodInvocation
   methodName: SimpleIdentifier
     token: map
     staticElement: MethodMember
-      base: <testLibraryFragment>::@class::List::@method::map
+      base: self::@class::List::@method::map
       substitution: {E: dynamic, T: T}
     staticType: T Function<T>(T Function(dynamic))
   argumentList: ArgumentList
@@ -3916,7 +3921,7 @@ MethodInvocation
     dynamic
 ''');
 
-    var node2 = findNode.methodInvocation('map((e) => 3);');
+    final node2 = findNode.methodInvocation('map((e) => 3);');
     assertResolvedNodeText(node2, r'''
 MethodInvocation
   target: SimpleIdentifier
@@ -3927,7 +3932,7 @@ MethodInvocation
   methodName: SimpleIdentifier
     token: map
     staticElement: MethodMember
-      base: <testLibraryFragment>::@class::List::@method::map
+      base: self::@class::List::@method::map
       substitution: {E: dynamic, T: T}
     staticType: T Function<T>(T Function(dynamic))
   argumentList: ArgumentList
@@ -3967,7 +3972,7 @@ main() {
   var foo = max(1.0, 2.0);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
     ]);
     expectInitializerType('foo', 'double');
   }
@@ -3979,7 +3984,7 @@ main() {
   var foo = math.max(1.0, 2.0);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 43, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 43, 3),
     ]);
     expectInitializerType('foo', 'double');
   }
@@ -3991,7 +3996,7 @@ main() {
   var foo = max(1.0, 2);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
     ]);
     expectInitializerType('foo', 'num');
   }
@@ -4003,7 +4008,7 @@ main() {
   var foo = max(1, 2.0);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
     ]);
     expectInitializerType('foo', 'num');
   }
@@ -4015,7 +4020,7 @@ main() {
   var foo = max(1, 2);
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
     ]);
     expectInitializerType('foo', 'int');
   }
@@ -4044,7 +4049,7 @@ class C<T> {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 96, 4),
     ]);
 
-    var node1 = findNode.methodInvocation('f<int>(3);');
+    final node1 = findNode.methodInvocation('f<int>(3);');
     assertResolvedNodeText(node1, r'''
 MethodInvocation
   target: InstanceCreationExpression
@@ -4060,10 +4065,10 @@ MethodInvocation
               element: S@19
               type: S
           rightBracket: >
-        element: <testLibraryFragment>::@class::C
+        element: self::@class::C
         type: C<S>
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::C::@constructor::new
+        base: self::@class::C::@constructor::new
         substitution: {T: S}
     argumentList: ArgumentList
       leftParenthesis: (
@@ -4073,7 +4078,7 @@ MethodInvocation
   methodName: SimpleIdentifier
     token: f
     staticElement: MethodMember
-      base: <testLibraryFragment>::@class::C::@method::f
+      base: self::@class::C::@method::f
       substitution: {T: S, S: S}
     staticType: S Function<S₀>(S₀)
   typeArguments: TypeArgumentList
@@ -4081,7 +4086,7 @@ MethodInvocation
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -4102,7 +4107,8 @@ MethodInvocation
   }
 
   test_genericMethod_nestedCaptureBounds() async {
-    await assertErrorsInCode(r'''
+    await assertErrorsInCode(
+        r'''
 class C<T> {
   T f<S extends T>(S x) {
     new C<S>().f<int>(3);
@@ -4110,12 +4116,16 @@ class C<T> {
     return null;
   }
 }
-''', [
-      error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 56, 3),
-      error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 106, 4),
-    ]);
+''',
+        expectedErrorsByNullability(nullable: [
+          error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 56, 3),
+          error(
+              CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 106, 4),
+        ], legacy: [
+          error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 56, 3),
+        ]));
 
-    var node1 = findNode.methodInvocation('f<int>(3);');
+    final node1 = findNode.methodInvocation('f<int>(3);');
     assertResolvedNodeText(node1, r'''
 MethodInvocation
   target: InstanceCreationExpression
@@ -4131,10 +4141,10 @@ MethodInvocation
               element: S@19
               type: S
           rightBracket: >
-        element: <testLibraryFragment>::@class::C
+        element: self::@class::C
         type: C<S>
       staticElement: ConstructorMember
-        base: <testLibraryFragment>::@class::C::@constructor::new
+        base: self::@class::C::@constructor::new
         substitution: {T: S}
     argumentList: ArgumentList
       leftParenthesis: (
@@ -4144,7 +4154,7 @@ MethodInvocation
   methodName: SimpleIdentifier
     token: f
     staticElement: MethodMember
-      base: <testLibraryFragment>::@class::C::@method::f
+      base: self::@class::C::@method::f
       substitution: {T: S, S: S}
     staticType: S Function<S₀ extends S>(S₀)
   typeArguments: TypeArgumentList
@@ -4152,7 +4162,7 @@ MethodInvocation
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   argumentList: ArgumentList
@@ -4171,12 +4181,12 @@ MethodInvocation
     int
 ''');
 
-    var node2 = findNode.simple('f;');
+    final node2 = findNode.simple('f;');
     assertResolvedNodeText(node2, r'''
 SimpleIdentifier
   token: f
   staticElement: MethodMember
-    base: <testLibraryFragment>::@class::C::@method::f
+    base: self::@class::C::@method::f
     substitution: {T: S, S: S}
   staticType: S Function<S₀ extends S>(S₀)
 ''');
@@ -4210,7 +4220,7 @@ class D extends C {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 72, 4),
     ]);
 
-    var node = findNode.methodDeclaration('f<T>(T y)');
+    final node = findNode.methodDeclaration('f<T>(T y)');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -4233,7 +4243,7 @@ MethodDeclaration
         element: T@61
         type: T
       name: y
-      declaredElement: <testLibraryFragment>::@class::D::@method::f::@parameter::y
+      declaredElement: self::@class::D::@method::f::@parameter::y
         type: T
     rightParenthesis: )
   body: ExpressionFunctionBody
@@ -4242,7 +4252,7 @@ MethodDeclaration
       literal: null
       staticType: Null
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@class::D::@method::f
+  declaredElement: self::@class::D::@method::f
     type: T Function<T>(T)
 ''');
   }
@@ -4313,7 +4323,7 @@ class D extends C {
 }''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 69, 4),
       error(CompileTimeErrorCode.INVALID_OVERRIDE, 101, 1,
-          contextMessages: [message(testFile, 46, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 46, 1)]),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 124, 4),
     ]);
   }
@@ -4330,7 +4340,7 @@ class D extends C {
 }''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 69, 4),
       error(CompileTimeErrorCode.INVALID_OVERRIDE, 101, 1,
-          contextMessages: [message(testFile, 46, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 46, 1)]),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 124, 4),
     ]);
   }
@@ -4345,7 +4355,7 @@ class D extends C {
 }''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 37, 4),
       error(CompileTimeErrorCode.INVALID_OVERRIDE, 74, 1,
-          contextMessages: [message(testFile, 24, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 1)]),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 87, 4),
     ]);
   }
@@ -4360,7 +4370,7 @@ class D extends C {
 }''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 27, 4),
       error(CompileTimeErrorCode.INVALID_OVERRIDE, 59, 1,
-          contextMessages: [message(testFile, 14, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 14, 1)]),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 75, 4),
     ]);
   }
@@ -4385,7 +4395,7 @@ C toSpan(dynamic element) {
   return null;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 122, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 122, 1),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 160, 4),
     ]);
     _assertLocalVarType('y', 'List<C>');
@@ -4418,13 +4428,13 @@ void test<S>(T Function<T>(T) pf) {
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 96, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 123, 4),
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 224, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 236, 13),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 263, 13),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 290, 18),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 322, 13),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 350, 15),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 380, 12),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 405, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 13),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 263, 13),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 290, 18),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 322, 13),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 350, 15),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 380, 12),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 12),
     ]);
     _assertLocalVarType('methodTearOff', "T Function<T>(int)");
     _assertLocalVarType('staticTearOff', "T Function<T>(T)");
@@ -4476,7 +4486,7 @@ main() {
 }
 ''', [
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 69, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 81, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 81, 3),
     ]);
 
     expectInitializerType('foo', 'Future<String>');
@@ -4492,7 +4502,7 @@ main() {
 }
 ''', [
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 105, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 117, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 117, 3),
     ]);
     expectInitializerType('foo', 'Future<String>');
   }
@@ -4505,7 +4515,7 @@ void main() {
   var foo = p.then((r) => new Future<String>.value(3));
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 40, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 40, 3),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
@@ -4533,7 +4543,7 @@ void test() {
 ''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 37, 4),
       error(CompileTimeErrorCode.INVALID_ASSIGNMENT, 73, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 102, 9),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 102, 9),
     ]);
     _assertLocalVarType('fieldRead', "T Function<T>(T)");
   }
@@ -4555,12 +4565,12 @@ void test() {
   var cc = new C();
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 116, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 124, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 132, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 142, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 162, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 182, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 116, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 124, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 132, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 142, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 162, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 182, 2),
     ]);
     _assertLocalVarType('ai', "A<dynamic>");
     _assertLocalVarType('bi', "B<num>");
@@ -4578,9 +4588,9 @@ class C<T0 extends List<T1>, T1 extends List<T0>> {}
 class D extends C {}
 ''', [
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 69, 1,
-          contextMessages: [message(testFile, 69, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 69, 1)]),
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 69, 1,
-          contextMessages: [message(testFile, 69, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 69, 1)]),
     ]);
   }
 
@@ -4593,10 +4603,10 @@ void test() {
   var c = new C();
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 73, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 73, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 81, 1),
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 81, 1,
-          contextMessages: [message(testFile, 81, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 81, 1)]),
     ]);
     _assertLocalVarType('c', 'C<List<Object?>, List<List<Object?>>>');
   }
@@ -4640,8 +4650,8 @@ C c;
 ''', [
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 48, 1,
           contextMessages: [
-            message(testFile, 48, 1),
-            message(testFile, 48, 1)
+            message('/home/test/lib/test.dart', 48, 1),
+            message('/home/test/lib/test.dart', 48, 1)
           ]),
       error(CompileTimeErrorCode.NOT_INITIALIZED_NON_NULLABLE_VARIABLE, 50, 1),
     ]);
@@ -4711,10 +4721,10 @@ void main() {
   D d;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 114, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 121, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 128, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 135, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 114, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 121, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 128, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 135, 1),
     ]);
     _assertLocalVarType('a', 'A<dynamic>');
     _assertLocalVarType('b', 'B<num>');
@@ -4733,7 +4743,7 @@ void g() {
 }
 ''', [
       error(CompileTimeErrorCode.BODY_MIGHT_COMPLETE_NORMALLY, 3, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 69, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 69, 1),
       error(CompileTimeErrorCode.COULD_NOT_INFER, 73, 1),
     ]);
     _assertLocalVarType('c', 'List<Object?>');
@@ -4753,12 +4763,12 @@ class C<T> {
       error(CompileTimeErrorCode.COULD_NOT_INFER, 95, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@class::C::@method::m
+    staticElement: self::@class::C::@method::m
     staticType: void Function<S0 extends T, S1 extends List<S0>>(S0, S1)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -4766,13 +4776,13 @@ MethodInvocation
       NullLiteral
         literal: null
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::C::@method::m::@parameter::p0
+          base: root::@parameter::p0
           substitution: {S0: Null, S1: Null}
         staticType: Null
       NullLiteral
         literal: null
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::C::@method::m::@parameter::p1
+          base: root::@parameter::p1
           substitution: {S0: Null, S1: Null}
         staticType: Null
     rightParenthesis: )
@@ -4797,12 +4807,12 @@ class C<T> {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 69, 4),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@class::C::@method::m
+    staticElement: self::@class::C::@method::m
     staticType: Map<S0, S1> Function<S0 extends T, S1 extends List<S0>>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -4828,12 +4838,12 @@ class C<T> {
       error(CompileTimeErrorCode.COULD_NOT_INFER, 65, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@class::C::@method::m
+    staticElement: self::@class::C::@method::m
     staticType: void Function<S extends T>(S)
   argumentList: ArgumentList
     leftParenthesis: (
@@ -4841,7 +4851,7 @@ MethodInvocation
       NullLiteral
         literal: null
         parameter: ParameterMember
-          base: <testLibraryFragment>::@class::C::@method::m::@parameter::p0
+          base: root::@parameter::p0
           substitution: {S: Null}
         staticType: Null
     rightParenthesis: )
@@ -4865,12 +4875,12 @@ class C<T> {
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_METHOD, 37, 4),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
-    staticElement: <testLibraryFragment>::@class::C::@method::m
+    staticElement: self::@class::C::@method::m
     staticType: S Function<S extends T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -4918,12 +4928,12 @@ void main() {
   (f)..hashCode;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 69, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 94, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 117, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 183, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 210, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 235, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 69, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 94, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 117, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 183, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 210, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 235, 2),
     ]);
   }
 
@@ -4952,37 +4962,37 @@ void main() {
   (f)..hashCode;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 63, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 63, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           68,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 88, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 88, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           93,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 111, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 111, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           116,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 177, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 177, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           183,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 204, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 204, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           210,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 229, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 229, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
@@ -5047,12 +5057,12 @@ void main() {
 }
 ''', [
       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 16, 4),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 71, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 96, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 119, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 185, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 212, 2),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 237, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 71, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 96, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 119, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 185, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 212, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 2),
     ]);
   }
 
@@ -5083,37 +5093,37 @@ void main() {
   (f)..hashCode;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 107, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 107, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           112,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 132, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 132, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           137,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 155, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 155, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           160,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 221, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 221, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           227,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 248, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 248, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
           254,
           1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 273, 2),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 273, 2),
       error(
           CompileTimeErrorCode
               .NOT_ASSIGNED_POTENTIALLY_NON_NULLABLE_LOCAL_VARIABLE,
@@ -5224,7 +5234,7 @@ main() {
   var foo = (true) ? null : 3;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 15, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 15, 3),
       error(WarningCode.DEAD_CODE, 37, 1),
     ]);
     expectInitializerType('foo', 'int?');
@@ -5236,7 +5246,7 @@ main() {
   var foo = (true) ? 3 : null;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 15, 3),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 15, 3),
       error(WarningCode.DEAD_CODE, 34, 4),
     ]);
     expectInitializerType('foo', 'int?');

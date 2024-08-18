@@ -36,13 +36,13 @@ class ConfigurationTest extends AbstractLspAnalysisServerTest {
     // some period and making the test slower.
     setTextSyncDynamicRegistration();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     await monitorDynamicRegistrations(
       registrations,
       () => initialize(),
     );
 
-    var registration =
+    final registration =
         registrationFor(registrations, Method.workspace_didChangeConfiguration);
     expect(registration, isNull);
   }
@@ -60,7 +60,7 @@ class ConfigurationTest extends AbstractLspAnalysisServerTest {
     expect(server.contextManager.excludedPaths, isEmpty);
 
     // Notify the server of updated config that includes an excluded path.
-    var excludedFolderPath = join(projectFolderPath, 'excluded');
+    final excludedFolderPath = join(projectFolderPath, 'excluded');
     await updateConfig({
       'analysisExcludedFolders': [excludedFolderPath]
     });
@@ -73,13 +73,13 @@ class ConfigurationTest extends AbstractLspAnalysisServerTest {
   Future<void> test_configurationDidChange_supported() async {
     setDidChangeConfigurationDynamicRegistration();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     await monitorDynamicRegistrations(
       registrations,
       initialize,
     );
 
-    var registration =
+    final registration =
         registrationFor(registrations, Method.workspace_didChangeConfiguration);
     expect(registration, isNotNull);
   }
@@ -99,7 +99,7 @@ class ConfigurationTest extends AbstractLspAnalysisServerTest {
   Future<void> test_configurationRequest_supported() async {
     setConfigurationSupport();
 
-    var configRequest = requestsFromServer
+    final configRequest = requestsFromServer
         .firstWhere((n) => n.method == Method.workspace_configuration);
     expect(configRequest, completes);
 

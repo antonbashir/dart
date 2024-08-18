@@ -17,16 +17,8 @@ void main() {
 
 @reflectiveTest
 class DiagnosticTest extends AbstractLspAnalysisServerIntegrationTest {
-  @override
-  Future<void> setUp() async {
-    await super.setUp();
-
-    // These tests deliberately generate diagnostics.
-    failTestOnErrorDiagnostic = false;
-  }
-
   Future<void> test_contextMessage() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
   x = 0;
   int [!x!] = 1;
@@ -35,20 +27,20 @@ void f() {
 ''');
     newFile(mainFilePath, code.code);
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = (await diagnosticsUpdate)!;
+    final diagnostics = (await diagnosticsUpdate)!;
 
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics.first;
+    final diagnostic = diagnostics.first;
     expect(
         diagnostic.message,
         startsWith(
             "Local variable 'x' can't be referenced before it is declared"));
 
-    var relatedInformation = diagnostic.relatedInformation!;
+    final relatedInformation = diagnostic.relatedInformation!;
     expect(relatedInformation, hasLength(1));
-    var relatedInfo = relatedInformation.first;
+    final relatedInfo = relatedInformation.first;
     expect(relatedInfo.message, equals("The declaration of 'x' is here."));
     expect(relatedInfo.location.uri, equals(mainFileUri));
     expect(relatedInfo.location.range, equals(code.range.range));
@@ -57,11 +49,11 @@ void f() {
   Future<void> test_initialAnalysis() async {
     newFile(mainFilePath, 'String a = 1;');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = (await diagnosticsUpdate)!;
+    final diagnostics = (await diagnosticsUpdate)!;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics.first;
+    final diagnostic = diagnostics.first;
     expect(diagnostic.code, equals('invalid_assignment'));
     expect(diagnostic.range.start.line, equals(0));
     expect(diagnostic.range.start.character, equals(11));
@@ -77,11 +69,11 @@ linter:
     - await_only_futures
     ''');
 
-    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final diagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await initialize();
-    var diagnostics = (await diagnosticsUpdate)!;
+    final diagnostics = (await diagnosticsUpdate)!;
     expect(diagnostics, hasLength(1));
-    var diagnostic = diagnostics.first;
+    final diagnostic = diagnostics.first;
     expect(diagnostic.code, equals('await_only_futures'));
     expect(diagnostic.range.start.line, equals(0));
     expect(diagnostic.range.start.character, equals(18));
@@ -92,22 +84,22 @@ linter:
   /// Ensure we get diagnostics for a project even if the workspace contains
   /// another folder that does not exist.
   Future<void> test_workspaceFolders_existsAndDoesNotExist() async {
-    var rootPath = projectFolderUri.toFilePath();
-    var existingFolderUri = Uri.file(pathContext.join(rootPath, 'exists'));
-    var existingFileUri =
+    final rootPath = projectFolderUri.toFilePath();
+    final existingFolderUri = Uri.file(pathContext.join(rootPath, 'exists'));
+    final existingFileUri =
         Uri.file(pathContext.join(rootPath, 'exists', 'main.dart'));
-    var nonExistingFolderUri =
+    final nonExistingFolderUri =
         Uri.file(pathContext.join(rootPath, 'does_not_exist'));
 
     newFolder(existingFolderUri.toFilePath());
     newFile(existingFileUri.toFilePath(), 'NotAClass a;');
 
-    var diagnosticsFuture = waitForDiagnostics(existingFileUri);
+    final diagnosticsFuture = waitForDiagnostics(existingFileUri);
 
     await initialize(
         workspaceFolders: [existingFolderUri, nonExistingFolderUri]);
 
-    var diagnostics = await diagnosticsFuture;
+    final diagnostics = await diagnosticsFuture;
     expect(diagnostics, hasLength(1));
     expect(diagnostics!.single.code, 'undefined_class');
   }

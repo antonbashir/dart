@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Annotate redeclared members.';
 
@@ -49,16 +48,20 @@ extension type E(C c) implements C {
 ''';
 
 class AnnotateRedeclares extends LintRule {
+  static const LintCode code = LintCode('annotate_redeclares',
+      "The member '{0}' is redeclaring but isn't annotated with '@redeclare'.",
+      correctionMessage: "Try adding the '@redeclare' annotation.");
+
   AnnotateRedeclares()
       : super(
             name: 'annotate_redeclares',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style},
+            group: Group.style,
             state: State.experimental());
 
   @override
-  LintCode get lintCode => LinterLintCode.annotate_redeclares;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -88,8 +91,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     var element = node.declaredElement;
     if (element == null || element.hasRedeclare) return;
 
-    var parentElement = parent.declaredElement;
-    var extensionType = parentElement?.augmented.declaration;
+    var extensionType = parent.declaredElement;
     if (extensionType == null) return;
 
     if (_redeclaresMember(element, extensionType)) {

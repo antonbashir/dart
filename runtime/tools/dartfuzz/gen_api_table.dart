@@ -415,7 +415,7 @@ void visitClass(ClassElement classElement) {
   }
   for (var accessor in classElement.accessors) {
     if (accessor.isPublic && accessor.isGetter) {
-      var variable = accessor.variable2!;
+      var variable = accessor.variable;
       if (accessor.isStatic) {
         addToTable(
             typeString(variable.type),

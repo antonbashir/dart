@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -13,17 +13,17 @@ class AddAwait extends ResolvedCorrectionProducer {
   /// The kind of correction to be made.
   final _CorrectionKind _correctionKind;
 
-  AddAwait.nonBool({required super.context})
-      : _correctionKind = _CorrectionKind.nonBool;
+  AddAwait.nonBool() : _correctionKind = _CorrectionKind.nonBool;
 
-  AddAwait.unawaited({required super.context})
-      : _correctionKind = _CorrectionKind.unawaited;
+  AddAwait.unawaited() : _correctionKind = _CorrectionKind.unawaited;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Adding `await` can change behaviour and is not clearly the right
-      // choice. See https://github.com/dart-lang/sdk/issues/54022.
-      CorrectionApplicability.singleLocation;
+  // Adding `await` can change behaviour and is not clearly the right choice.
+  // https://github.com/dart-lang/sdk/issues/54022
+  bool get canBeAppliedInBulk => false;
+
+  @override
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_AWAIT;
@@ -34,9 +34,6 @@ class AddAwait extends ResolvedCorrectionProducer {
   @override
   Future<void> compute(ChangeBuilder builder) async {
     if (_correctionKind == _CorrectionKind.unawaited) {
-      if (node.parent is CascadeExpression) {
-        return;
-      }
       await _addAwait(builder);
     } else if (_correctionKind == _CorrectionKind.nonBool) {
       await _computeNonBool(builder);

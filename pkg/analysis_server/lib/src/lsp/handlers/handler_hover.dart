@@ -6,7 +6,6 @@ import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/protocol/protocol_generated.dart';
 import 'package:analysis_server/src/computer/computer_hover.dart';
 import 'package:analysis_server/src/lsp/dartdoc.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -18,7 +17,6 @@ typedef StaticOptions = Either2<bool, HoverOptions>;
 class HoverHandler
     extends SharedMessageHandler<TextDocumentPositionParams, Hover?> {
   HoverHandler(super.server);
-
   @override
   Method get handlesMessage => Method.textDocument_hover;
 
@@ -27,20 +25,17 @@ class HoverHandler
       TextDocumentPositionParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<Hover?>> handle(TextDocumentPositionParams params,
       MessageInfo message, CancellationToken token) async {
     if (!isDartDocument(params.textDocument)) {
       return success(null);
     }
 
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
-    var offset = unit.mapResultSync((unit) => toOffset(unit.lineInfo, pos));
-    return (unit, offset).mapResultsSync(_getHover);
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final offset = await unit.mapResult((unit) => toOffset(unit.lineInfo, pos));
+    return offset.mapResult((offset) => _getHover(unit.result, offset));
   }
 
   Hover? toHover(LineInfo lineInfo, HoverInformation? hover) {
@@ -54,13 +49,13 @@ class HoverHandler
       return null;
     }
 
-    var content = StringBuffer();
+    final content = StringBuffer();
     const divider = '---';
 
     // Description + Types.
-    var elementDescription = hover.elementDescription;
-    var staticType = hover.staticType;
-    var isDeprecated = hover.isDeprecated ?? false;
+    final elementDescription = hover.elementDescription;
+    final staticType = hover.staticType;
+    final isDeprecated = hover.isDeprecated ?? false;
     if (elementDescription != null) {
       content.writeln('```dart');
       if (isDeprecated) {
@@ -77,7 +72,7 @@ class HoverHandler
     }
 
     // Source library.
-    var containingLibraryName = hover.containingLibraryName;
+    final containingLibraryName = hover.containingLibraryName;
     if (containingLibraryName != null && containingLibraryName.isNotEmpty) {
       content
         ..writeln('*$containingLibraryName*')
@@ -92,7 +87,7 @@ class HoverHandler
       content.writeln(cleanDartdoc(hover.dartdoc));
     }
 
-    var formats = server.lspClientCapabilities?.hoverContentFormats;
+    final formats = server.lspClientCapabilities?.hoverContentFormats;
     return Hover(
       contents:
           asMarkupContentOrString(formats, content.toString().trimRight()),
@@ -101,15 +96,15 @@ class HoverHandler
   }
 
   ErrorOr<Hover?> _getHover(ResolvedUnitResult unit, int offset) {
-    var compilationUnit = unit.unit;
-    var computer = DartUnitHoverComputer(
+    final compilationUnit = unit.unit;
+    final computer = DartUnitHoverComputer(
       server.getDartdocDirectiveInfoFor(unit),
       compilationUnit,
       offset,
       documentationPreference:
           server.lspClientConfiguration.global.preferredDocumentation,
     );
-    var hover = computer.compute();
+    final hover = computer.compute();
     return success(toHover(unit.lineInfo, hover));
   }
 }

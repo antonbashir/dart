@@ -5,8 +5,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:front_end/src/util/parser_ast.dart';
-import 'package:front_end/src/util/parser_ast_helper.dart';
+import 'package:front_end/src/fasta/util/parser_ast.dart';
+import 'package:front_end/src/fasta/util/parser_ast_helper.dart';
 
 late Uri base;
 
@@ -24,7 +24,6 @@ void main(List<String> args) {
 }
 
 void canParseTopLevelIshOfAllFrontendFiles() {
-  Stopwatch stopwatch = new Stopwatch()..start();
   Directory directory = new Directory.fromUri(base.resolve("../../../"));
   int processed = 0;
   int errors = 0;
@@ -34,14 +33,11 @@ void canParseTopLevelIshOfAllFrontendFiles() {
       try {
         processed++;
         List<int> data = entry.readAsBytesSync();
-        CompilationUnitEnd ast = getAST(
-          data,
-          includeBody: true,
-          includeComments: true,
-          enableExtensionMethods: true,
-          enableNonNullable: true,
-          enableTripleShift: true,
-        );
+        CompilationUnitEnd ast = getAST(data,
+            includeBody: true,
+            includeComments: true,
+            enableExtensionMethods: true,
+            enableNonNullable: false);
         splitIntoChunks(ast, data);
         for (ParserAstNode child in ast.children!) {
           if (child.isClass()) {
@@ -51,16 +47,6 @@ void canParseTopLevelIshOfAllFrontendFiles() {
             splitIntoChunks(
                 child.asMixinDeclaration().getClassOrMixinOrExtensionBody(),
                 data);
-          } else if (child.isExtension()) {
-            splitIntoChunks(
-                child.asExtension().getClassOrMixinOrExtensionBody(), data);
-          } else if (child.isExtensionType()) {
-            splitIntoChunks(
-                child.asExtensionType().getClassOrMixinOrExtensionBody(), data);
-          } else if (child.isEnum()) {
-            for (MemberEnd member in child.asEnum().getMembers()) {
-              processItem(member, data);
-            }
           }
         }
       } catch (e, st) {
@@ -69,11 +55,8 @@ void canParseTopLevelIshOfAllFrontendFiles() {
       }
     }
   }
-  print("Processed $processed files in $directory in ${stopwatch.elapsed}. "
+  print("Processed $processed files in $directory. "
       "Encountered $errors errors.");
-  if (errors != 0) {
-    throw "Got errors.";
-  }
 }
 
 void testTopLevelStuff() {
@@ -89,7 +72,7 @@ void testTopLevelStuff() {
   expect(2, ast.getExports().length);
 
   List<String> foundChunks = splitIntoChunks(ast, data);
-  expect(23, foundChunks.length);
+  expect(22, foundChunks.length);
   expect("library top_level_stuff;", foundChunks[0]);
   expect('import "top_level_stuff_helper.dart";', foundChunks[1]);
   expect('export "top_level_stuff_helper.dart";', foundChunks[2]);
@@ -102,37 +85,36 @@ void testTopLevelStuff() {
       'c hide d, e, f show foo;',
       foundChunks[4]);
   expect("part 'top_level_stuff_helper.dart';", foundChunks[5]);
-  expect('@metadataOneOnThisOne("bla")', foundChunks[6]);
-  expect("@metadataTwoOnThisOne", foundChunks[7]);
-  expect('@metadataThree.OnThisOne<int>("hello")', foundChunks[8]);
+  expect('@metadataOneOnThisOne("bla")\n', foundChunks[6]);
+  expect("@metadataTwoOnThisOne\n", foundChunks[7]);
   expect("""void toplevelMethod() {
   // no content
-}""", foundChunks[9]);
+}""", foundChunks[8]);
   expect("""List<E> anotherTopLevelMethod<E>() {
   return null;
-}""", foundChunks[10]);
-  expect("enum FooEnum { A, B, Bla }", foundChunks[11]);
+}""", foundChunks[9]);
+  expect("enum FooEnum { A, B, Bla }", foundChunks[10]);
   expect("""class FooClass {
   // no content.
-}""", foundChunks[12]);
+}""", foundChunks[11]);
   expect("""mixin FooMixin {
   // no content.
-}""", foundChunks[13]);
+}""", foundChunks[12]);
   expect("""class A<T> {
   // no content.
-}""", foundChunks[14]);
-  expect("typedef B = Function();", foundChunks[15]);
+}""", foundChunks[13]);
+  expect("typedef B = Function();", foundChunks[14]);
   expect("""mixin C<T> on A<T> {
   // no content.
-}""", foundChunks[16]);
+}""", foundChunks[15]);
   expect("""extension D<T> on A<T> {
   // no content.
-}""", foundChunks[17]);
-  expect("class E = A with FooClass;", foundChunks[18]);
-  expect("int field1;", foundChunks[19]);
-  expect("int field2, field3;", foundChunks[20]);
-  expect("int field4 = 42;", foundChunks[21]);
-  expect("@AnnotationAtEOF", foundChunks[22]);
+}""", foundChunks[16]);
+  expect("class E = A with FooClass;", foundChunks[17]);
+  expect("int field1;", foundChunks[18]);
+  expect("int field2, field3;", foundChunks[19]);
+  expect("int field4 = 42;", foundChunks[20]);
+  expect("@AnnotationAtEOF", foundChunks[21]);
 
   file = new File.fromUri(
       base.resolve("parser_ast_test_data/top_level_stuff_helper.txt"));
@@ -295,8 +277,6 @@ List<String> splitIntoChunks(ParserAstNode ast, List<int> data) {
 List<String> processItem(ParserAstNode item, List<int> data) {
   if (item.isClass()) {
     ClassDeclarationEnd cls = item.asClass();
-    // Check that we can get the identifier without throwing.
-    cls.getClassIdentifier();
     return [
       getCutContent(data, cls.beginToken.offset,
           cls.endToken.offset + cls.endToken.length)
@@ -307,10 +287,8 @@ List<String> processItem(ParserAstNode item, List<int> data) {
     if (entries.isNotEmpty) {
       List<String> chunks = [];
       for (MetadataEnd metadata in entries) {
-        // Check that we can get the identifiers without throwing.
-        metadata.getIdentifiers();
         chunks.add(getCutContent(
-            data, metadata.beginToken.offset, metadata.endToken.charEnd));
+            data, metadata.beginToken.offset, metadata.endToken.offset));
       }
       return chunks;
     }
@@ -347,24 +325,18 @@ List<String> processItem(ParserAstNode item, List<int> data) {
     ];
   } else if (item.isTopLevelMethod()) {
     TopLevelMethodEnd method = item.asTopLevelMethod();
-    // Check that we can get the identifier without throwing.
-    method.getNameIdentifier();
     return [
       getCutContent(data, method.beginToken.offset,
           method.endToken.offset + method.endToken.length)
     ];
   } else if (item.isTopLevelFields()) {
     TopLevelFieldsEnd fields = item.asTopLevelFields();
-    // Check that we can get the identifiers without throwing.
-    fields.getFieldIdentifiers();
     return [
       getCutContent(data, fields.beginToken.offset,
           fields.endToken.offset + fields.endToken.length)
     ];
   } else if (item.isEnum()) {
     EnumEnd declaration = item.asEnum();
-    // Check that we can get the identifier without throwing.
-    declaration.getEnumIdentifier();
     return [
       getCutContent(
           data,
@@ -374,43 +346,27 @@ List<String> processItem(ParserAstNode item, List<int> data) {
     ];
   } else if (item.isMixinDeclaration()) {
     MixinDeclarationEnd mixinDecl = item.asMixinDeclaration();
-    // Check that we can get the identifier without throwing.
-    mixinDecl.getMixinIdentifier();
     return [
       getCutContent(data, mixinDecl.beginToken.offset,
           mixinDecl.endToken.offset + mixinDecl.endToken.length)
     ];
   } else if (item.isNamedMixinDeclaration()) {
     NamedMixinApplicationEnd namedMixinDecl = item.asNamedMixinDeclaration();
-    // Check that we can get the identifier without throwing.
-    namedMixinDecl.getMixinIdentifier();
     return [
       getCutContent(data, namedMixinDecl.begin.offset,
           namedMixinDecl.endToken.offset + namedMixinDecl.endToken.length)
     ];
   } else if (item.isTypedef()) {
     TypedefEnd typedefDecl = item.asTypedef();
-    // Check that we can get the identifier without throwing.
-    typedefDecl.getNameIdentifier();
     return [
       getCutContent(data, typedefDecl.typedefKeyword.offset,
           typedefDecl.endToken.offset + typedefDecl.endToken.length)
     ];
   } else if (item.isExtension()) {
     ExtensionDeclarationEnd extensionDecl = item.asExtension();
-    // Check that we can get the identifier without throwing.
-    extensionDecl.getExtensionName();
     return [
       getCutContent(data, extensionDecl.extensionKeyword.offset,
           extensionDecl.endToken.offset + extensionDecl.endToken.length)
-    ];
-  } else if (item.isExtensionType()) {
-    ExtensionTypeDeclarationEnd extensionTypeDecl = item.asExtensionType();
-    // Check that we can get the identifier without throwing.
-    extensionTypeDecl.getExtensionTypeName();
-    return [
-      getCutContent(data, extensionTypeDecl.extensionKeyword.offset,
-          extensionTypeDecl.endToken.offset + extensionTypeDecl.endToken.length)
     ];
   } else if (item.isScript()) {
     ScriptHandle script = item.asScript();
@@ -421,160 +377,54 @@ List<String> processItem(ParserAstNode item, List<int> data) {
   } else if (item is MemberEnd) {
     if (item.isClassConstructor()) {
       ClassConstructorEnd decl = item.getClassConstructor();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isClassFactoryMethod()) {
       ClassFactoryMethodEnd decl = item.getClassFactoryMethod();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isClassMethod()) {
       ClassMethodEnd decl = item.getClassMethod();
-      // Check that we can get the identifier without throwing.
-      decl.getNameIdentifier();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isClassFields()) {
       ClassFieldsEnd decl = item.getClassFields();
-      // Check that we can get the identifiers without throwing.
-      decl.getFieldIdentifiers();
+      return [
+        getCutContent(data, decl.beginToken.offset,
+            decl.endToken.offset + decl.endToken.length)
+      ];
+    } else if (item.isClassFields()) {
+      ClassFieldsEnd decl = item.getClassFields();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isMixinFields()) {
       MixinFieldsEnd decl = item.getMixinFields();
-      // Check that we can get the identifiers without throwing.
-      decl.getFieldIdentifiers();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isMixinMethod()) {
       MixinMethodEnd decl = item.getMixinMethod();
-      // Check that we can get the identifier without throwing.
-      decl.getNameIdentifier();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isMixinFactoryMethod()) {
       MixinFactoryMethodEnd decl = item.getMixinFactoryMethod();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
       ];
     } else if (item.isMixinConstructor()) {
       MixinConstructorEnd decl = item.getMixinConstructor();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionMethod()) {
-      ExtensionMethodEnd decl = item.getExtensionMethod();
-      // Check that we can get the identifier without throwing.
-      decl.getNameIdentifier();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionFields()) {
-      ExtensionFieldsEnd decl = item.getExtensionFields();
-      // Check that we can get the identifiers without throwing.
-      decl.getFieldIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionConstructor()) {
-      ExtensionConstructorEnd decl = item.getExtensionConstructor();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionFactoryMethod()) {
-      ExtensionFactoryMethodEnd decl = item.getExtensionFactoryMethod();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionTypeMethod()) {
-      ExtensionTypeMethodEnd decl = item.getExtensionTypeMethod();
-      // Check that we can get the identifier without throwing.
-      decl.getNameIdentifier();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionTypeFields()) {
-      ExtensionTypeFieldsEnd decl = item.getExtensionTypeFields();
-      // Check that we can get the identifiers without throwing.
-      decl.getFieldIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionTypeConstructor()) {
-      ExtensionTypeConstructorEnd decl = item.getExtensionTypeConstructor();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isExtensionTypeFactoryMethod()) {
-      ExtensionTypeFactoryMethodEnd decl = item.getExtensionTypeFactoryMethod();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isEnumMethod()) {
-      EnumMethodEnd decl = item.getEnumMethod();
-      // Check that we can get the identifier without throwing.
-      decl.getNameIdentifier();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isEnumFields()) {
-      EnumFieldsEnd decl = item.getEnumFields();
-      // Check that we can get the identifiers without throwing.
-      decl.getFieldIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isEnumConstructor()) {
-      EnumConstructorEnd decl = item.getEnumConstructor();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
-      return [
-        getCutContent(data, decl.beginToken.offset,
-            decl.endToken.offset + decl.endToken.length)
-      ];
-    } else if (item.isEnumFactoryMethod()) {
-      EnumFactoryMethodEnd decl = item.getEnumFactoryMethod();
-      // Check that we can get the identifiers without throwing.
-      decl.getIdentifiers();
       return [
         getCutContent(data, decl.beginToken.offset,
             decl.endToken.offset + decl.endToken.length)
@@ -583,10 +433,9 @@ List<String> processItem(ParserAstNode item, List<int> data) {
       if (item.type == ParserAstType.BEGIN) return const [];
       if (item.type == ParserAstType.HANDLE) return const [];
       if (item.isClassRecoverableError()) return const [];
-      if (item.isExperimentNotEnabled()) return const [];
       if (item.isRecoverableError()) return const [];
       if (item.isRecoverImport()) return const [];
-      throw "Unknown member: $item --- ${item.children}";
+      throw "Unknown: $item --- ${item.children}";
     }
   } else if (item.isFunctionBody()) {
     BlockFunctionBodyEnd decl = item.asFunctionBody();

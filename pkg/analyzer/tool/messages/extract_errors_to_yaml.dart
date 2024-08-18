@@ -24,7 +24,7 @@ import 'package:yaml/yaml.dart';
 
 import 'error_code_info.dart';
 
-void main() {
+main() {
   var errorDeclarations = _findErrorDeclarations();
   var errorCodesByClass = _findErrorCodesByClass();
   _generateYaml(errorCodesByClass, errorDeclarations);

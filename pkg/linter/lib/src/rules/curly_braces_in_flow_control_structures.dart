@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'DO use curly braces for all flow control structures.';
 
@@ -52,19 +51,23 @@ if (overflowChars != other.overflowChars) {
 ''';
 
 class CurlyBracesInFlowControlStructures extends LintRule {
+  static const LintCode code = LintCode(
+      'curly_braces_in_flow_control_structures',
+      'Statements in {0} should be enclosed in a block.',
+      correctionMessage: 'Try wrapping the statement in a block.');
+
   CurlyBracesInFlowControlStructures()
       : super(
             name: 'curly_braces_in_flow_control_structures',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.style);
 
   @override
   bool get canUseParsedResult => true;
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.curly_braces_in_flow_control_structures;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

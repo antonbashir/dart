@@ -21,47 +21,32 @@ const List<String> specialSuites = <String>[
 Future<void> runStandardSuites([List<String>? args]) async {
   // Assert that 'strong' is the first suite - we use the assumption below.
   assert(standardSuites.first == 'weak', "Suite 'weak' most be the first.");
-
-  List<String> testingArguments = [];
+  bool first = true;
   for (String suite in standardSuites) {
     List<String> tests = args == null
         ? [suite]
         : args.map((String arg) => '${suite}/$arg').toList();
-    testingArguments.addAll(tests);
+    await fasta.main([
+      'testing',
+      ...tests,
+      // Only update comments in the first suite. Note that this only works
+      // if the first compilation is a full compilation, i.e. not outline,
+      // because comments are generated during body building and inference.
+      if (first) '-DupdateComments=true',
+      '-DupdateExpectations=true'
+    ]);
+    first = false;
   }
-  await fasta.main([
-    'testing',
-    ...testingArguments,
-    // Only update comments in the first suite. Note that this only works
-    // if the first compilation is a full compilation, i.e. not outline,
-    // because comments are generated during body building and inference.
-    '-DupdateComments=true',
-    '-DupdateExpectations=true',
-  ]);
-}
-
-Future<void> runAllSpecialSuites([List<String>? args]) async {
-  List<String> testingArguments = [];
-  for (String suite in specialSuites) {
-    List<String> tests = args == null
-        ? [suite]
-        : args.map((String arg) => '${suite}/$arg').toList();
-    testingArguments.addAll(tests);
-  }
-  await fasta.main([
-    'testing',
-    ...testingArguments,
-    '-DupdateExpectations=true',
-  ]);
 }
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     await runStandardSuites();
-    await runAllSpecialSuites();
+    for (String suite in specialSuites) {
+      await fasta.main(['testing', suite, '-DupdateExpectations=true']);
+    }
   } else {
     List<String> standardTests = <String>[];
-    List<String> wildcardSpecialTests = <String>[];
     for (String arg in args) {
       bool isSpecial = false;
       for (String suite in specialSuites) {
@@ -72,15 +57,11 @@ Future<void> main(List<String> args) async {
         }
       }
       if (!isSpecial) {
-        wildcardSpecialTests.add(arg);
         standardTests.add(arg);
       }
     }
-    if (wildcardSpecialTests.isNotEmpty) {
-      await runAllSpecialSuites(wildcardSpecialTests);
-    }
     if (standardTests.isNotEmpty) {
-      await runStandardSuites(standardTests);
+      await runStandardSuites(args);
     }
   }
 }

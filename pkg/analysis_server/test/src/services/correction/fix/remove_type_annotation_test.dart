@@ -150,16 +150,12 @@ class AvoidTypesOnClosureParametersBulkTest extends BulkFixProcessorTest {
 
   Future<void> test_singleFile() async {
     await resolveTestCode('''
-void f(List<Future<int>> list) {
-  list.forEach((Future<int> defaultValue) {});
-  list.forEach((Future<int> defaultValue) { defaultValue; });
-}
+var x = ({Future<int> defaultValue}) => null;
+var y = (Future<int> defaultValue) => null;
 ''');
     await assertHasFix('''
-void f(List<Future<int>> list) {
-  list.forEach((defaultValue) {});
-  list.forEach((defaultValue) { defaultValue; });
-}
+var x = ({defaultValue}) => null;
+var y = (defaultValue) => null;
 ''');
   }
 }
@@ -171,58 +167,28 @@ class AvoidTypesOnClosureParametersTest extends RemoveTypeAnnotationTest {
 
   Future<void> test_namedParameter() async {
     await resolveTestCode('''
-void f(C c) {
-  c.forEach(({Future<int>? p}) {});
-}
-class C {
-  void forEach(void Function({Future<int>? p})) {}
-}
+var x = ({Future<int>? defaultValue}) => null;
 ''');
     await assertHasFix('''
-void f(C c) {
-  c.forEach(({p}) {});
-}
-class C {
-  void forEach(void Function({Future<int>? p})) {}
-}
+var x = ({defaultValue}) => null;
 ''');
   }
 
   Future<void> test_normalParameter() async {
     await resolveTestCode('''
-void f(C c) {
-  c.forEach((Future<int>? p) {});
-}
-class C {
-  void forEach(void Function(Future<int>? p)) {}
-}
+var x = (Future<int> defaultValue) => null;
 ''');
     await assertHasFix('''
-void f(C c) {
-  c.forEach((p) {});
-}
-class C {
-  void forEach(void Function(Future<int>? p)) {}
-}
+var x = (defaultValue) => null;
 ''');
   }
 
   Future<void> test_optionalParameter() async {
     await resolveTestCode('''
-void f(C c) {
-  c.forEach(([Future<int>? p]) {});
-}
-class C {
-  void forEach(void Function([Future<int>? p])) {}
-}
+var x = ([Future<int>? defaultValue]) => null;
 ''');
     await assertHasFix('''
-void f(C c) {
-  c.forEach(([p]) {});
-}
-class C {
-  void forEach(void Function([Future<int>? p])) {}
-}
+var x = ([defaultValue]) => null;
 ''');
   }
 }

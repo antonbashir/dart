@@ -1,7 +1,5 @@
 library test;
 
 T f<T>() => throw '';
-
 void test() {}
-
 main() {}

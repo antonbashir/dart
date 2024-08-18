@@ -18,8 +18,7 @@ class AnalysisUpdateContentHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = AnalysisUpdateContentParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisUpdateContentParams.fromRequest(request);
 
     for (var file in params.files.keys) {
       if (!server.isAbsoluteAndNormalized(file)) {

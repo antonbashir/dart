@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:js_runtime/synced/array_flags.dart' show ArrayFlags;
 import '../common/elements.dart' show JCommonElements;
 import '../constants/constant_system.dart' as constant_system;
 import '../constants/values.dart';
@@ -204,23 +203,13 @@ class IndexAssignSpecializer extends InvokeDynamicSpecializer {
       OptimizationTestLog? log) {
     HInstruction receiver = instruction.inputs[1];
     HInstruction index = instruction.inputs[2];
-    final abstractValueDomain = closedWorld.abstractValueDomain;
-
-    bool needsMutableCheck = false;
-    if (abstractValueDomain
-        .isTypedArray(receiver.instructionType)
-        .isDefinitelyTrue) {
-      needsMutableCheck = true;
-    } else if (receiver.isArray(abstractValueDomain).isDefinitelyTrue) {
-      needsMutableCheck =
-          receiver.isMutableArray(abstractValueDomain).isPotentiallyFalse;
-    } else {
-      if (receiver.isMutableIndexable(abstractValueDomain).isPotentiallyFalse) {
-        return null;
-      }
+    if (receiver
+        .isMutableIndexable(closedWorld.abstractValueDomain)
+        .isPotentiallyFalse) {
+      return null;
     }
     // TODO(johnniwinther): Merge this and the following if statement.
-    if (index.isInteger(abstractValueDomain).isPotentiallyFalse &&
+    if (index.isInteger(closedWorld.abstractValueDomain).isPotentiallyFalse &&
         // TODO(johnniwinther): Support annotations on the possible targets
         // and used their parameter check policy here.
         closedWorld.annotationsData.getParameterCheckPolicy(null).isEmitted) {
@@ -236,25 +225,6 @@ class IndexAssignSpecializer extends InvokeDynamicSpecializer {
           instruction, receiver, value, commonElements, closedWorld)) {
         return null;
       }
-    }
-
-    if (needsMutableCheck) {
-      HInstruction getFlags =
-          HArrayFlagsGet(receiver, abstractValueDomain.uint31Type)
-            ..sourceInformation = instruction.sourceInformation;
-      instruction.block!.addBefore(instruction, getFlags);
-      HInstruction mask =
-          graph.addConstantInt(ArrayFlags.unmodifiableCheck, closedWorld);
-      HInstruction name = graph.addConstantString('[]=', closedWorld);
-      HInstruction verb = graph.addConstantString('modify', closedWorld);
-      final instructionType = receiver.instructionType;
-      final checkFlags = HArrayFlagsCheck(
-          receiver, getFlags, mask, name, verb, instructionType)
-        ..sourceInformation = instruction.sourceInformation;
-      instruction.block!.addBefore(instruction, checkFlags);
-      checkFlags.instructionType = checkFlags.computeInstructionType(
-          instructionType, abstractValueDomain);
-      receiver = checkFlags;
     }
 
     HInstruction checkedIndex = index;

@@ -62,7 +62,7 @@ class MockServerChannel implements ServerCommunicationChannel {
       return;
     }
     notificationsReceived.add(notification);
-    var errorCompleter = this.errorCompleter;
+    final errorCompleter = this.errorCompleter;
     if (errorCompleter != null && notification.event == 'server.error') {
       var params = notification.params!;
       print('[server.error] test: $name message: ${params['message']}');
@@ -215,6 +215,11 @@ class TestPluginManager implements PluginManager {
   @override
   List<PluginInfo> pluginsForContextRoot(analyzer.ContextRoot? contextRoot) {
     fail('Unexpected invocation of pluginsForContextRoot');
+  }
+
+  @override
+  void recordPluginFailure(String hostPackageName, String message) {
+    fail('Unexpected invocation of recordPluginFailure');
   }
 
   @override

@@ -48,9 +48,11 @@ class Tracer with TracerUtil {
     });
   }
 
-  void traceGraph(String name, ssa.HGraph graph) {
+  void traceGraph(String name, var irObject) {
     if (!traceActive) return;
-    HTracer(output!, closedWorld).traceGraph(name, graph);
+    if (irObject is ssa.HGraph) {
+      HTracer(output!, closedWorld).traceGraph(name, irObject);
+    }
   }
 
   void traceJavaScriptText(String name, String Function() getText) {
@@ -85,7 +87,7 @@ mixin TracerUtil {
     println(propertyName);
   }
 
-  String formatPrty(Object? x) {
+  String formatPrty(x) {
     if (x is num) {
       return '${x}';
     } else if (x is String) {
@@ -97,7 +99,7 @@ mixin TracerUtil {
     }
   }
 
-  void printProperty(String propertyName, Object? value) {
+  void printProperty(String propertyName, value) {
     println("$propertyName ${formatPrty(value)}");
   }
 

@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../util/ast_type_matchers.dart';
+import '../util/feature_sets.dart';
 import 'parser_test_base.dart';
 import 'test_support.dart';
 
@@ -35,7 +36,8 @@ class FormalParameterParserTest extends FastaParserTestCase {
       fail('$kind');
     }
     createParser(parametersCode);
-    FormalParameterList list = parserProxy.parseFormalParameterList();
+    FormalParameterList list =
+        parserProxy.parseFormalParameterList(inFunctionType: false);
     assertErrors(errors: errors);
     return list.parameters.single;
   }
@@ -71,6 +73,58 @@ class FormalParameterParserTest extends FastaParserTestCase {
     expect(defaultParameter.separator, isNotNull);
     expect(defaultParameter.defaultValue, isNotNull);
     expect(defaultParameter.isNamed, isTrue);
+  }
+
+  void test_functionTyped_named_nullable_disabled() {
+    ParameterKind kind = ParameterKind.NAMED;
+    var defaultParameter = parseFormalParameter('a()? : null', kind,
+            featureSet: FeatureSets.language_2_9,
+            errorCodes: [ParserErrorCode.EXPERIMENT_NOT_ENABLED])
+        as DefaultFormalParameter;
+    var functionParameter =
+        defaultParameter.parameter as FunctionTypedFormalParameter;
+    expect(functionParameter.returnType, isNull);
+    expect(functionParameter.name, isNotNull);
+    expect(functionParameter.typeParameters, isNull);
+    expect(functionParameter.parameters, isNotNull);
+    expect(functionParameter.isNamed, isTrue);
+    expect(functionParameter.question, isNotNull);
+    expect(defaultParameter.separator, isNotNull);
+    expect(defaultParameter.defaultValue, isNotNull);
+    expect(defaultParameter.isNamed, isTrue);
+  }
+
+  void test_functionTyped_positional_nullable_disabled() {
+    ParameterKind kind = ParameterKind.POSITIONAL;
+    var defaultParameter = parseFormalParameter('a()? = null', kind,
+            featureSet: FeatureSets.language_2_9,
+            errorCodes: [ParserErrorCode.EXPERIMENT_NOT_ENABLED])
+        as DefaultFormalParameter;
+    var functionParameter =
+        defaultParameter.parameter as FunctionTypedFormalParameter;
+    expect(functionParameter.returnType, isNull);
+    expect(functionParameter.name, isNotNull);
+    expect(functionParameter.typeParameters, isNull);
+    expect(functionParameter.parameters, isNotNull);
+    expect(functionParameter.isOptionalPositional, isTrue);
+    expect(functionParameter.question, isNotNull);
+    expect(defaultParameter.separator, isNotNull);
+    expect(defaultParameter.defaultValue, isNotNull);
+    expect(defaultParameter.isOptionalPositional, isTrue);
+  }
+
+  void test_functionTyped_required_nullable_disabled() {
+    ParameterKind kind = ParameterKind.REQUIRED;
+    var functionParameter = parseFormalParameter('a()?', kind,
+            featureSet: FeatureSets.language_2_9,
+            errorCodes: [ParserErrorCode.EXPERIMENT_NOT_ENABLED])
+        as FunctionTypedFormalParameter;
+    expect(functionParameter.returnType, isNull);
+    expect(functionParameter.name, isNotNull);
+    expect(functionParameter.typeParameters, isNull);
+    expect(functionParameter.parameters, isNotNull);
+    expect(functionParameter.isRequiredPositional, isTrue);
+    expect(functionParameter.question, isNotNull);
   }
 
   void test_parseConstructorParameter_this() {

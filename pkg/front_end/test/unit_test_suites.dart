@@ -390,7 +390,7 @@ const List<Suite> suites = [
     strong.createContext,
     "../../testing.json",
     path: "fasta/strong_suite.dart",
-    shardCount: 10,
+    shardCount: 2,
   ),
   const Suite(
     "incremental_bulk_compiler_smoke",

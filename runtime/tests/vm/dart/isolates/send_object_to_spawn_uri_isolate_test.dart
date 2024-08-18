@@ -10,6 +10,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:expect/expect.dart';
+import "package:test/test.dart";
 
 class Foo {
   var bar = 123;

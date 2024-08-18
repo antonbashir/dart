@@ -19,10 +19,15 @@ ArrayPtr GetNativeAssetsMap(Thread* thread) {
     return native_assets_map.ptr();
   }
 
+#if defined(DART_PRECOMPILED_RUNTIME)
+  // For now not configuring native assets is supported.
+  return Array::null();
+#else  // defined(DART_PRECOMPILED_RUNTIME)
+
   const auto& native_assets_library =
       Library::Handle(zone, object_store->native_assets_library());
   if (native_assets_library.IsNull()) {
-    // Kernel compilation can happen without a native assets library.
+    // For now not configuring native assets is supported.
     return Array::null();
   }
 
@@ -72,6 +77,8 @@ ArrayPtr GetNativeAssetsMap(Thread* thread) {
   native_assets_map = map.Release().ptr();
   object_store->set_native_assets_map(native_assets_map);
   return native_assets_map.ptr();
+
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
 }  // namespace dart

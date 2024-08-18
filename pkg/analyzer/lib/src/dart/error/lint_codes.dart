@@ -2,25 +2,24 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/// @docImport 'package:analyzer/src/error/codes.g.dart';
-library;
-
 import 'package:analyzer/error/error.dart';
 
 /// Defines style and best practice recommendations.
 ///
-/// Unlike [WarningCode]s, which are akin to traditional static warnings from a
-/// compiler, lint recommendations focus on matters of avoiding errors,
-/// unintended code, maintainability, style and other best practices that might
-/// be aggregated to define a project's style guide.
+/// Unlike [HintCode]s, which are akin to traditional static warnings from a
+/// compiler, lint recommendations focus on matters of style and practices that
+/// might aggregated to define a project's style guide.
 class LintCode extends ErrorCode {
+  final String? _url;
+
   const LintCode(
     String name,
     String problemMessage, {
     super.correctionMessage,
-    super.hasPublishedDocs,
     String? uniqueName,
-  }) : super(
+    String? url,
+  })  : _url = url,
+        super(
           problemMessage: problemMessage,
           name: name,
           uniqueName: uniqueName ?? 'LintCode.$name',
@@ -36,7 +35,7 @@ class LintCode extends ErrorCode {
   ErrorType get type => ErrorType.LINT;
 
   @override
-  String? get url => null;
+  String get url => _url ?? 'https://dart.dev/lints/$name';
 
   @override
   bool operator ==(Object other) =>

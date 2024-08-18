@@ -1,5 +1,0 @@
-class A {
-  const A.name();
-}
-
-void foo() {}

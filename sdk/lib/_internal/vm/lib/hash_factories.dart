@@ -2,15 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import "dart:_compact_hash"
-    show
-        DefaultMap,
-        DefaultSet,
-        CompactLinkedIdentityHashSet,
-        CompactLinkedCustomHashSet,
-        CompactLinkedCustomHashMap,
-        CompactLinkedIdentityHashMap;
-
 import "dart:_internal" show patch;
 
 import "dart:typed_data" show Uint32List;
@@ -28,13 +19,13 @@ class LinkedHashMap<K, V> {
     if (isValidKey == null) {
       if (hashCode == null) {
         if (equals == null) {
-          return DefaultMap<K, V>();
+          return new _Map<K, V>();
         }
         hashCode = _defaultHashCode;
       } else {
         if (identical(identityHashCode, hashCode) &&
             identical(identical, equals)) {
-          return CompactLinkedIdentityHashMap<K, V>();
+          return new _CompactLinkedIdentityHashMap<K, V>();
         }
         equals ??= _defaultEquals;
       }
@@ -42,11 +33,11 @@ class LinkedHashMap<K, V> {
       hashCode ??= _defaultHashCode;
       equals ??= _defaultEquals;
     }
-    return CompactLinkedCustomHashMap<K, V>(equals, hashCode, isValidKey);
+    return new _CompactLinkedCustomHashMap<K, V>(equals, hashCode, isValidKey);
   }
 
   @patch
-  factory LinkedHashMap.identity() => CompactLinkedIdentityHashMap<K, V>();
+  factory LinkedHashMap.identity() => new _CompactLinkedIdentityHashMap<K, V>();
 }
 
 @patch
@@ -59,13 +50,13 @@ class LinkedHashSet<E> {
     if (isValidKey == null) {
       if (hashCode == null) {
         if (equals == null) {
-          return DefaultSet<E>();
+          return new _Set<E>();
         }
         hashCode = _defaultHashCode;
       } else {
         if (identical(identityHashCode, hashCode) &&
             identical(identical, equals)) {
-          return CompactLinkedIdentityHashSet<E>();
+          return new _CompactLinkedIdentityHashSet<E>();
         }
         equals ??= _defaultEquals;
       }
@@ -73,9 +64,9 @@ class LinkedHashSet<E> {
       hashCode ??= _defaultHashCode;
       equals ??= _defaultEquals;
     }
-    return CompactLinkedCustomHashSet<E>(equals, hashCode, isValidKey);
+    return new _CompactLinkedCustomHashSet<E>(equals, hashCode, isValidKey);
   }
 
   @patch
-  factory LinkedHashSet.identity() => CompactLinkedIdentityHashSet<E>();
+  factory LinkedHashSet.identity() => new _CompactLinkedIdentityHashSet<E>();
 }

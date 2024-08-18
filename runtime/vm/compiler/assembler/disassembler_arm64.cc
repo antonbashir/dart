@@ -247,9 +247,7 @@ void ARM64Decoder::PrintMemOperand(Instr* instr) {
         Print("]!");
         break;
       }
-      default: {
-        Print("???");
-      }
+      default: { Print("???"); }
     }
   }
 }
@@ -795,7 +793,7 @@ void ARM64Decoder::DecodeLoadRegLiteral(Instr* instr) {
 }
 
 void ARM64Decoder::DecodeLoadStoreExclusive(Instr* instr) {
-  if (instr->Bit(31) != 1 || instr->Bit(21) != 0 ||
+  if (instr->Bit(32) != 1 || instr->Bit(21) != 0 ||
       instr->Bit(23) != instr->Bit(15)) {
     Unknown(instr);
   }
@@ -806,16 +804,16 @@ void ARM64Decoder::DecodeLoadStoreExclusive(Instr* instr) {
   if (is_load) {
     const bool is_load_acquire = !is_exclusive && is_ordered;
     if (is_load_acquire) {
-      Format(instr, "ldar'sz 'rt, ['rn]");
+      Format(instr, "ldar'sz 'rt, 'rn");
     } else {
-      Format(instr, "ldxr'sz 'rt, ['rn]");
+      Format(instr, "ldxr'sz 'rt, 'rn");
     }
   } else {
     const bool is_store_release = !is_exclusive && is_ordered;
     if (is_store_release) {
-      Format(instr, "stlr'sz 'rt, ['rn]");
+      Format(instr, "stlr'sz 'rt, 'rn");
     } else {
-      Format(instr, "stxr'sz 'rs, 'rt, ['rn]");
+      Format(instr, "stxr'sz 'rs, 'rt, 'rn");
     }
   }
 }

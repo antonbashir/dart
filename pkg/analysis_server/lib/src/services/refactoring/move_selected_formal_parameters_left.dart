@@ -30,53 +30,47 @@ class MoveSelectedFormalParametersLeft extends RefactoringProducer {
   String get title => constTitle;
 
   @override
-  Future<ComputeStatus> compute(
+  Future<void> compute(
     List<Object?> commandArguments,
     ChangeBuilder builder,
   ) async {
-    var availability = analyzeAvailability(
+    final availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
-
-    // This should not happen, `isAvailable()` returns `false`.
     if (availability is! Available) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    var selection = await analyzeSelection(
+    final selection = await analyzeSelection(
       available: availability,
     );
 
-    // This should not happen, `isAvailable()` returns `false`.
     if (selection is! ValidSelectionState) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    var all = selection.formalParameters.toList();
-    var selected = all.where((e) => e.isSelected).toList();
-    var firstSelected = selected.firstOrNull;
+    final all = selection.formalParameters.toList();
+    final selected = all.where((e) => e.isSelected).toList();
 
-    // This should not happen, `isAvailable()` returns `false`.
+    final firstSelected = selected.firstOrNull;
     if (firstSelected == null) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    var firstSelectedIndex = all.indexOf(firstSelected);
-
-    // This should not happen, `isAvailable()` returns `false`.
+    final firstSelectedIndex = all.indexOf(firstSelected);
     if (firstSelectedIndex < 1) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    var beforePrevious = all.take(firstSelectedIndex - 1);
-    var afterPrevious = all.skip(firstSelectedIndex - 1);
-    var reordered = [
+    final beforePrevious = all.take(firstSelectedIndex - 1);
+    final afterPrevious = all.skip(firstSelectedIndex - 1);
+    final reordered = [
       ...beforePrevious,
       ...selected,
       ...afterPrevious.whereNot(selected.contains),
     ];
 
-    var formalParameterUpdates = reordered.map(
+    final formalParameterUpdates = reordered.map(
       (formalParameter) {
         return FormalParameterUpdate(
           id: formalParameter.id,
@@ -85,31 +79,22 @@ class MoveSelectedFormalParametersLeft extends RefactoringProducer {
       },
     ).toList();
 
-    var signatureUpdate = MethodSignatureUpdate(
+    final signatureUpdate = MethodSignatureUpdate(
       formalParameters: formalParameterUpdates,
       formalParametersTrailingComma: TrailingComma.ifPresent,
       argumentsTrailingComma: ArgumentsTrailingComma.ifPresent,
     );
 
-    var status = await computeSourceChange(
+    await computeSourceChange(
       selectionState: selection,
       signatureUpdate: signatureUpdate,
       builder: builder,
     );
-
-    switch (status) {
-      case ChangeStatusFailure():
-        return ComputeStatusFailure(
-          reason: 'Failed to compute the change.',
-        );
-      case ChangeStatusSuccess():
-        return ComputeStatusSuccess();
-    }
   }
 
   @override
   bool isAvailable() {
-    var availability = analyzeAvailability(
+    final availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
     if (availability is! Available) {

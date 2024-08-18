@@ -49,7 +49,7 @@ final String bat = Platform.isWindows ? '.bat' : '';
 
 void _checkRecursion(String dillPath, Compiler compiler) {
   stdout.writeln('Checking recursive calls.');
-  final ConstFinder finder = new ConstFinder(
+  final ConstFinder finder = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/box.dart',
     className: 'Box',
@@ -60,7 +60,7 @@ void _checkRecursion(String dillPath, Compiler compiler) {
 
 void _checkConsts(String dillPath, Compiler compiler) {
   stdout.writeln('Checking for expected constants.');
-  final ConstFinder finder = new ConstFinder(
+  final ConstFinder finder = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/target.dart',
     className: 'Target',
@@ -153,7 +153,7 @@ void _checkConsts(String dillPath, Compiler compiler) {
     compiler,
   );
 
-  final ConstFinder finder2 = new ConstFinder(
+  final ConstFinder finder2 = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/target.dart',
     className: 'MixedInTarget',
@@ -174,7 +174,7 @@ void _checkAnnotation(String dillPath, Compiler compiler) {
   stdout.writeln(
       'Checking constant instances in a class annotated with instance of '
       'StaticIconProvider are ignored with $compiler');
-  final ConstFinder finder = new ConstFinder(
+  final ConstFinder finder = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/target.dart',
     className: 'Target',
@@ -208,7 +208,7 @@ void _checkAnnotation(String dillPath, Compiler compiler) {
 
 void _checkNonConstsFrontend(String dillPath, Compiler compiler) {
   stdout.writeln('Checking for non-constant instances with $compiler');
-  final ConstFinder finder = new ConstFinder(
+  final ConstFinder finder = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/target.dart',
     className: 'Target',
@@ -290,7 +290,7 @@ void _checkNonConstsFrontend(String dillPath, Compiler compiler) {
 void _checkNonConstsWeb(String dillPath, Compiler compiler) {
   assert(compiler == Compiler.dart2js);
   stdout.writeln('Checking for non-constant instances with $compiler');
-  final ConstFinder finder = new ConstFinder(
+  final ConstFinder finder = ConstFinder(
     kernelFilePath: dillPath,
     classLibraryUri: 'package:const_finder_fixtures/target.dart',
     className: 'Target',
@@ -389,13 +389,12 @@ final String packageConfig =
 // TODO(johnniwinther): Add unittests to package:kernel.
 // TODO(johnniwinther): Avoid emitting .deps files during testing.
 Future<void> main() async {
-  final String frontendServer =
-      'pkg/frontend_server/bin/frontend_server_starter.dart';
-  final String sdkRoot = computePlatformBinariesLocation().toFilePath();
+  final frontendServer = 'pkg/frontend_server/bin/frontend_server_starter.dart';
+  final sdkRoot = computePlatformBinariesLocation().toFilePath();
   final String librariesSpec = 'sdk/lib/libraries.json';
 
   final List<_Test> tests = <_Test>[
-    new _Test(
+    _Test(
       name: 'box_frontend',
       dartSource: path.join(fixtures, 'lib', 'box.dart'),
       frontendServer: frontendServer,
@@ -404,7 +403,7 @@ Future<void> main() async {
       verify: _checkRecursion,
       compiler: Compiler.aot,
     ),
-    new _Test(
+    _Test(
       name: 'box_web',
       dartSource: path.join(fixtures, 'lib', 'box.dart'),
       frontendServer: frontendServer,
@@ -413,7 +412,7 @@ Future<void> main() async {
       verify: _checkRecursion,
       compiler: Compiler.dart2js,
     ),
-    new _Test(
+    _Test(
       name: 'consts_frontend',
       dartSource: path.join(fixtures, 'lib', 'consts.dart'),
       frontendServer: frontendServer,
@@ -422,7 +421,7 @@ Future<void> main() async {
       verify: _checkConsts,
       compiler: Compiler.aot,
     ),
-    new _Test(
+    _Test(
       name: 'consts_web',
       dartSource: path.join(fixtures, 'lib', 'consts.dart'),
       frontendServer: frontendServer,
@@ -431,7 +430,7 @@ Future<void> main() async {
       verify: _checkConsts,
       compiler: Compiler.dart2js,
     ),
-    new _Test(
+    _Test(
       name: 'consts_and_non_frontend',
       dartSource: path.join(fixtures, 'lib', 'consts_and_non.dart'),
       frontendServer: frontendServer,
@@ -440,7 +439,7 @@ Future<void> main() async {
       verify: _checkNonConstsFrontend,
       compiler: Compiler.aot,
     ),
-    new _Test(
+    _Test(
       name: 'consts_and_non_web',
       dartSource: path.join(fixtures, 'lib', 'consts_and_non.dart'),
       frontendServer: frontendServer,
@@ -449,7 +448,7 @@ Future<void> main() async {
       verify: _checkNonConstsWeb,
       compiler: Compiler.dart2js,
     ),
-    new _Test(
+    _Test(
       name: 'static_icon_provider_frontend',
       dartSource: path.join(fixtures, 'lib', 'static_icon_provider.dart'),
       frontendServer: frontendServer,
@@ -458,7 +457,7 @@ Future<void> main() async {
       verify: _checkAnnotation,
       compiler: Compiler.aot,
     ),
-    new _Test(
+    _Test(
       name: 'static_icon_provider_web',
       dartSource: path.join(fixtures, 'lib', 'static_icon_provider.dart'),
       frontendServer: frontendServer,
@@ -532,7 +531,7 @@ class _Test {
   void dispose() {
     for (final String resource in resourcesToDispose) {
       stdout.writeln('Deleting $resource');
-      new File(resource).deleteSync();
+      File(resource).deleteSync();
     }
   }
 

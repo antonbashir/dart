@@ -4,7 +4,7 @@
 
 /// A library used to spawn the Dart Developer Service, used to communicate
 /// with a Dart VM Service instance.
-library;
+library dds;
 
 import 'dart:async';
 import 'dart:io';
@@ -150,12 +150,6 @@ abstract class DartDevelopmentService {
   /// Returns `null` if DevTools is not running.
   Uri? get devToolsUri;
 
-  /// Metadata for the Dart Tooling Daemon instance that is hosted by DevTools.
-  ///
-  /// This will be null if DTD was not started by the DevTools server. For
-  /// example, it may have been started by an IDE.
-  ({String? uri, String? secret})? get hostedDartToolingDaemon;
-
   /// Set to `true` if this instance of [DartDevelopmentService] is accepting
   /// requests.
   bool get isRunning;
@@ -166,11 +160,9 @@ abstract class DartDevelopmentService {
 
   /// The version of the DDS protocol supported by this [DartDevelopmentService]
   /// instance.
-  static const String protocolVersion = '2.0';
+  static const String protocolVersion = '1.6';
 }
 
-/// Thrown by DDS during initialization failures, unexpected connection issues,
-/// and when attempting to spawn DDS when an existing DDS instance exists.
 class DartDevelopmentServiceException implements Exception {
   /// Set when `DartDeveloperService.startDartDevelopmentService` is called and
   /// the target VM service already has a Dart Developer Service instance
@@ -184,32 +176,6 @@ class DartDevelopmentServiceException implements Exception {
   /// Set when a connection error has occurred after startup.
   static const int connectionError = 3;
 
-  factory DartDevelopmentServiceException.fromJson(Map<String, Object?> json) {
-    if (json
-        case {
-          'error_code': final int errorCode,
-          'message': final String message,
-        }) {
-      return switch (errorCode) {
-        existingDdsInstanceError =>
-          DartDevelopmentServiceException.existingDdsInstance(
-            message,
-            ddsUri: Uri.parse(json['uri']! as String),
-          ),
-        failedToStartError => DartDevelopmentServiceException.failedToStart(),
-        connectionError =>
-          DartDevelopmentServiceException.connectionIssue(message),
-        _ => throw StateError(
-            'Invalid DartDevelopmentServiceException error_code: $errorCode',
-          ),
-      };
-    }
-    throw StateError('Invalid DartDevelopmentServiceException JSON: $json');
-  }
-
-  /// Thrown when `DartDeveloperService.startDartDevelopmentService` is called
-  /// and the target VM service already has a Dart Developer Service instance
-  /// connected.
   factory DartDevelopmentServiceException.existingDdsInstance(
     String message, {
     Uri? ddsUri,
@@ -220,14 +186,11 @@ class DartDevelopmentServiceException implements Exception {
     );
   }
 
-  /// Thrown when the connection to the remote VM service terminates unexpectedly
-  /// during Dart Development Service startup.
   factory DartDevelopmentServiceException.failedToStart() {
     return DartDevelopmentServiceException._(
         failedToStartError, 'Failed to start Dart Development Service');
   }
 
-  /// Thrown when a connection error has occurred after startup.
   factory DartDevelopmentServiceException.connectionIssue(String message) {
     return DartDevelopmentServiceException._(connectionError, message);
   }
@@ -237,16 +200,10 @@ class DartDevelopmentServiceException implements Exception {
   @override
   String toString() => 'DartDevelopmentServiceException: $message';
 
-  Map<String, Object?> toJson() => {
-        'error_code': errorCode,
-        'message': message,
-      };
-
   final int errorCode;
   final String message;
 }
 
-/// Thrown when attempting to start a new DDS instance when one already exists.
 class ExistingDartDevelopmentServiceException
     extends DartDevelopmentServiceException {
   ExistingDartDevelopmentServiceException._(
@@ -263,22 +220,14 @@ class ExistingDartDevelopmentServiceException
   /// not the WebSocket URI (which can be obtained by mapping the scheme to
   /// `ws` (or `wss`) and appending `ws` to the path segments).
   final Uri? ddsUri;
-
-  @override
-  Map<String, Object?> toJson() => {
-        ...super.toJson(),
-        'uri': ddsUri.toString(),
-      };
 }
 
 class DevToolsConfiguration {
   const DevToolsConfiguration({
     required this.customBuildDirectoryPath,
-    this.devToolsServerAddress,
     this.enable = false,
   });
 
   final bool enable;
-  final Uri? devToolsServerAddress;
   final Uri customBuildDirectoryPath;
 }

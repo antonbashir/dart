@@ -5,44 +5,28 @@
 import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/lint/pub.dart';
 import 'package:analyzer/src/workspace/pub.dart';
+import 'package:collection/collection.dart';
 
 abstract class FileStateFilter {
   /// Return a filter of files that can be accessed by the [file].
   factory FileStateFilter(FileState file) {
     var workspacePackage = file.workspacePackage;
-    if (workspacePackage is PubPackage) {
+    if (workspacePackage is PubWorkspacePackage) {
       return _PubFilter(workspacePackage, file.path);
     } else {
       return _AnyFilter();
     }
   }
 
-  bool shouldInclude(FileState file);
-
-  static bool shouldIncludeSdk(FileState file, FileUriProperties uri) {
-    assert(identical(file.uriProperties, uri));
-    assert(uri.isDart);
-
-    // Exclude internal libraries.
-    if (uri.isDartInternal) {
-      return false;
-    }
-
-    // Exclude "soft deprecated" libraries.
-    if (const {
-      'dart:html',
-      'dart:indexed_db',
-      'dart:js',
-      'dart:js_util',
-      'dart:svg',
-      'dart:web_audio',
-      'dart:web_gl'
-    }.contains(file.uriStr)) {
-      return false;
-    }
-
-    return true;
+  /// Return a filter of files in the package named [packageName].
+  factory FileStateFilter.packageName(
+    String? packageName, {
+    required bool excludeSrc,
+  }) {
+    return _PackageNameFilter(packageName, excludeSrc: excludeSrc);
   }
+
+  bool shouldInclude(FileState file);
 }
 
 class _AnyFilter implements FileStateFilter {
@@ -50,34 +34,46 @@ class _AnyFilter implements FileStateFilter {
   bool shouldInclude(FileState file) {
     var uri = file.uriProperties;
     if (uri.isDart) {
-      return FileStateFilter.shouldIncludeSdk(file, uri);
+      return !uri.isDartInternal;
     }
     return true;
   }
 }
 
-class _PubFilter implements FileStateFilter {
-  final PubPackage targetPackage;
-  final String? targetPackageName;
+/// Matches any file in the package [packageName].
+///
+/// If [packageName] is `null`, matches files that also have no `packageName`.
+class _PackageNameFilter implements FileStateFilter {
+  final String? packageName;
+  final bool excludeSrc;
 
-  /// "Friends of `package:analyzer` see analyzer implementation libraries in
-  /// completions.
-  final bool targetPackageIsFriendOfAnalyzer;
-  final bool targetInLibOrEntryPoint;
+  _PackageNameFilter(this.packageName, {required this.excludeSrc});
+
+  @override
+  bool shouldInclude(FileState file) {
+    var uri = file.uriProperties;
+    return uri.packageName == packageName && !(uri.isSrc && excludeSrc);
+  }
+}
+
+class _PubFilter implements FileStateFilter {
+  final PubWorkspacePackage targetPackage;
+  final String? targetPackageName;
+  final bool targetPackageIsAnalysisServer;
+  final bool targetInLib;
   final Set<String> dependencies;
 
-  factory _PubFilter(PubPackage package, String path) {
-    var packageRootFolder = package.workspace.provider.getFolder(package.root);
-    var inLibOrEntryPoint =
-        packageRootFolder.getChildAssumingFolder('lib').contains(path) ||
-            packageRootFolder.getChildAssumingFolder('bin').contains(path) ||
-            packageRootFolder.getChildAssumingFolder('web').contains(path);
+  factory _PubFilter(PubWorkspacePackage package, String path) {
+    var inLib = package.workspace.provider
+        .getFolder(package.root)
+        .getChildAssumingFolder('lib')
+        .contains(path);
 
     var dependencies = <String>{};
     var pubspec = package.pubspec;
     if (pubspec != null) {
       dependencies.addAll(pubspec.dependencies.names);
-      if (!inLibOrEntryPoint) {
+      if (!inLib) {
         dependencies.addAll(pubspec.devDependencies.names);
       }
     }
@@ -87,9 +83,8 @@ class _PubFilter implements FileStateFilter {
     return _PubFilter._(
       targetPackage: package,
       targetPackageName: packageName,
-      targetPackageIsFriendOfAnalyzer:
-          packageName == 'analysis_server' || packageName == 'linter',
-      targetInLibOrEntryPoint: inLibOrEntryPoint,
+      targetPackageIsAnalysisServer: packageName == 'analysis_server',
+      targetInLib: inLib,
       dependencies: dependencies,
     );
   }
@@ -97,8 +92,8 @@ class _PubFilter implements FileStateFilter {
   _PubFilter._({
     required this.targetPackage,
     required this.targetPackageName,
-    required this.targetPackageIsFriendOfAnalyzer,
-    required this.targetInLibOrEntryPoint,
+    required this.targetPackageIsAnalysisServer,
+    required this.targetInLib,
     required this.dependencies,
   });
 
@@ -106,18 +101,18 @@ class _PubFilter implements FileStateFilter {
   bool shouldInclude(FileState file) {
     var uri = file.uriProperties;
     if (uri.isDart) {
-      return FileStateFilter.shouldIncludeSdk(file, uri);
+      return !uri.isDartInternal;
     }
 
     // Normally only package URIs are available.
-    // But outside of lib/ and entry points we allow any files of this package.
+    // But outside of lib/ we allow any files of this package.
     var packageName = uri.packageName;
     if (packageName == null) {
-      if (targetInLibOrEntryPoint) {
+      if (targetInLib) {
         return false;
       } else {
         var filePackage = file.workspacePackage;
-        return filePackage is PubPackage &&
+        return filePackage is PubWorkspacePackage &&
             filePackage.root == targetPackage.root;
       }
     }
@@ -129,9 +124,8 @@ class _PubFilter implements FileStateFilter {
 
     // If not the same package, must be public.
     if (uri.isSrc) {
-      // Special case access to `analyzer` to allow privileged access
-      // from "friends" like `analysis_server` and `linter`.
-      if (targetPackageIsFriendOfAnalyzer && packageName == 'analyzer') {
+      // Special case `analysis_server` access to `analyzer`.
+      if (targetPackageIsAnalysisServer && packageName == 'analyzer') {
         return true;
       }
       return false;
@@ -143,11 +137,14 @@ class _PubFilter implements FileStateFilter {
 
 extension on PSDependencyList? {
   List<String> get names {
-    var self = this;
+    final self = this;
     if (self == null) {
       return const [];
     } else {
-      return self.map((dependency) => dependency.name?.text).nonNulls.toList();
+      return self
+          .map((dependency) => dependency.name?.text)
+          .whereNotNull()
+          .toList();
     }
   }
 }

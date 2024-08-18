@@ -132,23 +132,6 @@ class A implements String {}
     ]);
   }
 
-  test_class_String_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-augment class A implements String {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.IMPLEMENTS_DISALLOWED_CLASS, 53, 6),
-    ]);
-  }
-
   test_class_String_num() async {
     await assertErrorsInCode('''
 class A implements String, num {}
@@ -299,14 +282,14 @@ mixin M implements int {}
       error(CompileTimeErrorCode.IMPLEMENTS_DISALLOWED_CLASS, 19, 3),
     ]);
 
-    var node = findNode.singleImplementsClause;
+    final node = findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
 ''');
   }

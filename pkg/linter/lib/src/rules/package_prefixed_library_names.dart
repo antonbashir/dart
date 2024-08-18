@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Prefix library names with the package name and a dot-separated path.';
@@ -52,15 +51,21 @@ bool matchesOrIsPrefixedBy(String name, String prefix) =>
     name == prefix || name.startsWith('$prefix.');
 
 class PackagePrefixedLibraryNames extends LintRule {
+  static const LintCode code = LintCode(
+      'package_prefixed_library_names',
+      'The library name is not prefixed by the package name and a '
+          'dot-separated path.',
+      correctionMessage: "Try changing the name to '{0}'.");
+
   PackagePrefixedLibraryNames()
       : super(
             name: 'package_prefixed_library_names',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.package_prefixed_library_names;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

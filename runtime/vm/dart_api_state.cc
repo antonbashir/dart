@@ -12,4 +12,6 @@
 #include "vm/thread.h"
 #include "vm/timeline.h"
 
-namespace dart {}  // namespace dart
+namespace dart {
+
+}  // namespace dart

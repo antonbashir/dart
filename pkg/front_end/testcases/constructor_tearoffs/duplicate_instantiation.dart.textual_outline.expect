@@ -4,5 +4,4 @@ class Class<T> {
 }
 
 test() {}
-
 main() {}

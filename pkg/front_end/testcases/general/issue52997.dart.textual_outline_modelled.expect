@@ -3,7 +3,5 @@ extension Ext<T> on T {
 }
 
 typedef E<T> = T Function(T);
-
 void foo<X>(bool test, X a, X b) {}
-
 void main() {}

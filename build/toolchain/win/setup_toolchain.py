@@ -1,4 +1,4 @@
-# Copyright 2013 The Chromium Authors
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
@@ -10,6 +10,7 @@
 # win tool. The script assumes that the root build directory is the current dir
 # and the files will be written to the current directory.
 
+from __future__ import print_function
 
 import errno
 import json
@@ -22,8 +23,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 import gn_helpers
 
 SCRIPT_DIR = os.path.dirname(__file__)
-SDK_VERSION = '10.0.22621.0'
-
 
 def _ExtractImportantEnvironment(output_of_set):
   """Extracts environment variables required for the toolchain to run from
@@ -39,8 +38,6 @@ def _ExtractImportantEnvironment(output_of_set):
       'luci_context', # needed by vpython
       'path',
       'pathext',
-      'rbe_cfg', # Dart specific patch: RBE_cfg is needed by reclient.
-      'rbe_server_address', # Dart specific patch: RBE_server_address ditto.
       'systemroot',
       'temp',
       'tmp',
@@ -61,25 +58,15 @@ def _ExtractImportantEnvironment(output_of_set):
           # path. Add the path to this python here so that if it's not in the
           # path when ninja is run later, python will still be found.
           setting = os.path.dirname(sys.executable) + os.pathsep + setting
-        # Dart specific patch: Ensure the environment variables use relative
-        # paths to the toolchain such that RBE commands can be cached
-        # remotely due to no absolute paths. Rewrite libpath as well although
-        # don't use it remotely at the moment.
-        if envvar in ['include', 'lib', 'libpath']:
-          exec_root_abs = os.path.dirname(os.path.dirname(os.getcwd()))
-          exec_root_rel = os.path.join('..', '..')
+        if envvar in ['include', 'lib']:
           # Make sure that the include and lib paths point to directories that
           # exist. This ensures a (relatively) clear error message if the
           # required SDK is not installed.
-          parts = []
           for part in setting.split(';'):
-            part = part.replace(exec_root_abs, exec_root_rel)
             if not os.path.exists(part) and len(part) != 0:
               raise Exception(
                   'Path "%s" from environment variable "%s" does not exist. '
                   'Make sure the necessary SDK is installed.' % (part, envvar))
-            parts.append(part)
-          setting = ';'.join(parts)
         env[var.upper()] = setting
         break
   if sys.platform in ('win32', 'cygwin'):
@@ -197,7 +184,7 @@ def _LoadToolchainEnv(cpu, toolchain_root, sdk_dir, target_store):
     # Explicitly specifying the SDK version to build with to avoid accidentally
     # building with a new and untested SDK. This should stay in sync with the
     # packaged toolchain in build/vs_toolchain.py.
-    args.append(SDK_VERSION)
+    args.append('10.0.20348.0')
     variables = _LoadEnvFromBat(args)
   return _ExtractImportantEnvironment(variables)
 
@@ -296,44 +283,32 @@ def main():
       lib = [p.replace('"', r'\"') for p in env['LIB'].split(';') if p]
       lib = list(map(relflag, lib))
 
-      include_I = ['/I' + i for i in include]
-      include_imsvc = ['-imsvc' + i for i in include]
-      libpath_flags = ['-libpath:' + i for i in lib]
+      include_I = ' '.join([q('/I' + i) for i in include])
+      include_imsvc = ' '.join([q('-imsvc' + i) for i in include])
+      libpath_flags = ' '.join([q('-libpath:' + i) for i in lib])
 
       if (environment_block_name != ''):
         env_block = _FormatAsEnvironmentBlock(env)
-        with open(environment_block_name, 'w', encoding='utf8') as f:
+        with open(environment_block_name, 'w') as f:
           f.write(env_block)
-
-  def ListToArgString(x):
-    return gn_helpers.ToGNString(' '.join(q(i) for i in x))
-
-  def ListToArgList(x):
-    return f'[{", ".join(gn_helpers.ToGNString(i) for i in x)}]'
 
   print('vc_bin_dir = ' + gn_helpers.ToGNString(vc_bin_dir))
   assert include_I
-  print(f'include_flags_I = {ListToArgString(include_I)}')
-  print(f'include_flags_I_list = {ListToArgList(include_I)}')
+  print('include_flags_I = ' + gn_helpers.ToGNString(include_I))
   assert include_imsvc
   if bool(int(os.environ.get('DEPOT_TOOLS_WIN_TOOLCHAIN', 1))) and win_sdk_path:
-    flags = ['/winsysroot' + relflag(toolchain_root)]
-    print(f'include_flags_imsvc = {ListToArgString(flags)}')
-    print(f'include_flags_imsvc_list = {ListToArgList(flags)}')
+    print('include_flags_imsvc = ' +
+          gn_helpers.ToGNString(q('/winsysroot' + relflag(toolchain_root))))
   else:
-    print(f'include_flags_imsvc = {ListToArgString(include_imsvc)}')
-    print(f'include_flags_imsvc_list = {ListToArgList(include_imsvc)}')
+    print('include_flags_imsvc = ' + gn_helpers.ToGNString(include_imsvc))
   print('paths = ' + gn_helpers.ToGNString(env['PATH']))
   assert libpath_flags
-  print(f'libpath_flags = {ListToArgString(libpath_flags)}')
-  print(f'libpath_flags_list = {ListToArgList(libpath_flags)}')
+  print('libpath_flags = ' + gn_helpers.ToGNString(libpath_flags))
   if bool(int(os.environ.get('DEPOT_TOOLS_WIN_TOOLCHAIN', 1))) and win_sdk_path:
-    flags = ['/winsysroot:' + relflag(toolchain_root)]
-    print(f'libpath_lldlink_flags = {ListToArgString(flags)}')
-    print(f'libpath_lldlink_flags_list = {ListToArgList(flags)}')
+    print('libpath_lldlink_flags = ' +
+          gn_helpers.ToGNString(q('/winsysroot:' + relflag(toolchain_root))))
   else:
-    print(f'libpath_lldlink_flags = {ListToArgString(libpath_flags)}')
-    print(f'libpath_lldlink_flags_list = {ListToArgList(libpath_flags)}')
+    print('libpath_lldlink_flags = ' + gn_helpers.ToGNString(libpath_flags))
 
 
 if __name__ == '__main__':

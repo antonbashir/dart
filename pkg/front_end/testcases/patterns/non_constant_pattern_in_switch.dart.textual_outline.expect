@@ -4,5 +4,4 @@ class Const<T> {
 }
 
 main() {}
-
 void test(dynamic value, bool expected) {}

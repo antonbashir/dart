@@ -32,13 +32,13 @@ class AnalysisNotificationOccurrencesTest extends PubPackageAnalysisServerTest {
     required ElementKind? kind,
     String? elementName,
   }) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     addTestFile(code.code);
 
     await prepareOccurrences();
     // Find the result from the first range
-    var range = code.ranges.first;
-    var sourceRange = range.sourceRange;
+    final range = code.ranges.first;
+    final sourceRange = range.sourceRange;
     findRegion(sourceRange.offset, sourceRange.length,
         kind: kind, exists: true);
 
@@ -90,8 +90,7 @@ class AnalysisNotificationOccurrencesTest extends PubPackageAnalysisServerTest {
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_OCCURRENCES) {
-      var params = AnalysisOccurrencesParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = AnalysisOccurrencesParams.fromNotification(notification);
       if (params.file == testFile.path) {
         occurrencesList = params.occurrences;
         _resultsAvailable.complete();

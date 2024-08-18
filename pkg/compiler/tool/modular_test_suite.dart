@@ -9,10 +9,9 @@ import 'dart:async';
 
 import 'package:modular_test/src/io_pipeline.dart';
 import 'package:modular_test/src/runner.dart';
-import 'package:modular_test/src/steps/macro_precompile_aot.dart';
 import 'modular_test_suite_helper.dart';
 
-Future<void> main(List<String> args) async {
+main(List<String> args) async {
   var options = Options.parse(args);
   await resolveScripts(options);
   await Future.wait([
@@ -21,7 +20,6 @@ Future<void> main(List<String> args) async {
         'tests/modular',
         options,
         IOPipeline([
-          PrecompileMacroAotStep(verbose: options.verbose),
           OutlineDillCompilationStep(),
           FullDillCompilationStep(),
           ConcatenateDillsStep(),

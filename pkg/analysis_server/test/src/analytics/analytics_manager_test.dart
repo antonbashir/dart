@@ -158,8 +158,8 @@ class AnalyticsManagerTest with ResourceProviderMixin {
   Future<void> test_server_request_analysisSetAnalysisRoots() async {
     _defaultStartup();
     var params = AnalysisSetAnalysisRootsParams(['a', 'b', 'c'], ['d', 'e']);
-    var request = Request('1', ANALYSIS_REQUEST_SET_ANALYSIS_ROOTS,
-        params.toJson(clientUriConverter: null));
+    var request =
+        Request('1', ANALYSIS_REQUEST_SET_ANALYSIS_ROOTS, params.toJson());
     manager.startedRequest(request: request, startTime: _now());
     manager.startedSetAnalysisRoots(params);
     manager.sentResponse(response: Response('1'));
@@ -181,8 +181,8 @@ class AnalyticsManagerTest with ResourceProviderMixin {
   Future<void> test_server_request_analysisSetPriorityFiles() async {
     _defaultStartup();
     var params = AnalysisSetPriorityFilesParams(['a']);
-    var request = Request('1', ANALYSIS_REQUEST_SET_PRIORITY_FILES,
-        params.toJson(clientUriConverter: null));
+    var request =
+        Request('1', ANALYSIS_REQUEST_SET_PRIORITY_FILES, params.toJson());
     manager.startedRequest(request: request, startTime: _now());
     manager.startedSetPriorityFiles(params);
     manager.sentResponse(response: Response('1'));
@@ -204,8 +204,7 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     _defaultStartup();
     var params =
         EditGetRefactoringParams(RefactoringKind.RENAME, '', 0, 0, true);
-    var request = Request('1', EDIT_REQUEST_GET_REFACTORING,
-        params.toJson(clientUriConverter: null));
+    var request = Request('1', EDIT_REQUEST_GET_REFACTORING, params.toJson());
     manager.startedRequest(request: request, startTime: _now());
     manager.startedGetRefactoring(params);
     manager.sentResponse(response: Response('1'));
@@ -469,8 +468,8 @@ class _ExpectedEvent {
   /// doesn't match the expected.
   void matches(Event actual) {
     expect(actual.eventName, eventName);
-    var actualData = actual.eventData;
-    var expectedData = eventData;
+    final actualData = actual.eventData;
+    final expectedData = eventData;
     if (expectedData != null) {
       for (var expectedKey in expectedData.keys) {
         var actualValue = actualData[expectedKey];

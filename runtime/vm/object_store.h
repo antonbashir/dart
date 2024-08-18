@@ -19,7 +19,6 @@ class ObjectPointerVisitor;
 #define FOR_EACH_BOOTSTRAP_LIBRARY(M)                                          \
   M(Core, core)                                                                \
   M(Async, async)                                                              \
-  M(CompactHash, _compact_hash)                                                \
   M(Collection, collection)                                                    \
   M(Convert, convert)                                                          \
   M(Developer, developer)                                                      \
@@ -29,9 +28,12 @@ class ObjectPointerVisitor;
   M(Math, math)                                                                \
   M(Mirrors, mirrors)                                                          \
   M(TypedData, typed_data)                                                     \
-  M(VMService, _vmservice)                                                     \
-  M(Concurrent, concurrent)
+  M(VMService, _vmservice)
 
+// TODO(liama): Once NNBD is enabled, *_type will be deleted and all uses will
+// be replaced with *_type_non_nullable. Later, once we drop support for opted
+// out code, *_type_legacy will be deleted.
+//
 // R_ - needs getter only
 // RW - needs getter and setter
 // ARW_RELAXED - needs getter and setter with relaxed atomic access
@@ -69,6 +71,7 @@ class ObjectPointerVisitor;
   LAZY_ISOLATE(Function, handle_message_function)                              \
   RW(Class, object_class)                                                      \
   RW(Type, object_type)                                                        \
+  RW(Type, legacy_object_type)                                                 \
   RW(Type, non_nullable_object_type)                                           \
   RW(Type, nullable_object_type)                                               \
   RW(Class, null_class)                                                        \
@@ -82,6 +85,7 @@ class ObjectPointerVisitor;
   RW(Type, number_type)                                                        \
   RW(Type, nullable_number_type)                                               \
   RW(Type, int_type)                                                           \
+  RW(Type, legacy_int_type)                                                    \
   RW(Type, non_nullable_int_type)                                              \
   RW(Type, nullable_int_type)                                                  \
   RW(Class, integer_implementation_class)                                      \
@@ -97,10 +101,13 @@ class ObjectPointerVisitor;
   RW(Type, int32x4_type)                                                       \
   RW(Type, float64x2_type)                                                     \
   RW(Type, string_type)                                                        \
+  RW(Type, legacy_string_type)                                                 \
   RW(TypeArguments, type_argument_int)                                         \
+  RW(TypeArguments, type_argument_legacy_int)                                  \
   RW(TypeArguments, type_argument_double)                                      \
   RW(TypeArguments, type_argument_never)                                       \
   RW(TypeArguments, type_argument_string)                                      \
+  RW(TypeArguments, type_argument_legacy_string)                               \
   RW(TypeArguments, type_argument_string_dynamic)                              \
   RW(TypeArguments, type_argument_string_string)                               \
   RW(Class, compiletime_error_class)                                           \
@@ -111,6 +118,8 @@ class ObjectPointerVisitor;
   RW(Class, future_or_class)                                                   \
   RW(Class, one_byte_string_class)                                             \
   RW(Class, two_byte_string_class)                                             \
+  RW(Class, external_one_byte_string_class)                                    \
+  RW(Class, external_two_byte_string_class)                                    \
   RW(Type, bool_type)                                                          \
   RW(Class, bool_class)                                                        \
   RW(Class, array_class)                                                       \
@@ -132,8 +141,6 @@ class ObjectPointerVisitor;
   RW(Class, finalizer_class)                                                   \
   RW(Class, finalizer_entry_class)                                             \
   RW(Class, native_finalizer_class)                                            \
-  RW(Class, dart_condition_variable_class)                                     \
-  RW(Class, dart_mutex_class)                                                  \
   ARW_AR(WeakArray, symbol_table)                                              \
   ARW_AR(WeakArray, regexp_table)                                              \
   RW(Array, canonical_types)                                                   \
@@ -143,9 +150,7 @@ class ObjectPointerVisitor;
   RW(Array, canonical_type_arguments)                                          \
   RW(Library, async_library)                                                   \
   RW(Library, core_library)                                                    \
-  RW(Library, _compact_hash_library)                                           \
   RW(Library, collection_library)                                              \
-  RW(Library, concurrent_library)                                              \
   RW(Library, convert_library)                                                 \
   RW(Library, developer_library)                                               \
   RW(Library, ffi_library)                                                     \
@@ -201,6 +206,8 @@ class ObjectPointerVisitor;
   RW(Array, unique_dynamic_targets)                                            \
   RW(GrowableObjectArray, megamorphic_cache_table)                             \
   RW(GrowableObjectArray, ffi_callback_code)                                   \
+  RW(Code, build_generic_method_extractor_code)                                \
+  RW(Code, build_nongeneric_method_extractor_code)                             \
   RW(Code, dispatch_table_null_error_stub)                                     \
   RW(Code, late_initialization_error_stub_with_fpu_regs_stub)                  \
   RW(Code, late_initialization_error_stub_without_fpu_regs_stub)               \
@@ -239,9 +246,6 @@ class ObjectPointerVisitor;
   RW(Code, allocate_int32x4_array_stub)                                        \
   RW(Code, allocate_float64x2_array_stub)                                      \
   RW(Code, allocate_closure_stub)                                              \
-  RW(Code, allocate_closure_generic_stub)                                      \
-  RW(Code, allocate_closure_ta_stub)                                           \
-  RW(Code, allocate_closure_ta_generic_stub)                                   \
   RW(Code, allocate_context_stub)                                              \
   RW(Code, allocate_growable_array_stub)                                       \
   RW(Code, allocate_object_stub)                                               \
@@ -265,8 +269,6 @@ class ObjectPointerVisitor;
   RW(Code, init_instance_field_stub)                                           \
   RW(Code, init_late_instance_field_stub)                                      \
   RW(Code, init_late_final_instance_field_stub)                                \
-  RW(Code, init_shared_late_static_field_stub)                                 \
-  RW(Code, init_shared_late_final_static_field_stub)                           \
   RW(Code, call_closure_no_such_method_stub)                                   \
   RW(Code, default_tts_stub)                                                   \
   RW(Code, default_nullable_tts_stub)                                          \
@@ -343,9 +345,6 @@ class ObjectPointerVisitor;
   DO(allocate_int32x4_array_stub, AllocateInt32x4Array)                        \
   DO(allocate_float64x2_array_stub, AllocateFloat64x2Array)                    \
   DO(allocate_closure_stub, AllocateClosure)                                   \
-  DO(allocate_closure_generic_stub, AllocateClosureGeneric)                    \
-  DO(allocate_closure_ta_stub, AllocateClosureTA)                              \
-  DO(allocate_closure_ta_generic_stub, AllocateClosureTAGeneric)               \
   DO(allocate_context_stub, AllocateContext)                                   \
   DO(allocate_growable_array_stub, AllocateGrowableArray)                      \
   DO(allocate_object_stub, AllocateObject)                                     \
@@ -376,8 +375,6 @@ class ObjectPointerVisitor;
   DO(init_instance_field_stub, InitInstanceField)                              \
   DO(init_late_instance_field_stub, InitLateInstanceField)                     \
   DO(init_late_final_instance_field_stub, InitLateFinalInstanceField)          \
-  DO(init_shared_late_static_field_stub, InitSharedLateStaticField)            \
-  DO(init_shared_late_final_static_field_stub, InitSharedLateFinalStaticField) \
   DO(await_stub, Await)                                                        \
   DO(await_with_type_check_stub, AwaitWithTypeCheck)                           \
   DO(clone_suspend_state_stub, CloneSuspendState)                              \
@@ -530,7 +527,6 @@ class ObjectStore {
 #undef DECLARE_LAZY_INIT_ASYNC_GETTER
 #undef DECLARE_LAZY_INIT_ISOLATE_GETTER
 #undef DECLARE_LAZY_INIT_INTERNAL_GETTER
-#undef DECLARE_LAZY_INIT_TYPED_DATA_GETTER
 
   LibraryPtr bootstrap_library(BootstrapLibraryId index) {
     switch (index) {

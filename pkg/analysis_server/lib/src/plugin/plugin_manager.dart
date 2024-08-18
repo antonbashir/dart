@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io' show Platform, Process, ProcessResult;
+import 'dart:io' show Platform, Process;
 
 import 'package:analysis_server/src/analytics/percentile_calculator.dart';
 import 'package:analysis_server/src/plugin/notification_manager.dart';
@@ -13,6 +13,7 @@ import 'package:analyzer/dart/analysis/context_root.dart' as analyzer;
 import 'package:analyzer/exception/exception.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/instrumentation/instrumentation.dart';
+import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
@@ -29,6 +30,7 @@ import 'package:analyzer_plugin/src/protocol/protocol_internal.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:meta/meta.dart';
+import 'package:path/path.dart' as path;
 import 'package:watcher/watcher.dart' as watcher;
 import 'package:yaml/yaml.dart';
 
@@ -194,9 +196,7 @@ abstract class PluginInfo {
   }
 
   void reportException(CaughtException exception) {
-    // If a previous exception has been reported, do not replace it here; the
-    //first should have more "root cause" information.
-    _exception ??= exception;
+    _exception = exception;
     instrumentationService.logPluginException(
         data, exception.exception, exception.stackTrace);
   }
@@ -228,7 +228,7 @@ abstract class PluginInfo {
     if (currentSession == null) {
       if (_exception != null) {
         // Plugin crashed, nothing to do.
-        return Future<void>.value();
+        return Future<void>.value(null);
       }
       throw StateError('Cannot stop a plugin that is not running.');
     }
@@ -242,7 +242,7 @@ abstract class PluginInfo {
 
   /// Update the context roots that the plugin should be analyzing.
   void _updatePluginRoots() {
-    var currentSession = this.currentSession;
+    final currentSession = this.currentSession;
     if (currentSession != null) {
       var params = AnalysisSetContextRootsParams(contextRoots
           .map((analyzer.ContextRoot contextRoot) => ContextRoot(
@@ -382,7 +382,7 @@ class PluginManager {
     var plugins = pluginsForContextRoot(contextRoot);
     var responseMap = <PluginInfo, Future<Response>>{};
     for (var plugin in plugins) {
-      var request = plugin.currentSession?.sendRequest(params);
+      final request = plugin.currentSession?.sendRequest(params);
       // Only add an entry to the map if we have sent a request.
       if (request != null) {
         responseMap[plugin] = request;
@@ -480,6 +480,22 @@ class PluginManager {
     return plugins;
   }
 
+  /// Record a failure to run the plugin associated with the host package with
+  /// the given [hostPackageName]. The failure is described by the [message],
+  /// and is expected to have occurred before a path could be computed, and
+  /// hence before [addPluginToContextRoot] could be invoked.
+  void recordPluginFailure(String hostPackageName, String message) {
+    try {
+      throw PluginException(message);
+    } catch (exception, stackTrace) {
+      var pluginPath = path.join(hostPackageName, 'tools', 'analyzer_plugin');
+      var plugin = DiscoveredPluginInfo(
+          pluginPath, '', '', notificationManager, instrumentationService);
+      plugin.reportException(CaughtException(exception, stackTrace));
+      _pluginMap[pluginPath] = plugin;
+    }
+  }
+
   /// The given [contextRoot] is no longer being analyzed.
   void removedContextRoot(analyzer.ContextRoot contextRoot) {
     var plugins = _pluginMap.values.toList();
@@ -491,7 +507,7 @@ class PluginManager {
         try {
           plugin.stop();
         } catch (e, st) {
-          instrumentationService
+          AnalysisEngine.instance.instrumentationService
               .logException(SilentException('Issue stopping a plugin', e, st));
         }
       }
@@ -593,7 +609,7 @@ class PluginManager {
       try {
         await info.stop();
       } catch (e, st) {
-        instrumentationService.logException(e, st);
+        AnalysisEngine.instance.instrumentationService.logException(e, st);
       }
     }));
   }
@@ -615,7 +631,12 @@ class PluginManager {
         .getChildAssumingFolder(file_paths.dotDartTool)
         .getChildAssumingFile(file_paths.packageConfigJson);
     if (pubCommand != null) {
-      var result = _runPubCommand(pubCommand, pluginFolder);
+      var result = Process.runSync(
+          Platform.executable, <String>['pub', pubCommand],
+          stderrEncoding: utf8,
+          stdoutEncoding: utf8,
+          workingDirectory: pluginFolder.path,
+          environment: {_pubEnvironmentKey: _getPubEnvironmentValue()});
       if (result.exitCode != 0) {
         var buffer = StringBuffer();
         buffer.writeln('Failed to run pub $pubCommand');
@@ -754,31 +775,6 @@ class PluginManager {
       }
     }
     return const <String>[];
-  }
-
-  /// Runs (and records timing to the instrumentation log) a Pub command
-  /// [pubCommand] in [folder].
-  ProcessResult _runPubCommand(String pubCommand, Folder folder) {
-    instrumentationService.logInfo(
-      'Running "pub $pubCommand" in "${folder.path}"',
-    );
-
-    var stopwatch = Stopwatch()..start();
-    var result = Process.runSync(
-      Platform.executable,
-      <String>['pub', pubCommand],
-      stderrEncoding: utf8,
-      stdoutEncoding: utf8,
-      workingDirectory: folder.path,
-      environment: {_pubEnvironmentKey: _getPubEnvironmentValue()},
-    );
-    stopwatch.stop();
-
-    instrumentationService.logInfo(
-      'Running "pub $pubCommand" took ${stopwatch.elapsed}',
-    );
-
-    return result;
   }
 
   /// Return a hex-encoded MD5 signature of the given file [path].
@@ -935,7 +931,7 @@ class PluginSession {
   /// Send a request, based on the given [parameters]. Return a future that will
   /// complete when a response is received.
   Future<Response> sendRequest(RequestParams parameters) {
-    var channel = this.channel;
+    final channel = this.channel;
     if (channel == null) {
       throw StateError('Cannot send a request to a plugin that has stopped.');
     }
@@ -976,7 +972,7 @@ class PluginSession {
         onDone: handleOnDone, onError: handleOnError) as dynamic);
     if (channel == null) {
       // If there is an error when starting the isolate, the channel will invoke
-      // `handleOnDone`, which will cause `channel` to be set to `null`.
+      // handleOnDone, which will cause `channel` to be set to `null`.
       info.reportException(CaughtException(
           PluginException('Unrecorded error while starting the plugin.'),
           StackTrace.current));

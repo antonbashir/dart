@@ -72,6 +72,7 @@ class LoadingUnitSerializationData : public ZoneAllocated {
 class SnapshotHeaderReader {
  public:
   static char* InitializeGlobalVMFlagsFromSnapshot(const Snapshot* snapshot);
+  static bool NullSafetyFromSnapshot(const Snapshot* snapshot);
 
   explicit SnapshotHeaderReader(const Snapshot* snapshot)
       : SnapshotHeaderReader(snapshot->kind(),
@@ -84,8 +85,6 @@ class SnapshotHeaderReader {
       : kind_(kind), stream_(buffer, size) {
     stream_.SetPosition(Snapshot::kHeaderSize);
   }
-
-  void SetCoverageFromSnapshotFeatures(IsolateGroup* isolate_group);
 
   // Verifies the version and features in the snapshot are compatible with the
   // current VM.  If isolate is non-null it validates isolate-specific features.

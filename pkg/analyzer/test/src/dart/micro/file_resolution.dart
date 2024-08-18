@@ -20,7 +20,6 @@ import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:analyzer/src/workspace/blaze.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:crypto/crypto.dart';
 import 'package:linter/src/rules.dart';
 import 'package:test/test.dart';
@@ -68,7 +67,7 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
   }
 
   void assertStateString(String expected) {
-    var buffer = StringBuffer();
+    final buffer = StringBuffer();
     printer.AnalyzerStatePrinter(
       byteStore: byteStore,
       unlinkedUnitStore: fsState.unlinkedUnitStore as UnlinkedUnitStoreImpl,
@@ -76,13 +75,10 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
       libraryContext: libraryContext,
       configuration: analyzerStatePrinterConfiguration,
       resourceProvider: resourceProvider,
-      sink: TreeStringSink(
-        sink: buffer,
-        indent: '',
-      ),
+      sink: buffer,
       withKeysGetPut: true,
     ).writeFileResolver(testData);
-    var actual = buffer.toString();
+    final actual = buffer.toString();
 
     if (actual != expected) {
       print(actual);
@@ -122,11 +118,11 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
 
   @override
   Future<ResolvedUnitResult> resolveFile(
-    File file, {
+    String path, {
     OperationPerformanceImpl? performance,
   }) async {
-    result = await fileResolver.resolve(
-      path: file.path,
+    result = await fileResolver.resolve2(
+      path: path,
       performance: performance,
     );
     return result;
@@ -134,7 +130,7 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
 
   @override
   Future<void> resolveTestFile() async {
-    result = await resolveFile(testFile);
+    result = await resolveFile(testFile.path);
     findNode = FindNode(result.content, result.unit);
     findElement = FindElement(result.unit);
   }

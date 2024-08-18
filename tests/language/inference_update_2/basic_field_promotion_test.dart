@@ -4,6 +4,8 @@
 
 // Tests basic field promotion functionality when the feature is enabled.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import '../static_type_helper.dart';
 
 abstract class C {

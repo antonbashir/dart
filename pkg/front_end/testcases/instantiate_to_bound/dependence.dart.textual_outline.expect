@@ -7,5 +7,4 @@ C c = throw '';
 class D<X extends num, Y extends X Function(X)> {}
 
 D d = throw '';
-
 main() {}

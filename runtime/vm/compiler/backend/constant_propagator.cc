@@ -191,7 +191,7 @@ void ConstantPropagator::VisitParallelMove(ParallelMoveInstr* instr) {
 // Analysis of control instructions.  Unconditional successors are
 // reachable.  Conditional successors are reachable depending on the
 // constant value of the condition.
-void ConstantPropagator::VisitDartReturn(DartReturnInstr* instr) {
+void ConstantPropagator::VisitReturn(ReturnInstr* instr) {
   // Nothing to do.
 }
 
@@ -476,6 +476,10 @@ void ConstantPropagator::VisitAssertBoolean(AssertBooleanInstr* instr) {
   }
 }
 
+void ConstantPropagator::VisitSpecialParameter(SpecialParameterInstr* instr) {
+  SetValue(instr, non_constant_);
+}
+
 void ConstantPropagator::VisitClosureCall(ClosureCallInstr* instr) {
   SetValue(instr, non_constant_);
 }
@@ -670,7 +674,7 @@ static bool CompareIntegers(Token::Kind kind,
 
 // Comparison instruction that is equivalent to the (left & right) == 0
 // comparison pattern.
-void ConstantPropagator::VisitTestInt(TestIntInstr* instr) {
+void ConstantPropagator::VisitTestSmi(TestSmiInstr* instr) {
   const Object& left = instr->left()->definition()->constant_value();
   const Object& right = instr->right()->definition()->constant_value();
   if (IsNonConstant(left) || IsNonConstant(right)) {
@@ -776,8 +780,12 @@ void ConstantPropagator::VisitFfiCall(FfiCallInstr* instr) {
   SetValue(instr, non_constant_);
 }
 
-void ConstantPropagator::VisitLeafRuntimeCall(LeafRuntimeCallInstr* instr) {
+void ConstantPropagator::VisitCCall(CCallInstr* instr) {
   SetValue(instr, non_constant_);
+}
+
+void ConstantPropagator::VisitRawStoreField(RawStoreFieldInstr* instr) {
+  // Nothing to do.
 }
 
 void ConstantPropagator::VisitDebugStepCheck(DebugStepCheckInstr* instr) {
@@ -916,7 +924,8 @@ void ConstantPropagator::VisitInstanceOf(InstanceOfInstr* instr) {
     Representation rep = def->representation();
     if ((checked_type.IsFloat32x4Type() && (rep == kUnboxedFloat32x4)) ||
         (checked_type.IsInt32x4Type() && (rep == kUnboxedInt32x4)) ||
-        (checked_type.IsDoubleType() && (rep == kUnboxedDouble)) ||
+        (checked_type.IsDoubleType() && (rep == kUnboxedDouble) &&
+         FlowGraphCompiler::SupportsUnboxedDoubles()) ||
         (checked_type.IsIntType() && (rep == kUnboxedInt64))) {
       // Ensure that compile time type matches representation.
       ASSERT(((rep == kUnboxedFloat32x4) && (value_cid == kFloat32x4Cid)) ||
@@ -970,11 +979,6 @@ void ConstantPropagator::VisitAllocateSmallRecord(
 }
 
 void ConstantPropagator::VisitLoadUntagged(LoadUntaggedInstr* instr) {
-  SetValue(instr, non_constant_);
-}
-
-void ConstantPropagator::VisitCalculateElementAddress(
-    CalculateElementAddressInstr* instr) {
   SetValue(instr, non_constant_);
 }
 
@@ -1455,34 +1459,19 @@ void ConstantPropagator::VisitDoubleTestOp(DoubleTestOpInstr* instr) {
   if (IsUnknown(value)) {
     return;
   }
-  bool result;
+  const bool is_negated = instr->kind() != Token::kEQ;
   if (value.IsInteger()) {
-    switch (instr->op_kind()) {
-      case MethodRecognizer::kDouble_getIsNaN:
-        FALL_THROUGH;
-      case MethodRecognizer::kDouble_getIsInfinite:
-        result = false;
-        break;
-      case MethodRecognizer::kDouble_getIsNegative: {
-        result = Integer::Cast(value).IsNegative();
-        break;
-      }
-      default:
-        UNREACHABLE();
-    }
-  } else if (value.IsDouble()) {
-    const double double_value = ToDouble(value);
+    SetValue(instr, is_negated ? Bool::True() : Bool::False());
+  } else if (IsIntegerOrDouble(value)) {
     switch (instr->op_kind()) {
       case MethodRecognizer::kDouble_getIsNaN: {
-        result = isnan(double_value);
+        const bool is_nan = isnan(ToDouble(value));
+        SetValue(instr, Bool::Get(is_negated ? !is_nan : is_nan));
         break;
       }
       case MethodRecognizer::kDouble_getIsInfinite: {
-        result = isinf(double_value);
-        break;
-      }
-      case MethodRecognizer::kDouble_getIsNegative: {
-        result = signbit(double_value) && !isnan(double_value);
+        const bool is_inf = isinf(ToDouble(value));
+        SetValue(instr, Bool::Get(is_negated ? !is_inf : is_inf));
         break;
       }
       default:
@@ -1490,10 +1479,7 @@ void ConstantPropagator::VisitDoubleTestOp(DoubleTestOpInstr* instr) {
     }
   } else {
     SetValue(instr, non_constant_);
-    return;
   }
-  const bool is_negated = instr->kind() != Token::kEQ;
-  SetValue(instr, Bool::Get(is_negated ? !result : result));
 }
 
 void ConstantPropagator::VisitSimdOp(SimdOpInstr* instr) {

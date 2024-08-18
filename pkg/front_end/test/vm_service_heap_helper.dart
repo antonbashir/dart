@@ -69,14 +69,6 @@ class VMServiceHeapHelperSpecificExactLeakFinder
     return false;
   }
 
-  bool _processHasExited = false;
-
-  @override
-  void processExited(int exitCode) {
-    super.processExited(exitCode);
-    _processHasExited = true;
-  }
-
   @override
   Future<void> run() async {
     _vm = await serviceClient.getVM();
@@ -102,17 +94,7 @@ class VMServiceHeapHelperSpecificExactLeakFinder
         if (timeout != null) {
           f = f.timeout(new Duration(seconds: timeout!));
         }
-        try {
-          await f;
-        } catch (e) {
-          await Future.delayed(const Duration(seconds: 2));
-          if (_processHasExited) {
-            // Seems OK for it to have thrown when the process exited
-            break;
-          }
-          // Process is still alive so don't swallow the throw.
-          rethrow;
-        }
+        await f;
       }
       print("Iteration: #$_iterationNumber");
 

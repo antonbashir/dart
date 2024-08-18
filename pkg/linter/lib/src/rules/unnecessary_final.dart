@@ -8,7 +8,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = "Don't use `final` for local variables.";
 
@@ -44,25 +43,27 @@ void goodMethod() {
 ''';
 
 class UnnecessaryFinal extends LintRule {
+  static const LintCode withType = LintCode(
+      'unnecessary_final', "Local variables should not be marked as 'final'.",
+      correctionMessage: "Remove the 'final'.");
+
+  static const LintCode withoutType = LintCode(
+      'unnecessary_final', "Local variables should not be marked as 'final'.",
+      correctionMessage: "Replace 'final' with 'var'.");
+
   UnnecessaryFinal()
       : super(
             name: 'unnecessary_final',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
   List<String> get incompatibleRules =>
       const ['prefer_final_locals', 'prefer_final_parameters'];
 
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.unnecessary_final_with_type,
-        LinterLintCode.unnecessary_final_without_type
-      ];
+  List<LintCode> get lintCodes => [withType, withoutType];
 
   @override
   void registerNodeProcessors(
@@ -81,9 +82,8 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   _Visitor(this.rule);
 
-  LintCode getErrorCode(Object? type) => type == null
-      ? LinterLintCode.unnecessary_final_without_type
-      : LinterLintCode.unnecessary_final_with_type;
+  LintCode getErrorCode(Object? type) =>
+      type == null ? UnnecessaryFinal.withoutType : UnnecessaryFinal.withType;
 
   (Token?, AstNode?) getParameterDetails(FormalParameter node) {
     var parameter = node is DefaultFormalParameter ? node.parameter : node;
@@ -136,7 +136,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       var keyword = forLoopParts.keyword;
       if (keyword.isFinal) {
         rule.reportLintForToken(keyword,
-            errorCode: LinterLintCode.unnecessary_final_without_type);
+            errorCode: UnnecessaryFinal.withoutType);
       }
     }
   }

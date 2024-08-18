@@ -12,7 +12,6 @@ import 'package:collection/collection.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = 'Unreachable top-level members in executable libraries.';
 
@@ -45,17 +44,21 @@ void f() {}
 ''';
 
 class UnreachableFromMain extends LintRule {
+  static const LintCode code = LintCode('unreachable_from_main',
+      "Unreachable member '{0}' in an executable library.",
+      correctionMessage: 'Try referencing the member or removing it.');
+
   UnreachableFromMain()
       : super(
           name: 'unreachable_from_main',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.unusedCode},
+          group: Group.style,
           state: State.stable(since: Version(3, 1, 0)),
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.unreachable_from_main;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -262,10 +265,6 @@ class _ReferenceVisitor extends RecursiveAstVisitor {
     var e = node.staticElement;
     if (e != null && _patternLevel == 0) {
       _addDeclaration(e);
-      var type = node.type.element;
-      if (type != null) {
-        _addDeclaration(type);
-      }
     }
     super.visitConstructorName(node);
   }
@@ -275,20 +274,6 @@ class _ReferenceVisitor extends RecursiveAstVisitor {
     _addNamedTypes(node.implementsClause?.interfaces);
 
     super.visitExtensionTypeDeclaration(node);
-  }
-
-  @override
-  void visitMethodDeclaration(MethodDeclaration node) {
-    if (node.name.lexeme == 'toJson' && !node.isStatic) {
-      // The 'dart:convert' library uses dynamic invocation to call `toJson` on
-      // arbitrary objects. Any declaration of `toJson` is automatically
-      // reachable.
-      var element = node.declaredElement;
-      if (element != null) {
-        _addDeclaration(element);
-      }
-    }
-    super.visitMethodDeclaration(node);
   }
 
   @override
@@ -482,7 +467,9 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitCompilationUnit(CompilationUnit node) {
-    var declarationGatherer = _DeclarationGatherer(linterContext: context);
+    var declarationGatherer = _DeclarationGatherer(
+      linterContext: context,
+    );
     for (var unit in context.allUnits) {
       declarationGatherer.addDeclarations(unit.unit);
     }
@@ -538,10 +525,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       }
     }
 
-    var unitDeclarationGatherer = _DeclarationGatherer(linterContext: context);
-    unitDeclarationGatherer.addDeclarations(node);
-    var unitDeclarations = unitDeclarationGatherer.declarations;
-    var unusedDeclarations = unitDeclarations.difference(usedMembers);
+    var unusedDeclarations = declarations.difference(usedMembers);
     var unusedMembers = unusedDeclarations.where((declaration) {
       var element = declaration.declaredElement;
       return element != null &&

@@ -85,7 +85,7 @@ class B extends core::Object /*hasConstConstructor*/  {
     : super core::Object::•()
     ;
   get x() → core::int
-    return let final core::int? #t2 = this.{self::B::_#B#x}{core::int?} in #t2 == null ?{core::int} let final core::int #t3 = 42 in this.{self::B::_#B#x}{core::int?} == null ?{core::int} this.{self::B::_#B#x} = #t3 : throw{for-error-handling} new _in::LateError::fieldADI("x") : #t2{core::int};
+    return let final core::int? #t2 = this.{self::B::_#B#x}{core::int?} in #t2 == null ?{core::int} let final core::int #t3 = 42 in this.{self::B::_#B#x}{core::int?} == null ?{core::int} this.{self::B::_#B#x} = #t3 : throw new _in::LateError::fieldADI("x") : #t2{core::int};
 }
 class C extends core::Object {
   field core::int? _#C#x = null;
@@ -93,12 +93,12 @@ class C extends core::Object {
     : super core::Object::•()
     ;
   get x() → core::int
-    return let final core::int? #t4 = this.{self::C::_#C#x}{core::int?} in #t4 == null ?{core::int} throw{for-error-handling} new _in::LateError::fieldNI("x") : #t4{core::int};
+    return let final core::int? #t4 = this.{self::C::_#C#x}{core::int?} in #t4 == null ?{core::int} throw new _in::LateError::fieldNI("x") : #t4{core::int};
   set x(core::int x#param) → void
     if(this.{self::C::_#C#x}{core::int?} == null)
       this.{self::C::_#C#x} = x#param;
     else
-      throw{for-error-handling} new _in::LateError::fieldAI("x");
+      throw new _in::LateError::fieldAI("x");
   method initVars() → dynamic {
     this.{self::C::x} = 42;
   }
@@ -130,13 +130,13 @@ No types are needed, the first is given by 'on', the second is always 'StackTrac
       #t5.{core::List::add}{Invariant}(i){(core::int) → void};
   }
 }
-static method hest() → dynamic async /* emittedValueType= dynamic */ {
+static method hest() → dynamic async /* futureValueType= dynamic */ {
   await for (core::String s in asy::Stream::fromIterable<core::String>(<core::String>["hest"])) {
     core::print(s);
   }
   return "hest";
 }
-static method fisk() → dynamic async /* emittedValueType= dynamic */ {
+static method fisk() → dynamic async /* futureValueType= dynamic */ {
   lowered has-declared-initializer core::String? #s1;
   function #s1#get() → core::String
     return let final core::String? #t6 = #s1 in #t6 == null ?{core::String} #s1 = invalid-expression "pkg/front_end/testcases/late_lowering/later.dart:40:20: Error: `await` expressions are not supported in late local initializers.
@@ -153,7 +153,7 @@ static method fisk() → dynamic async /* emittedValueType= dynamic */ {
     return #s2 = s2#param;
   lowered has-declared-initializer core::Function? #f;
   function #f#get() → core::Function
-    return let final core::Function? #t8 = #f in #t8 == null ?{core::Function} #f = () → asy::Future<dynamic> async /* emittedValueType= dynamic */ => await self::hest() /* runtimeCheckType= asy::Future<dynamic> */ : #t8{core::Function};
+    return let final core::Function? #t8 = #f in #t8 == null ?{core::Function} #f = () → asy::Future<dynamic> async /* futureValueType= dynamic */ => await self::hest() /* runtimeCheckType= asy::Future<dynamic> */ : #t8{core::Function};
   function #f#set(core::Function f#param) → dynamic
     return #f = f#param;
 }

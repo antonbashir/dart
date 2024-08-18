@@ -11,5 +11,4 @@ class B implements A {
 }
 
 foo() {}
-
 main() {}

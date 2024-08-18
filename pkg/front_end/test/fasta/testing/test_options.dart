@@ -19,6 +19,7 @@ const Option<bool> fixNnbdReleaseVersion =
     const Option('--fix-nnbd-release-version', const BoolValue(false));
 
 const List<Option> testOptionsSpecification = [
+  Options.nnbdAgnosticMode,
   Options.nnbdStrongMode,
   Options.nnbdWeakMode,
   fixNnbdReleaseVersion,
@@ -44,7 +45,14 @@ class SuiteTestOptions {
             ParsedOptions.readOptionsFile(optionsFile.readAsStringSync());
         ParsedOptions parsedOptions =
             ParsedOptions.parse(arguments, testOptionsSpecification);
+        if (Options.nnbdAgnosticMode.read(parsedOptions)) {
+          nnbdMode = NnbdMode.Agnostic;
+        }
         if (Options.nnbdStrongMode.read(parsedOptions)) {
+          if (nnbdMode != null) {
+            throw new UnsupportedError(
+                'Nnbd mode $nnbdMode already specified.');
+          }
           nnbdMode = NnbdMode.Strong;
         }
         if (Options.nnbdWeakMode.read(parsedOptions)) {

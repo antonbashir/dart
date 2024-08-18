@@ -36,9 +36,9 @@ intptr_t FileSystemWatcher::WatchPath(intptr_t id,
                                       int events,
                                       bool recursive) {
   USE(id);
-  const auto name = Utf8ToWideChar(path);
+  Utf8ToWideScope name(path);
   HANDLE dir =
-      CreateFileW(name.get(), FILE_LIST_DIRECTORY,
+      CreateFileW(name.wide(), FILE_LIST_DIRECTORY,
                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                   nullptr, OPEN_EXISTING,
                   FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
@@ -57,7 +57,10 @@ intptr_t FileSystemWatcher::WatchPath(intptr_t id,
 
   DirectoryWatchHandle* handle =
       new DirectoryWatchHandle(dir, list_events, recursive);
-  handle->Start();
+  // Issue a read directly, to be sure events are tracked from now on. This is
+  // okay, since in Dart, we create the socket and start reading immediately.
+  handle->EnsureInitialized(EventHandler::delegate());
+  handle->IssueRead();
   return reinterpret_cast<intptr_t>(handle);
 }
 

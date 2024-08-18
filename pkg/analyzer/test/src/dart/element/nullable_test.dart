@@ -44,11 +44,16 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
     isNotNonNullable(
       functionTypeQuestion(returnType: voidNone),
     );
+
+    isNonNullable(
+      functionTypeStar(returnType: voidNone),
+    );
   }
 
   test_functionClass() {
     isNonNullable(functionNone);
     isNotNonNullable(functionQuestion);
+    isNonNullable(functionStar);
   }
 
   test_futureOr_noneArgument() {
@@ -58,6 +63,10 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
 
     isNotNonNullable(
       futureOrQuestion(intNone),
+    );
+
+    isNonNullable(
+      futureOrStar(intNone),
     );
   }
 
@@ -69,11 +78,30 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
     isNotNonNullable(
       futureOrQuestion(intQuestion),
     );
+
+    isNotNonNullable(
+      futureOrStar(intQuestion),
+    );
+  }
+
+  test_futureOr_starArgument() {
+    isNonNullable(
+      futureOrNone(intStar),
+    );
+
+    isNotNonNullable(
+      futureOrStar(intQuestion),
+    );
+
+    isNonNullable(
+      futureOrStar(intStar),
+    );
   }
 
   test_interface() {
     isNonNullable(intNone);
     isNotNonNullable(intQuestion);
+    isNonNullable(intStar);
   }
 
   test_interface_extensionType() {
@@ -97,10 +125,11 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
   test_never() {
     isNonNullable(neverNone);
     isNotNonNullable(neverQuestion);
+    isNonNullable(neverStar);
   }
 
   test_null() {
-    isNotNonNullable(nullNone);
+    isNotNonNullable(nullStar);
   }
 
   test_typeParameter_boundNone() {
@@ -127,6 +156,14 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
     );
   }
 
+  test_typeParameter_boundStar() {
+    var T = typeParameter('T', bound: intStar);
+
+    isNonNullable(
+      typeParameterTypeStar(T),
+    );
+  }
+
   test_typeParameter_promotedBoundNone() {
     var T = typeParameter('T');
 
@@ -148,6 +185,18 @@ class IsNonNullableTest extends AbstractTypeSystemTest {
 
     isNotNonNullable(
       typeParameterTypeQuestion(T, promotedBound: intQuestion),
+    );
+  }
+
+  test_typeParameter_promotedBoundStar() {
+    var T = typeParameter('T');
+
+    isNonNullable(
+      typeParameterTypeNone(T, promotedBound: intStar),
+    );
+
+    isNonNullable(
+      typeParameterTypeQuestion(T, promotedBound: intStar),
     );
   }
 
@@ -178,11 +227,16 @@ class IsNullableTest extends AbstractTypeSystemTest {
     isNullable(
       functionTypeQuestion(returnType: voidNone),
     );
+
+    isNotNullable(
+      functionTypeStar(returnType: voidNone),
+    );
   }
 
   test_functionClass() {
     isNotNullable(functionNone);
     isNullable(functionQuestion);
+    isNotNullable(functionStar);
   }
 
   test_futureOr_noneArgument() {
@@ -192,6 +246,10 @@ class IsNullableTest extends AbstractTypeSystemTest {
 
     isNullable(
       futureOrQuestion(intNone),
+    );
+
+    isNotNullable(
+      futureOrStar(intNone),
     );
   }
 
@@ -203,11 +261,30 @@ class IsNullableTest extends AbstractTypeSystemTest {
     isNullable(
       futureOrQuestion(intQuestion),
     );
+
+    isNullable(
+      futureOrStar(intQuestion),
+    );
+  }
+
+  test_futureOr_starArgument() {
+    isNotNullable(
+      futureOrNone(intStar),
+    );
+
+    isNullable(
+      futureOrQuestion(intStar),
+    );
+
+    isNotNullable(
+      futureOrStar(intStar),
+    );
   }
 
   test_interface() {
     isNotNullable(intNone);
     isNullable(intQuestion);
+    isNotNullable(intStar);
   }
 
   test_interface_extensionType() {
@@ -237,10 +314,11 @@ class IsNullableTest extends AbstractTypeSystemTest {
   test_never() {
     isNotNullable(neverNone);
     isNullable(neverQuestion);
+    isNotNullable(neverStar);
   }
 
   test_null() {
-    isNullable(nullNone);
+    isNullable(nullStar);
   }
 
   test_typeParameter_boundNone() {
@@ -267,6 +345,14 @@ class IsNullableTest extends AbstractTypeSystemTest {
     );
   }
 
+  test_typeParameter_boundStar() {
+    var T = typeParameter('T', bound: intStar);
+
+    isNotNullable(
+      typeParameterTypeStar(T),
+    );
+  }
+
   test_typeParameter_promotedBoundNone() {
     var T = typeParameter('T');
 
@@ -288,6 +374,18 @@ class IsNullableTest extends AbstractTypeSystemTest {
 
     isNullable(
       typeParameterTypeQuestion(T, promotedBound: intQuestion),
+    );
+  }
+
+  test_typeParameter_promotedBoundStar() {
+    var T = typeParameter('T');
+
+    isNotNullable(
+      typeParameterTypeNone(T, promotedBound: intStar),
+    );
+
+    isNotNullable(
+      typeParameterTypeQuestion(T, promotedBound: intStar),
     );
   }
 
@@ -318,11 +416,16 @@ class IsPotentiallyNonNullableTest extends AbstractTypeSystemTest {
     isNotPotentiallyNonNullable(
       futureOrNone(intQuestion),
     );
+
+    isPotentiallyNonNullable(
+      futureOrNone(intStar),
+    );
   }
 
   test_interface() {
     isPotentiallyNonNullable(intNone);
     isNotPotentiallyNonNullable(intQuestion);
+    isPotentiallyNonNullable(intStar);
   }
 
   test_interface_extensionType() {
@@ -348,7 +451,7 @@ class IsPotentiallyNonNullableTest extends AbstractTypeSystemTest {
   }
 
   test_null() {
-    isNotPotentiallyNonNullable(nullNone);
+    isNotPotentiallyNonNullable(nullStar);
   }
 
   test_void() {
@@ -378,11 +481,16 @@ class IsPotentiallyNullableTest extends AbstractTypeSystemTest {
     isPotentiallyNullable(
       futureOrNone(intQuestion),
     );
+
+    isNotPotentiallyNullable(
+      futureOrNone(intStar),
+    );
   }
 
   test_interface() {
     isNotPotentiallyNullable(intNone);
     isPotentiallyNullable(intQuestion);
+    isNotPotentiallyNullable(intStar);
   }
 
   test_interface_extensionType() {
@@ -414,7 +522,7 @@ class IsPotentiallyNullableTest extends AbstractTypeSystemTest {
   }
 
   test_null() {
-    isPotentiallyNullable(nullNone);
+    isPotentiallyNullable(nullStar);
   }
 
   test_void() {
@@ -444,11 +552,16 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
     isNotStrictlyNonNullable(
       functionTypeQuestion(returnType: voidNone),
     );
+
+    isNotStrictlyNonNullable(
+      functionTypeStar(returnType: voidNone),
+    );
   }
 
   test_functionClass() {
     isStrictlyNonNullable(functionNone);
     isNotStrictlyNonNullable(functionQuestion);
+    isNotStrictlyNonNullable(functionStar);
   }
 
   test_futureOr_noneArgument() {
@@ -458,6 +571,10 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
 
     isNotStrictlyNonNullable(
       futureOrQuestion(intNone),
+    );
+
+    isNotStrictlyNonNullable(
+      futureOrStar(intNone),
     );
   }
 
@@ -469,11 +586,30 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
     isNotStrictlyNonNullable(
       futureOrQuestion(intQuestion),
     );
+
+    isNotStrictlyNonNullable(
+      futureOrStar(intQuestion),
+    );
+  }
+
+  test_futureOr_starArgument() {
+    isNotStrictlyNonNullable(
+      futureOrNone(intStar),
+    );
+
+    isNotStrictlyNonNullable(
+      futureOrStar(intQuestion),
+    );
+
+    isNotStrictlyNonNullable(
+      futureOrStar(intStar),
+    );
   }
 
   test_interface() {
     isStrictlyNonNullable(intNone);
     isNotStrictlyNonNullable(intQuestion);
+    isNotStrictlyNonNullable(intStar);
   }
 
   test_interface_extensionType() {
@@ -497,11 +633,13 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
   test_never() {
     isStrictlyNonNullable(neverNone);
     isNotStrictlyNonNullable(neverQuestion);
+    isNotStrictlyNonNullable(neverStar);
   }
 
   test_null() {
     isNotStrictlyNonNullable(nullNone);
     isNotStrictlyNonNullable(nullQuestion);
+    isNotStrictlyNonNullable(nullStar);
   }
 
   test_typeParameter_boundNone() {
@@ -514,6 +652,10 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
     isNotStrictlyNonNullable(
       typeParameterTypeQuestion(T),
     );
+
+    isNotStrictlyNonNullable(
+      typeParameterTypeStar(T),
+    );
   }
 
   test_typeParameter_boundQuestion() {
@@ -525,6 +667,26 @@ class IsStrictlyNonNullableTest extends AbstractTypeSystemTest {
 
     isNotStrictlyNonNullable(
       typeParameterTypeQuestion(T),
+    );
+
+    isNotStrictlyNonNullable(
+      typeParameterTypeStar(T),
+    );
+  }
+
+  test_typeParameter_boundStar() {
+    var T = typeParameter('T', bound: intStar);
+
+    isNotStrictlyNonNullable(
+      typeParameterTypeNone(T),
+    );
+
+    isNotStrictlyNonNullable(
+      typeParameterTypeQuestion(T),
+    );
+
+    isNotStrictlyNonNullable(
+      typeParameterTypeStar(T),
     );
   }
 
@@ -558,6 +720,7 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
   test_interfaceType() {
     _check(intNone, intNone);
     _check(intQuestion, intNone);
+    _check(intStar, intNone);
 
     // NonNull(C<T1, ... , Tn>) = C<T1, ... , Tn>
     _check(
@@ -579,7 +742,7 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
   }
 
   test_null() {
-    _check(nullNone, neverNone);
+    _check(nullStar, neverNone);
   }
 
   test_typeParameter_bound_dynamic() {
@@ -619,7 +782,7 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameter_bound_null() {
-    var element = typeParameter('T');
+    var element = typeParameter('T', bound: null);
     _checkTypeParameter(
       typeParameterTypeNone(element),
       element: element,
@@ -641,6 +804,22 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
       element: element,
       promotedBound: intNone,
     );
+
+    _checkTypeParameter(
+      typeParameterTypeStar(element),
+      element: element,
+      promotedBound: intNone,
+    );
+  }
+
+  test_typeParameter_bound_star() {
+    var element = typeParameter('T', bound: intStar);
+
+    _checkTypeParameter(
+      typeParameterTypeNone(element),
+      element: element,
+      promotedBound: intNone,
+    );
   }
 
   test_typeParameter_promotedBound_none() {
@@ -657,6 +836,12 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
       element: element,
       promotedBound: intNone,
     );
+
+    _checkTypeParameter(
+      promotedTypeParameterTypeStar(element, intNone),
+      element: element,
+      promotedBound: intNone,
+    );
   }
 
   test_typeParameter_promotedBound_question() {
@@ -670,6 +855,34 @@ class PromoteToNonNullTest extends AbstractTypeSystemTest {
 
     _checkTypeParameter(
       promotedTypeParameterTypeQuestion(element, intQuestion),
+      element: element,
+      promotedBound: intNone,
+    );
+
+    _checkTypeParameter(
+      promotedTypeParameterTypeStar(element, intQuestion),
+      element: element,
+      promotedBound: intNone,
+    );
+  }
+
+  test_typeParameter_promotedBound_star() {
+    var element = typeParameter('T', bound: numQuestion);
+
+    _checkTypeParameter(
+      promotedTypeParameterTypeNone(element, intStar),
+      element: element,
+      promotedBound: intNone,
+    );
+
+    _checkTypeParameter(
+      promotedTypeParameterTypeQuestion(element, intStar),
+      element: element,
+      promotedBound: intNone,
+    );
+
+    _checkTypeParameter(
+      promotedTypeParameterTypeStar(element, intStar),
       element: element,
       promotedBound: intNone,
     );

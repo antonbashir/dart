@@ -5,9 +5,10 @@
 import 'dart:async';
 import 'package:async_helper/async_helper.dart';
 import 'package:expect/expect.dart';
-import 'package:front_end/src/api_prototype/codes.dart'
+import 'package:front_end/src/fasta/messages.dart'
     show templateCantReadFile, messageMissingMain;
 import 'package:compiler/compiler_api.dart' as api;
+import 'package:compiler/src/commandline_options.dart';
 import 'package:compiler/src/util/memory_compiler.dart';
 
 final EXCEPTION = 'Crash-marker';
@@ -71,7 +72,8 @@ Future<RunResult> run(
       await runCompiler(
           entryPoint: entryPoint,
           memorySourceFiles: memorySourceFiles,
-          diagnosticHandler: diagnostics);
+          diagnosticHandler: diagnostics,
+          options: [Flags.soundNullSafety]);
     } catch (e) {
       result.exceptions.add(e);
     }

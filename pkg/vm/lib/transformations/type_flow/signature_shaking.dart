@@ -6,7 +6,7 @@ import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/type_environment.dart';
 import 'package:front_end/src/api_unstable/vm.dart' show isExtensionTypeThis;
-import 'package:front_end/src/api_prototype/resource_identifier.dart'
+import 'package:front_end/src/fasta/kernel/resource_identifier.dart'
     as ResourceIdentifiers;
 
 import 'analysis.dart';
@@ -190,7 +190,12 @@ class _ParameterInfo {
     }
 
     // Covariant parameters have implicit type checks, which count as reads.
-    if (param.isCovariantByDeclaration || param.isCovariantByClass) {
+    // When run in weak mode with null assertions enabled, parameters with
+    // non-nullable types have implicit null checks, which count as reads.
+    if ((param.isCovariantByDeclaration || param.isCovariantByClass) ||
+        (!shaker.typeFlowAnalysis.target.flags.soundNullSafety &&
+            param.type.nullability == Nullability.nonNullable &&
+            (type == null || type is NullableType))) {
       isChecked = true;
     }
 
@@ -211,9 +216,8 @@ class _ParameterInfo {
       isChecked = true;
     }
 
-    /// Disable signature shaking for annotated methods, to prevent removal of
-    /// parameters. The consumers of resources.json expect constant argument
-    /// values to be present for all parameters.
+    /// Avoid inlining methods annotated with `@ResourceIdentifier`, where we
+    /// want to store which arguments were actually passed.
     if (member is Procedure &&
         ResourceIdentifiers.findResourceAnnotations(member).isNotEmpty) {
       isChecked = true;

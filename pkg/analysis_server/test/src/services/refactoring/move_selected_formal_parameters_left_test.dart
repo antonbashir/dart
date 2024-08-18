@@ -366,7 +366,7 @@ void f() {
   Future<void> verifyRefactoring(String expected) async {
     await initializeServer();
 
-    var codeAction = await expectCodeAction(
+    final codeAction = await expectCodeAction(
       MoveSelectedFormalParametersLeft.constTitle,
     );
 

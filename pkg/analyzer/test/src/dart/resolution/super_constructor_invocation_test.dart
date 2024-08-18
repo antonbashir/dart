@@ -27,24 +27,24 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    final node = findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
   period: .
   constructorName: SimpleIdentifier
     token: named
-    staticElement: <testLibraryFragment>::@class::A::@constructor::named
+    staticElement: self::@class::A::@constructor::named
     staticType: null
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::named::@parameter::a
+        parameter: self::@class::A::@constructor::named::@parameter::a
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@constructor::named
+  staticElement: self::@class::A::@constructor::named
 ''');
   }
 
@@ -61,7 +61,7 @@ class B extends A {
       error(CompileTimeErrorCode.UNDEFINED_CONSTRUCTOR_IN_INITIALIZER, 53, 14),
     ]);
 
-    var node = findNode.singleSuperConstructorInvocation;
+    final node = findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
@@ -96,7 +96,7 @@ class B extends A {
       error(CompileTimeErrorCode.CONST_CONSTRUCTOR_WITH_NON_CONST_SUPER, 71, 8),
     ]);
 
-    var node = findNode.singleSuperConstructorInvocation;
+    final node = findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
@@ -105,10 +105,10 @@ SuperConstructorInvocation
     arguments
       IntegerLiteral
         literal: 5
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+        parameter: self::@class::A::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@constructor::new
+  staticElement: self::@class::A::@constructor::new
 ''');
   }
 
@@ -123,7 +123,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    final node = findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
@@ -132,10 +132,10 @@ SuperConstructorInvocation
     arguments
       IntegerLiteral
         literal: 0
-        parameter: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+        parameter: self::@class::A::@constructor::new::@parameter::a
         staticType: int
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@class::A::@constructor::new
+  staticElement: self::@class::A::@constructor::new
 ''');
   }
 
@@ -153,7 +153,7 @@ class B extends A {
           59, 8),
     ]);
 
-    var node = findNode.singleSuperConstructorInvocation;
+    final node = findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super

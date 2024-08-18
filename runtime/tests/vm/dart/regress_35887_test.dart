@@ -10,6 +10,8 @@
 //
 // VMOptions=--optimization_counter_threshold=10 --no-background-compilation
 
+import 'package:expect/expect.dart';
+
 class Value {
   const Value(this.val);
 

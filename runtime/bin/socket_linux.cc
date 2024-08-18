@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "platform/globals.h"
-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
+#if defined(DART_HOST_OS_LINUX)
 
 #include "bin/socket.h"
 
@@ -134,7 +134,7 @@ intptr_t Socket::CreateBindDatagram(const RawAddr& addr,
   }
 
   if (reusePort) {
-#if !defined(DART_HOST_OS_ANDROID) && defined(SO_REUSEPORT)
+#ifdef SO_REUSEPORT  // Not all Linux versions support this.
     int optval = 1;
     int reuse_port_success =
         setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
@@ -149,12 +149,12 @@ intptr_t Socket::CreateBindDatagram(const RawAddr& addr,
       Syslog::PrintErr("Dart Socket ERROR: %s:%d: %s.", __FILE__, __LINE__,
                        Utils::StrError(errno, error_buf, kBufferSize));
     }
-#else   // defined(DART_HOST_OS_ANDROID) || !defined(SO_REUSEPORT)
+#else   // !defined SO_REUSEPORT
     Syslog::PrintErr(
-        "Dart Socket ERROR: %s:%d: `reusePort` not supported on this "
-        "platform.",
+        "Dart Socket ERROR: %s:%d: `reusePort` not available on this Linux "
+        "version.",
         __FILE__, __LINE__);
-#endif  // !defined(DART_HOST_OS_ANDROID) && defined(SO_REUSEPORT)
+#endif  // SO_REUSEPORT
   }
 
   if (!SocketBase::SetMulticastHops(fd,
@@ -277,4 +277,4 @@ intptr_t ServerSocket::Accept(intptr_t fd) {
 }  // namespace bin
 }  // namespace dart
 
-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
+#endif  // defined(DART_HOST_OS_LINUX)

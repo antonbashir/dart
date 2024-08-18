@@ -1,9 +1,7 @@
 class A<X extends num> {}
 
 foo(A<num?> a) {}
-
 A<num?>? bar() {}
-
 baz<T extends A<num?>>() {}
 
 class B extends A<num?> {}
@@ -17,5 +15,4 @@ class Hest {
 }
 
 fisk(Hest h) {}
-
 main() {}

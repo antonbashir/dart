@@ -9,7 +9,7 @@ import 'package:pool/pool.dart';
 
 final pool = Pool(Platform.numberOfProcessors);
 
-void main(List<String> args) async {
+main() async {
   final sdkRoot = Platform.script.resolve('../').toFilePath();
   Directory.current = Directory(sdkRoot);
 
@@ -26,10 +26,8 @@ void main(List<String> args) async {
     print('Building $buildDir');
     await run([
       'tools/build.py',
-      ...args,
       '-a$arch',
       '-m$mode',
-      '--no-rbe',
       'offsets_extractor',
       'offsets_extractor_precompiled_runtime'
     ]);

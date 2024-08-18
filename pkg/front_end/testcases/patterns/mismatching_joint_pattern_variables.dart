@@ -4,13 +4,11 @@
 
 test(dynamic x) {
   switch (x) {
-    case int y when y == 0:
+    case int y when y == 0: // Error
     case [var y] when y == 0:
-      // Error
       return y;
-    case int y when y == 0:
+    case int y when y == 0: // Error
     case [final int y] when y == 0:
-      // Error
       return y;
     case int y || [var y] when y == 0: // Error.
       return y;

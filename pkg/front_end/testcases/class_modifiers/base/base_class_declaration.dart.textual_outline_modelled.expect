@@ -3,5 +3,4 @@ abstract base class B {}
 base class A {}
 
 base class C = Object with M;
-
 base mixin M {}

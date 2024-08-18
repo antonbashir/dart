@@ -1,5 +1,4 @@
 void main() {}
-
 void foo<X>(bool test, X a, X b) {}
 
 extension Ext<T> on T {

@@ -11,11 +11,13 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-final String dartSdkPath = p.dirname(p.dirname(Platform.resolvedExecutable));
+late final String dartSdkPath;
 
 final List<FileStats> fileStats = [];
 
 void main(List<String> arguments) {
+  final vm = Platform.resolvedExecutable;
+  dartSdkPath = p.dirname(p.dirname(vm));
   final version =
       File(p.join(dartSdkPath, 'version')).readAsStringSync().trim();
 

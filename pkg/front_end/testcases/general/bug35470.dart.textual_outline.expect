@@ -5,5 +5,4 @@ class A<X> {
 class B extends A<dynamic> {}
 
 bar(B b) {}
-
 main() {}

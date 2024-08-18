@@ -116,7 +116,8 @@ class DescriptorInfo : public DescriptorInfoBase {
 
 class DescriptorInfoSingle : public DescriptorInfoSingleMixin<DescriptorInfo> {
  public:
-  explicit DescriptorInfoSingle(intptr_t fd) : DescriptorInfoSingleMixin(fd) {}
+  explicit DescriptorInfoSingle(intptr_t fd)
+      : DescriptorInfoSingleMixin(fd, false) {}
   virtual ~DescriptorInfoSingle() {}
 
  private:
@@ -127,7 +128,7 @@ class DescriptorInfoMultiple
     : public DescriptorInfoMultipleMixin<DescriptorInfo> {
  public:
   explicit DescriptorInfoMultiple(intptr_t fd)
-      : DescriptorInfoMultipleMixin(fd) {}
+      : DescriptorInfoMultipleMixin(fd, false) {}
   virtual ~DescriptorInfoMultiple() {}
 
  private:

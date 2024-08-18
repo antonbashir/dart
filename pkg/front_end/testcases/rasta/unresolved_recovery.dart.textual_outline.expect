@@ -3,7 +3,5 @@ class E {
 }
 
 beforeTestMissingTry() {}
-
 testMissingTry() {}
-
 main() {}

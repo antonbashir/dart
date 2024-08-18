@@ -4,13 +4,14 @@
 
 import 'package:kernel/ast.dart';
 
-import '../base/messages.dart';
-import '../builder/declaration_builders.dart';
-import '../builder/library_builder.dart';
-import '../builder/member_builder.dart';
-import '../builder/type_builder.dart';
+import '../fasta/builder/declaration_builders.dart';
+import '../fasta/builder/library_builder.dart';
+import '../fasta/builder/member_builder.dart';
+import '../fasta/builder/type_builder.dart';
+import '../fasta/messages.dart';
+import '../fasta/source/source_library_builder.dart';
+import '../fasta/source/source_loader.dart';
 import '../kernel_generator_impl.dart';
-import '../source/source_loader.dart';
 
 /// Helper methods to use in annotated tests.
 
@@ -126,22 +127,29 @@ LibraryBuilder? lookupLibraryBuilder(
     InternalCompilerResult compilerResult, Library library,
     {bool required = true}) {
   SourceLoader loader = compilerResult.kernelTargetForTesting!.loader;
-  LibraryBuilder? builder =
-      loader.lookupLoadedLibraryBuilder(library.importUri);
+  LibraryBuilder? builder = loader.lookupLibraryBuilder(library.importUri);
   if (builder == null && required) {
     throw new ArgumentError("DeclarationBuilder for $library not found.");
   }
   return builder;
 }
 
+TypeParameterScopeBuilder lookupLibraryDeclarationBuilder(
+    InternalCompilerResult compilerResult, Library library,
+    {bool required = true}) {
+  SourceLibraryBuilder builder =
+      lookupLibraryBuilder(compilerResult, library, required: required)
+          as SourceLibraryBuilder;
+  return builder.libraryTypeParameterScopeBuilderForTesting;
+}
+
 ClassBuilder? lookupClassBuilder(
     InternalCompilerResult compilerResult, Class cls,
     {bool required = true}) {
-  LibraryBuilder libraryBuilder = lookupLibraryBuilder(
+  TypeParameterScopeBuilder libraryBuilder = lookupLibraryDeclarationBuilder(
       compilerResult, cls.enclosingLibrary,
-      required: required)!;
-  ClassBuilder? clsBuilder = libraryBuilder.nameSpace
-      .lookupLocalMember(cls.name, setter: false) as ClassBuilder?;
+      required: required);
+  ClassBuilder? clsBuilder = libraryBuilder.members![cls.name] as ClassBuilder?;
   if (clsBuilder == null && required) {
     throw new ArgumentError("ClassBuilder for $cls not found.");
   }
@@ -151,15 +159,16 @@ ClassBuilder? lookupClassBuilder(
 ExtensionBuilder? lookupExtensionBuilder(
     InternalCompilerResult compilerResult, Extension extension,
     {bool required = true}) {
-  LibraryBuilder libraryBuilder = lookupLibraryBuilder(
+  TypeParameterScopeBuilder libraryBuilder = lookupLibraryDeclarationBuilder(
       compilerResult, extension.enclosingLibrary,
-      required: required)!;
+      required: required);
   ExtensionBuilder? extensionBuilder;
-  libraryBuilder.nameSpace.forEachLocalExtension((ExtensionBuilder builder) {
+  for (ExtensionBuilder builder in libraryBuilder.extensions!) {
     if (builder.extension == extension) {
       extensionBuilder = builder;
+      break;
     }
-  });
+  }
   if (extensionBuilder == null && required) {
     throw new ArgumentError("ExtensionBuilder for $extension not found.");
   }
@@ -176,9 +185,10 @@ MemberBuilder? lookupClassMemberBuilder(InternalCompilerResult compilerResult,
   MemberBuilder? memberBuilder;
   if (classBuilder != null) {
     if (member is Constructor || member is Procedure && member.isFactory) {
-      memberBuilder = classBuilder.nameSpace.lookupConstructor(memberName);
+      memberBuilder =
+          classBuilder.constructorScope.lookupLocalMember(memberName);
     } else {
-      memberBuilder = classBuilder.nameSpace.lookupLocalMember(memberName,
+      memberBuilder = classBuilder.scope.lookupLocalMember(memberName,
           setter: member is Procedure && member.isSetter) as MemberBuilder?;
     }
   }
@@ -214,11 +224,15 @@ MemberBuilder? lookupMemberBuilder(
         compilerResult, member.enclosingClass!, member, member.name.text,
         required: required);
   } else {
-    LibraryBuilder libraryBuilder = lookupLibraryBuilder(
+    TypeParameterScopeBuilder libraryBuilder = lookupLibraryDeclarationBuilder(
         compilerResult, member.enclosingLibrary,
-        required: required)!;
-    memberBuilder = libraryBuilder.nameSpace.lookupLocalMember(member.name.text,
-        setter: member is Procedure && member.isSetter) as MemberBuilder?;
+        required: required);
+    if (member is Procedure && member.isSetter) {
+      memberBuilder = libraryBuilder.setters![member.name.text];
+    } else {
+      memberBuilder =
+          libraryBuilder.members![member.name.text] as MemberBuilder?;
+    }
   }
   if (memberBuilder == null && required) {
     throw new ArgumentError("MemberBuilder for $member not found.");
@@ -239,7 +253,7 @@ MemberBuilder? lookupExtensionMemberBuilder(
       lookupExtensionBuilder(compilerResult, extension, required: required);
   MemberBuilder? memberBuilder;
   if (extensionBuilder != null) {
-    memberBuilder = extensionBuilder.nameSpace
+    memberBuilder = extensionBuilder.scope
         .lookupLocalMember(memberName, setter: isSetter) as MemberBuilder?;
   }
   if (memberBuilder == null && required) {
@@ -467,9 +481,9 @@ class ConstantToTextVisitor implements ConstantVisitor<void> {
             sb.write(' ');
           }
         }
-        StructuralParameter structuralParameter = node.parameters[i];
-        sb.write(structuralParameter.name);
-        DartType bound = structuralParameter.bound;
+        TypeParameter typeParameter = node.parameters[i];
+        sb.write(typeParameter.name);
+        DartType bound = typeParameter.bound;
         if (!(bound is InterfaceType && bound.classNode.name == 'Object')) {
           sb.write(' extends ');
           typeToText.visit(bound);

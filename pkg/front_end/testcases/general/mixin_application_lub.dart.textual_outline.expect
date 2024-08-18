@@ -1,4 +1,5 @@
-mixin Diagnosticable {}
+// @dart = 2.9
+class Diagnosticable {}
 
 class SomeClass with Diagnosticable {}
 
@@ -8,10 +9,7 @@ class StateA extends State {}
 
 class StateB extends State<int> {}
 
-StateA? a = StateA();
-
+StateA a = StateA();
 StateB b = StateB();
-
 foo<T>(T x) {}
-
 main() {}

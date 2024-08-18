@@ -1,5 +1,4 @@
 void main() {}
-
 List<List<A>> subs<A>(List<A> list) => switch (list) {
       <A>[] => [],
       <A>[var x, ...var xs] => [
@@ -10,7 +9,6 @@ List<List<A>> subs<A>(List<A> list) => switch (list) {
           [x]
         ],
     };
-
 List<List<A>> perms<A>(List<A> list) => switch (list) {
       <A>[] || <A>[_] => [list],
       <A>[var x, ...var xs] => [
@@ -18,7 +16,6 @@ List<List<A>> perms<A>(List<A> list) => switch (list) {
             for (var perm in perms(xs)) [...perm.take(i), x, ...perm.skip(i)]
         ],
     };
-
 bool equals<A>(List<A> a, List<A> b) => switch ((a, b)) {
       (<A>[], <A>[]) => true,
       (<A>[_, ...], <A>[]) => false,

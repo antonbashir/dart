@@ -15,7 +15,7 @@ class Dart2jsConstantEvaluator extends ir.TryConstantEvaluator {
       ir.TypeEnvironment typeEnvironment, ir.ReportErrorFunction reportError,
       {Environment? environment,
       super.supportReevaluationForTesting,
-      required super.evaluationMode})
+      super.evaluationMode})
       : super(
           const Dart2jsDartLibrarySupport(),
           const Dart2jsConstantsBackend(supportsUnevaluatedConstants: false),
@@ -47,7 +47,7 @@ class ConstantReference extends ir.TreeNode {
   ConstantReference(this.expression, this.constant);
 
   @override
-  void visitChildren(ir.Visitor<Object?> v) {
+  void visitChildren(ir.Visitor v) {
     throw UnsupportedError("ConstantReference.visitChildren");
   }
 
@@ -62,12 +62,12 @@ class ConstantReference extends ir.TreeNode {
   }
 
   @override
-  Never transformChildren(ir.Transformer v) {
+  transformChildren(ir.Transformer v) {
     throw UnsupportedError("ConstantReference.transformChildren");
   }
 
   @override
-  Never transformOrRemoveChildren(ir.RemovingTransformer v) {
+  transformOrRemoveChildren(ir.RemovingTransformer v) {
     throw UnsupportedError("ConstantReference.transformOrRemoveChildren");
   }
 

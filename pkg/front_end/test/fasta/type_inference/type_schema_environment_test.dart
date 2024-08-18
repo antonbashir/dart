@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:kernel/ast.dart';
-import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -17,6 +16,9 @@ void main() {
 
 @reflectiveTest
 class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
+  @override
+  bool get isNonNullableByDefault => false;
+
   void test_addLowerBound() {
     parseTestLibrary("class A; class B extends A; class C extends A;");
     checkConstraintLowerBound(constraint: "", bound: "UNKNOWN");
@@ -163,7 +165,7 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         actualParameterTypes: "int*, double*",
         returnContextType: null,
         inferredTypesFromDownwardPhase: "UNKNOWN",
-        expectedTypes: "num");
+        expectedTypes: "num*");
 
     // Test an instantiation of [1, 2.0] with a context of List<Object>.  This
     // should infer as List<Object> during downwards inference.
@@ -172,7 +174,7 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         functionType: "() ->* List<T*>*",
         actualParameterTypes: null,
         returnContextType: "List<Object*>*",
-        expectedTypes: "Object");
+        expectedTypes: "Object*");
     // And upwards inference should preserve the type.
     checkInference(
         typeParametersToInfer: "T extends Object*",
@@ -180,7 +182,7 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         actualParameterTypes: "int*, double*",
         returnContextType: "List<Object*>*",
         inferredTypesFromDownwardPhase: "Object*",
-        expectedTypes: "Object");
+        expectedTypes: "Object*");
   }
 
   void test_inferTypeFromConstraints_applyBound() {
@@ -235,13 +237,13 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         constraints: "<: List<UNKNOWN>*",
         downwardsInferPhase: true,
         expected: "List<UNKNOWN>*");
-    // Upwards inference should refine that to List<List<Object?>>
+    // Upwards inference should refine that to List<List<dynamic>>
     checkInferenceFromConstraints(
         typeParameter: "T extends Object*",
         constraints: "<: List<UNKNOWN>*",
         downwardsInferPhase: false,
         inferredTypeFromDownwardPhase: "List<UNKNOWN>*",
-        expected: "List<Object?>*");
+        expected: "List<dynamic>*");
   }
 
   void test_lub_classic() {
@@ -345,11 +347,11 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         type2: "(B*) ->* void",
         upperBound: "Function*");
 
-    // GLB(({a: A}) -> void, ([B]) -> void) = Function
+    // GLB(({a: A}) -> void, ([B]) -> void) = () -> void
     checkUpperBound(
         type1: "({A* a}) ->* void",
         type2: "([B*]) ->* void",
-        upperBound: "Function*");
+        upperBound: "() ->* void");
   }
 
   void test_lub_identical() {
@@ -404,29 +406,29 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         upperBound: "T*",
         typeParameters: "T extends List<T*>*");
 
-    // LUB(T, List<Bottom>) = LUB(List<Object>, List<Bottom>) = List<Object?>
+    // LUB(T, List<Bottom>) = LUB(List<Object>, List<Bottom>) = List<Object>
     checkUpperBound(
         type1: "T*",
         type2: "List<Null>*",
-        upperBound: "List<Object?>*",
+        upperBound: "List<Object*>*",
         typeParameters: "T extends List<T*>*");
     checkUpperBound(
         type1: "List<Null>*",
         type2: "T*",
-        upperBound: "List<Object?>*",
+        upperBound: "List<Object*>*",
         typeParameters: "T extends List<T*>*");
 
-    // LUB(T, U) = LUB(List<Object>, U) = LUB(List<Object?>, List<Bottom>)
+    // LUB(T, U) = LUB(List<Object>, U) = LUB(List<Object>, List<Bottom>)
     // = List<Object>
     checkUpperBound(
         type1: "T*",
         type2: "U*",
-        upperBound: "List<Object?>*",
+        upperBound: "List<Object*>*",
         typeParameters: "T extends List<T*>*, U extends List<Null>*");
     checkUpperBound(
         type1: "U*",
         type2: "T*",
-        upperBound: "List<Object?>*",
+        upperBound: "List<Object*>*",
         typeParameters: "T extends List<T*>*, U extends List<Null>*");
   }
 
@@ -440,7 +442,7 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
     parseTestLibrary("""
       class A;
       class B extends A;
-
+      
       class C<T extends Object*>;
       class D<T extends Object*> extends C<T*>;
     """);
@@ -462,8 +464,8 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
     // Solve(A<?> <: T <: ?) => A<?>
     checkConstraintSolving(":> C<UNKNOWN>*", "C<UNKNOWN>*", grounded: false);
 
-    // Solve(A<?> <: T <: ?, grounded) => A<Never>
-    checkConstraintSolving(":> C<UNKNOWN>*", "C<Never>*", grounded: true);
+    // Solve(A<?> <: T <: ?, grounded) => A<Null>
+    checkConstraintSolving(":> C<UNKNOWN>*", "C<Null>*", grounded: true);
 
     // Solve(? <: T <: A) => A
     checkConstraintSolving("<: A*", "A*", grounded: false);
@@ -474,8 +476,8 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
     // Solve(? <: T <: A<?>) => A<?>
     checkConstraintSolving("<: C<UNKNOWN>*", "C<UNKNOWN>*", grounded: false);
 
-    // Solve(? <: T <: A<?>, grounded) => A<Object?>
-    checkConstraintSolving("<: C<UNKNOWN>*", "C<Object?>*", grounded: true);
+    // Solve(? <: T <: A<?>, grounded) => A<dynamic>
+    checkConstraintSolving("<: C<UNKNOWN>*", "C<dynamic>*", grounded: true);
 
     // Solve(B <: T <: A) => B
     checkConstraintSolving(":> B* <: A*", "B*", grounded: false);
@@ -503,8 +505,8 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
     checkConstraintSolving(":> D<UNKNOWN>* <: C<UNKNOWN>*", "D<UNKNOWN>*",
         grounded: false);
 
-    // Solve(B<?> <: T <: A<?>) => B<Never>
-    checkConstraintSolving(":> D<UNKNOWN>* <: C<UNKNOWN>*", "D<Never>*",
+    // Solve(B<?> <: T <: A<?>) => B<Null>
+    checkConstraintSolving(":> D<UNKNOWN>* <: C<UNKNOWN>*", "D<Null>*",
         grounded: true);
   }
 
@@ -550,26 +552,9 @@ class TypeSchemaEnvironmentTest extends TypeSchemaEnvironmentTestBase {
         (List<TypeParameter> typeParameterNodes) {
       expect(
           typeSchemaEnvironment.getStandardUpperBound(
-              parseType(type1), parseType(type2)),
+              parseType(type1), parseType(type2),
+              isNonNullableByDefault: testLibrary.isNonNullableByDefault),
           parseType(upperBound));
-    });
-  }
-
-  @override
-  void checkTypeShapeCheckSufficiency(
-      {required String expressionStaticType,
-      required String checkTargetType,
-      required String typeParameters,
-      required TypeShapeCheckSufficiency sufficiency}) {
-    typeParserEnvironment.withStructuralParameters(typeParameters,
-        (List<StructuralParameter> structuralParameters) {
-      expect(
-          typeSchemaEnvironment.computeTypeShapeCheckSufficiency(
-                  expressionStaticType: parseType(expressionStaticType),
-                  checkTargetType: parseType(checkTargetType),
-                  subtypeCheckMode: SubtypeCheckMode.ignoringNullabilities) ==
-              sufficiency,
-          isTrue);
     });
   }
 }

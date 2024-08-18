@@ -48,7 +48,6 @@ namespace dart {
   V(TraceICCall)                                                               \
   V(PatchStaticCall)                                                           \
   V(RangeError)                                                                \
-  V(RangeErrorUnboxedInt64)                                                    \
   V(WriteError)                                                                \
   V(NullError)                                                                 \
   V(NullErrorWithSelector)                                                     \
@@ -72,13 +71,7 @@ namespace dart {
   V(ResumeFrame)                                                               \
   V(SwitchableCallMiss)                                                        \
   V(NotLoaded)                                                                 \
-  V(FfiAsyncCallbackSend)                                                      \
-  V(GetFieldForDispatch)                                                       \
-  V(AdjustArgumentsDesciptorForImplicitClosure)                                \
-  V(ClosureArgumentsValid)                                                     \
-  V(ResolveCallFunction)                                                       \
-  V(InterpretedInstanceCallMissHandler)                                        \
-  V(InvokeNoSuchMethod)
+  V(FfiAsyncCallbackSend)
 
 // Note: Leaf runtime function have C linkage, so they cannot pass C++ struct
 // values like ObjectPtr.
@@ -87,14 +80,12 @@ namespace dart {
   V(intptr_t, DeoptimizeCopyFrame, uword, uword)                               \
   V(void, DeoptimizeFillFrame, uword)                                          \
   V(void, StoreBufferBlockProcess, Thread*)                                    \
-  V(void, OldMarkingStackBlockProcess, Thread*)                                \
-  V(void, NewMarkingStackBlockProcess, Thread*)                                \
+  V(void, MarkingStackBlockProcess, Thread*)                                   \
   V(void, RememberCard, uword /*ObjectPtr*/, ObjectPtr*)                       \
   V(uword /*ObjectPtr*/, EnsureRememberedAndMarkingDeferred,                   \
     uword /*ObjectPtr*/ object, Thread* thread)                                \
   V(double, LibcPow, double, double)                                           \
   V(double, DartModulo, double, double)                                        \
-  V(double, LibcFmod, double, double)                                          \
   V(double, LibcFloor, double)                                                 \
   V(double, LibcCeil, double)                                                  \
   V(double, LibcTrunc, double)                                                 \

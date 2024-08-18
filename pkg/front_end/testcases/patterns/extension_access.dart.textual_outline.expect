@@ -13,7 +13,5 @@ extension on I {
 method(A a) => switch (a) {
       I(:var member) => member,
     };
-
 main() {}
-
 expect(expected, actual) {}

@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /*library: 
- languageVersion=%CURRENT_VERSION_MARKER%,
+ languageVersion=2.8,
  packageUri=package:foo
 */
 

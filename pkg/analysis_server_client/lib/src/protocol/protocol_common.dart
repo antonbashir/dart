@@ -4085,10 +4085,6 @@ class RemoveContentOverlay implements HasToJson {
 /// Clients may not extend, implement or mix-in this class.
 class SourceChange implements HasToJson {
   /// A human-readable description of the change to be applied.
-  ///
-  /// If this change includes multiple edits made for different reasons (such
-  /// as during a bulk fix operation), the individual items in edits may
-  /// contain more specific descriptions.
   String message;
 
   /// A list of the edits used to effect the change, grouped by file.
@@ -4257,7 +4253,6 @@ class SourceChange implements HasToJson {
 ///   "length": int
 ///   "replacement": String
 ///   "id": optional String
-///   "description": optional String
 /// }
 ///
 /// Clients may not extend, implement or mix-in this class.
@@ -4286,20 +4281,7 @@ class SourceEdit implements HasToJson {
   /// need to be referenced will not have an id.
   String? id;
 
-  /// A human readable description of the change made by this edit.
-  ///
-  /// This description should be short and suitable to use as a heading with
-  /// changes grouped by it. For example, a change made as part of a quick-fix
-  /// may use the message "Replace final with var", allowing multiple changes
-  /// and multiple applications of the fix to be grouped together.
-  ///
-  /// This value may be more specific than any value in an enclosing
-  /// SourceChange.message which could contain edits made for different reasons
-  /// (such as during a bulk fix operation).
-  String? description;
-
-  SourceEdit(this.offset, this.length, this.replacement,
-      {this.id, this.description});
+  SourceEdit(this.offset, this.length, this.replacement, {this.id});
 
   factory SourceEdit.fromJson(
       JsonDecoder jsonDecoder, String jsonPath, Object? json) {
@@ -4328,13 +4310,7 @@ class SourceEdit implements HasToJson {
       if (json.containsKey('id')) {
         id = jsonDecoder.decodeString('$jsonPath.id', json['id']);
       }
-      String? description;
-      if (json.containsKey('description')) {
-        description = jsonDecoder.decodeString(
-            '$jsonPath.description', json['description']);
-      }
-      return SourceEdit(offset, length, replacement,
-          id: id, description: description);
+      return SourceEdit(offset, length, replacement, id: id);
     } else {
       throw jsonDecoder.mismatch(jsonPath, 'SourceEdit', json);
     }
@@ -4353,10 +4329,6 @@ class SourceEdit implements HasToJson {
     if (id != null) {
       result['id'] = id;
     }
-    var description = this.description;
-    if (description != null) {
-      result['description'] = description;
-    }
     return result;
   }
 
@@ -4372,8 +4344,7 @@ class SourceEdit implements HasToJson {
       return offset == other.offset &&
           length == other.length &&
           replacement == other.replacement &&
-          id == other.id &&
-          description == other.description;
+          id == other.id;
     }
     return false;
   }
@@ -4384,7 +4355,6 @@ class SourceEdit implements HasToJson {
         length,
         replacement,
         id,
-        description,
       );
 }
 

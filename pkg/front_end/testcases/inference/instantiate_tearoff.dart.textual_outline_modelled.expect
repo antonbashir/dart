@@ -12,5 +12,4 @@ class D extends C {
 }
 
 main() {}
-
 void test() {}

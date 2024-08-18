@@ -56,7 +56,7 @@ class ResolutionVerifier extends RecursiveAstVisitor<void> {
     node.visitChildren(this);
     var elementAnnotation = node.elementAnnotation;
     if (elementAnnotation == null) {
-      if (_knownExceptions == null || !_knownExceptions.contains(node)) {
+      if (_knownExceptions == null || !_knownExceptions!.contains(node)) {
         _unresolvedNodes.add(node);
       }
     }
@@ -244,7 +244,7 @@ class ResolutionVerifier extends RecursiveAstVisitor<void> {
     bool Function(Element)? predicate,
   ) {
     if (element == null) {
-      if (_knownExceptions == null || !_knownExceptions.contains(node)) {
+      if (_knownExceptions == null || !_knownExceptions!.contains(node)) {
         _unresolvedNodes.add(node);
       }
     } else if (predicate != null) {
@@ -299,7 +299,7 @@ class StaticTypeAnalyzer2TestShared extends PubPackageResolutionTest {
 
     String typeParametersStr(List<TypeParameterElement> elements) {
       var elementsStr = elements.map((e) {
-        return e.getDisplayString();
+        return e.getDisplayString(withNullability: false);
       }).join(', ');
       return '[$elementsStr]';
     }
@@ -329,7 +329,7 @@ class StaticTypeAnalyzer2TestShared extends PubPackageResolutionTest {
   /// stringifies to that text. Otherwise, [type] is used directly a [Matcher]
   /// to match the type.
   void expectInitializerType(String name, type) {
-    var declaration = findNode.variableDeclaration(name);
+    final declaration = findNode.variableDeclaration(name);
     var initializer = declaration.initializer!;
     _expectType(initializer.staticType, type);
   }

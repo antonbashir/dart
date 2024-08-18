@@ -27,7 +27,6 @@ const String unsoundNullSafetyError =
     'Error: the flag --no-sound-null-safety is not supported in Dart 3.';
 const String unsoundNullSafetyWarning =
     'Warning: the flag --no-sound-null-safety is deprecated and pending removal.';
-const String failedAssertionError = 'Failed assertion: line';
 String usingTargetOSMessageForPlatform(String targetOS) =>
     'Specializing Platform getters for target OS $targetOS.';
 final String usingTargetOSMessage =
@@ -319,7 +318,7 @@ void defineCompileTests() {
     );
 
     expect(result.stderr,
-        "'dart compile exe' is not supported on x86 architectures.\n");
+        "'dart compile exe' is not supported on x86 architectures");
     expect(result.exitCode, 64);
   }, skip: !isRunningOnIA32);
 
@@ -336,7 +335,7 @@ void defineCompileTests() {
     );
 
     expect(result.stderr,
-        "'dart compile aot-snapshot' is not supported on x86 architectures.\n");
+        "'dart compile aot-snapshot' is not supported on x86 architectures");
     expect(result.exitCode, 64);
   }, skip: !isRunningOnIA32);
 
@@ -632,6 +631,33 @@ void main() {
         reason: 'File not found: $outFile');
   }, skip: isRunningOnIA32);
 
+  test('Compile exe with warnings', () async {
+    final p = project(mainSrc: '''
+void main() {
+  int i = 0;
+  i?.isEven;
+}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'myexe'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'exe',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stdout, contains('Warning: '));
+    expect(result.stderr, isEmpty);
+    expect(result.exitCode, 0);
+    expect(File(outFile).existsSync(), true,
+        reason: 'File not found: $outFile');
+  }, skip: isRunningOnIA32);
+
   test('Compile exe with sound null safety', () async {
     final p = project(mainSrc: '''void main() {}''');
     final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
@@ -654,7 +680,31 @@ void main() {
         reason: 'File not found: $outFile');
   }, skip: isRunningOnIA32);
 
-  test('Compile and run exe (default sound null safety)', () async {
+  test('Compile exe with unsound null safety', () async {
+    final p = project(mainSrc: '''
+void main() {}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'myexe'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'exe',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stdout, contains(unsoundNullSafetyError));
+    expect(result.stderr, isEmpty);
+    expect(result.exitCode, 64);
+    expect(File(outFile).existsSync(), false, reason: 'File found: $outFile');
+  }, skip: isRunningOnIA32);
+
+  test('Compile and run exe with --sound-null-safety', () async {
     final p = project(mainSrc: '''void main() {
       print((<int?>[] is List<int>) ? 'oh no' : 'sound');
     }''');
@@ -665,6 +715,7 @@ void main() {
       [
         'compile',
         'exe',
+        '--sound-null-safety',
         '-o',
         outFile,
         inFile,
@@ -685,63 +736,6 @@ void main() {
     expect(result.stderr, isEmpty);
     expect(result.exitCode, 0);
     expect(result.stdout, contains('sound'));
-  }, skip: isRunningOnIA32);
-
-  test('Compile and run exe with DART_VM_OPTIONS', () async {
-    final p = project(mainSrc: '''
-    import 'dart:math';
-    void main() {
-      print(Random().nextInt(1000));
-    }''');
-    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final outFile = path.canonicalize(path.join(p.dirPath, 'myexe'));
-
-    var result = await p.run(
-      [
-        'compile',
-        'exe',
-        '-o',
-        outFile,
-        inFile,
-      ],
-    );
-
-    expect(result.stdout, isNot(contains(soundNullSafetyMessage)));
-    expect(result.stderr, isEmpty);
-    expect(result.exitCode, 0);
-    expect(File(outFile).existsSync(), true,
-        reason: 'File not found: $outFile');
-
-    // Verify CSV options are processed.
-    result = Process.runSync(
-      outFile,
-      [],
-      environment: <String, String>{
-        'DART_VM_OPTIONS': '--help,--verbose',
-      },
-    );
-
-    expect(result.stderr, isEmpty);
-    // vm_name is a verbose flag and will only be shown if --verbose is
-    // processed.
-    expect(result.stdout, contains('vm_name'));
-    expect(result.exitCode, 0);
-
-    // Verify non-help options work.
-    //
-    // Regression test for https://github.com/dart-lang/sdk/issues/55767
-    result = Process.runSync(
-      outFile,
-      [],
-      environment: <String, String>{
-        'DART_VM_OPTIONS': '--random_seed=42',
-      },
-    );
-
-    expect(result.stderr, isEmpty);
-    // This value should be consistent as long as --random_seed is processed.
-    expect(result.stdout, contains('64'));
-    expect(result.exitCode, 0);
   }, skip: isRunningOnIA32);
 
   test('Compile exe without info', () async {
@@ -797,97 +791,6 @@ void main() {
     expect(result.exitCode, 0);
   }, skip: isRunningOnIA32);
 
-  test('Compile exe with asserts', () async {
-    final p = project(mainSrc: '''
-void main() {
-  assert(int.parse('1') == 2);
-}
-''');
-    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final outFile = path.canonicalize(path.join(p.dirPath, 'myexe'));
-
-    final result = await p.run(
-      [
-        'compile',
-        'exe',
-        '--enable-asserts',
-        '-o',
-        outFile,
-        inFile,
-      ],
-    );
-
-    // Only printed when -v/--verbose is used, not --verbosity.
-    expect(result.stdout, isNot(contains(usingTargetOSMessage)));
-    expect(result.stdout, isNot(contains(soundNullSafetyMessage)));
-    expect(result.stderr, isEmpty);
-    expect(result.exitCode, 0);
-
-    final runResult = await Process.run(outFile, []);
-    expect(runResult.stdout, isEmpty);
-    expect(runResult.stderr, contains(failedAssertionError));
-  }, skip: isRunningOnIA32);
-
-  test('Compile exe from kernel', () async {
-    final p = project(mainSrc: '''
-void main() {}
-''');
-    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final dillOutFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
-    final exeOutFile = path.canonicalize(path.join(p.dirPath, 'myexe'));
-
-    var result = await p.run(
-      [
-        'compile',
-        'kernel',
-        '-o',
-        dillOutFile,
-        inFile,
-      ],
-    );
-    expect(result.exitCode, 0);
-    expect(
-      File(dillOutFile).existsSync(),
-      true,
-      reason: 'File not found: $dillOutFile',
-    );
-
-    result = await p.run(
-      [
-        'compile',
-        'exe',
-        '-o',
-        exeOutFile,
-        dillOutFile,
-      ],
-    );
-
-    expect(result.exitCode, 0);
-    expect(
-      File(exeOutFile).existsSync(),
-      true,
-      reason: 'File not found: $exeOutFile',
-    );
-  }, skip: isRunningOnIA32);
-
-  test('Compile wasm with wrong output filename', () async {
-    final p = project(mainSrc: 'void main() {}');
-    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final result = await p.run(
-      [
-        'compile',
-        'wasm',
-        '-o',
-        'foo',
-        inFile,
-      ],
-    );
-
-    expect(result.stderr,
-        contains('Error: The output file "foo" does not end with ".wasm"'));
-    expect(result.exitCode, 255);
-  }, skip: isRunningOnIA32);
-
   test('Compile wasm with error', () async {
     final p = project(mainSrc: '''
 void main() {
@@ -896,7 +799,7 @@ void main() {
 }
 ''');
     final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final outFile = path.canonicalize(path.join(p.dirPath, 'my.wasm'));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mywasm'));
 
     final result = await p.run(
       [
@@ -908,12 +811,39 @@ void main() {
       ],
     );
 
+    expect(result.stdout, contains('Compilation to WasmGC is experimental'));
     expect(result.stderr, contains('Error: '));
     // The CFE doesn't print to stderr, so all output is piped to stderr, even
     // including info-only output:
     expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
     expect(result.exitCode, compileErrorExitCode);
     expect(File(outFile).existsSync(), false,
+        reason: 'File not found: $outFile');
+  }, skip: isRunningOnIA32);
+
+  test('Compile wasm with warnings', () async {
+    final p = project(mainSrc: '''
+void main() {
+  int i = 0;
+  i?.isEven;
+}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mywasm.wasm'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'wasm',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, contains('Warning: '));
+    expect(result.exitCode, 0);
+    expect(File(outFile).existsSync(), true,
         reason: 'File not found: $outFile');
   }, skip: isRunningOnIA32);
 
@@ -937,7 +867,7 @@ void main() {
     expect(result.exitCode, 0);
     expect(File(outFile).existsSync(), true,
         reason: 'File not found: $outFile');
-  }, skip: isRunningOnIA32);
+  });
 
   test('Compile JS with unsound null safety', () async {
     final p = project(mainSrc: '''
@@ -1036,6 +966,32 @@ void main() {
         reason: 'File not found: $outFile');
   }, skip: isRunningOnIA32);
 
+  test('Compile AOT snapshot with unsound null safety', () async {
+    final p = project(mainSrc: '''
+void main() {}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'myaot'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'aot-snapshot',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stdout, contains(unsoundNullSafetyMessage));
+    expect(result.stdout, contains(unsoundNullSafetyWarning));
+    expect(result.stderr, isEmpty);
+    expect(result.exitCode, 0);
+    expect(File(outFile).existsSync(), true,
+        reason: 'File not found: $outFile');
+  }, skip: isRunningOnIA32);
+
   test('Compile AOT snapshot without info', () async {
     final p = project(mainSrc: '''void main() {}''');
     final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
@@ -1089,20 +1045,21 @@ void main() {
     expect(result.exitCode, 0);
   }, skip: isRunningOnIA32);
 
-  test('Compile AOT snapshot with asserts', () async {
+  test('Compile AOT snapshot with warnings', () async {
     final p = project(mainSrc: '''
 void main() {
-  assert(int.parse('1') == 2);
+  int i = 0;
+  i?.isEven;
 }
 ''');
     final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
     final outFile = path.canonicalize(path.join(p.dirPath, 'myaot'));
 
-    var result = await p.run(
+    final result = await p.run(
       [
         'compile',
         'aot-snapshot',
-        '--enable-asserts',
+        '--verbosity=warning',
         '-o',
         outFile,
         inFile,
@@ -1112,58 +1069,9 @@ void main() {
     // Only printed when -v/--verbose is used, not --verbosity.
     expect(result.stdout, isNot(contains(usingTargetOSMessage)));
     expect(result.stdout, isNot(contains(soundNullSafetyMessage)));
+    expect(result.stdout, contains('Warning: '));
     expect(result.stderr, isEmpty);
     expect(result.exitCode, 0);
-
-    final Directory binDir = File(Platform.resolvedExecutable).parent;
-    result = await Process.run(
-      path.join(binDir.path, 'dartaotruntime'),
-      [outFile],
-    );
-    expect(result.stdout, isEmpty);
-    expect(result.stderr, contains(failedAssertionError));
-  }, skip: isRunningOnIA32);
-
-  test('Compile AOT snapshot from kernel', () async {
-    final p = project(mainSrc: '''
-void main() {}
-''');
-    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-    final dillOutFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
-    final aotOutFile = path.canonicalize(path.join(p.dirPath, 'myaot'));
-
-    var result = await p.run(
-      [
-        'compile',
-        'kernel',
-        '-o',
-        dillOutFile,
-        inFile,
-      ],
-    );
-    expect(result.exitCode, 0);
-    expect(
-      File(dillOutFile).existsSync(),
-      true,
-      reason: 'File not found: $dillOutFile',
-    );
-
-    result = await p.run(
-      [
-        'compile',
-        'aot-snapshot',
-        '-o',
-        aotOutFile,
-        dillOutFile,
-      ],
-    );
-
-    expect(result.exitCode, 0);
-    expect(
-      File(aotOutFile).existsSync(),
-      true,
-      reason: 'File not found: $aotOutFile',
-    );
   }, skip: isRunningOnIA32);
 
   test('Compile kernel with invalid output directory', () async {
@@ -1241,6 +1149,31 @@ void main() {}
         reason: 'File not found: $outFile');
   });
 
+  test('Compile kernel with unsound null safety', () async {
+    final p = project(mainSrc: '''
+void main() {}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'kernel',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, contains(unsoundNullSafetyMessage));
+    expect(result.stdout, contains(unsoundNullSafetyWarning));
+    expect(result.exitCode, 0);
+    expect(File(outFile).existsSync(), true,
+        reason: 'File not found: $outFile');
+  });
+
   test('Compile kernel with --sound-null-safety', () async {
     final p = project(mainSrc: '''void main() {
       print((<int?>[] is List<int>) ? 'oh no' : 'sound');
@@ -1260,6 +1193,31 @@ void main() {}
     );
 
     expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
+    expect(result.exitCode, 0);
+    expect(File(outFile).existsSync(), true,
+        reason: 'File not found: $outFile');
+  });
+
+  test('Compile kernel with --no-sound-null-safety', () async {
+    final p = project(mainSrc: '''void main() {
+      print((<int?>[] is List<int>) ? 'unsound' : 'oh no');
+    }''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'kernel',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
+    expect(result.stdout, contains(unsoundNullSafetyWarning));
     expect(result.exitCode, 0);
     expect(File(outFile).existsSync(), true,
         reason: 'File not found: $outFile');
@@ -1310,7 +1268,32 @@ void main() {
 
     expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
     expect(result.stderr, contains('must be assigned before it can be used'));
-    expect(result.exitCode, 64);
+    expect(result.exitCode, 254);
+  });
+
+  test('Compile kernel with warnings', () async {
+    final p = project(mainSrc: '''
+void main() {
+    int i = 0;
+    i?.isEven;
+}''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'kernel',
+        '--verbosity=warning',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
+    expect(result.stderr, contains('Warning:'));
+    expect(result.exitCode, 0);
   });
 
   test('Compile JIT snapshot with default (sound null safety)', () async {
@@ -1334,7 +1317,30 @@ void main() {
         reason: 'File not found: $outFile');
   });
 
-  test('Compile JIT snapshot with (default sound null safety)', () async {
+  test('Compile JIT snapshot with unsound null safety', () async {
+    final p = project(mainSrc: '''
+void main() {}
+''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'myjit'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'jit-snapshot',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stdout, contains(unsoundNullSafetyError));
+    expect(result.exitCode, 64);
+    expect(File(outFile).existsSync(), false, reason: 'File found: $outFile');
+  });
+
+  test('Compile JIT snapshot with --sound-null-safety', () async {
     final p = project(mainSrc: '''void main() {
       print((<int?>[] is List<int>) ? 'oh no' : 'sound');
     }''');
@@ -1345,6 +1351,7 @@ void main() {
       [
         'compile',
         'jit-snapshot',
+        '--sound-null-safety',
         '-o',
         outFile,
         inFile,
@@ -1355,6 +1362,30 @@ void main() {
     expect(result.exitCode, 0);
     expect(File(outFile).existsSync(), true,
         reason: 'File not found: $outFile');
+  });
+
+  test('Compile JIT snapshot with --no-sound-null-safety', () async {
+    final p = project(mainSrc: '''void main() {
+      print((<int?>[] is List<int>) ? 'unsound' : 'oh no');
+    }''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'mydill'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'jit-snapshot',
+        '--no-sound-null-safety',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
+    expect(result.stdout, contains(unsoundNullSafetyError));
+    expect(result.exitCode, 64);
+    expect(File(outFile).existsSync(), false, reason: 'File found: $outFile');
   });
 
   test('Compile JIT snapshot with training args', () async {
@@ -1433,6 +1464,31 @@ void main() {
     expect(result.exitCode, 254);
   });
 
+  test('Compile JIT snapshot with warnings', () async {
+    final p = project(mainSrc: '''
+void main() {
+    int i = 0;
+    i?.isEven;
+}''');
+    final inFile = path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
+    final outFile = path.canonicalize(path.join(p.dirPath, 'myjit'));
+
+    final result = await p.run(
+      [
+        'compile',
+        'jit-snapshot',
+        '--verbosity=warning',
+        '-o',
+        outFile,
+        inFile,
+      ],
+    );
+
+    expect(result.stderr, isNot(contains(soundNullSafetyMessage)));
+    expect(result.stderr, contains('Warning:'));
+    expect(result.exitCode, 0);
+  });
+
   if (Platform.isMacOS) {
     test('Compile and run executable from signed dartaotruntime', () async {
       // Either the locally built dartaotruntime is already linker signed
@@ -1461,50 +1517,4 @@ void main() {
       await basicCompileTest();
     }, skip: isRunningOnIA32);
   }
-
-  // Tests for --depfile for compiling to AOT snapshots, executables and
-  // kernel.
-  group('depfiles', () {
-    Future<void> testDepFileGeneration(String subcommand) async {
-      final p = project(mainSrc: '''void main() {}''');
-      final inFile =
-          path.canonicalize(path.join(p.dirPath, p.relativeFilePath));
-      final outFile =
-          path.canonicalize(path.join(p.dirPath, 'output.$subcommand'));
-      final depFile =
-          path.canonicalize(path.join(p.dirPath, 'output.$subcommand.d'));
-
-      final result = await p.run(
-        [
-          'compile',
-          subcommand,
-          '--depfile',
-          depFile,
-          '-o',
-          outFile,
-          inFile,
-        ],
-      );
-
-      expect(result.stderr, isEmpty);
-      expect(result.exitCode, 0);
-
-      expect(File(depFile).existsSync(), isTrue);
-
-      final depFileContent = File(depFile).readAsStringSync();
-
-      String escapePath(String path) =>
-          path.replaceAll('\\', '\\\\').replaceAll(' ', '\\ ');
-
-      expect(depFileContent, startsWith('${escapePath(outFile)}: '));
-      expect(depFileContent, contains(escapePath(inFile)));
-    }
-
-    test('compile aot-snapshot', () => testDepFileGeneration('aot-snapshot'),
-        skip: isRunningOnIA32);
-    test('compile exe', () => testDepFileGeneration('exe'),
-        skip: isRunningOnIA32);
-    test('compile kernel', () => testDepFileGeneration('kernel'),
-        skip: isRunningOnIA32);
-  });
 }

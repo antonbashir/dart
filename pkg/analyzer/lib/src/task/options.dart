@@ -225,7 +225,11 @@ List<AnalysisError> _validatePluginsOption(
   String? firstEnabledPluginName,
 }) {
   RecordingErrorListener recorder = RecordingErrorListener();
-  ErrorReporter reporter = ErrorReporter(recorder, source);
+  ErrorReporter reporter = ErrorReporter(
+    recorder,
+    source,
+    isNonNullableByDefault: true,
+  );
   PluginsOptionValidator(firstEnabledPluginName).validate(reporter, options);
   return recorder.errors;
 }
@@ -284,6 +288,7 @@ class AnalyzerOptions {
     language,
     optionalChecks,
     plugins,
+    propagateLinterExceptions,
     strongMode,
   ];
 
@@ -304,7 +309,6 @@ class AnalyzerOptions {
   /// Supported 'analyzer' optional checks options.
   static const List<String> optionalChecksOptions = [
     chromeOsManifestChecks,
-    propagateLinterExceptions,
   ];
 
   /// Supported 'code-style' options.
@@ -340,13 +344,6 @@ class CannotIgnoreOptionValidator extends OptionsValidator {
   static final Set<String> _errorCodes =
       errorCodeValues.map((ErrorCode code) => code.name).toSet();
 
-  /// The error code names that existed, but were removed.
-  /// We don't want to report these, this breaks clients.
-  // TODO(scheglov): https://github.com/flutter/flutter/issues/141576
-  static const Set<String> _removedErrorCodes = {
-    'MISSING_RETURN',
-  };
-
   /// Lazily populated set of lint codes.
   late final Set<String> _lintCodes = Registry.ruleRegistry.rules
       .map((rule) => rule.name.toUpperCase())
@@ -368,8 +365,7 @@ class CannotIgnoreOptionValidator extends OptionsValidator {
             }
             var upperCaseName = unignorableName.toUpperCase();
             if (!_errorCodes.contains(upperCaseName) &&
-                !_lintCodes.contains(upperCaseName) &&
-                !_removedErrorCodes.contains(upperCaseName)) {
+                !_lintCodes.contains(upperCaseName)) {
               reporter.reportErrorForSpan(
                   AnalysisOptionsWarningCode.UNRECOGNIZED_ERROR_CODE,
                   unignorableNameNode.span,
@@ -561,13 +557,6 @@ class ErrorFilterOptionValidator extends OptionsValidator {
   static final Set<String> _errorCodes =
       errorCodeValues.map((ErrorCode code) => code.name).toSet();
 
-  /// The error code names that existed, but were removed.
-  /// We don't want to report these, this breaks clients.
-  // TODO(scheglov): https://github.com/flutter/flutter/issues/141576
-  static const Set<String> _removedErrorCodes = {
-    'MISSING_RETURN',
-  };
-
   /// Lazily populated set of lint codes.
   late final Set<String> _lintCodes = Registry.ruleRegistry.rules
       .map((rule) => rule.name.toUpperCase())
@@ -583,9 +572,7 @@ class ErrorFilterOptionValidator extends OptionsValidator {
           String? value;
           if (k is YamlScalar) {
             value = toUpperCase(k.value);
-            if (!_errorCodes.contains(value) &&
-                !_lintCodes.contains(value) &&
-                !_removedErrorCodes.contains(value)) {
+            if (!_errorCodes.contains(value) && !_lintCodes.contains(value)) {
               reporter.reportErrorForSpan(
                   AnalysisOptionsWarningCode.UNRECOGNIZED_ERROR_CODE,
                   k.span,
@@ -749,7 +736,11 @@ class OptionsFileValidator {
 
   List<AnalysisError> validate(YamlMap options) {
     RecordingErrorListener recorder = RecordingErrorListener();
-    ErrorReporter reporter = ErrorReporter(recorder, source);
+    ErrorReporter reporter = ErrorReporter(
+      recorder,
+      source,
+      isNonNullableByDefault: false,
+    );
     for (var validator in _validators) {
       validator.validate(reporter, options);
     }
@@ -779,7 +770,7 @@ class PluginsOptionValidator extends OptionsValidator {
         reporter.reportErrorForSpan(
           AnalysisOptionsWarningCode.MULTIPLE_PLUGINS,
           plugins.span,
-          [_firstIncludedPluginName],
+          [_firstIncludedPluginName!],
         );
       }
     } else if (plugins is YamlList) {
@@ -791,7 +782,7 @@ class PluginsOptionValidator extends OptionsValidator {
             reporter.reportErrorForSpan(
               AnalysisOptionsWarningCode.MULTIPLE_PLUGINS,
               plugin.span,
-              [_firstIncludedPluginName],
+              [_firstIncludedPluginName!],
             );
           }
         }
@@ -825,7 +816,7 @@ class PluginsOptionValidator extends OptionsValidator {
             reporter.reportErrorForSpan(
               AnalysisOptionsWarningCode.MULTIPLE_PLUGINS,
               plugin.span,
-              [_firstIncludedPluginName],
+              [_firstIncludedPluginName!],
             );
           }
         }

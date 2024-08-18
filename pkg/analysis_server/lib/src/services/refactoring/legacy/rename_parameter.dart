@@ -97,7 +97,7 @@ class RenameParameterRefactoringImpl extends RenameRefactoringImpl {
 
   /// Fills [elements] with [Element]s to rename.
   Future<void> _prepareElements() async {
-    var element = this.element;
+    final element = this.element;
     if (element.isNamed) {
       elements = await getHierarchyNamedParameters(searchEngine, element);
     } else {

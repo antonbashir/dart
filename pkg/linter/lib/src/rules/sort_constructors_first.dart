@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Sort constructor declarations before other members.';
 
@@ -34,15 +33,20 @@ abstract class Animation<T> {
 ''';
 
 class SortConstructorsFirst extends LintRule {
+  static const LintCode code = LintCode('sort_constructors_first',
+      'Constructor declarations should be before non-constructor declarations.',
+      correctionMessage:
+          'Try moving the constructor declaration before all other members.');
+
   SortConstructorsFirst()
       : super(
             name: 'sort_constructors_first',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.sort_constructors_first;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

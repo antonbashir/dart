@@ -18,8 +18,7 @@ class EditGetStatementCompletionHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = EditGetStatementCompletionParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = EditGetStatementCompletionParams.fromRequest(request);
     var file = params.file;
 
     if (server.sendResponseErrorIfInvalidFilePath(request, file)) {

@@ -11,11 +11,7 @@ class B {
 class C extends B implements I {}
 
 main() {}
-
 void expect(Object value, Object expected) {}
-
 void expectTypeError(void callback()) {}
-
 void g(C c) {}
-
 void test(C c, I i) {}

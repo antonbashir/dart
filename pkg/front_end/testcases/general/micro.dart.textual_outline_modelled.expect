@@ -30,15 +30,9 @@ class SubFinalBox extends FinalBox {
 }
 
 external Bar createBar();
-
 external bool externalStatic();
-
 intArgument(x) {}
-
 main() {}
-
 staticMethod() {}
-
 stringArgument(x) {}
-
 void makeDynamicCall(receiver) {}

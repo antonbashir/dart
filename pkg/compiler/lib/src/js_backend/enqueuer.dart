@@ -18,7 +18,6 @@ import '../universe/codegen_world_builder.dart';
 import '../universe/member_usage.dart';
 import '../universe/use.dart'
     show
-        ConditionalUse,
         ConstantUse,
         DynamicUse,
         StaticUse,
@@ -33,7 +32,7 @@ class CodegenEnqueuer extends Enqueuer {
   final String name;
   final Set<ClassEntity> _recentClasses = Setlet();
   bool _recentConstants = false;
-  final CodegenWorldBuilder worldBuilder;
+  final CodegenWorldBuilderImpl worldBuilder;
   final WorkItemBuilder _workItemBuilder;
 
   @override
@@ -157,24 +156,7 @@ class CodegenEnqueuer extends Enqueuer {
           // TODO(johnniwinther): Should this be tracked with _MemberUsage ?
           listener.registerUsedElement(staticUse.element as MemberEntity);
           break;
-        case StaticUseKind.CALL_METHOD:
-        case StaticUseKind.CLOSURE:
-        case StaticUseKind.CLOSURE_CALL:
-        case StaticUseKind.DIRECT_INVOKE:
-        case StaticUseKind.FIELD_CONSTANT_INIT:
-        case StaticUseKind.FIELD_INIT:
-        case StaticUseKind.INSTANCE_FIELD_GET:
-        case StaticUseKind.INSTANCE_FIELD_SET:
-        case StaticUseKind.STATIC_GET:
-        case StaticUseKind.STATIC_INVOKE:
-        case StaticUseKind.STATIC_SET:
-        case StaticUseKind.STATIC_TEAR_OFF:
-        case StaticUseKind.SUPER_FIELD_SET:
-        case StaticUseKind.SUPER_GET:
-        case StaticUseKind.SUPER_INVOKE:
-        case StaticUseKind.SUPER_SETTER_SET:
-        case StaticUseKind.SUPER_TEAR_OFF:
-        case StaticUseKind.WEAK_STATIC_TEAR_OFF:
+        default:
           break;
       }
     });
@@ -309,7 +291,4 @@ class CodegenEnqueuer extends Enqueuer {
   @override
   Iterable<MemberEntity> get processedEntities =>
       worldBuilder.processedEntities;
-
-  @override
-  void processConditionalUse(ConditionalUse conditionalUse) {}
 }

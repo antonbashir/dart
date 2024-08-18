@@ -3,26 +3,24 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io';
-import 'dart:math' as math;
+import 'dart:math';
 
 import './macho.dart';
-import 'src/generate_utils.dart';
 
-/// Pipe from one file stream into another.
-///
-/// This is done in chunks to avoid excessive memory load.
+// Simplifies casting so we get null values back instead of exceptions.
+T? cast<T>(x) => x is T ? x : null;
+
+// Pipe from one file stream into another. We do this in chunks to avoid
+// excessive memory load.
 Future<int> pipeStream(RandomAccessFile from, RandomAccessFile to,
     {int? numToWrite, int chunkSize = 1 << 30}) async {
-  var numWritten = 0;
-  final fileLength = from.lengthSync();
+  int numWritten = 0;
+  final int fileLength = from.lengthSync();
   while (from.positionSync() != fileLength) {
-    final availableBytes = fileLength - from.positionSync();
-    final numToRead = numToWrite == null
-        ? math.min(availableBytes, chunkSize)
-        : math.min(
-            numToWrite - numWritten,
-            math.min(availableBytes, chunkSize),
-          );
+    final int availableBytes = fileLength - from.positionSync();
+    final int numToRead = numToWrite == null
+        ? min(availableBytes, chunkSize)
+        : min(numToWrite - numWritten, min(availableBytes, chunkSize));
 
     final buffer = await from.read(numToRead);
     await to.writeFrom(buffer);
@@ -42,8 +40,7 @@ class _MacOSVersion {
   final int? _minor;
 
   static final _regexp = RegExp(r'Version (?<major>\d+).(?<minor>\d+)');
-  static const _parseFailure =
-      FormatException('Could not determine macOS version');
+  static const _parseFailure = 'Could not determine macOS version';
 
   const _MacOSVersion._internal(this._major, this._minor);
 
@@ -66,17 +63,14 @@ class _MacOSVersion {
 
 // Writes an "appended" dart runtime + script snapshot file in a format
 // compatible with MachO executables.
-//
-// WARNING: this method is used within google3, so don't try to refactor so
-// [dartaotruntimePath] is a constant inside this file.
-Future<void> writeAppendedMachOExecutable(
+Future writeAppendedMachOExecutable(
     String dartaotruntimePath, String payloadPath, String outputPath) async {
   final aotRuntimeFile = File(dartaotruntimePath);
 
   final aotRuntimeHeaders = MachOFile.fromFile(aotRuntimeFile);
   final oldLinkEdit = aotRuntimeHeaders.linkEditSegment;
   if (oldLinkEdit == null) {
-    throw const FormatException('__LINKEDIT segment not found');
+    throw FormatException("__LINKEDIT segment not found");
   }
 
   // Get the length of the contents of the section to be added.
@@ -126,7 +120,7 @@ Future<void> writeAppendedMachOExecutable(
 
   if (outputHeaders.hasCodeSignature) {
     if (!Platform.isMacOS) {
-      throw UnsupportedError('Cannot sign MachO binary on non-macOS platform');
+      throw 'Cannot sign MachO binary on non-macOS platform';
     }
 
     // After writing the modified file, we perform ad-hoc signing (no identity)
@@ -161,19 +155,17 @@ Future<void> writeAppendedMachOExecutable(
         ..write('subcommand terminated with exit code ')
         ..write(signingProcess.exitCode)
         ..writeln('.');
-      if (signingProcess.stdout case final signingOutput
-          when processOutputIsNotEmpty(signingOutput)) {
+      if (signingProcess.stdout.isNotEmpty) {
         stderr
           ..writeln('Subcommand stdout:')
-          ..writeln(signingOutput);
+          ..writeln(signingProcess.stdout);
       }
-      if (signingProcess.stderr case final signingErrorOutput
-          when processOutputIsNotEmpty(signingErrorOutput)) {
+      if (signingProcess.stderr.isNotEmpty) {
         stderr
           ..writeln('Subcommand stderr:')
-          ..writeln(signingErrorOutput);
+          ..writeln(signingProcess.stderr);
       }
-      throw Exception('Could not sign the new executable');
+      throw 'Could not sign the new executable';
     }
   }
 }

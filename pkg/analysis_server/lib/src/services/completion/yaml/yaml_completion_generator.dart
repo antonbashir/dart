@@ -87,7 +87,7 @@ abstract class YamlCompletionGenerator {
         suggestions.add(suggestion);
       }
     }
-    var node = nodePath.isNotEmpty ? nodePath.last : null;
+    final node = nodePath.isNotEmpty ? nodePath.last : null;
     String targetPrefix;
     int replacementOffset;
     int replacementLength;

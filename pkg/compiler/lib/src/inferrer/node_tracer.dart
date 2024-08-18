@@ -96,7 +96,7 @@ Set<String> doesNotEscapeMapSet = Set<String>.from(const <String>[
 ]);
 
 /// Common logic to trace a value through the type inference graph nodes.
-abstract class TracerVisitor implements TypeInformationVisitor<void> {
+abstract class TracerVisitor implements TypeInformationVisitor {
   final TypeInformation tracedType;
   final InferrerEngine inferrer;
 
@@ -144,7 +144,7 @@ abstract class TracerVisitor implements TypeInformationVisitor<void> {
     workList.add(info);
   }
 
-  bool _wouldBeTooManyUsers(Set<TypeInformation> users) {
+  bool _wouldBeTooManyUsers(Set users) {
     int seenSoFar = analyzedElements.length;
     if (seenSoFar + users.length <= MAX_ANALYSIS_COUNT) return false;
     int actualWork = 0;
@@ -281,7 +281,7 @@ abstract class TracerVisitor implements TypeInformationVisitor<void> {
       ClosureCallSiteTypeInformation info) {}
 
   @override
-  void visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
+  visitStaticCallSiteTypeInformation(StaticCallSiteTypeInformation info) {
     MemberEntity called = info.calledElement;
     TypeInformation inferred = inferrer.types.getInferredTypeOfMember(called);
     if (inferred == currentUser) {

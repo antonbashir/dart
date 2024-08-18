@@ -26,11 +26,11 @@ void foo() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 49, 1),
     ]);
 
-    var node = findNode.namedType('F()');
+    final node = findNode.namedType('F()');
     assertResolvedNodeText(node, r'''
 NamedType
   name: F
-  element: <testLibraryFragment>::@typeAlias::F
+  element: self::@typeAlias::F
   type: InvalidType
 ''');
   }
@@ -60,11 +60,11 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 28, 1),
     ]);
 
-    var node = findNode.namedType('A()');
+    final node = findNode.namedType('A()');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A
-  element: <testLibraryFragment>::@getter::A
+  element: self::@getter::A
   type: InvalidType
 ''');
   }
@@ -79,7 +79,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 28, 1),
     ]);
 
-    var node = findNode.namedType('A<int>()');
+    final node = findNode.namedType('A<int>()');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A
@@ -88,10 +88,10 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
-  element: <testLibraryFragment>::@getter::A
+  element: self::@getter::A
   type: InvalidType
 ''');
   }

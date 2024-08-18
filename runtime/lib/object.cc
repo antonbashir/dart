@@ -5,7 +5,6 @@
 #include "vm/bootstrap_natives.h"
 
 #include "lib/invocation_mirror.h"
-#include "vm/bytecode_reader.h"
 #include "vm/code_patcher.h"
 #include "vm/dart_entry.h"
 #include "vm/exceptions.h"
@@ -210,8 +209,10 @@ DEFINE_NATIVE_ENTRY(Object_instanceOf, 0, 4) {
     THR_Print("Native Object.instanceOf: result %s\n", result_str);
     const AbstractType& instance_type =
         AbstractType::Handle(zone, instance.GetType(Heap::kNew));
-    THR_Print("  instance type: %s\n", instance_type.NameCString());
-    THR_Print("  test type: %s\n", type.NameCString());
+    THR_Print("  instance type: %s\n",
+              String::Handle(zone, instance_type.Name()).ToCString());
+    THR_Print("  test type: %s\n",
+              String::Handle(zone, type.Name()).ToCString());
   }
   return Bool::Get(is_instance_of).ptr();
 }
@@ -330,28 +331,20 @@ DEFINE_NATIVE_ENTRY(Internal_deoptimizeFunctionsOnStack, 0, 0) {
   return Object::null();
 }
 
-DEFINE_NATIVE_ENTRY(Internal_allocateObjectInstructionsStart, 0, 0) {
+DEFINE_NATIVE_ENTRY(Internal_randomInstructionsOffsetInsideAllocateObjectStub,
+                    0,
+                    0) {
   auto& stub = Code::Handle(
       zone, isolate->group()->object_store()->allocate_object_stub());
-  ASSERT(!stub.IsUnknownDartCode());
-  // We return the start offset in the isolate instructions instead of the
-  // full address because that fits into small Smis on 32-bit architectures
-  // or compressed pointer builds.
+  const uword entry = stub.EntryPoint();
+  const uword random_offset = isolate->random()->NextUInt32() % stub.Size();
+  // We return the offset into the isolate instructions instead of the full
+  // address because that fits into small Smis on 32-bit architectures or
+  // compressed pointer builds.
   const uword instructions_start =
       reinterpret_cast<uword>(isolate->source()->snapshot_instructions);
-  return Smi::New(stub.PayloadStart() - instructions_start);
-}
-
-DEFINE_NATIVE_ENTRY(Internal_allocateObjectInstructionsEnd, 0, 0) {
-  auto& stub = Code::Handle(
-      zone, isolate->group()->object_store()->allocate_object_stub());
-  ASSERT(!stub.IsUnknownDartCode());
-  // We return the end offset in the isolate instructions instead of the
-  // full address because that fits into small Smis on 32-bit architectures
-  // or compressed pointer builds.
-  const uword instructions_start =
-      reinterpret_cast<uword>(isolate->source()->snapshot_instructions);
-  return Smi::New((stub.PayloadStart() - instructions_start) + stub.Size());
+  ASSERT(entry >= instructions_start);
+  return Smi::New((entry - instructions_start) + random_offset);
 }
 
 static bool ExtractInterfaceTypeArgs(Zone* zone,
@@ -559,61 +552,6 @@ DEFINE_NATIVE_ENTRY(Internal_boundsCheckForPartialInstantiation, 0, 2) {
   }
 
   return Object::null();
-}
-
-DEFINE_NATIVE_ENTRY(Internal_loadDynamicModule, 0, 1) {
-#if defined(DART_DYNAMIC_MODULES)
-  GET_NON_NULL_NATIVE_ARGUMENT(TypedData, module_bytes,
-                               arguments->NativeArgAt(0));
-
-  const intptr_t length = module_bytes.LengthInBytes();
-  uint8_t* data = reinterpret_cast<uint8_t*>(::malloc(length));
-  if (data == nullptr) {
-    const auto& exception = Instance::Handle(
-        zone, thread->isolate_group()->object_store()->out_of_memory());
-    Exceptions::Throw(thread, exception);
-  }
-  {
-    NoSafepointScope no_safepoint;
-    // The memory does not overlap.
-    memcpy(data, module_bytes.DataAddr(0), length);  // NOLINT
-  }
-  const ExternalTypedData& typed_data = ExternalTypedData::Handle(
-      zone,
-      ExternalTypedData::New(kExternalTypedDataUint8ArrayCid, data, length));
-  auto& function = Function::Handle();
-  {
-    SafepointWriteRwLocker ml(thread, thread->isolate_group()->program_lock());
-    bytecode::BytecodeLoader loader(thread, typed_data);
-    function = loader.LoadBytecode();
-  }
-
-  if (function.IsNull()) {
-    return Object::null();
-  }
-  ASSERT(function.is_static());
-  ASSERT(function.is_declared_in_bytecode());
-  auto& result = Object::Handle(zone);
-  if (function.NumParameters() == 0) {
-    result = DartEntry::InvokeFunction(function, Object::empty_array());
-  } else {
-    ASSERT(function.NumParameters() == 1);
-    // <String>[]
-    const auto& arg0 = Array::Handle(
-        zone, Array::New(0, Type::Handle(zone, Type::StringType())));
-    const auto& args = Array::Handle(zone, Array::New(1));
-    args.SetAt(0, arg0);
-    result = DartEntry::InvokeFunction(function, args);
-  }
-  if (result.IsError()) {
-    Exceptions::PropagateError(Error::Cast(result));
-  }
-  return result.ptr();
-#else
-  Exceptions::ThrowUnsupportedError(
-      "Loading of dynamic modules is not supported.");
-  return Object::null();
-#endif  // defined(DART_DYNAMIC_MODULES)
 }
 
 DEFINE_NATIVE_ENTRY(InvocationMirror_unpackTypeArguments, 0, 2) {

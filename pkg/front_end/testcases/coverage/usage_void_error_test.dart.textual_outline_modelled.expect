@@ -1,6 +1,0 @@
-abstract class C {
-  C() : v12 = T();
-  final T v12;
-}
-
-typedef T = void;

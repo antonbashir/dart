@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/change_workspace.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/src/correction/change_workspace.dart';
-import 'package:analysis_server_plugin/src/correction/dart_change_workspace.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_workspace.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -105,9 +105,9 @@ void f() {
 ''');
   }
 
-  Future<void> test_function_hasZero_partOfUri_noLibrary() async {
+  Future<void> test_function_hasZero_partOfName_noLibrary() async {
     await resolveTestCode('''
-part of 'a.dart';
+part of my_lib;
 test() {}
 void f() {
   test(1);
@@ -166,7 +166,7 @@ class AddMissingParameterRequiredTest_Workspace
   }
 
   Future<void> test_function_inPackage_inWorkspace() async {
-    var a = newFile('/home/aaa/lib/a.dart', 'void test() {}');
+    final a = newFile('/home/aaa/lib/a.dart', 'void test() {}');
 
     writeTestPackageConfig(
       config: PackageConfigFileBuilder()

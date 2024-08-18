@@ -15,7 +15,7 @@
 
 namespace dart {
 
-class MutexLocker;
+class MonitorLocker;
 
 class ThreadPool {
  public:
@@ -66,7 +66,7 @@ class ThreadPool {
   // Exposed for unit test in thread_pool_test.cc
   uint64_t workers_stopped() const { return count_dead_; }
 
- protected:
+ private:
   class Worker : public IntrusiveDListEntry<Worker> {
    public:
     explicit Worker(ThreadPool* pool);
@@ -75,14 +75,8 @@ class ThreadPool {
     // after a task has been set by the initial call to SetTask().
     void StartThread();
 
-    ConditionVariable::WaitResult Sleep(int64_t timeout_micros) {
-      return wakeup_cv_.WaitMicros(&pool_->pool_mutex_, timeout_micros);
-    }
-
    private:
     friend class ThreadPool;
-
-    void Wakeup() { wakeup_cv_.Notify(); }
 
     // The main entry point for new worker threads.
     static void Main(uword args);
@@ -93,16 +87,16 @@ class ThreadPool {
     ThreadJoinId join_id_;
     OSThread* os_thread_ = nullptr;
     bool is_blocked_ = false;
-    ConditionVariable wakeup_cv_;
 
     DISALLOW_COPY_AND_ASSIGN(Worker);
   };
 
+ protected:
   // Called when the thread pool turns idle.
   //
   // Subclasses can override this to perform some action.
   // NOTE: While this function is running the thread pool will be locked.
-  virtual void OnEnterIdleLocked(MutexLocker* ml, Worker* worker) {}
+  virtual void OnEnterIdleLocked(MonitorLocker* ml) {}
 
   // Whether a shutdown was requested.
   bool ShuttingDownLocked() { return shutting_down_; }
@@ -117,9 +111,7 @@ class ThreadPool {
   bool RunImpl(std::unique_ptr<Task> task);
   void WorkerLoop(Worker* worker);
 
-  Worker* ScheduleTaskLocked(std::unique_ptr<Task> task);
-
-  std::unique_ptr<Task> TakeNextAvailableTaskLocked();
+  Worker* ScheduleTaskLocked(MonitorLocker* ml, std::unique_ptr<Task> task);
 
   void IdleToRunningLocked(Worker* worker);
   void RunningToIdleLocked(Worker* worker);
@@ -127,7 +119,7 @@ class ThreadPool {
   void ObtainDeadWorkersLocked(WorkerList* dead_workers_to_join);
   void JoinDeadWorkersLocked(WorkerList* dead_workers_to_join);
 
-  Mutex pool_mutex_;
+  Monitor pool_monitor_;
   bool shutting_down_ = false;
   uint64_t count_running_ = 0;
   uint64_t count_idle_ = 0;

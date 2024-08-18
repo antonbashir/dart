@@ -14,8 +14,6 @@ Definition Order:
  topLevelFunction3:FunctionDefinitionMacro2.new()
  topLevelFunction4:FunctionDefinitionMacro2.new()
 Definitions:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'org-dartlang-test:///a/b/c/main.dart' as prefix0;
 
 augment prefix0.A topLevelFunction1(prefix0.A a, ) {
@@ -37,8 +35,7 @@ augment prefix0.D2 topLevelFunction4(prefix0.D1 a, ) {
   print('isExactly=false');
   print('isSubtype=false');
   throw 42;
-}
-*/
+}*/
 
 import 'package:macro/macro.dart';
 
@@ -58,7 +55,6 @@ class D2 {}
 
 /*member: topLevelFunction1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction1GeneratedMethod_es() {}
 
@@ -74,7 +70,6 @@ external A topLevelFunction1(A a);
 
 /*member: topLevelFunction2:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction2GeneratedMethod_s() {}
 
@@ -90,7 +85,6 @@ external B2 topLevelFunction2(B1 a);
 
 /*member: topLevelFunction3:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction3GeneratedMethod_() {}
 
@@ -106,7 +100,6 @@ external C2 topLevelFunction3(C1 a);
 
 /*member: topLevelFunction4:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction4GeneratedMethod_() {}
 

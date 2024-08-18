@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/commands/simple_edit_handler.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/progress.dart';
@@ -37,7 +36,7 @@ class SendWorkspaceEditCommandHandler extends SimpleEditCommandHandler {
       ));
     }
 
-    var workspaceEdit =
+    final workspaceEdit =
         WorkspaceEdit.fromJson(parameters['edit'] as Map<String, Object?>);
 
     return await sendWorkspaceEditToClient(workspaceEdit);

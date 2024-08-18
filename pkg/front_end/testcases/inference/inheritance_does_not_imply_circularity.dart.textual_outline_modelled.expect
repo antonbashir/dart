@@ -13,5 +13,4 @@ class I1 {
 }
 
 main() {}
-
 var y = new C().x;

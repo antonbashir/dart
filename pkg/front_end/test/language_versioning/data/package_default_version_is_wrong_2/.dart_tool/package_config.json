@@ -5,7 +5,7 @@
             "name": "foo",
             "rootUri": "../lib/",
             "languageVersion": "arglebargle",
-            "languageVersion": "%VERSION_MARKER1%"
+            "languageVersion": "2.5"
         }
     ]
 }

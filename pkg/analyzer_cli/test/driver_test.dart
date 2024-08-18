@@ -262,8 +262,7 @@ linter:
   Future<void> test_pubspec_lintsInOptions_generatedLints() async {
     await drive('data/linter_project/pubspec.yaml',
         options: 'data/linter_project/$analysisOptionsYaml');
-    expect(bulletToDash(outSink),
-        contains('lint - Dependencies not sorted alphabetically.'));
+    expect(bulletToDash(outSink), contains('lint - Unsorted dependencies.'));
   }
 
   YamlMap _parseOptions(String src) =>
@@ -409,25 +408,24 @@ class OptionsTest extends BaseTest {
       source: TestSource(),
       offset: 0,
       length: 1,
-      errorCode: WarningCode.UNUSED_LOCAL_VARIABLE,
+      errorCode: HintCode.UNUSED_LOCAL_VARIABLE,
       arguments: [
         ['x'],
       ],
     );
     expect(processorFor(unused_local_variable).severity, isNull);
 
-    // assignment_of_do_not_store: error
-    var assignment_of_do_not_store = AnalysisError.tmp(
+    // missing_return: error
+    var missing_return = AnalysisError.tmp(
       source: TestSource(),
       offset: 0,
       length: 1,
-      errorCode: WarningCode.ASSIGNMENT_OF_DO_NOT_STORE,
+      errorCode: WarningCode.MISSING_RETURN,
       arguments: [
         ['x'],
       ],
     );
-    expect(
-        processorFor(assignment_of_do_not_store).severity, ErrorSeverity.ERROR);
+    expect(processorFor(missing_return).severity, ErrorSeverity.ERROR);
     expect(bulletToDash(outSink),
         contains('error - The body might complete normally'));
     expect(outSink.toString(), contains('1 error and 1 warning found.'));

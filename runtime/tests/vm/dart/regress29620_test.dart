@@ -8,6 +8,8 @@
 
 // VMOptions=--optimization_counter_threshold=10 --no-use-osr --no-background-compilation
 
+import "package:expect/expect.dart";
+
 class Flag {
   var value;
   Flag(this.value);

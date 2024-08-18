@@ -9,9 +9,8 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid calling `toString()` on `runtimeType`.';
+const _desc = r'Avoid calling toString() on runtimeType.';
 
 const _details = r'''
 Calling `toString` on a runtime type is a non-trivial operation that can
@@ -43,15 +42,18 @@ type information is more important than performance:
 ''';
 
 class NoRuntimeTypeToString extends LintRule {
+  static const LintCode code = LintCode('no_runtimeType_toString',
+      "Using 'toString' on a 'Type' is not safe in production code.");
+
   NoRuntimeTypeToString()
       : super(
             name: 'no_runtimeType_toString',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.nonPerformant});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.no_runtimeType_toString;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

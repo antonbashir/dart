@@ -5,10 +5,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/constant/value.dart';
-import 'package:analyzer/src/lint/linter.dart'; // ignore: implementation_imports
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r"Don't use more than one case with same value.";
 
@@ -43,20 +41,26 @@ by the analyzer.
 ''';
 
 class NoDuplicateCaseValues extends LintRule {
+  static const LintCode code = LintCode(
+      'no_duplicate_case_values',
+      "The value of the case clause ('{0}') is equal to the value of an "
+          "earlier case clause ('{1}').",
+      correctionMessage: 'Try removing or changing the value.');
+
   NoDuplicateCaseValues()
       : super(
             name: 'no_duplicate_case_values',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.no_duplicate_case_values;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addSwitchStatement(this, visitor);
   }
 }
@@ -64,7 +68,9 @@ class NoDuplicateCaseValues extends LintRule {
 class _Visitor extends SimpleAstVisitor<void> {
   final NoDuplicateCaseValues rule;
 
-  _Visitor(this.rule);
+  final LinterContext context;
+
+  _Visitor(this.rule, this.context);
 
   @override
   void visitSwitchStatement(SwitchStatement node) {
@@ -74,7 +80,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       if (member is SwitchCase) {
         var expression = member.expression;
 
-        var result = expression.computeConstantValue();
+        var result = context.evaluateConstant(expression);
         var value = result.value;
 
         if (value == null || !value.hasKnownValue) {

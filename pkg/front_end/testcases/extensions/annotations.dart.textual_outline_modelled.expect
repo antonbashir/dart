@@ -13,6 +13,5 @@ extension Extension on Class {
 }
 
 main() {}
-
 @pragma('dart2js:noInline')
 topLevelMethod() {}

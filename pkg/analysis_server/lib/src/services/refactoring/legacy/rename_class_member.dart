@@ -142,7 +142,7 @@ class RenameClassMemberRefactoringImpl extends RenameRefactoringImpl {
     var parameter = node.parameter as FieldFormalParameter;
 
     var start = parameter.thisKeyword.offset;
-    var type = element.type.getDisplayString();
+    var type = element.type.getDisplayString(withNullability: true);
     var edit = SourceEdit(start, parameter.period.end - start, '$type ');
     doSourceChange_addSourceEdit(change, reference.unitSource, edit);
 
@@ -307,7 +307,7 @@ class _LocalElementsCollector extends GeneralizingAstVisitor<void> {
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     if (node.name.lexeme == name) {
-      var element = node.declaredElement;
+      final element = node.declaredElement;
       if (element is FunctionElement) {
         elements.add(element);
       }
@@ -319,7 +319,7 @@ class _LocalElementsCollector extends GeneralizingAstVisitor<void> {
   @override
   void visitSimpleFormalParameter(SimpleFormalParameter node) {
     if (node.name?.lexeme == name) {
-      var element = node.declaredElement;
+      final element = node.declaredElement;
       if (element != null) {
         elements.add(element);
       }
@@ -331,7 +331,7 @@ class _LocalElementsCollector extends GeneralizingAstVisitor<void> {
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
     if (node.name.lexeme == name) {
-      var element = node.declaredElement;
+      final element = node.declaredElement;
       if (element is LocalVariableElement) {
         elements.add(element);
       }
@@ -458,7 +458,7 @@ class _RenameClassMemberValidator extends _BaseClassMemberValidator {
 
   /// Fills [elements] with [Element]s to rename.
   Future<void> _prepareElements() async {
-    var element = this.element;
+    final element = this.element;
     if (element is ClassMemberElement) {
       elements = await getHierarchyMembers(searchEngine, element);
     } else {

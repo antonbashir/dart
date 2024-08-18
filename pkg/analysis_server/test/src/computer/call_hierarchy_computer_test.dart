@@ -7,7 +7,6 @@ import 'package:analysis_server/src/services/search/search_engine.dart';
 import 'package:analysis_server/src/services/search/search_engine_internal.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
-import 'package:matcher/expect.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -70,11 +69,11 @@ abstract class AbstractCallHierarchyTest extends AbstractSingleUnitTest {
   SourceRange entireRange(TestCode code) => SourceRange(0, code.code.length);
 
   Future<CallHierarchyItem?> findTarget(TestCode code) async {
-    var offset = code.position.offset;
+    final offset = code.position.offset;
     expect(offset, greaterThanOrEqualTo(0));
     addTestSource(code.code);
 
-    var result = await getResolvedUnit(testFile);
+    final result = await getResolvedUnit(testFile);
 
     return DartCallHierarchyComputer(result).findTarget(offset);
   }
@@ -87,7 +86,7 @@ abstract class AbstractCallHierarchyTest extends AbstractSingleUnitTest {
   /// Gets the expected range that starts at [search] in [code] with a
   /// length of [match.length].
   SourceRange rangeAtSearch(String search, TestCode code, [String? match]) {
-    var offset = code.code.indexOf(search);
+    final offset = code.code.indexOf(search);
     expect(offset, greaterThanOrEqualTo(0));
     return SourceRange(offset, (match ?? search).length);
   }
@@ -102,7 +101,7 @@ class CallHierarchyComputerFindTargetTest extends AbstractCallHierarchyTest {
   }
 
   Future<void> expectTarget(TestCode code, Matcher matcher) async {
-    var target = await findTarget(code);
+    final target = await findTarget(code);
     expect(target, matcher);
   }
 
@@ -125,13 +124,13 @@ class CallHierarchyComputerFindTargetTest extends AbstractCallHierarchyTest {
   }
 
   Future<void> test_constructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!Fo^o(String a) {}!]
 }
 ''');
 
-    var target = await findTarget(code);
+    final target = await findTarget(code);
     expect(
       target,
       _isItem(
@@ -146,7 +145,7 @@ class Foo {
   }
 
   Future<void> test_constructorCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -154,7 +153,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {
   [!Foo();!]
 }
@@ -173,39 +172,8 @@ class Foo {
         ));
   }
 
-  Future<void> test_constructorCall_to_augmentation() async {
-    var code = TestCode.parse('''
-import augment 'other.dart';
-
-class Foo {}
-
-void f() {
-  Foo.na^med();
-}
-''');
-
-    var otherCode = TestCode.parse('''
-augment library 'test.dart';
-augment class Foo {
-  [!Foo.named(){}!]
-}
-''');
-
-    newFile(otherFile, otherCode.code);
-    await expectTarget(
-        code,
-        _isItem(
-          CallHierarchyKind.constructor,
-          'Foo.named',
-          otherFile,
-          containerName: 'Foo',
-          nameRange: rangeAtSearch('named', otherCode),
-          codeRange: otherCode.range.sourceRange,
-        ));
-  }
-
   Future<void> test_extension_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 extension StringExtension on String {
   [!void myMet^hod() {}!]
 }
@@ -224,7 +192,7 @@ extension StringExtension on String {
   }
 
   Future<void> test_extension_methodCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -232,7 +200,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 extension StringExtension on String {
   [!void myMethod() {}!]
 }
@@ -252,7 +220,7 @@ extension StringExtension on String {
   }
 
   Future<void> test_function() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!void myFun^ction() {}!]
 ''');
 
@@ -269,7 +237,7 @@ extension StringExtension on String {
   }
 
   Future<void> test_function_startOfParameterList() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!void myFunction^() {}!]
 ''');
 
@@ -286,7 +254,7 @@ extension StringExtension on String {
   }
 
   Future<void> test_function_startOfTypeParameterList() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!void myFunction^<T>() {}!]
 ''');
 
@@ -303,7 +271,7 @@ extension StringExtension on String {
   }
 
   Future<void> test_functionCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart' as other;
 
 void f() {
@@ -311,7 +279,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 [!void myFunction() {}!]
 ''');
 
@@ -329,7 +297,7 @@ void f() {
   }
 
   Future<void> test_getter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!String get fo^o => '';!]
 }
@@ -348,7 +316,7 @@ class Foo {
   }
 
   Future<void> test_getterCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -356,7 +324,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 [!String get bar => '';!]
 ''');
 
@@ -377,7 +345,7 @@ void f() {
     // Even if a constructor is implicit, we might want to be able to get the
     // incoming calls, so we should return the class location as a stand-in
     // (although with the Kind still set to constructor).
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -385,7 +353,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 [!class Foo {}!]
 ''');
 
@@ -403,7 +371,7 @@ void f() {
   }
 
   Future<void> test_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!void myMet^hod() {}!]
 }
@@ -422,7 +390,7 @@ class Foo {
   }
 
   Future<void> test_method_startOfParameterList() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!void myMethod^() {}!]
 }
@@ -441,7 +409,7 @@ class Foo {
   }
 
   Future<void> test_method_startOfTypeParameterList() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!void myMethod^<T>() {}!]
 }
@@ -460,7 +428,7 @@ class Foo {
   }
 
   Future<void> test_methodCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -468,7 +436,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {
   [!void myMethod() {}!]
 }
@@ -487,40 +455,8 @@ class Foo {
         ));
   }
 
-  Future<void> test_methodCall_to_augmentation() async {
-    var code = TestCode.parse('''
-import augment 'other.dart';
-
-class Foo {}
-
-void f() {
-  Foo().myMet^hod();
-}
-''');
-
-    var otherCode = TestCode.parse('''
-augment library 'test.dart';
-
-augment class Foo {
-  [!void myMethod() {}!]
-}
-''');
-
-    newFile(otherFile, otherCode.code);
-    await expectTarget(
-        code,
-        _isItem(
-          CallHierarchyKind.method,
-          'myMethod',
-          otherFile,
-          containerName: 'Foo',
-          nameRange: rangeAtSearch('myMethod', otherCode),
-          codeRange: otherCode.range.sourceRange,
-        ));
-  }
-
   Future<void> test_mixin_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 mixin Bar {
   [!void myMet^hod() {}!]
 }
@@ -539,7 +475,7 @@ mixin Bar {
   }
 
   Future<void> test_mixin_methodCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -547,7 +483,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Bar {
   [!void myMethod() {}!]
 }
@@ -569,7 +505,7 @@ class Foo with Bar {}
   }
 
   Future<void> test_namedConstructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!Foo.Ba^r(String a) {}!]
 }
@@ -588,7 +524,7 @@ class Foo {
   }
 
   Future<void> test_namedConstructor_typeName() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   Fo^o.Bar(String a) {}
 }
@@ -598,7 +534,7 @@ class Foo {
   }
 
   Future<void> test_namedConstructorCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -606,7 +542,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {
   [!Foo.Bar();!]
 }
@@ -626,7 +562,7 @@ class Foo {
   }
 
   Future<void> test_namedConstructorCall_typeName() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -634,7 +570,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {
   Foo.Bar();
 }
@@ -645,7 +581,7 @@ class Foo {
   }
 
   Future<void> test_setter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   [!set fo^o(String value) {}!]
 }
@@ -664,7 +600,7 @@ class Foo {
   }
 
   Future<void> test_setterCall() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 void f() {
@@ -672,7 +608,7 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 [!set bar(String value) {}!]
 ''');
 
@@ -692,52 +628,6 @@ void f() {
   Future<void> test_whitespace() async {
     await expectNoTarget(TestCode.parse(' ^  void f() {}'));
   }
-
-  Future<void> test_wildcardVariable() async {
-    var code = TestCode.parse('''
-f() {
-  [!^_() {}!]
-}
-''');
-
-    var target = await findTarget(code);
-    expect(
-      target,
-      _isItem(
-        CallHierarchyKind.function,
-        '_',
-        testFile.path,
-        containerName: 'f',
-        nameRange: SourceRange(8, 1),
-        codeRange: code.range.sourceRange,
-      ),
-    );
-  }
-
-  Future<void> test_wildcardVariable_preWildcards() async {
-    var code = TestCode.parse('''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f() {
-  [!_() {}!]
-  ^_();
-}
-''');
-
-    var target = await findTarget(code);
-    expect(
-      target,
-      _isItem(
-        CallHierarchyKind.function,
-        '_',
-        testFile.path,
-        containerName: 'f',
-        nameRange: SourceRange(52, 1),
-        codeRange: code.range.sourceRange,
-      ),
-    );
-  }
 }
 
 @reflectiveTest
@@ -746,15 +636,15 @@ class CallHierarchyComputerIncomingCallsTest extends AbstractCallHierarchyTest {
   late SearchEngine searchEngine;
 
   Future<List<CallHierarchyCalls>> findIncomingCalls(TestCode code) async {
-    var target = (await findTarget(code))!;
+    final target = (await findTarget(code))!;
     return findIncomingCallsForTarget(target);
   }
 
   Future<List<CallHierarchyCalls>> findIncomingCallsForTarget(
     CallHierarchyItem target,
   ) async {
-    var targetFile = getFile(target.file);
-    var result = await getResolvedUnit(targetFile);
+    final targetFile = getFile(target.file);
+    final result = await getResolvedUnit(targetFile);
     expect(result.errors, isEmpty);
 
     return DartCallHierarchyComputer(result)
@@ -771,13 +661,13 @@ class CallHierarchyComputerIncomingCallsTest extends AbstractCallHierarchyTest {
   }
 
   Future<void> test_constructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   Fo^o();
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 final foo1 = Foo();
@@ -799,7 +689,7 @@ final foo1 = Foo();
         rangeAfterPrefix(prefix, otherCode, 'Foo');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -844,13 +734,13 @@ final foo1 = Foo();
   }
 
   Future<void> test_extension_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 extension StringExtension on String {
   void myMet^hod() {}
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 [!void f() {
@@ -863,7 +753,7 @@ import 'test.dart';
         rangeAfterPrefix(prefix, otherCode, 'myMethod');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -879,14 +769,14 @@ import 'test.dart';
   }
 
   Future<void> test_fileModifications() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void o^ne() {}
 void two() {
   one();
 }
 ''');
 
-    var target = (await findTarget(code))!;
+    final target = (await findTarget(code))!;
 
     // Ensure there are some results before modification.
     var calls = await findIncomingCallsForTarget(target);
@@ -901,11 +791,11 @@ void two() {
   }
 
   Future<void> test_function() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 String myFun^ction() => '';
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 final foo1 = myFunction();
@@ -928,7 +818,7 @@ final foo1 = myFunction();
         rangeAfterPrefix(prefix, otherCode, 'myFunction');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -973,11 +863,11 @@ final foo1 = myFunction();
   }
 
   Future<void> test_getter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 String get f^oo => '';
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 final foo1 = foo;
@@ -999,7 +889,7 @@ final foo1 = foo;
         rangeAfterPrefix(prefix, otherCode, 'foo');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1046,7 +936,7 @@ final foo1 = foo;
   Future<void> test_implicitConstructor() async {
     // We still expect to be able to navigate with implicit constructors. This
     // is done by the target being the class, but with a kind of Constructor.
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1055,7 +945,7 @@ import 'other.dart';
 }!]
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {}
 
 final foo2 = Foo();
@@ -1066,7 +956,7 @@ final foo2 = Foo();
         rangeAfterPrefix(prefix, code, 'Foo');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1089,13 +979,13 @@ final foo2 = Foo();
   }
 
   Future<void> test_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   void myMet^hod() {}
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 [!void f() {
@@ -1109,7 +999,7 @@ import 'test.dart';
         rangeAfterPrefix(prefix, otherCode, 'myMethod');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1125,41 +1015,8 @@ import 'test.dart';
     );
   }
 
-  Future<void> test_method_from_augmentation() async {
-    var code = TestCode.parse('''
-import augment 'other.dart';
-
-class Foo {
-  void myMet^hod() {}
-}
-''');
-
-    var otherCode = TestCode.parse('''
-augment library 'test.dart';
-
-augment class Foo {
-  [!void f() {
-    myMethod();
-  }!]
-}
-''');
-
-    newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
-    expect(calls, [
-      _isResult(
-        CallHierarchyKind.method,
-        'f',
-        otherFile,
-        containerName: 'Foo',
-        nameRange: rangeAtSearch('f() {', otherCode, 'f'),
-        codeRange: otherCode.range.sourceRange,
-      ),
-    ]);
-  }
-
   Future<void> test_mixin_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 mixin Bar {
   void myMet^hod() {}
 }
@@ -1167,7 +1024,7 @@ mixin Bar {
 class Foo with Bar {}
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 [!void f() {
@@ -1180,7 +1037,7 @@ import 'test.dart';
         rangeAfterPrefix(prefix, otherCode, 'myMethod');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1196,13 +1053,13 @@ import 'test.dart';
   }
 
   Future<void> test_namedConstructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class Foo {
   Foo.B^ar();
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 [!void f() {
@@ -1215,7 +1072,7 @@ import 'test.dart';
         rangeAfterPrefix(prefix, otherCode, 'Bar');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1231,11 +1088,11 @@ import 'test.dart';
   }
 
   Future<void> test_setter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 set fo^o(String value) {}
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 import 'test.dart';
 
 class Bar {
@@ -1254,7 +1111,7 @@ class Bar {
         rangeAfterPrefix(prefix, otherCode, 'foo');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findIncomingCalls(code);
+    final calls = await findIncomingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1283,15 +1140,15 @@ class CallHierarchyComputerOutgoingCallsTest extends AbstractCallHierarchyTest {
   late String otherFile;
 
   Future<List<CallHierarchyCalls>> findOutgoingCalls(TestCode code) async {
-    var target = (await findTarget(code))!;
+    final target = (await findTarget(code))!;
     return findOutgoingCallsForTarget(target);
   }
 
   Future<List<CallHierarchyCalls>> findOutgoingCallsForTarget(
     CallHierarchyItem target,
   ) async {
-    var targetFile = getFile(target.file);
-    var result = await getResolvedUnit(targetFile);
+    final targetFile = getFile(target.file);
+    final result = await getResolvedUnit(targetFile);
     expect(result.errors, isEmpty);
 
     return DartCallHierarchyComputer(result).findOutgoingCalls(target);
@@ -1304,7 +1161,7 @@ class CallHierarchyComputerOutgoingCallsTest extends AbstractCallHierarchyTest {
   }
 
   Future<void> test_constructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1318,7 +1175,7 @@ class Foo {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class A {
   /*[0*/A();/*0]*/
 }
@@ -1328,7 +1185,7 @@ class A {
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1352,42 +1209,8 @@ class A {
     );
   }
 
-  Future<void> test_constructor_from_augmentation() async {
-    var code = TestCode.parse('''
-import augment 'other.dart';
-
-class Foo {}
-
-void ba^r() {
-  Foo.named();
-}
-''');
-
-    var otherCode = TestCode.parse('''
-augment library 'test.dart';
-
-augment class Foo {
-  [!Foo.named() {
-  }!]
-}
-''');
-
-    newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
-    expect(calls, [
-      _isResult(
-        CallHierarchyKind.constructor,
-        'Foo.named',
-        otherFile,
-        containerName: 'Foo',
-        nameRange: rangeAtSearch('named() {', otherCode, 'named'),
-        codeRange: otherCode.range.sourceRange,
-      ),
-    ]);
-  }
-
   Future<void> test_extension_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1399,14 +1222,14 @@ extension StringExtension on String {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 extension StringExtension on String {
   [!void bar() {}!]
 }
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1423,14 +1246,14 @@ extension StringExtension on String {
   }
 
   Future<void> test_fileModifications() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void o^ne() {
   two();
 }
 void two() {}
 ''');
 
-    var target = (await findTarget(code))!;
+    final target = (await findTarget(code))!;
 
     // Ensure there are some results before modification.
     var calls = await findOutgoingCallsForTarget(target);
@@ -1445,7 +1268,7 @@ void two() {}
   }
 
   Future<void> test_function() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1460,12 +1283,12 @@ void fo^o() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 [!void f() {}!]
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1490,7 +1313,7 @@ void fo^o() {
   }
 
   Future<void> test_getter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1502,14 +1325,14 @@ String get fo^o {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 /*[0*/class A {
   /*[1*/String get b => '';/*1]*/
 }/*0]*/
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1537,7 +1360,7 @@ String get fo^o {
     // We can still begin navigating from an implicit constructor (so we can
     // search for inbound calls), so we should ensure that trying to fetch
     // outbound calls returns empty (and doesn't fail).
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1546,17 +1369,17 @@ void f() {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class Foo {}
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(calls, isEmpty);
   }
 
   Future<void> test_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1573,7 +1396,7 @@ class Foo {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 /*[0*/class A {
   String field;
   /*[1*/void bar() {}/*1]*/
@@ -1581,7 +1404,7 @@ class Foo {
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1605,45 +1428,8 @@ class Foo {
     );
   }
 
-  Future<void> test_method_from_augmentation() async {
-    var code = TestCode.parse('''
-import augment 'other.dart';
-
-class Foo {}
-
-void ba^r() {
-  Foo().myMethod();
-}
-''');
-
-    var otherCode = TestCode.parse('''
-augment library 'test.dart';
-
-augment class Foo {
-  [!void myMethod() {
-  }!]
-}
-''');
-
-    newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
-    expect(
-      calls,
-      contains(
-        _isResult(
-          CallHierarchyKind.method,
-          'myMethod',
-          otherFile,
-          containerName: 'Foo',
-          nameRange: rangeAtSearch('myMethod() {', otherCode, 'myMethod'),
-          codeRange: otherCode.range.sourceRange,
-        ),
-      ),
-    );
-  }
-
   Future<void> test_mixin_method() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1657,7 +1443,7 @@ mixin MyMixin {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 mixin OtherMixin {
   /*[0*/void foo() {}/*0]*/
 }
@@ -1665,7 +1451,7 @@ mixin OtherMixin {
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1691,7 +1477,7 @@ mixin OtherMixin {
   }
 
   Future<void> test_namedConstructor() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'other.dart';
 
@@ -1703,7 +1489,7 @@ class Foo {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 void f() {}
 class A {
   [!A.named();!]
@@ -1711,7 +1497,7 @@ class A {
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([
@@ -1729,7 +1515,7 @@ class A {
 
   Future<void> test_prefixedTypes() async {
     // Prefixed type names that are not tear-offs should never be included.
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 // ignore_for_file: unused_local_variable
 import 'dart:io' as io;
 
@@ -1738,12 +1524,12 @@ void ^f(io.File f) {
 }
 ''');
 
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(calls, isEmpty);
   }
 
   Future<void> test_setter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 import 'other.dart';
 
 set fo^o(String value) {
@@ -1753,14 +1539,14 @@ set fo^o(String value) {
 }
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 /*[0*/class A {
   /*[1*/set b(String value) {}/*1]*/
 }/*0]*/
 ''');
 
     newFile(otherFile, otherCode.code);
-    var calls = await findOutgoingCalls(code);
+    final calls = await findOutgoingCalls(code);
     expect(
       calls,
       unorderedEquals([

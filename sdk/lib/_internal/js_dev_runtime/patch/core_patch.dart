@@ -16,9 +16,10 @@ import 'dart:_js_helper'
         Primitives,
         PrivateSymbol,
         quoteStringForRegExp,
+        undefined,
         wrapZoneUnaryCallback;
 import 'dart:_runtime' as dart;
-import 'dart:_foreign_helper' show JS;
+import 'dart:_foreign_helper' show JS, JS_GET_FLAG, JSExportName;
 import 'dart:_native_typed_data' show NativeUint8List;
 import 'dart:_rti' as rti show createRuntimeType, Rti;
 import 'dart:collection' show UnmodifiableMapView;
@@ -64,14 +65,33 @@ class Object {
   }
 
   @patch
-  Type get runtimeType =>
-      rti.createRuntimeType(JS<rti.Rti>('!', '#', dart.getReifiedType(this)));
+  Type get runtimeType => JS_GET_FLAG('NEW_RUNTIME_TYPES')
+      ? rti.createRuntimeType(JS<rti.Rti>('!', '#', dart.getReifiedType(this)))
+      : dart.wrapType(dart.getReifiedType(this));
+
+  // Everything is an Object.
+  @JSExportName('is')
+  static bool _is_Object(Object? o) => o != null;
+
+  @JSExportName('as')
+  static Object? _as_Object(Object? o) =>
+      o == null ? dart.cast(o, dart.unwrapType(Object)) : o;
 }
 
 @patch
 class Null {
   @patch
   int get hashCode => super.hashCode;
+
+  @JSExportName('is')
+  static bool _is_Null(Object? o) => o == null;
+
+  @JSExportName('as')
+  static Object? _as_Null(Object? o) {
+    // Avoid extra function call to core.Null.is() by manually inlining.
+    if (o == null) return o;
+    return dart.cast(o, dart.unwrapType(Null));
+  }
 }
 
 // Patch for Function implementation.
@@ -111,6 +131,17 @@ class Function {
     });
     return result;
   }
+
+  @JSExportName('is')
+  static bool _is_Function(Object? o) =>
+      JS<bool>('!', 'typeof $o == "function"');
+
+  @JSExportName('as')
+  static Object? _as_Function(Object? o) {
+    // Avoid extra function call to core.Function.is() by manually inlining.
+    if (JS<bool>('!', 'typeof $o == "function"')) return o;
+    return dart.cast(o, dart.unwrapType(Function));
+  }
 }
 
 // Patch for Expando implementation.
@@ -130,7 +161,7 @@ class Expando<T extends Object> {
         object is num ||
         object is String ||
         object is Record) {
-      throw ArgumentError.value(
+      throw new ArgumentError.value(
           object,
           "Expandos are not allowed on strings, numbers, booleans, records,"
           " or null");
@@ -143,7 +174,7 @@ class Expando<T extends Object> {
     // JavaScript's WeakMap already throws on non-Object setter keys, so
     // we can rely on the underlying behavior for all non-Records.
     if (object is Record) {
-      throw ArgumentError.value(
+      throw new ArgumentError.value(
           object,
           "Expandos are not allowed on strings, numbers, booleans, records,"
           " or null");
@@ -212,7 +243,7 @@ class int {
     var value = tryParse(source, radix: radix);
     if (value != null) return value;
     if (onError != null) return onError(source);
-    throw FormatException(source);
+    throw new FormatException(source);
   }
 
   @patch
@@ -226,6 +257,20 @@ class int {
     throw UnsupportedError(
         'int.fromEnvironment can only be used as a const constructor');
   }
+
+  @JSExportName('is')
+  static bool _is_int(Object? o) {
+    return JS<bool>('!', 'typeof $o == "number" && Math.floor($o) == $o');
+  }
+
+  @JSExportName('as')
+  static Object? _as_int(Object? o) {
+    // Avoid extra function call to core.int.is() by manually inlining.
+    if (JS<bool>('!', '(typeof $o == "number" && Math.floor($o) == $o)')) {
+      return o;
+    }
+    return dart.cast(o, dart.unwrapType(int));
+  }
 }
 
 @patch
@@ -236,12 +281,39 @@ class double {
     var value = tryParse(source);
     if (value != null) return value;
     if (onError != null) return onError(source);
-    throw FormatException('Invalid double', source);
+    throw new FormatException('Invalid double', source);
   }
 
   @patch
   static double? tryParse(String source) {
     return Primitives.parseDouble(source);
+  }
+
+  @JSExportName('is')
+  static bool _is_double(Object? o) {
+    return JS<bool>('!', 'typeof $o == "number"');
+  }
+
+  @JSExportName('as')
+  static Object? _as_double(Object? o) {
+    // Avoid extra function call to core.double.is() by manually inlining.
+    if (JS<bool>('!', 'typeof $o == "number"')) return o;
+    return dart.cast(o, dart.unwrapType(double));
+  }
+}
+
+@patch
+abstract class num implements Comparable<num> {
+  @JSExportName('is')
+  static bool _is_num(Object? o) {
+    return JS<bool>('!', 'typeof $o == "number"');
+  }
+
+  @JSExportName('as')
+  static Object? _as_num(Object? o) {
+    // Avoid extra function call to core.num.is() by manually inlining.
+    if (JS<bool>('!', 'typeof $o == "number"')) return o;
+    return dart.cast(o, dart.unwrapType(num));
   }
 }
 
@@ -265,6 +337,147 @@ class Error {
     JS("", "throw #", dart.createErrorWithStack(error, stackTrace));
     throw "unreachable";
   }
+}
+
+// Patch for DateTime implementation.
+@patch
+class DateTime {
+  @patch
+  DateTime.fromMillisecondsSinceEpoch(int millisecondsSinceEpoch,
+      {bool isUtc = false})
+      : this._withValue(millisecondsSinceEpoch, isUtc: isUtc);
+
+  @patch
+  DateTime.fromMicrosecondsSinceEpoch(int microsecondsSinceEpoch,
+      {bool isUtc = false})
+      : this._withValue(
+            _microsecondInRoundedMilliseconds(microsecondsSinceEpoch),
+            isUtc: isUtc);
+
+  @patch
+  DateTime._internal(int year, int month, int day, int hour, int minute,
+      int second, int millisecond, int microsecond, bool isUtc)
+      : isUtc = isUtc,
+        _value = checkInt(Primitives.valueFromDecomposedDate(
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            millisecond + _microsecondInRoundedMilliseconds(microsecond),
+            isUtc));
+
+  @patch
+  DateTime._now()
+      : isUtc = false,
+        _value = Primitives.dateNow();
+
+  @patch
+  DateTime._nowUtc()
+      : isUtc = true,
+        _value = Primitives.dateNow();
+
+  /// Rounds the given [microsecond] to the nearest milliseconds value.
+  ///
+  /// For example, invoked with argument `2600` returns `3`.
+  static int _microsecondInRoundedMilliseconds(int microsecond) {
+    return (microsecond / 1000).round();
+  }
+
+  @patch
+  static int? _brokenDownDateToValue(int year, int month, int day, int hour,
+      int minute, int second, int millisecond, int microsecond, bool isUtc) {
+    return Primitives.valueFromDecomposedDate(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond + _microsecondInRoundedMilliseconds(microsecond),
+        isUtc);
+  }
+
+  @patch
+  String get timeZoneName {
+    if (isUtc) return "UTC";
+    return Primitives.getTimeZoneName(this);
+  }
+
+  @patch
+  Duration get timeZoneOffset {
+    if (isUtc) return Duration.zero;
+    return Duration(minutes: Primitives.getTimeZoneOffsetInMinutes(this));
+  }
+
+  @patch
+  DateTime add(Duration duration) {
+    return DateTime._withValue(_value + duration.inMilliseconds, isUtc: isUtc);
+  }
+
+  @patch
+  DateTime subtract(Duration duration) {
+    return DateTime._withValue(_value - duration.inMilliseconds, isUtc: isUtc);
+  }
+
+  @patch
+  Duration difference(DateTime other) {
+    return Duration(milliseconds: _value - other.millisecondsSinceEpoch);
+  }
+
+  @patch
+  int get millisecondsSinceEpoch => _value;
+
+  @patch
+  int get microsecondsSinceEpoch => _value * 1000;
+
+  @patch
+  int get year => Primitives.getYear(this);
+
+  @patch
+  int get month => Primitives.getMonth(this);
+
+  @patch
+  int get day => Primitives.getDay(this);
+
+  @patch
+  int get hour => Primitives.getHours(this);
+
+  @patch
+  int get minute => Primitives.getMinutes(this);
+
+  @patch
+  int get second => Primitives.getSeconds(this);
+
+  @patch
+  int get millisecond => Primitives.getMilliseconds(this);
+
+  @patch
+  int get microsecond => 0;
+
+  @patch
+  int get weekday => Primitives.getWeekday(this);
+
+  @patch
+  bool operator ==(Object other) =>
+      other is DateTime &&
+      _value == other.millisecondsSinceEpoch &&
+      isUtc == other.isUtc;
+
+  @patch
+  bool isBefore(DateTime other) => _value < other.millisecondsSinceEpoch;
+
+  @patch
+  bool isAfter(DateTime other) => _value > other.millisecondsSinceEpoch;
+
+  @patch
+  bool isAtSameMomentAs(DateTime other) =>
+      _value == other.millisecondsSinceEpoch;
+
+  @patch
+  int compareTo(DateTime other) =>
+      _value.compareTo(other.millisecondsSinceEpoch);
 }
 
 // Patch for Stopwatch implementation.
@@ -446,6 +659,18 @@ class String {
     final asJSArray = JS<JSArray<int>>('!', '#', list); // trusted downcast
     return Primitives.stringFromCharCodes(asJSArray);
   }
+
+  @JSExportName('is')
+  static bool _is_String(Object? o) {
+    return JS<bool>('!', 'typeof $o == "string"');
+  }
+
+  @JSExportName('as')
+  static Object? _as_String(Object? o) {
+    // Avoid extra function call to core.String.is() by manually inlining.
+    if (JS<bool>('!', 'typeof $o == "string"')) return o;
+    return dart.cast(o, dart.unwrapType(String));
+  }
 }
 
 @patch
@@ -476,6 +701,17 @@ class bool {
 
   @patch
   int get hashCode => super.hashCode;
+
+  @JSExportName('is')
+  static bool _is_bool(Object? o) =>
+      JS<bool>('!', '$o === true || $o === false');
+
+  @JSExportName('as')
+  static Object? _as_bool(Object? o) {
+    // Avoid extra function call to core.bool.is() by manually inlining.
+    if (JS<bool>("!", '$o === true || $o === false')) return o;
+    return dart.cast(o, dart.unwrapType(bool));
+  }
 }
 
 @patch
@@ -648,18 +884,25 @@ class Uri {
 
 @patch
 class _Uri {
-  // DDC is only used when targeting the browser, so this is always false.
   @patch
-  static bool get _isWindows => false;
+  static bool get _isWindows => _isWindowsCached;
+
+  static final bool _isWindowsCached = JS(
+      'bool',
+      'typeof process != "undefined" && '
+          'Object.prototype.toString.call(process) == "[object process]" && '
+          'process.platform == "win32"');
 
   // Matches a String that _uriEncodes to itself regardless of the kind of
   // component.  This corresponds to [_unreservedTable], i.e. characters that
   // are not encoded by any encoding table.
   static final RegExp _needsNoEncoding = RegExp(r'^[\-\.0-9A-Z_a-z~]*$');
 
-  /// This is the internal implementation of JavaScript's encodeURI function.
-  /// It encodes all characters in the string [text] except for those
-  /// that appear in [canonicalTable], and returns the escaped string.
+  /**
+   * This is the internal implementation of JavaScript's encodeURI function.
+   * It encodes all characters in the string [text] except for those
+   * that appear in [canonicalTable], and returns the escaped string.
+   */
   @patch
   static String _uriEncode(List<int> canonicalTable, String text,
       Encoding encoding, bool spaceToPlus) {

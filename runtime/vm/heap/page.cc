@@ -23,14 +23,14 @@ namespace dart {
 
 // This cache needs to be at least as big as FLAG_new_gen_semi_max_size or
 // munmap will noticeably impact performance.
-static constexpr intptr_t kPageCacheCapacity = 128 * kWordSize;
+static constexpr intptr_t kPageCacheCapacity = 8 * kWordSize;
 static Mutex* page_cache_mutex = nullptr;
 static VirtualMemory* page_cache[kPageCacheCapacity] = {nullptr};
 static intptr_t page_cache_size = 0;
 
 void Page::Init() {
   ASSERT(page_cache_mutex == nullptr);
-  page_cache_mutex = new Mutex();
+  page_cache_mutex = new Mutex(NOT_IN_PRODUCT("page_cache_mutex"));
 }
 
 void Page::ClearCache() {
@@ -114,7 +114,6 @@ Page* Page::Allocate(intptr_t size, uword flags) {
   result->end_ = 0;
   result->survivor_end_ = 0;
   result->resolved_top_ = 0;
-  result->live_bytes_ = 0;
 
   if ((flags & kNew) != 0) {
     uword top = result->object_start();
@@ -150,23 +149,10 @@ void Page::Deallocate() {
 
   if (CanUseCache(flags_)) {
     ASSERT(memory->size() == kPageSize);
-
-    // Allow caching up to one new-space worth of pages to avoid the cost unmap
-    // when freeing from-space. Using ThresholdInWords both accounts for
-    // new-space scaling with the number of mutators, and prevents the cache
-    // from staying big after new-space shrinks.
-    intptr_t limit = 0;
-    IsolateGroup* group = IsolateGroup::Current();
-    if ((group != nullptr) && ((flags_ & kNew) != 0)) {
-      limit = group->heap()->new_space()->ThresholdInWords() / kPageSizeInWords;
-    }
-    limit = Utils::Maximum(limit, FLAG_new_gen_semi_max_size * MB / kPageSize);
-    limit = Utils::Minimum(limit, kPageCacheCapacity);
-
     MutexLocker ml(page_cache_mutex);
     ASSERT(page_cache_size >= 0);
     ASSERT(page_cache_size <= kPageCacheCapacity);
-    if (page_cache_size < limit) {
+    if (page_cache_size < kPageCacheCapacity) {
       intptr_t size = memory->size();
 #if defined(DEBUG)
       if ((flags_ & kNew) != 0) {
@@ -185,8 +171,7 @@ void Page::Deallocate() {
 }
 
 void Page::VisitObjects(ObjectVisitor* visitor) const {
-  ASSERT(Thread::Current()->OwnsGCSafepoint() ||
-         (Thread::Current()->task_kind() == Thread::kIncrementalCompactorTask));
+  ASSERT(Thread::Current()->OwnsGCSafepoint());
   NoSafepointScope no_safepoint;
   uword obj_addr = object_start();
   uword end_addr = object_end();
@@ -222,11 +207,9 @@ void Page::VisitObjectPointers(ObjectPointerVisitor* visitor) const {
   ASSERT(obj_addr == end_addr);
 }
 
-void Page::VisitRememberedCards(PredicateObjectPointerVisitor* visitor,
-                                bool only_marked) {
+void Page::VisitRememberedCards(ObjectPointerVisitor* visitor) {
   ASSERT(Thread::Current()->OwnsGCSafepoint() ||
-         (Thread::Current()->task_kind() == Thread::kScavengerTask) ||
-         (Thread::Current()->task_kind() == Thread::kIncrementalCompactorTask));
+         (Thread::Current()->task_kind() == Thread::kScavengerTask));
   NoSafepointScope no_safepoint;
 
   if (card_table_ == nullptr) {
@@ -235,9 +218,8 @@ void Page::VisitRememberedCards(PredicateObjectPointerVisitor* visitor,
 
   ArrayPtr obj =
       static_cast<ArrayPtr>(UntaggedObject::FromAddr(object_start()));
-  ASSERT(obj->IsArray() || obj->IsImmutableArray());
+  ASSERT(obj->IsArray());
   ASSERT(obj->untag()->IsCardRemembered());
-  if (only_marked && !obj->untag()->IsMarked()) return;
   CompressedObjectPtr* obj_from = obj->untag()->from();
   CompressedObjectPtr* obj_to =
       obj->untag()->to(Smi::Value(obj->untag()->length()));
@@ -276,9 +258,15 @@ void Page::VisitRememberedCards(PredicateObjectPointerVisitor* visitor,
         card_to = obj_to;
       }
 
-      bool has_new_target = visitor->PredicateVisitCompressedPointers(
-          heap_base, card_from, card_to);
+      visitor->VisitCompressedPointers(heap_base, card_from, card_to);
 
+      bool has_new_target = false;
+      for (CompressedObjectPtr* slot = card_from; slot <= card_to; slot++) {
+        if ((*slot)->IsNewObjectMayBeSmi()) {
+          has_new_target = true;
+          break;
+        }
+      }
       if (!has_new_target) {
         cell ^= bit_mask;
       }
@@ -296,7 +284,7 @@ void Page::WriteProtect(bool read_only) {
 
   VirtualMemory::Protection prot;
   if (read_only) {
-    if (is_executable()) {
+    if (is_executable() && (memory_->AliasOffset() == 0)) {
       prot = VirtualMemory::kReadExecute;
     } else {
       prot = VirtualMemory::kReadOnly;

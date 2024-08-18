@@ -75,12 +75,6 @@ def GenerateCompileCommands(options):
         # Remove warnings
         command = command.replace("-Werror", "")
 
-        match = re.search(r"(\.\.\/\.\.\/[^ ]+\/clang\/bin\/clang)", command)
-        if match:
-            command = match.group(1) + command[match.end():]
-        else:
-            print("Path ending in clang/bin/clang not found in the command.")
-
         # Remove ninja prepend on Windows.
         # This is not fully correct, as now it fails to find a sysroot for
         # Windows. However, clangd completely fails with the `-t` flag.
@@ -90,12 +84,12 @@ def GenerateCompileCommands(options):
         # Add sysroot from out\DebugX64\environment.x64 on Windows.
         # TODO(dacoharkes): Fetch the paths from that file.
         windowsSysroots = [
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\Windows Kits\\10\\Include\\10.0.22621.0\\um',
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\Windows Kits\\10\\Include\\10.0.22621.0\\shared',
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\Windows Kits\\10\\Include\\10.0.22621.0\\winrt',
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\Windows Kits\\10\\Include\\10.0.22621.0\\ucrt',
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\VC\\Tools\\MSVC\\14.34.31933\\include',
-            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\27370823e7\\VC\\Tools\\MSVC\\14.34.31933\\atlmfc\\include',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\Windows Kits\\10\\Include\\10.0.20348.0\\um',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\Windows Kits\\10\\Include\\10.0.20348.0\\shared',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\Windows Kits\\10\\Include\\10.0.20348.0\\winrt',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\Windows Kits\\10\\Include\\10.0.20348.0\\ucrt',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\VC\\Tools\\MSVC\\14.29.30133\\include',
+            'C:\\src\\depot_tools\\win_toolchain\\vs_files\\1023ce2e82\\VC\\Tools\\MSVC\\14.29.30133\\atlmfc\\include',
         ]
         for windowsSysroot in windowsSysroots:
             command = command.replace(

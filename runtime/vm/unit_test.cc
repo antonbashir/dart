@@ -9,7 +9,6 @@
 #include "bin/builtin.h"
 #include "bin/dartutils.h"
 #include "bin/isolate_data.h"
-#include "bin/uri.h"
 
 #include "platform/globals.h"
 
@@ -116,7 +115,7 @@ Dart_Isolate TestCase::CreateIsolate(const uint8_t* data_buffer,
   char* err;
   Dart_IsolateFlags api_flags;
   Isolate::FlagsInitialize(&api_flags);
-  api_flags.null_safety = true;
+  api_flags.null_safety = FLAG_sound_null_safety;
   Dart_Isolate isolate = nullptr;
   if (len == 0) {
     isolate = Dart_CreateIsolateGroup(
@@ -213,6 +212,10 @@ const char* TestCase::GetTestLib(const char* url) {
     }
   }
   return nullptr;
+}
+
+bool TestCase::IsNNBD() {
+  return KernelIsolate::GetExperimentalFlag(ExperimentalFeature::non_nullable);
 }
 
 #ifndef PRODUCT
@@ -380,24 +383,7 @@ static Dart_Handle LibraryTagHandler(Dart_LibraryTag tag,
     if (Dart_IsError(library_url)) {
       return library_url;
     }
-
-    const char* library_url_cstr;
-    Dart_Handle result = Dart_StringToCString(library_url, &library_url_cstr);
-    if (Dart_IsError(result)) {
-      return result;
-    }
-    const char* url_cstr;
-    result = Dart_StringToCString(url, &url_cstr);
-    if (Dart_IsError(result)) {
-      return result;
-    }
-    CStringUniquePtr resolved_uri = ResolveUri(url_cstr, library_url_cstr);
-    if (!resolved_uri) {
-      return DartUtils::NewError("%s: Unable to canonicalize uri '%s'.",
-                                 __FUNCTION__, url_cstr);
-    }
-    result = Dart_NewStringFromCString(resolved_uri.get());
-    return result;
+    return Dart_DefaultCanonicalizeUrl(library_url, url);
   }
   UNREACHABLE();
   return Dart_Null();

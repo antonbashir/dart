@@ -23,8 +23,6 @@ abstract class Interface {
 class Class implements Interface {
   /*member: Class.field:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 
 augment class Class {
@@ -38,8 +36,6 @@ prefix0.List<OmittedType0> get_fieldList(prefix0.List<OmittedType0> l) => [this.
 
   /*member: Class.:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 
 augment class Class {
@@ -53,8 +49,6 @@ prefix0.List<OmittedType0> get_List() => throw "";
 
   /*member: Class.method:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 
 augment class Class {
@@ -69,8 +63,6 @@ prefix0.List<OmittedType0> get_methodList() => [this.method()];
   @InferableMacro()
   /*member: Class.staticField:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 
 augment class Class {
@@ -84,8 +76,6 @@ prefix0.List<OmittedType0> get_staticFieldList(prefix0.List<OmittedType0> l) => 
   @InferableMacro()
   /*member: Class.staticMethod:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
-
 import 'dart:core' as prefix0;
 
 augment class Class {

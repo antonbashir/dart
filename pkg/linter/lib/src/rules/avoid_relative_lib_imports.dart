@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Avoid relative imports for files in `lib/`.';
 
@@ -42,15 +41,21 @@ import 'baz.dart';
 ''';
 
 class AvoidRelativeLibImports extends LintRule {
+  static const LintCode code = LintCode('avoid_relative_lib_imports',
+      "Can't use a relative path to import a library in 'lib'.",
+      correctionMessage:
+          "Try fixing the relative path or changing the import to a 'package:' "
+          'import.');
+
   AvoidRelativeLibImports()
       : super(
             name: 'avoid_relative_lib_imports',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errorProne});
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_relative_lib_imports;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

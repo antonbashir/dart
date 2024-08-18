@@ -6,10 +6,10 @@ import 'dart:math';
 
 import 'customized_codes.dart';
 
-/// An error code associated with an `AnalysisError`.
+/// An error code associated with an [AnalysisError].
 ///
 /// Generally, messages should follow the [Guide for Writing
-/// Diagnostics](https://github.com/dart-lang/sdk/blob/main/pkg/front_end/lib/src/base/diagnostics.md).
+/// Diagnostics](../fasta/diagnostics.md).
 abstract class ErrorCode {
   /// Regular expression for identifying positional arguments in error messages.
   static final RegExp _positionalArgumentRegExp = new RegExp(r'{(\d+)\}');
@@ -225,6 +225,13 @@ class ErrorType implements Comparable<ErrorType> {
       const ErrorType('STATIC_WARNING', 4, ErrorSeverity.WARNING);
 
   /**
+   * Many, but not all, static warnings relate to types, in which case they are
+   * known as static type warnings.
+   */
+  static const ErrorType STATIC_TYPE_WARNING =
+      const ErrorType('STATIC_TYPE_WARNING', 5, ErrorSeverity.WARNING);
+
+  /**
    * Syntactic errors are errors produced as a result of input that does not
    * conform to the grammar.
    */
@@ -243,6 +250,7 @@ class ErrorType implements Comparable<ErrorType> {
     COMPILE_TIME_ERROR,
     CHECKED_MODE_COMPILE_TIME_ERROR,
     STATIC_WARNING,
+    STATIC_TYPE_WARNING,
     SYNTACTIC_ERROR,
     LINT,
   ];

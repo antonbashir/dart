@@ -1,5 +1,4 @@
 T hest1<T>() => throw "hest";
-
 test1() {}
 
 class A2 {
@@ -7,9 +6,7 @@ class A2 {
 }
 
 test2(A2 a) {}
-
 test3() {}
-
 test4() {}
 
 class A5 {
@@ -34,5 +31,4 @@ class A7 {
 }
 
 test7(A7? a) {}
-
 main() {}

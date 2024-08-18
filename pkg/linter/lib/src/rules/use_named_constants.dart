@@ -6,10 +6,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/src/lint/linter.dart'; // ignore: implementation_imports
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const lintName = 'use_named_constants';
 
@@ -30,21 +28,25 @@ Duration.zero;
 ''';
 
 class UseNamedConstants extends LintRule {
+  static const LintCode code = LintCode('use_named_constants',
+      "Use the constant '{0}' rather than a constructor returning the same object.",
+      correctionMessage: "Try using '{0}'.");
+
   UseNamedConstants()
       : super(
           name: lintName,
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.use_named_constants;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addInstanceCreationExpression(this, visitor);
   }
 }
@@ -52,7 +54,9 @@ class UseNamedConstants extends LintRule {
 class _Visitor extends SimpleAstVisitor<void> {
   final LintRule rule;
 
-  _Visitor(this.rule);
+  final LinterContext context;
+
+  _Visitor(this.rule, this.context);
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
@@ -74,7 +78,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
         var library = (node.root as CompilationUnit).declaredElement?.library;
         if (library == null) return;
-        var value = node.computeConstantValue().value;
+        var value = context.evaluateConstant(node).value;
         for (var field
             in element.fields.where((e) => e.isStatic && e.isConst)) {
           if (field.isAccessibleIn(library) &&

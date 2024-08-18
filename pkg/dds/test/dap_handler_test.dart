@@ -116,18 +116,8 @@ void main() {
     );
     service = await vmServiceConnectUri(dds!.wsUri!.toString());
 
-    final isolateRef = (await service.getVM()).isolates!.first;
-    final isolateId = isolateRef.id!;
-
-    // Wait for the isolate to become runnable as `evaluateInFrame` requires
-    // the isolate to be runnable.
-    Isolate? isolate;
-    do {
-      if (isolate != null) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
-      isolate = await service.getIsolate(isolateId);
-    } while (!isolate.runnable!);
+    final isolate = (await service.getVM()).isolates!.first;
+    final isolateId = isolate.id!;
 
     // Get the variable for 'myInstance'.
     final originalInstanceRef = (await service.evaluateInFrame(

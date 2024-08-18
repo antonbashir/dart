@@ -17,10 +17,9 @@ class Module implements Serializable {
   final DataSegments dataSegments;
   final List<Import> imports;
   final List<int> watchPoints;
-  final Uri? sourceMapUrl;
+  final bool dataReferencedFromGlobalInitializer;
 
   Module(
-      this.sourceMapUrl,
       this.functions,
       this.tables,
       this.tags,
@@ -30,7 +29,8 @@ class Module implements Serializable {
       this.types,
       this.dataSegments,
       this.imports,
-      this.watchPoints);
+      this.watchPoints,
+      this.dataReferencedFromGlobalInitializer);
 
   /// Serialize a module to its binary representation.
   @override
@@ -46,28 +46,22 @@ class Module implements Serializable {
     TableSection(tables.defined, watchPoints).serialize(s);
     MemorySection(memories.defined, watchPoints).serialize(s);
     TagSection(tags.defined, watchPoints).serialize(s);
+    if (dataReferencedFromGlobalInitializer) {
+      DataCountSection(dataSegments.defined, watchPoints).serialize(s);
+    }
     GlobalSection(globals.defined, watchPoints).serialize(s);
     ExportSection(exports.exported, watchPoints).serialize(s);
     StartSection(functions.start, watchPoints).serialize(s);
-    ElementSection(tables.defined, tables.imported, watchPoints).serialize(s);
-    DataCountSection(dataSegments.defined, watchPoints).serialize(s);
+    ElementSection(tables.defined, watchPoints).serialize(s);
+    if (!dataReferencedFromGlobalInitializer) {
+      DataCountSection(dataSegments.defined, watchPoints).serialize(s);
+    }
     CodeSection(functions.defined, watchPoints).serialize(s);
     DataSection(dataSegments.defined, watchPoints).serialize(s);
-    if (sourceMapUrl != null) {
-      SourceMapSection(sourceMapUrl.toString()).serialize(s);
-    }
-
-    if (functions.namedCount > 0 ||
-        types.namedCount > 0 ||
-        globals.namedCount > 0) {
-      NameSection(
-              <BaseFunction>[...functions.imported, ...functions.defined],
-              [for (final t in types.recursionGroups) ...t],
-              <Global>[...globals.imported, ...globals.defined],
-              watchPoints,
+    if (functions.namedCount > 0 || types.namedCount > 0) {
+      NameSection(functions.all, types.defined, watchPoints,
               functionNameCount: functions.namedCount,
-              typeNameCount: types.namedCount,
-              globalNameCount: globals.namedCount)
+              typeNameCount: types.namedCount)
           .serialize(s);
     }
   }

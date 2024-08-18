@@ -19,7 +19,5 @@ class SubClass extends Class {
 }
 
 main() {}
-
 expect(expected, actual) {}
-
 throws(f(), String message) {}

@@ -32,16 +32,6 @@ void f() {
     await assertNoFix();
   }
 
-  Future<void> test_macroGenerated() async {
-    testFilePath = join(testPackageLibPath, 'test.macro.dart');
-    await resolveTestCode('''
-void f() {
-  json.encode('');
-}
-''');
-    await assertNoFix();
-  }
-
   Future<void> test_withClass_asExpression() async {
     await resolveTestCode('''
 void f(p) {
@@ -55,13 +45,6 @@ void f(p) {
   p as HashMap;
 }
 ''');
-  }
-
-  Future<void> test_withClass_dartHtml() async {
-    await resolveTestCode('''
-void f(KeyEvent e) {}
-''');
-    await assertNoFix();
   }
 
   Future<void> test_withClass_extends() async {

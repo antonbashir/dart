@@ -4,5 +4,5 @@
 
 library front_end.try_constant_evaluator;
 
-export '../kernel/try_constant_evaluator.dart'
+export '../fasta/kernel/try_constant_evaluator.dart'
     show ReportErrorFunction, TryConstantEvaluator;

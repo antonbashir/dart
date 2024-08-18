@@ -4,12 +4,12 @@
 
 // Dart test for a function type test that cannot be eliminated at compile time.
 import "package:expect/expect.dart";
-import "package:expect/variations.dart" as v;
 
 typedef FListInt(List<int> l);
 
 main() {
-  Expect.throwsTypeErrorWhen(v.checkedImplicitDowncasts, () {
+  if (dart2jsProductionMode) return; // Checks are omitted in production mode.
+  Expect.throwsTypeError(() {
     // Static result type of f(), i.e. FList, is a subtype of FListInt.
     // However, run time type of returned function is not a subtype of FListInt.
     // Run time type check should not be eliminated.

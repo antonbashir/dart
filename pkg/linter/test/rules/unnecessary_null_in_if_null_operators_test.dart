@@ -8,23 +8,25 @@ import '../rule_test_support.dart';
 
 main() {
   defineReflectiveSuite(() {
+    defineReflectiveTests(UnnecessaryNullInIfNullOperatorsLanguage29Test);
     defineReflectiveTests(UnnecessaryNullInIfNullOperatorsTest);
   });
 }
 
 @reflectiveTest
-class UnnecessaryNullInIfNullOperatorsTest extends LintRuleTest {
+class UnnecessaryNullInIfNullOperatorsLanguage29Test extends LintRuleTest {
   @override
   String get lintRule => 'unnecessary_null_in_if_null_operators';
 
+  @override
+  String get testPackageLanguageVersion => '2.9';
+
   test_localVariableDeclaration_noNull() async {
-    await assertDiagnostics(r'''
+    await assertNoDiagnostics(r'''
 void f() {
   var x = 1 ?? 1;
 }
-''', [
-      error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 26, 1),
-    ]);
+''');
   }
 
   test_localVariableDeclaration_nullOnLeft() async {
@@ -33,7 +35,7 @@ void f() {
   var x = null ?? 1;
 }
 ''', [
-      lint(21, 4),
+      lint(21, 9),
     ]);
   }
 
@@ -43,10 +45,37 @@ void f() {
   var x = 1 ?? null;
 }
 ''', [
-      lint(26, 4),
-      error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 26, 4),
+      lint(21, 9),
     ]);
   }
+
+  test_topLevelVariableDeclaration_noNull() async {
+    await assertNoDiagnostics(r'''
+var x = 1 ?? 1;
+''');
+  }
+
+  test_topLevelVariableDeclaration_nullOnLeft() async {
+    await assertDiagnostics(r'''
+var x = null ?? 1;
+''', [
+      lint(8, 9),
+    ]);
+  }
+
+  test_topLevelVariableDeclaration_nullOnRight() async {
+    await assertDiagnostics(r'''
+var x = 1 ?? null;
+''', [
+      lint(8, 9),
+    ]);
+  }
+}
+
+@reflectiveTest
+class UnnecessaryNullInIfNullOperatorsTest extends LintRuleTest {
+  @override
+  String get lintRule => 'unnecessary_null_in_if_null_operators';
 
   test_methodBody() async {
     await assertDiagnostics(r'''
@@ -57,9 +86,9 @@ class C {
   }
 }
 ''', [
-      lint(35, 4),
+      lint(30, 9),
       error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 35, 4),
-      lint(53, 4),
+      lint(53, 9),
     ]);
   }
 
@@ -81,9 +110,9 @@ class C {
 var x = 1 ?? null;
 var y = null ?? 1;
 ''', [
-      lint(13, 4),
+      lint(8, 9),
       error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 13, 4),
-      lint(27, 4),
+      lint(27, 9),
     ]);
   }
 
@@ -93,31 +122,6 @@ var x = 1 ?? 1;
 ''', [
       // No lint.
       error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 13, 1),
-    ]);
-  }
-
-  test_topLevelVariableDeclaration_noNull() async {
-    await assertDiagnostics(r'''
-var x = 1 ?? 1;
-''', [
-      error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 13, 1),
-    ]);
-  }
-
-  test_topLevelVariableDeclaration_nullOnLeft() async {
-    await assertDiagnostics(r'''
-var x = null ?? 1;
-''', [
-      lint(8, 4),
-    ]);
-  }
-
-  test_topLevelVariableDeclaration_nullOnRight() async {
-    await assertDiagnostics(r'''
-var x = 1 ?? null;
-''', [
-      lint(13, 4),
-      error(StaticWarningCode.DEAD_NULL_AWARE_EXPRESSION, 13, 4),
     ]);
   }
 }

@@ -6,6 +6,7 @@ import 'dart:collection';
 
 import 'package:_fe_analyzer_shared/src/base/errors.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
+import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/diagnostic/diagnostic.dart';
 import 'package:analyzer/src/error/error_code_values.g.dart';
@@ -13,7 +14,6 @@ import 'package:analyzer/src/generated/java_core.dart';
 
 export 'package:_fe_analyzer_shared/src/base/errors.dart'
     show ErrorCode, ErrorSeverity, ErrorType;
-export 'package:analyzer/src/dart/error/lint_codes.dart' show LintCode;
 export 'package:analyzer/src/error/error_code_values.g.dart';
 
 /// The lazy initialized map from [ErrorCode.uniqueName] to the [ErrorCode]
@@ -46,22 +46,19 @@ HashMap<String, ErrorCode> _computeUniqueNameToCodeMap() {
 
 /// An error discovered during the analysis of some Dart code.
 ///
-/// See `AnalysisErrorListener`.
+/// See [AnalysisErrorListener].
 class AnalysisError implements Diagnostic {
   /// An empty array of errors used when no errors are expected.
-  @Deprecated('Not used')
   static const List<AnalysisError> NO_ERRORS = <AnalysisError>[];
 
   /// A [Comparator] that sorts by the name of the file that the [AnalysisError]
   /// was found.
-  @Deprecated('Not used')
   static Comparator<AnalysisError> FILE_COMPARATOR =
       (AnalysisError o1, AnalysisError o2) =>
           o1.source.shortName.compareTo(o2.source.shortName);
 
   /// A [Comparator] that sorts error codes first by their severity (errors
   /// first, warnings second), and then by the error code type.
-  @Deprecated('Not used')
   static Comparator<AnalysisError> ERROR_CODE_COMPARATOR =
       (AnalysisError o1, AnalysisError o2) {
     ErrorCode errorCode1 = o1.errorCode;
@@ -271,7 +268,6 @@ class AnalysisError implements Diagnostic {
 
   /// Merge all of the errors in the lists in the given list of [errorLists]
   /// into a single list of errors.
-  @Deprecated('Not used')
   static List<AnalysisError> mergeLists(List<List<AnalysisError>> errorLists) {
     Set<AnalysisError> errors = HashSet<AnalysisError>();
     for (List<AnalysisError> errorList in errorLists) {

@@ -62,7 +62,7 @@ void f() {
       error(CompileTimeErrorCode.RETHROW_OUTSIDE_CATCH, 13, 7),
     ]);
 
-    var node = findNode.singleRethrowExpression;
+    final node = findNode.singleRethrowExpression;
     assertResolvedNodeText(node, r'''
 RethrowExpression
   rethrowKeyword: rethrow

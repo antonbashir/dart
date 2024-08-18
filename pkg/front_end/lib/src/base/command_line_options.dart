@@ -3,13 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/util/options.dart';
+import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:kernel/target/targets.dart';
-
-import '../api_prototype/compiler_options.dart';
 
 class Flags {
   // TODO(johnniwinther): What is the right name for this?
   static const String nnbdStrongMode = "--nnbd-strong";
+  static const String nnbdAgnosticMode = "--nnbd-agnostic";
   static const String nnbdWeakMode = "--nnbd-weak";
 
   static const String forceLateLowering = "--force-late-lowering";
@@ -35,8 +35,6 @@ class Flags {
   static const String omitPlatform = "--omit-platform";
   static const String fatal = "--fatal";
   static const String fatalSkip = "--fatal-skip";
-  static const String showGeneratedMacroSources = "--show-macros";
-  static const String checkMacroOffsets = "--check-macro-offsets";
   static const String help = "--help";
   static const String librariesJson = "--libraries-json";
   static const String noDefines = "--no-defines";
@@ -76,10 +74,6 @@ class Options {
       const Option(Flags.fatal, const StringListValue());
   static const Option<String?> fatalSkip =
       const Option(Flags.fatalSkip, const StringValue());
-  static const Option<bool> showGeneratedMacroSources =
-      const Option(Flags.showGeneratedMacroSources, const BoolValue(false));
-  static const Option<bool> checkMacroOffsets =
-      const Option(Flags.checkMacroOffsets, const BoolValue(false));
   static const Option<int?> forceLateLowering = const Option(
       Flags.forceLateLowering,
       const IntValue(defaultValue: null, noArgValue: LateLowering.all));
@@ -115,6 +109,8 @@ class Options {
       const Option(Flags.nnbdWeakMode, const BoolValue(false));
   static const Option<bool> nnbdStrongMode =
       const Option(Flags.nnbdStrongMode, const BoolValue(false));
+  static const Option<bool> nnbdAgnosticMode =
+      const Option(Flags.nnbdAgnosticMode, const BoolValue(false));
   static const Option<String> target = const Option(
       Flags.target, const StringValue(defaultValue: 'vm'),
       aliases: ["-t"]);
@@ -126,6 +122,8 @@ class Options {
       const Option(Flags.verify, const BoolValue(false));
   static const Option<bool> skipPlatformVerification =
       const Option(Flags.skipPlatformVerification, const BoolValue(false));
+  static const Option<bool> warnOnReachabilityCheck =
+      const Option(Flags.warnOnReachabilityCheck, const BoolValue(false));
   static const Option<List<Uri>?> linkDependencies =
       const Option(Flags.linkDependencies, const UriListValue());
   static const Option<bool> noDeps =

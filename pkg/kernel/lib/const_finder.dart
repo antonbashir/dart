@@ -6,7 +6,7 @@ import 'dart:collection';
 
 import 'kernel.dart';
 
-class _ConstVisitor extends RecursiveVisitor {
+class _ConstVisitor extends RecursiveVisitor<void> {
   _ConstVisitor(
     this.classLibraryUri,
     this.className,

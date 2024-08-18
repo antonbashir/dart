@@ -175,7 +175,7 @@ bool File::VPrint(const char* format, va_list args) {
   // Measure.
   va_list measure_args;
   va_copy(measure_args, args);
-  intptr_t len = Utils::VSNPrint(nullptr, 0, format, measure_args);
+  intptr_t len = vsnprintf(nullptr, 0, format, measure_args);
   va_end(measure_args);
 
   char* buffer = reinterpret_cast<char*>(malloc(len + 1));
@@ -183,7 +183,7 @@ bool File::VPrint(const char* format, va_list args) {
   // Print.
   va_list print_args;
   va_copy(print_args, args);
-  Utils::VSNPrint(buffer, len + 1, format, print_args);
+  vsnprintf(buffer, len + 1, format, print_args);
   va_end(print_args);
 
   bool result = WriteFully(buffer, len);
@@ -296,15 +296,15 @@ File* File::Open(Namespace* namespc, const char* name, FileOpenMode mode) {
   return new File(new FileHandle(fd));
 }
 
-CStringUniquePtr File::UriToPath(const char* uri) {
-  const char* path =
-      (strlen(uri) >= 8 && strncmp(uri, "file:///", 8) == 0) ? uri + 7 : uri;
+Utils::CStringUniquePtr File::UriToPath(const char* uri) {
+  const char* path = (strlen(uri) >= 8 && strncmp(uri, "file:///", 8) == 0)
+      ? uri + 7 : uri;
   UriDecoder uri_decoder(path);
   if (uri_decoder.decoded() == nullptr) {
     errno = EINVAL;
-    return CStringUniquePtr(nullptr);
+    return Utils::CreateCStringUniquePtr(nullptr);
   }
-  return CStringUniquePtr(strdup(uri_decoder.decoded()));
+  return Utils::CreateCStringUniquePtr(strdup(uri_decoder.decoded()));
 }
 
 File* File::OpenUri(Namespace* namespc, const char* uri, FileOpenMode mode) {
@@ -610,7 +610,7 @@ const char* File::LinkTarget(Namespace* namespc,
     dest = DartUtils::ScopedCString(target_size + 1);
   } else {
     ASSERT(dest_size > 0);
-    if (static_cast<size_t>(dest_size) <= target_size) {
+    if ((size_t)dest_size <= target_size) {
       return nullptr;
     }
   }

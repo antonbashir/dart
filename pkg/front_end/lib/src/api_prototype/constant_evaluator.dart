@@ -4,7 +4,7 @@
 
 library front_end.constant_evaluator;
 
-export '../kernel/constant_evaluator.dart'
+export '../fasta/kernel/constant_evaluator.dart'
     show
         ConstantEvaluator,
         ConstantsTransformer,
@@ -12,4 +12,5 @@ export '../kernel/constant_evaluator.dart'
         EvaluationMode,
         EvaluationEnvironment,
         SimpleErrorReporter,
+        transformComponent,
         transformLibraries;

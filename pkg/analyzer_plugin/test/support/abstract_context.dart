@@ -12,13 +12,10 @@ import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/generated/engine.dart' show AnalysisEngine;
+import 'package:analyzer/src/test_utilities/mock_packages.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
-import 'package:analyzer_utilities/test/experiments/experiments.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
-import 'package:linter/src/rules.dart';
-import 'package:meta/meta.dart';
 
 /// Finds an [Element] with the given [name].
 Element? findChildElement(Element root, String name, [ElementKind? kind]) {
@@ -38,7 +35,7 @@ Element? findChildElement(Element root, String name, [ElementKind? kind]) {
 /// A function to be called for every [Element].
 typedef _ElementVisitorFunction = void Function(Element element);
 
-class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
+class AbstractContextTest with ResourceProviderMixin {
   final ByteStore _byteStore = MemoryByteStore();
 
   final Map<String, String> _declaredVariables = {};
@@ -46,13 +43,6 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
   AnalysisContextCollection? _analysisContextCollection;
 
   List<String> get collectionIncludedPaths => [workspaceRootPath];
-
-  /// Return a list of the experiments that are to be enabled for tests in this
-  /// class, an empty list if there are no experiments that should be enabled.
-  List<String> get experiments => experimentsForTests;
-
-  @override
-  String get packagesRootPath => '/packages';
 
   Folder get sdkRoot => newFolder('/sdk');
 
@@ -118,7 +108,6 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
     return analysisContext.currentSession;
   }
 
-  @mustCallSuper
   void setUp() {
     createMockSdk(
       resourceProvider: resourceProvider,
@@ -127,10 +116,8 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
 
     newFolder(testPackageRootPath);
     writeTestPackageConfig();
-    createAnalysisOptionsFile(experiments: experiments);
   }
 
-  @mustCallSuper
   void tearDown() {
     AnalysisEngine.instance.clearCaches();
   }
@@ -147,7 +134,6 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
     var buffer = StringBuffer();
 
     if (lints != null) {
-      registerLintRules();
       buffer.writeln('linter:');
       buffer.writeln('  rules:');
       for (var lint in lints) {
@@ -155,7 +141,7 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
       }
     }
 
-    newFile(testPackageAnalysisOptionsPath, buffer.toString());
+    newFile('$testPackageRootPath/analysis_options.yaml', buffer.toString());
   }
 
   void writeTestPackageConfig({
@@ -176,7 +162,10 @@ class AbstractContextTest with MockPackagesMixin, ResourceProviderMixin {
     );
 
     if (meta) {
-      var metaPath = addMeta().parent.path;
+      var metaPath = '/packages/meta';
+      MockPackages.addMetaPackageFiles(
+        getFolder(metaPath),
+      );
       config.add(name: 'meta', rootPath: metaPath);
     }
 

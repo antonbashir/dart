@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:async_helper/async_helper.dart';
+import 'package:compiler/src/commandline_options.dart';
 import 'package:compiler/src/common/names.dart';
 import 'package:compiler/src/elements/entities.dart';
 import 'package:compiler/src/elements/names.dart';
@@ -17,7 +18,8 @@ import '../helpers/type_test_helper.dart';
 
 main() {
   runTest() async {
-    TypeEnvironment env = await TypeEnvironment.create(r"""
+    TypeEnvironment env = await TypeEnvironment.create(
+        r"""
       class A {}
       class B extends A {}
       main() {
@@ -28,7 +30,9 @@ main() {
         print(A());
         print(B());
       }
-      """, testBackendWorld: true);
+      """,
+        testBackendWorld: true,
+        options: [Flags.soundNullSafety]);
     JClosedWorld world = env.jClosedWorld;
     final domain = world.abstractValueDomain as CommonMasks;
 

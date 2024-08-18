@@ -20,7 +20,7 @@ void f() {
   (_) = 0;
 }
 ''');
-    var node = findNode.singlePatternAssignment.pattern;
+    final node = findNode.singlePatternAssignment.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (
@@ -38,14 +38,14 @@ void f() {
   var (int _) = 0;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclaration.pattern;
+    final node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (
   pattern: WildcardPattern
     type: NamedType
       name: int
-      element: dart:core::<fragment>::@class::int
+      element: dart:core::@class::int
       type: int
     name: _
     matchedValueType: int
@@ -60,7 +60,7 @@ void f() {
   var (_) = 0;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclaration.pattern;
+    final node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (
@@ -78,12 +78,12 @@ void f(x) {
   if (x case int _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 WildcardPattern
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   name: _
   matchedValueType: dynamic
@@ -96,13 +96,13 @@ void f(x) {
   if (x case final int _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 WildcardPattern
   keyword: final
   type: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   name: _
   matchedValueType: dynamic
@@ -115,7 +115,7 @@ void f(x) {
   if (x case _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 WildcardPattern
   name: _
@@ -129,7 +129,7 @@ void f(x) {
   if (x case final _) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 WildcardPattern
   keyword: final

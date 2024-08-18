@@ -100,16 +100,15 @@ class Package implements Comparable<Package> {
   Package(this.dir) {
     var pubspec = File(path.join(dir, 'pubspec.yaml'));
     var doc = yaml.loadYamlDocument(pubspec.readAsStringSync());
-    var contents = doc.contents as yaml.YamlMap;
+    dynamic contents = doc.contents.value;
     _packageName = contents['name'];
     _publishToNone = contents['publish_to'] == 'none';
 
     Set<String> process(String section, List<PubDep> target) {
       if (contents[section] != null) {
-        final value =
-            Set<String>.from((contents[section] as yaml.YamlMap).keys);
+        final value = Set<String>.from(contents[section].keys);
 
-        var deps = contents[section] as yaml.YamlMap;
+        var deps = contents[section];
         for (var package in deps.keys) {
           target.add(PubDep.parse(package, deps[package]));
         }
@@ -252,10 +251,9 @@ class Package implements Comparable<Package> {
     }
 
     if (publishable) {
-      // Validate that deps for published packages use semver (but not any),
-      // except for SDK vendored packages.
+      // Validate that deps for published packages use semver (but not any).
       for (PubDep dep in _declaredPubDeps) {
-        if (dep is SemverPubDep || dep is SdkPubDep) continue;
+        if (dep is SemverPubDep) continue;
 
         out('  Published packages should use semver deps:');
         out('    $dep');
@@ -271,10 +269,9 @@ class Package implements Comparable<Package> {
         fail = true;
       }
     } else {
-      // Validate that non-publishable packages use an 'any' constraint,
-      // except for SDK vendored deps.
+      // Validate that non-publishable packages use an 'any' constraint.
       for (PubDep dep in [..._declaredPubDeps, ..._declaredDevPubDeps]) {
-        if (dep is AnyPubDep || dep is SdkPubDep) continue;
+        if (dep is AnyPubDep) continue;
 
         out('  Prefer an `any` constraint for unpublished packages');
         out('    $dep');
@@ -334,8 +331,8 @@ class Package implements Comparable<Package> {
       if (entity is Directory) {
         final uriPath = entity.uri.path;
         const excludedPaths = {
+          'pkg/analysis_server/test/mock_packages/',
           'pkg/analyzer_cli/test/data/',
-          'pkg/analyzer_utilities/lib/test/mock_packages/package_content/',
           'pkg/front_end/test/id_testing/data/',
           'pkg/front_end/test/enable_non_nullable/data/',
           'pkg/front_end/test/language_versioning/data/',
@@ -378,7 +375,6 @@ class Package implements Comparable<Package> {
           line.startsWith('extension ') ||
           line.startsWith('void ') ||
           line.startsWith('Future ') ||
-          line.startsWith('Future<') ||
           line.startsWith('final ') ||
           line.startsWith('const ')) {
         break;
@@ -470,7 +466,7 @@ class SdkDeps {
     var pubspec = File(path.join(dir.path, 'pubspec.yaml'));
     if (pubspec.existsSync()) {
       var doc = yaml.loadYamlDocument(pubspec.readAsStringSync());
-      var contents = doc.contents as yaml.YamlMap;
+      dynamic contents = doc.contents.value;
       var name = contents['name'];
       var version = contents['version'];
       var dep = ResolvedDep(
@@ -502,8 +498,6 @@ abstract class PubDep {
     } else if (dep is Map) {
       if (dep.containsKey('path')) {
         return PathPubDep(name, dep['path']);
-      } else if (dep.containsKey('sdk')) {
-        return SdkPubDep(name, dep['sdk'], dep['version']);
       } else {
         return UnhandledPubDep(name);
       }
@@ -518,16 +512,6 @@ class AnyPubDep extends PubDep {
 
   @override
   String toString() => '$name: any';
-}
-
-class SdkPubDep extends PubDep {
-  final String sdk;
-  final String? version;
-
-  SdkPubDep(String name, this.sdk, this.version) : super(name);
-
-  @override
-  String toString() => '$name: (sdk: $sdk, version: $version)';
 }
 
 class SemverPubDep extends PubDep {

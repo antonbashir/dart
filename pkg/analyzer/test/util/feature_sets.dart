@@ -4,7 +4,6 @@
 
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/src/dart/analysis/experiments.dart';
-import 'package:analyzer_utilities/test/experiments/experiments.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 class FeatureSets {
@@ -43,16 +42,14 @@ class FeatureSets {
     flags: [],
   );
 
-  static final FeatureSet language_3_4 = FeatureSet.fromEnableFlags2(
-    sdkLanguageVersion: Version.parse('3.4.0'),
-    flags: [],
-  );
-
   static final FeatureSet latest = FeatureSet.latestLanguageVersion();
 
   static final FeatureSet latestWithExperiments = FeatureSet.fromEnableFlags2(
     sdkLanguageVersion: ExperimentStatus.currentVersion,
-    flags: experimentsForTests,
+    flags: [
+      Feature.inline_class.enableString,
+      Feature.macros.enableString,
+    ],
   );
 
   static final FeatureSet latestWithVariance = FeatureSet.fromEnableFlags2(

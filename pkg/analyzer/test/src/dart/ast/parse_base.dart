@@ -4,7 +4,6 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/dart/scanner/reader.dart';
 import 'package:analyzer/src/dart/scanner/scanner.dart';
@@ -18,9 +17,10 @@ class ParseBase with ResourceProviderMixin {
 
   ParseResult parseUnit(String path) {
     var file = getFile(path);
-    var source = FileSource(file);
+    var source = file.createSource();
     var content = file.readAsStringSync();
 
+    final analysisOptions = this.analysisOptions;
     var featureSet = analysisOptions.contextFeatures;
 
     var errorListener = RecordingErrorListener();

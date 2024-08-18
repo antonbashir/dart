@@ -25,10 +25,6 @@ class A { A(^ Function() f) {}}
 ''');
     assertResponse(r'''
 suggestions
-  this
-    kind: keyword
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
@@ -36,6 +32,10 @@ suggestions
   final
     kind: keyword
   super
+    kind: keyword
+  this
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -46,10 +46,6 @@ class A { A(^) {}}
 ''');
     assertResponse(r'''
 suggestions
-  this
-    kind: keyword
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
@@ -57,6 +53,10 @@ suggestions
   final
     kind: keyword
   super
+    kind: keyword
+  this
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -70,15 +70,15 @@ class A {
 ''');
     assertResponse(r'''
 suggestions
-  this
-    kind: keyword
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
+    kind: keyword
+  this
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -110,13 +110,13 @@ void f(^void Function() g) {}
 replacement
   right: 4
 suggestions
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -133,15 +133,15 @@ class A { foo({bool bar: ^}) {}}
 ''');
     assertResponse(r'''
 suggestions
-  false
-    kind: keyword
-  true
-    kind: keyword
   const
+    kind: keyword
+  false
     kind: keyword
   null
     kind: keyword
   switch
+    kind: keyword
+  true
     kind: keyword
 ''');
   }
@@ -165,15 +165,15 @@ class A { foo([bool bar = ^]) {}}
 ''');
     assertResponse(r'''
 suggestions
-  false
-    kind: keyword
-  true
-    kind: keyword
   const
+    kind: keyword
+  false
     kind: keyword
   null
     kind: keyword
   switch
+    kind: keyword
+  true
     kind: keyword
 ''');
   }
@@ -197,13 +197,13 @@ class A { foo(^ Function(){}) {}}
 ''');
     assertResponse(r'''
 suggestions
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -214,13 +214,13 @@ class A { foo(^) {}}
 ''');
     assertResponse(r'''
 suggestions
-  void
-    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
+    kind: keyword
+  void
     kind: keyword
 ''');
   }

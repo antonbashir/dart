@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 import 'package:compiler/src/util/testing.dart';
 
 /*class: A:typeArgument*/
@@ -23,27 +25,27 @@ class E {}
 class F {}
 
 /*class: M1:checks=[]*/
-mixin M1<Tm1> {
+class M1<Tm1> {
   m1() => "M1<$Tm1>";
 }
 
 /*class: M2:checks=[]*/
-mixin M2<Tm2> {
+class M2<Tm2> {
   m2() => "M2<$Tm2>";
 }
 
 /*class: M3:checks=[]*/
-mixin M3<Tm3> {
+class M3<Tm3> {
   m3() => "M3<$Tm3>";
 }
 
 /*class: M4:checks=[]*/
-mixin M4<Tm4> {
+class M4<Tm4> {
   m4() => "M4<$Tm4>";
 }
 
 /*class: M5:checks=[]*/
-mixin M5<Tm5> {
+class M5<Tm5> {
   m5() => "M5<$Tm5>";
 }
 

@@ -28,12 +28,12 @@ class IfStatementTest extends DartSnippetProducerTest {
   String get prefix => IfStatement.prefix;
 
   Future<void> test_if() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   if^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));
@@ -62,14 +62,14 @@ void f() {
   }
 
   Future<void> test_if_indentedInsideBlock() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   if (true) {
     if^
   }
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

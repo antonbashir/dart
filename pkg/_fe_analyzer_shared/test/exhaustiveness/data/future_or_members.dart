@@ -45,7 +45,13 @@ membersMethod(o) {
 }
 
 exhaustiveHashCode(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={hashCode:int},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={hashCode:int},
@@ -59,7 +65,13 @@ exhaustiveHashCode(Typedef o) {
 }
 
 exhaustiveRuntimeType(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={runtimeType:Type},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={runtimeType:Type},
@@ -73,7 +85,13 @@ exhaustiveRuntimeType(Typedef o) {
 }
 
 exhaustiveToString(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={toString:String Function()},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={toString:String Function()},
@@ -89,7 +107,13 @@ exhaustiveToString(Typedef o) {
 }
 
 exhaustiveNoSuchMethod(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={noSuchMethod:dynamic Function(Invocation)},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={noSuchMethod:dynamic Function(Invocation)},
@@ -105,9 +129,16 @@ exhaustiveNoSuchMethod(Typedef o) {
 }
 
 nonExhaustiveRestrictedValue(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   error=non-exhaustive:Null(hashCode: int())/null,
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={hashCode:int},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
-   error=non-exhaustive:Future<dynamic>(hashCode: int())/Future<dynamic>();Object();null,
+   error=non-exhaustive:Future<dynamic>(hashCode: int())/Future<dynamic>(),
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={hashCode:int},
    subtypes={Object?,Future<dynamic>},
@@ -119,9 +150,16 @@ nonExhaustiveRestrictedValue(Typedef o) {
 }
 
 nonExhaustiveRestrictedType(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   error=non-exhaustive:Null(noSuchMethod: dynamic Function(Invocation) _)/null,
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={noSuchMethod:dynamic Function(Invocation)},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
-   error=non-exhaustive:Future<dynamic>(noSuchMethod: dynamic Function(Invocation) _)/Future<dynamic>();Object();null,
+   error=non-exhaustive:Future<dynamic>(noSuchMethod: dynamic Function(Invocation) _)/Future<dynamic>(),
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={noSuchMethod:dynamic Function(Invocation)},
    subtypes={Object?,Future<dynamic>},
@@ -136,7 +174,13 @@ nonExhaustiveRestrictedType(Typedef o) {
 }
 
 unreachableMethod(Typedef o) {
-  return /*
+  return /*cfe.
+   checkingOrder={FutureOr<dynamic>,FutureOr<dynamic>,Null,Object?,Future<dynamic>,Object,Null},
+   expandedSubtypes={Object,Null,Future<dynamic>},
+   fields={hashCode:int,noSuchMethod:dynamic Function(Invocation),runtimeType:Type,toString:String Function()},
+   subtypes={FutureOr<dynamic>,Null},
+   type=FutureOr<dynamic>
+  */ /*analyzer.
    checkingOrder={FutureOr<dynamic>,Object?,Future<dynamic>,Object,Null},
    expandedSubtypes={Object,Null,Future<dynamic>},
    fields={hashCode:int,noSuchMethod:dynamic Function(Invocation),runtimeType:Type,toString:String Function()},

@@ -17,6 +17,13 @@ class MD5Bench extends BenchmarkBase {
         super('MD5');
 
   @override
+  void warmup() {
+    for (int i = 0; i < 4; i++) {
+      run();
+    }
+  }
+
+  @override
   void run() {
     final hash = md5.convert(data);
     if (hex.encode(hash.bytes) != expected) {

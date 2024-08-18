@@ -130,6 +130,7 @@ main() {
           entry: 'main',
           methodName: 'foo',
           disableTypeInference: false,
+          soundNullSafety: true,
           check: checkerForAbsentPresent(test));
     }
 

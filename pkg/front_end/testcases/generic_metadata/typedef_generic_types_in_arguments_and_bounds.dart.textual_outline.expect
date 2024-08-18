@@ -9,5 +9,4 @@ class B extends A<F> {}
 class C<Z extends F> {}
 
 bar<V extends F>() => throw 42;
-
 main() {}

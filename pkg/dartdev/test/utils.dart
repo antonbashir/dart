@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +12,7 @@ import 'package:file/memory.dart';
 import 'package:path/path.dart' as path;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:test/test.dart';
+import 'package:unified_analytics/src/enums.dart';
 import 'package:unified_analytics/unified_analytics.dart';
 
 /// A long [Timeout] is provided for tests that start a process on
@@ -64,14 +64,6 @@ class TestProject {
 
   String get mainPath => path.join(dirPath, relativeFilePath);
 
-  String get analysisOptionsPath => path.join(dirPath, 'analysis_options.yaml');
-
-  String get packageConfigPath => path.join(
-        dirPath,
-        '.dart_tool',
-        'package_config.json',
-      );
-
   final String name;
 
   String get relativeFilePath => 'lib/main.dart';
@@ -94,23 +86,6 @@ class TestProject {
           'name': name,
           'environment': {'sdk': sdkConstraint?.toString() ?? '^3.0.0'},
           ...?pubspecExtras,
-        },
-      ),
-    );
-    file(
-      '.dart_tool/package_config.json',
-      JsonEncoder.withIndent('  ').convert(
-        {
-          'configVersion': 2,
-          'generator': 'utils.dart',
-          'packages': [
-            {
-              'name': name,
-              'rootUri': '../',
-              'packageUri': 'lib/',
-              'languageVersion': '3.2',
-            },
-          ],
         },
       ),
     );
@@ -139,11 +114,6 @@ class TestProject {
     await _process?.exitCode;
     _process = null;
     await deleteDirectory(root);
-  }
-
-  Future<void> kill() async {
-    _process?.kill();
-    _process = null;
   }
 
   Future<ProcessResult> runAnalyze(
@@ -192,52 +162,6 @@ class TestProject {
       ..then((p) => _process = p);
   }
 
-  Future<void> runWithVmService(
-    List<String> arguments,
-    void Function(String) onStdout, {
-    String? workingDir,
-  }) async {
-    final process = await start(arguments, workingDir: workingDir);
-    final completer = Completer<void>();
-    late StreamSubscription<String> sub;
-    late StreamSubscription<String> subError;
-
-    void onData(event) {
-      print('stdout: $event');
-      onStdout(event);
-    }
-
-    void onStderr(event) async {
-      print('stderr: $event');
-      await subError.cancel();
-      await sub.cancel();
-      completer.complete();
-      fail('stderr is expected to be empty');
-    }
-
-    void onError(error) async {
-      kill();
-      await subError.cancel();
-      await sub.cancel();
-      completer.complete();
-    }
-
-    void onDone() async {
-      await subError.cancel();
-      await sub.cancel();
-      completer.complete();
-    }
-
-    sub = process.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .listen(onData, onError: onError, onDone: onDone);
-    subError = process.stderr.transform(utf8.decoder).listen(onStderr);
-
-    // Wait for process to start and run.
-    await completer.future;
-  }
-
   Future<FakeAnalytics> runLocalWithFakeAnalytics(
     List<String> arguments, {
     String? workingDir,
@@ -257,19 +181,23 @@ class TestProject {
   FakeAnalytics _createFakeAnalytics() {
     final fs = MemoryFileSystem.test(style: FileSystemStyle.posix);
     final homeDirectory = fs.directory('/');
-    final FakeAnalytics initialAnalytics = Analytics.fake(
+    final FakeAnalytics initialAnalytics = FakeAnalytics(
       tool: DashTool.dartTool,
       homeDirectory: homeDirectory,
       dartVersion: 'dartVersion',
+      platform: DevicePlatform.linux,
       fs: fs,
+      surveyHandler: SurveyHandler(homeDirectory: homeDirectory, fs: fs),
     );
     initialAnalytics.clientShowedMessage();
 
-    return Analytics.fake(
+    return FakeAnalytics(
       tool: DashTool.dartTool,
       homeDirectory: homeDirectory,
       dartVersion: 'dartVersion',
+      platform: DevicePlatform.linux,
       fs: fs,
+      surveyHandler: SurveyHandler(homeDirectory: homeDirectory, fs: fs),
     );
   }
 
@@ -343,16 +271,4 @@ void ensureRunFromSdkBinDart() {
 The `pkg/dartdev` tests must be run with the `dart` executable in the `bin` folder.
 ''');
   }
-}
-
-/// Replaces the path [filePath] case-insensitively in [input] with itself.
-///
-/// This allows comparing strings that contain file paths where the casing may
-/// be different but is not important to the test (for example where a drive
-/// letter might have different casing).
-String replacePathsWithMatchingCase(String input, {required String filePath}) {
-  return input.replaceAll(
-    RegExp(RegExp.escape(filePath), caseSensitive: false),
-    filePath,
-  );
 }

@@ -85,6 +85,13 @@ class InheritanceManager3 {
       return candidates[0];
     }
 
+    // Check for a getter/method conflict.
+    var conflict = _checkForGetterMethodConflict(name, candidates);
+    if (conflict != null) {
+      conflicts?.add(conflict);
+      return null;
+    }
+
     var targetLibrary = targetClass.library as LibraryElementImpl;
     var typeSystem = targetLibrary.typeSystem;
 
@@ -219,10 +226,6 @@ class InheritanceManager3 {
   /// Return the interface of the given [element].  It might include
   /// private members, not necessary accessible in all libraries.
   Interface getInterface(InterfaceElement element) {
-    if (element.augmentationTarget != null) {
-      throw ArgumentError('Interfaces can only be asked for declarations');
-    }
-
     var result = _interfaces[element];
     if (result != null) {
       return result;
@@ -339,6 +342,7 @@ class InheritanceManager3 {
     required Map<Name, List<ExecutableElement>> namedCandidates,
     required MapSubstitution substitution,
     required Interface interface,
+    required bool isNonNullableByDefault,
   }) {
     var map = interface.map;
     for (var entry in map.entries) {
@@ -346,6 +350,10 @@ class InheritanceManager3 {
       var candidate = entry.value;
 
       candidate = ExecutableMember.from2(candidate, substitution);
+
+      if (!isNonNullableByDefault) {
+        candidate = Member.legacy(candidate) as ExecutableElement;
+      }
 
       var candidates = namedCandidates[name];
       if (candidates == null) {
@@ -379,6 +387,7 @@ class InheritanceManager3 {
     required Map<Name, ExecutableElement> implemented,
     required MapSubstitution substitution,
     required Interface mixin,
+    required bool isNonNullableByDefault,
   }) {
     for (var entry in mixin.implemented.entries) {
       var executable = entry.value;
@@ -392,6 +401,10 @@ class InheritanceManager3 {
       }
 
       executable = ExecutableMember.from2(executable, substitution);
+
+      if (!isNonNullableByDefault) {
+        executable = Member.legacy(executable) as ExecutableElement;
+      }
 
       implemented[entry.key] = executable;
     }
@@ -438,20 +451,11 @@ class InheritanceManager3 {
 
     for (var entry in namedCandidates.entries) {
       var name = entry.key;
-      var candidates = entry.value;
-
-      // There is no way to resolve the getter / method conflict.
-      if (candidates.length > 1) {
-        var conflict = _checkForGetterMethodConflict(name, candidates);
-        if (conflict != null) {
-          conflicts.add(conflict);
-          continue;
-        }
-      }
-
       if (map.containsKey(name)) {
         continue;
       }
+
+      var candidates = entry.value;
 
       var combinedSignature = combineSignatures(
         targetClass: targetClass,
@@ -471,13 +475,15 @@ class InheritanceManager3 {
   }
 
   Interface _getInterfaceClass(InterfaceElement element) {
-    var augmented = element.augmented;
+    final augmented = element.augmentedOfDeclaration;
+    var classLibrary = element.library;
+    var isNonNullableByDefault = classLibrary.isNonNullableByDefault;
 
     var namedCandidates = <Name, List<ExecutableElement>>{};
     var superImplemented = <Map<Name, ExecutableElement>>[];
     var implemented = <Name, ExecutableElement>{};
 
-    InterfaceType? superType = element.supertype;
+    final InterfaceType? superType = element.supertype;
 
     Interface? superTypeInterface;
     if (superType != null) {
@@ -487,11 +493,15 @@ class InheritanceManager3 {
         namedCandidates: namedCandidates,
         substitution: substitution,
         interface: superTypeInterface,
+        isNonNullableByDefault: isNonNullableByDefault,
       );
 
       for (var entry in superTypeInterface.implemented.entries) {
         var executable = entry.value;
         executable = ExecutableMember.from2(executable, substitution);
+        if (!isNonNullableByDefault) {
+          executable = Member.legacy(executable) as ExecutableElement;
+        }
         implemented[entry.key] = executable;
       }
 
@@ -530,13 +540,21 @@ class InheritanceManager3 {
 
         var currentList = namedCandidates[name];
         if (currentList == null) {
-          namedCandidates[name] = [candidate];
+          namedCandidates[name] = [
+            isNonNullableByDefault
+                ? candidate
+                : Member.legacy(candidate) as ExecutableElement,
+          ];
           continue;
         }
 
         var current = currentList.single;
         if (candidate.enclosingElement == mixinElement) {
-          namedCandidates[name] = [candidate];
+          namedCandidates[name] = [
+            isNonNullableByDefault
+                ? candidate
+                : Member.legacy(candidate) as ExecutableElement,
+          ];
           if (current.kind != candidate.kind) {
             var currentIsGetter = current.kind == ElementKind.GETTER;
             mixinConflicts.add(
@@ -562,7 +580,11 @@ class InheritanceManager3 {
           doTopMerge: true,
         );
         for (var entry in map.entries) {
-          namedCandidates[entry.key] = [entry.value];
+          namedCandidates[entry.key] = [
+            isNonNullableByDefault
+                ? entry.value
+                : Member.legacy(entry.value) as ExecutableElement,
+          ];
         }
       }
 
@@ -573,6 +595,7 @@ class InheritanceManager3 {
         implemented: implemented,
         substitution: substitution,
         mixin: mixinInterface,
+        isNonNullableByDefault: isNonNullableByDefault,
       );
 
       superImplemented.add(implemented);
@@ -583,6 +606,7 @@ class InheritanceManager3 {
         namedCandidates: namedCandidates,
         substitution: Substitution.fromInterfaceType(interface),
         interface: getInterface(interface.element),
+        isNonNullableByDefault: isNonNullableByDefault,
       );
     }
 
@@ -659,18 +683,18 @@ class InheritanceManager3 {
   /// We handle "has an extension type member" and "has a non-extension type
   /// member" portions, considering redeclaration and conflicts.
   Interface _getInterfaceExtensionType(ExtensionTypeElement element) {
-    var augmented = element.augmented;
+    final augmented = element.augmentedOfDeclaration;
 
     // Add instance members implemented by the element itself.
-    var declared = <Name, ExecutableElement>{};
+    final declared = <Name, ExecutableElement>{};
     _addImplemented(declared, element, augmented);
 
     // Prepare precluded names.
-    var precludedNames = <Name>{};
-    var precludedMethods = <Name>{};
-    var precludedSetters = <Name>{};
-    for (var entry in declared.entries) {
-      var name = entry.key;
+    final precludedNames = <Name>{};
+    final precludedMethods = <Name>{};
+    final precludedSetters = <Name>{};
+    for (final entry in declared.entries) {
+      final name = entry.key;
       precludedNames.add(name);
       switch (entry.value) {
         case MethodElement():
@@ -681,16 +705,16 @@ class InheritanceManager3 {
     }
 
     // These declared members take precedence over "inherited" ones.
-    var implemented = Map.of(declared);
+    final implemented = Map.of(declared);
 
     // Prepare candidates for inheritance.
-    var extensionCandidates = <Name, _ExtensionTypeCandidates>{};
-    var notExtensionCandidates = <Name, _ExtensionTypeCandidates>{};
-    for (var interface in augmented.interfaces) {
-      var substitution = Substitution.fromInterfaceType(interface);
-      for (var entry in getInterface(interface.element).map.entries) {
-        var name = entry.key;
-        var executable = ExecutableMember.from2(entry.value, substitution);
+    final extensionCandidates = <Name, _ExtensionTypeCandidates>{};
+    final notExtensionCandidates = <Name, _ExtensionTypeCandidates>{};
+    for (final interface in augmented.interfaces) {
+      final substitution = Substitution.fromInterfaceType(interface);
+      for (final entry in getInterface(interface.element).map.entries) {
+        final name = entry.key;
+        final executable = ExecutableMember.from2(entry.value, substitution);
         if (executable.isExtensionTypeMember) {
           (extensionCandidates[name] ??= _ExtensionTypeCandidates(name))
               .add(executable);
@@ -701,16 +725,16 @@ class InheritanceManager3 {
       }
     }
 
-    var redeclared = <Name, List<ExecutableElement>>{};
-    var conflicts = <Conflict>[];
+    final redeclared = <Name, List<ExecutableElement>>{};
+    final conflicts = <Conflict>[];
 
     // Add extension type members.
-    for (var entry in extensionCandidates.entries) {
-      var name = entry.key;
-      var candidates = entry.value;
+    for (final entry in extensionCandidates.entries) {
+      final name = entry.key;
+      final candidates = entry.value;
       (redeclared[name] ??= []).addAll(candidates.all);
 
-      var notPrecluded = candidates.notPrecluded(
+      final notPrecluded = candidates.notPrecluded(
         precludedNames: precludedNames,
         precludedMethods: precludedMethods,
         precludedSetters: precludedSetters,
@@ -722,9 +746,9 @@ class InheritanceManager3 {
       }
 
       // If not precluded, can have either non-extension, or extension.
-      var nonExtensionSignatures = notExtensionCandidates[name];
+      final nonExtensionSignatures = notExtensionCandidates[name];
       if (nonExtensionSignatures != null) {
-        var notExtensionNotPrecluded = nonExtensionSignatures.notPrecluded(
+        final notExtensionNotPrecluded = nonExtensionSignatures.notPrecluded(
           precludedNames: precludedNames,
           precludedMethods: precludedMethods,
           precludedSetters: precludedSetters,
@@ -743,7 +767,7 @@ class InheritanceManager3 {
 
       // The inherited member must be unique.
       ExecutableElement? uniqueElement;
-      for (var candidate in notPrecluded) {
+      for (final candidate in notPrecluded) {
         if (uniqueElement == null) {
           uniqueElement = candidate;
         } else if (uniqueElement.declaration != candidate.declaration) {
@@ -766,12 +790,12 @@ class InheritanceManager3 {
     }
 
     // Add non-extension type members.
-    for (var entry in notExtensionCandidates.entries) {
-      var name = entry.key;
-      var candidates = entry.value;
+    for (final entry in notExtensionCandidates.entries) {
+      final name = entry.key;
+      final candidates = entry.value;
       (redeclared[name] ??= []).addAll(candidates.all);
 
-      var notPrecluded = candidates.notPrecluded(
+      final notPrecluded = candidates.notPrecluded(
         precludedNames: precludedNames,
         precludedMethods: precludedMethods,
         precludedSetters: precludedSetters,
@@ -788,7 +812,7 @@ class InheritanceManager3 {
         continue;
       }
 
-      var combinedSignature = combineSignatures(
+      final combinedSignature = combineSignatures(
         targetClass: element,
         candidates: notPrecluded,
         doTopMerge: true,
@@ -809,10 +833,10 @@ class InheritanceManager3 {
     }
 
     // Ensure unique overridden elements.
-    var uniqueRedeclared = <Name, List<ExecutableElement>>{};
-    for (var entry in redeclared.entries) {
-      var name = entry.key;
-      var elements = entry.value;
+    final uniqueRedeclared = <Name, List<ExecutableElement>>{};
+    for (final entry in redeclared.entries) {
+      final name = entry.key;
+      final elements = entry.value;
       if (elements.length == 1) {
         uniqueRedeclared[name] = elements;
       } else {
@@ -833,7 +857,9 @@ class InheritanceManager3 {
   }
 
   Interface _getInterfaceMixin(MixinElement element) {
-    var augmented = element.augmented;
+    final augmented = element.augmentedOfDeclaration;
+    var classLibrary = element.library;
+    var isNonNullableByDefault = classLibrary.isNonNullableByDefault;
 
     var superCandidates = <Name, List<ExecutableElement>>{};
     for (var constraint in augmented.superclassConstraints) {
@@ -843,6 +869,7 @@ class InheritanceManager3 {
         namedCandidates: superCandidates,
         substitution: substitution,
         interface: interfaceObj,
+        isNonNullableByDefault: isNonNullableByDefault,
       );
     }
 
@@ -862,6 +889,7 @@ class InheritanceManager3 {
         namedCandidates: interfaceCandidates,
         substitution: Substitution.fromInterfaceType(interface),
         interface: getInterface(interface.element),
+        isNonNullableByDefault: isNonNullableByDefault,
       );
     }
 
@@ -975,13 +1003,13 @@ class InheritanceManager3 {
       result.prototype = executable;
       result.returnType = executable.returnType;
 
-      var field = executable.variable2!;
+      var field = executable.variable;
       var resultField = FieldElementImpl(field.name, -1);
       resultField.enclosingElement = class_;
       resultField.getter = field.getter;
       resultField.setter = executable;
       resultField.type = executable.parameters[0].type;
-      result.variable2 = resultField;
+      result.variable = resultField;
 
       return result;
     }
@@ -999,6 +1027,10 @@ class InheritanceManager3 {
     var first = validOverrides[0];
 
     if (validOverrides.length == 1) {
+      return first;
+    }
+
+    if (!typeSystem.isNonNullableByDefault) {
       return first;
     }
 
@@ -1055,7 +1087,7 @@ class InheritanceManager3 {
         field.setter = result;
         field.type = result.parameters[0].type;
       }
-      result.variable2 = field;
+      result.variable = field;
 
       return result;
     }
@@ -1191,7 +1223,7 @@ class Name {
 
   Name get forGetter {
     if (name.endsWith('=')) {
-      var getterName = name.substring(0, name.length - 1);
+      final getterName = name.substring(0, name.length - 1);
       return Name(libraryUri, getterName);
     } else {
       return this;

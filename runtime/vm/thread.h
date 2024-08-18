@@ -39,7 +39,6 @@ class CompilerState;
 class CompilerTimings;
 class Class;
 class Code;
-class Bytecode;
 class Error;
 class ExceptionHandlers;
 class Field;
@@ -50,7 +49,6 @@ class HandleScope;
 class Heap;
 class HierarchyInfo;
 class Instance;
-class Interpreter;
 class Isolate;
 class IsolateGroup;
 class Library;
@@ -71,10 +69,6 @@ class TypeParameter;
 class TypeUsageInfo;
 class Zone;
 
-namespace bytecode {
-class BytecodeLoader;
-}
-
 namespace compiler {
 namespace target {
 class Thread;
@@ -86,7 +80,6 @@ class Thread;
   V(Array)                                                                     \
   V(Class)                                                                     \
   V(Code)                                                                      \
-  V(Bytecode)                                                                  \
   V(Error)                                                                     \
   V(ExceptionHandlers)                                                         \
   V(Field)                                                                     \
@@ -111,8 +104,6 @@ class Thread;
     StubCode::FixAllocationStubTarget().ptr(), nullptr)                        \
   V(CodePtr, invoke_dart_code_stub_, StubCode::InvokeDartCode().ptr(),         \
     nullptr)                                                                   \
-  V(CodePtr, invoke_dart_code_from_bytecode_stub_,                             \
-    StubCode::InvokeDartCodeFromBytecode().ptr(), nullptr)                     \
   V(CodePtr, call_to_runtime_stub_, StubCode::CallToRuntime().ptr(), nullptr)  \
   V(CodePtr, late_initialization_error_shared_without_fpu_regs_stub_,          \
     StubCode::LateInitializationErrorSharedWithoutFPURegs().ptr(), nullptr)    \
@@ -185,8 +176,6 @@ class Thread;
   V(BoolPtr, bool_true_, Object::bool_true().ptr(), nullptr)                   \
   V(BoolPtr, bool_false_, Object::bool_false().ptr(), nullptr)                 \
   V(ArrayPtr, empty_array_, Object::empty_array().ptr(), nullptr)              \
-  V(TypeArgumentsPtr, empty_type_arguments_,                                   \
-    Object::empty_type_arguments().ptr(), nullptr)                             \
   V(TypePtr, dynamic_type_, Type::dynamic_type().ptr(), nullptr)
 
 // List of VM-global objects/addresses cached in each Thread object.
@@ -256,7 +245,6 @@ class Thread;
     NativeEntry::NoScopeNativeCallWrapperEntry(), 0)                           \
   V(uword, auto_scope_native_wrapper_entry_point_,                             \
     NativeEntry::AutoScopeNativeCallWrapperEntry(), 0)                         \
-  V(uword, interpret_call_entry_point_, RuntimeEntry::InterpretCallEntry(), 0) \
   V(StringPtr*, predefined_symbols_address_, Symbols::PredefinedAddress(),     \
     nullptr)                                                                   \
   V(uword, double_nan_address_, reinterpret_cast<uword>(&double_nan_constant), \
@@ -353,15 +341,14 @@ class Thread : public ThreadState {
  public:
   // The kind of task this thread is performing. Sampled by the profiler.
   enum TaskKind {
-    kUnknownTask = 0,
-    kMutatorTask,
-    kCompilerTask,
-    kMarkerTask,
-    kSweeperTask,
-    kCompactorTask,
-    kScavengerTask,
-    kSampleBlockTask,
-    kIncrementalCompactorTask,
+    kUnknownTask = 0x0,
+    kMutatorTask = 0x1,
+    kCompilerTask = 0x2,
+    kMarkerTask = 0x4,
+    kSweeperTask = 0x8,
+    kCompactorTask = 0x10,
+    kScavengerTask = 0x20,
+    kSampleBlockTask = 0x40,
   };
   // Converts a TaskKind to its corresponding C-String name.
   static const char* TaskKindToCString(TaskKind kind);
@@ -470,6 +457,7 @@ class Thread : public ThreadState {
     return OFFSET_OF(Thread, safepoint_state_);
   }
 
+
   // Tag state is maintained on transitions.
   enum {
     // Always true in generated state.
@@ -552,10 +540,6 @@ class Thread : public ThreadState {
 
   static intptr_t field_table_values_offset() {
     return OFFSET_OF(Thread, field_table_values_);
-  }
-
-  static intptr_t shared_field_table_values_offset() {
-    return OFFSET_OF(Thread, shared_field_table_values_);
   }
 
   bool IsDartMutatorThread() const {
@@ -677,25 +661,17 @@ class Thread : public ThreadState {
   }
 #endif
   void StoreBufferBlockProcess(StoreBuffer::ThresholdPolicy policy);
-  void StoreBufferReleaseGC();
-  void StoreBufferAcquireGC();
   static intptr_t store_buffer_block_offset() {
     return OFFSET_OF(Thread, store_buffer_block_);
   }
 
-  bool is_marking() const { return old_marking_stack_block_ != nullptr; }
+  bool is_marking() const { return marking_stack_block_ != nullptr; }
   void MarkingStackAddObject(ObjectPtr obj);
-  void OldMarkingStackAddObject(ObjectPtr obj);
-  void NewMarkingStackAddObject(ObjectPtr obj);
   void DeferredMarkingStackAddObject(ObjectPtr obj);
-  void OldMarkingStackBlockProcess();
-  void NewMarkingStackBlockProcess();
+  void MarkingStackBlockProcess();
   void DeferredMarkingStackBlockProcess();
-  static intptr_t old_marking_stack_block_offset() {
-    return OFFSET_OF(Thread, old_marking_stack_block_);
-  }
-  static intptr_t new_marking_stack_block_offset() {
-    return OFFSET_OF(Thread, new_marking_stack_block_);
+  static intptr_t marking_stack_block_offset() {
+    return OFFSET_OF(Thread, marking_stack_block_);
   }
 
   uword top_exit_frame_info() const { return top_exit_frame_info_; }
@@ -1164,16 +1140,6 @@ class Thread : public ThreadState {
     return SafepointLevel::kGCAndDeoptAndReload;
   }
 
-#if defined(DART_DYNAMIC_MODULES)
-  Interpreter* interpreter() const { return interpreter_; }
-  void set_interpreter(Interpreter* value) { interpreter_ = value; }
-
-  bytecode::BytecodeLoader* bytecode_loader() const { return bytecode_loader_; }
-  void set_bytecode_loader(bytecode::BytecodeLoader* value) {
-    bytecode_loader_ = value;
-  }
-#endif
-
  private:
   template <class T>
   T* AllocateReusableHandle();
@@ -1207,7 +1173,6 @@ class Thread : public ThreadState {
   uword end_ = 0;
   const uword* dispatch_table_array_ = nullptr;
   ObjectPtr* field_table_values_ = nullptr;
-  ObjectPtr* shared_field_table_values_ = nullptr;
 
   // Offsets up to this point can all fit in a byte on X64. All of the above
   // fields are very abundantly accessed from code. Thus, keeping them first
@@ -1243,8 +1208,7 @@ class Thread : public ThreadState {
   uword stack_overflow_flags_ = 0;
   uword volatile top_exit_frame_info_ = 0;
   StoreBufferBlock* store_buffer_block_ = nullptr;
-  MarkingStackBlock* old_marking_stack_block_ = nullptr;
-  MarkingStackBlock* new_marking_stack_block_ = nullptr;
+  MarkingStackBlock* marking_stack_block_ = nullptr;
   MarkingStackBlock* deferred_marking_stack_block_ = nullptr;
   uword volatile vm_tag_ = 0;
   // Memory locations dedicated for passing unboxed int64 and double
@@ -1319,8 +1283,8 @@ class Thread : public ThreadState {
 
   uword true_end_ = 0;
   TaskKind task_kind_;
-  TimelineStream* const dart_stream_;
-  StreamInfo* const service_extension_stream_;
+  TimelineStream* dart_stream_;
+  StreamInfo* service_extension_stream_;
   mutable Monitor thread_lock_;
   ApiLocalScope* api_reusable_scope_;
   int32_t no_callback_scope_depth_;
@@ -1351,9 +1315,6 @@ class Thread : public ThreadState {
   ErrorPtr sticky_error_;
 
   ObjectPtr* field_table_values() const { return field_table_values_; }
-  ObjectPtr* shared_field_table_values() const {
-    return shared_field_table_values_;
-  }
 
 // Reusable handles support.
 #define REUSABLE_HANDLE_FIELDS(object) object* object##_handle_;
@@ -1427,27 +1388,18 @@ class Thread : public ThreadState {
   HeapProfileSampler heap_sampler_;
 #endif
 
-#if defined(DART_DYNAMIC_MODULES)
-  Interpreter* interpreter_ = nullptr;
-  bytecode::BytecodeLoader* bytecode_loader_ = nullptr;
-#endif
-
   explicit Thread(bool is_vm_isolate);
 
   void StoreBufferRelease(
       StoreBuffer::ThresholdPolicy policy = StoreBuffer::kCheckThreshold);
   void StoreBufferAcquire();
 
-  void OldMarkingStackRelease();
-  void OldMarkingStackAcquire();
-  void NewMarkingStackRelease();
-  void NewMarkingStackAcquire();
+  void MarkingStackRelease();
+  void MarkingStackAcquire();
+  void MarkingStackFlush();
   void DeferredMarkingStackRelease();
   void DeferredMarkingStackAcquire();
-
-  void AcquireMarkingStacks();
-  void ReleaseMarkingStacks();
-  void FlushMarkingStacks();
+  void DeferredMarkingStackFlush();
 
   void set_safepoint_state(uint32_t value) { safepoint_state_ = value; }
   void EnterSafepointUsingLock();
@@ -1497,7 +1449,6 @@ class Thread : public ThreadState {
 
   friend class ApiZone;
   friend class ActiveIsolateScope;
-  friend class Interpreter;
   friend class InterruptChecker;
   friend class Isolate;
   friend class IsolateGroup;

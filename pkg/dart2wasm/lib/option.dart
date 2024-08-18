@@ -5,9 +5,8 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:front_end/src/api_unstable/vm.dart' show resolveInputUri;
 
-import 'compiler_options.dart';
+import 'package:dart2wasm/compiler_options.dart';
 
 class Option<T> {
   final String name;
@@ -22,7 +21,7 @@ class Option<T> {
 }
 
 class Flag extends Option<bool> {
-  Flag(String name, void Function(WasmCompilerOptions o, bool v) applyToOptions,
+  Flag(String name, void applyToOptions(WasmCompilerOptions o, bool v),
       {String? abbr,
       String? help,
       bool? defaultsTo = false,
@@ -39,36 +38,30 @@ class Flag extends Option<bool> {
 }
 
 class ValueOption<T> extends Option<T> {
-  ValueOption(
-      String name,
-      void Function(WasmCompilerOptions o, T v) applyToOptions,
-      T Function(dynamic v) converter,
-      {String? defaultsTo,
-      bool hide = false})
+  ValueOption(String name, void applyToOptions(WasmCompilerOptions o, T v),
+      T converter(dynamic v), {String? defaultsTo, bool hide = false})
       : super(name, (a) => a.addOption(name, defaultsTo: defaultsTo),
             applyToOptions, converter);
 }
 
 class IntOption extends ValueOption<int> {
-  IntOption(
-      String name, void Function(WasmCompilerOptions o, int v) applyToOptions,
+  IntOption(String name, void applyToOptions(WasmCompilerOptions o, int v),
       {String? defaultsTo})
       : super(name, applyToOptions, (v) => int.parse(v),
             defaultsTo: defaultsTo);
 }
 
 class StringOption extends ValueOption<String> {
-  StringOption(String name,
-      void Function(WasmCompilerOptions o, String v) applyToOptions,
+  StringOption(
+      String name, void applyToOptions(WasmCompilerOptions o, String v),
       {String? defaultsTo, bool hide = false})
       : super(name, applyToOptions, (v) => v, defaultsTo: defaultsTo);
 }
 
 class UriOption extends ValueOption<Uri> {
-  UriOption(
-      String name, void Function(WasmCompilerOptions o, Uri v) applyToOptions,
+  UriOption(String name, void applyToOptions(WasmCompilerOptions o, Uri v),
       {String? defaultsTo})
-      : super(name, applyToOptions, (v) => resolveInputUri(v as String),
+      : super(name, applyToOptions, (v) => Uri.file(Directory(v).absolute.path),
             defaultsTo: defaultsTo);
 }
 
@@ -76,7 +69,7 @@ class MultiValueOption<T> extends Option<List<T>> {
   MultiValueOption(
       String name,
       void Function(WasmCompilerOptions o, List<T> v) applyToOptions,
-      T Function(dynamic v) converter,
+      T converter(dynamic v),
       {Iterable<String>? defaultsTo,
       String? abbr})
       : super(
@@ -87,8 +80,7 @@ class MultiValueOption<T> extends Option<List<T>> {
 }
 
 class IntMultiOption extends MultiValueOption<int> {
-  IntMultiOption(
-      name, void Function(WasmCompilerOptions o, List<int> v) applyToOptions,
+  IntMultiOption(name, void applyToOptions(WasmCompilerOptions o, List<int> v),
       {Iterable<String>? defaultsTo})
       : super(name, applyToOptions, (v) => int.parse(v),
             defaultsTo: defaultsTo);
@@ -96,15 +88,14 @@ class IntMultiOption extends MultiValueOption<int> {
 
 class StringMultiOption extends MultiValueOption<String> {
   StringMultiOption(
-      name, void Function(WasmCompilerOptions o, List<String> v) applyToOptions,
+      name, void applyToOptions(WasmCompilerOptions o, List<String> v),
       {String? abbr, Iterable<String>? defaultsTo})
       : super(name, applyToOptions, (v) => v,
             abbr: abbr, defaultsTo: defaultsTo);
 }
 
 class UriMultiOption extends MultiValueOption<Uri> {
-  UriMultiOption(
-      name, void Function(WasmCompilerOptions o, List<Uri> v) applyToOptions,
+  UriMultiOption(name, void applyToOptions(WasmCompilerOptions o, List<Uri> v),
       {Iterable<String>? defaultsTo})
       : super(name, applyToOptions, (v) => Uri.file(Directory(v).absolute.path),
             defaultsTo: defaultsTo);

@@ -7,5 +7,4 @@ class C {
 class D<T> {}
 
 var f = new C().f<int>();
-
 main() {}

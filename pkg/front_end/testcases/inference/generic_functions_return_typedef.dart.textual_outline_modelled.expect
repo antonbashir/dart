@@ -1,5 +1,4 @@
 library test;
 
 test() {}
-
 typedef void ToValue<T>(T value);

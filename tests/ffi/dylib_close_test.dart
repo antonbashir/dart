@@ -5,6 +5,7 @@
 // SharedObjects=ffi_test_functions
 
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:expect/expect.dart';
 

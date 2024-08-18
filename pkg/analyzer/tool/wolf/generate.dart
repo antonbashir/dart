@@ -106,7 +106,7 @@ class _Instructions {
     _addInstruction('yield_', []);
     // Invocations and tearoffs
     _addInstruction('call',
-        [callDescriptor('callDescriptor'), argumentNames('argumentNames')]);
+        [(callDescriptor('callDescriptor')), (argumentNames('argumentNames'))]);
   }
 
   _NontrivialEncoding encoding(String type,
@@ -265,7 +265,7 @@ part of 'ir.dart';
     outputIRToStringMixin();
     outputParameterShapes();
     outputOpcode();
-    return _substringsToOutput.join();
+    return _substringsToOutput.join('');
   }
 }
 
@@ -339,7 +339,7 @@ class _TrivialEncoding extends _Encoding {
 }
 
 extension<T> on List<T> {
-  void forEachSeparated(void Function() separator, void Function(T) callback) {
+  forEachSeparated(void Function() separator, void Function(T) callback) {
     void Function()? nextSeparator;
     for (var item in this) {
       nextSeparator?.call();

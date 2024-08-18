@@ -4,15 +4,16 @@
 
 import "dart:async";
 import "dart:io";
+import "dart:convert";
 
-import 'package:expect/config.dart';
+import 'package:expect/expect.dart';
 import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 
 import 'use_flag_test_helper.dart';
 
 main(List<String> args) async {
-  if (!isVmAotConfiguration) {
+  if (!Platform.executable.endsWith("dart_precompiled_runtime")) {
     return; // Running in JIT: AOT binaries not available.
   }
 
@@ -35,7 +36,7 @@ main(List<String> args) async {
     final scriptDill = path.join(tempDir.path, 'test.dill');
 
     // Compile script to Kernel IR.
-    await run(genKernel, <String>[
+    await run('pkg/vm/tool/gen_kernel', <String>[
       '--aot',
       '--packages=$sdkDir/.dart_tool/package_config.json',
       '--platform=$platformDill',
@@ -56,9 +57,9 @@ main(List<String> args) async {
       final scriptDill = path.join(tempDir.path, 'test.dill');
 
       // Compile script to Kernel IR.
-      await run(genKernel, <String>[
+      await run('pkg/vm/tool/gen_kernel', <String>[
         '--aot',
-        '--packages=$sdkDir/.dart_tool/package_config.json',
+        '--packages=$sdkDir/.packages',
         '--platform=$platformDill',
         '-o',
         scriptDill,

@@ -29,37 +29,9 @@ class VMServiceHelper {
     await _serviceClient.dispose();
   }
 
-  Future<void> resumeAllIsolates() async {
-    vmService.VM vm = await serviceClient.getVM();
-    for (vmService.IsolateRef isolate in vm.isolates!) {
-      try {
-        await serviceClient.resume(isolate.id!);
-      } catch (e) {
-        // It might exit at some point so we can't expect to get a good result.
-      }
-    }
-  }
-
-  Future<void> waitUntilSomeIsolatePausedAtExit() async {
-    while (true) {
-      vmService.VM vm = await serviceClient.getVM();
-      if (vm.isolates!.isNotEmpty) {
-        for (vmService.IsolateRef isolate in vm.isolates!) {
-          String isolateId = isolate.id!;
-          if (await isPausedAtExit(isolateId) == true) {
-            return;
-          }
-        }
-      }
-      await Future.delayed(const Duration(milliseconds: 10));
-    }
-  }
-
   Future<bool> waitUntilPaused(String isolateId) async {
     int nulls = 0;
-    int tries = 0;
     while (true) {
-      tries++;
       bool? result = await isPaused(isolateId);
       if (result == null) {
         nulls++;
@@ -71,39 +43,19 @@ class VMServiceHelper {
       } else if (result) {
         return true;
       } else {
-        if (tries > 50) {
-          // Waited 5+ seconds --- check if some isolate is paused at start
-          // and resume if it is. This is for instance the case with macros.
-          await _resumeAllPausedAtStartIsolates();
-          tries = 0;
-        }
         await Future.delayed(const Duration(milliseconds: 100));
       }
     }
   }
 
-  Future<void> _resumeAllPausedAtStartIsolates() async {
-    vmService.VM vm = await serviceClient.getVM();
-    for (vmService.IsolateRef isolateRef in vm.isolates!) {
-      try {
-        String? id = isolateRef.id;
-        if (id == null) continue;
-        vmService.Isolate isolate = await _serviceClient.getIsolate(id);
-        if (isolate.pauseEvent?.kind == "PauseStart") {
-          print("Found isolate paused at start - resuming it.");
-          await serviceClient.resume(id);
-        }
-      } catch (e) {
-        // It might exit at some point so we can't expect to get a good result.
-      }
-    }
-  }
-
   Future<bool?> isPaused(String isolateId) async {
-    vmService.Isolate isolate = await _serviceClient.getIsolate(isolateId);
-    String? kind = isolate.pauseEvent!.kind;
-    if (kind != "Resume" && kind != "None") return true;
-    return false;
+    dynamic tmp = await _serviceClient.getIsolate(isolateId);
+    if (tmp is vmService.Isolate) {
+      vmService.Isolate isolate = tmp;
+      if (isolate.pauseEvent!.kind != "Resume") return true;
+      return false;
+    }
+    return null;
   }
 
   Future<bool> isPausedAtStart(String isolateId) async {
@@ -116,8 +68,12 @@ class VMServiceHelper {
   }
 
   Future<bool> isPausedAtExit(String isolateId) async {
-    vmService.Isolate isolate = await _serviceClient.getIsolate(isolateId);
-    return isolate.pauseEvent!.kind == "PauseExit";
+    dynamic tmp = await _serviceClient.getIsolate(isolateId);
+    if (tmp is vmService.Isolate) {
+      vmService.Isolate isolate = tmp;
+      return isolate.pauseEvent!.kind == "PauseExit";
+    }
+    return false;
   }
 
   Future<vmService.AllocationProfile> forceGC(String isolateId) async {
@@ -197,19 +153,15 @@ abstract class LaunchingVMServiceHelper extends VMServiceHelper {
 
   bool _started = false;
 
-  Future<void> start(
-    List<String> scriptAndArgs, {
-    void Function(String line)? stdoutReceiver,
-    void Function(String line)? stderrReceiver,
-    bool pauseIsolateOnStart = true,
-  }) async {
+  Future<void> start(List<String> scriptAndArgs,
+      {void Function(String line)? stdoutReceiver,
+      void Function(String line)? stderrReceiver}) async {
     if (_started) throw "Already started";
     _started = true;
-    _process = await Process.start(Platform.resolvedExecutable, [
-      if (pauseIsolateOnStart) "--pause_isolates_on_start",
-      "--enable-vm-service=0",
-      ...scriptAndArgs
-    ]);
+    _process = await Process.start(
+        Platform.resolvedExecutable,
+        ["--pause_isolates_on_start", "--enable-vm-service=0"]
+          ..addAll(scriptAndArgs));
     _process.stdout
         .transform(utf8.decoder)
         .transform(new LineSplitter())

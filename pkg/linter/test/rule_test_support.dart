@@ -6,7 +6,6 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
@@ -14,12 +13,9 @@ import 'package:analyzer/src/error/analyzer_error_code.dart';
 import 'package:analyzer/src/lint/pub.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/lint/util.dart';
-import 'package:analyzer/src/test_utilities/find_element.dart';
-import 'package:analyzer/src/test_utilities/find_node.dart';
+import 'package:analyzer/src/test_utilities/mock_packages.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
-import 'package:analyzer_utilities/test/experiments/experiments.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:collection/collection.dart';
 import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/rules.dart';
@@ -62,7 +58,7 @@ class AnalysisOptionsFileConfig {
       }
 
       if (propagateLinterExceptions) {
-        buffer.writeln('  optional-checks:');
+        buffer.writeln('  strong-mode:');
         buffer.writeln(
           '    propagate-linter-exceptions: $propagateLinterExceptions',
         );
@@ -178,9 +174,10 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
 
   bool get dumpAstOnFailures => true;
 
-  List<String> get experiments => experimentsForTests;
+  List<String> get experiments => ['macros'];
 
-  List<String> get lintRules => _lintRules;
+  /// The path that is not in [workspaceRootPath], contains external packages.
+  String get packagesRootPath => '/packages';
 
   String get testFileName => 'test.dart';
 
@@ -318,30 +315,6 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
     }
   }
 
-  /// Assert that the number of diagnostics that have been gathered matches the
-  /// number of [expectedDiagnostics] and that they have the expected error
-  /// descriptions and locations. The order in which the diagnostics were
-  /// gathered is ignored.
-  Future<void> assertDiagnosticsInFile(
-      String path, List<ExpectedDiagnostic> expectedDiagnostics) async {
-    await _resolveFile(path);
-    await assertDiagnosticsIn(errors, expectedDiagnostics);
-  }
-
-  /// Asserts that the diagnostics for each `path` match those in
-  /// `expectedDiagnostics`.
-  ///
-  /// The unit at each path needs to have already been written to the file
-  /// system before calling this method.
-  Future<void> assertDiagnosticsInUnits(
-      List<(String path, List<ExpectedDiagnostic> expectedDiagnostics)>
-          unitsAndDiagnostics) async {
-    for (var (path, expectedDiagnostics) in unitsAndDiagnostics) {
-      result = await resolveFile(convertPath(path));
-      await assertDiagnosticsIn(result.errors, expectedDiagnostics);
-    }
-  }
-
   /// Assert that there are no diagnostics in the given [code].
   Future<void> assertNoDiagnostics(String code) async =>
       assertDiagnostics(code, const []);
@@ -349,10 +322,6 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
   /// Assert that there are no diagnostics in [errors].
   Future<void> assertNoDiagnosticsIn(List<AnalysisError> errors) =>
       assertDiagnosticsIn(errors, const []);
-
-  /// Assert that there are no diagnostics in the given file.
-  Future<void> assertNoDiagnosticsInFile(String path) async =>
-      assertDiagnosticsInFile(path, const []);
 
   /// Assert that no diagnostics are reported when resolving [content].
   Future<void> assertNoPubspecDiagnostics(String content) async {
@@ -392,11 +361,10 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
     writeTestPackageConfig(
       PackageConfigFileBuilder(),
     );
-    writeTestPackagePubspecYamlFile(PubspecYamlFileConfig(name: 'test'));
   }
 
   void writePackageConfig(String path, PackageConfigFileBuilder config) {
-    newFile(
+    newFile2(
       path,
       config.toContent(
         toUriStr: toUriStr,
@@ -421,30 +389,42 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
     );
 
     if (addFixnumPackageDep) {
-      var fixnumPath = addFixnum().parent.path;
+      var fixnumPath = '/packages/fixnum';
+      addFixnumPackageFiles(
+        getFolder(fixnumPath),
+      );
       configCopy.add(name: 'fixnum', rootPath: fixnumPath);
     }
 
     if (addFlutterPackageDep) {
-      var uiPath = addUI().parent.path;
-      configCopy.add(name: 'ui', rootPath: uiPath);
-
-      var flutterPath = addFlutter().parent.path;
+      var flutterPath = '/packages/flutter';
+      addFlutterPackageFiles(
+        getFolder(flutterPath),
+      );
       configCopy.add(name: 'flutter', rootPath: flutterPath);
     }
 
     if (addJsPackageDep) {
-      var jsPath = addJs().parent.path;
+      var jsPath = '/packages/js';
+      MockPackages.addJsPackageFiles(
+        getFolder(jsPath),
+      );
       configCopy.add(name: 'js', rootPath: jsPath);
     }
 
     if (addKernelPackageDep) {
-      var kernelPath = addKernel().parent.path;
+      var kernelPath = '/packages/kernel';
+      MockPackages.addKernelPackageFiles(
+        getFolder(kernelPath),
+      );
       configCopy.add(name: 'kernel', rootPath: kernelPath);
     }
 
     if (addMetaPackageDep) {
-      var metaPath = addMeta().parent.path;
+      var metaPath = '/packages/meta';
+      MockPackages.addMetaPackageFiles(
+        getFolder(metaPath),
+      );
       configCopy.add(name: 'meta', rootPath: metaPath);
     }
 
@@ -477,16 +457,177 @@ class PubPackageResolutionTest extends _ContextResolutionTest {
     var pubspecAst = Pubspec.parse(content,
         sourceUrl: sourceUri, resourceProvider: resourceProvider);
     var listener = RecordingErrorListener();
-    var file = resourceProvider.getFile(path);
     var reporter = ErrorReporter(
-      listener,
-      FileSource(file, sourceUri),
-    );
+        listener, resourceProvider.getFile(path).createSource(sourceUri),
+        isNonNullableByDefault: false);
     for (var entry in pubspecRules.entries) {
       entry.key.reporter = reporter;
       pubspecAst.accept(entry.value);
     }
     return [...listener.errors];
+  }
+
+  /// Creates a fake 'fixnum' package that can be used by tests.
+  static void addFixnumPackageFiles(Folder rootFolder) {
+    var libFolder = rootFolder.getChildAssumingFolder('lib');
+    libFolder.getChildAssumingFile('fixnum.dart').writeAsStringSync(r'''
+library fixnum;
+
+class Int32 {}
+
+class Int64 {}
+''');
+  }
+
+  /// Create a fake 'flutter' package that can be used by tests.
+  static void addFlutterPackageFiles(Folder rootFolder) {
+    var libFolder = rootFolder.getChildAssumingFolder('lib');
+
+    libFolder.getChildAssumingFile('foundation.dart').writeAsStringSync(r'''
+export 'src/foundation/constants.dart';
+''');
+
+    libFolder
+        .getChildAssumingFolder('src')
+        .getChildAssumingFolder('foundation')
+        .getChildAssumingFile('constants.dart')
+        .writeAsStringSync(r'''
+mixin Diagnosticable {
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {}
+}
+
+class DiagnosticableTree with Diagnosticable {
+  List<DiagnosticsNode> debugDescribeChildren() => const [];
+}
+
+class DiagnosticPropertiesBuilder {}
+
+class DiagnosticsNode {}
+
+class Key {
+  Key(String value);
+}
+
+const bool kDebugMode = true;
+''');
+
+    libFolder.getChildAssumingFile('widgets.dart').writeAsStringSync(r'''
+export 'src/widgets/basic.dart';
+export 'src/widgets/container.dart';
+export 'src/widgets/framework.dart';
+''');
+
+    libFolder
+        .getChildAssumingFolder('src')
+        .getChildAssumingFolder('widgets')
+        .getChildAssumingFile('basic.dart')
+        .writeAsStringSync(r'''
+import 'package:flutter/foundation.dart';
+import 'framework.dart';
+
+class Column implements Widget {
+  Column({
+    Key? key,
+    List<Widget> children = const <Widget>[],
+  });
+}
+
+class RawMaterialButton implements Widget {
+  RawMaterialButton({
+    Key? key,
+    Widget? child,
+    void Function()? onPressed,
+  });
+}
+
+class SizedBox implements Widget {
+  SizedBox({
+    Key? key,
+    double height = 0,
+    double width = 0,
+    Widget? child,
+  });
+}
+
+class Text implements Widget {
+  Text(String data);
+}
+''');
+
+    libFolder
+        .getChildAssumingFolder('src')
+        .getChildAssumingFolder('widgets')
+        .getChildAssumingFile('container.dart')
+        .writeAsStringSync(r'''
+import 'framework.dart';
+
+// This is found in dart:ui.
+class Color {
+  Color(int value);
+}
+
+class Container extends StatelessWidget {
+  const Container({
+    super.key,
+    Color? color,
+    Decoration? decoration,
+    double? width,
+    double? height,
+    Widget? child,
+  });
+}
+
+class Decoration with Diagnosticable {}
+
+class BoxDecoration implements Decoration {}
+
+class Row implements Widget {}
+''');
+
+    libFolder
+        .getChildAssumingFolder('src')
+        .getChildAssumingFolder('widgets')
+        .getChildAssumingFile('framework.dart')
+        .writeAsStringSync(r'''
+import 'package:flutter/foundation.dart';
+
+abstract class BuildContext {
+  Widget get widget;
+  bool get mounted;
+}
+
+class Navigator {
+  static NavigatorState of(
+      BuildContext context, {bool rootNavigator = false}) => NavigatorState();
+}
+
+class NavigatorState {}
+
+abstract class StatefulWidget extends Widget {
+  const StatefulWidget({super.key});
+
+  State<StatefulWidget> createState();
+}
+
+abstract class State<T extends StatefulWidget> {
+  BuildContext get context;
+
+  bool get mounted;
+}
+
+abstract class Widget {
+  final Key? key;
+
+  const Widget({thi.key});
+}
+
+abstract class StatelessWidget extends Widget {
+  const StatelessWidget({super.key});
+
+  @protected
+  Widget build(BuildContext context);
+}
+''');
   }
 }
 
@@ -534,17 +675,12 @@ class PubspecYamlFileDependency {
   });
 }
 
-abstract class _ContextResolutionTest
-    with MockPackagesMixin, ResourceProviderMixin {
+abstract class _ContextResolutionTest with ResourceProviderMixin {
   static bool _lintRulesAreRegistered = false;
 
   final ByteStore _byteStore = MemoryByteStore();
 
   AnalysisContextCollectionImpl? _analysisContextCollection;
-
-  late FindElement findElement;
-
-  late FindNode findNode;
 
   late ResolvedUnitResult result;
 
@@ -559,20 +695,16 @@ abstract class _ContextResolutionTest
   List<AnalyzerErrorCode> get ignoredErrorCodes =>
       [WarningCode.UNUSED_LOCAL_VARIABLE];
 
-  /// The path to the root of the external packages.
-  @override
-  String get packagesRootPath => '/packages';
-
   Folder get sdkRoot => newFolder('/sdk');
 
   String get testFilePath => '/test/lib/test.dart';
 
   void addTestFile(String content) {
-    newFile(testFilePath, content);
+    newFile2(testFilePath, content);
   }
 
   @override
-  File newFile(String path, String content) {
+  File newFile2(String path, String content) {
     if (_analysisContextCollection != null && !path.endsWith('.dart')) {
       throw StateError('Only dart files can be changed after analysis.');
     }
@@ -586,11 +718,7 @@ abstract class _ContextResolutionTest
   Future<ResolvedUnitResult> resolveFile(String path) async {
     var analysisContext = _contextFor(path);
     var session = analysisContext.currentSession;
-    var result = await session.getResolvedUnit(path) as ResolvedUnitResult;
-
-    findElement = FindElement(result.unit);
-    findNode = FindNode(result.content, result.unit);
-    return result;
+    return await session.getResolvedUnit(path) as ResolvedUnitResult;
   }
 
   Future<void> resolveTestFile() => _resolveFile(testFilePath);
@@ -606,12 +734,6 @@ abstract class _ContextResolutionTest
       resourceProvider: resourceProvider,
       root: sdkRoot,
     );
-  }
-
-  @mustCallSuper
-  Future<void> tearDown() async {
-    await _analysisContextCollection?.dispose();
-    _analysisContextCollection = null;
   }
 
   DriverBasedAnalysisContext _contextFor(String path) {

@@ -3,303 +3,20 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/refactoring/legacy/extract_method.dart';
-import 'package:analyzer/source/source.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
-import 'package:analyzer_plugin/src/utilities/string_utilities.dart';
-import 'package:linter/src/rules.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import '../../../abstract_single_unit.dart';
-import '../../../analysis_server_base.dart';
 import 'abstract_refactoring.dart';
 
 void main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(AddLibraryImportsTest);
     defineReflectiveTests(ExtractMethodTest_Enum);
     defineReflectiveTests(ExtractMethodTest_Extension);
     defineReflectiveTests(ExtractMethodTest_ExtensionType);
     defineReflectiveTests(ExtractMethodTest_Mixin);
     defineReflectiveTests(ExtractMethodTest);
   });
-}
-
-@reflectiveTest
-class AddLibraryImportsTest extends AbstractSingleUnitTest {
-  Future<void> test_dart_doubleQuotes() async {
-    registerLintRules();
-    var config = AnalysisOptionsFileConfig(
-      lints: ['prefer_double_quotes'],
-    );
-    newAnalysisOptionsYamlFile(
-      testPackageRootPath,
-      config.toContent(),
-    );
-
-    await resolveTestCode('''
-/// Comment.
-
-class A {}
-''');
-    var newLibrary1 = _getDartSource('dart:math');
-    var newLibrary2 = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-/// Comment.
-
-import "dart:async";
-import "dart:math";
-
-class A {}
-''');
-  }
-
-  Future<void> test_dart_hasImports_between() async {
-    await resolveTestCode('''
-import 'dart:async';
-import 'dart:math';
-''');
-    var newLibrary = _getDartSource('dart:collection');
-    await _assertAddLibraryImport([newLibrary], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasImports_first() async {
-    await resolveTestCode('''
-import 'dart:collection';
-import 'dart:math';
-''');
-    var newLibrary = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasImports_last() async {
-    await resolveTestCode('''
-import 'dart:async';
-import 'dart:collection';
-''');
-    var newLibrary = _getDartSource('dart:math');
-    await _assertAddLibraryImport([newLibrary], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasImports_multiple() async {
-    await resolveTestCode('''
-import 'dart:collection';
-import 'dart:math';
-''');
-    var newLibrary1 = _getDartSource('dart:async');
-    var newLibrary2 = _getDartSource('dart:html');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:html';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasImports_multiple_first() async {
-    await resolveTestCode('''
-import 'dart:html';
-import 'dart:math';
-''');
-    var newLibrary1 = _getDartSource('dart:async');
-    var newLibrary2 = _getDartSource('dart:collection');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:html';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasImports_multiple_last() async {
-    await resolveTestCode('''
-import 'dart:async';
-import 'dart:collection';
-''');
-    var newLibrary1 = _getDartSource('dart:html');
-    var newLibrary2 = _getDartSource('dart:math');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-import 'dart:async';
-import 'dart:collection';
-import 'dart:html';
-import 'dart:math';
-''');
-  }
-
-  Future<void> test_dart_hasLibraryDirective() async {
-    await resolveTestCode('''
-library test;
-
-class A {}
-''');
-    var newLibrary1 = _getDartSource('dart:math');
-    var newLibrary2 = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-library test;
-
-import 'dart:async';
-import 'dart:math';
-
-class A {}
-''');
-  }
-
-  Future<void> test_dart_noDirectives_hasComment() async {
-    await resolveTestCode('''
-/// Comment.
-
-class A {}
-''');
-    var newLibrary1 = _getDartSource('dart:math');
-    var newLibrary2 = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-/// Comment.
-
-import 'dart:async';
-import 'dart:math';
-
-class A {}
-''');
-  }
-
-  Future<void> test_dart_noDirectives_hasShebang() async {
-    await resolveTestCode('''
-#!/bin/dart
-
-class A {}
-''');
-    var newLibrary1 = _getDartSource('dart:math');
-    var newLibrary2 = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-#!/bin/dart
-
-import 'dart:async';
-import 'dart:math';
-
-class A {}
-''');
-  }
-
-  Future<void> test_dart_noDirectives_noShebang() async {
-    await resolveTestCode('''
-class A {}
-''');
-    var newLibrary1 = _getDartSource('dart:math');
-    var newLibrary2 = _getDartSource('dart:async');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-import 'dart:async';
-import 'dart:math';
-
-class A {}
-''');
-  }
-
-  Future<void> test_package_hasDart_hasPackages_insertAfter() async {
-    newFile('$workspaceRootPath/aaa/lib/aaa.dart', '');
-    newFile('$workspaceRootPath/bbb/lib/bbb.dart', '');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa')
-        ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'),
-    );
-
-    await resolveTestCode('''
-import 'dart:async';
-
-import 'package:aaa/aaa.dart';
-''');
-    var newLibrary = _getSource('/lib/bbb.dart', 'package:bbb/bbb.dart');
-    await _assertAddLibraryImport([newLibrary], '''
-import 'dart:async';
-
-import 'package:aaa/aaa.dart';
-import 'package:bbb/bbb.dart';
-''');
-  }
-
-  Future<void> test_package_hasDart_hasPackages_insertBefore() async {
-    newFile('$workspaceRootPath/aaa/lib/aaa.dart', '');
-    newFile('$workspaceRootPath/bbb/lib/bbb.dart', '');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa')
-        ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'),
-    );
-
-    await resolveTestCode('''
-import 'dart:async';
-
-import 'package:bbb/bbb.dart';
-''');
-    var newLibrary = _getSource('/lib/aaa.dart', 'package:aaa/aaa.dart');
-    await _assertAddLibraryImport([newLibrary], '''
-import 'dart:async';
-
-import 'package:aaa/aaa.dart';
-import 'package:bbb/bbb.dart';
-''');
-  }
-
-  Future<void> test_package_hasImports_between() async {
-    newFile('$workspaceRootPath/aaa/lib/aaa.dart', '');
-    newFile('$workspaceRootPath/bbb/lib/bbb.dart', '');
-    newFile('$workspaceRootPath/ccc/lib/ccc.dart', '');
-    newFile('$workspaceRootPath/ddd/lib/ddd.dart', '');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa')
-        ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb')
-        ..add(name: 'ccc', rootPath: '$workspaceRootPath/ccc')
-        ..add(name: 'ddd', rootPath: '$workspaceRootPath/ddd'),
-    );
-
-    await resolveTestCode('''
-import 'package:aaa/aaa.dart';
-import 'package:ddd/ddd.dart';
-''');
-    var newLibrary1 = _getSource('/lib/bbb.dart', 'package:bbb/bbb.dart');
-    var newLibrary2 = _getSource('/lib/ccc.dart', 'package:ccc/ccc.dart');
-    await _assertAddLibraryImport([newLibrary1, newLibrary2], '''
-import 'package:aaa/aaa.dart';
-import 'package:bbb/bbb.dart';
-import 'package:ccc/ccc.dart';
-import 'package:ddd/ddd.dart';
-''');
-  }
-
-  Future<void> _assertAddLibraryImport(
-      List<Source> newLibraries, String expectedCode) async {
-    var change = SourceChange('');
-    await addLibraryImports(testAnalysisResult.session, change,
-        testLibraryElement, newLibraries.toSet());
-    var testEdit = change.getFileEdit(testFile.path);
-    var resultCode = SourceEdit.applySequence(testCode, testEdit!.edits);
-    expect(resultCode, expectedCode);
-  }
-
-  Source _getDartSource(String uri) {
-    var path = removeStart(uri, 'dart:');
-    return _SourceMock('/sdk/lib/$path.dart', Uri.parse(uri));
-  }
-
-  Source _getSource(String path, String uri) {
-    return _SourceMock(path, Uri.parse(uri));
-  }
 }
 
 @reflectiveTest
@@ -852,7 +569,7 @@ void f(int p) {
 }
 ''');
     _createRefactoringForStartEndComments();
-    return _assertConditionsError(ExtractMethodRefactoringImpl.errorExits);
+    return _assertConditionsError(ExtractMethodRefactoringImpl.ERROR_EXITS);
   }
 
   Future<void> test_bad_statements_return_andAssignsVariable() async {
@@ -1332,16 +1049,15 @@ class C {
 process(f(x)) {}
 void f() {
   int k = 2;
-  int a = 3;
-  process((x) => x * k * a);
+  process((x) => x * k);
 }
 ''');
-    _createRefactoringForString('(x) => x * k * a');
+    _createRefactoringForString('(x) => x * k');
     // check
     var status = await refactoring.checkInitialConditions();
     assertRefactoringStatus(status, RefactoringProblemSeverity.FATAL,
-        expectedMessage: 'Cannot extract the closure as a method,'
-            'it references the external variables \'k\' and \'a\'.');
+        expectedMessage:
+            'Cannot extract closure as method, it references 1 external variable.');
   }
 
   Future<void> test_closure_bad_referencesParameter() async {
@@ -1355,8 +1071,8 @@ void f(int k) {
     // check
     var status = await refactoring.checkInitialConditions();
     assertRefactoringStatus(status, RefactoringProblemSeverity.FATAL,
-        expectedMessage: 'Cannot extract the closure as a method,'
-            'it references the external variable \'k\'.');
+        expectedMessage:
+            'Cannot extract closure as method, it references 1 external variable.');
   }
 
   Future<void> test_fromTopLevelVariableInitializerClosure() async {
@@ -1530,7 +1246,7 @@ void f() {
     expect(refactoring.lengths, unorderedEquals([5, 6]));
   }
 
-  Future<void> test_parameterType_nullableTypeWithTypeArguments() async {
+  Future<void> test_parameterType_nullableTypeWithArguments() async {
     await indexTestUnit('''
 abstract class C {
   List<int>? get x;
@@ -1539,7 +1255,9 @@ class D {
   f(C c) {
     var x = c.x;
 // start
-    print(x);
+    if (x != null) {
+      print(x);
+    }
 // end
   }
 }
@@ -1548,54 +1266,6 @@ class D {
     // do check
     await refactoring.checkInitialConditions();
     expect(refactoring.parameters[0].type, 'List<int>?');
-  }
-
-  Future<void> test_parameterType_prefixed() async {
-    await indexTestUnit('''
-import 'dart:core' as core;
-class C {
-  f(core.String p) {
-// start
-    p;
-// end
-  }
-}
-''');
-    _createRefactoringForStartEndComments();
-    await refactoring.checkInitialConditions();
-    expect(refactoring.parameters[0].type, 'core.String');
-  }
-
-  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/55254')
-  Future<void> test_parameterType_typeParameterOfEnclosingClass() async {
-    await indexTestUnit('''
-class C<T> {
-  f(T p) {
-// start
-    p;
-// end
-  }
-}
-''');
-    _createRefactoringForStartEndComments();
-    await refactoring.checkInitialConditions();
-    expect(refactoring.parameters[0].type, 'T');
-  }
-
-  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/55254')
-  Future<void> test_parameterType_typeParameterOfEnclosingFunction() async {
-    await indexTestUnit('''
-class C {
-  f<T>(T p) {
-// start
-    p;
-// end
-  }
-}
-''');
-    _createRefactoringForStartEndComments();
-    await refactoring.checkInitialConditions();
-    expect(refactoring.parameters[0].type, 'T');
   }
 
   Future<void> test_prefixPartOfQualified() async {
@@ -2008,29 +1678,6 @@ class A {
   }
 }
 ''');
-  }
-
-  Future<void> test_singleExpression_occurrences_referencedInMacro() async {
-    addMacros([declareInTypeMacro()]);
-
-    await indexTestUnit('''
-import 'macros.dart';
-    
-void f() {
-  print('!');
-}
-
-@DeclareInType("  void m() { print('!'); }")
-class A { }
-''');
-
-    _createRefactoringForString("print('!');");
-    await assertRefactoringConditionsOK();
-    var refactoringChange = await refactoring.createChange();
-
-    // Verify that `test.macro.dart` is unmodified.
-    expect(refactoringChange.edits.map((e) => e.file),
-        unorderedEquals([testFile.path]));
   }
 
   Future<void> test_singleExpression_parameter_functionTypeAlias() async {
@@ -3958,7 +3605,7 @@ class _ExtractMethodTest extends RefactoringTest {
   }
 
   void _createRefactoringForStartEndComments() {
-    var eol = testCode.contains('\r\n') ? '\r\n' : '\r';
+    final eol = testCode.contains('\r\n') ? '\r\n' : '\r';
     var offset = findEnd('// start') + eol.length;
     var end = findOffset('// end');
     _createRefactoring(offset, end - offset);
@@ -4000,17 +3647,4 @@ class _ExtractMethodTest extends RefactoringTest {
       return RefactoringMethodParameter(p.kind, p.type, p.name, id: p.id);
     }).toList();
   }
-}
-
-class _SourceMock implements Source {
-  @override
-  final String fullName;
-
-  @override
-  final Uri uri;
-
-  _SourceMock(this.fullName, this.uri);
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

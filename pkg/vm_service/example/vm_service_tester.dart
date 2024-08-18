@@ -2,8 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/// An example of using the the libraries provided by `package:vm_service`.
-library;
+library service_tester;
 
 import 'dart:async';
 import 'dart:collection';
@@ -15,8 +14,8 @@ import 'package:test/test.dart';
 import 'package:vm_service/vm_service.dart';
 import 'package:vm_service/vm_service_io.dart';
 
-const String host = 'localhost';
-const int port = 7575;
+final String host = 'localhost';
+final int port = 7575;
 
 late VmService serviceClient;
 
@@ -28,40 +27,35 @@ void main() {
   });
 
   test('integration', () async {
-    final sdkPath = path.dirname(path.dirname(Platform.resolvedExecutable));
-    print('Using sdk at $sdkPath.');
+    String sdk = path.dirname(path.dirname(Platform.resolvedExecutable));
+
+    print('Using sdk at $sdk.');
 
     // pause_isolates_on_start, pause_isolates_on_exit
-    final sampleProcess = process = await Process.start(
-      Platform.resolvedExecutable,
-      [
-        '--pause-isolates-on-start',
-        '--enable-vm-service=$port',
-        '--disable-service-auth-codes',
-        'example/sample_main.dart',
-      ],
-    );
+    process = await Process.start('$sdk/bin/dart', [
+      '--pause_isolates_on_start',
+      '--enable-vm-service=$port',
+      '--disable-service-auth-codes',
+      'example/sample_main.dart'
+    ]);
 
-    print('Dart process started.');
+    print('dart process started');
 
-    unawaited(sampleProcess.exitCode.then((code) => print('vm exited: $code')));
-    sampleProcess.stdout.transform(utf8.decoder).listen(print);
-    sampleProcess.stderr.transform(utf8.decoder).listen(print);
+    unawaited(process!.exitCode.then((code) => print('vm exited: $code')));
+    process!.stdout.transform(utf8.decoder).listen(print);
+    process!.stderr.transform(utf8.decoder).listen(print);
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(Duration(milliseconds: 500));
 
-    final wsUri = Uri(scheme: 'ws', host: host, port: port, path: 'ws');
-    serviceClient = await vmServiceConnectUri(
-      wsUri.toString(),
-      log: StdoutLog(),
-    );
+    final wsUri = 'ws://$host$port/ws';
+    serviceClient = await vmServiceConnectUri(wsUri, log: StdoutLog());
 
-    print('VM service web socket connected.');
+    print('socket connected');
 
     serviceClient.onSend.listen((str) => print('--> $str'));
 
-    // The next listener will bail out if you toggle this to false, which is
-    // needed for some things like the custom service registration tests.
+    // The next listener will bail out if you toggle this to false, which we need
+    // to do for some things like the custom service registration tests.
     var checkResponseJsonCompatibility = true;
     serviceClient.onReceive.listen((str) {
       print('<-- $str');
@@ -71,41 +65,25 @@ void main() {
       // For each received event, check that we can deserialize it and
       // reserialize it back to the same exact representation (minus private
       // fields).
-      final json = jsonDecode(str);
+      var json = jsonDecode(str);
       var originalJson = json['result'] as Map<String, dynamic>?;
       if (originalJson == null && json['method'] == 'streamNotify') {
         originalJson = json['params']['event'];
       }
       expect(originalJson, isNotNull, reason: 'Unrecognized event type! $json');
 
-      final instance =
-          createServiceObject(originalJson!, const ['Event', 'Success']);
+      var instance =
+          createServiceObject(originalJson, const ['Event', 'Success']);
       expect(instance, isNotNull,
-          reason: 'Failed to deserialize object $originalJson!');
+          reason: 'failed to deserialize object $originalJson!');
 
-      final reserializedJson = (instance as dynamic).toJson();
+      var reserializedJson = (instance as dynamic).toJson();
 
-      forEachNestedMap(originalJson, (obj) {
-        // Remove private fields that we don't reproduce.
+      forEachNestedMap(originalJson!, (obj) {
+        // Private fields that we don't reproduce
         obj.removeWhere((k, v) => k.startsWith('_'));
-
-        // Remove extra fields that aren't specified and we don't reproduce.
+        // Extra fields that aren't specified and we don't reproduce
         obj.remove('isExport');
-        obj.remove('isolate_group');
-        obj.remove('parameterizedClass');
-
-        // Convert `Null` instances in the original JSON to
-        // just `null` as `createServiceObject` will use `null`
-        // to represent the reference.
-        obj.updateAll((key, value) {
-          if (value is Map &&
-              value['type'] == '@Instance' &&
-              value['kind'] == 'Null') {
-            return null;
-          } else {
-            return value;
-          }
-        });
       });
 
       forEachNestedMap(reserializedJson, (obj) {
@@ -126,14 +104,14 @@ void main() {
     unawaited(serviceClient.streamListen(EventStreams.kDebug));
     unawaited(serviceClient.streamListen(EventStreams.kStdout));
 
-    final vm = await serviceClient.getVM();
+    VM vm = await serviceClient.getVM();
     print('hostCPU=${vm.hostCPU}');
     print(await serviceClient.getVersion());
-    final isolates = vm.isolates!;
+    List<IsolateRef> isolates = vm.isolates!;
     print(isolates);
 
-    // Disable the json reserialization checks since custom services are
-    // not supported.
+    // Disable the json reserialization checks since custom services are not
+    // supported.
     checkResponseJsonCompatibility = false;
     await testServiceRegistration();
     checkResponseJsonCompatibility = true;
@@ -141,23 +119,23 @@ void main() {
     await testScriptParse(vm.isolates!.first);
     await testSourceReport(vm.isolates!.first);
 
-    final isolateRef = isolates.first;
+    IsolateRef isolateRef = isolates.first;
     print(await serviceClient.resume(isolateRef.id!));
 
-    print('Waiting for service client to shut down...');
+    print('waiting for client to shut down...');
     await serviceClient.dispose();
 
     await serviceClient.onDone;
-    print('Service client shut down.');
+    print('service client shut down');
   });
 }
 
-/// Deeply traverses the [input] map and calls [cb] with
-/// each nested map and the parent map.
-void forEachNestedMap(Map input, void Function(Map) cb) {
-  final queue = Queue.from([input]);
+// Deeply traverses a map and calls [cb] with each nested map and the
+// parent map.
+void forEachNestedMap(Map input, Function(Map) cb) {
+  var queue = Queue.from([input]);
   while (queue.isNotEmpty) {
-    final next = queue.removeFirst();
+    var next = queue.removeFirst();
     if (next is Map) {
       cb(next);
       queue.addAll(next.values);
@@ -167,7 +145,7 @@ void forEachNestedMap(Map input, void Function(Map) cb) {
   }
 }
 
-Future<void> testServiceRegistration() async {
+Future testServiceRegistration() async {
   const String serviceName = 'serviceName';
   const String serviceAlias = 'serviceAlias';
   const String movedValue = 'movedValue';
@@ -179,18 +157,15 @@ Future<void> testServiceRegistration() async {
     };
   });
   await serviceClient.registerService(serviceName, serviceAlias);
-  final wsUri = Uri(scheme: 'ws', host: host, port: port, path: 'ws');
-  final otherClient = await vmServiceConnectUri(
-    wsUri.toString(),
-    log: StdoutLog(),
-  );
-  final completer = Completer();
+  final wsUri = 'ws://$host$port/ws';
+  VmService otherClient = await vmServiceConnectUri(wsUri, log: StdoutLog());
+  Completer completer = Completer();
   otherClient.onEvent('Service').listen((e) async {
     if (e.service == serviceName && e.kind == EventKind.kServiceRegistered) {
       assert(e.alias == serviceAlias);
-      final response = await serviceClient.callMethod(
+      Response? response = await serviceClient.callMethod(
         e.method!,
-        args: {'input': movedValue},
+        args: <String, dynamic>{'input': movedValue},
       );
       assert(response.json!['output'] == movedValue);
       completer.complete();
@@ -201,14 +176,14 @@ Future<void> testServiceRegistration() async {
   await otherClient.dispose();
 }
 
-Future<void> testScriptParse(IsolateRef isolateRef) async {
+Future testScriptParse(IsolateRef isolateRef) async {
   final isolateId = isolateRef.id!;
-  final isolate = await serviceClient.getIsolate(isolateId);
-  final rootLibrary =
+  final Isolate isolate = await serviceClient.getIsolate(isolateId);
+  final Library rootLibrary =
       await serviceClient.getObject(isolateId, isolate.rootLib!.id!) as Library;
-  final scriptRef = rootLibrary.scripts!.first;
+  final ScriptRef scriptRef = rootLibrary.scripts!.first;
 
-  final script =
+  final Script script =
       await serviceClient.getObject(isolateId, scriptRef.id!) as Script;
   print(script);
   print(script.uri);
@@ -217,23 +192,21 @@ Future<void> testScriptParse(IsolateRef isolateRef) async {
   print(script.tokenPosTable!.length);
 }
 
-Future<void> testSourceReport(IsolateRef isolateRef) async {
+Future testSourceReport(IsolateRef isolateRef) async {
   final isolateId = isolateRef.id!;
-  final isolate = await serviceClient.getIsolate(isolateId);
-  final rootLibrary =
+  final Isolate isolate = await serviceClient.getIsolate(isolateId);
+  final Library rootLibrary =
       await serviceClient.getObject(isolateId, isolate.rootLib!.id!) as Library;
-  final scriptRef = rootLibrary.scripts!.first;
+  final ScriptRef scriptRef = rootLibrary.scripts!.first;
 
-  // Make sure that some code has run.
+  // make sure some code has run
   await serviceClient.resume(isolateId);
   await Future.delayed(const Duration(milliseconds: 25));
 
-  final sourceReport = await serviceClient.getSourceReport(
-    isolateId,
-    [SourceReportKind.kCoverage],
-    scriptId: scriptRef.id,
-  );
-  for (final range in sourceReport.ranges!) {
+  final SourceReport sourceReport = await serviceClient.getSourceReport(
+      isolateId, [SourceReportKind.kCoverage],
+      scriptId: scriptRef.id);
+  for (SourceReportRange range in sourceReport.ranges!) {
     print('  $range');
     if (range.coverage != null) {
       print('  ${range.coverage}');

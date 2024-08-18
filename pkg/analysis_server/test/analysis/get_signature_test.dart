@@ -23,7 +23,7 @@ class AnalysisSignatureTest extends PubPackageAnalysisServerTest {
 
   Future<Response> prepareRawSignatureAt(int offset, {String? file}) async {
     var request = AnalysisGetSignatureParams(file ?? testFile.path, offset)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+        .toRequest('0');
     return handleRequest(request);
   }
 
@@ -35,8 +35,7 @@ class AnalysisSignatureTest extends PubPackageAnalysisServerTest {
   Future<AnalysisGetSignatureResult> prepareSignatureAt(int offset,
       {String? file}) async {
     var response = await prepareRawSignatureAt(offset, file: file);
-    return AnalysisGetSignatureResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    return AnalysisGetSignatureResult.fromResponse(response);
   }
 
   @override
@@ -427,25 +426,6 @@ void f() {
             ParameterInfo(ParameterKind.REQUIRED_POSITIONAL, 'length', 'int')));
   }
 
-  Future<void> test_function_wildcardParams() async {
-    newFile(testFilePath, '''
-void g(int _, [String _]) {}
-void f() {
-  g(/*^*/);
-}
-''');
-    var result = await prepareSignature('/*^*/');
-    expect(result.name, equals('g'));
-    expect(result.parameters, hasLength(2));
-    // Ensure wildcard params have their types.
-    expect(result.parameters[0],
-        equals(ParameterInfo(ParameterKind.REQUIRED_POSITIONAL, '_', 'int')));
-    expect(
-        result.parameters[1],
-        equals(
-            ParameterInfo(ParameterKind.OPTIONAL_POSITIONAL, '_', 'String')));
-  }
-
   Future<void> test_function_zero_arguments() async {
     newFile(testFilePath, '''
 /// one doc
@@ -461,8 +441,7 @@ void f() {
   }
 
   Future<void> test_invalidFilePathFormat_notAbsolute() async {
-    var request = AnalysisGetSignatureParams('test.dart', 0)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = AnalysisGetSignatureParams('test.dart', 0).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -474,7 +453,7 @@ void f() {
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var request =
         AnalysisGetSignatureParams(convertPath('/foo/../bar/test.dart'), 0)
-            .toRequest('0', clientUriConverter: server.uriConverter);
+            .toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,

@@ -8,11 +8,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 // ignore: implementation_imports
 import 'package:analyzer/src/error/deprecated_member_use_verifier.dart';
+import 'package:analyzer/src/generated/engine.dart'; //ignore: implementation_imports
 // ignore: implementation_imports
 import 'package:analyzer/src/workspace/workspace.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     'Avoid using deprecated elements from within the package in which they are '
@@ -78,18 +78,32 @@ void m(Foo foo) {
 ''';
 
 class DeprecatedMemberUseFromSamePackage extends LintRule {
+  static const LintCode code = LintCode(
+    'deprecated_member_use_from_same_package',
+    "'{0}' is deprecated and shouldn't be used.",
+    correctionMessage:
+        'Try replacing the use of the deprecated member with the replacement, '
+        'if a replacement is specified.',
+  );
+
+  static const LintCode codeWithMessage = LintCode(
+    'deprecated_member_use_from_same_package',
+    "'{0}' is deprecated and shouldn't be used. {1}",
+    correctionMessage:
+        'Try replacing the use of the deprecated member with the replacement, '
+        'if a replacement is specified.',
+    uniqueName: 'LintCode.deprecated_member_use_from_same_package_with_message',
+  );
+
   DeprecatedMemberUseFromSamePackage()
       : super(
             name: 'deprecated_member_use_from_same_package',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.languageFeatureUsage});
+            group: Group.errors);
 
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.deprecated_member_use_from_same_package_with_message,
-        LinterLintCode.deprecated_member_use_from_same_package_without_message
-      ];
+  List<LintCode> get lintCodes => [code, codeWithMessage];
 
   @override
   void registerNodeProcessors(
@@ -103,7 +117,8 @@ class _DeprecatedMemberUseVerifier extends BaseDeprecatedMemberUseVerifier {
   final LintRule _rule;
   final WorkspacePackage _workspacePackage;
 
-  _DeprecatedMemberUseVerifier(this._rule, this._workspacePackage);
+  _DeprecatedMemberUseVerifier(this._rule, this._workspacePackage,
+      {required super.strictCasts});
 
   @override
   void reportError(SyntacticEntity errorEntity, Element element,
@@ -122,8 +137,7 @@ class _DeprecatedMemberUseVerifier extends BaseDeprecatedMemberUseVerifier {
         errorEntity.offset,
         errorEntity.length,
         arguments: [displayName],
-        errorCode: LinterLintCode
-            .deprecated_member_use_from_same_package_without_message,
+        errorCode: DeprecatedMemberUseFromSamePackage.code,
       );
     } else {
       if (!normalizedMessage.endsWith('.') &&
@@ -135,8 +149,7 @@ class _DeprecatedMemberUseVerifier extends BaseDeprecatedMemberUseVerifier {
         errorEntity.offset,
         errorEntity.length,
         arguments: [displayName, normalizedMessage],
-        errorCode:
-            LinterLintCode.deprecated_member_use_from_same_package_with_message,
+        errorCode: DeprecatedMemberUseFromSamePackage.codeWithMessage,
       );
     }
   }
@@ -148,10 +161,10 @@ class _DeprecatedMemberUseVerifier extends BaseDeprecatedMemberUseVerifier {
 class _RecursiveVisitor extends RecursiveAstVisitor<void> {
   final _DeprecatedMemberUseVerifier _deprecatedVerifier;
 
-  _RecursiveVisitor(
-    LintRule rule,
-    WorkspacePackage package,
-  ) : _deprecatedVerifier = _DeprecatedMemberUseVerifier(rule, package);
+  _RecursiveVisitor(LintRule rule, WorkspacePackage package,
+      {required bool strictCasts})
+      : _deprecatedVerifier = _DeprecatedMemberUseVerifier(rule, package,
+            strictCasts: strictCasts);
 
   @override
   void visitAssignmentExpression(AssignmentExpression node) {
@@ -471,7 +484,12 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    var visitor = _RecursiveVisitor(_rule, package);
+    // TODO(pq): update when there's a better API to access strictCasts.
+    var strictCasts =
+        // ignore: deprecated_member_use
+        (_context.analysisOptions as AnalysisOptionsImpl).strictCasts;
+
+    var visitor = _RecursiveVisitor(_rule, package, strictCasts: strictCasts);
     node.accept(visitor);
   }
 }

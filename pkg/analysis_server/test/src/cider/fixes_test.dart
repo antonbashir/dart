@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/plugin/edit/fix/fix_core.dart';
 import 'package:analysis_server/src/cider/fixes.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/fix/fix.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' show SourceEdit;
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -76,7 +76,7 @@ void f(A a) {
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 class Test {}
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f(Test a) {}^
@@ -93,7 +93,7 @@ void f(Test a) {}
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 enum Test {a, b, c}
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f(Test a) {}^
@@ -112,7 +112,7 @@ extension E on int {
   void foo() {}
 }
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f() {
@@ -133,7 +133,7 @@ void f() {
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 void foo() {}
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f() {
@@ -154,7 +154,7 @@ void f() {
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 mixin Test {}
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f(Test a) {}^
@@ -171,7 +171,7 @@ void f(Test a) {}
     var a = newFile('/workspace/dart/test/lib/a.dart', r'''
 var a = 0;
 ''');
-    await fileResolver.resolve(path: a.path);
+    await fileResolver.resolve2(path: a.path);
 
     await _compute(r'''
 void f() {

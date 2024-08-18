@@ -1,16 +1,18 @@
-// Copyright (c) 2022, the Dart project authors.  Please see the AUTHORS file
+// Copyright (c) 2019, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-nullAwareListSpread(List<String>? list) {
+// @dart=2.9
+
+nullAwareListSpread(List<String> list) {
   list = ['foo', ...?list];
 }
 
-nullAwareSetSpread(Set<String>? set) {
+nullAwareSetSpread(Set<String> set) {
   set = {'foo', ...?set};
 }
 
-nullAwareMapSpread(Map<int, String>? map) {
+nullAwareMapSpread(Map<int, String> map) {
   map = {0: 'foo', ...?map};
 }
 

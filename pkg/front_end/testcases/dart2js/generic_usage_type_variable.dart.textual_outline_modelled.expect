@@ -1,7 +1,6 @@
 import 'dart:async';
 
 List<T<void>> v2 = [];
-
 T<int>? v1;
 
 abstract class C {
@@ -30,7 +29,6 @@ class C1 implements C {
 class D {}
 
 const List<T<C>> v4 = [];
-
 const v5 = <Type, Type>{T: T};
 
 extension E on T<dynamic> {
@@ -38,7 +36,5 @@ extension E on T<dynamic> {
 }
 
 final T<String> v3 = throw "Anything";
-
 main() {}
-
 typedef T<X> = X;

@@ -34,9 +34,9 @@ class NodeLocator2Test extends _SharedNodeLocatorTests {
     String code = ' f() {} ';
     //             01234567
     CompilationUnit unit = parseCompilationUnit(code);
-    var function = unit.declarations.single as FunctionDeclaration;
-    var expression = function.functionExpression;
-    var body = expression.body as BlockFunctionBody;
+    final function = unit.declarations.single as FunctionDeclaration;
+    final expression = function.functionExpression;
+    final body = expression.body as BlockFunctionBody;
     expect(NodeLocator2(0).searchWithin(unit), same(unit));
     expect(NodeLocator2(1).searchWithin(unit), same(function));
     expect(NodeLocator2(2).searchWithin(unit), same(function));
@@ -52,7 +52,7 @@ class NodeLocator2Test extends _SharedNodeLocatorTests {
     String code = ' f() {} ';
     //             01234567
     CompilationUnit unit = parseCompilationUnit(code);
-    var function = unit.declarations.single as FunctionDeclaration;
+    final function = unit.declarations.single as FunctionDeclaration;
     expect(NodeLocator2(-1, 2).searchWithin(unit), isNull);
     expect(NodeLocator2(0, 2).searchWithin(unit), same(unit));
     expect(NodeLocator2(1, 2).searchWithin(unit), same(function));
@@ -120,15 +120,6 @@ abstract class _SharedNodeLocatorTests extends ParserTestCase {
     int start, [
     int? end,
   ]);
-
-  void test_searchWithin_class_afterName_beforeTypeParameters() {
-    var source = r'''
-class A<T> {}
-''';
-    var unit = parseCompilationUnit(source);
-    var node = _assertLocate(unit, source.indexOf('<T> {}'));
-    expect(node, isClassDeclaration);
-  }
 
   void test_searchWithin_constructor_afterName_beforeParameters() {
     var source = r'''

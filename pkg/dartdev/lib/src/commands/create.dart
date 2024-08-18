@@ -64,7 +64,7 @@ class CreateCommand extends DartdevCommand {
   @override
   FutureOr<int> run() async {
     final args = argResults!;
-    if (args.flag('list-templates')) {
+    if (args['list-templates']) {
       log.stdout(_availableTemplatesJson());
       return 0;
     }
@@ -74,12 +74,12 @@ class CreateCommand extends DartdevCommand {
       return 1;
     }
 
-    String templateId = args.option('template')!;
+    String templateId = args['template'];
 
     String dir = args.rest.first;
     var targetDir = io.Directory(dir).absolute;
     dir = targetDir.path;
-    if (targetDir.existsSync() && !args.flag('force')) {
+    if (targetDir.existsSync() && !args['force']) {
       log.stderr(
         "Directory '$dir' already exists "
         "(use '--force' to force project generation).",
@@ -111,17 +111,21 @@ class CreateCommand extends DartdevCommand {
       DirectoryGeneratorTarget(generator, io.Directory(dir)),
     );
 
-    if (args.flag('pub')) {
+    if (args['pub']) {
       log.stdout('');
-      final progress = log.progress('Running pub get');
+      var progress = log.progress('Running pub get');
+      var process = await startDartProcess(
+        sdk,
+        ['pub', 'get'],
+        cwd: dir,
+      );
 
       // Run 'pub get'. We display output from the pub command, but keep the
       // output terse. This is to give the user a sense of the work that pub
       // did without scrolling the previous stdout sections off the screen.
-      final buffer = StringBuffer();
-      final exitCode = await runProcess(
-        [sdk.dart, 'pub', 'get'],
-        cwd: dir,
+      var buffer = StringBuffer();
+      routeToStdout(
+        process,
         logToTrace: true,
         listener: (str) {
           // Filter lines like '+ multi_server_socket 1.0.2'.
@@ -130,7 +134,8 @@ class CreateCommand extends DartdevCommand {
           }
         },
       );
-      if (exitCode != 0) return exitCode;
+      int code = await process.exitCode;
+      if (code != 0) return code;
       progress.finish(showTiming: true);
       log.stdout(buffer.toString().trimRight());
     }

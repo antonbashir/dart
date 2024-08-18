@@ -2,6 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// TODO(https://github.com/dart-lang/sdk/issues/51557): Decide if the mixins
+// being applied in this test should be "mixin", "mixin class" or the test
+// should be left at 2.19.
+// @dart=2.19
+
 /// This is a regression test from issue #29310. The global type-inferrer does
 /// tracing of closures including allocated classes that implement a `call`
 /// method. We incorrectly considered also classes with invoked factory
@@ -28,7 +33,7 @@ class DummyB implements B {
 }
 
 // mixin scenario: we should trace C, but we should trace _C
-abstract mixin class C implements A {
+abstract class C implements A {
   factory C() => new D();
 }
 

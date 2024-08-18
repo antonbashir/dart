@@ -275,39 +275,37 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
       : typeConverter = _TypeConverter(_dartTypes);
 
   @override
-  NullConstantValue visitNull(NullConstantValue constant, _) => constant;
+  ConstantValue visitNull(NullConstantValue constant, _) => constant;
   @override
-  IntConstantValue visitInt(IntConstantValue constant, _) => constant;
+  ConstantValue visitInt(IntConstantValue constant, _) => constant;
   @override
-  DoubleConstantValue visitDouble(DoubleConstantValue constant, _) => constant;
+  ConstantValue visitDouble(DoubleConstantValue constant, _) => constant;
   @override
-  BoolConstantValue visitBool(BoolConstantValue constant, _) => constant;
+  ConstantValue visitBool(BoolConstantValue constant, _) => constant;
   @override
-  StringConstantValue visitString(StringConstantValue constant, _) => constant;
+  ConstantValue visitString(StringConstantValue constant, _) => constant;
   @override
-  DummyInterceptorConstantValue visitDummyInterceptor(
+  ConstantValue visitDummyInterceptor(
           DummyInterceptorConstantValue constant, _) =>
       constant;
   @override
-  LateSentinelConstantValue visitLateSentinel(
-          LateSentinelConstantValue constant, _) =>
+  ConstantValue visitLateSentinel(LateSentinelConstantValue constant, _) =>
       constant;
   @override
-  UnreachableConstantValue visitUnreachable(
-          UnreachableConstantValue constant, _) =>
+  ConstantValue visitUnreachable(UnreachableConstantValue constant, _) =>
       constant;
   @override
-  JsNameConstantValue visitJsName(JsNameConstantValue constant, _) => constant;
+  ConstantValue visitJsName(JsNameConstantValue constant, _) => constant;
 
   @override
-  FunctionConstantValue visitFunction(FunctionConstantValue constant, _) {
+  ConstantValue visitFunction(FunctionConstantValue constant, _) {
     return FunctionConstantValue(
         toBackendEntity(constant.element) as FunctionEntity,
         typeConverter.visit(constant.type, toBackendEntity) as FunctionType);
   }
 
   @override
-  ListConstantValue visitList(ListConstantValue constant, _) {
+  ConstantValue visitList(ListConstantValue constant, _) {
     DartType type = typeConverter.visit(constant.type, toBackendEntity);
     List<ConstantValue> entries = _handleValues(constant.entries);
     if (identical(entries, constant.entries) && type == constant.type) {
@@ -317,14 +315,12 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  constant_system.JavaScriptSetConstant visitSet(
+  ConstantValue visitSet(
       covariant constant_system.JavaScriptSetConstant constant, _) {
     DartType type = typeConverter.visit(constant.type, toBackendEntity);
     List<ConstantValue> values = _handleValues(constant.values);
-    final constantIndex = constant.indexObject;
-    final indexObject = constantIndex == null
-        ? null
-        : visitJavaScriptObject(constantIndex, null);
+    JavaScriptObjectConstantValue? indexObject =
+        constant.indexObject?.accept(this, null);
     if (identical(values, constant.values) &&
         identical(indexObject, constant.indexObject) &&
         type == constant.type) {
@@ -335,15 +331,13 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  constant_system.JavaScriptMapConstant visitMap(
+  ConstantValue visitMap(
       covariant constant_system.JavaScriptMapConstant constant, _) {
     DartType type = typeConverter.visit(constant.type, toBackendEntity);
-    final keyList = visitList(constant.keyList, null);
-    final valueList = visitList(constant.valueList, null);
-    final constantIndex = constant.indexObject;
-    final indexObject = constantIndex == null
-        ? null
-        : visitJavaScriptObject(constantIndex, null);
+    ListConstantValue keyList = constant.keyList.accept(this, null);
+    ListConstantValue valueList = constant.valueList.accept(this, null);
+    JavaScriptObjectConstantValue? indexObject =
+        constant.indexObject?.accept(this, null);
     if (identical(keyList, constant.keyList) &&
         identical(valueList, constant.valueList) &&
         identical(indexObject, constant.indexObject) &&
@@ -355,8 +349,7 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  ConstructedConstantValue visitConstructed(
-      ConstructedConstantValue constant, _) {
+  ConstantValue visitConstructed(ConstructedConstantValue constant, _) {
     DartType type = typeConverter.visit(constant.type, toBackendEntity);
     Map<FieldEntity, ConstantValue> fields = {};
     constant.fields.forEach((f, v) {
@@ -367,7 +360,7 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  RecordConstantValue visitRecord(RecordConstantValue constant, _) {
+  ConstantValue visitRecord(RecordConstantValue constant, _) {
     // TODO(50081): An alternative is to lower the record to
     // ConstructedConstantValue with possible a ListConstantValue argument. One
     // way to do this would be to have two constant_systems - a K-system and a
@@ -379,7 +372,7 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  JavaScriptObjectConstantValue visitJavaScriptObject(
+  ConstantValue visitJavaScriptObject(
       JavaScriptObjectConstantValue constant, _) {
     List<ConstantValue> keys = _handleValues(constant.keys);
     List<ConstantValue> values = _handleValues(constant.values);
@@ -390,7 +383,7 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  TypeConstantValue visitType(TypeConstantValue constant, _) {
+  ConstantValue visitType(TypeConstantValue constant, _) {
     DartType type = typeConverter.visit(constant.type, toBackendEntity);
     DartType representedType =
         typeConverter.visit(constant.representedType, toBackendEntity);
@@ -401,22 +394,21 @@ class _ConstantConverter implements ConstantValueVisitor<ConstantValue, Null> {
   }
 
   @override
-  Never visitInterceptor(InterceptorConstantValue constant, _) {
+  ConstantValue visitInterceptor(InterceptorConstantValue constant, _) {
     // Interceptor constants are only created in the SSA graph builder.
     throw UnsupportedError(
         "Unexpected visitInterceptor ${constant.toStructuredText(_dartTypes)}");
   }
 
   @override
-  Never visitDeferredGlobal(DeferredGlobalConstantValue constant, _) {
+  ConstantValue visitDeferredGlobal(DeferredGlobalConstantValue constant, _) {
     // Deferred global constants are only created in the SSA graph builder.
     throw UnsupportedError(
         "Unexpected DeferredGlobalConstantValue ${constant.toStructuredText(_dartTypes)}");
   }
 
   @override
-  InstantiationConstantValue visitInstantiation(
-      InstantiationConstantValue constant, _) {
+  ConstantValue visitInstantiation(InstantiationConstantValue constant, _) {
     ConstantValue function = constant.function.accept(this, null);
     List<DartType> typeArguments =
         typeConverter.convertTypes(constant.typeArguments, toBackendEntity);

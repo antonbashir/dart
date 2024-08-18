@@ -318,7 +318,9 @@ class Call extends Statement {
 
   Call(this.selector, this.args, this.staticResultType,
       bool isInstanceCreation) {
-    if (selector is! InterfaceSelector) {
+    // TODO(sjindel/tfa): Support inferring unchecked entry-points for dynamic
+    // and direct calls as well.
+    if (selector is DynamicSelector || selector is DirectSelector) {
       setUseCheckedEntry();
     }
     if (isInstanceCreation) {
@@ -340,7 +342,7 @@ class Call extends Statement {
         new List<Type>.filled(args.values.length, emptyType);
     for (int i = 0; i < args.values.length; i++) {
       final Type type = args.values[i].getComputedType(computedTypes);
-      if (type.hasEmptySpecialization(typeHierarchy)) {
+      if (type == emptyType) {
         debugPrint("Optimized call with empty arg");
         return emptyType;
       }
@@ -388,7 +390,7 @@ class Call extends Statement {
 
   Member? _monomorphicTarget;
 
-  Member? get monomorphicTarget => _monomorphicTarget;
+  Member? get monomorphicTarget => filterArtificialNode(_monomorphicTarget);
 
   bool get isMonomorphic => (_flags & kMonomorphic) != 0;
 
@@ -446,12 +448,11 @@ class Call extends Statement {
     if (receiver is NullableType) {
       _flags |= kNullableReceiver;
     }
-    if (!receiverMayBeInt) {
-      final receiverIntIntersect =
-          receiver.intersection(typeHierarchy.intType, typeHierarchy);
-      if (receiverIntIntersect != emptyType) {
-        _flags |= kReceiverMayBeInt;
-      }
+    final receiverIntIntersect =
+        receiver.intersection(typeHierarchy.intType, typeHierarchy);
+    if (receiverIntIntersect != emptyType &&
+        receiverIntIntersect != nullableEmptyType) {
+      _flags |= kReceiverMayBeInt;
     }
   }
 
@@ -766,7 +767,7 @@ class UnaryOperation extends Statement {
           return emptyType;
         }
         if (arg is NullableType) {
-          if (arg.baseType.hasEmptySpecialization(typeHierarchy)) {
+          if (arg.baseType.specialize(typeHierarchy) is EmptyType) {
             return typeHierarchy.constantTrue;
           }
           return typeHierarchy.boolType;
@@ -774,7 +775,7 @@ class UnaryOperation extends Statement {
           return typeHierarchy.constantFalse;
         }
       case UnaryOp.IsEmpty:
-        return (arg.hasEmptySpecialization(typeHierarchy))
+        return (arg.specialize(typeHierarchy) is EmptyType)
             ? typeHierarchy.constantTrue
             : typeHierarchy.boolType;
       case UnaryOp.Not:
@@ -900,11 +901,8 @@ abstract class SharedVariable {
 }
 
 abstract class SharedVariableBuilder {
-  /// [SharedVariable] representing captured [variable].
+  /// Returns [SharedVariable] representing captured [variable].
   SharedVariable getSharedVariable(VariableDeclaration variable);
-
-  /// [SharedVariable] representing captured `this` in [member].
-  SharedVariable getSharedCapturedThis(Member member);
 }
 
 /// Reads value from [variable].

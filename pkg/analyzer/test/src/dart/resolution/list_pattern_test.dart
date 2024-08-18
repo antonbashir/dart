@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/dart/error/hint_codes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -24,9 +24,9 @@ void f(x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 41, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 41, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -34,7 +34,7 @@ ListPattern
     DeclaredVariablePattern
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: a
       declaredElement: a@41
@@ -55,9 +55,9 @@ void f(x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 41, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 41, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -83,9 +83,9 @@ void f(x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 46, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   typeArguments: TypeArgumentList
@@ -93,7 +93,7 @@ ListPattern
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: [
@@ -116,7 +116,7 @@ void f(List<int> x) {
   if (x case [0, ...]) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -140,9 +140,9 @@ void f(List<int> x) {
   if (x case [0, ...var rest]) {}
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 46, 4),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 4),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -175,9 +175,9 @@ void f(List<int> x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 51, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 51, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -203,9 +203,9 @@ void f(List<num> x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 56, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 56, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   typeArguments: TypeArgumentList
@@ -213,7 +213,7 @@ ListPattern
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: [
@@ -239,7 +239,7 @@ void f(Object x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -264,7 +264,7 @@ void f(Object x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -283,9 +283,9 @@ void f(Object x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 48, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 48, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -293,7 +293,7 @@ ListPattern
     DeclaredVariablePattern
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: a
       declaredElement: a@48
@@ -314,9 +314,9 @@ void f(Object x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 48, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 48, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -342,7 +342,7 @@ void f(Object x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   typeArguments: TypeArgumentList
@@ -350,7 +350,7 @@ ListPattern
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: [
@@ -375,9 +375,9 @@ void f(Object x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 53, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 53, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   typeArguments: TypeArgumentList
@@ -385,7 +385,7 @@ ListPattern
     arguments
       NamedType
         name: num
-        element: dart:core::<fragment>::@class::num
+        element: dart:core::@class::num
         type: num
     rightBracket: >
   leftBracket: [
@@ -393,7 +393,7 @@ ListPattern
     DeclaredVariablePattern
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       name: a
       declaredElement: a@53
@@ -414,9 +414,9 @@ void f(Object x) {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 53, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 53, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   typeArguments: TypeArgumentList
@@ -424,7 +424,7 @@ ListPattern
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
   leftBracket: [
@@ -447,9 +447,9 @@ void f(List<int> x) {
   var [a] = x;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 29, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 29, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclaration;
+    final node = findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -467,7 +467,7 @@ PatternVariableDeclaration
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: List<int>
   patternTypeSchema: List<_>
 ''');
@@ -481,9 +481,9 @@ void f() {
 
 T g<T>() => throw 0;
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 23, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 23, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclaration;
+    final node = findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -493,7 +493,7 @@ PatternVariableDeclaration
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
     leftBracket: [
@@ -510,7 +510,7 @@ PatternVariableDeclaration
   expression: MethodInvocation
     methodName: SimpleIdentifier
       token: g
-      staticElement: <testLibraryFragment>::@function::g
+      staticElement: self::@function::g
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -531,9 +531,9 @@ void f() {
 
 T g<T>() => throw 0;
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 22, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 22, 1),
     ]);
-    var node = findNode.singlePatternVariableDeclaration;
+    final node = findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -543,7 +543,7 @@ PatternVariableDeclaration
       DeclaredVariablePattern
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: a
         declaredElement: a@22
@@ -556,7 +556,7 @@ PatternVariableDeclaration
   expression: MethodInvocation
     methodName: SimpleIdentifier
       token: g
-      staticElement: <testLibraryFragment>::@function::g
+      staticElement: self::@function::g
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (

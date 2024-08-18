@@ -12,13 +12,8 @@ class D {
 }
 
 void acceptsInt(int x) {}
-
 void testAbstractFinalFieldIsPromotable(C c) {}
-
 void testAbstractNonFinalFieldIsNotPromotable(C c) {}
-
 void testAbstractFinalFieldDoesNotBlockPromotionElsewhere(D d) {}
-
 void testAbstractNonFinalFieldBlocksPromotionElsewhere(D d) {}
-
 main() {}

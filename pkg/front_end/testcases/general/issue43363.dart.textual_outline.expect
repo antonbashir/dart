@@ -6,5 +6,4 @@ class E {
   y = 2;
   E.named() : this.x = 5, this.y = 6;
 }
-
 main() {}

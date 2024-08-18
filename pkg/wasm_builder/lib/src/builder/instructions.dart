@@ -6,7 +6,6 @@
 
 import '../ir/ir.dart' as ir;
 import 'builder.dart';
-import '../../source_map.dart';
 
 // TODO(joshualitt): Suggested further optimizations:
 //   1) Add size estimates to `_Instruction`, and then remove logic where we
@@ -105,6 +104,9 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   /// Locals declared in this body, including parameters.
   final List<ir.Local> locals = [];
 
+  /// Is this the initializer of a global variable?
+  final bool isGlobalInitializer;
+
   /// Whether a textual trace of the instruction stream should be recorded when
   /// emitting instructions (provided asserts are enabled).
   ///
@@ -119,12 +121,6 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   /// instruction. When the stack is higher than this, some elements in the
   /// middle of the stack are left out.
   int maxStackShown = 10;
-
-  /// Mappings for the instructions in [_instructions] to their source code.
-  ///
-  /// Since we add mappings as we generate instructions, this will be sorted
-  /// based on [SourceMapping.instructionOffset].
-  final List<SourceMapping>? _sourceMappings;
 
   int _indent = 1;
   final List<String> _traceLines = [];
@@ -147,15 +143,14 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   final Map<ir.Instruction, StackTrace>? _stackTraces;
 
   /// Create a new instruction sequence.
-  InstructionsBuilder(
-      this.module, List<ir.ValueType> inputs, List<ir.ValueType> outputs)
-      : _stackTraces = module.watchPoints.isNotEmpty ? {} : null,
-        _sourceMappings = module.sourceMapUrl == null ? null : [] {
+  InstructionsBuilder(this.module, List<ir.ValueType> outputs,
+      {this.isGlobalInitializer = false})
+      : _stackTraces = module.watchPoints.isNotEmpty ? {} : null {
     _labelStack.add(Expression(const [], outputs));
-    for (ir.ValueType paramType in inputs) {
-      _addParameter(paramType);
-    }
   }
+
+  /// Whether the current point in the instruction stream is reachable.
+  bool get reachable => _reachable;
 
   /// Whether the instruction sequence has been completed by the final `end`.
   bool get isComplete => _labelStack.isEmpty;
@@ -163,45 +158,21 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   /// Textual trace of the instructions.
   String get trace => _traceLines.join();
 
-  bool get recordSourceMaps => _sourceMappings != null;
-
-  void collectUsedTypes(Set<ir.DefType> usedTypes) {
-    for (final local in locals) {
-      final localDefType = local.type.containedDefType;
-      if (localDefType != null) usedTypes.add(localDefType);
-    }
-    for (final instruction in _instructions) {
-      usedTypes.addAll(instruction.usedDefTypes);
-      for (final valueType in instruction.usedValueTypes) {
-        final type = valueType.containedDefType;
-        if (type != null) usedTypes.add(type);
-      }
-    }
-  }
-
   @override
-  ir.Instructions forceBuild() => ir.Instructions(
-      locals, _instructions, _stackTraces, _traceLines, _sourceMappings);
+  ir.Instructions forceBuild() =>
+      ir.Instructions(locals, _instructions, _stackTraces, _traceLines);
 
   void _add(ir.Instruction i) {
-    if (!_reachable) return;
     _instructions.add(i);
     if (module.watchPoints.isNotEmpty) {
       _stackTraces![i] = StackTrace.current;
     }
   }
 
-  ir.Local _addParameter(ir.ValueType type) {
+  ir.Local addLocal(ir.ValueType type, {required bool isParameter}) {
     final local = ir.Local(locals.length, type);
     locals.add(local);
-    _localInitialized.add(true);
-    return local;
-  }
-
-  ir.Local addLocal(ir.ValueType type) {
-    final local = ir.Local(locals.length, type);
-    locals.add(local);
-    _localInitialized.add(type.defaultable);
+    _localInitialized.add(isParameter || type.defaultable);
     return local;
   }
 
@@ -265,7 +236,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   }
 
   ir.ValueType get _topOfStack {
-    if (!_reachable) return ir.RefType.common(nullable: true);
+    if (!reachable) return ir.RefType.common(nullable: true);
     if (_stackTypes.isEmpty) _reportError("Stack underflow");
     return _stackTypes.last;
   }
@@ -279,8 +250,6 @@ class InstructionsBuilder with Builder<ir.Instructions> {
     if (_stackTypes.length < n) _reportError("Stack underflow");
     return _stackTypes.sublist(_stackTypes.length - n);
   }
-
-  List<ir.ValueType> get stack => _stackTypes;
 
   List<ir.ValueType> _checkStackTypes(List<ir.ValueType> inputs,
       [List<ir.ValueType>? stack]) {
@@ -309,7 +278,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   bool _verifyTypesFun(List<ir.ValueType> inputs,
       List<ir.ValueType> Function(List<ir.ValueType>) outputsFun,
       {List<Object>? trace, bool reachableAfter = true}) {
-    if (!_reachable) {
+    if (!reachable) {
       return _debugTrace(trace, reachableAfter: false);
     }
     final int baseStackHeight = _topOfLabelStack.baseStackHeight;
@@ -328,7 +297,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
 
   bool _verifyBranchTypes(Label label,
       [int popped = 0, List<ir.ValueType> pushed = const []]) {
-    if (!_reachable) {
+    if (!reachable) {
       return true;
     }
     final List<ir.ValueType> inputs = label.targetTypes;
@@ -351,7 +320,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   bool _verifyStartOfBlock(Label label, {required List<Object> trace}) {
     return _debugTrace(
         ["$label:", ...trace, ir.FunctionType(label.inputs, label.outputs)],
-        reachableAfter: _reachable, indentAfter: 1);
+        reachableAfter: reachable, indentAfter: 1);
   }
 
   bool _verifyEndOfBlock(List<ir.ValueType> outputs,
@@ -359,7 +328,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
       required bool reachableAfter,
       required bool reindent}) {
     final Label label = _topOfLabelStack;
-    if (_reachable) {
+    if (reachable) {
       final int expectedHeight = label.baseStackHeight + label.outputs.length;
       if (_stackTypes.length != expectedHeight) {
         _reportError("Incorrect stack height at end of block"
@@ -379,55 +348,6 @@ class InstructionsBuilder with Builder<ir.Instructions> {
         indentAfter: reindent ? 1 : 0);
   }
 
-  // Source maps
-
-  /// Start mapping added instructions to the source location given in
-  /// arguments.
-  ///
-  /// This assumes [recordSourceMaps] is `true`.
-  void startSourceMapping(Uri fileUri, int line, int col, String? name) {
-    _addSourceMapping(
-        SourceMapping(_instructions.length, fileUri, line, col, name));
-  }
-
-  /// Stop mapping added instructions to the last source location given in
-  /// [startSourceMapping].
-  ///
-  /// The instructions added after this won't have a mapping in the source map.
-  ///
-  /// This assumes [recordSourceMaps] is `true`.
-  void stopSourceMapping() {
-    _addSourceMapping(SourceMapping.unmapped(_instructions.length));
-  }
-
-  void _addSourceMapping(SourceMapping mapping) {
-    final sourceMappings = _sourceMappings!;
-
-    if (sourceMappings.isNotEmpty) {
-      final lastMapping = sourceMappings.last;
-
-      // Check if we are overriding the current source location. This can
-      // happen when we restore the source location after a compiling a
-      // sub-tree, and the next node in the AST immediately updates the source
-      // location. The restored location is then never used.
-      if (lastMapping.instructionOffset == mapping.instructionOffset) {
-        sourceMappings.removeLast();
-        sourceMappings.add(mapping);
-        return;
-      }
-
-      // Check if we the new mapping maps to the same source as the old
-      // mapping. This happens when we have e.g. an instance field get like
-      // `length`, which gets transformed by the front-end as `this.length`. In
-      // this case `this` and `length` will have the same source location.
-      if (lastMapping.sourceInfo == mapping.sourceInfo) {
-        return;
-      }
-    }
-
-    sourceMappings.add(mapping);
-  }
-
   // Meta
 
   /// Emit a comment.
@@ -441,8 +361,8 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   void unreachable() {
     assert(_verifyTypes(const [], const [],
         trace: const ['unreachable'], reachableAfter: false));
-    _add(const ir.Unreachable());
     _reachable = false;
+    _add(const ir.Unreachable());
   }
 
   /// Emit a `nop` instruction.
@@ -456,7 +376,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
     label.ordinal = ++_labelCount;
     label.depth = _labelStack.length;
     label.baseStackHeight = _stackTypes.length - label.inputs.length;
-    label.reachable = _reachable;
+    label.reachable = reachable;
     label.localInitializationStackHeight = _localInitializationStack.length;
     _labelStack.add(label);
     assert(_verifyStartOfBlock(label, trace: trace));
@@ -564,16 +484,16 @@ class InstructionsBuilder with Builder<ir.Instructions> {
   /// Emit a `throw` instruction.
   void throw_(ir.Tag tag) {
     assert(_verifyTypes(tag.type.inputs, const [], trace: ['throw', tag]));
-    _add(ir.Throw(tag));
     _reachable = false;
+    _add(ir.Throw(tag));
   }
 
   /// Emit a `rethrow` instruction.
   void rethrow_(Label label) {
     assert(label is Try && label.hasCatch);
     assert(_verifyTypes(const [], const [], trace: ['rethrow', label]));
-    _add(ir.Rethrow(_labelIndex(label)));
     _reachable = false;
+    _add(ir.Rethrow(_labelIndex(label)));
   }
 
   /// Emit an `end` instruction.
@@ -598,8 +518,8 @@ class InstructionsBuilder with Builder<ir.Instructions> {
     assert(_verifyTypes(const [], const [],
         trace: ['br', label], reachableAfter: false));
     assert(_verifyBranchTypes(label));
-    _add(ir.Br(_labelIndex(label)));
     _reachable = false;
+    _add(ir.Br(_labelIndex(label)));
   }
 
   /// Emit a `br_if` instruction.
@@ -618,17 +538,17 @@ class InstructionsBuilder with Builder<ir.Instructions> {
       assert(_verifyBranchTypes(label));
     }
     assert(_verifyBranchTypes(defaultLabel));
+    _reachable = false;
     _add(ir.BrTable(
         labels.map(_labelIndex).toList(), _labelIndex(defaultLabel)));
-    _reachable = false;
   }
 
   /// Emit a `return` instruction.
   void return_() {
     assert(_verifyTypes(_labelStack[0].outputs, const [],
         trace: const ['return'], reachableAfter: false));
-    _add(const ir.Return());
     _reachable = false;
+    _add(const ir.Return());
   }
 
   /// Emit a `call` instruction.
@@ -1154,6 +1074,7 @@ class InstructionsBuilder with Builder<ir.Instructions> {
         [ir.RefType.def(arrayType, nullable: false)],
         trace: ['array.new_data', arrayType, data.index]));
     _add(ir.ArrayNewData(arrayType, data));
+    if (isGlobalInitializer) module.dataReferencedFromGlobalInitializer = true;
   }
 
   /// Emit an `array.copy` instruction.

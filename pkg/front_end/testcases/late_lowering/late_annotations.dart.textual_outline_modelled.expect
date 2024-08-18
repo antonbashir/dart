@@ -30,15 +30,11 @@ extension Extension on A {
 
 @Annotation()
 late final int finalTopLevelField;
-
 @Annotation()
 late final int finalTopLevelFieldWithInitializer = 0;
-
 @Annotation()
 late int topLevelField;
-
 main() {}
-
 mixin B {
   @Annotation()
   covariant late num covariantInstanceField;

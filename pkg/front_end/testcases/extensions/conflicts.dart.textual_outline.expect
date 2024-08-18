@@ -18,5 +18,4 @@ extension UniqueExtensionName on Class1 {
 }
 
 main() {}
-
 errors() {}

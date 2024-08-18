@@ -22,16 +22,16 @@ void main() {
 class FormatTest extends AbstractLspAnalysisServerTest {
   Future<List<TextEdit>> expectFormattedContents(
       Uri uri, String original, String expected) async {
-    var formatEdits = (await formatDocument(uri))!;
-    var formattedContents = applyTextEdits(original, formatEdits);
+    final formatEdits = (await formatDocument(uri))!;
+    final formattedContents = applyTextEdits(original, formatEdits);
     expect(formattedContents, equals(expected));
     return formatEdits;
   }
 
   Future<List<TextEdit>> expectRangeFormattedContents(
       Uri uri, TestCode code, String expected) async {
-    var formatEdits = (await formatRange(uri, code.range.range))!;
-    var formattedContents = applyTextEdits(code.code, formatEdits);
+    final formatEdits = (await formatRange(uri, code.range.range))!;
+    final formattedContents = applyTextEdits(code.code, formatEdits);
     expect(formattedContents, equals(expected));
     return formatEdits;
   }
@@ -45,7 +45,7 @@ void f() {
     await initialize();
     await openFile(mainFileUri, contents);
 
-    var formatEdits = await formatDocument(mainFileUri);
+    final formatEdits = await formatDocument(mainFileUri);
     expect(formatEdits, isNull);
   }
 
@@ -66,7 +66,7 @@ void f() {
 
     // Now replace and format with '\n'.
     await replaceFile(2, mainFileUri, 'int? a;\n');
-    var formatEdits = await formatDocument(mainFileUri);
+    final formatEdits = await formatDocument(mainFileUri);
 
     // Expect no edits because this document was already formatted.
     // When the bug occurs, we'd see edits to add a '\r'.
@@ -74,8 +74,6 @@ void f() {
   }
 
   Future<void> test_complex() async {
-    failTestOnErrorDiagnostic = false;
-
     const contents = '''
 ErrorOr<Pair<A, List<B>>> c(
   String d,
@@ -89,7 +87,7 @@ ErrorOr<Pair<A, List<B>>> c(
 
 
     ''';
-    var expected = '''
+    final expected = '''
 ErrorOr<Pair<A, List<B>>> c(
   String d,
   List<Either2<E, F>> g, {
@@ -107,7 +105,7 @@ ErrorOr<Pair<A, List<B>>> c(
     setDocumentFormattingDynamicRegistration();
     setDidChangeConfigurationDynamicRegistration();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     // Provide empty config and collect dynamic registrations during
     // initialization.
     await provideConfig(
@@ -147,7 +145,7 @@ ErrorOr<Pair<A, List<B>>> c(
     setDocumentFormattingDynamicRegistration();
     setDidChangeConfigurationDynamicRegistration();
 
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     // Provide empty config and collect dynamic registrations during
     // initialization.
     await provideConfig(
@@ -193,17 +191,17 @@ void f  ()
     print('test');
 ^}
     ''';
-    var expected = '''void f() {
+    final expected = '''void f() {
   print('test');
 }
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    var formatEdits =
+    final formatEdits =
         (await formatOnType(mainFileUri, code.position.position, '}'))!;
-    var formattedContents = applyTextEdits(code.code, formatEdits);
+    final formattedContents = applyTextEdits(code.code, formatEdits);
     expect(formattedContents, equals(expected));
   }
 
@@ -218,7 +216,7 @@ void f()
     !]    print('test');
 }
 ''';
-    var expected = '''
+    final expected = '''
 void f()
 {
         print('test');
@@ -226,7 +224,7 @@ void f()
         print('test');
 }
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
     await expectRangeFormattedContents(mainFileUri, code, expected);
@@ -251,7 +249,7 @@ void f()
   print('test'); // line 4
 }
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
     await expectRangeFormattedContents(mainFileUri, code, expected);
@@ -264,10 +262,10 @@ void f()
         print('test');
 }
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
-    var formatRangeRequest = formatRange(
+    final formatRangeRequest = formatRange(
       mainFileUri,
       Range(
           start: Position(line: 0, character: 0),
@@ -297,7 +295,7 @@ main3  ()
     print('test');
 }
 ''';
-    var expected = '''
+    final expected = '''
 main  ()
 {
 
@@ -314,7 +312,7 @@ main3  ()
     print('test');
 }
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
     await expectRangeFormattedContents(mainFileUri, code, expected);
@@ -324,26 +322,24 @@ main3  ()
     // Check we complete when a formatted block ends with a newline.
     // https://github.com/dart-lang/sdk/issues/47702
     const contents = '''
-int? a;
+int a;
 [!
-    int? b;
+    int b;
 !]
 ''';
-    var expected = '''
-int? a;
+    final expected = '''
+int a;
 
-int? b;
+int b;
 
 ''';
-    var code = TestCode.parse(contents);
+    final code = TestCode.parse(contents);
     await initialize();
     await openFile(mainFileUri, code.code);
     await expectRangeFormattedContents(mainFileUri, code, expected);
   }
 
   Future<void> test_invalidSyntax() async {
-    failTestOnErrorDiagnostic = false;
-
     const contents = '''
 void f(((( {
   print('test');
@@ -352,7 +348,7 @@ void f(((( {
     await initialize();
     await openFile(mainFileUri, contents);
 
-    var formatEdits = await formatDocument(mainFileUri);
+    final formatEdits = await formatDocument(mainFileUri);
     expect(formatEdits, isNull);
   }
 
@@ -363,11 +359,11 @@ print(
 '123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789'
 );
     ''';
-    var expectedDefault = '''
+    final expectedDefault = '''
 void f() => print(
     '123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789');
 ''';
-    var expectedLongLines = '''
+    final expectedLongLines = '''
 void f() => print('123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789');
 ''';
 
@@ -479,7 +475,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(1));
     expect(formatEdits[0].newText, ' ');
@@ -499,7 +495,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(1));
     expect(formatEdits[0].newText, '');
@@ -521,7 +517,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(1));
     expect(formatEdits[0].newText, '');
@@ -540,7 +536,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(1));
     expect(
@@ -567,7 +563,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(1));
     expect(
@@ -591,7 +587,7 @@ void f() {}
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(2));
     expect(formatEdits[0].newText, isEmpty);
@@ -620,7 +616,7 @@ void f() {
 ''';
     await initialize();
     await openFile(mainFileUri, contents);
-    var formatEdits =
+    final formatEdits =
         await expectFormattedContents(mainFileUri, contents, expected);
     expect(formatEdits, hasLength(3));
     expect(
@@ -653,7 +649,7 @@ void f() {
     await initialize();
     await openFile(pubspecFileUri, simplePubspecContent);
 
-    var formatEdits = await formatOnType(pubspecFileUri, startOfDocPos, '}');
+    final formatEdits = await formatOnType(pubspecFileUri, startOfDocPos, '}');
     expect(formatEdits, isNull);
   }
 
@@ -676,7 +672,7 @@ void f() {
         Uri.parse(mainFileUri.toString() + r'###***\\\///:::.dart'),
       ),
       throwsA(isResponseError(ServerErrorCodes.InvalidFilePath,
-          message: 'URI does not contain a valid file path')),
+          message: 'File URI did not contain a valid file path')),
     );
   }
 
@@ -686,8 +682,7 @@ void f() {
     await expectLater(
       formatDocument(Uri.parse('a:/a.dart')),
       throwsA(isResponseError(ServerErrorCodes.InvalidFilePath,
-          message:
-              "URI scheme 'a' is not supported. Allowed schemes are 'file'.")),
+          message: 'URI was not a valid file:// URI')),
     );
   }
 
@@ -699,7 +694,7 @@ void f() {
         print('test');
     }
     ''';
-    var expected = '''
+    final expected = '''
 void f() {
   print('test');
 }
@@ -717,7 +712,7 @@ void f() {
         print('test');
     }
     ''';
-    var expected = '''
+    final expected = '''
 void f() {
   print('test');
 }
@@ -728,18 +723,16 @@ void f() {
   }
 
   Future<void> test_validSyntax_withErrors() async {
-    failTestOnErrorDiagnostic = false;
-
     // We should still be able to format syntactically valid code even if it has
     // analysis errors.
     const contents = '''
 void f() {
-       print(unresolved);
+       print(a);
 }
 ''';
     const expected = '''
 void f() {
-  print(unresolved);
+  print(a);
 }
 ''';
     await initialize();

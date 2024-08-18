@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/generated/source.dart' show UriResolver;
 import 'package:analyzer/src/util/uri.dart';
@@ -31,7 +30,7 @@ class ResourceUriResolver extends UriResolver {
     }
     String path = fileUriToNormalizedPath(_provider.pathContext, uri);
     File file = _provider.getFile(path);
-    return FileSource(file, uri);
+    return file.createSource(uri);
   }
 
   /// Return `true` if the given [uri] is a `file` URI.

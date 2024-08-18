@@ -4,9 +4,9 @@
 
 import 'dart:collection' show SplayTreeMap;
 
-import 'package:kernel/ast.dart';
+import 'package:dart2wasm/class_info.dart';
 
-import 'class_info.dart';
+import 'package:kernel/ast.dart';
 
 /// Describes shape of a record as the number of positionals + set of field
 /// names.

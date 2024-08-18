@@ -34,19 +34,11 @@ extension IntClassExtension on IntClass {
 }
 
 main() {}
-
 testLocals() {}
-
 testProperties() {}
-
 testIntProperties() {}
-
 testExplicitProperties() {}
-
 testExplicitIntProperties() {}
-
 testExplicitNullAwareProperties(Class? v) {}
-
 testExplicitNullAwareIntProperties(IntClass? v) {}
-
 expect(expected, actual, [expectNull = false]) {}

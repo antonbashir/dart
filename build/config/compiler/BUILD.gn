@@ -113,6 +113,9 @@ config("compiler") {
 
     # Common options for AddressSanitizer, LeakSanitizer, ThreadSanitizer and
     # MemorySanitizer
+    if (using_sanitizer) {
+      cflags += [ "-gline-tables-only" ]
+    }
     if (is_asan) {
       cflags += [ "-fsanitize=address" ]
       ldflags += [ "-fsanitize=address" ]
@@ -229,11 +232,25 @@ config("compiler") {
     } else if (current_cpu == "arm") {
       cflags += [
         "-march=$arm_arch",
-        "-mfpu=$arm_fpu",
         "-mfloat-abi=$arm_float_abi",
       ]
       if (arm_tune != "") {
         cflags += [ "-mtune=$arm_tune" ]
+      }
+      if (!is_clang) {
+        # Clang doesn't support these flags.
+        cflags += [
+          # The tree-sra optimization (scalar replacement for
+          # aggregates enabling subsequent optimizations) leads to
+          # invalid code generation when using the Android NDK's
+          # compiler (r5-r7). This can be verified using
+          # webkit_unit_tests' WTF.Checked_int8_t test.
+          "-fno-tree-sra",
+
+          # The following option is disabled to improve binary
+          # size and performance in gcc 4.9.
+          "-fno-caller-saves",
+        ]
       }
     }
   }
@@ -432,10 +449,8 @@ config("compiler") {
 
 config("cxx_version_default") {
   if (is_win) {
-    cflags_c = [ "/std:c17" ]
     cc_std = [ "/std:c++17" ]
   } else {
-    cflags_c = [ "-std=c17" ]
     cc_std = [ "-std=c++17" ]
   }
   cflags_cc = cc_std
@@ -444,10 +459,8 @@ config("cxx_version_default") {
 
 config("cxx_version_11") {
   if (is_win) {
-    cflags_c = [ "/std:c11" ]
     cc_std = [ "/std:c++11" ]
   } else {
-    cflags_c = [ "-std=c11" ]
     cc_std = [ "-std=c++11" ]
   }
   cflags_cc = cc_std
@@ -456,10 +469,8 @@ config("cxx_version_11") {
 
 config("cxx_version_14") {
   if (is_win) {
-    cflags_c = [ "/std:c14" ]
     cc_std = [ "/std:c++14" ]
   } else {
-    cflags_c = [ "-std=c14" ]
     cc_std = [ "-std=c++14" ]
   }
   cflags_cc = cc_std
@@ -468,10 +479,8 @@ config("cxx_version_14") {
 
 config("cxx_version_17") {
   if (is_win) {
-    cflags_c = [ "/std:c17" ]
     cc_std = [ "/std:c++17" ]
   } else {
-    cflags_c = [ "-std=c17" ]
     cc_std = [ "-std=c++17" ]
   }
   cflags_cc = cc_std
@@ -480,10 +489,8 @@ config("cxx_version_17") {
 
 config("cxx_version_20") {
   if (is_win) {
-    cflags_c = [ "/std:c20" ]
     cc_std = [ "/std:c++20" ]
   } else {
-    cflags_c = [ "-std=c20" ]
     cc_std = [ "-std=c++20" ]
   }
   cflags_cc = cc_std
@@ -907,7 +914,12 @@ config("optimize_speed") {
 
 config("symbols") {
   if (is_win) {
-    cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+    import("//build/toolchain/goma.gni")
+    if (use_goma) {
+      cflags = [ "/Z7" ]  # No PDB file
+    } else {
+      cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+    }
     ldflags = [ "/DEBUG" ]
   } else {
     cflags = [

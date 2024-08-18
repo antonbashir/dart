@@ -46,11 +46,11 @@ class ImplementationTest extends AbstractLspAnalysisServerTest {
     ''');
 
   Future<void> test_emptyResults() async {
-    var content = '';
+    final content = '';
 
     await initialize();
     await openFile(mainFileUri, content);
-    var res = await getImplementations(
+    final res = await getImplementations(
       mainFileUri,
       startOfDocPos,
     );
@@ -71,7 +71,7 @@ class ImplementationTest extends AbstractLspAnalysisServerTest {
   Future<void> test_method_excludesClassesWithoutImplementations() =>
       _testMarkedContent('''
       abstract class A {
-        void ^b() {}
+        void ^b();
       }
 
       class B extends A {}
@@ -185,14 +185,14 @@ class ImplementationTest extends AbstractLspAnalysisServerTest {
   /// Check that implementations that come from mixins in other files return the
   /// correct location for the implementation.
   Future<void> test_mixins() async {
-    var mixinsContent = r'''
+    final mixinsContent = r'''
 import 'main.dart';
 
 mixin MyMixin implements MyInterface {
   String get [!interfaceField!] => '';
 }
 ''';
-    var content = r'''
+    final content = r'''
 import 'other.dart';
 
 class A with MyMixin {}
@@ -201,7 +201,7 @@ class C implements MyInterface {
   String get [!interfaceField!] => '';
 }
 
-abstract class MyInterface {
+class MyInterface {
   String get interf^aceField;
 }
 ''';
@@ -213,7 +213,7 @@ abstract class MyInterface {
     newFile(pubspecFilePath, simplePubspecContent);
     await initialize();
 
-    var res = await getImplementations(pubspecFileUri, startOfDocPos);
+    final res = await getImplementations(pubspecFileUri, startOfDocPos);
     expect(res, isEmpty);
   }
 
@@ -231,23 +231,24 @@ abstract class MyInterface {
     String? otherContent,
     bool expectResults = true,
   }) async {
-    var otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
-    var otherFileUri = pathContext.toUri(otherFilePath);
-    var code = TestCode.parse(content);
-    var otherCode = otherContent != null ? TestCode.parse(otherContent) : null;
+    final otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
+    final otherFileUri = pathContext.toUri(otherFilePath);
+    final code = TestCode.parse(content);
+    final otherCode =
+        otherContent != null ? TestCode.parse(otherContent) : null;
     if (otherCode != null) {
       newFile(otherFilePath, otherCode.code);
     }
-    newFile(mainFilePath, code.code);
 
     await initialize();
+    await openFile(mainFileUri, code.code);
 
-    var res = await getImplementations(
+    final res = await getImplementations(
       mainFileUri,
       code.position.position,
     );
 
-    var expectedLocations = [
+    final expectedLocations = [
       for (final range in code.ranges)
         Location(uri: mainFileUri, range: range.range),
       if (otherCode != null)
@@ -259,7 +260,7 @@ abstract class MyInterface {
       expect(expectedLocations, isNotEmpty);
       expect(res, unorderedEquals(expectedLocations));
     } else {
-      for (var location in expectedLocations) {
+      for (final location in expectedLocations) {
         expect(res, isNot(contains(location)));
       }
     }

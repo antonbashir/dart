@@ -3,5 +3,4 @@ class A<X extends num> {
 }
 
 expectThrows(void Function() f) {}
-
 main() {}

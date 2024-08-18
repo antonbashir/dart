@@ -29,7 +29,7 @@ class UserPromptPreferencesTest with ResourceProviderMixin {
   late final preferencesFile = preferences.preferencesFile;
 
   late final _optionalStateResourceProvider =
-      _OptionalStateResourceProvider(resourceProvider);
+      _OptionalStateMemoryResourceProvider(resourceProvider);
 
   String get currentFileContents => preferencesFile!.readAsStringSync();
 
@@ -115,14 +115,14 @@ class UserPromptPreferencesTest with ResourceProviderMixin {
 /// Wraps [MemoryResourceProvider] making [getStateLocation] return a nullable
 /// [Folder] since the standard implementation of [MemoryResourceProvider]
 /// removes the option for null.
-class _OptionalStateResourceProvider implements ResourceProvider {
+class _OptionalStateMemoryResourceProvider implements ResourceProvider {
   /// Whether to return [null] from [getStateLocation] instead of an in-memory
   /// folder.
   bool returnNullStateLocation = false;
 
-  final ResourceProvider _provider;
+  final MemoryResourceProvider _provider;
 
-  _OptionalStateResourceProvider(this._provider);
+  _OptionalStateMemoryResourceProvider(this._provider);
 
   @override
   Context get pathContext => _provider.pathContext;
@@ -132,9 +132,6 @@ class _OptionalStateResourceProvider implements ResourceProvider {
 
   @override
   Folder getFolder(String path) => _provider.getFolder(path);
-
-  @override
-  Link getLink(String path) => _provider.getLink(path);
 
   @override
   Resource getResource(String path) => _provider.getResource(path);

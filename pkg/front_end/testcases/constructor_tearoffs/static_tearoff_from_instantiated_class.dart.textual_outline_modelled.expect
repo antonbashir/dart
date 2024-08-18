@@ -3,9 +3,6 @@ class A<X> {
 }
 
 main() {}
-
 test() {}
-
 typedef D1<X> = A<X>;
-
 typedef D2<X extends num> = A<X>;

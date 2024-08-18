@@ -1,7 +1,8 @@
+// @dart = 2.9
 class A {}
 
-mixin class C<T extends A> {
-  late T _field;
+class C<T extends A> {
+  T _field;
   foo(T x) {}
 }
 

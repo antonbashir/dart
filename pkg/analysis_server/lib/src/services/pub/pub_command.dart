@@ -46,7 +46,7 @@ class PubCommand {
     // When calling the `pub` command, we must add an identifier to the
     // PUB_ENVIRONMENT environment variable (joined with colons).
     const pubEnvString = 'analysis_server.pub_api';
-    var existingPubEnv = Platform.environment[_pubEnvironmentKey];
+    final existingPubEnv = Platform.environment[_pubEnvironmentKey];
     _pubEnvironmentValue = [
       if (existingPubEnv?.isNotEmpty ?? false) existingPubEnv,
       pubEnvString,
@@ -58,15 +58,16 @@ class PubCommand {
   /// If any error occurs executing the command, returns an empty list.
   Future<List<PubOutdatedPackageDetails>> outdatedVersions(
       String pubspecPath) async {
-    var packageDirectory = _pathContext.dirname(pubspecPath);
-    var result = await _runPubJsonCommand(['outdated', '--show-all', '--json'],
+    final packageDirectory = _pathContext.dirname(pubspecPath);
+    final result = await _runPubJsonCommand(
+        ['outdated', '--show-all', '--json'],
         workingDirectory: packageDirectory);
 
     if (result == null) {
       return [];
     }
 
-    var packages =
+    final packages =
         (result['packages'] as List<dynamic>?)?.cast<Map<String, Object?>>();
     if (packages == null) {
       return [];
@@ -102,27 +103,27 @@ class PubCommand {
       {required String workingDirectory}) async {
     // Atomically replace the lastQueuedCommand future with our own to ensure
     // only one command waits on any previous commands future.
-    var completer = Completer<void>();
-    var lastCommand = _lastQueuedCommand;
+    final completer = Completer<void>();
+    final lastCommand = _lastQueuedCommand;
     _lastQueuedCommand = completer.future;
     // And wait for that previous command to finish.
     await lastCommand.catchError((_) {});
 
     try {
       _instrumentationService.logInfo('Starting pub command $args');
-      var process = await _processRunner.start(
+      final process = await _processRunner.start(
           Platform.resolvedExecutable, ['pub', ...args],
           workingDirectory: workingDirectory,
           environment: {_pubEnvironmentKey: _pubEnvironmentValue});
       _activeProcesses.add(process);
 
-      var stdoutFuture = process.stdout.transform(utf8.decoder).join();
-      var stderrFuture = process.stderr.transform(utf8.decoder).join();
-      var exitCode = await process.exitCode;
+      final stdoutFuture = process.stdout.transform(utf8.decoder).join();
+      final stderrFuture = process.stderr.transform(utf8.decoder).join();
+      final exitCode = await process.exitCode;
       _activeProcesses.remove(process);
 
-      var stdout = await stdoutFuture;
-      var stderr = await stderrFuture;
+      final stdout = await stdoutFuture;
+      final stderr = await stderrFuture;
 
       if (exitCode != 0) {
         _instrumentationService
@@ -131,7 +132,7 @@ class PubCommand {
       }
 
       try {
-        var results = jsonDecode(stdout);
+        final results = jsonDecode(stdout);
         _instrumentationService.logInfo('pub command completed successfully');
         return results as Map<String, Object?>?;
       } catch (e) {
@@ -148,8 +149,8 @@ class PubCommand {
   }
 
   String? _version(Map<String, Object?> json, String type) {
-    var versionType = json[type] as Map<String, Object?>?;
-    var version =
+    final versionType = json[type] as Map<String, Object?>?;
+    final version =
         versionType != null ? versionType['version'] as String? : null;
     return version;
   }

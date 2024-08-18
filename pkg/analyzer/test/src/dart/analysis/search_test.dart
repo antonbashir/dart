@@ -74,7 +74,7 @@ class SearchTest extends PubPackageResolutionTest {
     Map<File, String> inFiles,
     String expected,
   ) {
-    var actual = _getDeclarationsText(symbols, inFiles);
+    final actual = _getDeclarationsText(symbols, inFiles);
     if (actual != expected) {
       print(actual);
       NodeTextExpectationsCollector.add(actual);
@@ -86,9 +86,9 @@ class SearchTest extends PubPackageResolutionTest {
     Element element,
     String expected,
   ) async {
-    var searchedFiles = SearchedFiles();
-    var results = await driver.search.references(element, searchedFiles);
-    var actual = _getSearchResultsText(results);
+    final searchedFiles = SearchedFiles();
+    final results = await driver.search.references(element, searchedFiles);
+    final actual = _getSearchResultsText(results);
     if (actual != expected) {
       print(actual);
       NodeTextExpectationsCollector.add(actual);
@@ -100,10 +100,10 @@ class SearchTest extends PubPackageResolutionTest {
     String name,
     String expected,
   ) async {
-    var searchedFiles = SearchedFiles();
-    var results =
+    final searchedFiles = SearchedFiles();
+    final results =
         await driver.search.unresolvedMemberReferences(name, searchedFiles);
-    var actual = _getSearchResultsText(results);
+    final actual = _getSearchResultsText(results);
     if (actual != expected) {
       print(actual);
       NodeTextExpectationsCollector.add(actual);
@@ -279,9 +279,9 @@ testFile
         ..add(name: 'bbb', rootPath: bbbPackageRootPath),
     );
 
-    var file_a = newFile(aaaFilePath, 'class A {}');
-    var file_b = newFile(bbbFilePath, 'class B {}');
-    var file_c = newFile(cccFilePath, 'class C {}');
+    final file_a = newFile(aaaFilePath, 'class A {}');
+    final file_b = newFile(bbbFilePath, 'class B {}');
+    final file_c = newFile(cccFilePath, 'class C {}');
 
     await resolveTestCode('class T {}');
 
@@ -706,9 +706,9 @@ testFile
   }
 
   test_issue49951_references_dontAddToKnown_unrelated() async {
-    var myRoot = newFolder('$workspaceRootPath/packages/my');
+    final myRoot = newFolder('$workspaceRootPath/packages/my');
 
-    var myFile = newFile('${myRoot.path}/lib/my.dart', r'''
+    final myFile = newFile('${myRoot.path}/lib/my.dart', r'''
 class A {}
 ''');
 
@@ -718,27 +718,27 @@ class A {}
       PackageConfigFileBuilder()..add(name: 'my', rootPath: myRoot.path),
     );
 
-    var myDriver = driverFor(myFile);
-    var mySession = contextFor(myFile).currentSession;
-    var libraryElementResult =
+    final myDriver = driverFor(myFile);
+    final mySession = contextFor(myFile).currentSession;
+    final libraryElementResult =
         await mySession.getLibraryByUri('package:my/my.dart');
     libraryElementResult as LibraryElementResult;
 
-    var A = libraryElementResult.element.getClass('A')!;
+    final A = libraryElementResult.element.getClass('A')!;
 
-    var searchedFiles = SearchedFiles();
+    final searchedFiles = SearchedFiles();
     searchedFiles.ownAnalyzed(myDriver.search);
 
-    var testDriver = driverFor(testFile);
+    final testDriver = driverFor(testFile);
 
     // No references, but this is not the most important.
-    var references = await testDriver.search.references(A, searchedFiles);
+    final references = await testDriver.search.references(A, searchedFiles);
     expect(references, isEmpty);
 
     // We should not add the file to known files. It is not in the
     // `package:test` itself, and not in a package from its package config.
     // So, it is absolutely unrelated to `package:test`.
-    for (var knowFile in testDriver.fsState.knownFiles) {
+    for (final knowFile in testDriver.fsState.knownFiles) {
       if (knowFile.path == myFile.path) {
         fail('The file should not be added.');
       }
@@ -817,41 +817,6 @@ self::@class::C::@method::main
 ''');
   }
 
-  test_searchReferences_class_constructor_declaredInAugmentation() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  A.named();
-}
-''');
-
-    await resolveTestCode('''
-import augment 'a.dart';
-
-class A {
-  void foo() {
-    A.named();
-  }
-}
-
-void f() {
-  A.named();
-}
-''');
-
-    var A = findElement.class_('A');
-    var element = A.augmented.constructors.single;
-    expect(element.name, 'named');
-
-    await assertElementReferencesText(element, r'''
-self::@class::A::@method::foo
-  56 5:6 |.named| INVOCATION qualified
-self::@function::f
-  87 10:4 |.named| INVOCATION qualified
-''');
-  }
-
   test_searchReferences_class_getter_in_objectPattern() async {
     await resolveTestCode('''
 void f(Object? x) {
@@ -863,7 +828,7 @@ class A {
   int get foo => 0;
 }
 ''');
-    var element = findElement.getter('foo');
+    final element = findElement.getter('foo');
     await assertElementReferencesText(element, r'''
 self::@function::f
   35 2:16 |foo| REFERENCE qualified
@@ -882,7 +847,7 @@ class A {
   void foo() {}
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@function::f
   35 2:16 |foo| REFERENCE qualified
@@ -897,11 +862,11 @@ Random v1;
 Random v2;
 ''');
 
-    var element = findElement.importFind('dart:math').class_('Random');
+    final element = findElement.importFind('dart:math').class_('Random');
     await assertElementReferencesText(element, r'''
-self::@topLevelVariable::v1
+self::@variable::v1
   20 2:1 |Random| REFERENCE
-self::@topLevelVariable::v2
+self::@variable::v2
   31 3:1 |Random| REFERENCE
 ''');
   }
@@ -917,7 +882,7 @@ class B2 implements A {}
 class B3 extends Object with A {}
 List<A> v2 = null;
 ''');
-    var element = findElement.class_('A');
+    final element = findElement.class_('A');
     await assertElementReferencesText(element, r'''
 self::@function::main::@parameter::p
   17 2:6 |A| REFERENCE
@@ -929,7 +894,7 @@ self::@class::B2
   75 6:21 |A| REFERENCE
 self::@class::B3
   109 7:30 |A| REFERENCE
-self::@topLevelVariable::v2
+self::@variable::v2
   119 8:6 |A| REFERENCE
 ''');
   }
@@ -944,7 +909,7 @@ main(A p) {
   A v;
 }
 ''');
-    var element = findNode.namedType('A p').element!;
+    final element = findNode.namedType('A p').element!;
     await assertElementReferencesText(element, r'''
 self::@function::main::@parameter::p
   24 2:6 |A| REFERENCE
@@ -962,7 +927,7 @@ main(MyEnum p) {
   MyEnum.a;
 }
 ''');
-    var element = findElement.enum_('MyEnum');
+    final element = findElement.enum_('MyEnum');
     await assertElementReferencesText(element, r'''
 self::@function::main::@parameter::p
   22 3:6 |MyEnum| REFERENCE
@@ -978,7 +943,7 @@ class A {}
 
 void f(({int foo, A bar}) r) {}
 ''');
-    var element = findElement.class_('A');
+    final element = findElement.class_('A');
     await assertElementReferencesText(element, r'''
 self::@function::f::@parameter::r
   30 3:19 |A| REFERENCE
@@ -991,7 +956,7 @@ class A {}
 
 void f((int, A) r) {}
 ''');
-    var element = findElement.class_('A');
+    final element = findElement.class_('A');
     await assertElementReferencesText(element, r'''
 self::@function::f::@parameter::r
   25 3:14 |A| REFERENCE
@@ -1003,7 +968,7 @@ self::@function::f::@parameter::r
 mixin A {}
 class B extends Object with A {}
 ''');
-    var element = findElement.mixin('A');
+    final element = findElement.mixin('A');
     await assertElementReferencesText(element, r'''
 self::@class::B
   39 2:29 |A| REFERENCE
@@ -1022,7 +987,7 @@ class B {}
 void f() {}
 ''');
 
-    var element = findElement.class_('B');
+    final element = findElement.class_('B');
     await assertElementReferencesText(element, r'''
 self::@function::f
   44 7:4 |B| REFERENCE
@@ -1035,7 +1000,7 @@ self::@function::f
 import 'foo.dart';
 export 'foo.dart';
 ''');
-    var element = findElement.importFind('package:test/foo.dart').unitElement;
+    final element = findElement.importFind('package:test/foo.dart').unitElement;
     await assertElementReferencesText(element, r'''
 self
   7 1:8 |'foo.dart'| REFERENCE qualified
@@ -1061,7 +1026,7 @@ void f() {
   A.named;
 }
 ''');
-    var element = findElement.constructor('named');
+    final element = findElement.constructor('named');
     await assertElementReferencesText(element, r'''
 self::@class::A
   10 1:11 |.named| REFERENCE qualified
@@ -1091,7 +1056,7 @@ void f() {
 }
 ''');
 
-    var element = findElement.constructor('named');
+    final element = findElement.constructor('named');
     await assertElementReferencesText(element, r'''
 self::@function::f
   64 8:4 |.named| INVOCATION qualified
@@ -1117,7 +1082,7 @@ void f() {
   A.new;
 }
 ''');
-    var element = findElement.unnamedConstructor('A');
+    final element = findElement.unnamedConstructor('A');
     await assertElementReferencesText(element, r'''
 self::@class::A
   10 1:11 || REFERENCE qualified
@@ -1149,9 +1114,9 @@ class A {
   A() {}
 }
 ''');
-    var element = findElement.unnamedConstructor('A');
+    final element = findElement.unnamedConstructor('A');
     await assertElementReferencesText(element, r'''
-package:test/other.dart::@fragment::package:test/other.dart::@function::f
+package:test/other.dart::@unit::package:test/other.dart::@function::f
   35 4:4 || INVOCATION qualified
 ''');
   }
@@ -1171,7 +1136,7 @@ void f() {
   A.new;
 }
 ''');
-    var element = findElement.unnamedConstructor('A');
+    final element = findElement.unnamedConstructor('A');
     await assertElementReferencesText(element, r'''
 self::@class::A
   10 1:11 || REFERENCE qualified
@@ -1194,7 +1159,7 @@ enum E {
   const E.other() : this.named();
 }
 ''');
-    var element = findElement.constructor('named');
+    final element = findElement.constructor('named');
     await assertElementReferencesText(element, r'''
 self::@enum::E
   10 1:11 |.named| REFERENCE qualified
@@ -1216,7 +1181,7 @@ enum E {
   const E.other() : this();
 }
 ''');
-    var element = findElement.unnamedConstructor('E');
+    final element = findElement.unnamedConstructor('E');
     await assertElementReferencesText(element, r'''
 self::@enum::E
   10 1:11 || REFERENCE qualified
@@ -1240,7 +1205,7 @@ enum E {
   v3.new();
 }
 ''');
-    var element = findElement.unnamedConstructor('E');
+    final element = findElement.unnamedConstructor('E');
     await assertElementReferencesText(element, r'''
 self::@enum::E
   10 1:11 || REFERENCE qualified
@@ -1265,30 +1230,11 @@ main() {
   E.bar();
 }
 ''');
-    var element = findElement.extension_('E');
+    final element = findElement.extension_('E');
     await assertElementReferencesText(element, r'''
 self::@function::main
   74 7:3 |E| REFERENCE
   88 8:3 |E| REFERENCE
-''');
-  }
-
-  test_searchReferences_ExtensionTypeElement() async {
-    await resolveTestCode('''
-extension type E(int it) {
-  static void bar() {}
-}
-
-void f(E e) {
-  E.bar();
-}
-''');
-    var element = findElement.extensionType('E');
-    await assertElementReferencesText(element, r'''
-self::@function::f::@parameter::e
-  60 5:8 |E| REFERENCE
-self::@function::f
-  69 6:3 |E| REFERENCE
 ''');
   }
 
@@ -1310,7 +1256,7 @@ class A {
   }
 }
 ''');
-    var element = findElement.field('field');
+    final element = findElement.field('field');
     await assertElementReferencesText(element, r'''
 self::@class::A::@constructor::new::@parameter::field
   33 3:11 |field| WRITE qualified
@@ -1341,7 +1287,7 @@ class A {
   }
 }
 ''');
-    var element = findElement.field('field');
+    final element = findElement.field('field');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::main
   78 6:5 |field| READ
@@ -1365,7 +1311,7 @@ void f(E e) {
   e.field;
 }
 ''');
-    var element = findElement.field('field');
+    final element = findElement.field('field');
     await assertElementReferencesText(element, r'''
 self::@enum::E::@constructor::new::@parameter::field
   68 4:26 |field| WRITE qualified
@@ -1386,26 +1332,26 @@ main() {
   MyEnum.B;
 }
 ''');
-    var index = typeProvider.enumElement!.getField('index')!;
+    final index = typeProvider.enumElement!.getField('index')!;
     await assertElementReferencesText(index, r'''
 self::@function::main
   46 5:12 |index| READ qualified
 ''');
 
-    var values = findElement.field('values');
+    final values = findElement.field('values');
     await assertElementReferencesText(values, r'''
 self::@function::main
   62 6:10 |values| READ qualified
 ''');
 
-    var A = findElement.field('A');
+    final A = findElement.field('A');
     await assertElementReferencesText(A, r'''
 self::@function::main
   44 5:10 |A| READ qualified
   79 7:10 |A| READ qualified
 ''');
 
-    var B = findElement.field('B');
+    final B = findElement.field('B');
     await assertElementReferencesText(B, r'''
 self::@function::main
   91 8:10 |B| READ qualified
@@ -1420,7 +1366,7 @@ main() {
   test;
 }
 ''');
-    var element = findElement.function('test');
+    final element = findElement.function('test');
     await assertElementReferencesText(element, r'''
 self::@function::main
   21 3:3 |test| INVOCATION
@@ -1436,7 +1382,7 @@ main() {
   test;
 }
 ''');
-    var element = findElement.localFunction('test');
+    final element = findElement.localFunction('test');
     await assertElementReferencesText(element, r'''
 self::@function::main
   23 3:3 |test| INVOCATION
@@ -1455,7 +1401,7 @@ main() {
 }
 Random bar() => null;
 ''');
-    var element = findElement.import('dart:math', mustBeUnique: false);
+    final element = findElement.import('dart:math', mustBeUnique: false);
     await assertElementReferencesText(element, r'''
 self::@function::main
   111 4:3 || REFERENCE
@@ -1488,7 +1434,7 @@ main() {
 Random bar() => null;
 ''');
 
-    var element = findElement.import('dart:math');
+    final element = findElement.import('dart:math');
     await assertElementReferencesText(element, r'''
 self::@function::main
   111 4:3 || REFERENCE
@@ -1496,6 +1442,35 @@ self::@function::main
   133 6:3 || REFERENCE
 self::@function::bar
   146 8:1 || REFERENCE
+''');
+  }
+
+  test_searchReferences_ImportElement_noPrefix_optIn_fromOptOut() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class N1 {}
+void N2() {}
+int get N3 => 0;
+set N4(int _) {}
+''');
+
+    await resolveTestCode('''
+// @dart = 2.7
+import 'a.dart';
+
+main() {
+  N1;
+  N2();
+  N3;
+  N4 = 0;
+}
+''');
+    final element = findElement.import('package:test/a.dart');
+    await assertElementReferencesText(element, r'''
+self::@function::main
+  44 5:3 || REFERENCE
+  50 6:3 || REFERENCE
+  58 7:3 || REFERENCE
+  64 8:3 || REFERENCE
 ''');
   }
 
@@ -1510,7 +1485,7 @@ main() {
 }
 math.Random bar() => null;
 ''');
-    var element = findElement.import('dart:math', mustBeUnique: false);
+    final element = findElement.import('dart:math', mustBeUnique: false);
     await assertElementReferencesText(element, r'''
 self::@function::main
   119 4:3 |math.| REFERENCE
@@ -1531,19 +1506,48 @@ main() {
 }
 ''');
     {
-      var element = findElement.import('dart:async');
+      final element = findElement.import('dart:async');
       await assertElementReferencesText(element, r'''
 self::@function::main
   76 5:3 |p.| REFERENCE
 ''');
     }
     {
-      var element = findElement.import('dart:math');
+      final element = findElement.import('dart:math');
       await assertElementReferencesText(element, r'''
 self::@function::main
   62 4:3 |p.| REFERENCE
 ''');
     }
+  }
+
+  test_searchReferences_ImportElement_withPrefix_optIn_fromOptOut() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class N1 {}
+void N2() {}
+int get N3 => 0;
+set N4(int _) {}
+''');
+
+    await resolveTestCode('''
+// @dart = 2.7
+import 'a.dart' as a;
+
+main() {
+  a.N1;
+  a.N2();
+  a.N3;
+  a.N4 = 0;
+}
+''');
+    final element = findElement.import('package:test/a.dart');
+    await assertElementReferencesText(element, r'''
+self::@function::main
+  49 5:3 |a.| REFERENCE
+  57 6:3 |a.| REFERENCE
+  67 7:3 |a.| REFERENCE
+  75 8:3 |a.| REFERENCE
+''');
   }
 
   test_searchReferences_LabelElement() async {
@@ -1558,11 +1562,28 @@ label:
   }
 }
 ''');
-    var element = findElement.label('label');
+    final element = findElement.label('label');
     await assertElementReferencesText(element, r'''
 self::@function::main
   61 5:13 |label| REFERENCE
   84 7:11 |label| REFERENCE
+''');
+  }
+
+  test_searchReferences_LibraryElement() async {
+    newFile('$testPackageLibPath/unitA.dart', 'part of lib;');
+    newFile('$testPackageLibPath/unitB.dart', 'part of lib;');
+    await resolveTestCode('''
+library lib;
+part 'unitA.dart';
+part 'unitB.dart';
+''');
+    final element = result.libraryElement;
+    await assertElementReferencesText(element, r'''
+self::@unit::package:test/unitA.dart
+  8 1:9 |lib| REFERENCE
+self::@unit::package:test/unitB.dart
+  8 1:9 |lib| REFERENCE
 ''');
   }
 
@@ -1588,52 +1609,12 @@ library lib;
 part 'unitA.dart';
 part 'unitB.dart';
 ''');
-    var element = result.libraryElement;
+    final element = result.libraryElement;
     await assertElementReferencesText(element, r'''
-self::@fragment::package:aaa/unitA.dart
+self::@unit::package:aaa/unitA.dart
   8 1:9 |lib| REFERENCE
-self::@fragment::package:aaa/unitB.dart
+self::@unit::package:aaa/unitB.dart
   8 1:9 |lib| REFERENCE
-''');
-  }
-
-  test_searchReferences_LibraryElement_partOfName() async {
-    newFile('$testPackageLibPath/unitA.dart', 'part of lib;');
-    newFile('$testPackageLibPath/unitB.dart', 'part of lib;');
-    await resolveTestCode('''
-library lib;
-part 'unitA.dart';
-part 'unitB.dart';
-''');
-    var element = result.libraryElement;
-    await assertElementReferencesText(element, r'''
-self::@fragment::package:test/unitA.dart
-  8 1:9 |lib| REFERENCE
-self::@fragment::package:test/unitB.dart
-  8 1:9 |lib| REFERENCE
-''');
-  }
-
-  test_searchReferences_LibraryElement_partOfUri() async {
-    newFile('$testPackageLibPath/unitA.dart', r'''
-part of 'test.dart';
-''');
-
-    newFile('$testPackageLibPath/unitB.dart', r'''
-part of 'test.dart';
-''');
-
-    await resolveTestCode('''
-part 'unitA.dart';
-part 'unitB.dart';
-''');
-
-    var element = result.libraryElement;
-    await assertElementReferencesText(element, r'''
-self::@fragment::package:test/unitA.dart
-  8 1:9 |'test.dart'| REFERENCE
-self::@fragment::package:test/unitB.dart
-  8 1:9 |'test.dart'| REFERENCE
 ''');
   }
 
@@ -1647,7 +1628,7 @@ main() {
   v();
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::main
   20 3:3 |v| WRITE
@@ -1663,7 +1644,7 @@ Object f() => [
   for (var v in []) v,
 ];
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::f
   36 2:21 |v| READ
@@ -1680,7 +1661,7 @@ Object f() {
   }
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::f
   54 4:25 |v| READ
@@ -1695,7 +1676,7 @@ Object f() {
   ];
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::f
   46 3:23 |v| READ
@@ -1708,9 +1689,9 @@ var x = [
   for (var v in []) v,
 ];
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
-self::@topLevelVariable::x
+self::@variable::x
   30 2:21 |v| READ
 ''');
   }
@@ -1726,7 +1707,7 @@ main() {
   }
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::main
   35 3:5 |v| WRITE
@@ -1756,38 +1737,13 @@ main() {
   v();
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::main
   20 3:3 |v| WRITE
   29 4:3 |v| READ_WRITE
   39 5:3 |v| READ
   44 6:3 |v| READ
-''');
-  }
-
-  test_searchReferences_macroGenerated_references() async {
-    if (!configureWithCommonMacros()) {
-      return;
-    }
-
-    await resolveTestCode('''
-import 'append.dart';
-
-class A {}
-
-@DeclareInLibrary('void f() { A; }')
-class B {
-  void foo() { A; }
-}
-''');
-
-    var element = findElement.class_('A');
-    await assertElementReferencesText(element, r'''
-self::@class::B::@method::foo
-  97 7:16 |A| REFERENCE
-self::@fragment::package:test/test.macro.dart::@function::f
-  46 3:12 |A| REFERENCE
 ''');
   }
 
@@ -1803,7 +1759,7 @@ class A {
   }
 }
 ''');
-    var element = findElement.method('m');
+    final element = findElement.method('m');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::main
   34 4:5 |m| INVOCATION
@@ -1829,7 +1785,7 @@ void f(E e) {
   e.foo;
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@enum::E::@method::bar
   49 5:5 |foo| INVOCATION
@@ -1860,7 +1816,7 @@ main() {
   0.foo;
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::E::@method::bar
   57 5:5 |foo| INVOCATION
@@ -1888,7 +1844,7 @@ extension E on int {
   }
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::E::@method::bar
   57 5:5 |foo| INVOCATION
@@ -1914,7 +1870,7 @@ main() {
   E.foo;
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::E::@method::bar
   71 5:5 |foo| INVOCATION
@@ -1938,36 +1894,13 @@ extension on int {
   }
 }
 ''');
-    var element = findElement.method('foo');
+    final element = findElement.method('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::0::@method::bar
   55 5:5 |foo| INVOCATION
   71 6:10 |foo| INVOCATION qualified
   82 7:5 |foo| REFERENCE
   96 8:10 |foo| REFERENCE qualified
-''');
-  }
-
-  test_searchReferences_MethodElement_extensionType() async {
-    await resolveTestCode('''
-extension type E(int it) {
-  void foo() {}
-
-  void bar() {
-    foo();
-  }
-}
-
-void f(E e) {
-  e.foo();
-}
-''');
-    var element = findElement.method('foo');
-    await assertElementReferencesText(element, r'''
-self::@extensionType::E::@method::bar
-  63 5:5 |foo| INVOCATION
-self::@function::f
-  95 10:5 |foo| INVOCATION qualified
 ''');
   }
 
@@ -1980,7 +1913,7 @@ main(A<int> a) {
   a.m();
 }
 ''');
-    var element = findElement.method('m');
+    final element = findElement.method('m');
     await assertElementReferencesText(element, r'''
 self::@function::main
   53 5:5 |m| INVOCATION qualified
@@ -1996,7 +1929,7 @@ class B extends A {
   B({required super.a});
 }
 ''');
-    var element = findElement.unnamedConstructor('A').parameter('a');
+    final element = findElement.unnamedConstructor('A').parameter('a');
     await assertElementReferencesText(element, r'''
 self::@class::B::@constructor::new::@parameter::a
   75 5:21 |a| REFERENCE qualified
@@ -2012,7 +1945,7 @@ class B extends A {
   B(super.a);
 }
 ''');
-    var element = findElement.unnamedConstructor('A').parameter('a');
+    final element = findElement.unnamedConstructor('A').parameter('a');
     await assertElementReferencesText(element, r'''
 self::@class::B::@constructor::new::@parameter::a
   54 5:11 |a| REFERENCE qualified
@@ -2031,7 +1964,7 @@ main() {
   foo(p: 42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::foo
   13 2:3 |p| WRITE
@@ -2052,7 +1985,7 @@ main() {
   foo(0, p: 1, 2);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::foo
   27 2:3 |p| READ
@@ -2073,7 +2006,7 @@ main() {
   foo(42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::foo
   13 2:3 |p| WRITE
@@ -2097,7 +2030,7 @@ main() {
   foo(p: 42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::foo
   26 2:3 |p| WRITE
@@ -2124,7 +2057,7 @@ main() {
   new C(42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@class::C::@constructor::new
   32 3:14 |p| READ
@@ -2147,7 +2080,7 @@ main() {
   foo(42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::main
   24 3:5 |p| WRITE
@@ -2171,7 +2104,7 @@ main(C c) {
   c.foo(42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@class::C::@method::foo
   25 3:5 |p| WRITE
@@ -2193,7 +2126,7 @@ main() {
   foo(42);
 }
 ''');
-    var element = findElement.parameter('p');
+    final element = findElement.parameter('p');
     await assertElementReferencesText(element, r'''
 self::@function::foo
   11 2:3 |p| WRITE
@@ -2218,9 +2151,9 @@ main() {
   ppp.Stream b;
 }
 ''');
-    var element = findElement.prefix('ppp');
+    final element = findElement.prefix('ppp');
     await assertElementReferencesText(element, r'''
-self::@fragment::package:test/my_part.dart::@topLevelVariable::c
+self::@unit::package:test/my_part.dart::@variable::c
   16 2:1 |ppp| REFERENCE
 self::@function::main
   76 5:3 |ppp| REFERENCE
@@ -2242,7 +2175,7 @@ void f() {
   prefix.E(0).foo();
 }
 ''');
-    var element = findElement.prefix('prefix');
+    final element = findElement.prefix('prefix');
     await assertElementReferencesText(element, r'''
 self::@function::f
   41 4:3 |prefix| REFERENCE
@@ -2277,12 +2210,12 @@ main() {
 }
 ''');
 
-    var element = findElement.prefix('ppp');
+    final element = findElement.prefix('ppp');
     await assertElementReferencesText(element, r'''
 self::@function::main
   76 5:3 |ppp| REFERENCE
   92 6:3 |ppp| REFERENCE
-self::@fragment::package:aaa/my_part.dart::@topLevelVariable::c
+self::@unit::package:aaa/my_part.dart::@variable::c
   16 2:1 |ppp| REFERENCE
 ''');
   }
@@ -2305,13 +2238,13 @@ part 'part3.dart';
 class _C {}
 _C v;
 ''');
-    var element = findElement.class_('_C');
+    final element = findElement.class_('_C');
     await assertElementReferencesText(element, r'''
-self::@fragment::package:test/part1.dart::@topLevelVariable::v1
+self::@unit::package:test/part1.dart::@variable::v1
   13 1:14 |_C| REFERENCE
-self::@fragment::package:test/part2.dart::@topLevelVariable::v2
+self::@unit::package:test/part2.dart::@variable::v2
   13 1:14 |_C| REFERENCE
-self::@topLevelVariable::v
+self::@variable::v
   82 6:1 |_C| REFERENCE
 ''');
   }
@@ -2340,13 +2273,14 @@ _C v1;
 
     await resolveTestCode(code);
 
-    var element = findElement.partFind('package:test/part1.dart').class_('_C');
+    final element =
+        findElement.partFind('package:test/part1.dart').class_('_C');
     await assertElementReferencesText(element, r'''
-self::@fragment::package:test/part1.dart::@topLevelVariable::v1
+self::@unit::package:test/part1.dart::@variable::v1
   25 3:1 |_C| REFERENCE
-self::@fragment::package:test/part2.dart::@topLevelVariable::v2
+self::@unit::package:test/part2.dart::@variable::v2
   13 1:14 |_C| REFERENCE
-self::@topLevelVariable::v
+self::@variable::v
   51 4:1 |_C| REFERENCE
 ''');
   }
@@ -2379,13 +2313,13 @@ _C v;
 
     await resolveFileCode(testFile, testCode);
 
-    var element = findElement.class_('_C');
+    final element = findElement.class_('_C');
     await assertElementReferencesText(element, r'''
-self::@topLevelVariable::v
+self::@variable::v
   63 5:1 |_C| REFERENCE
-self::@fragment::package:aaa/part1.dart::@topLevelVariable::v1
+self::@unit::package:aaa/part1.dart::@variable::v1
   13 1:14 |_C| REFERENCE
-self::@fragment::package:aaa/part2.dart::@topLevelVariable::v2
+self::@unit::package:aaa/part2.dart::@variable::v2
   13 1:14 |_C| REFERENCE
 ''');
   }
@@ -2406,7 +2340,7 @@ main() {
   0.foo;
 }
 ''');
-    var element = findElement.getter('foo');
+    final element = findElement.getter('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::E::@method::bar
   61 5:5 |foo| REFERENCE
@@ -2433,7 +2367,7 @@ main() {
   0.foo = 4;
 }
 ''');
-    var element = findElement.setter('foo');
+    final element = findElement.setter('foo');
     await assertElementReferencesText(element, r'''
 self::@extension::E::@method::bar
   61 5:5 |foo| REFERENCE
@@ -2456,7 +2390,7 @@ class A {
   }
 }
 ''');
-    var element = findElement.getter('ggg');
+    final element = findElement.getter('ggg');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::main
   44 4:5 |ggg| REFERENCE
@@ -2476,7 +2410,7 @@ class A {
   }
 }
 ''');
-    var element = findElement.setter('s');
+    final element = findElement.setter('s');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::main
   39 4:5 |s| REFERENCE
@@ -2501,7 +2435,7 @@ main() {
   V();
 }
 ''');
-    var element = findElement
+    final element = findElement
         .importFind('package:test/lib.dart', mustBeUnique: false)
         .topVar('V');
     await assertElementReferencesText(element, r'''
@@ -2536,7 +2470,7 @@ void f(B p) {
 }
 ''');
 
-    var element = findElement.typeAlias('B');
+    final element = findElement.typeAlias('B');
     await assertElementReferencesText(element, r'''
 self::@class::C
   103 8:17 |B| REFERENCE
@@ -2547,6 +2481,25 @@ self::@function::f
   132 12:3 |B| REFERENCE
   147 13:3 |B| REFERENCE
   158 14:3 |B| REFERENCE
+''');
+  }
+
+  test_searchReferences_TypeAliasElement_fromLegacy() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+typedef A<T> = Map<int, T>;
+''');
+    await resolveTestCode('''
+// @dart = 2.9
+import 'a.dart';
+
+void f(A<String> a) {}
+''');
+
+    final element =
+        findElement.importFind('package:test/a.dart').typeAlias('A');
+    await assertElementReferencesText(element, r'''
+self::@function::f::@parameter::a
+  40 4:8 |A| REFERENCE
 ''');
   }
 
@@ -2561,7 +2514,7 @@ void f() {
 }
 ''');
 
-    var element = findElement.typeAlias('B');
+    final element = findElement.typeAlias('B');
     await assertElementReferencesText(element, r'''
 self::@function::f
   49 6:3 |B| REFERENCE
@@ -2575,7 +2528,7 @@ class A<T> {
   bar(T b) {}
 }
 ''');
-    var element = findElement.typeParameter('T');
+    final element = findElement.typeParameter('T');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::foo::@parameter::a
   19 2:7 |T| REFERENCE
@@ -2592,7 +2545,7 @@ enum E<T> {
   void foo(T b) {}
 }
 ''');
-    var element = findElement.typeParameter('T');
+    final element = findElement.typeParameter('T');
     await assertElementReferencesText(element, r'''
 self::@enum::E::@field::a
   25 3:9 |T| REFERENCE
@@ -2609,7 +2562,7 @@ main() {
   }
 }
 ''');
-    var element = findElement.typeParameter('T');
+    final element = findElement.typeParameter('T');
     await assertElementReferencesText(element, r'''
 self::@function::main
   23 2:15 |T| REFERENCE
@@ -2623,7 +2576,7 @@ class A {
   foo<T>(T p) {}
 }
 ''');
-    var element = findElement.typeParameter('T');
+    final element = findElement.typeParameter('T');
     await assertElementReferencesText(element, r'''
 self::@class::A::@method::foo::@parameter::p
   19 2:10 |T| REFERENCE
@@ -2636,7 +2589,7 @@ foo<T>(T a) {
   bar(T b) {}
 }
 ''');
-    var element = findElement.typeParameter('T');
+    final element = findElement.typeParameter('T');
     await assertElementReferencesText(element, r'''
 self::@function::foo::@parameter::a
   7 1:8 |T| REFERENCE
@@ -2655,7 +2608,7 @@ void f(x) {
   v();
 }
 ''');
-    var element = findNode.bindPatternVariableElement('v) =');
+    final element = findNode.bindPatternVariableElement('v) =');
     await assertElementReferencesText(element, r'''
 self::@function::f
   29 3:3 |v| WRITE
@@ -2673,7 +2626,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var element = findNode.bindPatternVariableElement('v)');
+    final element = findNode.bindPatternVariableElement('v)');
     await assertElementReferencesText(element, r'''
 self::@function::f
   46 3:5 |v| READ
@@ -2689,7 +2642,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var element = findNode.bindPatternVariableElement('v]');
+    final element = findNode.bindPatternVariableElement('v]');
     await assertElementReferencesText(element, r'''
 self::@function::f
   57 3:5 |v| READ
@@ -2705,7 +2658,7 @@ void f() {
   v;
 }
 ''');
-    var element = findElement.localVar('v');
+    final element = findElement.localVar('v');
     await assertElementReferencesText(element, r'''
 self::@function::f
   23 3:4 |v| WRITE
@@ -2720,7 +2673,7 @@ Object f(Object? x) => switch (0) {
   _ => -1,
 }
 ''');
-    var element = findNode.bindPatternVariableElement('int v');
+    final element = findNode.bindPatternVariableElement('int v');
     await assertElementReferencesText(element, r'''
 self::@function::f
   49 2:14 |v| READ
@@ -2736,9 +2689,9 @@ var f = switch (0) {
   _ => -1,
 }
 ''');
-    var element = findNode.bindPatternVariableElement('int v');
+    final element = findNode.bindPatternVariableElement('int v');
     await assertElementReferencesText(element, r'''
-self::@topLevelVariable::f
+self::@variable::f
   34 2:14 |v| READ
   43 2:23 |v| READ
   52 2:32 |v| WRITE
@@ -2756,7 +2709,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var element = findNode.bindPatternVariableElement('int v when');
+    final element = findNode.bindPatternVariableElement('int v when');
     await assertElementReferencesText(element, r'''
 self::@function::f
   55 3:21 |v| READ
@@ -2777,7 +2730,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var element = findNode.bindPatternVariableElement('int v when');
+    final element = findNode.bindPatternVariableElement('int v when');
     await assertElementReferencesText(element, r'''
 self::@function::f
   55 3:21 |v| READ
@@ -2794,7 +2747,7 @@ class A extends T {}
 class B = Object with T;
 class C implements T {}
 ''');
-    var element = findElement.class_('T');
+    final element = findElement.class_('T');
     await assertElementReferencesText(element, r'''
 self::@class::A
   27 2:17 |T| REFERENCE
@@ -2811,7 +2764,7 @@ class T {}
 mixin A on T {}
 mixin B implements T {}
 ''');
-    var element = findElement.class_('T');
+    final element = findElement.class_('T');
     await assertElementReferencesText(element, r'''
 self::@mixin::A
   22 2:12 |T| REFERENCE
@@ -2974,7 +2927,7 @@ class A {
 
     void assertHasResult(String path, String name, {bool not = false}) {
       var matcher = contains(predicate((SearchResult r) {
-        var element = r.enclosingElement;
+        final element = r.enclosingElement;
         return element.name == name && element.source!.fullName == path;
       }));
       expect(results, not ? isNot(matcher) : matcher);
@@ -3013,46 +2966,6 @@ class A {}
 
     expect(b.id, endsWith('b.dart;B'));
     expect(c.id, endsWith('c.dart;C'));
-  }
-
-  test_subtypes_class_macroGenerated() async {
-    if (!configureWithCommonMacros()) {
-      return;
-    }
-
-    await resolveTestCode('''
-import 'append.dart';
-
-class A {}
-
-@DeclareTypesPhase('C', """
-class C extends A {
-  void methodC() {}
-}
-""")
-class B extends A {
-  void methodB() {}
-}
-''');
-    var A = findElement.class_('A');
-
-    // Search by 'type'.
-    var subtypes = await driver.search.subtypes(
-      SearchedFiles(),
-      type: A,
-    );
-    expect(subtypes, hasLength(2));
-
-    var B = subtypes.singleWhere((r) => r.name == 'B');
-    var C = subtypes.singleWhere((r) => r.name == 'C');
-
-    expect(B.libraryUri, testUriStr);
-    expect(B.id, '$testUriStr;$testUriStr;B');
-    expect(B.members, ['methodB']);
-
-    expect(C.libraryUri, testUriStr);
-    expect(C.id, 'package:test/test.dart;package:test/test.macro.dart;C');
-    expect(C.members, ['methodC']);
   }
 
   test_subtypes_enum() async {
@@ -3103,14 +3016,14 @@ extension type E2(A it) implements A {
 }
 ''');
 
-    var subtypes = await driver.search.subtypes(
+    final subtypes = await driver.search.subtypes(
       SearchedFiles(),
       type: findElement.class_('A'),
     );
     expect(subtypes, hasLength(2));
 
-    var resultE1 = subtypes.singleWhere((r) => r.name == 'E1');
-    var resultE2 = subtypes.singleWhere((r) => r.name == 'E2');
+    final resultE1 = subtypes.singleWhere((r) => r.name == 'E1');
+    final resultE2 = subtypes.singleWhere((r) => r.name == 'E2');
 
     expect(resultE1.libraryUri, testUriStr);
     expect(resultE1.id, '$testUriStr;$testUriStr;E1');
@@ -3130,13 +3043,13 @@ extension type B(int it) implements A {
 }
 ''');
 
-    var subtypes = await driver.search.subtypes(
+    final subtypes = await driver.search.subtypes(
       SearchedFiles(),
       type: findElement.extensionType('A'),
     );
     expect(subtypes, hasLength(1));
 
-    var B = subtypes.singleWhere((r) => r.name == 'B');
+    final B = subtypes.singleWhere((r) => r.name == 'B');
 
     expect(B.libraryUri, testUriStr);
     expect(B.id, '$testUriStr;$testUriStr;B');
@@ -3212,23 +3125,23 @@ class NoMatchABCDEF {}
     WorkspaceSymbols symbols,
     Map<File, String> inFiles,
   ) {
-    var groups = symbols.declarations
+    final groups = symbols.declarations
         .map((declaration) {
-          var file = getFile(symbols.files[declaration.fileIndex]);
-          var fileStr = inFiles[file];
+          final file = getFile(symbols.files[declaration.fileIndex]);
+          final fileStr = inFiles[file];
           return fileStr != null ? MapEntry(fileStr, declaration) : null;
         })
-        .nonNulls
+        .whereNotNull()
         .groupListsBy((entry) => entry.key);
 
-    var buffer = StringBuffer();
-    for (var group in groups.entries) {
-      var fileStr = group.key;
+    final buffer = StringBuffer();
+    for (final group in groups.entries) {
+      final fileStr = group.key;
       buffer.writeln(fileStr);
-      var fileDeclarations = group.value.map((e) => e.value).toList();
-      var sorted = fileDeclarations.sortedBy<num>((e) => e.offset);
-      for (var declaration in sorted) {
-        var name = declaration.name;
+      final fileDeclarations = group.value.map((e) => e.value).toList();
+      final sorted = fileDeclarations.sortedBy<num>((e) => e.offset);
+      for (final declaration in sorted) {
+        final name = declaration.name;
         buffer.write('  ${declaration.kind.name} ');
         buffer.writeln(name.isNotEmpty ? name : '<unnamed>');
         buffer.writeln(
@@ -3240,17 +3153,17 @@ class NoMatchABCDEF {}
           '${declaration.codeLength}',
         );
 
-        var className = declaration.className;
+        final className = declaration.className;
         if (className != null) {
           buffer.writeln('    className: $className');
         }
 
-        var mixinName = declaration.mixinName;
+        final mixinName = declaration.mixinName;
         if (mixinName != null) {
           buffer.writeln('    mixinName: $mixinName');
         }
 
-        var parameters = declaration.parameters;
+        final parameters = declaration.parameters;
         if (parameters != null) {
           buffer.writeln('    parameters: $parameters');
         }
@@ -3260,7 +3173,7 @@ class NoMatchABCDEF {}
   }
 
   String _getSearchResultsText(List<SearchResult> results) {
-    var selfUriStr = '${result.uri}';
+    final selfUriStr = '${result.uri}';
 
     String referenceToString(Reference reference) {
       var name = reference.name;
@@ -3268,7 +3181,7 @@ class NoMatchABCDEF {}
         name = 'self';
       }
 
-      var parent = reference.parent ??
+      final parent = reference.parent ??
           (throw StateError('Should not go past libraries'));
 
       // A library.
@@ -3277,7 +3190,7 @@ class NoMatchABCDEF {}
       }
 
       // A unit of the self library.
-      if (parent.name == '@fragment' && name == 'self') {
+      if (parent.name == '@unit' && name == 'self') {
         return 'self';
       }
 
@@ -3285,12 +3198,12 @@ class NoMatchABCDEF {}
     }
 
     String elementToReferenceString(Element element) {
-      var enclosingElement = element.enclosingElement;
-      var reference = (element as ElementImpl).reference;
+      final enclosingElement = element.enclosingElement;
+      final reference = (element as ElementImpl).reference;
       if (reference != null) {
         return referenceToString(reference);
       } else if (element is ParameterElement) {
-        var enclosingStr = enclosingElement != null
+        final enclosingStr = enclosingElement != null
             ? elementToReferenceString(enclosingElement)
             : 'root';
         return '$enclosingStr::@parameter::${element.name}';
@@ -3299,40 +3212,40 @@ class NoMatchABCDEF {}
       }
     }
 
-    var analysisSession = result.session;
+    final analysisSession = result.session;
 
-    var groups = results
+    final groups = results
         .groupListsBy((result) => result.enclosingElement)
         .entries
         .map((e) {
-      var enclosingElement = e.key;
+      final enclosingElement = e.key;
       return _GroupToPrint(
         enclosingElement: enclosingElement,
         enclosingElementStr: elementToReferenceString(enclosingElement),
         results: e.value.sortedBy<num>((e) => e.offset),
       );
     }).sorted((first, second) {
-      var firstPath = first.path;
-      var secondPath = second.path;
-      var byPath = firstPath.compareTo(secondPath);
+      final firstPath = first.path;
+      final secondPath = second.path;
+      final byPath = firstPath.compareTo(secondPath);
       if (byPath != 0) {
         return byPath;
       }
       return first.results.first.offset - second.results.first.offset;
     });
 
-    var buffer = StringBuffer();
-    for (var group in groups) {
-      var unitPath = group.path;
-      var unitResult = analysisSession.getParsedUnit(unitPath);
+    final buffer = StringBuffer();
+    for (final group in groups) {
+      final unitPath = group.path;
+      final unitResult = analysisSession.getParsedUnit(unitPath);
       unitResult as ParsedUnitResult;
       buffer.writeln(group.enclosingElementStr);
-      for (var result in group.results) {
-        var offset = result.offset;
-        var length = result.length;
-        var end = offset + length;
-        var location = unitResult.lineInfo.getLocation(offset);
-        var snippet = unitResult.content.substring(offset, end);
+      for (final result in group.results) {
+        final offset = result.offset;
+        final length = result.length;
+        final end = offset + length;
+        final location = unitResult.lineInfo.getLocation(offset);
+        final snippet = unitResult.content.substring(offset, end);
 
         buffer.write('  ');
         buffer.write(result.offset);

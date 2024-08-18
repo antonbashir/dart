@@ -2,9 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/services/linter/lint_names.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
-import 'package:analysis_server_plugin/src/correction/fix_generators.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -125,12 +124,11 @@ class VerificationTests {
 
   static void verify_fixInFileFixesHaveUniqueBulkFixes() {
     group('VerificationTests | fixInFileFixesHaveUniqueBulkFixes | lint |', () {
-      for (var fixEntry in registeredFixGenerators.lintProducers.entries) {
+      for (var fixEntry in FixProcessor.lintProducerMap.entries) {
         var errorCode = fixEntry.key;
         for (var generator in fixEntry.value) {
-          var producer =
-              generator(context: StubCorrectionProducerContext.instance);
-          if (producer.canBeAppliedAcrossSingleFile) {
+          var producer = generator();
+          if (producer.canBeAppliedToFile) {
             test('$errorCode |', () {
               var multiFixKind = producer.multiFixKind;
               var fixKind = producer.fixKind;
@@ -149,13 +147,12 @@ class VerificationTests {
     var dynamicProducerTypes = ['ReplaceWithIsEmpty'];
 
     group('VerificationTests | fixInFileFixKindsHaveMultiFixes | lint |', () {
-      for (var fixEntry in registeredFixGenerators.lintProducers.entries) {
+      for (var fixEntry in FixProcessor.lintProducerMap.entries) {
         var errorCode = fixEntry.key;
         for (var generator in fixEntry.value) {
-          var producer =
-              generator(context: StubCorrectionProducerContext.instance);
+          var producer = generator();
           // At least one generator should have a multiFix.
-          if (producer.canBeAppliedAcrossSingleFile) {
+          if (producer.canBeAppliedToFile) {
             test('$errorCode |', () {
               var foundMultiFix = producer.multiFixKind != null ||
                   dynamicProducerTypes

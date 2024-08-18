@@ -60,9 +60,6 @@ class ClientDynamicRegistrations {
   bool get codeActions =>
       _capabilities.textDocument?.codeAction?.dynamicRegistration ?? false;
 
-  bool get codeLens =>
-      _capabilities.textDocument?.codeLens?.dynamicRegistration ?? false;
-
   bool get colorProvider =>
       _capabilities.textDocument?.colorProvider?.dynamicRegistration ?? false;
 
@@ -141,7 +138,6 @@ class ServerCapabilitiesComputer {
 
   /// List of current registrations.
   Set<Registration> currentRegistrations = {};
-
   var _lastRegistrationId = 0;
 
   ServerCapabilitiesComputer(this._server);
@@ -163,8 +159,12 @@ class ServerCapabilitiesComputer {
   ServerCapabilities computeServerCapabilities(
     LspClientCapabilities clientCapabilities,
   ) {
-    var context = _createRegistrationContext();
-    var features = LspFeatures(context);
+    final context = RegistrationContext(
+      clientCapabilities: clientCapabilities,
+      clientConfiguration: _server.lspClientConfiguration,
+      pluginTypes: pluginTypes,
+    );
+    final features = LspFeatures(context);
 
     return ServerCapabilities(
       textDocumentSync: features.textDocumentSync.staticRegistration,
@@ -179,7 +179,6 @@ class ServerCapabilitiesComputer {
       documentHighlightProvider: features.documentHighlight.staticRegistration,
       documentSymbolProvider: features.documentSymbol.staticRegistration,
       codeActionProvider: features.codeActions.staticRegistration,
-      codeLensProvider: features.codeLens.staticRegistration,
       colorProvider: features.colors.staticRegistration,
       documentFormattingProvider: features.format.staticRegistration,
       documentOnTypeFormattingProvider:
@@ -205,21 +204,6 @@ class ServerCapabilitiesComputer {
               )
             : null,
       ),
-      experimental: {
-        if (clientCapabilities
-            .supportsDartExperimentalTextDocumentContentProvider)
-          'dartTextDocumentContentProvider':
-              features.dartTextDocumentContentProvider.staticRegistration,
-        'textDocument': {
-          // These properties can be used by the client to know that we support
-          // custom methods like `dart/textDocument/augmented`.
-          //
-          // These fields are objects to allow for future expansion.
-          'super': {},
-          'augmented': {},
-          'augmentation': {},
-        },
-      },
     );
   }
 
@@ -231,14 +215,19 @@ class ServerCapabilitiesComputer {
   /// support and it will be up to them to decide which file types they will
   /// send requests for.
   Future<void> performDynamicRegistration() async {
-    var features = LspFeatures(_createRegistrationContext());
-    var registrations = <Registration>[];
+    final context = RegistrationContext(
+      clientCapabilities: _server.lspClientCapabilities!,
+      clientConfiguration: _server.lspClientConfiguration,
+      pluginTypes: pluginTypes,
+    );
+    final features = LspFeatures(context);
+    final registrations = <Registration>[];
 
     // Collect dynamic registrations for all features.
-    var dynamicRegistrations = features.allFeatures
+    final dynamicRegistrations = features.allFeatures
         .where((feature) => feature.supportsDynamic)
         .expand((feature) => feature.dynamicRegistrations);
-    for (var (method, options) in dynamicRegistrations) {
+    for (final (method, options) in dynamicRegistrations) {
       registrations.add(
         Registration(
           id: (_lastRegistrationId++).toString(),
@@ -260,19 +249,19 @@ class ServerCapabilitiesComputer {
     String registrationHash(Registration registration) =>
         '${registration.method}${registration.registerOptions.hashCode}';
 
-    var newRegistrationsMap = Map.fromEntries(
+    final newRegistrationsMap = Map.fromEntries(
         newRegistrations.map((r) => MapEntry(r, registrationHash(r))));
-    var newRegistrationsJsons = newRegistrationsMap.values.toSet();
-    var currentRegistrationsMap = Map.fromEntries(
+    final newRegistrationsJsons = newRegistrationsMap.values.toSet();
+    final currentRegistrationsMap = Map.fromEntries(
         currentRegistrations.map((r) => MapEntry(r, registrationHash(r))));
-    var currentRegistrationJsons = currentRegistrationsMap.values.toSet();
+    final currentRegistrationJsons = currentRegistrationsMap.values.toSet();
 
-    var registrationsToAdd = newRegistrationsMap.entries
+    final registrationsToAdd = newRegistrationsMap.entries
         .where((entry) => !currentRegistrationJsons.contains(entry.value))
         .map((entry) => entry.key)
         .toList();
 
-    var registrationsToRemove = currentRegistrationsMap.entries
+    final registrationsToRemove = currentRegistrationsMap.entries
         .where((entry) => !newRegistrationsJsons.contains(entry.value))
         .map((entry) => entry.key)
         .toList();
@@ -285,7 +274,7 @@ class ServerCapabilitiesComputer {
 
     Future<void>? unregistrationRequest;
     if (registrationsToRemove.isNotEmpty) {
-      var unregistrations = registrationsToRemove
+      final unregistrations = registrationsToRemove
           .map((r) => Unregistration(id: r.id, method: r.method))
           .toList();
       // It's important not to await this request here, as we must ensure
@@ -305,7 +294,7 @@ class ServerCapabilitiesComputer {
           .sendRequest(Method.client_registerCapability,
               RegistrationParams(registrations: registrationsToAdd))
           .then((registrationResponse) {
-        var error = registrationResponse.error;
+        final error = registrationResponse.error;
         if (error != null) {
           _server.logErrorToClient(
             'Failed to register capabilities with client: '
@@ -321,21 +310,5 @@ class ServerCapabilitiesComputer {
     // method between them.
     await unregistrationRequest;
     await registrationRequest;
-  }
-
-  RegistrationContext _createRegistrationContext() {
-    return RegistrationContext(
-      clientCapabilities: _server.lspClientCapabilities!,
-      clientConfiguration: _server.lspClientConfiguration,
-      customDartSchemes: _server.uriConverter.supportedNonFileSchemes,
-      dartFilters: [
-        for (var scheme in {
-          'file',
-          ..._server.uriConverter.supportedNonFileSchemes
-        })
-          TextDocumentFilterWithScheme(language: 'dart', scheme: scheme)
-      ],
-      pluginTypes: pluginTypes,
-    );
   }
 }

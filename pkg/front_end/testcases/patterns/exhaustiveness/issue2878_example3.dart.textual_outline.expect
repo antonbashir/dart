@@ -1,5 +1,4 @@
 void main() {}
-
 List<List<A>> subs<A>(List<A> list) => switch (list) {
       [] => [],
       [var x, ...var xs] => [

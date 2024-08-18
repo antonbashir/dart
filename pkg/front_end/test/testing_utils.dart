@@ -6,22 +6,18 @@ import 'dart:io' show Directory, Process, ProcessResult;
 
 import 'package:testing/testing.dart' show Chain, TestDescription;
 
-Future<List<TestDescription>> filterList(
-    Chain suite, bool onlyInGit, List<TestDescription> base) async {
-  Set<Uri> gitFiles = {};
+Stream<TestDescription> filterList(
+    Chain suite, bool onlyInGit, Stream<TestDescription> base) async* {
+  Set<Uri>? gitFiles;
   if (onlyInGit) {
-    for (Uri subRoot in suite.subRoots) {
-      gitFiles.addAll(await getGitFiles(subRoot));
-    }
+    gitFiles = await getGitFiles(suite.uri);
   }
-  List<TestDescription> result = [];
-  for (TestDescription description in base) {
-    if (onlyInGit && !gitFiles.contains(description.uri)) {
+  await for (TestDescription description in base) {
+    if (onlyInGit && !gitFiles!.contains(description.uri)) {
       continue;
     }
-    result.add(description);
+    yield description;
   }
-  return result;
 }
 
 Future<Set<Uri>> getGitFiles(Uri uri) async {

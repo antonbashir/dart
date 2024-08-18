@@ -7,7 +7,7 @@
 
 /// Utilities for building JS ASTs at runtime. Contains a builder class and a
 /// parser that parses part of the language.
-library;
+library js_ast.builder;
 
 import 'characters.dart' as char_codes;
 import 'nodes.dart';
@@ -1032,15 +1032,15 @@ class MiniJsParser {
     AsyncModifier asyncModifier;
     if (acceptString('async')) {
       if (acceptString('*')) {
-        asyncModifier = AsyncModifier.asyncStar;
+        asyncModifier = const AsyncModifier.asyncStar();
       } else {
-        asyncModifier = AsyncModifier.async;
+        asyncModifier = const AsyncModifier.async();
       }
     } else if (acceptString('sync')) {
       if (!acceptString('*')) error('Only sync* is valid - sync is implied');
-      asyncModifier = AsyncModifier.syncStar;
+      asyncModifier = const AsyncModifier.syncStar();
     } else {
-      asyncModifier = AsyncModifier.sync;
+      asyncModifier = const AsyncModifier.sync();
     }
     expectCategory(LBRACE);
     Block block = parseBlock();

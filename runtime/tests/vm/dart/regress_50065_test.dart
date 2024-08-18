@@ -8,6 +8,7 @@
 
 import 'dart:isolate';
 
+import 'package:expect/expect.dart';
 import '../../../../tests/language/generic/function_bounds_test.dart'
     as function_bounds_test;
 

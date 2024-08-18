@@ -15,9 +15,6 @@ class E extends D {
 }
 
 main() {}
-
 test() {}
-
 typedef F<T>(T x);
-
 void g1(C c) {}

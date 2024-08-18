@@ -19,9 +19,7 @@ import 'promotion_key_store.dart';
 /// flow analysis.
 ///
 /// Then, in the second phase, the client may make queries using
-/// [AssignedVariablesForTesting.capturedAnywhere],
-/// [AssignedVariablesForTesting.writtenInNode], and
-/// [AssignedVariablesForTesting.capturedInNode].
+/// [capturedAnywhere], [writtenInNode], and [capturedInNode].
 ///
 /// We use the term "node" to refer generally to a loop statement, switch
 /// statement, try statement, loop collection element, local function, or
@@ -41,7 +39,7 @@ class AssignedVariables<Node extends Object, Variable extends Object> {
   ];
 
   /// When assertions are enabled, the set of info objects that have been
-  /// retrieved by [deferNode] but not yet sent to [storeInfo].
+  /// retrieved by [deferNode] but not yet sent to [storeNode].
   final Set<AssignedVariablesNodeInfo> _deferredInfos =
       new Set<AssignedVariablesNodeInfo>.identity();
 
@@ -102,7 +100,7 @@ class AssignedVariables<Node extends Object, Variable extends Object> {
   ///
   /// In contrast to [endNode], this method doesn't store the data gathered for
   /// the node for later use; instead it returns it to the caller.  At a later
-  /// time, the caller should pass the returned data to [storeInfo].
+  /// time, the caller should pass the returned data to [storeNodeInfo].
   ///
   /// See [beginNode] for more details.
   AssignedVariablesNodeInfo deferNode(

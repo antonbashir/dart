@@ -7,7 +7,8 @@
 /*@testedFeatures=inference*/
 library test;
 
-test(dynamic o) async {
+test() async {
+  Object o;
   for (var /*@type=dynamic*/ x in o) {}
   await for (var /*@type=dynamic*/ x in o) {}
   int y;

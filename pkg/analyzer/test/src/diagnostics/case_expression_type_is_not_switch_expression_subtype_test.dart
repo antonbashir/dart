@@ -39,7 +39,7 @@ mixin CaseExpressionTypeIsNotSwitchExpressionSubtypeTestCases
   _Variant get _variant;
 
   test_notSubtype_hasEqEq() async {
-    List<ExpectedError> expectedErrors;
+    final List<ExpectedError> expectedErrors;
     switch (_variant) {
       case _Variant.nullSafe:
         expectedErrors = [
@@ -87,7 +87,7 @@ void f(A e) {
   }
 
   test_notSubtype_primitiveEquality() async {
-    List<ExpectedError> expectedErrors;
+    final List<ExpectedError> expectedErrors;
     switch (_variant) {
       case _Variant.nullSafe:
         expectedErrors = [

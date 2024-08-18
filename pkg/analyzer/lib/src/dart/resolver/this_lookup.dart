@@ -33,14 +33,14 @@ class ThisLookup {
       nameErrorEntity: node,
     );
 
-    var callFunctionType = propertyResult.callFunctionType;
+    final callFunctionType = propertyResult.callFunctionType;
     if (callFunctionType != null) {
       return LexicalLookupResult(
         callFunctionType: callFunctionType,
       );
     }
 
-    var recordField = propertyResult.recordField;
+    final recordField = propertyResult.recordField;
     if (recordField != null) {
       return LexicalLookupResult(
         recordField: recordField,

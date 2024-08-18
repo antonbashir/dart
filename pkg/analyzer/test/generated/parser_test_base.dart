@@ -24,6 +24,7 @@ import 'package:analyzer/src/generated/parser.dart' as analyzer;
 import 'package:analyzer/src/generated/source.dart' show NonExistingSource;
 import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:analyzer/src/string_source.dart';
+import 'package:collection/collection.dart';
 import 'package:pub_semver/src/version.dart';
 import 'package:test/test.dart';
 
@@ -240,7 +241,8 @@ class FastaParserTestCase
 
   @override
   void assertErrorsWithCodes(List<ErrorCode> expectedErrorCodes) {
-    parserProxy.errorListener.assertErrorsWithCodes(expectedErrorCodes);
+    parserProxy.errorListener.assertErrorsWithCodes(
+        _toFastaGeneratedAnalyzerErrorCodes(expectedErrorCodes));
   }
 
   @override
@@ -267,7 +269,7 @@ class FastaParserTestCase
 
   @override
   ExpectedError expectedError(ErrorCode code, int offset, int length) =>
-      ExpectedError(code, offset, length);
+      ExpectedError(_toFastaGeneratedAnalyzerErrorCode(code), offset, length);
 
   @override
   void expectNotNullIfNoErrors(Object? result) {
@@ -353,13 +355,14 @@ class FastaParserTestCase
       {List<ErrorCode>? codes,
       List<ExpectedError>? errors,
       FeatureSet? featureSet}) {
-    GatheringErrorListener listener = GatheringErrorListener();
+    GatheringErrorListener listener = GatheringErrorListener(checkRanges: true);
 
     var unit = parseCompilationUnit2(content, listener, featureSet: featureSet);
 
     // Assert and return result
     if (codes != null) {
-      listener.assertErrorsWithCodes(codes);
+      listener
+          .assertErrorsWithCodes(_toFastaGeneratedAnalyzerErrorCodes(codes));
     } else if (errors != null) {
       listener.assertErrors(errors);
     } else {
@@ -390,14 +393,15 @@ class FastaParserTestCase
     _fastaTokens = result.tokens;
 
     // Run parser
-    ErrorReporter errorReporter = ErrorReporter(listener, source);
+    ErrorReporter errorReporter = ErrorReporter(
+      listener,
+      source,
+      isNonNullableByDefault: false,
+    );
     AstBuilder astBuilder = AstBuilder(errorReporter, source.uri, true,
         featureSet!, LineInfo.fromContent(content));
-    fasta.Parser parser = fasta.Parser(
-      astBuilder,
-      allowPatterns: featureSet!.isEnabled(Feature.patterns),
-      enableFeatureEnhancedParts: featureSet!.isEnabled(Feature.enhanced_parts),
-    );
+    fasta.Parser parser = fasta.Parser(astBuilder,
+        allowPatterns: featureSet!.isEnabled(Feature.patterns));
     astBuilder.parser = parser;
     astBuilder.allowNativeClause = allowNativeClause;
     parser.parseUnit(_fastaTokens);
@@ -489,7 +493,7 @@ class FastaParserTestCase
       fail('$kind');
     }
     FormalParameterList list = parseFormalParameterList(parametersCode,
-        errorCodes: errorCodes, featureSet: featureSet);
+        inFunctionType: false, errorCodes: errorCodes, featureSet: featureSet);
     return list.parameters.single;
   }
 
@@ -611,7 +615,7 @@ class FastaParserTestCase
       {int? expectedEndOffset, List<ExpectedError>? errors}) {
     createParser(code, expectedEndOffset: expectedEndOffset);
     Expression result = parserProxy.parsePrimaryExpression();
-    assertErrors(errors: errors);
+    assertErrors(codes: null, errors: errors);
     return result;
   }
 
@@ -683,6 +687,27 @@ class FastaParserTestCase
     var statement = parseStatement('$code;') as ExpressionStatement;
     return statement.expression;
   }
+
+  ErrorCode _toFastaGeneratedAnalyzerErrorCode(ErrorCode code) {
+    if (code == ParserErrorCode.ABSTRACT_ENUM ||
+        code == ParserErrorCode.ABSTRACT_TOP_LEVEL_FUNCTION ||
+        code == ParserErrorCode.ABSTRACT_TOP_LEVEL_VARIABLE ||
+        code == ParserErrorCode.ABSTRACT_TYPEDEF ||
+        code == ParserErrorCode.CONST_ENUM ||
+        code == ParserErrorCode.CONST_TYPEDEF ||
+        code == ParserErrorCode.COVARIANT_TOP_LEVEL_DECLARATION ||
+        code == ParserErrorCode.FINAL_CLASS ||
+        code == ParserErrorCode.FINAL_ENUM ||
+        code == ParserErrorCode.FINAL_TYPEDEF ||
+        code == ParserErrorCode.STATIC_TOP_LEVEL_DECLARATION) {
+      return ParserErrorCode.EXTRANEOUS_MODIFIER;
+    }
+    return code;
+  }
+
+  List<ErrorCode> _toFastaGeneratedAnalyzerErrorCodes(
+          List<ErrorCode> expectedErrorCodes) =>
+      expectedErrorCodes.map(_toFastaGeneratedAnalyzerErrorCode).toList();
 }
 
 /// Proxy implementation of the analyzer parser, implemented in terms of the
@@ -705,7 +730,7 @@ class ParserProxy extends analyzer.Parser {
       int? expectedEndOffset,
       required LineInfo lineInfo}) {
     TestSource source = TestSource();
-    var errorListener = GatheringErrorListener();
+    var errorListener = GatheringErrorListener(checkRanges: true);
     return ParserProxy._(firstToken, source, errorListener, featureSet,
         allowNativeClause: allowNativeClause,
         expectedEndOffset: expectedEndOffset,
@@ -756,7 +781,7 @@ class ParserProxy extends analyzer.Parser {
 
   ClassMember? parseClassMemberOrNull(String className) {
     return _run('ClassOrMixinBody', () {
-      var builder = astBuilder.createFakeClassDeclarationBuilder(className);
+      final builder = astBuilder.createFakeClassDeclarationBuilder(className);
       // TODO(danrubel): disambiguate between class and mixin
       currentToken = fastaParser.parseClassMember(currentToken, className);
       //currentToken = fastaParser.parseMixinMember(currentToken);
@@ -1210,8 +1235,8 @@ class ParserTestCase with ParserTestHelpers implements AbstractParserTestCase {
     } else {
       fail('$kind');
     }
-    FormalParameterList list =
-        parseFormalParameterList(parametersCode, errorCodes: errorCodes);
+    FormalParameterList list = parseFormalParameterList(parametersCode,
+        inFunctionType: false, errorCodes: errorCodes);
     return list.parameters.single;
   }
 

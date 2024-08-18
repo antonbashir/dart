@@ -43,8 +43,7 @@ class AnalysisNotificationAnalyzedFilesTest
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_ANALYZED_FILES) {
-      var params = AnalysisAnalyzedFilesParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = AnalysisAnalyzedFilesParams.fromNotification(notification);
       analyzedFilesReceived = true;
       analyzedFiles = params.directories;
     }

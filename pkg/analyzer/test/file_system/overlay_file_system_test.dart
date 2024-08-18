@@ -7,7 +7,6 @@ import 'dart:typed_data';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/memory_file_system.dart';
 import 'package:analyzer/file_system/overlay_file_system.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -72,7 +71,7 @@ class FileTest extends OverlayTestSupport {
 
   test_createSource() {
     File file = _file(exists: true);
-    Source source = FileSource(file);
+    Source source = file.createSource();
     expect(source, isNotNull);
     expect(source.fullName, defaultFilePath);
     expect(source.uri, Uri.file(defaultFilePath));

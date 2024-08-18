@@ -39,13 +39,6 @@ abstract class EntryPointsListener {
 
   /// Record the fact that given member is torn off.
   void recordTearOff(Member target) {}
-
-  /// Artificial call method corresponding to the given [closure].
-  Procedure getClosureCallMethod(Closure closure);
-
-  /// Add class which can be extended by a dynamically loaded class
-  /// (unknown at compilation time).
-  void addDynamicallyExtendableClass(Class c);
 }
 
 class PragmaEntryPointsVisitor extends RecursiveVisitor {
@@ -66,35 +59,17 @@ class PragmaEntryPointsVisitor extends RecursiveVisitor {
   }
 
   @override
-  visitLibrary(Library library) {
-    final type = _annotationsDefineRoot(library.annotations);
-    if (type != null) {
-      if (type == PragmaEntryPointType.Default) {
-        nativeCodeOracle.addLibraryReferencedFromNativeCode(library);
-      } else {
-        throw "Error: pragma entry-point definition on a library must evaluate "
-            "to null. See entry_points_pragma.md.";
-      }
-    }
-    library.visitChildren(this);
-  }
-
-  @override
   visitClass(Class klass) {
     final type = _annotationsDefineRoot(klass.annotations);
     if (type != null) {
-      if (type == PragmaEntryPointType.Default) {
-        if (!klass.isAbstract) {
-          entryPoints.addAllocatedClass(klass);
-        }
-        nativeCodeOracle.addClassReferencedFromNativeCode(klass);
-      } else if (type == PragmaEntryPointType.Extendable) {
-        entryPoints.addDynamicallyExtendableClass(klass);
-        nativeCodeOracle.addClassReferencedFromNativeCode(klass);
-      } else {
+      if (type != PragmaEntryPointType.Default) {
         throw "Error: pragma entry-point definition on a class must evaluate "
             "to null, true or false. See entry_points_pragma.md.";
       }
+      if (!klass.isAbstract) {
+        entryPoints.addAllocatedClass(klass);
+      }
+      nativeCodeOracle.addClassReferencedFromNativeCode(klass);
     }
     klass.visitChildren(this);
   }
@@ -138,12 +113,6 @@ class PragmaEntryPointsVisitor extends RecursiveVisitor {
         if (!proc.isSetter && !proc.isGetter && !proc.isFactory) {
           addSelector(CallKind.PropertyGet);
         }
-        break;
-      case PragmaEntryPointType.Extendable:
-        throw "Error: only class can be extendable";
-      case PragmaEntryPointType.CanBeOverridden:
-        nativeCodeOracle.addDynamicallyOverriddenMember(proc);
-        break;
     }
 
     nativeCodeOracle.setMemberReferencedFromNativeCode(proc);
@@ -196,11 +165,6 @@ class PragmaEntryPointsVisitor extends RecursiveVisitor {
       case PragmaEntryPointType.CallOnly:
         throw "Error: can't generate invocation dispatcher for field $field"
             "through @pragma('vm:entry-point')";
-      case PragmaEntryPointType.Extendable:
-        throw "Error: only class can be extendable";
-      case PragmaEntryPointType.CanBeOverridden:
-        nativeCodeOracle.addDynamicallyOverriddenMember(field);
-        break;
     }
 
     nativeCodeOracle.setMemberReferencedFromNativeCode(field);
@@ -211,19 +175,10 @@ class PragmaEntryPointsVisitor extends RecursiveVisitor {
 class NativeCodeOracle {
   final LibraryIndex _libraryIndex;
   final Set<Member> _membersReferencedFromNativeCode = new Set<Member>();
-  final Set<Member> _dynamicallyOverriddenMembers = new Set<Member>();
   final Set<Class> _classesReferencedFromNativeCode = new Set<Class>();
-  final Set<Library> _librariesReferencedFromNativeCode = new Set<Library>();
   final PragmaAnnotationParser _matcher;
 
   NativeCodeOracle(this._libraryIndex, this._matcher);
-
-  void addLibraryReferencedFromNativeCode(Library library) {
-    _librariesReferencedFromNativeCode.add(library);
-  }
-
-  bool isLibraryReferencedFromNativeCode(Library library) =>
-      _librariesReferencedFromNativeCode.contains(library);
 
   void addClassReferencedFromNativeCode(Class klass) {
     _classesReferencedFromNativeCode.add(klass);
@@ -238,13 +193,6 @@ class NativeCodeOracle {
 
   bool isMemberReferencedFromNativeCode(Member member) =>
       _membersReferencedFromNativeCode.contains(member);
-
-  void addDynamicallyOverriddenMember(Member member) {
-    _dynamicallyOverriddenMembers.add(member);
-  }
-
-  bool isDynamicallyOverriddenMember(Member member) =>
-      _dynamicallyOverriddenMembers.contains(member);
 
   PragmaRecognizedType? recognizedType(Member member) {
     for (var annotation in member.annotations) {
@@ -284,12 +232,14 @@ class NativeCodeOracle {
       TypesBuilder typesBuilder,
       RuntimeTypeTranslator translator) {
     TypeExpr? returnType = null;
+    bool? nullable = null;
 
     for (var annotation in member.annotations) {
       ParsedPragma? pragma = _matcher.parsePragma(annotation);
       if (pragma == null) continue;
       if (pragma is ParsedResultTypeByTypePragma ||
-          pragma is ParsedResultTypeByPathPragma) {
+          pragma is ParsedResultTypeByPathPragma ||
+          pragma is ParsedNonNullableResultType) {
         // We can only use the 'vm:exact-result-type' pragma on methods in core
         // libraries for safety reasons. See 'result_type_pragma.md', detail 1.2
         // for explanation.
@@ -326,13 +276,22 @@ class NativeCodeOracle {
         Class klass = _libraryIndex.getClass(libName, klassName);
         Type concreteClass = entryPointsListener.addAllocatedClass(klass);
         returnType = concreteClass;
+      } else if (pragma is ParsedNonNullableResultType) {
+        nullable = false;
       }
+    }
+
+    if (returnType != null && nullable != null) {
+      throw 'ERROR: Cannot have both, @pragma("$kVmExactResultTypePragmaName") '
+          'and @pragma("$kVmNonNullableResultType"), '
+          'annotating the same member.';
     }
 
     if (returnType != null) {
       return returnType;
     } else {
-      return typesBuilder.fromStaticType(member.function!.returnType, true);
+      return typesBuilder.fromStaticType(
+          member.function!.returnType, nullable ?? true);
     }
   }
 }

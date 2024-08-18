@@ -13,7 +13,8 @@ library;
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context.dart';
-import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/context_builder.dart';
+import 'package:analyzer/dart/analysis/context_locator.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:test_runner/src/path.dart';
@@ -64,18 +65,12 @@ void _checkTestDirectory(Directory directory) {
 }
 
 void _initAnalysisContext() {
-  var collection = AnalysisContextCollection(
-    includedPaths: ['test'],
-  );
-
-  if (collection.contexts.length != 1) {
-    throw StateError(
-      'Expected to find exactly one context root, '
-      'got ${collection.contexts.length}',
-    );
+  var roots = ContextLocator().locateRoots(includedPaths: ['test']);
+  if (roots.length != 1) {
+    throw StateError('Expected to find exactly one context root, got $roots');
   }
 
-  _analysisContext = collection.contexts.single;
+  _analysisContext = ContextBuilder().createContext(contextRoot: roots[0]);
 }
 
 void _parseReferences(Set<String> importedPaths, String filePath) {

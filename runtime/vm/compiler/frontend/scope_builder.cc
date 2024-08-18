@@ -5,7 +5,6 @@
 #include "vm/compiler/frontend/scope_builder.h"
 
 #include "vm/compiler/backend/il.h"  // For CompileType.
-#include "vm/compiler/frontend/kernel_to_il.h"
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 
 namespace dart {
@@ -98,6 +97,7 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
     LocalVariable* suspend_state_var =
         MakeVariable(TokenPosition::kNoSource, TokenPosition::kNoSource,
                      Symbols::SuspendStateVar(), AbstractType::dynamic_type());
+    suspend_state_var->set_is_forced_stack();
     suspend_state_var->set_invisible(true);
     scope_->AddVariable(suspend_state_var);
     parsed_function_->set_suspend_state_var(suspend_state_var);
@@ -117,6 +117,7 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
   }
 
   LocalVariable* context_var = parsed_function_->current_context_var();
+  context_var->set_is_forced_stack();
   scope_->AddVariable(context_var);
 
   parsed_function_->set_scope(scope_);
@@ -166,16 +167,12 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
           --depth_.catch_;
         }
       }
-      if (FlowGraphBuilder::IsRecognizedMethodForFlowGraph(function) &&
-          FlowGraphBuilder::IsExpressionTempVarUsedInRecognizedMethodFlowGraph(
-              function)) {
-        needs_expr_temp_ = true;
-      }
       intptr_t pos = 0;
       if (function.IsClosureFunction()) {
         LocalVariable* closure_parameter = MakeVariable(
             TokenPosition::kNoSource, TokenPosition::kNoSource,
             Symbols::ClosureParameter(), AbstractType::dynamic_type());
+        closure_parameter->set_is_forced_stack();
         scope_->InsertParameterAt(pos++, closure_parameter);
       } else if (!function.is_static()) {
         // We use [is_static] instead of [IsStaticFunction] because the latter
@@ -246,11 +243,6 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
         // async/async*/sync* function. It may reference receiver or type
         // arguments of the enclosing function which need to be captured.
         VisitDartType();
-
-        // Visit optional future value type.
-        if (helper_.ReadTag() == kSomething) {
-          VisitDartType();
-        }
       }
 
       // We generate a synthetic body for implicit closure functions - which
@@ -297,7 +289,7 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       if (is_setter) {
         if (CompilerState::Current().is_aot()) {
           const intptr_t kernel_offset = field.kernel_offset();
-          const InferredTypeMetadata inferred_field_type =
+          const InferredTypeMetadata parameter_type =
               inferred_type_metadata_helper_.GetInferredType(kernel_offset);
           result_->setter_value = MakeVariable(
               TokenPosition::kNoSource, TokenPosition::kNoSource,
@@ -305,9 +297,7 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
               AbstractType::ZoneHandle(Z, function.ParameterTypeAt(pos)),
               LocalVariable::kNoKernelOffset, /*is_late=*/false,
               /*inferred_type=*/nullptr,
-              /*inferred_arg_type=*/field.is_covariant()
-                  ? nullptr
-                  : &inferred_field_type);
+              /*inferred_arg_type=*/&parameter_type);
         } else {
           result_->setter_value = MakeVariable(
               TokenPosition::kNoSource, TokenPosition::kNoSource,
@@ -360,12 +350,6 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       const auto& target = Function::ZoneHandle(Z, function.ForwardingTarget());
       ASSERT(!target.IsNull());
 
-      if (FlowGraphBuilder::IsRecognizedMethodForFlowGraph(function) &&
-          FlowGraphBuilder::IsExpressionTempVarUsedInRecognizedMethodFlowGraph(
-              function)) {
-        needs_expr_temp_ = true;
-      }
-
       if (helper_.PeekTag() == kField) {
         // Create [this] variable.
         const Class& klass = Class::Handle(Z, function.Owner());
@@ -408,8 +392,9 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       break;
     }
     case UntaggedFunction::kMethodExtractor: {
-      // Add a receiver parameter. Though it is captured, we emit code to
-      // explicitly copy it to a freshly-allocated closure.
+      // Add a receiver parameter.  Though it is captured, we emit code to
+      // explicitly copy it to a fixed offset in a freshly-allocated context
+      // instead of using the generic code for regular functions.
       // Therefore, it isn't necessary to mark it as captured here.
       Class& klass = Class::Handle(Z, function.Owner());
       Type& klass_type = H.GetDeclarationType(klass);
@@ -771,7 +756,6 @@ void ScopeBuilder::VisitExpression() {
       return;
     case kDynamicInvocation:
       helper_.ReadByte();      // read kind.
-      helper_.ReadByte();      // read flags.
       helper_.ReadPosition();  // read position.
       VisitExpression();       // read receiver.
       helper_.SkipName();      // read name.
@@ -861,6 +845,7 @@ void ScopeBuilder::VisitExpression() {
     case kIsExpression:
       needs_expr_temp_ = true;
       helper_.ReadPosition();  // read position.
+      helper_.ReadFlags();     // read flags.
       VisitExpression();       // read operand.
       VisitDartType();         // read type.
       return;
@@ -883,7 +868,6 @@ void ScopeBuilder::VisitExpression() {
       return;
     case kThrow:
       helper_.ReadPosition();  // read position.
-      helper_.ReadFlags();     // read flags.
       VisitExpression();       // read expression.
       return;
     case kListLiteral: {
@@ -1373,7 +1357,7 @@ void ScopeBuilder::VisitVariableDeclaration() {
     variable->set_is_late();
     variable->set_late_init_offset(initializer_offset);
   }
-  if (helper.IsSynthesized() || helper.IsWildcard()) {
+  if (helper.IsSynthesized()) {
     variable->set_invisible(true);
   }
 
@@ -1680,9 +1664,6 @@ void ScopeBuilder::AddVariableDeclarationParameter(
   if (helper.IsCovariant()) {
     variable->set_is_explicit_covariant_parameter();
   }
-  if (helper.IsWildcard()) {
-    variable->set_invisible(true);
-  }
 
   const bool needs_covariant_check_in_method =
       helper.IsCovariant() ||
@@ -1798,6 +1779,7 @@ void ScopeBuilder::AddExceptionVariable(
 
     // If transformer did not lift the variable then there is no need
     // to lift it into the context when we encounter a YieldStatement.
+    v->set_is_forced_stack();
     current_function_scope_->AddVariable(v);
   }
 
@@ -1819,6 +1801,7 @@ void ScopeBuilder::FinalizeExceptionVariable(
     raw_variable =
         new LocalVariable(TokenPosition::kNoSource, TokenPosition::kNoSource,
                           symbol, AbstractType::dynamic_type());
+    raw_variable->set_is_forced_stack();
     const bool ok = scope_->AddVariable(raw_variable);
     ASSERT(ok);
   } else {
@@ -1855,6 +1838,7 @@ void ScopeBuilder::AddSwitchVariable() {
     LocalVariable* variable =
         MakeVariable(TokenPosition::kNoSource, TokenPosition::kNoSource,
                      Symbols::SwitchExpr(), AbstractType::dynamic_type());
+    variable->set_is_forced_stack();
     current_function_scope_->AddVariable(variable);
     result_->switch_variable = variable;
   }

@@ -7,8 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Avoid wrapping fields in getters and setters just to be "safe".';
@@ -50,18 +48,20 @@ class Box {
 ''';
 
 class UnnecessaryGettersSetters extends LintRule {
+  static const LintCode code = LintCode('unnecessary_getters_setters',
+      'Unnecessary use of getter and setter to wrap a field.',
+      correctionMessage:
+          'Try removing the getter and setter and renaming the field.');
+
   UnnecessaryGettersSetters()
       : super(
             name: 'unnecessary_getters_setters',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_getters_setters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -79,15 +79,11 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    if (node.isAugmentation) return;
-
     _check(node.members);
   }
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    if (node.isAugmentation) return;
-
     _check(node.members);
   }
 

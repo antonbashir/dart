@@ -9,12 +9,14 @@ import '../context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(LogicalAndTest);
+    defineReflectiveTests(LogicalAndWithoutNullSafetyTest);
     defineReflectiveTests(LogicalOrTest);
+    defineReflectiveTests(LogicalOrWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
-class LogicalAndTest extends PubPackageResolutionTest {
+class LogicalAndTest extends PubPackageResolutionTest with LogicalAndTestCases {
   test_downward() async {
     await resolveTestCode('''
 void f(b) {
@@ -25,13 +27,13 @@ T a<T>() => throw '';
 T b<T>() => throw '';
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    final node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::a
+      staticElement: self::@function::a
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -44,7 +46,7 @@ BinaryExpression
   rightOperand: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: b
-      staticElement: <testLibraryFragment>::@function::f::@parameter::b
+      staticElement: self::@function::f::@parameter::b
       staticType: dynamic
     argumentList: ArgumentList
       leftParenthesis: (
@@ -57,7 +59,9 @@ BinaryExpression
   staticType: bool
 ''');
   }
+}
 
+mixin LogicalAndTestCases on PubPackageResolutionTest {
   test_upward() async {
     await resolveTestCode('''
 void f(bool a, bool b) {
@@ -66,28 +70,51 @@ void f(bool a, bool b) {
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
+    final node = findNode.singleBinaryExpression;
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: bool
   operator: &&
   rightOperand: SimpleIdentifier
     token: b
     parameter: <null>
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: bool
   staticElement: <null>
   staticInvokeType: null
   staticType: bool
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: bool*
+  operator: &&
+  rightOperand: SimpleIdentifier
+    token: b
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::b
+    staticType: bool*
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: bool*
+''');
+    }
   }
 }
 
 @reflectiveTest
-class LogicalOrTest extends PubPackageResolutionTest {
+class LogicalAndWithoutNullSafetyTest extends PubPackageResolutionTest
+    with LogicalAndTestCases, WithoutNullSafetyMixin {}
+
+@reflectiveTest
+class LogicalOrTest extends PubPackageResolutionTest with LogicalOrTestCases {
   test_downward() async {
     await resolveTestCode('''
 void f(b) {
@@ -98,13 +125,13 @@ T a<T>() => throw '';
 T b<T>() => throw '';
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    final node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::a
+      staticElement: self::@function::a
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -117,7 +144,7 @@ BinaryExpression
   rightOperand: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: b
-      staticElement: <testLibraryFragment>::@function::f::@parameter::b
+      staticElement: self::@function::f::@parameter::b
       staticType: dynamic
     argumentList: ArgumentList
       leftParenthesis: (
@@ -130,7 +157,9 @@ BinaryExpression
   staticType: bool
 ''');
   }
+}
 
+mixin LogicalOrTestCases on PubPackageResolutionTest {
   test_upward() async {
     await resolveTestCode('''
 void f(bool a, bool b) {
@@ -139,22 +168,45 @@ void f(bool a, bool b) {
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
+    final node = findNode.singleBinaryExpression;
+    if (isNullSafetyEnabled) {
+      assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
+    staticElement: self::@function::f::@parameter::a
     staticType: bool
   operator: ||
   rightOperand: SimpleIdentifier
     token: b
     parameter: <null>
-    staticElement: <testLibraryFragment>::@function::f::@parameter::b
+    staticElement: self::@function::f::@parameter::b
     staticType: bool
   staticElement: <null>
   staticInvokeType: null
   staticType: bool
 ''');
+    } else {
+      assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: bool*
+  operator: ||
+  rightOperand: SimpleIdentifier
+    token: b
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::b
+    staticType: bool*
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: bool*
+''');
+    }
   }
 }
+
+@reflectiveTest
+class LogicalOrWithoutNullSafetyTest extends PubPackageResolutionTest
+    with LogicalOrTestCases, WithoutNullSafetyMixin {}

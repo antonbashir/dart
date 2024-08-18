@@ -18,8 +18,13 @@ abstract class TestDescription implements Comparable<TestDescription> {
 class FileBasedTestDescription extends TestDescription {
   final Uri root;
   final File file;
+  final Uri? output;
 
-  FileBasedTestDescription(this.root, this.file);
+  /// If non-null, this is a generated multitest, and the set contains the
+  /// expected outcomes.
+  Set<String>? multitestExpectations;
+
+  FileBasedTestDescription(this.root, this.file, {this.output});
 
   @override
   Uri get uri => file.uri;

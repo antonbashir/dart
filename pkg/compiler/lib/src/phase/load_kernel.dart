@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:_js_interop_checks/src/transformations/static_interop_class_eraser.dart';
 import 'package:collection/collection.dart';
 import 'package:front_end/src/api_unstable/dart2js.dart' as fe;
+import 'package:front_end/src/fasta/kernel/utils.dart';
 import 'package:kernel/ast.dart' as ir;
 import 'package:kernel/binary/ast_from_binary.dart' show BinaryBuilder;
 import 'package:kernel/class_hierarchy.dart' as ir;
@@ -143,8 +144,7 @@ void _simplifyConstConditionals(ir.Component component, CompilerOptions options,
           evaluationMode: options.useLegacySubtyping
               ? fe.EvaluationMode.weak
               : fe.EvaluationMode.strong,
-          shouldNotInline: shouldNotInline,
-          removeAsserts: !options.enableUserAssertions)
+          shouldNotInline: shouldNotInline)
       .run();
 }
 
@@ -185,7 +185,7 @@ Future<_LoadFromKernelResult> _loadFromKernel(
   ir.Component component = ir.Component();
 
   Future<void> read(Uri uri) async {
-    api.Input<List<int>> input =
+    api.Input input =
         await compilerInput.readFromUri(uri, inputKind: api.InputKind.binary);
     BinaryBuilder(input.data).readComponent(component);
   }
@@ -361,7 +361,7 @@ Output _createOutput(
   // that is reachable from `main`. Note that all internal libraries that
   // the compiler relies on are reachable from `dart:core`.
   var seen = Set<Library>();
-  void search(ir.Library current) {
+  search(ir.Library current) {
     if (!seen.add(current)) return;
     for (ir.LibraryDependency dep in current.dependencies) {
       search(dep.targetLibrary);
@@ -402,7 +402,7 @@ Future<Output?> run(Input input) async {
   ir.Component? component;
   fe.InitializedCompilerState? initializedCompilerState =
       input.initializedCompilerState;
-  if (options.shouldLoadFromDill) {
+  if (options.stage.shouldLoadFromDill) {
     _LoadFromKernelResult result =
         await _loadFromKernel(options, compilerInput, targetName, reporter);
     component = result.component;
@@ -416,7 +416,7 @@ Future<Output?> run(Input input) async {
   if (component == null) return null;
   if (input.forceSerialization) {
     // TODO(johnniwinther): Remove this when #34942 is fixed.
-    List<int> data = fe.serializeComponent(component);
+    List<int> data = serializeComponent(component);
     component = ir.Component();
     BinaryBuilder(data).readComponent(component);
     // Ensure we use the new deserialized entry point library.

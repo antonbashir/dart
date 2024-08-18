@@ -9,7 +9,7 @@ import 'dart:async';
 
 import 'package:js/js.dart';
 import 'package:js/js_util.dart' as js_util;
-import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
+import 'package:expect/minitest.dart';
 import 'package:async_helper/async_helper.dart';
 
 @JS()
@@ -19,34 +19,42 @@ external void eval(String code);
 abstract class Promise<T> {}
 
 @JS()
-external Promise getResolvedPromise();
+external Promise get resolvedPromise;
 
 @JS()
-external Promise getRejectedPromise();
+external Promise get rejectedPromise;
+
+@JS()
+external Promise getResolvedPromise();
 
 main() {
   eval(r"""
+    var rejectedPromise = new Promise((resolve, reject) => reject('rejected'));
+    var resolvedPromise = new Promise(resolve => resolve('resolved'));
     function getResolvedPromise() {
-      return new Promise(resolve => resolve('resolved'));
-    }
-    function getRejectedPromise() {
-      return new Promise((resolve, reject) => reject('rejected'));
+      return resolvedPromise;
     }
     """);
 
   Future<void> testResolvedPromise() async {
-    final String result = await js_util.promiseToFuture(getResolvedPromise());
+    final String result = await js_util.promiseToFuture(resolvedPromise);
     expect(result, equals('resolved'));
   }
 
   Future<void> testRejectedPromise() async {
     final String error = await asyncExpectThrows<String>(
-        js_util.promiseToFuture(getRejectedPromise()));
+        js_util.promiseToFuture(rejectedPromise));
     expect(error, equals('rejected'));
+  }
+
+  Future<void> testReturnResolvedPromise() async {
+    final String result = await js_util.promiseToFuture(getResolvedPromise());
+    expect(result, equals('resolved'));
   }
 
   asyncTest(() async {
     await testResolvedPromise();
     await testRejectedPromise();
+    await testReturnResolvedPromise();
   });
 }

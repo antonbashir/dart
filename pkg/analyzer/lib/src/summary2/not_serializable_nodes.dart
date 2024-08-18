@@ -16,7 +16,7 @@ bool isNotSerializableMarker(SimpleIdentifier node) {
 /// If [node] is fully serializable, returns it.
 /// Otherwise returns a marker node.
 ExpressionImpl replaceNotSerializableNode(ExpressionImpl node) {
-  var visitor = _IsSerializableNodeVisitor();
+  final visitor = _IsSerializableNodeVisitor();
   node.accept(visitor);
   if (visitor.result) {
     return node;

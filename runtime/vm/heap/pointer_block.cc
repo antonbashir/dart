@@ -15,19 +15,8 @@ DEFINE_LEAF_RUNTIME_ENTRY(void, StoreBufferBlockProcess, 1, Thread* thread) {
 }
 END_LEAF_RUNTIME_ENTRY
 
-DEFINE_LEAF_RUNTIME_ENTRY(void,
-                          OldMarkingStackBlockProcess,
-                          1,
-                          Thread* thread) {
-  thread->OldMarkingStackBlockProcess();
-}
-END_LEAF_RUNTIME_ENTRY
-
-DEFINE_LEAF_RUNTIME_ENTRY(void,
-                          NewMarkingStackBlockProcess,
-                          1,
-                          Thread* thread) {
-  thread->NewMarkingStackBlockProcess();
+DEFINE_LEAF_RUNTIME_ENTRY(void, MarkingStackBlockProcess, 1, Thread* thread) {
+  thread->MarkingStackBlockProcess();
 }
 END_LEAF_RUNTIME_ENTRY
 
@@ -276,9 +265,6 @@ void BlockStack<BlockSize>::TrimGlobalEmpty() {
     delete global_empty_->Pop();
   }
 }
-
-template class PointerBlock<kStoreBufferBlockSize>;
-template class PointerBlock<kMarkingStackBlockSize>;
 
 template class BlockStack<kStoreBufferBlockSize>;
 template class BlockStack<kMarkingStackBlockSize>;

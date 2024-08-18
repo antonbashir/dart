@@ -22,7 +22,7 @@ import 'js_emitter.dart' show ModularEmitter;
 /// ast for a program.
 /// [value] is the actual position, once they have been finalized.
 abstract class _MetadataEntry extends jsAst.DeferredNumber
-    implements Comparable<_MetadataEntry>, jsAst.ReferenceCountedAstNode {
+    implements Comparable, jsAst.ReferenceCountedAstNode {
   jsAst.Expression get entry;
   @override
   int get value;
@@ -47,7 +47,7 @@ class BoundMetadataEntry extends _MetadataEntry {
   @override
   bool get isFinalized => _value != -1;
 
-  void finalize(int value) {
+  finalize(int value) {
     assert(!isFinalized);
     _value = value;
   }
@@ -61,7 +61,7 @@ class BoundMetadataEntry extends _MetadataEntry {
   bool get isUsed => _rc > 0;
 
   @override
-  void markSeen(jsAst.TokenCounter visitor) {
+  void markSeen(jsAst.BaseVisitor visitor) {
     _rc++;
     if (_rc == 1) entry.accept(visitor);
   }
@@ -87,8 +87,7 @@ class _MetadataList extends jsAst.DeferredExpression {
   }
 
   @override
-  js_precedence.Precedence get precedenceLevel =>
-      js_precedence.Precedence.primary;
+  int get precedenceLevel => js_precedence.PRIMARY;
 }
 
 class MetadataCollector implements jsAst.TokenFinalizer {

@@ -62,6 +62,8 @@ replacement
 suggestions
   case
     kind: keyword
+  default:
+    kind: keyword
 ''');
   }
 

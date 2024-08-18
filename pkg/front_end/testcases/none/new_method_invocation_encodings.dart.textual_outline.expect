@@ -6,5 +6,4 @@ class Class {
 }
 
 test(Class c, dynamic d, Function f1, void Function() f2) {}
-
 main() {}

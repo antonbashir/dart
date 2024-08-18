@@ -3,5 +3,4 @@ class A {
   :
   x = 'foo' ;
 }
-
 main() {}

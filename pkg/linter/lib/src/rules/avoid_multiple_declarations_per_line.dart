@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r"Don't declare multiple variables on a single line.";
 
@@ -28,15 +27,20 @@ String? baz;
 ''';
 
 class AvoidMultipleDeclarationsPerLine extends LintRule {
+  static const LintCode code = LintCode('avoid_multiple_declarations_per_line',
+      'Multiple variables declared on a single line.',
+      correctionMessage:
+          'Try splitting the variable declarations into multiple lines.');
+
   AvoidMultipleDeclarationsPerLine()
       : super(
             name: 'avoid_multiple_declarations_per_line',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_multiple_declarations_per_line;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

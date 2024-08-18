@@ -12,7 +12,7 @@ void main() {
 
   String expectedRuntime;
   if (1.0 is! int) {
-    expectedRuntime = 'unknown';
+    expectedRuntime = 'vm';
   } else if (ClassWithLongName().toString().contains('minified:')) {
     // dart2js minified: "Instance of 'minified:xy'".
     expectedRuntime = 'dart2js';
@@ -42,7 +42,7 @@ void main() {
     return;
   }
 
-  if (expectedRuntime == 'unknown') {
+  if (expectedRuntime == 'vm') {
     return;
   }
 

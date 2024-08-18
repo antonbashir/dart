@@ -96,36 +96,6 @@ void f() {
 ''');
   }
 
-  Future<void> test_assigned_inAssignment2() async {
-    await resolveTestCode(r'''
-void f() {
-  var x = 1, y = 2;
-  print(x);
-}
-''');
-    await assertHasFix(r'''
-void f() {
-  var x = 1;
-  print(x);
-}
-''');
-  }
-
-  Future<void> test_assigned_inDeclaration() async {
-    await resolveTestCode(r'''
-List<String> l = [];
-void f(str) {
-  final removed = l.remove(str);
-}
-''');
-    await assertHasFix(r'''
-List<String> l = [];
-void f(str) {
-  l.remove(str);
-}
-''');
-  }
-
   Future<void> test_notInFunctionBody() async {
     await resolveTestCode(r'''
 var a = [for (var v = 0;;) 0];
@@ -400,7 +370,8 @@ void f(Object? x) {
   Future<void> test_objectPattern_declarationStatement_multi_first() async {
     await resolveTestCode(r'''
 void f(A a) {
-  var A(:foo, bar: int()) = a;
+  var A(:foo, :bar) = a;
+  bar;
 }
 
 class A {
@@ -410,7 +381,8 @@ class A {
 ''');
     await assertHasFix(r'''
 void f(A a) {
-  var A(bar: int()) = a;
+  var A(:bar) = a;
+  bar;
 }
 
 class A {
@@ -423,7 +395,8 @@ class A {
   Future<void> test_objectPattern_declarationStatement_multi_last() async {
     await resolveTestCode(r'''
 void f(A a) {
-  var A(foo: int(), :bar) = a;
+  var A(:foo, :bar) = a;
+  foo;
 }
 
 class A {
@@ -433,7 +406,8 @@ class A {
 ''');
     await assertHasFix(r'''
 void f(A a) {
-  var A(foo: int()) = a;
+  var A(:foo) = a;
+  foo;
 }
 
 class A {
@@ -568,12 +542,14 @@ void f(Object? x) {
   Future<void> test_recordPattern_named_declaration() async {
     await resolveTestCode(r'''
 void f(({int foo, int bar}) x) {
-  var (:foo, bar: int()) = x;
+  var (:foo, :bar) = x;
+  bar;
 }
 ''');
     await assertHasFix(r'''
 void f(({int foo, int bar}) x) {
-  var (foo: _, bar: int()) = x;
+  var (foo: _, :bar) = x;
+  bar;
 }
 ''');
   }
@@ -594,12 +570,14 @@ void f(Object? x) {
   Future<void> test_recordPattern_positional_declaration() async {
     await resolveTestCode(r'''
 void f(Object? x) {
-  var (foo, int()) = (0, 1);
+  var (foo, bar) = (0, 1);
+  bar;
 }
 ''');
     await assertHasFix(r'''
 void f(Object? x) {
-  var (_, int()) = (0, 1);
+  var (_, bar) = (0, 1);
+  bar;
 }
 ''');
   }

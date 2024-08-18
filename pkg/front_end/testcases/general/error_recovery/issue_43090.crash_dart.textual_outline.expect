@@ -1,3 +1,2 @@
 typedef A< >= void Function();
-
 main() {}

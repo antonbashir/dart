@@ -1,61 +1,5 @@
-## 6.9.0
-* `NormalFormalParameter` now implements `AnnotatedNode`.
-
-## 6.8.0
-* Add `AnalysisContextCollection.dispose()`. It must be invoked at the end.
-* Deprecated `ContextLocator` and `ContextBuilder`.
-  Use `AnalysisContextCollection` instead.
-
-## 6.7.0
-* Deprecated `File.createSource()`, it violates levels of abstraction.
-  You can get `Source` instances from `AnalysisResult`s.
-* Deprecated unused static members of `AnalysisError`.
-
-## 6.6.0
-* Stop exporting `src/file_system/file_system.dart`
-  from `file_system/file_system.dart`.
-* Deprecated `package:analyzer/src/source/source_resource.dart`,
-  import `package:analyzer/source/file_source.dart` instead.
-* Deprecated exports from `package:analyzer/src/source/source.dart`,
-  import `package:analyzer/source/source.dart` instead.
-
-## 6.5.2
-* Updated constraints `macros: '>=0.1.2-0 <0.1.3'`.
-
-## 6.5.1
-* Updated constraints `macros: '>=0.1.1-0 <0.1.2'`.
-
-## 6.5.0
-* Deprecated `LibraryElement.toLegacyTypeIfOptOut`.
-* Deprecated `LibraryElement.toLegacyElementIfOptOut`.
-* Deprecated `LibraryElement.isNonNullableByDefault`.
-* Deprecated `InterfaceElement.lookUpGetter`, `InterfaceElement.lookUpMethod`,
-  and `InterfaceElement.lookUpSetter`.
-* Fixed `GeneralizingAstVisitor.visitNamedType` to invoke `visitTypeAnnotation`.
-* Deprecated `PropertyInducingElement get variable` in `PropertyAccessorElement`,
-  use `PropertyInducingElement? get variable2` instead.
-  The reason for this is that when the property accessor is an augmentation
-  without the corresponding declaration, there is no corresponding variable.
-* Deprecated `ExtensionDeclaration.onKeyword` and `extendedType`.
-  Use `ExtensionOnClause? get onClause` instead.
-  Extension augmentations are not allowed to have `onClause`.
-* Deprecated `OnClause`, use `MixinOnClause` instead.
-* Support new meta annotation: `@doNotSubmit`.
-* Support new meta annotation: `@mustBeConst`.
-* Support new meta TargetKinds: `constructor`, `directive`, `enumValue`, and
-  `typeParameter`.
-* Fix for accessing constants from extension type, when import prefixed.
-* Deprecated `AstNode.getProperty` and `AstNode.setProperty`. Clients who need
-  the ability to add arbitrary decorations to AST nodes can achieve the same
-  effect using Dart's built-in
-  [Expando](https://api.flutter.dev/flutter/dart-core/Expando-class.html) class.
-
-## 6.4.1
-* Patch for crash in ffi_verifier.
-
 ## 6.3.0
 * Updated the current language version to `3.3`.
-* Removed generated `ConstantEvaluator`.
 
 ## 6.2.0
 * Improvements for extension types.
@@ -241,7 +185,7 @@
 * Update SDK constraints to `>=2.17.0 <3.0.0`.
 * Deprecated `ImportDirective.COMPARATOR`, use appropriate custom logic, if necessary.
 * Deprecated `Element.isAccessibleIn()`, use `isAccessibleIn2()` instead.
-* Bug fixes: 49225.
+* Bug fixes: 49225. 
 
 ## 4.1.0
 * Deprecated `ParameterElement.isNotOptional`, use `isRequired` instead.

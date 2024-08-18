@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:collection/collection.dart';
 import 'package:test/test.dart';
@@ -23,19 +22,22 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
     CodeActionTriggerKind? triggerKind,
     String? filePath,
     bool openTargetFile = false,
+    bool failTestOnAnyErrorNotification = true,
   }) async {
     filePath ??= mainFilePath;
-    var code = TestCode.parse(content);
+    final fileUri = pathContext.toUri(filePath);
+    final code = TestCode.parse(content);
     newFile(filePath, code.code);
 
-    await initialize();
+    await initialize(
+      failTestOnAnyErrorNotification: failTestOnAnyErrorNotification,
+    );
 
-    var fileUri = uriConverter.toClientUri(filePath);
     if (openTargetFile) {
       await openFile(fileUri, code.code);
     }
 
-    var codeActions = await getCodeActions(
+    final codeActions = await getCodeActions(
       fileUri,
       position: code.positions.isNotEmpty ? code.position.position : null,
       range: code.ranges.isNotEmpty ? code.range.range : null,
@@ -67,7 +69,7 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
     ProgressToken? workDoneToken,
   }) async {
     filePath ??= mainFilePath;
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(filePath, code.code);
 
     if (workDoneToken != null) {
@@ -75,8 +77,8 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
     }
     await initialize();
 
-    var codeActions = await getCodeActions(
-      uriConverter.toClientUri(filePath),
+    final codeActions = await getCodeActions(
+      pathContext.toUri(filePath),
       position: code.positions.isNotEmpty ? code.position.position : null,
       range: code.ranges.isNotEmpty ? code.range.range : null,
       workDoneToken: workDoneToken,
@@ -114,7 +116,7 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
           }
           return action;
         })
-        .nonNulls
+        .whereNotNull()
         .toList();
   }
 
@@ -122,11 +124,11 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
       List<Either2<Command, CodeAction>> actions, String commandID,
       [String? wantedTitle]) {
     for (var codeAction in actions) {
-      var id = codeAction.map(
+      final id = codeAction.map(
         (cmd) => cmd.command,
         (action) => action.command?.command,
       );
-      var title = codeAction.map(
+      final title = codeAction.map(
         (cmd) => cmd.title,
         (action) => action.title,
       );
@@ -141,14 +143,10 @@ abstract class AbstractCodeActionsTest extends AbstractLspAnalysisServerTest {
   void setUp() {
     super.setUp();
 
-    // Fix tests are likely to have diagnostics that need fixing.
-    failTestOnErrorDiagnostic = false;
-
     // Some defaults that most tests use. Tests can opt-out by overwriting these
     // before initializing.
     setApplyEditSupport();
     setDocumentChangesSupport();
-    registerBuiltInProducers();
   }
 
   /// Initializes the server with some basic configuration and expects to find
@@ -173,7 +171,7 @@ ${LspChangeVerifier.editMarkerStart} ${relativePath(filePath)}
 $expected''';
     }
 
-    var action = await expectAction(
+    final action = await expectAction(
       filePath: filePath,
       content,
       kind: kind,
@@ -190,7 +188,7 @@ $expected''';
         workDoneToken: commandWorkDoneToken,
       );
     } else {
-      var edit = action.edit!;
+      final edit = action.edit!;
       return verifyEdit(edit, expected);
     }
   }

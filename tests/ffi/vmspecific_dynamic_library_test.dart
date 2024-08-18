@@ -24,7 +24,7 @@ void main() {
 }
 
 void testOpen() {
-  dlopenPlatformSpecific("ffi_test_dynamic_library");
+  DynamicLibrary l = dlopenPlatformSpecific("ffi_test_dynamic_library");
 }
 
 void testOpenError() {

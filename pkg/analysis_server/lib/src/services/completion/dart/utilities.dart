@@ -5,14 +5,13 @@
 /// A collection of utility methods used by completion contributors.
 library;
 
-import 'package:analysis_server/src/protocol_server.dart' show Location;
+import 'package:analysis_server/src/protocol_server.dart'
+    show CompletionSuggestion, Location;
 import 'package:analysis_server/src/services/completion/dart/completion_manager.dart';
-import 'package:analysis_server/src/services/completion/dart/suggestion_builder.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/analysis/code_style_options.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/generated/source.dart';
@@ -24,18 +23,15 @@ const DYNAMIC = 'dynamic';
 
 /// Sort by relevance first, highest to lowest, and then by the completion
 /// alphabetically.
-Comparator<CompletionSuggestionBuilder> completionComparator = (a, b) {
+Comparator<CompletionSuggestion> completionComparator = (a, b) {
   if (a.relevance == b.relevance) {
     return a.completion.compareTo(b.completion);
   }
   return b.relevance.compareTo(a.relevance);
 };
 
-String buildClosureParameters(
-  FunctionType type, {
-  required bool includeTypes,
-  required bool includeKeywords,
-}) {
+String buildClosureParameters(FunctionType type,
+    {bool includeKeywords = true}) {
   var buffer = StringBuffer();
   buffer.write('(');
 
@@ -54,10 +50,6 @@ String buildClosureParameters(
     } else if (parameter.isOptionalPositional && !hasOptionalPositional) {
       hasOptionalPositional = true;
       buffer.write('[');
-    }
-    if (includeTypes) {
-      buffer.write(parameter.type);
-      buffer.write(' ');
     }
     var name = parameter.name;
     if (name.isEmpty) {
@@ -103,9 +95,42 @@ CompletionDefaultArgumentList computeCompletionDefaultArgumentList(
     }
     offset = sb.length;
 
-    var name = param.name;
-    sb.write(name);
-    ranges.addAll([offset, name.length]);
+    var parameterType = param.type;
+    if (parameterType is FunctionType) {
+      var rangeStart = offset;
+      int rangeLength;
+
+      // TODO(pq): consider adding ranges for params
+      // pending: https://github.com/dart-lang/sdk/issues/40207
+      // (types in closure param completions make this UX awkward)
+      final parametersString = buildClosureParameters(parameterType);
+      final blockBuffer = StringBuffer(parametersString);
+
+      blockBuffer.write(' ');
+
+      // TODO(pq): consider refactoring to share common logic w/
+      //  ArgListContributor.buildClosureSuggestions
+      final returnType = parameterType.returnType;
+      if (returnType is VoidType) {
+        blockBuffer.write('{');
+        rangeStart = sb.length + blockBuffer.length;
+        blockBuffer.write(' }');
+        rangeLength = 1;
+      } else {
+        final returnValue = returnType.isDartCoreBool ? 'false' : 'null';
+        blockBuffer.write('=> ');
+        rangeStart = sb.length + blockBuffer.length;
+        blockBuffer.write(returnValue);
+        rangeLength = returnValue.length;
+      }
+
+      sb.write(blockBuffer);
+      ranges.addAll([rangeStart, rangeLength]);
+    } else {
+      var name = param.name;
+      sb.write(name);
+      ranges.addAll([offset, name.length]);
+    }
   }
 
   for (var param in namedParams) {
@@ -151,7 +176,8 @@ protocol.Element createLocalElement(
 
 /// Return a default argument value for the given [parameter].
 DefaultArgument? getDefaultStringParameterValue(
-    ParameterElement parameter, CodeStyleOptions codeStyleOptions) {
+    ParameterElement parameter, CodeStyleOptions codeStyleOptions,
+    {required bool withNullability}) {
   var type = parameter.type;
   if (type is InterfaceType) {
     if (type.isDartCoreList) {
@@ -164,7 +190,8 @@ DefaultArgument? getDefaultStringParameterValue(
     }
   } else if (type is FunctionType) {
     var params = type.parameters
-        .map((p) => '${getTypeString(p.type)}${p.name}')
+        .map((p) =>
+            '${getTypeString(p.type, withNullability: withNullability)}${p.name}')
         .join(', ');
     // TODO(devoncarew): Support having this method return text with newlines.
     var text = '($params) {  }';
@@ -189,26 +216,12 @@ String getRequestLineIndent(DartCompletionRequest request) {
   return content.substring(lineStartOffset, notWhitespaceOffset);
 }
 
-String getTypeString(DartType type) {
+String getTypeString(DartType type, {required bool withNullability}) {
   if (type is DynamicType) {
     return '';
   } else {
-    return '${type.getDisplayString()} ';
+    return '${type.getDisplayString(withNullability: withNullability)} ';
   }
-}
-
-/// Instantiates the given [InterfaceElement]
-InterfaceType instantiateInstanceElement(
-    InterfaceElement element, NeverType neverType) {
-  var typeParameters = element.typeParameters;
-  var typeArguments = const <DartType>[];
-  if (typeParameters.isNotEmpty) {
-    typeArguments = List.filled(typeParameters.length, neverType);
-  }
-  return element.instantiate(
-    typeArguments: typeArguments,
-    nullabilitySuffix: NullabilitySuffix.none,
-  );
 }
 
 /// Return name of the type of the given [identifier], or, if it unresolved, the
@@ -225,7 +238,7 @@ String? nameForType(SimpleIdentifier identifier, TypeAnnotation? declaredType) {
     }
     type = element.returnType;
   } else if (element is TypeAliasElement) {
-    var aliasedType = element.aliasedType;
+    final aliasedType = element.aliasedType;
     if (aliasedType is FunctionType) {
       type = aliasedType.returnType;
     } else {
@@ -244,7 +257,7 @@ String? nameForType(SimpleIdentifier identifier, TypeAnnotation? declaredType) {
     }
     return DYNAMIC;
   }
-  return type.getDisplayString();
+  return type.getDisplayString(withNullability: false);
 }
 
 class CompletionDefaultArgumentList {

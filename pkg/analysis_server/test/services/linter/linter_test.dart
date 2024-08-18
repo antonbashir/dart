@@ -36,6 +36,7 @@ class LinterRuleOptionsValidatorTest {
     reporter = ErrorReporter(
       recorder,
       _TestSource(),
+      isNonNullableByDefault: false,
     );
   }
 

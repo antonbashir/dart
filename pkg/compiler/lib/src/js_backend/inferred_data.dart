@@ -124,7 +124,7 @@ class InferredDataImpl implements InferredData {
   SideEffects getSideEffectsOfSelector(
       Selector selector, AbstractValue? receiver) {
     // We're not tracking side effects of closures.
-    if (selector.isMaybeClosureCall ||
+    if (selector.isClosureCall ||
         _closedWorld.includesClosureCall(selector, receiver)) {
       return SideEffects();
     }

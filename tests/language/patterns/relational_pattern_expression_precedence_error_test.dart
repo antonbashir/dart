@@ -55,6 +55,7 @@ void usingEquals(x) {
   // [cfe] This pattern cannot appear inside a unary pattern (cast pattern, null check pattern, or null assert pattern) without parentheses.
   //                 ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                   ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.
@@ -110,6 +111,7 @@ void usingNotEquals(x) {
   // [cfe] This pattern cannot appear inside a unary pattern (cast pattern, null check pattern, or null assert pattern) without parentheses.
   //                 ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                   ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.
@@ -168,6 +170,7 @@ void usingLessThanOrEquals(x) {
   // [cfe] The argument type 'bool' can't be assigned to the parameter type 'num'.
   //                 ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                   ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.
@@ -226,6 +229,7 @@ void usingLessThan(x) {
   // [cfe] The argument type 'bool' can't be assigned to the parameter type 'num'.
   //                ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                  ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.
@@ -284,6 +288,7 @@ void usingGreaterThanOrEquals(x) {
   // [cfe] The argument type 'bool' can't be assigned to the parameter type 'num'.
   //                 ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                   ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.
@@ -342,6 +347,7 @@ void usingGreaterThan(x) {
   // [cfe] The argument type 'bool' can't be assigned to the parameter type 'num'.
   //                ^
   // [analyzer] STATIC_WARNING.UNNECESSARY_NULL_CHECK_PATTERN
+  // [cfe] The null-check pattern will have no effect because the matched type isn't nullable.
   //                  ^
   // [analyzer] SYNTACTIC_ERROR.EXPECTED_TOKEN
   // [cfe] Expected ')' before this.

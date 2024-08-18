@@ -9,7 +9,7 @@ import '../elements/entities.dart';
 /// [EntityData] child knows how to use an [EntityDataCollector] to collect
 /// [EntityDataInfo]. [EntityData] objects are canonicalized and must be created
 /// by an [EntityDataRegistry].
-abstract class EntityData<T extends Object> {
+abstract class EntityData<T> {
   final T entity;
 
   EntityData(this.entity);
@@ -70,27 +70,32 @@ class ConstantEntityData extends EntityData<ConstantValue> {
 
 /// A registry used to canonicalize [EntityData].
 class EntityDataRegistry {
-  final Map<ClassEntity, ClassEntityData> _classData = {};
+  /// Map of [Entity] / [ConstantValue] to [EntityData], used by all non
+  /// [ClassTypeEntityData].
+  final Map<Object, EntityData> _nonClassTypeData = {};
+
+  /// Map of [ClassEntity] to [EntityData], used by [ClassTypeEntityData].
   final Map<ClassEntity, ClassTypeEntityData> _classTypeData = {};
-  final Map<ConstantValue, ConstantEntityData> _constantData = {};
-  final Map<Local, LocalFunctionEntityData> _localFunctionData = {};
-  final Map<MemberEntity, MemberEntityData> _memberData = {};
 
-  ClassEntityData createClassEntityData(ClassEntity cls) =>
-      _classData[cls] ??= ClassEntityData(cls);
+  EntityData createClassEntityData(ClassEntity cls) {
+    return _nonClassTypeData[cls] ??= ClassEntityData(cls);
+  }
 
-  ClassTypeEntityData createClassTypeEntityData(ClassEntity cls) =>
-      _classTypeData[cls] ??= ClassTypeEntityData(cls);
+  EntityData createClassTypeEntityData(ClassEntity cls) {
+    return _classTypeData[cls] ??= ClassTypeEntityData(cls);
+  }
 
-  ConstantEntityData createConstantEntityData(ConstantValue constant) =>
-      _constantData[constant] ??= ConstantEntityData(constant);
+  EntityData createConstantEntityData(ConstantValue constant) {
+    return _nonClassTypeData[constant] ??= ConstantEntityData(constant);
+  }
 
-  LocalFunctionEntityData createLocalFunctionEntityData(Local localFunction) =>
-      _localFunctionData[localFunction] ??=
-          LocalFunctionEntityData(localFunction);
+  EntityData createLocalFunctionEntityData(Local localFunction) {
+    return _nonClassTypeData[localFunction] ??=
+        LocalFunctionEntityData(localFunction);
+  }
 
-  MemberEntityData createMemberEntityData(MemberEntity member) {
-    return _memberData[member] ??= MemberEntityData(member);
+  EntityData createMemberEntityData(MemberEntity member) {
+    return _nonClassTypeData[member] ??= MemberEntityData(member);
   }
 }
 

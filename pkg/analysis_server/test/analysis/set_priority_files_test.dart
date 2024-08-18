@@ -81,8 +81,8 @@ analyzer:
   }
 
   Future<void> test_ignoredInAnalysisOptions_inChildContext() async {
-    writeTestPackageConfig();
-    writePackageConfig(convertPath('$testPackageRootPath/child'));
+    newPackageConfigJsonFile(testPackageRootPath, '');
+    newPackageConfigJsonFile('$testPackageRootPath/child', '');
     var sampleFile = newFile(
       '$testPackageRootPath/child/samples/sample.dart',
       '',
@@ -99,8 +99,8 @@ analyzer:
   }
 
   Future<void> test_ignoredInAnalysisOptions_inRootContext() async {
-    writeTestPackageConfig();
-    writePackageConfig(convertPath('$testPackageRootPath/child'));
+    newPackageConfigJsonFile(testPackageRootPath, '');
+    newPackageConfigJsonFile('$testPackageRootPath/child', '');
     var sampleFile = newFile(
       '$testPackageRootPath/child/samples/sample.dart',
       '',
@@ -120,7 +120,7 @@ analyzer:
     var response = await handleRequest(
       AnalysisSetPriorityFilesParams([
         'test.dart',
-      ]).toRequest('1', clientUriConverter: server.uriConverter),
+      ]).toRequest('1'),
     );
     assertResponseFailure(
       response,
@@ -132,7 +132,7 @@ analyzer:
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var response = await handleRequest(AnalysisSetPriorityFilesParams([
       convertPath('/foo/../bar/test.dart'),
-    ]).toRequest('1', clientUriConverter: server.uriConverter));
+    ]).toRequest('1'));
     assertResponseFailure(
       response,
       requestId: '1',
@@ -155,7 +155,7 @@ analyzer:
     return await handleSuccessfulRequest(
       AnalysisSetPriorityFilesParams(<String>[
         file.path,
-      ]).toRequest('1', clientUriConverter: server.uriConverter),
+      ]).toRequest('1'),
     );
   }
 

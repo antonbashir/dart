@@ -698,10 +698,10 @@ ObjectPtr IrregexpInterpreter::Match(const TypedData& bytecode,
     previous_char = subject.CharAt(start_position - 1);
   }
 
-  if (subject.IsOneByteString()) {
+  if (subject.IsOneByteString() || subject.IsExternalOneByteString()) {
     return RawMatch<uint8_t>(bytecode, subject, registers, start_position,
                              previous_char);
-  } else if (subject.IsTwoByteString()) {
+  } else if (subject.IsTwoByteString() || subject.IsExternalTwoByteString()) {
     return RawMatch<uint16_t>(bytecode, subject, registers, start_position,
                               previous_char);
   } else {

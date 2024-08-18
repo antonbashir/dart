@@ -18,14 +18,17 @@ import 'error_handling.dart' show withErrorHandling;
 
 import 'chain.dart' show CreateContext;
 
-import '../testing.dart' show Chain, ChainContext;
+import '../testing.dart'
+    show Chain, ChainContext, FileBasedTestDescription, listTests;
 
 import 'analyze.dart' show Analyze;
 
 import 'log.dart'
     show enableVerboseOutput, isVerbose, Logger, splitLines, StdoutLogger;
 
-import 'suite.dart' show Suite;
+import 'suite.dart' show Dart, Suite;
+
+import 'test_dart.dart' show TestDart;
 
 import 'zone_helper.dart' show acknowledgeControlMessages;
 
@@ -130,7 +133,7 @@ Future<void> runProgram(String program, Uri packages) async {
   await for (var _ in exitPort) {
     exitPort.close();
   }
-  await subscription.cancel();
+  subscription.cancel();
   return error == null
       ? null
       : Future.error(error![0], StackTrace.fromString(error![1]));
@@ -165,10 +168,28 @@ class SuiteRunner {
     StringBuffer chain = StringBuffer();
     bool hasRunnableTests = false;
 
+    await for (FileBasedTestDescription description in listDescriptions()) {
+      hasRunnableTests = true;
+      description.writeImportOn(imports);
+      description.writeClosureOn(dart);
+    }
+
     await for (Chain suite in listChainSuites()) {
       hasRunnableTests = true;
       suite.writeImportOn(imports);
       suite.writeClosureOn(chain);
+    }
+
+    bool isFirstTestDartSuite = true;
+    for (TestDart suite in listTestDartSuites()) {
+      if (shouldRunSuite(suite)) {
+        hasRunnableTests = true;
+        if (isFirstTestDartSuite) {
+          suite.writeFirstImportOn(imports);
+        }
+        isFirstTestDartSuite = false;
+        suite.writeRunCommandOn(chain);
+      }
     }
 
     if (!hasRunnableTests) return null;
@@ -213,6 +234,22 @@ Future<Null> main() async {
     return hasAnalyzerSuites;
   }
 
+  Stream<FileBasedTestDescription> listDescriptions() async* {
+    for (Dart suite in suites.whereType<Dart>()) {
+      await for (FileBasedTestDescription description
+          in listTests(<Uri>[suite.uri], pattern: "")) {
+        testUris.add((await Isolate.resolvePackageUri(description.uri))!);
+        if (shouldRunSuite(suite)) {
+          String path = description.file.uri.path;
+          if (suite.exclude.any((RegExp r) => path.contains(r))) continue;
+          if (suite.pattern.any((RegExp r) => path.contains(r))) {
+            yield description;
+          }
+        }
+      }
+    }
+  }
+
   Stream<Chain> listChainSuites() async* {
     for (Chain suite in suites.whereType<Chain>()) {
       testUris.add((await Isolate.resolvePackageUri(suite.source))!);
@@ -220,6 +257,10 @@ Future<Null> main() async {
         yield suite;
       }
     }
+  }
+
+  Iterable<TestDart> listTestDartSuites() {
+    return suites.whereType<TestDart>();
   }
 
   Iterable<Analyze> listAnalyzerSuites() {

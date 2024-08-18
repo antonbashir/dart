@@ -26,7 +26,7 @@ class MethodRecognizer : public AllStatic {
  public:
   enum Kind {
     kUnknown,
-#define DEFINE_ENUM_LIST(library, class, function, enum_name, fp) k##enum_name,
+#define DEFINE_ENUM_LIST(class_name, function_name, enum_name, fp) k##enum_name,
     RECOGNIZED_LIST(DEFINE_ENUM_LIST)
 #undef DEFINE_ENUM_LIST
         kNumRecognizedMethods
@@ -42,6 +42,14 @@ class MethodRecognizer : public AllStatic {
   // See [result_type_pragma.md].
   static intptr_t ResultCidFromPragma(const Object& function_or_field);
 
+  // Try to find an annotation of the form
+  //   @pragma("vm:non-nullable-result-type")
+  // and returns true iff `false` was specified in the annotation.
+  //
+  // See [pragmas.md].
+  static bool HasNonNullableResultTypeFromPragma(
+      const Object& function_or_field);
+
   static intptr_t MethodKindToReceiverCid(Kind kind);
   static const char* KindToCString(Kind kind);
   static const char* KindToFunctionNameCString(Kind kind);
@@ -49,6 +57,9 @@ class MethodRecognizer : public AllStatic {
   static bool IsMarkedAsRecognized(const Function& function,
                                    const char* kind = nullptr);
   static void InitializeState();
+
+ private:
+  static void Libraries(GrowableArray<Library*>* libs);
 };
 
 // Recognizes token corresponding to a method name.

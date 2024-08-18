@@ -8,33 +8,32 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid method calls or property accesses on a `dynamic` target.';
+const _desc = r'Avoid method calls or property accesses on a "dynamic" target.';
 
 const _details = r'''
 **DO** avoid method calls or accessing properties on an object that is either
-explicitly or implicitly statically typed `dynamic`. Dynamic calls are treated
+explicitly or implicitly statically typed "dynamic". Dynamic calls are treated
 slightly different in every runtime environment and compiler, but most
 production modes (and even some development modes) have both compile size and
 runtime performance penalties associated with dynamic calls.
 
-Additionally, targets typed `dynamic` disables most static analysis, meaning it
-is easier to lead to a runtime `NoSuchMethodError` or `TypeError` than properly
+Additionally, targets typed "dynamic" disables most static analysis, meaning it
+is easier to lead to a runtime "NoSuchMethodError" or "NullError" than properly
 statically typed Dart code.
 
-There is an exception to methods and properties that exist on `Object?`:
-- `a.hashCode`
-- `a.runtimeType`
-- `a.noSuchMethod(someInvocation)`
-- `a.toString()`
+There is an exception to methods and properties that exist on "Object?":
+- a.hashCode
+- a.runtimeType
+- a.noSuchMethod(someInvocation)
+- a.toString()
 
 ... these members are dynamically dispatched in the web-based runtimes, but not
 in the VM-based ones. Additionally, they are so common that it would be very
 punishing to disallow `any.toString()` or `any == true`, for example.
 
-Note that despite `Function` being a type, the semantics are close to identical
-to `dynamic`, and calls to an object that is typed `Function` will also trigger
+Note that despite "Function" being a type, the semantics are close to identical
+to "dynamic", and calls to an object that is typed "Function" will also trigger
 this lint.
 
 Dynamic calls are allowed on cast expressions (`as dynamic` or `as Function`).
@@ -94,19 +93,20 @@ void functionTypeWithParameters(Function() function) {
 ''';
 
 class AvoidDynamicCalls extends LintRule {
+  static const LintCode code = LintCode('avoid_dynamic_calls',
+      "Method invocation or property access on a 'dynamic' target.",
+      correctionMessage: 'Try giving the target a type.');
+
   AvoidDynamicCalls()
       : super(
           name: 'avoid_dynamic_calls',
           description: _desc,
           details: _details,
-          categories: {
-            LintRuleCategory.binarySize,
-            LintRuleCategory.errorProne
-          },
+          group: Group.errors,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_dynamic_calls;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -197,7 +197,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     }
     var receiverWasDynamic = _lintIfDynamic(node.realTarget);
     if (!receiverWasDynamic) {
-      var target = node.realTarget;
+      var target = node.target;
       // The ".call" method is special, where "a.call()" is treated ~as "a()".
       //
       // If the method is "call", and the receiver is a function, we assume then

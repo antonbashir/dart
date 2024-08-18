@@ -179,8 +179,6 @@ class ArgumentsDescriptor : public ValueObject {
   // A cache of VM heap allocated arguments descriptors.
   static ArrayPtr cached_args_descriptors_[kCachedDescriptorCount];
 
-  friend class Interpreter;
-  friend class InterpreterHelpers;
   friend class VMSerializationRoots;
   friend class VMDeserializationRoots;
   DISALLOW_COPY_AND_ASSIGN(ArgumentsDescriptor);
@@ -304,8 +302,8 @@ class DartLibraryCalls : public AllStatic {
   // Returns null on success, an ErrorPtr on failure.
   static ObjectPtr EnsureScheduleImmediate();
 
-  // Runs the `_rehashObjects()` function in `dart:compact_hash`.
-  static ObjectPtr RehashObjectsInDartCompactHash(
+  // Runs the `_rehashObjects()` function in `dart:collection`.
+  static ObjectPtr RehashObjectsInDartCollection(
       Thread* thread,
       const Object& array_or_growable_array);
 

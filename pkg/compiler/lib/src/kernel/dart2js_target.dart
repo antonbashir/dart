@@ -9,8 +9,8 @@ library compiler.src.kernel.dart2js_target;
 import 'package:_fe_analyzer_shared/src/messages/codes.dart'
     show Message, LocatedMessage;
 import 'package:_js_interop_checks/js_interop_checks.dart';
+import 'package:_js_interop_checks/src/transformations/export_creator.dart';
 import 'package:_js_interop_checks/src/transformations/js_util_optimizer.dart';
-import 'package:_js_interop_checks/src/transformations/shared_interop_transformer.dart';
 import 'package:kernel/ast.dart' as ir;
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
@@ -20,7 +20,7 @@ import 'package:kernel/target/targets.dart';
 import 'package:kernel/type_environment.dart';
 
 import '../options.dart';
-import 'invocation_mirror.dart';
+import 'invocation_mirror_constants.dart';
 import 'transformations/modular/transform.dart' as modularTransforms;
 
 const Iterable<String> _allowedDartSchemePaths = [
@@ -130,6 +130,9 @@ class Dart2jsTarget extends Target {
   bool enableNative(Uri uri) => maybeEnableNative(uri);
 
   @override
+  bool get nativeExtensionExpectsString => false;
+
+  @override
   bool get errorOnUnexactWebIntLiterals => true;
 
   @override
@@ -139,30 +142,26 @@ class Dart2jsTarget extends Target {
       ClassHierarchy hierarchy,
       List<ir.Library> libraries,
       Map<String, String>? environmentDefines,
-      covariant DiagnosticReporter<Message, LocatedMessage> diagnosticReporter,
+      DiagnosticReporter diagnosticReporter,
       ReferenceFromIndex? referenceFromIndex,
       {void Function(String msg)? logger,
       ChangedStructureNotifier? changedStructureNotifier}) {
     _nativeClasses = JsInteropChecks.getNativeClasses(component);
-    final jsInteropReporter = JsInteropDiagnosticReporter(diagnosticReporter);
+    final jsInteropReporter = JsInteropDiagnosticReporter(
+        diagnosticReporter as DiagnosticReporter<Message, LocatedMessage>);
     var jsInteropChecks = JsInteropChecks(
         coreTypes, hierarchy, jsInteropReporter, _nativeClasses!);
     // Process and validate first before doing anything with exports.
     for (var library in libraries) {
       jsInteropChecks.visitLibrary(library);
     }
-    var sharedInteropTransformer = SharedInteropTransformer(
-        TypeEnvironment(coreTypes, hierarchy),
-        jsInteropReporter,
-        jsInteropChecks.exportChecker,
-        jsInteropChecks.extensionIndex);
-    var jsUtilOptimizer = JsUtilOptimizer(
-        coreTypes, hierarchy, jsInteropChecks.extensionIndex,
-        isDart2JS: true);
+    var exportCreator = ExportCreator(TypeEnvironment(coreTypes, hierarchy),
+        jsInteropReporter, jsInteropChecks.exportChecker);
+    var jsUtilOptimizer = JsUtilOptimizer(coreTypes, hierarchy);
     for (var library in libraries) {
-      // Shared transformer has static checks, so we still visit even if there
-      // are errors.
-      sharedInteropTransformer.visitLibrary(library);
+      // Export creator has static checks, so we still visit even if there are
+      // errors.
+      exportCreator.visitLibrary(library);
       // TODO (rileyporter): Merge js_util optimizations with other lowerings
       // in the single pass in `transformations/lowering.dart`.
       if (!jsInteropReporter.hasJsInteropErrors) {
@@ -183,15 +182,15 @@ class Dart2jsTarget extends Target {
       ir.Arguments arguments,
       int offset,
       bool isSuper) {
-    InvocationMirrorKind kind;
+    int kind;
     if (name.startsWith('get:')) {
-      kind = InvocationMirrorKind.getter;
+      kind = invocationMirrorGetterKind;
       name = name.substring(4);
     } else if (name.startsWith('set:')) {
-      kind = InvocationMirrorKind.setter;
+      kind = invocationMirrorSetterKind;
       name = name.substring(4);
     } else {
-      kind = InvocationMirrorKind.method;
+      kind = invocationMirrorMethodKind;
     }
     return ir.StaticInvocation(
         coreTypes.index
@@ -211,7 +210,7 @@ class Dart2jsTarget extends Target {
           })), keyType: coreTypes.stringNonNullableRawType)
             ..isConst = (arguments.named.length == 0)
             ..fileOffset = arguments.fileOffset,
-          ir.IntLiteral(kind.value)..fileOffset = offset,
+          ir.IntLiteral(kind)..fileOffset = offset,
         ]))
       ..fileOffset = offset;
   }
@@ -256,15 +255,12 @@ const implicitlyUsedLibraries = <String>[
 // compile-platform should just specify which libraries to compile instead.
 const requiredLibraries = <String, List<String>>{
   'dart2js': [
-    'dart:_array_flags',
     'dart:_async_status_codes',
-    'dart:_dart2js_only',
     'dart:_dart2js_runtime_metrics',
     'dart:_foreign_helper',
     'dart:_http',
     'dart:_interceptors',
     'dart:_internal',
-    'dart:_invocation_mirror_constants',
     'dart:_js',
     'dart:_js_annotations',
     'dart:_js_embedded_names',
@@ -299,15 +295,12 @@ const requiredLibraries = <String, List<String>>{
     'dart:web_gl',
   ],
   'dart2js_server': [
-    'dart:_array_flags',
     'dart:_async_status_codes',
-    'dart:_dart2js_only',
     'dart:_dart2js_runtime_metrics',
     'dart:_foreign_helper',
     'dart:_http',
     'dart:_interceptors',
     'dart:_internal',
-    'dart:_invocation_mirror_constants',
     'dart:_js',
     'dart:_js_annotations',
     'dart:_js_embedded_names',
@@ -361,8 +354,6 @@ class Dart2jsConstantsBackend extends ConstantsBackend {
 }
 
 class Dart2jsDartLibrarySupport extends CustomizedDartLibrarySupport {
-  // This is required so that `dart.library._dart2js_only` can be used as an
-  // import condition. Libraries with leading underscores are otherwise
-  // considered unsupported regardless of the library specification.
-  const Dart2jsDartLibrarySupport() : super(supported: const {'_dart2js_only'});
+  const Dart2jsDartLibrarySupport()
+      : super(supported: const {'_dart2js_runtime_metrics'});
 }

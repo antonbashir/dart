@@ -1,4 +1,0 @@
-class A {
-  const A.a4(String this.x);
-  final int x;
-}

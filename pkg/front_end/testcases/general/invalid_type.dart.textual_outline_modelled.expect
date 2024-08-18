@@ -3,5 +3,4 @@ class C {
 }
 
 main() {}
-
 test() {}

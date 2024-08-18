@@ -1,7 +1,5 @@
 import "package:expect/expect.dart";
-
 const printConst = MessageType.parse("print");
-
 class MessageType {
   static const print = MessageType._('print');
   static const skip = MessageType._('skip');
@@ -9,5 +7,4 @@ class MessageType {
   const factory MessageType.parse(String name) {}
   const MessageType._(this.name);
 }
-
 void main() {}

@@ -2,5 +2,4 @@ class Operators7 {
   operator <<(){}
   Toperator>(a) => true;
 }
-
 main() {}

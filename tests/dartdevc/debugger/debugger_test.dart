@@ -9,11 +9,10 @@
 library debugger_test;
 
 import 'dart:html';
-import 'package:async_helper/async_helper.dart';
 import 'package:js/js.dart';
 import 'package:js/js_util.dart' as js_util;
 
-import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
+import 'package:expect/minitest.dart';
 
 import 'dart:_debugger' as _debugger;
 
@@ -58,7 +57,7 @@ List get devtoolsFormatters => _devtoolsFormatters;
 @JS('JSON.stringify')
 external stringify(value, [Function replacer, int space]);
 
-// TODO(jacobr): this is only valid if the DDC library loader is used.
+// TODO(jacobr): this is only valid if the legacy library loader is used.
 // We need a solution that works with all library loaders.
 @JS('dart_library.import')
 external importDartLibrary(String path);
@@ -125,7 +124,6 @@ List<FormattedObject> extractNestedFormattedObjects(json) {
 }
 
 main() async {
-  asyncStart();
   if (devtoolsFormatters == null) {
     print("Warning: no devtools custom formatters specified. Skipping tests.");
     return;
@@ -363,6 +361,5 @@ window.ExampleJSClass = function ExampleJSClass(x) {
       });
     }
     expect(actualStr == golden, isTrue);
-    asyncEnd();
   });
 }

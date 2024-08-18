@@ -1,9 +1,5 @@
 include: package:lints/recommended.yaml
 
-analyzer:
-  errors:
-    unnecessary_library_name: ignore
-
 linter:
   rules:
     - lines_longer_than_80_chars

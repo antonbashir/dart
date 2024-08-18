@@ -29,14 +29,13 @@
 /// (Specialization classes have not yet been implemented).
 library dart2js.js_model.records;
 
-import 'package:js_shared/variance.dart';
-
 import '../common.dart';
 import '../constants/values.dart' show ConstantValue;
 import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart';
 import '../ir/element_map.dart' show IrToElementMap;
+import '../ir/static_type_cache.dart';
 import '../js_backend/annotations.dart';
 import '../ordered_typeset.dart';
 import '../serialization/serialization.dart';
@@ -73,8 +72,6 @@ class RecordData {
 
   List<MemberEntity> gettersForShape(RecordShape shape) =>
       _gettersByShape[shape]!;
-
-  Iterable<ClassEntity> get allClasses => _classToRepresentation.keys;
 
   factory RecordData.readFromDataSource(
       JsToElementMap elementMap, DataSourceReader source) {
@@ -434,6 +431,12 @@ abstract class RecordMemberData implements JMemberData {
   RecordMemberData(this.definition, this.memberThisType);
 
   @override
+  StaticTypeCache get staticTypes {
+    // The cached types are stored in the data for enclosing member.
+    throw UnsupportedError('RecordMemberData.staticTypes');
+  }
+
+  @override
   InterfaceType? getMemberThisType(covariant JsToElementMap elementMap) {
     return memberThisType;
   }
@@ -487,7 +490,11 @@ class RecordGetterData extends RecordMemberData implements FunctionData {
       JsToElementMap elementMap,
       ParameterStructure parameterStructure,
       void f(DartType type, String? name, ConstantValue? defaultValue),
-      {bool isNative = false}) {}
+      {bool isNative = false}) {
+    // This `throw` can be removed if `RecordGetterData.forEachParameter` is
+    // used from general code via `FunctionData.forEachParameter`.
+    throw UnsupportedError('${runtimeType}.forEachParameter');
+  }
 
   @override
   // It is a bit of a code-smell here that an synthetic element introduced

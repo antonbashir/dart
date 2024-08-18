@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Start multiline strings with a newline.';
 
@@ -36,15 +35,20 @@ var s2 = '''This one-liner multiline string is ok. It usually allows to escape b
 """;
 
 class LeadingNewlinesInMultilineStrings extends LintRule {
+  static const LintCode code = LintCode('leading_newlines_in_multiline_strings',
+      'Missing a newline at the beginning of a multiline string.',
+      correctionMessage:
+          'Try adding a newline at the beginning of the string.');
+
   LeadingNewlinesInMultilineStrings()
       : super(
             name: 'leading_newlines_in_multiline_strings',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.leading_newlines_in_multiline_strings;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

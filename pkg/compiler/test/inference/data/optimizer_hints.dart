@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: main:[null]*/
 main() {
   assumeDynamic();
@@ -43,7 +45,7 @@ notAssumeDynamic() {
 // No annotation is needed to trust return type annotation.
 ////////////////////////////////////////////////////////////////////////////////
 
-/*member: trustReturnTypeString:[exact=JSString]*/
+/*member: trustReturnTypeString:[null|exact=JSString]*/
 String trustReturnTypeString() {
   return _assumeDynamic(0);
 }
@@ -53,7 +55,7 @@ String trustReturnTypeString() {
 ////////////////////////////////////////////////////////////////////////////////
 
 /*member: _trustParameterTypeString:[null]*/
-_trustParameterTypeString(String /*[exact=JSString]*/ o) {}
+_trustParameterTypeString(String /*[null|exact=JSString]*/ o) {}
 
 /*member: trustParameterTypeString:[null]*/
 trustParameterTypeString() {

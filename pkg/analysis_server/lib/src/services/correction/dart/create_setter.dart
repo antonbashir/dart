@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -15,15 +15,8 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 class CreateSetter extends ResolvedCorrectionProducer {
   String _setterName = '';
 
-  CreateSetter({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
-  @override
-  List<String> get fixArguments => [_setterName];
+  List<Object> get fixArguments => [_setterName];
 
   @override
   FixKind get fixKind => DartFixKind.CREATE_SETTER;
@@ -101,22 +94,31 @@ class CreateSetter extends ResolvedCorrectionProducer {
     } else {
       return;
     }
-    // Build setter source.
+    // prepare location
+    var targetUnit = targetDeclarationResult.resolvedUnit;
+    if (targetUnit == null) {
+      return;
+    }
+    var targetLocation = CorrectionUtils(targetUnit)
+        .prepareNewGetterLocation(targetNode); // Rename to "AccessorLocation"
+    if (targetLocation == null) {
+      return;
+    }
+    // build method source
     var targetFile = targetSource.fullName;
     _setterName = nameNode.name;
     await builder.addDartFileEdit(targetFile, (builder) {
-      builder.insertGetter(
-        targetNode,
-        (builder) {
-          var parameterTypeNode = climbPropertyAccess(nameNode);
-          var parameterType = inferUndefinedExpressionType(parameterTypeNode);
-          builder.writeSetterDeclaration(_setterName,
-              isStatic: staticModifier,
-              nameGroupName: 'NAME',
-              parameterType: parameterType,
-              parameterTypeGroupName: 'TYPE');
-        },
-      );
+      builder.addInsertion(targetLocation.offset, (builder) {
+        var parameterTypeNode = climbPropertyAccess(nameNode);
+        var parameterType = inferUndefinedExpressionType(parameterTypeNode);
+        builder.write(targetLocation.prefix);
+        builder.writeSetterDeclaration(_setterName,
+            isStatic: staticModifier,
+            nameGroupName: 'NAME',
+            parameterType: parameterType,
+            parameterTypeGroupName: 'TYPE');
+        builder.write(targetLocation.suffix);
+      });
     });
   }
 }

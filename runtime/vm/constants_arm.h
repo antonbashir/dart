@@ -504,7 +504,6 @@ struct AllocateClosureABI {
   static constexpr Register kResultReg = AllocateObjectABI::kResultReg;
   static constexpr Register kFunctionReg = R1;
   static constexpr Register kContextReg = R2;
-  static constexpr Register kInstantiatorTypeArgsReg = R3;
   static constexpr Register kScratchReg = R4;
 };
 
@@ -718,8 +717,6 @@ class CallingConventions {
   // How stack arguments are aligned.
   static constexpr AlignmentStrategy kArgumentStackAlignment =
       kAlignedToWordSizeAndValueSize;
-  static constexpr AlignmentStrategy kArgumentStackAlignmentVarArgs =
-      kArgumentStackAlignment;
 
   // How fields in compounds are aligned.
 #if defined(DART_TARGET_OS_MACOS_IOS)
@@ -749,14 +746,6 @@ class CallingConventions {
   COMPILE_ASSERT(
       ((R(kFirstNonArgumentRegister) | R(kSecondNonArgumentRegister)) &
        (kArgumentRegisters | R(kPointerToReturnStructRegisterCall))) == 0);
-};
-
-// Register based calling convention used for Dart functions.
-//
-// See |compiler::ComputeCallingConvention| for more details.
-struct DartCallingConvention {
-  static constexpr Register kCpuRegistersForArgs[] = {R1, R2, R3, R8};
-  static constexpr FpuRegister kFpuRegistersForArgs[] = {Q0, Q1, Q2, Q3};
 };
 
 #undef R
@@ -1336,9 +1325,6 @@ inline Register ConcreteRegister(LinkRegister) {
 #undef LR
 
 #define LINK_REGISTER (LinkRegister())
-
-// Prioritize code size over performance.
-const intptr_t kPreferredLoopAlignment = 1;
 
 }  // namespace dart
 

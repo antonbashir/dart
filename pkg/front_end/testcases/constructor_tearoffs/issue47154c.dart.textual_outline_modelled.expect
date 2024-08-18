@@ -14,5 +14,4 @@ class C<X> {
 }
 
 void m<X>(X x) {}
-
 void main() {}

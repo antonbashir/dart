@@ -2,14 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/token.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/dart/element/type_schema.dart';
+import 'package:analyzer/src/dart/resolver/variance.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:path/path.dart' show toUri;
@@ -166,7 +165,7 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
     );
 
     // class B extends A<B> {}
-    var B = class_(name: 'B');
+    var B = class_(name: 'B', superType: null);
     B.supertype = interfaceTypeNone(A, typeArguments: [interfaceTypeNone(B)]);
     var typeB = interfaceTypeNone(B);
 
@@ -212,6 +211,27 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
     var inferredType = inferredTypes[0] as TypeParameterTypeImpl;
     expect(inferredType.element, S);
     expect(inferredType.promotedBound, isNull);
+  }
+
+  void test_fromLegacy_nonNullableBound() {
+    typeSystem = analysisContext.typeSystemLegacy;
+
+    // void Function<T extends Object>(T)
+    var T = typeParameter('T', bound: objectNone);
+    var rawType = functionTypeNone(
+      typeFormals: [T],
+      parameters: [
+        requiredParameter(
+          type: typeParameterTypeNone(T),
+        ),
+      ],
+      returnType: voidNone,
+    );
+
+    _assertTypes(
+      _inferCall(rawType, [dynamicType]),
+      [dynamicType],
+    );
   }
 
   void test_genericCastFunction() {
@@ -501,6 +521,16 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
     _assertTypes(_inferCall(f, [], returnType: stringNone), [stringNone]);
   }
 
+  void test_returnTypeFromContext_nonNullify() {
+    // <T>() -> T
+    var T = typeParameter('T');
+    var f = functionTypeNone(
+      typeFormals: [T],
+      returnType: typeParameterTypeNone(T),
+    );
+    _assertTypes(_inferCall(f, [], returnType: intStar), [intNone]);
+  }
+
   void test_returnTypeWithBoundFromContext() {
     // <T extends num>() -> T
     var T = typeParameter('T', bound: numNone);
@@ -590,30 +620,30 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
   }
 
   void _assertType(DartType type, String expected) {
-    var typeStr = type.getDisplayString();
+    var typeStr = type.getDisplayString(withNullability: false);
     expect(typeStr, expected);
   }
 
   void _assertTypes(List<DartType> actual, List<DartType> expected) {
     var actualStr = actual.map((e) {
-      return e.getDisplayString();
+      return e.getDisplayString(withNullability: true);
     }).toList();
 
     var expectedStr = expected.map((e) {
-      return e.getDisplayString();
+      return e.getDisplayString(withNullability: true);
     }).toList();
 
     expect(actualStr, expectedStr);
   }
 
   List<DartType> _inferCall(FunctionType ft, List<DartType> arguments,
-      {DartType returnType = UnknownInferredType.instance,
-      bool expectError = false}) {
+      {DartType? returnType, bool expectError = false}) {
     var listener = RecordingErrorListener();
 
     var reporter = ErrorReporter(
       listener,
       NonExistingSource('/test.dart', toUri('/test.dart')),
+      isNonNullableByDefault: false,
     );
 
     var inferrer = typeSystem.setupGenericTypeInference(
@@ -621,20 +651,14 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
       declaredReturnType: ft.returnType,
       contextReturnType: returnType,
       errorReporter: reporter,
-      errorEntity: NullLiteralImpl(
+      errorNode: NullLiteralImpl(
         literal: KeywordToken(Keyword.NULL, 0),
       ),
       genericMetadataIsEnabled: true,
       strictInference: false,
-      strictCasts: false,
-      typeSystemOperations: typeSystemOperations,
-      dataForTesting: null,
-      nodeForTesting: null,
     );
     inferrer.constrainArguments(
-        parameters: ft.parameters,
-        argumentTypes: arguments,
-        nodeForTesting: null);
+        parameters: ft.parameters, argumentTypes: arguments);
     var typeArguments = inferrer.chooseFinalTypes();
 
     if (expectError) {
@@ -648,8 +672,7 @@ class GenericFunctionInferenceTest extends AbstractTypeSystemTest {
   }
 
   FunctionType _inferCall2(FunctionType ft, List<DartType> arguments,
-      {DartType returnType = UnknownInferredType.instance,
-      bool expectError = false}) {
+      {DartType? returnType, bool expectError = false}) {
     var typeArguments = _inferCall(
       ft,
       arguments,

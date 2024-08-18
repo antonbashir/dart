@@ -138,6 +138,8 @@
   FIELD(Context, num_variables_offset)                                         \
   FIELD(Context, parent_offset)                                                \
   FIELD(Double, value_offset)                                                  \
+  FIELD(ExternalOneByteString, external_data_offset)                           \
+  FIELD(ExternalTwoByteString, external_data_offset)                           \
   FIELD(Float32x4, value_offset)                                               \
   FIELD(Float64x2, value_offset)                                               \
   FIELD(Field, initializer_function_offset)                                    \
@@ -281,8 +283,6 @@
   FIELD(Thread, float_not_address_offset)                                      \
   FIELD(Thread, float_zerow_address_offset)                                    \
   FIELD(Thread, global_object_pool_offset)                                     \
-  FIELD(Thread, interpret_call_entry_point_offset)                             \
-  FIELD(Thread, invoke_dart_code_from_bytecode_stub_offset)                    \
   FIELD(Thread, invoke_dart_code_stub_offset)                                  \
   FIELD(Thread, exit_through_ffi_offset)                                       \
   FIELD(Thread, isolate_offset)                                                \
@@ -291,8 +291,7 @@
   FIELD(Thread, lazy_deopt_from_return_stub_offset)                            \
   FIELD(Thread, lazy_deopt_from_throw_stub_offset)                             \
   FIELD(Thread, lazy_specialize_type_test_stub_offset)                         \
-  FIELD(Thread, old_marking_stack_block_offset)                                \
-  FIELD(Thread, new_marking_stack_block_offset)                                \
+  FIELD(Thread, marking_stack_block_offset)                                    \
   FIELD(Thread, megamorphic_call_checked_entry_offset)                         \
   FIELD(Thread, switchable_call_miss_entry_offset)                             \
   FIELD(Thread, switchable_call_miss_stub_offset)                              \
@@ -318,7 +317,6 @@
   FIELD(Thread, resume_pc_offset)                                              \
   FIELD(Thread, saved_shadow_call_stack_offset)                                \
   FIELD(Thread, safepoint_state_offset)                                        \
-  FIELD(Thread, shared_field_table_values_offset)                              \
   FIELD(Thread, slow_type_test_stub_offset)                                    \
   FIELD(Thread, slow_type_test_entry_point_offset)                             \
   FIELD(Thread, stack_limit_offset)                                            \
@@ -412,7 +410,6 @@
   SIZEOF(ApiError, InstanceSize, UntaggedApiError)                             \
   SIZEOF(Array, header_size, UntaggedArray)                                    \
   SIZEOF(Bool, InstanceSize, UntaggedBool)                                     \
-  SIZEOF(Bytecode, InstanceSize, UntaggedBytecode)                             \
   SIZEOF(Capability, InstanceSize, UntaggedCapability)                         \
   SIZEOF(Class, InstanceSize, UntaggedClass)                                   \
   SIZEOF(Closure, InstanceSize, UntaggedClosure)                               \
@@ -424,6 +421,8 @@
   SIZEOF(Context, header_size, UntaggedContext)                                \
   SIZEOF(Double, InstanceSize, UntaggedDouble)                                 \
   SIZEOF(DynamicLibrary, InstanceSize, UntaggedDynamicLibrary)                 \
+  SIZEOF(ExternalOneByteString, InstanceSize, UntaggedExternalOneByteString)   \
+  SIZEOF(ExternalTwoByteString, InstanceSize, UntaggedExternalTwoByteString)   \
   SIZEOF(ExternalTypedData, InstanceSize, UntaggedExternalTypedData)           \
   SIZEOF(FfiTrampolineData, InstanceSize, UntaggedFfiTrampolineData)           \
   SIZEOF(Field, InstanceSize, UntaggedField)                                   \
@@ -441,7 +440,6 @@
   SIZEOF(Instructions, UnalignedHeaderSize, UntaggedInstructions)              \
   SIZEOF(InstructionsSection, UnalignedHeaderSize,                             \
          UntaggedInstructionsSection)                                          \
-  FIELD(InstructionsSection, HeaderSize)                                       \
   SIZEOF(InstructionsTable, InstanceSize, UntaggedInstructionsTable)           \
   SIZEOF(Int32x4, InstanceSize, UntaggedInt32x4)                               \
   SIZEOF(Integer, InstanceSize, UntaggedInteger)                               \

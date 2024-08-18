@@ -2,10 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/services/correction/util.dart';
-import 'package:analysis_server_plugin/edit/correction_utils.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
@@ -17,12 +16,13 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   final List<_Command> _commands = [];
 
-  RemoveUnusedLocalVariable({required super.context});
+  @override
+  // Not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_UNUSED_LOCAL_VARIABLE;
@@ -38,7 +38,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
     }
 
     await builder.addDartFileEdit(file, (builder) {
-      for (var command in _commands) {
+      for (final command in _commands) {
         command.execute(builder);
       }
     });
@@ -47,24 +47,17 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   bool _deleteDeclaration() {
     switch (node) {
       case VariableDeclaration():
-        var declarationList = node.parent;
+        final declarationList = node.parent;
         if (declarationList is VariableDeclarationList) {
-          var declarationStatement = declarationList.parent;
+          final declarationStatement = declarationList.parent;
           if (declarationStatement is VariableDeclarationStatement) {
             if (declarationList.variables.length == 1) {
-              var initializer = declarationList.variables.first.initializer;
-              if (initializer is MethodInvocation) {
-                _commands.add(_DeleteSourceRangeCommand(
-                    sourceRange: SourceRange(declarationStatement.offset,
-                        initializer.offset - declarationStatement.offset)));
-              } else {
-                _commands.add(
-                  _DeleteStatementCommand(
-                    utils: utils,
-                    statement: declarationStatement,
-                  ),
-                );
-              }
+              _commands.add(
+                _DeleteStatementCommand(
+                  utils: utils,
+                  statement: declarationStatement,
+                ),
+              );
             } else {
               _commands.add(
                 _DeleteNodeInListCommand(
@@ -103,9 +96,9 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   bool _deleteDeclarationInContainerPattern({
     required DeclaredVariablePattern declaredVariable,
   }) {
-    String replacement;
-    if (declaredVariable.type case var typeNode?) {
-      var typeStr = utils.getNodeText(typeNode);
+    final String replacement;
+    if (declaredVariable.type case final typeNode?) {
+      final typeStr = utils.getNodeText(typeNode);
       replacement = '$typeStr _';
     } else {
       replacement = '_';
@@ -123,8 +116,8 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
     required DeclaredVariablePattern declaredVariable,
     required LogicalAndPattern logicalAnd,
   }) {
-    if (declaredVariable.type case var typeNode?) {
-      var typeStr = utils.getNodeText(typeNode);
+    if (declaredVariable.type case final typeNode?) {
+      final typeStr = utils.getNodeText(typeNode);
       _commands.add(
         _ReplaceSourceRangeCommand(
           sourceRange: range.node(declaredVariable),
@@ -159,17 +152,17 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   }) {
     switch (patternField.parent) {
       case ObjectPatternImpl objectPattern:
-        var nameNode = patternField.name;
+        final nameNode = patternField.name;
         if (nameNode == null) {
           return false;
         }
 
-        var fields = objectPattern.fields;
+        final fields = objectPattern.fields;
         // Remove completely `var A(:notUsed) = x;`
         if (fields.length == 1) {
-          var patternDeclaration = objectPattern.parent;
+          final patternDeclaration = objectPattern.parent;
           if (patternDeclaration is PatternVariableDeclaration) {
-            var patternStatement = patternDeclaration.parent;
+            final patternStatement = patternDeclaration.parent;
             if (patternStatement is PatternVariableDeclarationStatement) {
               _commands.add(
                 _DeleteStatementCommand(
@@ -183,7 +176,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
         }
         // If matching, the explicit type is used.
         if (declaredVariable.type != null) {
-          var patternContext = objectPattern.patternContext;
+          final patternContext = objectPattern.patternContext;
           if (patternContext is GuardedPattern) {
             if (nameNode.name == null) {
               _commands.add(
@@ -210,7 +203,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
         );
         return true;
       case RecordPattern():
-        var nameNode = patternField.name;
+        final nameNode = patternField.name;
         if (nameNode != null && nameNode.name == null) {
           _commands.add(
             _AddExplicitFieldNameCommand(
@@ -232,29 +225,29 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   }
 
   bool _deleteReferences() {
-    var element = _localVariableElement();
+    final element = _localVariableElement();
     if (element is! LocalVariableElement) {
       return false;
     }
 
-    var node = this.node;
-    var functionBody = node.thisOrAncestorOfType<FunctionBody>();
+    final node = this.node;
+    final functionBody = node.thisOrAncestorOfType<FunctionBody>();
     if (functionBody == null) {
       return false;
     }
 
-    var references = findLocalElementReferences(functionBody, element);
+    final references = findLocalElementReferences(functionBody, element);
 
-    var deletedRanges = <SourceRange>[];
+    final deletedRanges = <SourceRange>[];
 
-    for (var reference in references) {
-      var referenceRange = _referenceRangeToDelete(reference);
+    for (final reference in references) {
+      final referenceRange = _referenceRangeToDelete(reference);
       if (referenceRange == null) {
         return false;
       }
 
       var isCovered = false;
-      for (var other in deletedRanges) {
+      for (final other in deletedRanges) {
         if (other.covers(referenceRange)) {
           isCovered = true;
           break;
@@ -290,7 +283,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   }
 
   Element? _localVariableElement() {
-    var node = this.node;
+    final node = this.node;
     if (node is DeclaredVariablePattern) {
       return node.declaredElement;
     } else if (node is VariableDeclaration) {
@@ -302,7 +295,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
   }
 
   SourceRange? _referenceRangeToDelete(AstNode reference) {
-    var parent = reference.parent;
+    final parent = reference.parent;
     if (parent is AssignmentExpression) {
       if (parent.leftHandSide == reference) {
         return _forAssignmentExpression(parent);
@@ -345,7 +338,7 @@ class _DeleteNodeInListCommand<T extends AstNode> extends _Command {
 
   @override
   void execute(DartFileEditBuilder builder) {
-    var sourceRange = range.nodeInList(nodes, node);
+    final sourceRange = range.nodeInList(nodes, node);
     builder.addDeletion(sourceRange);
   }
 }
@@ -374,8 +367,8 @@ class _DeleteStatementCommand extends _Command {
 
   @override
   void execute(DartFileEditBuilder builder) {
-    var statementRange = range.node(statement);
-    var linesRange = utils.getLinesRange(statementRange);
+    final statementRange = range.node(statement);
+    final linesRange = utils.getLinesRange(statementRange);
     builder.addDeletion(linesRange);
   }
 }
@@ -389,7 +382,7 @@ class _MakeItWildcardCommand extends _Command {
 
   @override
   void execute(DartFileEditBuilder builder) {
-    var nameRange = range.token(declaredVariable.name);
+    final nameRange = range.token(declaredVariable.name);
     builder.addSimpleReplacement(nameRange, '_');
   }
 }

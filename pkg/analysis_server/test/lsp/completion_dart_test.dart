@@ -59,7 +59,7 @@ abstract class AbstractCompletionTest extends AbstractLspAnalysisServerTest
   }
 
   void expectDocumentation(CompletionItem completion, Matcher matcher) {
-    var docs = completion.documentation?.map(
+    final docs = completion.documentation?.map(
       (markup) => markup.value,
       (string) => string,
     );
@@ -69,10 +69,6 @@ abstract class AbstractCompletionTest extends AbstractLspAnalysisServerTest
   @override
   void setUp() {
     super.setUp();
-
-    // Completion tests have incomplete code.
-    failTestOnErrorDiagnostic = false;
-
     setApplyEditSupport();
   }
 }
@@ -83,7 +79,8 @@ class CompletionDocumentationResolutionTest extends AbstractCompletionTest {
   late final code = TestCode.parse(content);
 
   Future<CompletionItem> getCompletionItem(String label) async {
-    var completions = await getCompletion(mainFileUri, code.position.position);
+    final completions =
+        await getCompletion(mainFileUri, code.position.position);
     return completions.singleWhere((c) => c.label == label);
   }
 
@@ -110,10 +107,10 @@ void f() {
 
     await initializeServer();
 
-    var completion = await getCompletionItem('MyClass');
+    final completion = await getCompletionItem('MyClass');
     expectDocumentation(completion, isNull);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectDocumentation(resolved, contains('Class.'));
   }
 
@@ -136,10 +133,10 @@ void f() {
 
     await initializeServer();
 
-    var completion = await getCompletionItem('MyClass()');
+    final completion = await getCompletionItem('MyClass()');
     expectDocumentation(completion, isNull);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectDocumentation(resolved, contains('Constructor.'));
   }
 
@@ -162,10 +159,10 @@ void f() {
 
     await initializeServer();
 
-    var completion = await getCompletionItem('MyClass.named()');
+    final completion = await getCompletionItem('MyClass.named()');
     expectDocumentation(completion, isNull);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectDocumentation(resolved, contains('Named Constructor.'));
   }
 
@@ -186,10 +183,10 @@ void f() {
 
     await initializeServer();
 
-    var completion = await getCompletionItem('MyEnum');
+    final completion = await getCompletionItem('MyEnum');
     expectDocumentation(completion, isNull);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectDocumentation(resolved, contains('Enum.'));
   }
 
@@ -223,10 +220,10 @@ void f() {
 
     await initializeServer();
 
-    var completion = await getCompletionItem('MyEnum.one');
+    final completion = await getCompletionItem('MyEnum.one');
     expectDocumentation(completion, isNull);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectDocumentation(resolved, contains('Enum Member.'));
   }
 }
@@ -237,7 +234,6 @@ class CompletionLabelDetailsTest extends AbstractCompletionTest {
 
   Future<void> expectLabels(
     String content, {
-    Uri? completionFileUri,
     // Main label of the completion (eg 'myFunc')
     required String? label,
     // The detail part of the label (shown after label, usually truncated signature)
@@ -251,15 +247,13 @@ class CompletionLabelDetailsTest extends AbstractCompletionTest {
     // Sometimes resolved detail has a prefix added (eg. "Auto-import from").
     String? resolvedDetailPrefix,
   }) async {
-    completionFileUri ??= mainFileUri;
-
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await initialize();
-    await openFile(completionFileUri, code.code);
+    await openFile(mainFileUri, code.code);
 
-    var completions =
-        await getCompletion(completionFileUri, code.position.position);
-    var completion = completions.singleWhereOrNull((c) => c.label == label);
+    final completions =
+        await getCompletion(mainFileUri, code.position.position);
+    final completion = completions.singleWhereOrNull((c) => c.label == label);
     if (completion == null) {
       fail('Did not find completion "$label" in completion results:'
           '\n    ${completions.map((c) => c.label).join('\n    ')}');
@@ -273,7 +267,7 @@ class CompletionLabelDetailsTest extends AbstractCompletionTest {
     if (labelDetail == null && labelDescription == null) {
       expect(completion.labelDetails, isNull);
     } else {
-      var labelDetails = completion.labelDetails;
+      final labelDetails = completion.labelDetails;
       if (labelDetails == null) {
         fail('Completion "$label" does not have labelDetails');
       }
@@ -282,7 +276,7 @@ class CompletionLabelDetailsTest extends AbstractCompletionTest {
     }
 
     // Verify that resolution does not modify these results.
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved.label, completion.label);
     expect(resolved.filterText, completion.filterText);
     expect(
@@ -310,52 +304,11 @@ class CompletionLabelDetailsTest extends AbstractCompletionTest {
     setCompletionItemLabelDetailsSupport();
   }
 
-  Future<void> test_constructor_argument() async {
-    var content = '''
-var a = Foo(^);
-
-class Foo {
-  final int value;
-  const Foo({required this.value});
-}
-''';
-
-    await expectLabels(
-      content,
-      label: 'value:',
-      labelDetail: ' int',
-      labelDescription: null,
-      filterText: null,
-      detail: 'int',
-    );
-  }
-
-  Future<void> test_constructor_factory_argument() async {
-    var content = '''
-var a = Foo(^);
-
-class Foo {
-  final int value;
-  const Foo._({required this.value});
-  const factory Foo({required int value}) = Foo._;
-}
-''';
-
-    await expectLabels(
-      content,
-      label: 'value:',
-      labelDetail: ' int',
-      labelDescription: null,
-      filterText: null,
-      detail: 'int',
-    );
-  }
-
   Future<void> test_imported_function_returnType_args() async {
     newFile(fileAPath, '''
 String a(String a, {String b}) {}
 ''');
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   a^
@@ -374,7 +327,7 @@ void f() {
     newFile(fileAPath, '''
 String a() {}
 ''');
-    var content = '''
+    final content = '''
 import 'a.dart';
 String f() {
   a^
@@ -393,7 +346,7 @@ String f() {
     newFile(fileAPath, '''
 void a(String a, {String b}) {}
 ''');
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   a^
@@ -412,7 +365,7 @@ void f() {
     newFile(fileAPath, '''
 void a() {}
 ''');
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   a^
@@ -428,7 +381,7 @@ void f() {
   }
 
   Future<void> test_local_function_returnType_args() async {
-    var content = '''
+    final content = '''
 String f(String a, {String b}) {
   f^
 }
@@ -442,7 +395,7 @@ String f(String a, {String b}) {
   }
 
   Future<void> test_local_function_returnType_noArgs() async {
-    var content = '''
+    final content = '''
 String f() {
   f^
 }
@@ -457,7 +410,7 @@ String f() {
   }
 
   Future<void> test_local_function_void_args() async {
-    var content = '''
+    final content = '''
 void f(String a, {String b}) {
   f^
 }
@@ -472,7 +425,7 @@ void f(String a, {String b}) {
   }
 
   Future<void> test_local_function_void_noArgs() async {
-    var content = '''
+    final content = '''
 void f() {
   f^
 }
@@ -487,7 +440,7 @@ void f() {
   }
 
   Future<void> test_local_getter() async {
-    var content = '''
+    final content = '''
 String a => '';
 void f() {
   a^
@@ -502,58 +455,23 @@ void f() {
   }
 
   Future<void> test_local_getterAndSetter() async {
-    var content = '''
+    final content = '''
+String a => '';
 set a(String value) {}
-String get a => '';
 void f() {
   a^
 }
 ''';
     await expectLabels(content,
         label: 'a',
-        labelDetail: ' String',
+        labelDetail: '() → String',
         labelDescription: null,
         filterText: null,
-        detail: 'String');
+        detail: '() → String');
   }
 
-  Future<void> test_local_override_annotation_equals() async {
-    var content = '''
-class Base {
-}
-
-class Derived extends Base {
-  @over^
-}
-''';
-    await expectLabels(content,
-        label: 'override ==',
-        labelDetail: '(…) → bool',
-        labelDescription: null,
-        filterText: null,
-        detail: '(Object other) → bool');
-  }
-
-  Future<void> test_local_override_annotation_method() async {
-    var content = '''
-class Base {
-  String aa(String a) => '';
-}
-
-class Derived extends Base {
-  @over^
-}
-''';
-    await expectLabels(content,
-        label: 'override aa',
-        labelDetail: '(…) → String',
-        labelDescription: null,
-        filterText: null,
-        detail: '(String a) → String');
-  }
-
-  Future<void> test_local_override_name() async {
-    var content = '''
+  Future<void> test_local_override() async {
+    final content = '''
 class Base {
   String aa(String a) => '';
 }
@@ -571,7 +489,7 @@ class Derived extends Base {
   }
 
   Future<void> test_local_setter() async {
-    var content = '''
+    final content = '''
 set a(String value) {}
 void f() {
   a^
@@ -589,7 +507,7 @@ void f() {
     newFile(fileAPath, '''
 String a(String a, {String b}) {}
 ''');
-    var content = '''
+    final content = '''
 void f() {
   a^
 }
@@ -608,7 +526,7 @@ void f() {
     newFile(fileAPath, '''
 String a() {}
 ''');
-    var content = '''
+    final content = '''
 String f() {
   a^
 }
@@ -627,7 +545,7 @@ String f() {
     newFile(fileAPath, '''
 void a(String a, {String b}) {}
 ''');
-    var content = '''
+    final content = '''
 void f() {
   a^
 }
@@ -646,7 +564,7 @@ void f() {
     newFile(fileAPath, '''
 void a() {}
 ''');
-    var content = '''
+    final content = '''
 void f() {
   a^
 }
@@ -661,31 +579,8 @@ void f() {
         resolvedDetailPrefix: "Auto import from 'package:test/a.dart'\n\n");
   }
 
-  Future<void> test_notImported_outsideLib_relativePath() async {
-    var testMainFilePath = join(projectFolderPath, 'test', 'main.dart');
-    var testFileAPath = join(projectFolderPath, 'test', 'a.dart');
-
-    newFile(testFileAPath, '''
-void a(String a, {String b}) {}
-''');
-    var content = '''
-void f() {
-  a^
-}
-''';
-
-    await expectLabels(content,
-        completionFileUri: toUri(testMainFilePath),
-        label: 'a',
-        labelDetail: '(…) → void',
-        labelDescription: 'a.dart',
-        filterText: null,
-        detail: '(String a, {String b}) → void',
-        resolvedDetailPrefix: "Auto import from 'a.dart'\n\n");
-  }
-
   Future<void> test_nullNotEmpty() async {
-    var content = '''
+    final content = '''
 bool a = ^
 ''';
 
@@ -702,7 +597,7 @@ bool a = ^
   }
 
   Future<void> test_record() async {
-    var content = r'''
+    final content = r'''
 void f((int, int) record) {
   record.$^
 }
@@ -717,7 +612,7 @@ void f((int, int) record) {
   }
 
   Future<void> test_variable() async {
-    var content = r'''
+    final content = r'''
 void f(int variable) {
   varia^
 }
@@ -741,7 +636,7 @@ class CompletionTest extends AbstractCompletionTest {
     required bool includesSummary,
     required bool includesFull,
   }) async {
-    var content = '''
+    final content = '''
 /// Summary.
 ///
 /// Full.
@@ -756,11 +651,11 @@ A^
         if (preference != null) 'documentation': preference,
       },
     );
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var completion = res.singleWhere((c) => c.label == 'A');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final completion = res.singleWhere((c) => c.label == 'A');
 
     if (includesSummary) {
       expectDocumentation(completion, contains('Summary.'));
@@ -792,7 +687,7 @@ A^
       ''',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
@@ -804,16 +699,16 @@ void f() {
         if (preference != null) 'documentation': preference,
       },
     );
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var completion = res.singleWhere((c) => c.label == 'InOtherFile');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final completion = res.singleWhere((c) => c.label == 'InOtherFile');
 
     // Expect no docs in original response and correct type of docs added
     // during resolve.
     expectDocumentation(completion, isNull);
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
 
     if (includesSummary) {
       expectDocumentation(resolved, contains('Summary.'));
@@ -836,10 +731,10 @@ void f() {
   }) async {
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere(
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere(
       (c) => c.label == completion,
       orElse: () =>
           throw 'Did not find $completion in ${res.map((r) => r.label).toList()}',
@@ -851,7 +746,7 @@ void f() {
     expect(item.insertText, isNull);
 
     // And the expected text should be in the `textEdit`.
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, equals(editText));
     expect(textEdit.range, equals(code.range.range));
   }
@@ -874,13 +769,14 @@ void f() {
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(
+    writePackageConfig(
+      projectFolderPath,
       flutter: true,
     );
   }
 
   Future<void> test_annotation_beforeMember() async {
-    var content = '''
+    final content = '''
 class B {
   @^
   int a = 1;
@@ -888,34 +784,36 @@ class B {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var completions = await getCompletion(mainFileUri, code.position.position);
-    var labels = completions.map((c) => c.label).toList();
+    final completions =
+        await getCompletion(mainFileUri, code.position.position);
+    final labels = completions.map((c) => c.label).toList();
     expect(labels, contains('override'));
     expect(labels, contains('deprecated'));
     expect(labels, contains('Deprecated(…)'));
   }
 
   Future<void> test_annotation_endOfClass() async {
-    var content = '''
+    final content = '''
 class B {
   @^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var completions = await getCompletion(mainFileUri, code.position.position);
-    var labels = completions.map((c) => c.label).toList();
+    final completions =
+        await getCompletion(mainFileUri, code.position.position);
+    final labels = completions.map((c) => c.label).toList();
     expect(labels, contains('override'));
     expect(labels, contains('deprecated'));
     expect(labels, contains('Deprecated(…)'));
   }
 
   Future<void> test_closure() async {
-    var content = '''
+    final content = '''
 void f({void Function(int a, String b) closure}) {}
 
 void g() {
@@ -923,7 +821,7 @@ void g() {
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 void f({void Function(int a, String b) closure}) {}
 
 void g() {
@@ -941,7 +839,7 @@ void g() {
   }
 
   Future<void> test_closure_requiredNamed() async {
-    var content = '''
+    final content = '''
 void f({void Function({int a, required String b}) closure}) {}
 
 void g() {
@@ -949,7 +847,7 @@ void g() {
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 void f({void Function({int a, required String b}) closure}) {}
 
 void g() {
@@ -969,46 +867,46 @@ void g() {
   }
 
   Future<void> test_comment() async {
-    var content = '''
+    final content = '''
     // foo ^
     void f() {}
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res, isEmpty);
   }
 
   Future<void> test_comment_endOfFile_withNewline() async {
     // Checks for a previous bug where invoking completion inside a comment
     // at the end of a file would return results.
-    var content = '''
+    final content = '''
     // foo ^
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res, isEmpty);
   }
 
   Future<void> test_comment_endOfFile_withoutNewline() async {
     // Checks for a previous bug where invoking completion inside a comment
     // at the very end of a file with no trailing newline would return results.
-    var content = '// foo ^';
+    final content = '// foo ^';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res, isEmpty);
   }
 
   Future<void> test_commitCharacter_dynamicRegistration() async {
-    var registrations = <Registration>[];
+    final registrations = <Registration>[];
     // Provide empty config and collect dynamic registrations during
     // initialization.
     setDidChangeConfigurationDynamicRegistration();
@@ -1186,7 +1084,7 @@ void g() {
     // Flutter's setState method has special handling inside SuggestionBuilder
     // that already adds in a selection (which overlaps with completeFunctionCalls).
     // Ensure we don't end up with two sets of parens/placeholders in this case.
-    var content = '''
+    final content = '''
 import 'package:flutter/material.dart';
 
 class MyWidget extends StatefulWidget {
@@ -1205,10 +1103,10 @@ class _MyWidgetState extends State<MyWidget> {
 
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label.startsWith('setState('));
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label.startsWith('setState('));
 
     // Usually the label would be "setState(…)" but here it's slightly different
     // to indicate a full statement is being inserted.
@@ -1218,7 +1116,7 @@ class _MyWidgetState extends State<MyWidget> {
     // placeholders.
     expect(item.insertTextFormat, equals(InsertTextFormat.Snippet));
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, 'setState(() {\n      \$0\n    });');
     expect(textEdit.range, equals(code.range.range));
   }
@@ -1239,7 +1137,7 @@ class _MyWidgetState extends State<MyWidget> {
       );
 
   Future<void> test_completeFunctionCalls_noParameters() async {
-    var content = '''
+    final content = '''
     void myFunction() {}
 
     void f() {
@@ -1256,7 +1154,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> test_completeFunctionCalls_optionalParameters() async {
-    var content = '''
+    final content = '''
     void myFunction({int a}) {}
 
     void f() {
@@ -1274,7 +1172,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> test_completeFunctionCalls_requiredNamed() async {
-    var content = '''
+    final content = '''
     void myFunction(String a, int b, {required String c, String d = ''}) {}
 
     void f() {
@@ -1284,26 +1182,26 @@ class _MyWidgetState extends State<MyWidget> {
 
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'myFunction(…)');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'myFunction(…)');
     // Ensure the snippet comes through in the expected format with the expected
     // placeholders.
     expect(item.insertTextFormat, equals(InsertTextFormat.Snippet));
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, r'myFunction(${1:a}, ${2:b}, c: ${3:c})');
     expect(textEdit.range, equals(code.range.range));
   }
 
   Future<void> test_completeFunctionCalls_requiredNamed_suggestionSet() async {
-    var otherFile = join(projectFolderPath, 'lib', 'other.dart');
+    final otherFile = join(projectFolderPath, 'lib', 'other.dart');
     newFile(
       otherFile,
       "void myFunction(String a, int b, {required String c, String d = ''}) {}",
     );
-    var content = '''
+    final content = '''
     void f() {
       [!myFu^!]
     }
@@ -1311,24 +1209,24 @@ class _MyWidgetState extends State<MyWidget> {
 
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'myFunction(…)');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'myFunction(…)');
     // Ensure the snippet comes through in the expected format with the expected
     // placeholders.
     expect(item.insertTextFormat, equals(InsertTextFormat.Snippet));
     expect(item.insertText, isNull);
     expect(item.textEdit, isNotNull);
-    var originalTextEdit = item.textEdit;
+    final originalTextEdit = item.textEdit;
 
     // Ensure the item can be resolved and retains the correct textEdit (since
     // textEdit may be recomputed during resolve).
-    var resolved = await resolveCompletion(item);
+    final resolved = await resolveCompletion(item);
     expect(resolved.insertText, isNull);
     expect(resolved.textEdit, originalTextEdit);
-    var textEdit = toTextEdit(resolved.textEdit!);
+    final textEdit = toTextEdit(resolved.textEdit!);
     expect(textEdit.newText, r'myFunction(${1:a}, ${2:b}, c: ${3:c})');
     expect(textEdit.range, equals(code.range.range));
   }
@@ -1343,7 +1241,7 @@ class _MyWidgetState extends State<MyWidget> {
     // not provided both `insertText` and `textEdit` back in the resolve call.
     //
     // Now, we never supply `insertText` and always use `textEdit`.
-    var content = '''
+    final content = '''
 final a = Stri^
 ''';
 
@@ -1360,35 +1258,35 @@ final a = Stri^
 
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completion =
+    final completion =
         res.singleWhere((c) => c.label == 'String.fromCharCode(…)');
     expectCorrectCompletion(completion);
 
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expectCorrectCompletion(resolved);
   }
 
   Future<void> test_completeFunctionCalls_show() async {
-    var content = '''
+    final content = '''
     import 'dart:math' show mi^
 ''';
 
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'completeFunctionCalls': true});
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'min(…)');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'min(…)');
     // The insert text should be a simple string with no parens/args and
     // no need for snippets.
     expect(item.insertTextFormat, isNull);
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, r'min');
   }
 
@@ -1420,16 +1318,16 @@ final a = Stri^
     newFile(join(projectFolderPath, 'file.dart'), '');
     newFolder(join(projectFolderPath, 'folder'));
 
-    var content = "import '^';";
+    final content = "import '^';";
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var file = res.singleWhere((c) => c.label == 'file.dart');
-    var folder = res.singleWhere((c) => c.label == 'folder/');
-    var builtin = res.singleWhere((c) => c.label == 'dart:core');
+    final file = res.singleWhere((c) => c.label == 'file.dart');
+    final folder = res.singleWhere((c) => c.label == 'folder/');
+    final builtin = res.singleWhere((c) => c.label == 'dart:core');
     // Default capabilities include File + Module but not Folder.
     expect(file.kind, equals(CompletionItemKind.File));
     // We fall back to Module if Folder isn't supported.
@@ -1445,16 +1343,16 @@ final a = Stri^
       CompletionItemKind.Module,
     ]);
 
-    var content = "import '^';";
+    final content = "import '^';";
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var file = res.singleWhere((c) => c.label == 'file.dart');
-    var folder = res.singleWhere((c) => c.label == 'folder/');
-    var builtin = res.singleWhere((c) => c.label == 'dart:core');
+    final file = res.singleWhere((c) => c.label == 'file.dart');
+    final folder = res.singleWhere((c) => c.label == 'folder/');
+    final builtin = res.singleWhere((c) => c.label == 'dart:core');
     expect(file.kind, equals(CompletionItemKind.File));
     expect(folder.kind, equals(CompletionItemKind.Folder));
     expect(builtin.kind, equals(CompletionItemKind.Module));
@@ -1464,7 +1362,7 @@ final a = Stri^
     // Tell the server we only support the Field CompletionItemKind.
     setCompletionItemKinds([CompletionItemKind.Field]);
 
-    var content = '''
+    final content = '''
     class MyClass {
       String abcdefghij;
     }
@@ -1476,10 +1374,10 @@ final a = Stri^
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var kinds = res.map((item) => item.kind).toList();
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final kinds = res.map((item) => item.kind).toList();
 
     // Ensure we only get nulls or Fields (the sample code contains Classes).
     expect(
@@ -1490,7 +1388,7 @@ final a = Stri^
 
   Future<void> test_completionTrigger_brace_block() async {
     // Brace should not trigger completion if a normal code block.
-    var content = r'''
+    final content = r'''
     main () {^}
 ''';
     await _checkResultsForTriggerCharacters(content, ['{'], isEmpty);
@@ -1499,7 +1397,7 @@ final a = Stri^
   Future<void>
       test_completionTrigger_brace_interpolatedStringExpression() async {
     // Brace should trigger completion if at the start of an interpolated expression
-    var content = r'''
+    final content = r'''
     var a = '${^';
 ''';
     await _checkResultsForTriggerCharacters(content, [r'{'], isNotEmpty);
@@ -1507,7 +1405,7 @@ final a = Stri^
 
   Future<void> test_completionTrigger_brace_rawString() async {
     // Brace should not trigger completion if in a raw string.
-    var content = r'''
+    final content = r'''
     var a = r'${^';
 ''';
     await _checkResultsForTriggerCharacters(content, [r'{'], isEmpty);
@@ -1516,7 +1414,7 @@ final a = Stri^
   Future<void> test_completionTrigger_brace_string() async {
     // Brace should not trigger completion if not at the start of an interpolated
     // expression.
-    var content = r'''
+    final content = r'''
     var a = '{^';
 ''';
     await _checkResultsForTriggerCharacters(content, [r'{'], isEmpty);
@@ -1524,7 +1422,7 @@ final a = Stri^
 
   Future<void> test_completionTrigger_colon_argument() async {
     // Colons should trigger completion after argument names.
-    var content = r'''
+    final content = r'''
 void f({int? a}) {
   f(a:^
 }
@@ -1534,7 +1432,7 @@ void f({int? a}) {
 
   Future<void> test_completionTrigger_colon_case() async {
     // Colons should not trigger completion in a switch case.
-    var content = r'''
+    final content = r'''
 void f(int a) {
   switch (a) {
     case:^
@@ -1546,7 +1444,7 @@ void f(int a) {
 
   Future<void> test_completionTrigger_colon_default() async {
     // Colons should not trigger completion in a switch case.
-    var content = r'''
+    final content = r'''
 void f(int a) {
   switch (a) {
     default:^
@@ -1558,7 +1456,7 @@ void f(int a) {
 
   Future<void> test_completionTrigger_colon_import() async {
     // Colons should trigger completion after argument names.
-    var content = r'''
+    final content = r'''
 import 'package:^';
 ''';
     await _checkResultsForTriggerCharacters(content, [r':'], isNotEmpty);
@@ -1566,32 +1464,32 @@ import 'package:^';
 
   Future<void> test_completionTrigger_quotes_endingString() async {
     // Completion triggered by a quote ending a string should not return results.
-    var content = "foo(''^);";
+    final content = "foo(''^);";
     await _checkResultsForTriggerCharacters(content, ["'", '"'], isEmpty);
   }
 
   Future<void> test_completionTrigger_quotes_startingImport() async {
     // Completion triggered by a quote for import should return results.
-    var content = "import '^'";
+    final content = "import '^'";
     await _checkResultsForTriggerCharacters(content, ["'", '"'], isNotEmpty);
   }
 
   Future<void> test_completionTrigger_quotes_startingString() async {
     // Completion triggered by a quote for normal string should not return results.
-    var content = "foo('^');";
+    final content = "foo('^');";
     await _checkResultsForTriggerCharacters(content, ["'", '"'], isEmpty);
   }
 
   Future<void> test_completionTrigger_quotes_terminatingImport() async {
     // Completion triggered by a quote ending an import should not return results.
-    var content = "import ''^";
+    final content = "import ''^";
     await _checkResultsForTriggerCharacters(content, ["'", '"'], isEmpty);
   }
 
   Future<void> test_completionTrigger_slash_directivePath() async {
     // Slashes should trigger completion when typing in directive paths, eg.
     // after typing 'package:foo/' completion should give the next folder segments.
-    var content = r'''
+    final content = r'''
     import 'package:test/^';
 ''';
     await _checkResultsForTriggerCharacters(content, [r'/'], isNotEmpty);
@@ -1599,7 +1497,7 @@ import 'package:^';
 
   Future<void> test_completionTrigger_slash_divide() async {
     // Slashes should not trigger completion when typing in a normal expression.
-    var content = r'''
+    final content = r'''
     var a = 1 /^
 ''';
     await _checkResultsForTriggerCharacters(content, [r'/'], isEmpty);
@@ -1608,8 +1506,8 @@ import 'package:^';
   Future<void> test_completionTriggerKinds_invalidParams() async {
     await initialize();
 
-    var invalidTriggerKind = CompletionTriggerKind.fromJson(-1);
-    var request = getCompletion(
+    final invalidTriggerKind = CompletionTriggerKind.fromJson(-1);
+    final request = getCompletion(
       mainFileUri,
       Position(line: 0, character: 0),
       context: CompletionContext(
@@ -1623,35 +1521,22 @@ import 'package:^';
   Future<void> test_concurrentRequestsCancellation() async {
     // We expect a new completion request to cancel any in-flight request so
     // send multiple without awaiting, then check only the last one completes.
-    var code = TestCode.empty;
+    final code = TestCode.empty;
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    var position = code.position.position;
-
-    // Use a completer to force the requests to overlap without races.
-    var completer = Completer<void>();
-    CompletionHandler.delayAfterResolveForTests = completer.future;
-    try {
-      var responseFutures = [
-        getCompletion(mainFileUri, position),
-        getCompletion(mainFileUri, position),
-        getCompletion(mainFileUri, position),
-      ];
-
-      // Ensure all requests started, then let them continue.
-      await pumpEventQueue(times: 5000);
-      completer.complete();
-
-      expect(responseFutures[0],
-          throwsA(isResponseError(ErrorCodes.RequestCancelled)));
-      expect(responseFutures[1],
-          throwsA(isResponseError(ErrorCodes.RequestCancelled)));
-      var results = await responseFutures[2];
-      expect(results, isNotEmpty);
-    } finally {
-      CompletionHandler.delayAfterResolveForTests = null;
-    }
+    final position = code.position.position;
+    final responseFutures = [
+      getCompletion(mainFileUri, position),
+      getCompletion(mainFileUri, position),
+      getCompletion(mainFileUri, position),
+    ];
+    expect(responseFutures[0],
+        throwsA(isResponseError(ErrorCodes.RequestCancelled)));
+    expect(responseFutures[1],
+        throwsA(isResponseError(ErrorCodes.RequestCancelled)));
+    final results = await responseFutures[2];
+    expect(results, isNotEmpty);
   }
 
   Future<void> test_dartDocPreference_full() =>
@@ -1670,7 +1555,7 @@ import 'package:^';
 
   Future<void> test_filterText_constructorParens() async {
     // Constructor parens should not be included in filterText.
-    var content = '''
+    final content = '''
 class MyClass {}
 
 void f() {
@@ -1679,17 +1564,17 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'MyClass()'), isTrue);
-    var item = res.singleWhere((c) => c.label == 'MyClass()');
+    final item = res.singleWhere((c) => c.label == 'MyClass()');
 
     // filterText is set explicitly because it's not the same as label.
     expect(item.filterText, 'MyClass');
 
     // The text in the edit should also not contain the parens.
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, 'MyClass');
   }
 
@@ -1698,7 +1583,7 @@ void f() {
     // of the label. That text should _not_ appear in filterText as it will
     // affect the editors relevance ranking as the user types.
     // https://github.com/dart-lang/sdk/issues/45157
-    var content = '''
+    final content = '''
 abstract class Person {
   String get name;
 }
@@ -1709,10 +1594,10 @@ class Student extends Person {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'name => …');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'name => …');
     // filterText is set explicitly because it's not the same as label.
     expect(item.filterText, 'name');
   }
@@ -1722,7 +1607,7 @@ class Student extends Person {
     // of the label. That text should _not_ appear in filterText as it will
     // affect the editors relevance ranking as the user types.
     // https://github.com/dart-lang/sdk/issues/45157
-    var content = '''
+    final content = '''
 abstract class Base {
   void myMethod() {};
 }
@@ -1733,24 +1618,24 @@ class BaseImpl extends Base {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'myMethod() { … }');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'myMethod() { … }');
     // filterText is set explicitly because it's not the same as label.
     expect(item.filterText, 'myMethod');
   }
 
   Future<void> test_fromPlugin_dartFile() async {
     if (!AnalysisServer.supportsPlugins) return;
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
     void f() {
       var x = '';
       print(^);
     }
 ''');
 
-    var pluginResult = plugin.CompletionGetSuggestionsResult(
+    final pluginResult = plugin.CompletionGetSuggestionsResult(
       code.position.offset,
       0,
       [
@@ -1770,9 +1655,9 @@ class BaseImpl extends Base {
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var fromServer = res.singleWhere((c) => c.label == 'x');
-    var fromPlugin = res.singleWhere((c) => c.label == 'x.toUpperCase()');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final fromServer = res.singleWhere((c) => c.label == 'x');
+    final fromPlugin = res.singleWhere((c) => c.label == 'x.toUpperCase()');
 
     expect(fromServer.kind, equals(CompletionItemKind.Variable));
     expect(fromPlugin.kind, equals(CompletionItemKind.Method));
@@ -1780,13 +1665,13 @@ class BaseImpl extends Base {
 
   Future<void> test_fromPlugin_dartFile_withImports() async {
     if (!AnalysisServer.supportsPlugins) return;
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
   ^
 }
 ''');
 
-    var pluginResult = plugin.CompletionGetSuggestionsResult(
+    final pluginResult = plugin.CompletionGetSuggestionsResult(
       code.position.offset,
       0,
       [
@@ -1808,12 +1693,12 @@ void f() {
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    var items = await getCompletion(mainFileUri, code.position.position);
-    var item = items.singleWhere((c) => c.label == 'fooFromDartIO');
-    var resolved = await resolveCompletion(item);
+    final items = await getCompletion(mainFileUri, code.position.position);
+    final item = items.singleWhere((c) => c.label == 'fooFromDartIO');
+    final resolved = await resolveCompletion(item);
 
     // Apply both the main completion edit and the additionalTextEdits atomically.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -1832,9 +1717,9 @@ void f() {
 
   Future<void> test_fromPlugin_nonDartFile() async {
     if (!AnalysisServer.supportsPlugins) return;
-    var pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.foo');
-    var pluginAnalyzedFileUri = pathContext.toUri(pluginAnalyzedFilePath);
-    var code = TestCode.parse('''
+    final pluginAnalyzedFilePath = join(projectFolderPath, 'lib', 'foo.foo');
+    final pluginAnalyzedFileUri = pathContext.toUri(pluginAnalyzedFilePath);
+    final code = TestCode.parse('''
     CREATE TABLE foo (
       id INTEGER NOT NULL PRIMARY KEY
     );
@@ -1842,7 +1727,7 @@ void f() {
     query: SELECT ^ FROM foo;
 ''');
 
-    var pluginResult = plugin.CompletionGetSuggestionsResult(
+    final pluginResult = plugin.CompletionGetSuggestionsResult(
       code.position.offset,
       0,
       [
@@ -1861,11 +1746,11 @@ void f() {
 
     await initialize();
     await openFile(pluginAnalyzedFileUri, code.code);
-    var res =
+    final res =
         await getCompletion(pluginAnalyzedFileUri, code.position.position);
 
     expect(res, hasLength(1));
-    var suggestion = res.single;
+    final suggestion = res.single;
 
     expect(suggestion.kind, CompletionItemKind.Variable);
     expect(suggestion.label, equals('id'));
@@ -1873,14 +1758,14 @@ void f() {
 
   Future<void> test_fromPlugin_tooSlow() async {
     if (!AnalysisServer.supportsPlugins) return;
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
     void f() {
       var x = '';
       print(^);
     }
 ''');
 
-    var pluginResult = plugin.CompletionGetSuggestionsResult(
+    final pluginResult = plugin.CompletionGetSuggestionsResult(
       code.position.offset,
       0,
       [
@@ -1904,9 +1789,10 @@ void f() {
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var fromServer = res.singleWhere((c) => c.label == 'x');
-    var fromPlugin = res.singleWhereOrNull((c) => c.label == 'x.toUpperCase()');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final fromServer = res.singleWhere((c) => c.label == 'x');
+    final fromPlugin =
+        res.singleWhereOrNull((c) => c.label == 'x.toUpperCase()');
 
     // Server results should still be included.
     expect(fromServer.kind, equals(CompletionItemKind.Variable));
@@ -1918,8 +1804,8 @@ void f() {
   /// the correct narrowed type in the `detail` field.
   ///
   /// https://github.com/Dart-Code/Dart-Code/issues/4499
-  Future<void> test_getter_narrowedBySubclass() async {
-    var content = '''
+  Future<void> test_getter_barrowedBySubclass() async {
+    final content = '''
 void f(MyItem item) {
   item.na^
 }
@@ -1937,15 +1823,15 @@ abstract class MyItem implements NotNullableName, NullableName {}
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var name = res.singleWhere((c) => c.label == 'name');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final name = res.singleWhere((c) => c.label == 'name');
     expect(name.detail, equals('String'));
   }
 
   Future<void> test_gettersAndSetters() async {
-    var content = '''
+    final content = '''
     class MyClass {
       String get justGetter => '';
       set justSetter(String value) {}
@@ -1960,12 +1846,12 @@ abstract class MyItem implements NotNullableName, NullableName {}
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var getter = res.singleWhere((c) => c.label == 'justGetter');
-    var setter = res.singleWhere((c) => c.label == 'justSetter');
-    var both = res.singleWhere((c) => c.label == 'getterAndSetter');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final getter = res.singleWhere((c) => c.label == 'justGetter');
+    final setter = res.singleWhere((c) => c.label == 'justSetter');
+    final both = res.singleWhere((c) => c.label == 'getterAndSetter');
     expect(getter.detail, equals('String'));
     expect(setter.detail, equals('String'));
     expect(both.detail, equals('String'));
@@ -1975,81 +1861,81 @@ abstract class MyItem implements NotNullableName, NullableName {}
   }
 
   Future<void> test_import() async {
-    var content = '''
+    final content = '''
 import '^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_import_configuration() async {
-    var content = '''
+    final content = '''
 import 'dart:core' if (dart.library.io) '^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_import_configuration_eof() async {
-    var content = '''
+    final content = '''
 import 'dart:core' if (dart.library.io) '^
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_import_configuration_partial() async {
-    var content = '''
+    final content = '''
 import 'dart:core' if (dart.library.io) 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_import_eof() async {
-    var content = '''
+    final content = '''
 import '^
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_import_partial() async {
-    var content = '''
+    final content = '''
 import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'dart:async'), isTrue);
   }
 
   Future<void> test_insertReplaceRanges() async {
     setCompletionItemInsertReplaceSupport();
 
-    var content = '''
+    final content = '''
     class MyClass {
       String abcdefghij;
     }
@@ -2061,21 +1947,21 @@ import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'abcdefghij'), isTrue);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     // When using the replacement range, we should get exactly the symbol
     // we expect.
-    var replaced = applyTextEdits(
+    final replaced = applyTextEdits(
       code.code,
       [textEditForReplace(item.textEdit!)],
     );
     expect(replaced, contains('a.abcdefghij\n'));
     // When using the insert range, we should retain what was after the caret
     // ("def" in this case).
-    var inserted = applyTextEdits(
+    final inserted = applyTextEdits(
       code.code,
       [textEditForInsert(item.textEdit!)],
     );
@@ -2084,7 +1970,7 @@ import 'dart:^';
 
   Future<void> test_insertTextMode_multiline() async {
     setCompletionItemInsertTextModeSupport();
-    var content = '''
+    final content = '''
     import 'package:flutter/material.dart';
 
     class _MyWidgetState extends State<MyWidget> {
@@ -2097,14 +1983,14 @@ import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label.startsWith('setState'));
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label.startsWith('setState'));
 
     // Multiline completions should always set insertTextMode.asIs.
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, contains('\n'));
     expect(item.insertTextMode, equals(InsertTextMode.asIs));
   }
@@ -2112,40 +1998,40 @@ import 'dart:^';
   Future<void> test_insertTextMode_singleLine() async {
     setCompletionItemInsertTextModeSupport();
 
-    var content = '''
+    final content = '''
     void foo() {
       ^
     }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label.startsWith('foo'));
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label.startsWith('foo'));
 
     // Single line completions should never set insertTextMode.asIs to
     // avoid bloating payload size where it wouldn't matter.
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, isNot(contains('\n')));
     expect(item.insertTextMode, isNull);
   }
 
   Future<void> test_insideString() async {
-    var content = '''
+    final content = '''
     var a = "This is ^a test"
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res, isEmpty);
   }
 
   Future<void> test_isDeprecated_notSupported() async {
-    var content = '''
+    final content = '''
     class MyClass {
       @deprecated
       String abcdefghij;
@@ -2158,10 +2044,10 @@ import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     expect(item.deprecated, isNull);
     // If the does not say it supports the deprecated flag, we should show
     // '(deprecated)' in the details.
@@ -2170,7 +2056,7 @@ import 'dart:^';
 
   Future<void> test_isDeprecated_supportedFlag() async {
     setCompletionItemDeprecatedFlagSupport();
-    var content = '''
+    final content = '''
     class MyClass {
       @deprecated
       String abcdefghij;
@@ -2183,10 +2069,10 @@ import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     expect(item.deprecated, isTrue);
     // If the client says it supports the deprecated flag, we should not show
     // deprecated in the details.
@@ -2196,7 +2082,7 @@ import 'dart:^';
   Future<void> test_isDeprecated_supportedTag() async {
     setCompletionItemTagSupport([CompletionItemTag.Deprecated]);
 
-    var content = '''
+    final content = '''
     class MyClass {
       @deprecated
       String abcdefghij;
@@ -2209,10 +2095,10 @@ import 'dart:^';
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     expect(item.tags, contains(CompletionItemTag.Deprecated));
     // If the client says it supports the deprecated tag, we should not show
     // deprecated in the details.
@@ -2220,14 +2106,14 @@ import 'dart:^';
   }
 
   Future<void> test_isIncomplete_falseIfAllIncluded() async {
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   A a = A();
   a.^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     // Create a class with fields aaa1 to aaa500 in the other file.
     newFile(
@@ -2242,7 +2128,7 @@ void f() {
     await initialize();
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // Expect everything (hashCode etc. will take it over 500).
     expect(res.items, hasLength(greaterThanOrEqualTo(500)));
@@ -2250,14 +2136,14 @@ void f() {
   }
 
   Future<void> test_isIncomplete_trueIfNotAllIncluded() async {
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   A a = A();
   a.^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     // Create a class with fields aaa1 to aaa500 in the other file.
     newFile(
@@ -2273,7 +2159,7 @@ void f() {
     await provideConfig(initialize, {'maxCompletionItems': 200});
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // Should be capped at 200 and marked as incomplete.
     expect(res.items, hasLength(200));
@@ -2288,18 +2174,19 @@ void f() {
     setCompletionItemInsertReplaceSupport();
     setCompletionListDefaults(['editRange']);
 
-    var content = '''
+    final content = '''
 void myFunction() {
   [!myFunctio^!]
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    var list = await getCompletionList(mainFileUri, code.position.position);
-    var item = list.items.singleWhere((c) => c.label.startsWith('myFunction'));
-    var defaultEditRange = list.itemDefaults!.editRange!.map(
+    final list = await getCompletionList(mainFileUri, code.position.position);
+    final item =
+        list.items.singleWhere((c) => c.label.startsWith('myFunction'));
+    final defaultEditRange = list.itemDefaults!.editRange!.map(
       (insertReplace) => throw 'Expected Range, got CompletionItemEditRange',
       (range) => range,
     );
@@ -2325,22 +2212,22 @@ void myFunction() {
     //
     // Additionally, because the caret is before the identifier, we will have
     // separate default insert/replace ranges.
-    var content = '''
+    final content = '''
 void f(String a, {String? b}) {
   f([!^b!]);
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    var list = await getCompletionList(mainFileUri, code.position.position);
-    var itemA = list.items.singleWhere((c) => c.label == 'a');
-    var itemB = list.items.singleWhere((c) => c.label == 'b: ');
+    final list = await getCompletionList(mainFileUri, code.position.position);
+    final itemA = list.items.singleWhere((c) => c.label == 'a');
+    final itemB = list.items.singleWhere((c) => c.label == 'b: ');
 
     // Default replace range should span `b`.
-    var expectedRange = code.range.range;
-    var defaultEditRange = list.itemDefaults!.editRange!.map(
+    final expectedRange = code.range.range;
+    final defaultEditRange = list.itemDefaults!.editRange!.map(
       (insertReplace) => insertReplace,
       (range) => throw 'Expected Range, got CompletionItemEditRange',
     );
@@ -2358,7 +2245,7 @@ void f(String a, {String? b}) {
     // Item B should have its own range, which is a single range for both
     // insert and replace that matches the insert range (in front of `b`) of
     // the default.
-    var itemBTextEdit = toTextEdit(itemB.textEdit!);
+    final itemBTextEdit = toTextEdit(itemB.textEdit!);
     expect(itemBTextEdit.range, defaultEditRange.insert);
     expect(itemBTextEdit.newText, 'b: ');
   }
@@ -2370,7 +2257,7 @@ void f(String a, {String? b}) {
     // We only normally set InsertTextMode on multiline completions (where it
     // matters), so ensure there's a multiline completion in the results for
     // testing.
-    var content = '''
+    final content = '''
 import 'package:flutter/material.dart';
 
 class _MyWidgetState extends State<MyWidget> {
@@ -2381,12 +2268,12 @@ class _MyWidgetState extends State<MyWidget> {
   }
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    var list = await getCompletionList(mainFileUri, code.position.position);
-    var item = list.items.singleWhere((c) => c.label.startsWith('setState'));
+    final list = await getCompletionList(mainFileUri, code.position.position);
+    final item = list.items.singleWhere((c) => c.label.startsWith('setState'));
 
     // Default should be set.
     expect(list.itemDefaults?.insertTextMode, InsertTextMode.asIs);
@@ -2397,13 +2284,13 @@ class _MyWidgetState extends State<MyWidget> {
   /// Exact matches should always be included when completion lists are
   /// truncated, even if they ranked poorly.
   Future<void> test_maxCompletionItems_doesNotExcludeExactMatches() async {
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   var a = Item^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     // Create classes `Item1` to `Item20` along with a field named `item`.
     // The classes will rank higher in the position above and push
@@ -2419,7 +2306,7 @@ void f() {
     await provideConfig(initialize, {'maxCompletionItems': 10});
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // We expect 11 items, because the exact match was not in the top 10 and
     // was included additionally.
@@ -2437,13 +2324,13 @@ void f() {
   /// because they are not ranked like other completions and might be
   /// truncated when they are exactly what the user wants.
   Future<void> test_maxCompletionItems_doesNotExcludeSnippets() async {
-    var content = '''
+    final content = '''
 import 'a.dart';
 void f() {
   fo^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     // Create fields for1 to for20 in the other file.
     newFile(
@@ -2457,7 +2344,7 @@ void f() {
     await provideConfig(initialize, {'maxCompletionItems': 10});
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // Should be capped at 10 and marked as incomplete.
     expect(res.items, hasLength(10));
@@ -2474,13 +2361,13 @@ void f() {
   }
 
   Future<void> test_namedArg_flutterChildren() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/widgets.dart';
 
 final a = Flex(c^);
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:flutter/widgets.dart';
 
 final a = Flex(children: [^],);
@@ -2499,13 +2386,13 @@ final a = Flex(children: [^],);
     // Flutter's widget classes have special handling that adds `[]` after the
     // children named arg, but this should not occur if there's already a value
     // for this named arg.
-    var content = '''
+    final content = '''
 import 'package:flutter/widgets.dart';
 
 final a = Flex(c^: []);
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:flutter/widgets.dart';
 
 final a = Flex(children: []);
@@ -2528,19 +2415,19 @@ final a = Flex(children: []);
       required String expectedReplace,
       required String expectedInsert,
     }) async {
-      var content = '''
+      final content = '''
 class A { const A({int argOne, int argTwo, String argThree}); }
 final varOne = '';
 $code
 void f() { }
 ''';
-      var expectedReplaced = '''
+      final expectedReplaced = '''
 class A { const A({int argOne, int argTwo, String argThree}); }
 final varOne = '';
 $expectedReplace
 void f() { }
 ''';
-      var expectedInserted = '''
+      final expectedInserted = '''
 class A { const A({int argOne, int argTwo, String argThree}); }
 final varOne = '';
 $expectedInsert
@@ -2617,7 +2504,7 @@ void f() { }
     // identifier to be used as the `targetPrefix` which would filter out
     // other symbol.
     // https://github.com/Dart-Code/Dart-Code/issues/2672#issuecomment-666085575
-    var content = '''
+    final content = '''
     void f() {
       myFunction(
         ^
@@ -2629,31 +2516,31 @@ void f() { }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'aaab: '), isTrue);
   }
 
   Future<void> test_namedArg_plainText() async {
-    var content = '''
+    final content = '''
     class A { const A({int one}); }
     @A(^)
     void f() { }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'one: '), isTrue);
-    var item = res.singleWhere((c) => c.label == 'one: ');
+    final item = res.singleWhere((c) => c.label == 'one: ');
     expect(item.insertTextFormat,
         anyOf(equals(InsertTextFormat.PlainText), isNull));
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, item.label);
-    var updated = applyTextEdits(
+    final updated = applyTextEdits(
       code.code,
       [toTextEdit(item.textEdit!)],
     );
@@ -2661,7 +2548,7 @@ void f() { }
   }
 
   Future<void> test_namedArg_snippetStringSelection_endOfString() async {
-    var content = '''
+    final content = '''
     class A { const A({int one}); }
     @A(^)
     void f() { }
@@ -2669,17 +2556,17 @@ void f() { }
 
     setCompletionItemSnippetSupport();
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'one: '), isTrue);
-    var item = res.singleWhere((c) => c.label == 'one: ');
+    final item = res.singleWhere((c) => c.label == 'one: ');
     // As the selection is the end of the string, there's no need for a snippet
     // here. Since the insert text is also the same as the label, it does not
     // need to be provided.
     expect(item.insertTextFormat, isNull);
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, equals('one: '));
     expect(
       textEdit.range,
@@ -2689,7 +2576,7 @@ void f() { }
 
   Future<void>
       test_namedArgTrailing_snippetStringSelection_insideString() async {
-    var content = '''
+    final content = '''
     void f({int one, int two}) {
       f(
         ^
@@ -2700,16 +2587,16 @@ void f() { }
 
     setCompletionItemSnippetSupport();
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'one: '), isTrue);
-    var item = res.singleWhere((c) => c.label == 'one: ');
+    final item = res.singleWhere((c) => c.label == 'one: ');
     // Ensure the snippet comes through in the expected format with the expected
     // placeholder.
     expect(item.insertTextFormat, equals(InsertTextFormat.Snippet));
     expect(item.insertText, isNull);
-    var textEdit = toTextEdit(item.textEdit!);
+    final textEdit = toTextEdit(item.textEdit!);
     expect(textEdit.newText, equals(r'one: $0,'));
     expect(
       textEdit.range,
@@ -2718,17 +2605,17 @@ void f() { }
   }
 
   Future<void> test_nonAnalyzedFile() async {
-    var readmeFilePath = convertPath(join(projectFolderPath, 'README.md'));
+    final readmeFilePath = convertPath(join(projectFolderPath, 'README.md'));
     newFile(readmeFilePath, '');
     await initialize();
 
-    var res =
+    final res =
         await getCompletion(pathContext.toUri(readmeFilePath), startOfDocPos);
     expect(res, isEmpty);
   }
 
   Future<void> test_nullableTypes() async {
-    var content = '''
+    final content = '''
     String? foo(int? a, [int b = 1]) {}
 
     void f() {
@@ -2737,17 +2624,17 @@ void f() { }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completion = res.singleWhere((c) => c.label.startsWith('foo'));
+    final completion = res.singleWhere((c) => c.label.startsWith('foo'));
     expect(completion.detail, '(int? a, [int b = 1]) → String?');
   }
 
   Future<void> test_plainText() async {
-    var content = '''
+    final content = '''
     class MyClass {
       String abcdefghij;
     }
@@ -2759,23 +2646,28 @@ void f() { }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'abcdefghij'), isTrue);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     expect(item.insertTextFormat,
         anyOf(equals(InsertTextFormat.PlainText), isNull));
     expect(item.insertText, anyOf(equals('abcdefghij'), isNull));
-    var updated = applyTextEdits(
+    final updated = applyTextEdits(
       code.code,
       [toTextEdit(item.textEdit!)],
     );
     expect(updated, contains('a.abcdefghij'));
   }
 
+  @FailingTest(reason: 'https://github.com/Dart-Code/Dart-Code/issues/4794')
   Future<void> test_prefixed_enumMember() async {
-    var content = '''
+    // If the first character of the enum member is typed (`self.MyEnum.o^`)
+    // this test passes. Without any charactres typed (`self.MyEnum.^`) the
+    // dotTarget on the completion is `null`. The containingNode is a
+    // ConstructorName.
+    final content = '''
 import 'main.dart' as self;
 
 enum MyEnum {
@@ -2789,14 +2681,14 @@ void main() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'one'), isTrue);
   }
 
   Future<void> test_prefixFilter_endOfSymbol() async {
-    var content = '''
+    final content = '''
     class UniqueNamedClassForLspOne {}
     class UniqueNamedClassForLspTwo {}
     class UniqueNamedClassForLspThree {}
@@ -2808,16 +2700,16 @@ void main() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspOne'), isFalse);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspTwo'), isTrue);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspThree'), isTrue);
   }
 
   Future<void> test_prefixFilter_midSymbol() async {
-    var content = '''
+    final content = '''
     class UniqueNamedClassForLspOne {}
     class UniqueNamedClassForLspTwo {}
     class UniqueNamedClassForLspThree {}
@@ -2829,16 +2721,16 @@ void main() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspOne'), isFalse);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspTwo'), isTrue);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspThree'), isTrue);
   }
 
   Future<void> test_prefixFilter_startOfSymbol() async {
-    var content = '''
+    final content = '''
     class UniqueNamedClassForLspOne {}
     class UniqueNamedClassForLspTwo {}
     class UniqueNamedClassForLspThree {}
@@ -2850,16 +2742,16 @@ void main() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspOne'), isTrue);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspTwo'), isTrue);
     expect(res.any((c) => c.label == 'UniqueNamedClassForLspThree'), isTrue);
   }
 
   Future<void> test_setters() async {
-    var content = '''
+    final content = '''
     class MyClass {
       set stringSetter(String a) {}
       set noArgSetter() {}
@@ -2874,10 +2766,10 @@ void main() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var setters = res
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final setters = res
         .where((c) => c.label.endsWith('Setter'))
         .map((c) => c.detail != null ? '${c.label} (${c.detail})' : c.label)
         .toList();
@@ -2895,7 +2787,7 @@ void main() {
   }
 
   Future<void> test_sort_sortsByRelevance() async {
-    var content = '''
+    final content = '''
 class UniquePrefixABC {}
 class UniquePrefixAaBbCc {}
 
@@ -2917,7 +2809,7 @@ final a = UniquePrefixab^
   }
 
   Future<void> test_sort_truncatesByFuzzyScore() async {
-    var content = '''
+    final content = '''
 class UniquePrefixABC {}
 class UniquePrefixAaBbCc {}
 
@@ -2950,23 +2842,23 @@ final a = UniquePrefixab^
       ''',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
-    var completion = res.singleWhere((c) => c.label == 'InOtherFile');
+    final completion = res.singleWhere((c) => c.label == 'InOtherFile');
     expect(completion, isNotNull);
     expect(completion.textEdit, isNotNull);
-    var originalTextEdit = completion.textEdit;
+    final originalTextEdit = completion.textEdit;
 
     // Expect no docs, this is added during resolve.
     expectDocumentation(completion, isNull);
@@ -2975,7 +2867,7 @@ void f() {
     // This is LSP's equiv of getSuggestionDetails() and is invoked by LSP
     // clients to populate additional info (in our case, any additional edits
     // for inserting the import).
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved, isNotNull);
 
     // Ensure the detail field was update to show this will auto-import.
@@ -2995,7 +2887,7 @@ void f() {
     expect(resolved.command, isNull);
 
     // Apply both the main completion edit and the additionalTextEdits atomically.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3052,7 +2944,7 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 import 'reexport1.dart';
 import 'reexport2.dart';
 
@@ -3062,11 +2954,11 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var completions = res.where((c) => c.label == 'MyExportedClass').toList();
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final completions = res.where((c) => c.label == 'MyExportedClass').toList();
     expect(completions, hasLength(1));
   }
 
@@ -3093,7 +2985,7 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 import 'reexport1.dart';
 
 void f() {
@@ -3102,12 +2994,12 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completions = res.where((c) => c.label == 'MyExportedClass').toList();
+    final completions = res.where((c) => c.label == 'MyExportedClass').toList();
     expect(completions, hasLength(1));
   }
 
@@ -3126,23 +3018,24 @@ void f() {
       'class MyDuplicatedClass {}',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   MyDuplicated^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completions = res.where((c) => c.label == 'MyDuplicatedClass').toList();
+    final completions =
+        res.where((c) => c.label == 'MyDuplicatedClass').toList();
     expect(completions, hasLength(3));
 
     // Resolve the completions so we can get the auto-import text.
-    var resolvedCompletions =
+    final resolvedCompletions =
         await Future.wait(completions.map(resolveCompletion));
 
     expectAutoImportCompletion(resolvedCompletions, '../source_file1.dart');
@@ -3168,7 +3061,7 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 import 'package:test/function_x.dart';
 
 void f() {
@@ -3177,26 +3070,26 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var enumCompletions =
+    final enumCompletions =
         res.where((c) => c.label.startsWith('MyExportedEnum')).toList();
     expect(
         enumCompletions.map((c) => c.label),
         unorderedEquals(
             ['MyExportedEnum', 'MyExportedEnum.One', 'MyExportedEnum.Two']));
 
-    var completion =
+    final completion =
         enumCompletions.singleWhere((c) => c.label == 'MyExportedEnum.One');
 
     // Resolve the completion item (via server) to get its edits. This is the
     // LSP's equiv of getSuggestionDetails() and is invoked by LSP clients to
     // populate additional info (in our case, the additional edits for inserting
     // the import).
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved, isNotNull);
 
     // Ensure the detail field was update to show this will auto-import.
@@ -3209,7 +3102,7 @@ void f() {
     expect(resolved.textEdit, isNotNull);
 
     // Apply both the main completion edit and the additionalTextEdits atomically.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3249,7 +3142,7 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 import 'reexport1.dart';
 
 void f() {
@@ -3258,15 +3151,15 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completions =
+    final completions =
         res.where((c) => c.label == 'MyExportedEnum.One').toList();
     expect(completions, hasLength(1));
-    var resolved = await resolveCompletion(completions.first);
+    final resolved = await resolveCompletion(completions.first);
     // It should not include auto-import text since it's already imported.
     expect(resolved.detail, isNot(contains('Auto import from')));
   }
@@ -3291,7 +3184,7 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 import 'reexport1.dart';
 
 void f() {
@@ -3300,14 +3193,14 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completions = res.where((c) => c.label == 'MyExportedClass').toList();
+    final completions = res.where((c) => c.label == 'MyExportedClass').toList();
     expect(completions, hasLength(1));
-    var resolved = await resolveCompletion(completions.first);
+    final resolved = await resolveCompletion(completions.first);
     // It should not include auto-import text since it's already imported.
     expect(resolved.detail, isNull);
   }
@@ -3318,13 +3211,13 @@ void f() {
       'class MyClass {}',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   MyClas^
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:test/my_class.dart';
 
 void f() {
@@ -3332,7 +3225,7 @@ void f() {
 }
 ''';
 
-    var completionLabel = 'MyClass';
+    final completionLabel = 'MyClass';
 
     await _checkCompletionEdits(
       mainFileUri,
@@ -3350,13 +3243,13 @@ extension MyExtension on String {
 }
       ''');
 
-    var content = '''
+    final content = '''
 void f() {
   ''.myExtensionMet^
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:test/my_extension.dart';
 
 void f() {
@@ -3364,7 +3257,7 @@ void f() {
 }
 ''';
 
-    var completionLabel = 'myExtensionMethod()';
+    final completionLabel = 'myExtensionMethod()';
     await _checkCompletionEdits(
       mainFileUri,
       content,
@@ -3394,23 +3287,23 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   MyExported^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completions = res.where((c) => c.label == 'MyExportedClass').toList();
+    final completions = res.where((c) => c.label == 'MyExportedClass').toList();
     expect(completions, hasLength(3));
 
     // Resolve the completions so we can get the auto-import text.
-    var resolvedCompletions =
+    final resolvedCompletions =
         await Future.wait(completions.map(resolveCompletion));
 
     expectAutoImportCompletion(resolvedCompletions, '../source_file.dart');
@@ -3429,23 +3322,23 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^il
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
-    var completion = res.singleWhere((c) => c.label == 'InOtherFile');
+    final completion = res.singleWhere((c) => c.label == 'InOtherFile');
     expect(completion, isNotNull);
     expect(completion.textEdit, isNotNull);
-    var originalTextEdit = completion.textEdit;
+    final originalTextEdit = completion.textEdit;
 
     // Expect no docs, this is added during resolve.
     expectDocumentation(completion, isNull);
@@ -3454,7 +3347,7 @@ void f() {
     // This is LSP's equiv of getSuggestionDetails() and is invoked by LSP
     // clients to populate additional info (in our case, any additional edits
     // for inserting the import).
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved, isNotNull);
 
     // Ensure the detail field was update to show this will auto-import.
@@ -3476,13 +3369,13 @@ void f() {
     // Apply both the main completion edit and the additionalTextEdits atomically
     // then check the contents.
 
-    var newContentReplaceMode = applyTextEdits(
+    final newContentReplaceMode = applyTextEdits(
       code.code,
       [textEditForReplace(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
           .toList(),
     );
-    var newContentInsertMode = applyTextEdits(
+    final newContentInsertMode = applyTextEdits(
       code.code,
       [textEditForInsert(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3517,7 +3410,7 @@ class InOtherFile {}
     );
 
     // File that will have the import added.
-    var parentContent = '''
+    final parentContent = '''
 part 'main.dart';
 ''';
     newFile(
@@ -3526,7 +3419,7 @@ part 'main.dart';
     );
 
     // File that we're invoking completion in.
-    var content = '''
+    final content = '''
 part of 'parent.dart';
 void f() {
   InOtherF^
@@ -3534,16 +3427,16 @@ void f() {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completion = res.singleWhere((c) => c.label == 'InOtherFile');
+    final completion = res.singleWhere((c) => c.label == 'InOtherFile');
     expect(completion, isNotNull);
 
     // Resolve the completion item to get its edits.
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved, isNotNull);
     // Ensure it has a command, since it will need to make edits in other files
     // and that's done by telling the server to send a workspace/applyEdit. LSP
@@ -3552,7 +3445,7 @@ void f() {
     expect(resolved.command, isNotNull);
 
     // Apply all current-document edits.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3575,12 +3468,12 @@ part 'main.dart';
 
   Future<void>
       test_unimportedSymbols_isIncompleteNotSetIfBudgetNotExhausted() async {
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize(
       initializationOptions: {
@@ -3591,7 +3484,7 @@ void f() {
     );
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // Ensure we flagged that we returned everything.
     expect(res.isIncomplete, isFalse);
@@ -3603,12 +3496,12 @@ void f() {
       'class InOtherFile {}',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize(
       initializationOptions: {
@@ -3619,7 +3512,7 @@ void f() {
     );
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletionList(mainFileUri, code.position.position);
+    final res = await getCompletionList(mainFileUri, code.position.position);
 
     // Ensure we flagged that we did not return everything.
     expect(res.items, hasLength(0));
@@ -3632,10 +3525,10 @@ void f() {
   /// completion including items from files that were open (had overlays).
   /// https://github.com/Dart-Code/Dart-Code/issues/2286#issuecomment-658597532
   Future<void> test_unimportedSymbols_modifiedFiles() async {
-    var otherFilePath = join(projectFolderPath, 'lib', 'other_file.dart');
-    var otherFileUri = pathContext.toUri(otherFilePath);
+    final otherFilePath = join(projectFolderPath, 'lib', 'other_file.dart');
+    final otherFileUri = pathContext.toUri(otherFilePath);
 
-    var mainFileCode = TestCode.parse('MyOtherClass^');
+    final mainFileCode = TestCode.parse('MyOtherClass^');
     await initialize();
     await openFile(mainFileUri, mainFileCode.code);
     await initialAnalysis;
@@ -3651,9 +3544,10 @@ void f() {
     await pumpEventQueue(times: 5000);
 
     // Ensure the class appears in completion.
-    var completions =
+    final completions =
         await getCompletion(mainFileUri, mainFileCode.position.position);
-    var matching = completions.where((c) => c.label == 'MyOtherClass').toList();
+    final matching =
+        completions.where((c) => c.label == 'MyOtherClass').toList();
     expect(matching, hasLength(1));
   }
 
@@ -3668,20 +3562,20 @@ void f() {
       ''',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   var a = InOtherF^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
-    var completion =
+    final completion =
         res.singleWhere((c) => c.label == 'InOtherFile.fromJson()');
     expect(completion, isNotNull);
     expect(completion.textEdit, isNotNull);
@@ -3693,11 +3587,11 @@ void f() {
     // This is LSP's equiv of getSuggestionDetails() and is invoked by LSP
     // clients to populate additional info (in our case, any additional edits
     // for inserting the import).
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
     expect(resolved, isNotNull);
 
     // Apply both the main completion edit and the additionalTextEdits atomically.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3737,7 +3631,7 @@ abstract class Base {
     // A will already be imported
     // B will already be imported but with a prefix
     // C & D are not imported and need importing (return + parameter types)
-    var content = '''
+    final content = '''
 import 'package:test/a.dart';
 import 'package:test/b.dart' as b;
 import 'package:test/base.dart';
@@ -3748,16 +3642,16 @@ class BaseImpl extends Base {
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
-    var completion =
+    final completion =
         res.singleWhere((c) => c.label == 'myMethod(A a, b.B b, C c) { … }');
-    var resolved = await resolveCompletion(completion);
+    final resolved = await resolveCompletion(completion);
 
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolved.textEdit!)]
           .followedBy(resolved.additionalTextEdits!)
@@ -3784,22 +3678,22 @@ class BaseImpl extends Base {
   Future<void>
       test_unimportedSymbols_preferRelativeImportsLib_insideLib() async {
     _enableLints([LintNames.prefer_relative_imports]);
-    var importingFilePath =
+    final importingFilePath =
         join(projectFolderPath, 'lib', 'nested1', 'main.dart');
-    var importingFileUri = pathContext.toUri(importingFilePath);
-    var importedFilePath =
+    final importingFileUri = pathContext.toUri(importingFilePath);
+    final importedFilePath =
         join(projectFolderPath, 'lib', 'nested2', 'imported.dart');
 
     // Create a file that will be auto-imported from completion.
     newFile(importedFilePath, 'class MyClass {}');
 
-    var content = '''
+    final content = '''
 void f() {
   MyClas^
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import '../nested2/imported.dart';
 
 void f() {
@@ -3807,7 +3701,7 @@ void f() {
 }
 ''';
 
-    var completionLabel = 'MyClass';
+    final completionLabel = 'MyClass';
 
     await _checkCompletionEdits(
       importingFileUri,
@@ -3822,22 +3716,22 @@ void f() {
     // Files outside of the lib folder should still get absolute imports to
     // files inside lib, even with the lint enabled.
     _enableLints([LintNames.prefer_relative_imports]);
-    var importingFilePath =
+    final importingFilePath =
         join(projectFolderPath, 'bin', 'nested1', 'main.dart');
-    var importingFileUri = pathContext.toUri(importingFilePath);
-    var importedFilePath =
+    final importingFileUri = pathContext.toUri(importingFilePath);
+    final importedFilePath =
         join(projectFolderPath, 'lib', 'nested2', 'imported.dart');
 
     // Create a file that will be auto-imported from completion.
     newFile(importedFilePath, 'class MyClass {}');
 
-    var content = '''
+    final content = '''
 void f() {
   MyClas^
 }
 ''';
 
-    var expectedContent = '''
+    final expectedContent = '''
 import 'package:test/nested2/imported.dart';
 
 void f() {
@@ -3845,7 +3739,7 @@ void f() {
 }
 ''';
 
-    var completionLabel = 'MyClass';
+    final completionLabel = 'MyClass';
 
     await _checkCompletionEdits(
       importingFileUri,
@@ -3861,7 +3755,7 @@ void f() {
       'class InOtherFile {}',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
@@ -3874,14 +3768,14 @@ void f() {
         'suggestFromUnimportedLibraries': false,
       },
     );
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
     // Ensure the item doesn't appear in the results (because we might not
     // be able to execute the import edits if they're in another file).
-    var completion = res.singleWhereOrNull((c) => c.label == 'InOtherFile');
+    final completion = res.singleWhereOrNull((c) => c.label == 'InOtherFile');
     expect(completion, isNull);
   }
 
@@ -3895,26 +3789,26 @@ void f() {
       'class InOtherFile {}',
     );
 
-    var content = '''
+    final content = '''
 void f() {
   InOtherF^
 }
 ''';
 
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
 
     // Ensure the item doesn't appear in the results (because we might not
     // be able to execute the import edits if they're in another file).
-    var completion = res.singleWhereOrNull((c) => c.label == 'InOtherFile');
+    final completion = res.singleWhereOrNull((c) => c.label == 'InOtherFile');
     expect(completion, isNull);
   }
 
   Future<void> test_unopenFile() async {
-    var content = '''
+    final content = '''
     class MyClass {
       String abcdefghij;
     }
@@ -3924,17 +3818,17 @@ void f() {
       a.abc^
     }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     newFile(mainFilePath, code.code);
     await initialize();
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.label == 'abcdefghij'), isTrue);
-    var item = res.singleWhere((c) => c.label == 'abcdefghij');
+    final item = res.singleWhere((c) => c.label == 'abcdefghij');
     expect(item.insertTextFormat,
         anyOf(equals(InsertTextFormat.PlainText), isNull));
     expect(item.insertText, anyOf(equals('abcdefghij'), isNull));
-    var updated = applyTextEdits(
+    final updated = applyTextEdits(
       code.code,
       [toTextEdit(item.textEdit!)],
     );
@@ -3952,17 +3846,17 @@ void f() {
     String completionLabel,
     String expectedContent,
   ) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await initialize();
     await openFile(fileUri, code.code);
     await initialAnalysis;
-    var res = await getCompletion(fileUri, code.position.position);
+    final res = await getCompletion(fileUri, code.position.position);
 
-    var completion = res.where((c) => c.label == completionLabel).single;
-    var resolvedCompletion = await resolveCompletion(completion);
+    final completion = res.where((c) => c.label == completionLabel).single;
+    final resolvedCompletion = await resolveCompletion(completion);
 
     // Apply both the main completion edit and the additionalTextEdits atomically.
-    var newContent = applyTextEdits(
+    final newContent = applyTextEdits(
       code.code,
       [toTextEdit(resolvedCompletion.textEdit!)]
           .followedBy(resolvedCompletion.additionalTextEdits!)
@@ -3974,27 +3868,23 @@ void f() {
 
   Future<void> _checkResultsForTriggerCharacters(String content,
       List<String> triggerCharacters, Matcher expectedResults) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    for (var triggerCharacter in triggerCharacters) {
-      var context = CompletionContext(
+    for (final triggerCharacter in triggerCharacters) {
+      final context = CompletionContext(
           triggerKind: CompletionTriggerKind.TriggerCharacter,
           triggerCharacter: triggerCharacter);
-      var res = await getCompletion(mainFileUri, code.position.position,
+      final res = await getCompletion(mainFileUri, code.position.position,
           context: context);
-      expect(
-        res,
-        expectedResults,
-        reason: 'No completions when using $triggerCharacter',
-      );
+      expect(res, expectedResults);
     }
   }
 
   void _enableLints(List<String> lintNames) {
     registerLintRules();
-    var lintsYaml = lintNames.map((name) => '    - $name\n').join();
+    final lintsYaml = lintNames.map((name) => '    - $name\n').join();
     newFile(analysisOptionsPath, '''
 linter:
   rules:
@@ -4006,12 +3896,12 @@ $lintsYaml
 @reflectiveTest
 class DartSnippetCompletionTest extends SnippetCompletionTest {
   Future<void> test_snippets_class() async {
-    var content = '''
+    final content = '''
 clas^
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: ClassDeclaration.prefix,
       label: ClassDeclaration.label,
@@ -4027,7 +3917,7 @@ class ${1:ClassName} {
   /// Checks that the `enableSnippets` setting can disable snippets even if the
   /// client supports them.
   Future<void> test_snippets_disabled() async {
-    var content = '^';
+    final content = '^';
 
     // Support is set in setUp, but here we disable the user preference.
     await provideConfig(initialize, {'enableSnippets': false});
@@ -4036,14 +3926,14 @@ class ${1:ClassName} {
   }
 
   Future<void> test_snippets_doWhile() async {
-    var content = '''
+    final content = '''
 void f() {
   do^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: DoStatement.prefix,
       label: DoStatement.label,
@@ -4063,23 +3953,23 @@ void f() {
   /// prevent non-Snippet completion results from being returned (because this
   /// happens frequently while typing).
   Future<void> test_snippets_failureDoesNotPreventNonSnippets() async {
-    var content = '''
+    final content = '''
 void f() {
   ^
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
 
     // Use a Completer to control when the completion handler starts computing.
-    var completer = Completer<void>();
+    final completer = Completer<void>();
     CompletionHandler.delayAfterResolveForTests = completer.future;
     try {
       // Start the completion request but don't await it yet.
-      var completionRequest =
+      final completionRequest =
           getCompletionList(mainFileUri, code.position.position);
       // Modify the document to ensure the snippet requests will fail to build
       // edits and then allow the handler to continue.
@@ -4087,7 +3977,7 @@ void f() {
       completer.complete();
 
       // Wait for the results.
-      var result = await completionRequest;
+      final result = await completionRequest;
 
       // Ensure we flagged that we did not return everything but we still got
       // results.
@@ -4101,7 +3991,7 @@ void f() {
 
   Future<void>
       test_snippets_flutterStateless_notAvailable_notFlutterProject() async {
-    var content = '''
+    final content = '''
 class A {}
 
 stle^
@@ -4117,14 +4007,14 @@ class B {}
   }
 
   Future<void> test_snippets_for() async {
-    var content = '''
+    final content = '''
 void f() {
   for^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: ForStatement.prefix,
       label: ForStatement.label,
@@ -4140,14 +4030,14 @@ void f() {
   }
 
   Future<void> test_snippets_forIn() async {
-    var content = '''
+    final content = '''
 void f() {
   forin^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: ForInStatement.prefix,
       label: ForInStatement.label,
@@ -4163,14 +4053,14 @@ void f() {
   }
 
   Future<void> test_snippets_functionClassMember() async {
-    var content = '''
+    final content = '''
 class A {
   fun^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FunctionDeclaration.prefix,
       label: FunctionDeclaration.label,
@@ -4186,14 +4076,14 @@ class A {
   }
 
   Future<void> test_snippets_functionNested() async {
-    var content = '''
+    final content = '''
 void a() {
   fun^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FunctionDeclaration.prefix,
       label: FunctionDeclaration.label,
@@ -4209,12 +4099,12 @@ void a() {
   }
 
   Future<void> test_snippets_functionTopLevel() async {
-    var content = '''
+    final content = '''
 fun^
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FunctionDeclaration.prefix,
       label: FunctionDeclaration.label,
@@ -4228,14 +4118,14 @@ ${1:void} ${2:name}(${3:params}) {
   }
 
   Future<void> test_snippets_if() async {
-    var content = '''
+    final content = '''
 void f() {
   if^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: IfStatement.prefix,
       label: IfStatement.label,
@@ -4251,14 +4141,14 @@ void f() {
   }
 
   Future<void> test_snippets_ifElse() async {
-    var content = '''
+    final content = '''
 void f() {
   if^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: IfElseStatement.prefix,
       label: IfElseStatement.label,
@@ -4281,12 +4171,12 @@ $fourSpaces
   Future<void> test_snippets_itemDefaults() async {
     setCompletionListDefaults(
         ['editRange', 'insertTextMode', 'insertTextFormat']);
-    var content = '''
+    final content = '''
 fu^
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FunctionDeclaration.prefix,
       label: FunctionDeclaration.label,
@@ -4300,7 +4190,7 @@ ${1:void} ${2:name}(${3:params}) {
   }
 
   Future<void> test_snippets_mainFunction() async {
-    var content = '''
+    final content = '''
 class A {}
 
 main^
@@ -4309,7 +4199,7 @@ class B {}
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: MainFunction.prefix,
       label: MainFunction.label,
@@ -4327,27 +4217,27 @@ class B {}
   }
 
   Future<void> test_snippets_notSupported() async {
-    var content = '^';
+    final content = '^';
 
     // If we don't send support for Snippet CompletionItem kinds, we don't
     // expect any snippets at all.
     setCompletionItemSnippetSupport(false);
     await initialize();
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
+    final res = await getCompletion(mainFileUri, code.position.position);
     expect(res.any((c) => c.kind == CompletionItemKind.Snippet), isFalse);
   }
 
   Future<void> test_snippets_switch() async {
-    var content = '''
+    final content = '''
 void f() {
   swi^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: SwitchStatement.prefix,
       label: SwitchStatement.label,
@@ -4368,14 +4258,14 @@ void f() {
   Future<void> test_snippets_testBlock() async {
     mainFilePath = join(projectFolderPath, 'test', 'foo_test.dart');
     mainFileUri = pathContext.toUri(mainFilePath);
-    var content = '''
+    final content = '''
 void f() {
   test^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: TestDefinition.prefix,
       label: TestDefinition.label,
@@ -4393,14 +4283,14 @@ void f() {
   Future<void> test_snippets_testGroupBlock() async {
     mainFilePath = join(projectFolderPath, 'test', 'foo_test.dart');
     mainFileUri = pathContext.toUri(mainFilePath);
-    var content = '''
+    final content = '''
 void f() {
   group^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: TestGroupDefinition.prefix,
       label: TestGroupDefinition.label,
@@ -4416,14 +4306,14 @@ void f() {
   }
 
   Future<void> test_snippets_tryCatch() async {
-    var content = '''
+    final content = '''
 void f() {
   tr^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: TryCatchStatement.prefix,
       label: TryCatchStatement.label,
@@ -4441,14 +4331,14 @@ $fourSpaces
   }
 
   Future<void> test_snippets_while() async {
-    var content = '''
+    final content = '''
 void f() {
   while^
 }
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: WhileStatement.prefix,
       label: WhileStatement.label,
@@ -4476,13 +4366,14 @@ import 'package:flutter/widgets.dart';''';
   @override
   void setUp() {
     super.setUp();
-    writeTestPackageConfig(
+    writePackageConfig(
+      projectFolderPath,
       flutter: true,
     );
   }
 
   Future<void> test_snippets_flutterStateful() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/widgets.dart';
 
 class A {}
@@ -4493,7 +4384,7 @@ class B {}
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatefulWidget.prefix,
       label: FlutterStatefulWidget.label,
@@ -4523,7 +4414,7 @@ class B {}
   }
 
   Future<void> test_snippets_flutterStatefulWithAnimationController() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/widgets.dart';
 
 class A {}
@@ -4534,7 +4425,7 @@ class B {}
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatefulWidgetWithAnimationController.prefix,
       label: FlutterStatefulWidgetWithAnimationController.label,
@@ -4579,7 +4470,7 @@ class B {}
   }
 
   Future<void> test_snippets_flutterStateless() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/widgets.dart';
 
 class A {}
@@ -4590,7 +4481,7 @@ class B {}
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatelessWidget.prefix,
       label: FlutterStatelessWidget.label,
@@ -4615,7 +4506,7 @@ class B {}
   }
 
   Future<void> test_snippets_flutterStateless_addsImports() async {
-    var content = '''
+    final content = '''
 class A {}
 
 stle^
@@ -4624,7 +4515,7 @@ class B {}
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatelessWidget.prefix,
       label: FlutterStatelessWidget.label,
@@ -4649,12 +4540,12 @@ class B {}
   }
 
   Future<void> test_snippets_flutterStateless_addsImports_onlyPrefix() async {
-    var content = '''
+    final content = '''
 stless^
 ''';
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatelessWidget.prefix,
       label: FlutterStatelessWidget.label,
@@ -4675,12 +4566,12 @@ class \${1:MyWidget} extends StatelessWidget {
   }
 
   Future<void> test_snippets_flutterStateless_addsImports_zeroOffset() async {
-    var content = '''
+    final content = '''
 ^
 '''; // Deliberate trailing newline to ensure imports aren't inserted at "end".
 
     await initialize();
-    var updated = await expectAndApplySnippet(
+    final updated = await expectAndApplySnippet(
       content,
       prefix: FlutterStatelessWidget.prefix,
       label: FlutterStatelessWidget.label,
@@ -4701,7 +4592,7 @@ class \${1:MyWidget} extends StatelessWidget {
   }
 
   Future<void> test_snippets_flutterStateless_notAvailable_notTopLevel() async {
-    var content = '''
+    final content = '''
 class A {
 
   stle^
@@ -4717,16 +4608,16 @@ class A {
   }
 
   Future<void> test_snippets_flutterStateless_outsideAnalysisRoot() async {
-    var content = '''
+    final content = '''
 stle^
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
 
     await initialize();
-    var otherFileUri = pathContext.toUri(convertPath('/other/file.dart'));
+    final otherFileUri = pathContext.toUri(convertPath('/other/file.dart'));
     await openFile(otherFileUri, code.code);
-    var res = await getCompletion(otherFileUri, code.position.position);
-    var snippetItems = res.where((c) => c.kind == CompletionItemKind.Snippet);
+    final res = await getCompletion(otherFileUri, code.position.position);
+    final snippetItems = res.where((c) => c.kind == CompletionItemKind.Snippet);
     expect(snippetItems, hasLength(0));
   }
 }
@@ -4740,18 +4631,18 @@ abstract class SnippetCompletionTest extends AbstractLspAnalysisServerTest
     required String prefix,
     required String label,
   }) async {
-    var code = TestCode.parse(content);
-    var (snippet: snippet, defaults: defaults) = await expectSnippet(
+    final code = TestCode.parse(content);
+    final (snippet: snippet, defaults: defaults) = await expectSnippet(
       code,
       prefix: prefix,
       label: label,
     );
 
-    var textEdit = snippet.textEdit;
-    var textEditText = snippet.textEditText;
-    var additionalTextEdits = snippet.additionalTextEdits;
+    final textEdit = snippet.textEdit;
+    final textEditText = snippet.textEditText;
+    final additionalTextEdits = snippet.additionalTextEdits;
 
-    var edits = [
+    final edits = [
       // Additional TextEdits come first, because if they have the same offset
       // as edits in the normal edit, they will be inserted first.
       // https://github.com/microsoft/vscode/issues/143888.
@@ -4776,7 +4667,7 @@ abstract class SnippetCompletionTest extends AbstractLspAnalysisServerTest
     // snippet syntax here, as we don't do any special handling of them (and
     // assume what's coded here is correct, and that the client will correctly
     // interpret them).
-    var updated = applyTextEdits(code.code, edits);
+    final updated = applyTextEdits(code.code, edits);
     return updated;
   }
 
@@ -4786,19 +4677,19 @@ abstract class SnippetCompletionTest extends AbstractLspAnalysisServerTest
     String content,
     String prefix,
   ) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var hasSnippet = res.any((c) => c.filterText == prefix);
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final hasSnippet = res.any((c) => c.filterText == prefix);
     expect(hasSnippet, isFalse);
   }
 
   /// Expect that there are no snippets at the position of `^` within [content].
   Future<void> expectNoSnippets(String content) async {
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     await openFile(mainFileUri, code.code);
-    var res = await getCompletion(mainFileUri, code.position.position);
-    var hasAnySnippet = res.any((c) => c.kind == CompletionItemKind.Snippet);
+    final res = await getCompletion(mainFileUri, code.position.position);
+    final hasAnySnippet = res.any((c) => c.kind == CompletionItemKind.Snippet);
     expect(hasAnySnippet, isFalse);
   }
 
@@ -4811,8 +4702,8 @@ abstract class SnippetCompletionTest extends AbstractLspAnalysisServerTest
     required String label,
   }) async {
     await openFile(mainFileUri, code.code);
-    var res = await getCompletionList(mainFileUri, code.position.position);
-    var item = res.items.singleWhere(
+    final res = await getCompletionList(mainFileUri, code.position.position);
+    final item = res.items.singleWhere(
       (c) =>
           c.kind == CompletionItemKind.Snippet &&
           (c.filterText ?? c.label) == prefix &&
@@ -4830,10 +4721,6 @@ abstract class SnippetCompletionTest extends AbstractLspAnalysisServerTest
   @override
   void setUp() {
     super.setUp();
-
-    // Snippet completion tests have incomplete code.
-    failTestOnErrorDiagnostic = false;
-
     setCompletionItemSnippetSupport();
   }
 }

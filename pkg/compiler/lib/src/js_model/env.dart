@@ -4,7 +4,6 @@
 
 library dart2js.js_model.env;
 
-import 'package:js_shared/variance.dart';
 import 'package:kernel/ast.dart' as ir;
 
 import '../constants/values.dart';
@@ -12,6 +11,7 @@ import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart';
 import '../ir/element_map.dart';
+import '../ir/static_type_cache.dart';
 import '../ir/util.dart';
 import '../js_model/class_type_variable_access.dart';
 import '../ordered_typeset.dart';
@@ -25,8 +25,8 @@ import 'closure.dart'
         ClosureFieldData;
 import 'element_map.dart'
     show
-        ClassDefinition,
         JsToElementMap,
+        ClassDefinition,
         MemberDefinition,
         forEachOrderedParameterByFunctionNode;
 import 'element_map_impl.dart';
@@ -587,6 +587,8 @@ abstract class JMemberData {
 
   ClassTypeVariableAccess get classTypeVariableAccess;
 
+  StaticTypeCache get staticTypes;
+
   JMemberData();
 
   /// Deserializes a [JMemberData] object from [source].
@@ -624,9 +626,19 @@ abstract class JMemberDataImpl implements JMemberData {
   @override
   final MemberDefinition definition;
 
-  JMemberDataImpl(this.node, this.definition);
+  @override
+  StaticTypeCache get staticTypes => _staticTypes.loaded();
+  final Deferrable<StaticTypeCache> _staticTypes;
 
-  JMemberDataImpl._deserialized(this.node, this.definition);
+  JMemberDataImpl(this.node, this.definition, StaticTypeCache staticTypes)
+      : _staticTypes = Deferrable.eager(staticTypes);
+
+  JMemberDataImpl._deserialized(this.node, this.definition, this._staticTypes);
+
+  static StaticTypeCache _readStaticTypeCache(
+      DataSourceReader source, ir.Member node) {
+    return StaticTypeCache.readFromDataSource(source, node);
+  }
 
   @override
   InterfaceType? getMemberThisType(JsToElementMap elementMap) {
@@ -685,6 +697,10 @@ mixin FunctionDataTypeVariablesMixin implements FunctionData {
 mixin FunctionDataForEachParameterMixin implements FunctionData {
   ir.FunctionNode get functionNode;
 
+  // TODO(johnniwinther,sigmund): Remove this when it's no longer needed for
+  //  `getConstantValue` in [forEachParameter].
+  ir.Member get memberContext;
+
   @override
   void forEachParameter(
       JsToElementMap elementMap,
@@ -704,7 +720,8 @@ mixin FunctionDataForEachParameterMixin implements FunctionData {
         }
       } else if (isOptional) {
         if (parameter.initializer != null) {
-          defaultValue = elementMap.getConstantValue(parameter.initializer!);
+          defaultValue = elementMap.getConstantValue(
+              memberContext, parameter.initializer!);
         } else {
           defaultValue = NullConstantValue();
         }
@@ -733,13 +750,13 @@ class FunctionDataImpl extends JMemberDataImpl
   final ir.FunctionNode functionNode;
   FunctionType? _type;
 
-  FunctionDataImpl(
-      ir.Member node, this.functionNode, MemberDefinition definition)
-      : super(node, definition);
+  FunctionDataImpl(ir.Member node, this.functionNode,
+      MemberDefinition definition, StaticTypeCache staticTypes)
+      : super(node, definition, staticTypes);
 
-  FunctionDataImpl._deserialized(
-      ir.Member node, this.functionNode, MemberDefinition definition)
-      : super._deserialized(node, definition);
+  FunctionDataImpl._deserialized(ir.Member node, this.functionNode,
+      MemberDefinition definition, Deferrable<StaticTypeCache> staticTypes)
+      : super._deserialized(node, definition, staticTypes);
 
   factory FunctionDataImpl.readFromDataSource(DataSourceReader source) {
     source.begin(tag);
@@ -754,8 +771,11 @@ class FunctionDataImpl extends JMemberDataImpl
           "Unexpected member node $node (${node.runtimeType}).");
     }
     MemberDefinition definition = MemberDefinition.readFromDataSource(source);
+    Deferrable<StaticTypeCache> staticTypes = source.readDeferrableWithArg(
+        JMemberDataImpl._readStaticTypeCache, node);
     source.end(tag);
-    return FunctionDataImpl._deserialized(node, functionNode, definition);
+    return FunctionDataImpl._deserialized(
+        node, functionNode, definition, staticTypes);
   }
 
   @override
@@ -764,8 +784,12 @@ class FunctionDataImpl extends JMemberDataImpl
     sink.begin(tag);
     sink.writeMemberNode(node);
     definition.writeToDataSink(sink);
+    sink.writeDeferrable(() => staticTypes.writeToDataSink(sink, node));
     sink.end(tag);
   }
+
+  @override
+  ir.Member get memberContext => node;
 
   @override
   FunctionType getFunctionType(covariant JsKernelToElementMap elementMap) {
@@ -828,6 +852,9 @@ class SignatureFunctionData implements FunctionData {
     sink.writeEnum(classTypeVariableAccess);
     sink.end(tag);
   }
+
+  @override
+  StaticTypeCache get staticTypes => const StaticTypeCache();
 
   @override
   FunctionType getFunctionType(covariant JsKernelToElementMap elementMap) {
@@ -893,18 +920,6 @@ abstract class DelegatedFunctionData implements FunctionData {
       baseData.classTypeVariableAccess;
 }
 
-class ParameterStubFunctionData extends DelegatedFunctionData {
-  @override
-  final MemberDefinition definition;
-
-  ParameterStubFunctionData(super.baseData, this.definition);
-
-  @override
-  void writeToDataSink(DataSinkWriter sink) {
-    throw UnimplementedError('Cannot serialize parameter stub data.');
-  }
-}
-
 class GeneratorBodyFunctionData extends DelegatedFunctionData {
   /// Tag used for identifying serialized [GeneratorBodyFunctionData] objects in
   /// a debugging data stream.
@@ -934,6 +949,9 @@ class GeneratorBodyFunctionData extends DelegatedFunctionData {
     definition.writeToDataSink(sink);
     sink.end(tag);
   }
+
+  @override
+  StaticTypeCache get staticTypes => const StaticTypeCache();
 }
 
 class JConstructorData extends FunctionDataImpl {
@@ -943,10 +961,11 @@ class JConstructorData extends FunctionDataImpl {
 
   JConstructorBody? constructorBody;
 
-  JConstructorData(super.node, super.functionNode, super.definition);
+  JConstructorData(
+      super.node, super.functionNode, super.definition, super.staticTypes);
 
   JConstructorData._deserialized(
-      super.node, super.functionNode, super.definition)
+      super.node, super.functionNode, super.definition, super.staticTypes)
       : super._deserialized();
 
   factory JConstructorData.readFromDataSource(DataSourceReader source) {
@@ -962,8 +981,11 @@ class JConstructorData extends FunctionDataImpl {
           "Unexpected member node $node (${node.runtimeType}).");
     }
     MemberDefinition definition = MemberDefinition.readFromDataSource(source);
+    Deferrable<StaticTypeCache> staticTypes = source.readDeferrableWithArg(
+        JMemberDataImpl._readStaticTypeCache, node);
     source.end(tag);
-    return JConstructorData._deserialized(node, functionNode, definition);
+    return JConstructorData._deserialized(
+        node, functionNode, definition, staticTypes);
   }
 
   @override
@@ -973,6 +995,7 @@ class JConstructorData extends FunctionDataImpl {
     sink.writeMemberNode(node);
     definition.writeToDataSink(sink);
     assert(constructorBody == null);
+    sink.writeDeferrable(() => staticTypes.writeToDataSink(sink, node));
     sink.end(tag);
   }
 
@@ -986,10 +1009,11 @@ class ConstructorBodyDataImpl extends FunctionDataImpl {
   /// a debugging data stream.
   static const String tag = 'constructor-body-data';
 
-  ConstructorBodyDataImpl(super.node, super.functionNode, super.definition);
+  ConstructorBodyDataImpl(
+      super.node, super.functionNode, super.definition, super.staticTypes);
 
   ConstructorBodyDataImpl._deserialized(
-      super.node, super.functionNode, super.definition)
+      super.node, super.functionNode, super.definition, super.staticTypes)
       : super._deserialized();
 
   factory ConstructorBodyDataImpl.readFromDataSource(DataSourceReader source) {
@@ -1005,9 +1029,11 @@ class ConstructorBodyDataImpl extends FunctionDataImpl {
           "Unexpected member node $node (${node.runtimeType}).");
     }
     MemberDefinition definition = MemberDefinition.readFromDataSource(source);
+    Deferrable<StaticTypeCache> staticTypes = source.readDeferrableWithArg(
+        JMemberDataImpl._readStaticTypeCache, node);
     source.end(tag);
     return ConstructorBodyDataImpl._deserialized(
-        node, functionNode, definition);
+        node, functionNode, definition, staticTypes);
   }
 
   @override
@@ -1016,6 +1042,7 @@ class ConstructorBodyDataImpl extends FunctionDataImpl {
     sink.begin(tag);
     sink.writeMemberNode(node);
     definition.writeToDataSink(sink);
+    sink.writeDeferrable(() => staticTypes.writeToDataSink(sink, node));
     sink.end(tag);
   }
 
@@ -1037,17 +1064,20 @@ class JFieldDataImpl extends JMemberDataImpl implements JFieldData {
 
   DartType? _type;
 
-  JFieldDataImpl(super.node, super.definition);
+  JFieldDataImpl(super.node, super.definition, super.staticTypes);
 
-  JFieldDataImpl._deserialized(super.node, super.definition)
+  JFieldDataImpl._deserialized(super.node, super.definition, super.staticTypes)
       : super._deserialized();
 
   factory JFieldDataImpl.readFromDataSource(DataSourceReader source) {
     source.begin(tag);
     ir.Member node = source.readMemberNode();
     MemberDefinition definition = MemberDefinition.readFromDataSource(source);
+    Deferrable<StaticTypeCache> staticTypes = source.readDeferrableWithArg(
+        JMemberDataImpl._readStaticTypeCache, node);
     source.end(tag);
-    return JFieldDataImpl._deserialized(node as ir.Field, definition);
+    return JFieldDataImpl._deserialized(
+        node as ir.Field, definition, staticTypes);
   }
 
   @override
@@ -1056,6 +1086,7 @@ class JFieldDataImpl extends JMemberDataImpl implements JFieldData {
     sink.begin(tag);
     sink.writeMemberNode(node);
     definition.writeToDataSink(sink);
+    sink.writeDeferrable(() => staticTypes.writeToDataSink(sink, node));
     sink.end(tag);
   }
 

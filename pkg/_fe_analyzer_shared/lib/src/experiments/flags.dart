@@ -6,17 +6,10 @@
 //
 // Instead modify 'tools/experimental_features.yaml' and run
 // 'dart pkg/front_end/tool/fasta.dart generate-experimental-flags' to update.
-const Version defaultLanguageVersion = const Version(3, 6);
+const Version defaultLanguageVersion = const Version(3, 3);
 
 /// Enum for experimental flags shared between the CFE and the analyzer.
 enum ExperimentalFlag {
-  augmentations(
-      name: 'augmentations',
-      isEnabledByDefault: false,
-      isExpired: false,
-      experimentEnabledVersion: defaultLanguageVersion,
-      experimentReleasedVersion: defaultLanguageVersion),
-
   classModifiers(
       name: 'class-modifiers',
       isEnabledByDefault: true,
@@ -52,26 +45,12 @@ enum ExperimentalFlag {
       experimentEnabledVersion: const Version(2, 0),
       experimentReleasedVersion: const Version(2, 0)),
 
-  digitSeparators(
-      name: 'digit-separators',
-      isEnabledByDefault: true,
-      isExpired: false,
-      experimentEnabledVersion: const Version(3, 6),
-      experimentReleasedVersion: const Version(3, 6)),
-
   enhancedEnums(
       name: 'enhanced-enums',
       isEnabledByDefault: true,
       isExpired: true,
       experimentEnabledVersion: const Version(2, 17),
       experimentReleasedVersion: const Version(2, 17)),
-
-  enhancedParts(
-      name: 'enhanced-parts',
-      isEnabledByDefault: false,
-      isExpired: false,
-      experimentEnabledVersion: defaultLanguageVersion,
-      experimentReleasedVersion: defaultLanguageVersion),
 
   extensionMethods(
       name: 'extension-methods',
@@ -97,21 +76,21 @@ enum ExperimentalFlag {
   inferenceUpdate2(
       name: 'inference-update-2',
       isEnabledByDefault: true,
-      isExpired: true,
+      isExpired: false,
       experimentEnabledVersion: const Version(3, 2),
       experimentReleasedVersion: const Version(3, 2)),
 
   inferenceUpdate3(
       name: 'inference-update-3',
-      isEnabledByDefault: true,
-      isExpired: true,
-      experimentEnabledVersion: const Version(3, 4),
-      experimentReleasedVersion: const Version(3, 4)),
+      isEnabledByDefault: false,
+      isExpired: false,
+      experimentEnabledVersion: defaultLanguageVersion,
+      experimentReleasedVersion: defaultLanguageVersion),
 
   inlineClass(
       name: 'inline-class',
       isEnabledByDefault: true,
-      isExpired: true,
+      isExpired: false,
       experimentEnabledVersion: const Version(3, 3),
       experimentReleasedVersion: const Version(3, 3)),
 
@@ -149,13 +128,6 @@ enum ExperimentalFlag {
       isExpired: true,
       experimentEnabledVersion: const Version(2, 13),
       experimentReleasedVersion: const Version(2, 13)),
-
-  nullAwareElements(
-      name: 'null-aware-elements',
-      isEnabledByDefault: false,
-      isExpired: false,
-      experimentEnabledVersion: defaultLanguageVersion,
-      experimentReleasedVersion: defaultLanguageVersion),
 
   patterns(
       name: 'patterns',
@@ -229,13 +201,6 @@ enum ExperimentalFlag {
 
   variance(
       name: 'variance',
-      isEnabledByDefault: false,
-      isExpired: false,
-      experimentEnabledVersion: defaultLanguageVersion,
-      experimentReleasedVersion: defaultLanguageVersion),
-
-  wildcardVariables(
-      name: 'wildcard-variables',
       isEnabledByDefault: false,
       isExpired: false,
       experimentEnabledVersion: defaultLanguageVersion,

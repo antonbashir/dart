@@ -7,7 +7,6 @@
 import 'dart:typed_data';
 
 import "package:expect/expect.dart";
-import 'package:expect/variations.dart' as v;
 
 double uint64toDouble(int i) {
   var buffer = new Uint8List(8).buffer;
@@ -21,7 +20,7 @@ double createOtherNAN() {
 }
 
 main() {
-  if (v.jsNumbers) {
+  if (webNumbers) {
     // (1) The web compilers elect to generate smaller, faster code for
     // `identical` using `===`, with the result that `identical(NaN, NaN)` is
     // false.

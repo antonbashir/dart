@@ -8,7 +8,6 @@ import 'ir.dart';
 /// Any import (function, table, memory or global).
 abstract class Import implements Indexable, Serializable {
   String get module;
-
   @override
   String get name;
 }

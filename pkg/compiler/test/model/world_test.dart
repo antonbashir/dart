@@ -34,8 +34,8 @@ testClassSets() async {
   var env = await TypeEnvironment.create(r"""
       import 'dart:html' as html;
 
-      mixin class A implements X {}
-      mixin class B {}
+      class A implements X {}
+      class B {}
       class C_Super extends A {}
       class C extends C_Super {}
       class D implements A {}
@@ -196,43 +196,43 @@ testClassSets() async {
 
 testProperties() async {
   var env = await TypeEnvironment.create(r"""
-      mixin class A {}
+      class A {}
       class A1 extends A {}
       class A2 implements A {}
       class A3 extends Object with A {}
 
-      mixin class B {}
+      class B {}
       class B1 extends B {}
       class B2 implements B {}
       class B3 extends Object with B {}
 
-      mixin class C {}
+      class C {}
       class C1 extends C {}
       class C2 implements C {}
       class C3 extends Object with C {}
 
-      mixin class D {}
+      class D {}
       class D1 extends D {}
       class D2 implements D {}
       class D3 extends Object with D {}
 
-      mixin class E {}
+      class E {}
       class E1 extends E {}
       class E2 implements E {}
       class E3 extends Object with E {}
 
-      mixin class F {}
+      class F {}
       class F1 extends F {}
       class F2 implements F {}
       class F3 extends Object with F {}
 
-      mixin class G {}
+      class G {}
       class G1 extends G {}
       class G2 extends G1 {}
       class G3 extends G2 implements G {}
       class G4 extends G2 with G {}
 
-      mixin class H {}
+      class H {}
       class H1 extends H {}
       class H2 extends H1 {}
       class H3 extends H2 implements H {}
@@ -569,46 +569,48 @@ testCommonSubclasses() async {
   final I = env.getElement("I") as ClassEntity;
   final J = env.getElement("J") as ClassEntity;
 
-  ClassQuery? toClassQuery(SubclassResult result, ClassEntity cls1,
+  ClassQuery? toClassQuery(SubclassResultKind kind, ClassEntity cls1,
       ClassQuery query1, ClassEntity cls2, ClassQuery query2) {
-    switch (result) {
-      case SimpleSubclassResult.empty:
+    switch (kind) {
+      case SubclassResultKind.EMPTY:
         return null;
-      case SimpleSubclassResult.exact1:
+      case SubclassResultKind.EXACT1:
         return ClassQuery.EXACT;
-      case SimpleSubclassResult.exact2:
+      case SubclassResultKind.EXACT2:
         return ClassQuery.EXACT;
-      case SimpleSubclassResult.subclass1:
+      case SubclassResultKind.SUBCLASS1:
         return ClassQuery.SUBCLASS;
-      case SimpleSubclassResult.subclass2:
+      case SubclassResultKind.SUBCLASS2:
         return ClassQuery.SUBCLASS;
-      case SimpleSubclassResult.subtype1:
+      case SubclassResultKind.SUBTYPE1:
         return ClassQuery.SUBTYPE;
-      case SimpleSubclassResult.subtype2:
+      case SubclassResultKind.SUBTYPE2:
         return ClassQuery.SUBTYPE;
-      case SetSubclassResult():
+      case SubclassResultKind.SET:
+      default:
         return null;
     }
   }
 
-  ClassEntity? toClassEntity(SubclassResult result, ClassEntity cls1,
+  ClassEntity? toClassEntity(SubclassResultKind kind, ClassEntity cls1,
       ClassQuery query1, ClassEntity cls2, ClassQuery query2) {
-    switch (result) {
-      case SimpleSubclassResult.empty:
+    switch (kind) {
+      case SubclassResultKind.EMPTY:
         return null;
-      case SimpleSubclassResult.exact1:
+      case SubclassResultKind.EXACT1:
         return cls1;
-      case SimpleSubclassResult.exact2:
+      case SubclassResultKind.EXACT2:
         return cls2;
-      case SimpleSubclassResult.subclass1:
+      case SubclassResultKind.SUBCLASS1:
         return cls1;
-      case SimpleSubclassResult.subclass2:
+      case SubclassResultKind.SUBCLASS2:
         return cls2;
-      case SimpleSubclassResult.subtype1:
+      case SubclassResultKind.SUBTYPE1:
         return cls1;
-      case SimpleSubclassResult.subtype2:
+      case SubclassResultKind.SUBTYPE2:
         return cls2;
-      case SetSubclassResult():
+      case SubclassResultKind.SET:
+      default:
         return null;
     }
   }
@@ -620,102 +622,82 @@ testCommonSubclasses() async {
     SubclassResult result2 =
         closedWorld.classHierarchy.commonSubclasses(cls2, query2, cls1, query1);
     Expect.equals(
-        toClassQuery(result1, cls1, query1, cls2, query2),
-        toClassQuery(result2, cls2, query2, cls1, query1),
+        toClassQuery(result1.kind, cls1, query1, cls2, query2),
+        toClassQuery(result2.kind, cls2, query2, cls1, query1),
         "Asymmetric results for ($cls1,$query1) vs ($cls2,$query2):"
         "\n a vs b: $result1\n b vs a: $result2");
     Expect.equals(
-        toClassEntity(result1, cls1, query1, cls2, query2),
-        toClassEntity(result2, cls2, query2, cls1, query1),
+        toClassEntity(result1.kind, cls1, query1, cls2, query2),
+        toClassEntity(result2.kind, cls2, query2, cls1, query1),
         "Asymmetric results for ($cls1,$query1) vs ($cls2,$query2):"
         "\n a vs b: $result1\n b vs a: $result2");
-    switch (expectedResult) {
-      case SimpleSubclassResult():
-        Expect.equals(
-            expectedResult,
-            result1,
-            "Unexpected results for ($cls1,$query1) vs ($cls2,$query2):"
-            "\n expected: $expectedResult\n actual: $result1");
-      case SetSubclassResult():
-        Expect.type<SetSubclassResult>(result1);
-        Expect.type<SetSubclassResult>(result2);
-        result1 as SetSubclassResult;
-        result2 as SetSubclassResult;
-        Expect.setEquals(
-            result1.classes,
-            result2.classes,
-            "Asymmetric results for ($cls1,$query1) vs ($cls2,$query2):"
-            "\n a vs b: $result1\n b vs a: $result2");
-        Expect.setEquals(
-            expectedResult.classes,
-            result1.classes,
-            "Unexpected results for ($cls1,$query1) vs ($cls2,$query2):"
-            "\n expected: $expectedResult\n actual: $result1");
+    Expect.equals(
+        expectedResult.kind,
+        result1.kind,
+        "Unexpected results for ($cls1,$query1) vs ($cls2,$query2):"
+        "\n expected: $expectedResult\n actual: $result1");
+    if (expectedResult.kind == SubclassResultKind.SET) {
+      Expect.setEquals(
+          result1.classes,
+          result2.classes,
+          "Asymmetric results for ($cls1,$query1) vs ($cls2,$query2):"
+          "\n a vs b: $result1\n b vs a: $result2");
+      Expect.setEquals(
+          expectedResult.classes,
+          result1.classes,
+          "Unexpected results for ($cls1,$query1) vs ($cls2,$query2):"
+          "\n expected: $expectedResult\n actual: $result1");
     }
   }
 
-  check(A, ClassQuery.EXACT, A, ClassQuery.EXACT, SimpleSubclassResult.exact1);
+  check(A, ClassQuery.EXACT, A, ClassQuery.EXACT, SubclassResult.EXACT1);
+  check(A, ClassQuery.EXACT, A, ClassQuery.SUBCLASS, SubclassResult.EXACT1);
+  check(A, ClassQuery.EXACT, A, ClassQuery.SUBTYPE, SubclassResult.EXACT1);
   check(
-      A, ClassQuery.EXACT, A, ClassQuery.SUBCLASS, SimpleSubclassResult.exact1);
+      A, ClassQuery.SUBCLASS, A, ClassQuery.SUBCLASS, SubclassResult.SUBCLASS1);
   check(
-      A, ClassQuery.EXACT, A, ClassQuery.SUBTYPE, SimpleSubclassResult.exact1);
-  check(A, ClassQuery.SUBCLASS, A, ClassQuery.SUBCLASS,
-      SimpleSubclassResult.subclass1);
-  check(A, ClassQuery.SUBCLASS, A, ClassQuery.SUBTYPE,
-      SimpleSubclassResult.subclass1);
-  check(A, ClassQuery.SUBTYPE, A, ClassQuery.SUBTYPE,
-      SimpleSubclassResult.subtype1);
+      A, ClassQuery.SUBCLASS, A, ClassQuery.SUBTYPE, SubclassResult.SUBCLASS1);
+  check(A, ClassQuery.SUBTYPE, A, ClassQuery.SUBTYPE, SubclassResult.SUBTYPE1);
 
-  check(A, ClassQuery.EXACT, B, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(
-      A, ClassQuery.EXACT, B, ClassQuery.SUBCLASS, SimpleSubclassResult.empty);
-  check(
-      A, ClassQuery.SUBCLASS, B, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(A, ClassQuery.EXACT, B, ClassQuery.SUBTYPE, SimpleSubclassResult.empty);
-  check(A, ClassQuery.SUBTYPE, B, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(A, ClassQuery.SUBCLASS, B, ClassQuery.SUBCLASS,
-      SimpleSubclassResult.empty);
-  check(A, ClassQuery.SUBCLASS, B, ClassQuery.SUBTYPE, SetSubclassResult([G]));
-  check(A, ClassQuery.SUBTYPE, B, ClassQuery.SUBCLASS, SetSubclassResult([J]));
+  check(A, ClassQuery.EXACT, B, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(A, ClassQuery.EXACT, B, ClassQuery.SUBCLASS, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBCLASS, B, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(A, ClassQuery.EXACT, B, ClassQuery.SUBTYPE, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBTYPE, B, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBCLASS, B, ClassQuery.SUBCLASS, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBCLASS, B, ClassQuery.SUBTYPE, SubclassResult([G]));
+  check(A, ClassQuery.SUBTYPE, B, ClassQuery.SUBCLASS, SubclassResult([J]));
   check(A, ClassQuery.SUBTYPE, B, ClassQuery.SUBTYPE,
-      SetSubclassResult([F, G, I, J]));
+      SubclassResult([F, G, I, J]));
 
-  check(A, ClassQuery.EXACT, C, ClassQuery.EXACT, SimpleSubclassResult.empty);
+  check(A, ClassQuery.EXACT, C, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(A, ClassQuery.EXACT, C, ClassQuery.SUBCLASS, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBCLASS, C, ClassQuery.EXACT, SubclassResult.EXACT2);
+  check(A, ClassQuery.EXACT, C, ClassQuery.SUBTYPE, SubclassResult.EMPTY);
+  check(A, ClassQuery.SUBTYPE, C, ClassQuery.EXACT, SubclassResult.EXACT2);
   check(
-      A, ClassQuery.EXACT, C, ClassQuery.SUBCLASS, SimpleSubclassResult.empty);
+      A, ClassQuery.SUBCLASS, C, ClassQuery.SUBCLASS, SubclassResult.SUBCLASS2);
+  check(A, ClassQuery.SUBCLASS, C, ClassQuery.SUBTYPE, SubclassResult([C]));
   check(
-      A, ClassQuery.SUBCLASS, C, ClassQuery.EXACT, SimpleSubclassResult.exact2);
-  check(A, ClassQuery.EXACT, C, ClassQuery.SUBTYPE, SimpleSubclassResult.empty);
-  check(
-      A, ClassQuery.SUBTYPE, C, ClassQuery.EXACT, SimpleSubclassResult.exact2);
-  check(A, ClassQuery.SUBCLASS, C, ClassQuery.SUBCLASS,
-      SimpleSubclassResult.subclass2);
-  check(A, ClassQuery.SUBCLASS, C, ClassQuery.SUBTYPE, SetSubclassResult([C]));
-  check(A, ClassQuery.SUBTYPE, C, ClassQuery.SUBCLASS,
-      SimpleSubclassResult.subclass2);
-  check(A, ClassQuery.SUBTYPE, C, ClassQuery.SUBTYPE,
-      SimpleSubclassResult.subtype2);
+      A, ClassQuery.SUBTYPE, C, ClassQuery.SUBCLASS, SubclassResult.SUBCLASS2);
+  check(A, ClassQuery.SUBTYPE, C, ClassQuery.SUBTYPE, SubclassResult.SUBTYPE2);
 
-  check(B, ClassQuery.EXACT, C, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(
-      B, ClassQuery.EXACT, C, ClassQuery.SUBCLASS, SimpleSubclassResult.empty);
-  check(
-      B, ClassQuery.SUBCLASS, C, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(B, ClassQuery.EXACT, C, ClassQuery.SUBTYPE, SimpleSubclassResult.empty);
-  check(B, ClassQuery.SUBTYPE, C, ClassQuery.EXACT, SimpleSubclassResult.empty);
-  check(B, ClassQuery.SUBCLASS, C, ClassQuery.SUBCLASS,
-      SimpleSubclassResult.empty);
-  check(B, ClassQuery.SUBCLASS, C, ClassQuery.SUBTYPE, SetSubclassResult([]));
-  check(B, ClassQuery.SUBTYPE, C, ClassQuery.SUBCLASS, SetSubclassResult([G]));
-  check(
-      B, ClassQuery.SUBTYPE, C, ClassQuery.SUBTYPE, SetSubclassResult([F, G]));
+  check(B, ClassQuery.EXACT, C, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(B, ClassQuery.EXACT, C, ClassQuery.SUBCLASS, SubclassResult.EMPTY);
+  check(B, ClassQuery.SUBCLASS, C, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(B, ClassQuery.EXACT, C, ClassQuery.SUBTYPE, SubclassResult.EMPTY);
+  check(B, ClassQuery.SUBTYPE, C, ClassQuery.EXACT, SubclassResult.EMPTY);
+  check(B, ClassQuery.SUBCLASS, C, ClassQuery.SUBCLASS, SubclassResult.EMPTY);
+  check(B, ClassQuery.SUBCLASS, C, ClassQuery.SUBTYPE, SubclassResult([]));
+  check(B, ClassQuery.SUBTYPE, C, ClassQuery.SUBCLASS, SubclassResult([G]));
+  check(B, ClassQuery.SUBTYPE, C, ClassQuery.SUBTYPE, SubclassResult([F, G]));
 }
 
 testLiveMembers() async {
   final env = await TypeEnvironment.create(r"""
       class A { int a() => 1; }
 
-      mixin B { int b(); }
+      abstract class B { int b(); }
       class C with B { int b() => 2; }
 
       mixin D { int d(); }

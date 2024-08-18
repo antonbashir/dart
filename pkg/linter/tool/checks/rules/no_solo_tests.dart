@@ -29,25 +29,17 @@ test_myTest() async {
 ''';
 
 class NoSoloTests extends LintRule {
-  static const LintCode code = LintCode('no_solo_tests', _desc,
-      correctionMessage:
-          "Try removing the 'soloTest' annotation or 'solo_' prefix.",
-      hasPublishedDocs: true);
-
   NoSoloTests()
       : super(
             name: 'no_solo_tests',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.errors});
-
-  @override
-  LintCode get lintCode => code;
+            group: Group.errors);
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    if (context.definingUnit.unit.inTestDir) {
+    if (context.inTestDir(context.currentUnit.unit)) {
       var visitor = _Visitor(this);
       registry.addMethodDeclaration(this, visitor);
     }
@@ -62,8 +54,7 @@ class _Visitor extends SimpleAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     // TODO(pq): we *could* ensure we're in a reflective test too.
-    // Handle both 'solo_test_' and 'solo_fail_'.
-    if (node.name.lexeme.startsWith('solo_')) {
+    if (node.name.lexeme.startsWith('solo_test_')) {
       rule.reportLintForToken(node.name);
       return;
     }

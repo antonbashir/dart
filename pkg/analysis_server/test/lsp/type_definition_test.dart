@@ -19,7 +19,7 @@ void main() {
 @reflectiveTest
 class TypeDefinitionTest extends AbstractLspAnalysisServerTest {
   Uri get sdkCoreUri {
-    var sdkCorePath = convertPath('/sdk/lib/core/core.dart');
+    final sdkCorePath = convertPath('/sdk/lib/core/core.dart');
     return pathContext.toUri(sdkCorePath);
   }
 
@@ -31,16 +31,16 @@ class TypeDefinitionTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_currentFile() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class /*[0*/A/*0]*/ {}
 
 final /*[1*/a^/*1]*/ = A();
 ''');
 
-    var ranges = code.ranges.ranges;
-    var targetRange = ranges[0];
-    var originRange = ranges[1];
-    var result = await _getResult(code);
+    final ranges = code.ranges.ranges;
+    final targetRange = ranges[0];
+    final originRange = ranges[1];
+    final result = await _getResult(code);
     expect(result.originSelectionRange, originRange);
     expect(result.targetUri, mainFileUri);
     expect(result.targetSelectionRange, targetRange);
@@ -48,17 +48,17 @@ final /*[1*/a^/*1]*/ = A();
   }
 
   Future<void> test_doubleLiteral() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a = [!12^.3!];
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'double');
   }
 
   Future<void> test_getter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class A {
   String get aaa => '';
 }
@@ -69,17 +69,17 @@ void f() {
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_intLiteral() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a = [!12^3!];
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'int');
   }
@@ -89,42 +89,42 @@ const a = [!12^3!];
   Future<void> test_location() async {
     setLocationLinkSupport(false);
 
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a^ = 'test string';
 ''');
 
-    var result = await _getLocationResult(code);
+    final result = await _getLocationResult(code);
     expect(result.uri, sdkCoreUri);
     _expectNameRange(result.range, 'String');
   }
 
   Future<void> test_nonDartFile() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a = '^';
 ''');
 
     newFile(pubspecFilePath, code.code);
     await initialize();
-    var results =
+    final results =
         await getTypeDefinitionAsLocation(mainFileUri, code.position.position);
     expect(results, isEmpty);
   }
 
   Future<void> test_otherFile() async {
-    var otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
-    var otherFileUri = pathContext.toUri(otherFilePath);
-    var code = TestCode.parse('''
+    final otherFilePath = join(projectFolderPath, 'lib', 'other.dart');
+    final otherFileUri = pathContext.toUri(otherFilePath);
+    final code = TestCode.parse('''
 import 'other.dart';
 
 final [!a^!] = A();
 ''');
 
-    var otherCode = TestCode.parse('''
+    final otherCode = TestCode.parse('''
 class [!A!] {}
 ''');
 
     newFile(otherFilePath, otherCode.code);
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     expect(result.targetUri, otherFileUri);
     expect(result.targetSelectionRange, otherCode.range.range);
@@ -132,31 +132,31 @@ class [!A!] {}
   }
 
   Future<void> test_parameter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f(String a) {
   f([!'te^st'!]);
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_parameterName() async {
-    var code = TestCode.parse('''
-void f({String? a}) {
+    final code = TestCode.parse('''
+void f({String a}) {
   f([!a^!]: 'test');
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_setter() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 class A {
   set aaa(String value) {}
 }
@@ -167,138 +167,84 @@ void f() {
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_stringLiteral() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a = [!'te^st string'!];
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_type() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 [!St^ring!] a = '';
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_unopenedFile() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const a = [!'^'!];
 ''');
 
     newFile(mainFilePath, code.code);
-    var result = await _getResult(code, inOpenFile: false);
+    final result = await _getResult(code, inOpenFile: false);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_variableDeclaration() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 const [!a^!] = 'test string';
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
-  }
-
-  Future<void> test_variableDeclaration_forInLoop() async {
-    var code = TestCode.parse('''
-void f() {
-  for (final [!a^!] in ['']) {
-  }
-}
-''');
-
-    var result = await _getResult(code);
-    expect(result.originSelectionRange, code.range.range);
-    _expectSdkCoreType(result, 'String');
-  }
-
-  Future<void> test_variableDeclaration_forLoop() async {
-    var code = TestCode.parse('''
-void f() {
-  for (var [!i^!] = 0; i < 1; i++) {
-  }
-}
-''');
-
-    var result = await _getResult(code);
-    expect(result.originSelectionRange, code.range.range);
-    _expectSdkCoreType(result, 'int');
   }
 
   Future<void> test_variableDeclaration_inferredType() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 var [!a^!] = 'test string';
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
 
   Future<void> test_variableReference() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
   const a = 'test string';
   print([!a^!]);
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
-  }
-
-  Future<void> test_variableReference_forInLoop() async {
-    var code = TestCode.parse('''
-void f() {
-  for (final a in ['']) {
-    print([!a^!]);
-  }
-}
-''');
-
-    var result = await _getResult(code);
-    expect(result.originSelectionRange, code.range.range);
-    _expectSdkCoreType(result, 'String');
-  }
-
-  Future<void> test_variableReference_forLoop() async {
-    var code = TestCode.parse('''
-void f() {
-  for (var i = 0; i < 1; i++) {
-    print([!i^!]);
-  }
-}
-''');
-
-    var result = await _getResult(code);
-    expect(result.originSelectionRange, code.range.range);
-    _expectSdkCoreType(result, 'int');
   }
 
   Future<void> test_variableReference_inferredType() async {
-    var code = TestCode.parse('''
+    final code = TestCode.parse('''
 void f() {
   var a = 'test string';
   print([!a^!]);
 }
 ''');
 
-    var result = await _getResult(code);
+    final result = await _getResult(code);
     expect(result.originSelectionRange, code.range.range);
     _expectSdkCoreType(result, 'String');
   }
@@ -343,7 +289,7 @@ void f() {
   Future<Location> _getLocationResult(TestCode code) async {
     await initialize();
     await openFile(mainFileUri, code.code);
-    var results =
+    final results =
         await getTypeDefinitionAsLocation(mainFileUri, code.position.position);
     return results.single;
   }
@@ -357,7 +303,7 @@ void f() {
     if (inOpenFile) {
       await openFile(fileUri, code.code);
     }
-    var results = await getTypeDefinitionAsLocationLinks(
+    final results = await getTypeDefinitionAsLocationLinks(
       mainFileUri,
       code.position.position,
     );

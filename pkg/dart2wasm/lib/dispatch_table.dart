@@ -4,15 +4,17 @@
 
 import 'dart:math' show min;
 
+import 'package:dart2wasm/class_info.dart';
+import 'package:dart2wasm/param_info.dart';
+import 'package:dart2wasm/reference_extensions.dart';
+import 'package:dart2wasm/translator.dart';
+
 import 'package:kernel/ast.dart';
+
 import 'package:vm/metadata/procedure_attributes.dart';
 import 'package:vm/metadata/table_selector.dart';
-import 'package:wasm_builder/wasm_builder.dart' as w;
 
-import 'class_info.dart';
-import 'param_info.dart';
-import 'reference_extensions.dart';
-import 'translator.dart';
+import 'package:wasm_builder/wasm_builder.dart' as w;
 
 /// Information for a dispatch table selector.
 ///
@@ -42,27 +44,29 @@ class SelectorInfo {
   /// Does this method have any tear-off uses?
   bool hasTearOffUses = false;
 
-  /// Targets for all concrete classes implementing this selector.
-  ///
-  /// As a subclass hierarchy often inherits the same target, we associate the
-  /// target with a range of class ids. The ranges are non-empty,
-  /// non-overlapping and sorted in ascending order.
-  late final List<({Range range, Reference target})> targetRanges;
-  late final Set<Reference> targetSet =
-      targetRanges.map((e) => e.target).toSet();
-  late final List<({Range range, Reference target})> staticDispatchRanges;
+  /// Maps class IDs to the selector's member in the class. The member can be
+  /// abstract.
+  final Map<int, Reference> targets = {};
 
   /// Wasm function type for the selector.
   ///
   /// This should be read after all targets have been added to the selector.
   late final w.FunctionType signature = _computeSignature();
 
-  /// Number of concrete classes that provide this selector.
-  late final int concreteClasses;
+  /// IDs of classes that implement the member. This does not include abstract
+  /// classes.
+  late final List<int> classIds;
+
+  /// Number of non-abstract references in [targets].
+  late final int targetCount;
+
+  /// When [targetCount] is 1, this holds the only non-abstract target of the
+  /// selector.
+  late final Reference? singularTarget;
 
   /// Offset of the selector in the dispatch table.
   ///
-  /// For a class in [targetRanges], `class ID + offset` gives the offset of the
+  /// For a class in [targets], `class ID + offset` gives the offset of the
   /// class member for this selector.
   int? offset;
 
@@ -88,7 +92,7 @@ class SelectorInfo {
         List.generate(1 + paramInfo.paramCount, (_) => {});
     List<Set<w.ValueType>> outputSets = List.generate(returnCount, (_) => {});
     List<bool> ensureBoxed = List.filled(1 + paramInfo.paramCount, false);
-    for (final (range: _, :target) in targetRanges) {
+    targets.forEach((classId, target) {
       Member member = target.asMember;
       DartType receiver =
           InterfaceType(member.enclosingClass!, Nullability.nonNullable);
@@ -99,7 +103,7 @@ class SelectorInfo {
         if (target.isImplicitGetter) {
           positional = const [];
           named = const {};
-          returns = [translator.typeOfReturnValue(member)];
+          returns = [member.getterType];
         } else {
           positional = [member.setterType];
           named = const {};
@@ -112,19 +116,39 @@ class SelectorInfo {
           named = const {};
           returns = [function.computeFunctionType(Nullability.nonNullable)];
         } else {
-          final typeForParam = translator.typeOfParameterVariable;
+          DartType typeForParam(VariableDeclaration param, int index) {
+            if (param.isCovariantByClass) {
+              // The type argument of a static type is not required to conform
+              // to the bounds of the type variable. Thus, any object can be
+              // passed to a parameter that is covariant by class.
+              return translator.coreTypes.objectNullableRawType;
+            }
+            if (param.isCovariantByDeclaration) {
+              if (hasTearOffUses) {
+                // The type of a covariant parameter in the runtime function
+                // type of a tear-off is always `Object?`. Thus, if the method
+                // has any tear-off uses, any object could be passed into the
+                // parameter.
+                return translator.coreTypes.objectNullableRawType;
+              }
+              if (!translator.options.omitTypeChecks) {
+                // A runtime type check of the parameter will be generated.
+                // The value therefore must be boxed.
+                ensureBoxed[index] = true;
+              }
+            }
+            return param.type;
+          }
+
           positional = [
             for (int i = 0; i < function.positionalParameters.length; i++)
-              typeForParam(function.positionalParameters[i],
-                  i < function.requiredParameterCount)
+              typeForParam(function.positionalParameters[i], 1 + i)
           ];
           named = {
             for (VariableDeclaration param in function.namedParameters)
-              param.name!: typeForParam(param, param.isRequired)
+              param.name!: typeForParam(param, 1 + nameIndex[param.name!]!)
           };
-          returns = target.isSetter
-              ? const []
-              : [translator.typeOfReturnValue(member)];
+          returns = target.isSetter ? const [] : [function.returnType];
         }
       }
       assert(returns.length <= outputSets.length);
@@ -151,7 +175,7 @@ class SelectorInfo {
           outputSets[i].add(translator.topInfo.nullableType);
         }
       }
-    }
+    });
 
     List<w.ValueType> typeParameters = List.filled(paramInfo.typeParamCount,
         translator.classInfo[translator.typeClass]!.nonNullableType);
@@ -168,13 +192,6 @@ class SelectorInfo {
   }
 
   w.ValueType _upperBound(Set<w.ValueType> types, {required bool ensureBoxed}) {
-    if (types.isEmpty) {
-      // This happens if the selector doesn't have any targets. Any call site of
-      // such a selector is unreachable. Though such call sites still have to
-      // evaluate receiver and arguments. Doing so requires the signature. So we
-      // create a dummy signature with top types.
-      return translator.topInfo.nullableType;
-    }
     if (!ensureBoxed && types.length == 1 && types.single.isPrimitive) {
       // Unboxed primitive.
       return types.single;
@@ -313,25 +330,24 @@ class DispatchTable {
   void build() {
     // Collect class/selector combinations
 
-    // Maps class to selector IDs of the class
-    final selectorsInClass = <Class, Map<SelectorInfo, Reference>>{};
-    final staticDispatchPragmas = <Reference>{};
+    // Maps class IDs to selector IDs of the class
+    List<Set<int>> selectorsInClass = [];
 
     // Add classes to selector targets for their members
-    for (ClassInfo info in translator.classesSupersFirst) {
-      final Class cls = info.cls ?? translator.coreTypes.objectClass;
-      final Map<SelectorInfo, Reference> selectors;
+    for (ClassInfo info in translator.classes) {
+      Set<int> selectorIds = {};
+      final ClassInfo? superInfo = info.superInfo;
 
       // Add the class to its inherited members' selectors. Skip `_WasmBase`:
       // it's defined as a Dart class (in `dart._wasm` library) but it's special
       // and does not inherit from `Object`.
-      final ClassInfo? superInfo = info.superInfo;
-      if (superInfo == null || cls == translator.wasmTypesBaseClass) {
-        selectors = {};
-      } else {
-        final Class superCls =
-            superInfo.cls ?? translator.coreTypes.objectClass;
-        selectors = Map.of(selectorsInClass[superCls]!);
+      if (superInfo != null && info.cls != translator.wasmTypesBaseClass) {
+        int superId = superInfo.classId;
+        selectorIds = Set.of(selectorsInClass[superId]);
+        for (int selectorId in selectorIds) {
+          SelectorInfo selector = _selectorInfo[selectorId]!;
+          selector.targets[info.classId] = selector.targets[superId]!;
+        }
       }
 
       /// Add a method (or getter, setter) of the current class ([info]) to
@@ -342,127 +358,73 @@ class DispatchTable {
       /// for the class. Override that target if [reference] is a not abstract.
       /// If it's abstract, then the superclass's method will be called, so do
       /// not update the target.
-      void addMember(Reference reference, bool staticDispatch) {
+      void addMember(Reference reference) {
         SelectorInfo selector = _createSelectorForTarget(reference);
         if (reference.asMember.isAbstract) {
           // Reference is abstract, do not override inherited concrete member
-          selectors[selector] ??= reference;
+          selector.targets[info.classId] ??= reference;
         } else {
           // Reference is concrete, override inherited member
-          selectors[selector] = reference;
-
-          if (staticDispatch) staticDispatchPragmas.add(reference);
+          selector.targets[info.classId] = reference;
         }
+        selectorIds.add(selector.id);
       }
 
       // Add the class to its non-static members' selectors. If `info.cls` is
       // `null`, that means [info] represents the `#Top` type, which is not a
       // Dart class but has the members of `Object`.
-      for (Member member in cls.members) {
+      for (Member member
+          in info.cls?.members ?? translator.coreTypes.objectClass.members) {
         // Skip static members
         if (!member.isInstanceMember) {
           continue;
         }
-        final bool staticDispatch =
-            translator.getPragma<bool>(member, 'wasm:static-dispatch', true) ??
-                false;
         if (member is Field) {
-          addMember(member.getterReference, staticDispatch);
-          if (member.hasSetter) {
-            addMember(member.setterReference!, staticDispatch);
-          }
+          addMember(member.getterReference);
+          if (member.hasSetter) addMember(member.setterReference!);
         } else if (member is Procedure) {
-          addMember(member.reference, staticDispatch);
+          addMember(member.reference);
           // `hasTearOffUses` can be true for operators as well, even though
           // it's not possible to tear-off an operator. (no syntax for it)
           if (member.kind == ProcedureKind.Method &&
               _procedureAttributeMetadata[member]!.hasTearOffUses) {
-            addMember(member.tearOffReference, staticDispatch);
+            addMember(member.tearOffReference);
           }
         }
       }
-      selectorsInClass[cls] = selectors;
+
+      selectorsInClass.add(selectorIds);
     }
 
-    final selectorTargets = <SelectorInfo, Map<int, Reference>>{};
-    final maxConcreteClassId = translator.classIdNumbering.maxConcreteClassId;
-    for (int classId = 0; classId < maxConcreteClassId; ++classId) {
-      final cls = translator.classes[classId].cls;
-      if (cls != null) {
-        selectorsInClass[cls]!.forEach((selectorInfo, target) {
-          if (!target.asMember.isAbstract) {
-            selectorTargets.putIfAbsent(selectorInfo, () => {})[classId] =
-                target;
-          }
-        });
-      }
-    }
-
-    selectorTargets
-        .forEach((SelectorInfo selector, Map<int, Reference> targets) {
-      selector.concreteClasses = targets.length;
-
-      final List<({Range range, Reference target})> ranges = targets.entries
-          .map((entry) =>
-              (range: Range(entry.key, entry.key), target: entry.value))
+    // Build lists of class IDs and count targets
+    for (SelectorInfo selector in _selectorInfo.values) {
+      selector.classIds = selector.targets.keys
+          .where((classId) =>
+              !(translator.classes[classId].cls?.isAbstract ?? true))
           .toList()
-        ..sort((a, b) => a.range.start.compareTo(b.range.start));
-      assert(ranges.isNotEmpty);
-      int writeIndex = 0;
-      for (int readIndex = 1; readIndex < ranges.length; ++readIndex) {
-        final current = ranges[writeIndex];
-        final next = ranges[readIndex];
-        assert(next.range.length == 1);
-        if ((current.range.end + 1) == next.range.start &&
-            identical(current.target, next.target)) {
-          ranges[writeIndex] = (
-            range: Range(current.range.start, next.range.end),
-            target: current.target
-          );
-        } else {
-          ranges[++writeIndex] = next;
-        }
-      }
-      ranges.length = writeIndex + 1;
-
-      final staticDispatchRanges = (translator
-                  .options.polymorphicSpecialization ||
-              ranges.length == 1)
-          ? ranges
-          : ranges
-              .where((range) => staticDispatchPragmas.contains(range.target))
-              .toList();
-      selector.targetRanges = ranges;
-      selector.staticDispatchRanges = staticDispatchRanges;
-    });
-
-    _selectorInfo.forEach((_, selector) {
-      if (!selectorTargets.containsKey(selector)) {
-        selector.concreteClasses = 0;
-        selector.targetRanges = [];
-      }
-    });
+        ..sort();
+      Set<Reference> targets =
+          selector.targets.values.where((t) => !t.asMember.isAbstract).toSet();
+      selector.targetCount = targets.length;
+      selector.singularTarget = targets.length == 1 ? targets.single : null;
+    }
 
     // Assign selector offsets
 
-    bool isUsedViaDispatchTableCall(SelectorInfo selector) {
-      // Special case for `objectNoSuchMethod`: we introduce instance
-      // invocations of `objectNoSuchMethod` in dynamic calls, so keep it alive
-      // even if there was no references to it from the Dart code.
-      if (selector.paramInfo.member! == translator.objectNoSuchMethod) {
-        return true;
-      }
-      if (selector.callCount == 0) return false;
-      if (selector.targetRanges.length <= 1) return false;
-      if (selector.staticDispatchRanges.length ==
-          selector.targetRanges.length) {
-        return false;
-      }
-      return true;
-    }
+    /// Whether the selector will be used in an instance invocation.
+    ///
+    /// If not, then we don't add the selector to the dispatch table and don't
+    /// assign it a dispatch table offset.
+    ///
+    /// Special case for `objectNoSuchMethod`: we introduce instance
+    /// invocations of `objectNoSuchMethod` in dynamic calls, so keep it alive
+    /// even if there was no references to it from the Dart code.
+    bool needsDispatch(SelectorInfo selector) =>
+        (selector.callCount > 0 && selector.targetCount > 1) ||
+        (selector.paramInfo.member! == translator.objectNoSuchMethod);
 
-    final List<SelectorInfo> selectors =
-        selectorTargets.keys.where(isUsedViaDispatchTableCall).toList();
+    List<SelectorInfo> selectors =
+        _selectorInfo.values.where(needsDispatch).toList();
 
     // Sort the selectors based on number of targets and number of use sites.
     // This is a heuristic to keep the table small.
@@ -474,25 +436,44 @@ class DispatchTable {
     // more used ones first, as the smaller selector offset will have a smaller
     // instruction encoding.
     int selectorSortWeight(SelectorInfo selector) =>
-        selector.concreteClasses * 10 + selector.callCount;
+        selector.classIds.length * 10 + selector.callCount;
 
     selectors.sort((a, b) => selectorSortWeight(b) - selectorSortWeight(a));
 
-    final rows = <Row<Reference>>[];
-    for (final selector in selectors) {
-      final rowValues = <({int index, Reference value})>[];
-      for (final (:range, :target) in selector.targetRanges) {
-        for (int classId = range.start; classId <= range.end; ++classId) {
-          rowValues.add((index: classId, value: target));
+    int firstAvailable = 0;
+    _table = [];
+    bool first = true;
+    for (SelectorInfo selector in selectors) {
+      int offset = first ? 0 : firstAvailable - selector.classIds.first;
+      first = false;
+      bool fits;
+      do {
+        fits = true;
+        for (int classId in selector.classIds) {
+          int entry = offset + classId;
+          if (entry >= _table.length) {
+            // Fits
+            break;
+          }
+          if (_table[entry] != null) {
+            fits = false;
+            break;
+          }
         }
+        if (!fits) offset++;
+      } while (!fits);
+      selector.offset = offset;
+      for (int classId in selector.classIds) {
+        int entry = offset + classId;
+        while (_table.length <= entry) {
+          _table.add(null);
+        }
+        assert(_table[entry] == null);
+        _table[entry] = selector.targets[classId];
       }
-      rowValues.sort((a, b) => a.index.compareTo(b.index));
-      rows.add(Row(rowValues));
-    }
-
-    _table = buildRowDisplacementTable<Reference>(rows);
-    for (int i = 0; i < rows.length; ++i) {
-      selectors[i].offset = rows[i].offset;
+      while (firstAvailable < _table.length && _table[firstAvailable] != null) {
+        firstAvailable++;
+      }
     }
 
     wasmTable = m.tables.define(w.RefType.func(nullable: true), _table.length);
@@ -509,74 +490,4 @@ class DispatchTable {
       }
     }
   }
-}
-
-/// Build a row-displacement table based on fitting the [rows].
-///
-/// The returned list is the resulting row displacement table with `null`
-/// entries representing unused space.
-///
-/// The offset of all [Row]s will be initialized.
-List<V?> buildRowDisplacementTable<V extends Object>(List<Row<V>> rows,
-    {int firstAvailable = 0}) {
-  final table = <V?>[];
-  for (final row in rows) {
-    final values = row.values;
-    int offset = firstAvailable - values.first.index;
-    bool fits;
-    do {
-      fits = true;
-      for (final value in values) {
-        final int entry = offset + value.index;
-        if (entry >= table.length) {
-          // Fits
-          break;
-        }
-        if (table[entry] != null) {
-          fits = false;
-          break;
-        }
-      }
-      if (!fits) offset++;
-    } while (!fits);
-    row.offset = offset;
-    for (final (:index, :value) in values) {
-      final int tableIndex = offset + index;
-      while (table.length <= tableIndex) {
-        table.add(null);
-      }
-      assert(table[tableIndex] == null);
-      table[tableIndex] = value;
-    }
-    while (firstAvailable < table.length && table[firstAvailable] != null) {
-      firstAvailable++;
-    }
-  }
-  return table;
-}
-
-class Row<V extends Object> {
-  /// The values of the table row, represented sparsely as (index, value) tuples.
-  final List<({int index, V value})> values;
-
-  /// The given [values] must not be empty and should be sorted by index.
-  Row(this.values) {
-    assert(values.isNotEmpty);
-    assert(() {
-      int previous = values.first.index;
-      for (final value in values.skip(1)) {
-        if (value.index <= previous) return false;
-        previous = value.index;
-      }
-      return true;
-    }());
-  }
-
-  /// The selected offset of this row.
-  late final int offset;
-
-  int get width => values.last.index - values.first.index + 1;
-  int get holes => width - values.length;
-  int get density => (100 * values.length) ~/ width;
-  int get sparsity => 100 - density;
 }

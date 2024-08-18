@@ -2,9 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/// @docImport 'string_scanner.dart';
-/// @docImport 'utf8_bytes_scanner.dart';
-/// @docImport '../parser/class_member_parser.dart';
 library _fe_analyzer_shared.scanner.abstract_scanner;
 
 import 'dart:collection' show ListMixin;
@@ -29,7 +26,6 @@ import '../messages/codes.dart'
         messageExpectedHexDigit,
         messageMissingExponent,
         messageUnexpectedDollarInString,
-        messageUnexpectedSeparatorInNumber,
         messageUnterminatedComment;
 
 import '../util/link.dart' show Link;
@@ -663,7 +659,7 @@ abstract class AbstractScanner implements Scanner {
   /**
    * This method is called to discard '<' from the "grouping" stack.
    *
-   * [ClassMemberParser.skipExpression] relies on the fact that we do not
+   * [PartialParser.skipExpression] relies on the fact that we do not
    * create groups for stuff like:
    * [:a = b < c, d = e > f:].
    *
@@ -1253,49 +1249,20 @@ abstract class AbstractScanner implements Scanner {
 
   int tokenizeNumber(int next) {
     int start = scanOffset;
-    bool hasSeparators = false;
-    bool previousWasSeparator = false;
     while (true) {
       next = advance();
       if ($0 <= next && next <= $9) {
-        previousWasSeparator = false;
-        continue;
-      } else if (identical(next, $_)) {
-        hasSeparators = true;
-        previousWasSeparator = true;
         continue;
       } else if (identical(next, $e) || identical(next, $E)) {
-        if (previousWasSeparator) {
-          // Not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
-        return tokenizeFractionPart(next, start, hasSeparators);
+        return tokenizeFractionPart(next, start);
       } else {
         if (identical(next, $PERIOD)) {
-          if (previousWasSeparator) {
-            // Not allowed.
-            prependErrorToken(new UnterminatedToken(
-                messageUnexpectedSeparatorInNumber, start, stringOffset));
-          }
           int nextnext = peek();
           if ($0 <= nextnext && nextnext <= $9) {
-            return tokenizeFractionPart(nextnext, start, hasSeparators);
-          } else {
-            TokenType tokenType =
-                hasSeparators ? TokenType.INT_WITH_SEPARATORS : TokenType.INT;
-            appendSubstringToken(tokenType, start, /* asciiOnly = */ true);
-            return next;
+            return tokenizeFractionPart(advance(), start);
           }
         }
-        if (previousWasSeparator) {
-          // End of the number is a separator; not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
-        TokenType tokenType =
-            hasSeparators ? TokenType.INT_WITH_SEPARATORS : TokenType.INT;
-        appendSubstringToken(tokenType, start, /* asciiOnly = */ true);
+        appendSubstringToken(TokenType.INT, start, /* asciiOnly = */ true);
         return next;
       }
     }
@@ -1313,23 +1280,12 @@ abstract class AbstractScanner implements Scanner {
     int start = scanOffset;
     next = advance(); // Advance past the $x or $X.
     bool hasDigits = false;
-    bool hasSeparators = false;
-    bool previousWasSeparator = false;
     while (true) {
       next = advance();
       if (($0 <= next && next <= $9) ||
           ($A <= next && next <= $F) ||
           ($a <= next && next <= $f)) {
         hasDigits = true;
-        previousWasSeparator = false;
-      } else if (identical(next, $_)) {
-        if (!hasDigits) {
-          // Not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
-        hasSeparators = true;
-        previousWasSeparator = true;
       } else {
         if (!hasDigits) {
           prependErrorToken(new UnterminatedToken(
@@ -1339,15 +1295,8 @@ abstract class AbstractScanner implements Scanner {
               TokenType.HEXADECIMAL, start, /* asciiOnly = */ true, "0");
           return next;
         }
-        if (previousWasSeparator) {
-          // End of the number is a separator; not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
-        TokenType tokenType = hasSeparators
-            ? TokenType.HEXADECIMAL_WITH_SEPARATORS
-            : TokenType.HEXADECIMAL;
-        appendSubstringToken(tokenType, start, /* asciiOnly = */ true);
+        appendSubstringToken(
+            TokenType.HEXADECIMAL, start, /* asciiOnly = */ true);
         return next;
       }
     }
@@ -1357,7 +1306,7 @@ abstract class AbstractScanner implements Scanner {
     int start = scanOffset;
     next = advance();
     if (($0 <= next && next <= $9)) {
-      return tokenizeFractionPart(next, start, /* hasSeparators = */ false);
+      return tokenizeFractionPart(next, start);
     } else if (identical($PERIOD, next)) {
       next = advance();
       if (identical(next, $PERIOD)) {
@@ -1379,54 +1328,23 @@ abstract class AbstractScanner implements Scanner {
     }
   }
 
-  int tokenizeFractionPart(int next, int start, bool hasSeparators) {
+  int tokenizeFractionPart(int next, int start) {
     bool done = false;
     bool hasDigit = false;
-    bool previousWasSeparator = false;
     LOOP:
     while (!done) {
       if ($0 <= next && next <= $9) {
         hasDigit = true;
-        previousWasSeparator = false;
-      } else if (identical($_, next)) {
-        if (!hasDigit) {
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
-        hasSeparators = true;
-        previousWasSeparator = true;
       } else if (identical($e, next) || identical($E, next)) {
-        if (previousWasSeparator) {
-          // Not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
         hasDigit = true;
-        previousWasSeparator = false;
         next = advance();
-        while (identical(next, $_)) {
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-          hasSeparators = true;
-          previousWasSeparator = true;
-          next = advance();
-        }
         if (identical(next, $PLUS) || identical(next, $MINUS)) {
-          previousWasSeparator = false;
           next = advance();
         }
         bool hasExponentDigits = false;
         while (true) {
           if ($0 <= next && next <= $9) {
             hasExponentDigits = true;
-            previousWasSeparator = false;
-          } else if (identical(next, $_)) {
-            if (!hasExponentDigits) {
-              prependErrorToken(new UnterminatedToken(
-                  messageUnexpectedSeparatorInNumber, start, stringOffset));
-            }
-            hasSeparators = true;
-            previousWasSeparator = true;
           } else {
             if (!hasExponentDigits) {
               appendSyntheticSubstringToken(
@@ -1439,20 +1357,10 @@ abstract class AbstractScanner implements Scanner {
           }
           next = advance();
         }
-        if (previousWasSeparator) {
-          // End of the number is a separator; not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
 
         done = true;
         continue LOOP;
       } else {
-        if (previousWasSeparator) {
-          // End of the number is a separator; not allowed.
-          prependErrorToken(new UnterminatedToken(
-              messageUnexpectedSeparatorInNumber, start, stringOffset));
-        }
         done = true;
         continue LOOP;
       }
@@ -1472,9 +1380,7 @@ abstract class AbstractScanner implements Scanner {
       appendPrecedenceToken(TokenType.PERIOD);
       return next;
     }
-    TokenType tokenType =
-        hasSeparators ? TokenType.DOUBLE_WITH_SEPARATORS : TokenType.DOUBLE;
-    appendSubstringToken(tokenType, start, /* asciiOnly = */ true);
+    appendSubstringToken(TokenType.DOUBLE, start, /* asciiOnly = */ true);
     return next;
   }
 
@@ -2205,11 +2111,14 @@ class ScannerConfiguration {
   final bool forAugmentationLibrary;
 
   const ScannerConfiguration({
-    this.enableExtensionMethods = false,
-    this.enableNonNullable = false,
-    this.enableTripleShift = false,
-    this.forAugmentationLibrary = false,
-  });
+    bool enableExtensionMethods = false,
+    bool enableNonNullable = false,
+    bool enableTripleShift = false,
+    bool forAugmentationLibrary = false,
+  })  : this.enableExtensionMethods = enableExtensionMethods,
+        this.enableNonNullable = enableNonNullable,
+        this.enableTripleShift = enableTripleShift,
+        this.forAugmentationLibrary = forAugmentationLibrary;
 }
 
 bool _isIdentifierChar(int next, bool allowDollar) {

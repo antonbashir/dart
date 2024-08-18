@@ -170,7 +170,9 @@ class ListeningSocketRegistry {
         unix_domain_sockets_(nullptr),
         mutex_() {}
 
-  ~ListeningSocketRegistry() { CloseAllSafe(); }
+  ~ListeningSocketRegistry() {
+    CloseAllSafe();
+  }
 
   static void Initialize();
 

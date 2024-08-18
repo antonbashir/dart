@@ -25,12 +25,12 @@ class SwitchExpressionTest extends DartSnippetProducerTest {
   String get prefix => SwitchExpression.prefix;
 
   Future<void> test_switch() async {
-    var code = r'''
+    final code = r'''
 void f() {
   var a = sw^
 }
     ''';
-    var expectedCode = '''
+    final expectedCode = '''
 void f() {
   var a = switch (/*[0*/expression/*0]*/) {
     /*[1*/pattern/*1]*/ => /*[2*/value/*2]*/,^
@@ -41,14 +41,14 @@ void f() {
   }
 
   Future<void> test_switch_nested() async {
-    var code = r'''
+    final code = r'''
 int f(String a, int b) {
   return switch (a) {
     _ => sw^
   };
 }
     ''';
-    var expectedCode = '''
+    final expectedCode = '''
 int f(String a, int b) {
   return switch (a) {
     _ => switch (/*[0*/expression/*0]*/) {

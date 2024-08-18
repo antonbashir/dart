@@ -66,7 +66,7 @@ class Test {
 }
 
 void main() {
-  Env env = new Env('');
+  Env env = new Env('', isNonNullableByDefault: true);
   ClassHierarchy classHierarchy =
       new ClassHierarchy(env.component, env.coreTypes);
   TypeEnvironment typeEnvironment =

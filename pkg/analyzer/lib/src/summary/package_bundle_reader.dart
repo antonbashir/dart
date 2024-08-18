@@ -102,7 +102,7 @@ class InSummaryUriResolver extends UriResolver {
     String uriString = uri.toString();
     String? summaryPath = _dataStore.uriToSummaryPath[uriString];
     if (summaryPath != null) {
-      var isLibrary = _dataStore._libraryUris.contains(uriString);
+      final isLibrary = _dataStore._libraryUris.contains(uriString);
       return InSummarySource(
         uri: uri,
         summaryPath: summaryPath,

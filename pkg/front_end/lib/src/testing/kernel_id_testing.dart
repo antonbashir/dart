@@ -2,12 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/macros/uri.dart';
 import 'package:_fe_analyzer_shared/src/testing/id.dart';
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:kernel/ast.dart';
-
-import '../base/messages.dart';
+import '../fasta/kernel/macro/macro.dart';
+import '../fasta/messages.dart';
 import 'id_testing_utils.dart';
 
 /// Identifier for a test configuration.
@@ -170,38 +169,28 @@ class KernelCompiledData<T, R> extends CompiledData<T> {
   }
 }
 
-String createMessageInLocation(
-    Map<Uri, Source> uriToSource, Uri? uri, int offset, String message,
-    {bool succinct = false}) {
-  StringBuffer sb = new StringBuffer();
-  if (uri == null) {
-    sb.write("(null uri)@$offset: $message");
-  } else {
-    Source? source = uriToSource[uri];
-    if (source == null) {
-      sb.write('$uri@$offset: $message');
-    } else {
-      if (offset >= 1) {
-        Location location = source.getLocation(uri, offset);
-        sb.write('$location: $message');
-        if (!succinct) {
-          sb.writeln('');
-          sb.writeln(source.getTextLine(location.line));
-          sb.write(' ' * (location.column - 1) + '^');
-        }
-      } else {
-        sb.write('$uri: $message');
-      }
-    }
-  }
-  return sb.toString();
-}
-
 void printMessageInLocation(
     Map<Uri, Source> uriToSource, Uri? uri, int offset, String message,
     {bool succinct = false}) {
-  print(createMessageInLocation(uriToSource, uri, offset, message,
-      succinct: succinct));
+  if (uri == null) {
+    print("(null uri)@$offset: $message");
+  } else {
+    Source? source = uriToSource[uri];
+    if (source == null) {
+      print('$uri@$offset: $message');
+    } else {
+      if (offset >= 1) {
+        Location location = source.getLocation(uri, offset);
+        print('$location: $message');
+        if (!succinct) {
+          print(source.getTextLine(location.line));
+          print(' ' * (location.column - 1) + '^');
+        }
+      } else {
+        print('$uri: $message');
+      }
+    }
+  }
 }
 
 /// Computes the [TestResult] for an id-test [testData] using the result of
@@ -226,6 +215,10 @@ Future<TestResult<T>> processCompiledResult<T, C extends TestConfig, R,
   Map<Id, ActualData<T>> globalData = <Id, ActualData<T>>{};
 
   Map<Id, ActualData<T>> actualMapForUri(Uri? uri) {
+    if (uri?.scheme == augmentationScheme) {
+      throw new UnsupportedError(
+          "Annotations are not support on augmentation uris.");
+    }
     return actualMaps.putIfAbsent(uri ?? nullUri, () => <Id, ActualData<T>>{});
   }
 
@@ -238,15 +231,14 @@ Future<TestResult<T>> processCompiledResult<T, C extends TestConfig, R,
     Map<Uri, Map<int, List<FormattedMessage>>> errorMap = {};
     for (FormattedMessage error in errors) {
       Uri? uri = error.uri;
-      bool isMacroLibrary = false;
-      if (uri != null && isMacroLibraryUri(uri)) {
-        isMacroLibrary = true;
-        uri = toOriginLibraryUri(uri);
+      bool isAugmentation = uri?.scheme == augmentationScheme;
+      if (isAugmentation) {
+        uri = testData.entryPoint;
       }
       Map<int, List<FormattedMessage>> map =
           errorMap.putIfAbsent(uri ?? nullUri, () => {});
       List<FormattedMessage> list =
-          map.putIfAbsent(isMacroLibrary ? -1 : error.charOffset, () => []);
+          map.putIfAbsent(isAugmentation ? -1 : error.charOffset, () => []);
       list.add(error);
     }
 
@@ -270,8 +262,12 @@ Future<TestResult<T>> processCompiledResult<T, C extends TestConfig, R,
     Uri uri = node is Library
         ? node.fileUri
         : (node is Member ? node.fileUri : node.location!.file);
-    if (isMacroLibraryUri(uri)) {
-      uri = toOriginLibraryUri(uri);
+    if (uri.scheme == augmentationScheme) {
+      TreeNode library = node;
+      while (library is! Library) {
+        library = library.parent!;
+      }
+      uri = library.fileUri;
     }
     return actualMapForUri(uri);
   }

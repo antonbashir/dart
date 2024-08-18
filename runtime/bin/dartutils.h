@@ -11,7 +11,6 @@
 #include "platform/assert.h"
 #include "platform/globals.h"
 #include "platform/hashmap.h"
-#include "platform/syslog.h"
 
 namespace dart {
 namespace bin {
@@ -85,14 +84,6 @@ class CommandLineOptions {
 
   Dart_Handle CreateRuntimeOptions();
 
-#if defined(DEBUG)
-  void DebugPrint() const {
-    for (int i = 0; i < count(); ++i) {
-      Syslog::PrintErr("[%d] = %s\n", i, GetArgument(i));
-    }
-  }
-#endif  // defined(DEBUG)
-
   void operator delete(void* pointer) { abort(); }
 
  private:
@@ -148,8 +139,6 @@ class DartUtils {
   // is not a string value an API error is propagated.
   static const char* GetNativeStringArgument(Dart_NativeArguments args,
                                              intptr_t index);
-  static const char* GetNativeTypedDataArgument(Dart_NativeArguments args,
-                                                intptr_t index);
   static Dart_Handle SetIntegerField(Dart_Handle handle,
                                      const char* name,
                                      int64_t val);
@@ -237,10 +226,6 @@ class DartUtils {
     return result;
   }
 
-  static char* ScopedCStringFormatted(const char* format, ...)
-      PRINTF_ATTRIBUTE(1, 2);
-  static char* ScopedCStringVFormatted(const char* format, va_list args);
-
   // Create a new Dart InternalError object with the provided message.
   static Dart_Handle NewError(const char* format, ...);
   static Dart_Handle NewInternalError(const char* message);
@@ -258,24 +243,8 @@ class DartUtils {
     kKernelMagicNumber,
     kKernelListMagicNumber,
     kGzipMagicNumber,
-    kAotELFMagicNumber,
-    kAotMachO32MagicNumber,
-    kAotMachO64MagicNumber,
-    kAotMachO64Arm64MagicNumber,
-    kAotCoffARM32MagicNumber,
-    kAotCoffARM64MagicNumber,
-    kAotCoffRISCV32MagicNumber,
-    kAotCoffRISCV64MagicNumber,
     kUnknownMagicNumber
   };
-  static constexpr int64_t kMaxMagicNumberSize = 8;
-
-  // Note: The check for AOT magic number must match up with the enum
-  // order above.
-  static bool IsAotMagicNumber(MagicNumber number) {
-    return (number >= DartUtils::kAotELFMagicNumber) &&
-           (number <= DartUtils::kAotCoffRISCV64MagicNumber);
-  }
 
   // Checks if the buffer is a script snapshot, kernel file, or gzip file.
   static MagicNumber SniffForMagicNumber(const char* filename);
@@ -290,7 +259,6 @@ class DartUtils {
   static constexpr const char* kDartScheme = "dart:";
   static constexpr const char* kAsyncLibURL = "dart:async";
   static constexpr const char* kBuiltinLibURL = "dart:_builtin";
-  static constexpr const char* kConcurrentLibURL = "dart:concurrent";
   static constexpr const char* kCoreLibURL = "dart:core";
   static constexpr const char* kInternalLibURL = "dart:_internal";
   static constexpr const char* kIsolateLibURL = "dart:isolate";
@@ -659,7 +627,6 @@ struct MagicNumberData {
 };
 
 extern MagicNumberData appjit_magic_number;
-extern MagicNumberData aotelf_magic_number;
 extern MagicNumberData kernel_magic_number;
 extern MagicNumberData kernel_list_magic_number;
 extern MagicNumberData gzip_magic_number;

@@ -38,7 +38,7 @@ final class Bar implements Foo {}
   }
 
   test_class_outside_viaLanguage219AndCore() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    final a = newFile('$testPackageLibPath/a.dart', r'''
 // @dart=2.19
 import 'dart:core';
 class A implements MapEntry<int, int> {

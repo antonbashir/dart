@@ -36,7 +36,7 @@ class CodegenImpactTransformer {
   final RuntimeTypesNeed _rtiNeed;
   final NativeCodegenEnqueuer _nativeCodegenEnqueuer;
   final Namer _namer;
-  final OneShotInterceptorData oneShotInterceptorData;
+  final OneShotInterceptorData _oneShotInterceptorData;
   final RuntimeTypesChecksBuilder _rtiChecksBuilder;
   final NativeEmitter _nativeEmitter;
 
@@ -49,7 +49,7 @@ class CodegenImpactTransformer {
       this._rtiNeed,
       this._nativeCodegenEnqueuer,
       this._namer,
-      this.oneShotInterceptorData,
+      this._oneShotInterceptorData,
       this._rtiChecksBuilder,
       this._nativeEmitter);
 
@@ -104,20 +104,7 @@ class CodegenImpactTransformer {
           _closedWorld.outputUnitData.registerConstantDeferredUse(
               constantUse.value as DeferredGlobalConstantValue);
           break;
-        case ConstantValueKind.BOOL:
-        case ConstantValueKind.DOUBLE:
-        case ConstantValueKind.DUMMY_INTERCEPTOR:
-        case ConstantValueKind.FUNCTION:
-        case ConstantValueKind.INT:
-        case ConstantValueKind.INTERCEPTOR:
-        case ConstantValueKind.JAVASCRIPT_OBJECT:
-        case ConstantValueKind.JS_NAME:
-        case ConstantValueKind.LATE_SENTINEL:
-        case ConstantValueKind.NULL:
-        case ConstantValueKind.RECORD:
-        case ConstantValueKind.STRING:
-        case ConstantValueKind.TYPE:
-        case ConstantValueKind.UNREACHABLE:
+        default:
           break;
       }
     }
@@ -162,7 +149,7 @@ class CodegenImpactTransformer {
     }
 
     for (Set<ClassEntity> classes in impact.specializedGetInterceptors) {
-      oneShotInterceptorData.registerSpecializedGetInterceptor(classes);
+      _oneShotInterceptorData.registerSpecializedGetInterceptor(classes);
     }
 
     if (impact.usesInterceptor) {
@@ -188,9 +175,6 @@ class CodegenImpactTransformer {
           _impacts.asyncStarBody
               .registerImpact(transformed, _elementEnvironment);
           break;
-        case AsyncMarker.SYNC:
-          // No implicit impacts.
-          break;
       }
     }
 
@@ -208,7 +192,7 @@ class CodegenImpactTransformer {
     }
 
     for (Selector selector in impact.oneShotInterceptors) {
-      oneShotInterceptorData.registerOneShotInterceptor(
+      _oneShotInterceptorData.registerOneShotInterceptor(
           selector, _namer, _closedWorld);
     }
 

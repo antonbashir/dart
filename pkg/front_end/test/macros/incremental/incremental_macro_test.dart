@@ -4,21 +4,23 @@
 
 import 'dart:io';
 
+import 'package:_fe_analyzer_shared/src/macros/executor/multi_executor.dart';
 import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:front_end/src/api_prototype/experimental_flags.dart';
 import 'package:front_end/src/api_prototype/incremental_kernel_generator.dart';
 import 'package:front_end/src/api_prototype/memory_file_system.dart';
-import 'package:front_end/src/base/compiler_context.dart';
-import 'package:front_end/src/base/hybrid_file_system.dart';
-import 'package:front_end/src/base/incremental_compiler.dart';
 import 'package:front_end/src/base/processed_options.dart';
 import 'package:front_end/src/compute_platform_binaries_location.dart';
-import 'package:front_end/src/macros/isolate_macro_serializer.dart';
-import 'package:front_end/src/macros/macro_serializer.dart';
+import 'package:front_end/src/fasta/compiler_context.dart';
+import 'package:front_end/src/fasta/hybrid_file_system.dart';
+import 'package:front_end/src/fasta/incremental_compiler.dart';
+import 'package:front_end/src/isolate_macro_serializer.dart';
+import 'package:front_end/src/macro_serializer.dart';
 import 'package:front_end/src/testing/compiler_common.dart';
 import 'package:kernel/kernel.dart';
+import 'package:kernel/target/targets.dart';
 import 'package:kernel/text/ast_to_text.dart';
-import 'package:macros/src/executor/multi_executor.dart';
+import 'package:vm/target/vm.dart';
 
 import '../../utils/kernel_chain.dart';
 
@@ -89,6 +91,7 @@ Future<void> main(List<String> args) async {
       ExperimentalFlag.alternativeInvalidationStrategy: true,
     }
     ..macroSerializer = macroSerializer
+    ..macroTarget = new VmTarget(new TargetFlags())
     ..fileSystem = new HybridFileSystem(memoryFileSystem);
   compilerOptions.macroExecutor ??= new MultiMacroExecutor();
 
@@ -113,9 +116,6 @@ Future<void> main(List<String> args) async {
         IncrementalCompilerResult incrementalCompilerResult =
             await compiler.computeDelta(entryPoints: [entryPoint]);
         Component component = incrementalCompilerResult.component;
-        if (component.problemsAsJson?.isNotEmpty ?? false) {
-          throw 'Unexpected errors.';
-        }
         StringBuffer buffer = new StringBuffer();
         Printer printer = new Printer(buffer)
           ..writeProblemsAsJson(

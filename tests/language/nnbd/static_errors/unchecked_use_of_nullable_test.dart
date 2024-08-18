@@ -2,11 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:async_helper/async_helper.dart';
 
 // Test that it is an error to use nullable types in unsound ways.
 void main() async {
-  asyncStart();
   int? x;
   bool? cond;
   List? list;
@@ -56,7 +54,6 @@ void main() async {
   assert(cond); //# 38: compile-time error
   [...list]; //# 39: compile-time error
   [...?list]; //# 40: ok
-  asyncEnd();
 }
 
 generator() sync* {

@@ -4,13 +4,15 @@
 
 // ignore_for_file: implementation_imports
 
+import 'package:_fe_analyzer_shared/src/messages/codes.dart'
+    show
+        templateJsInteropStaticInteropMockMissingGetterOrSetter,
+        templateJsInteropStaticInteropMockMissingImplements;
 import 'package:_js_interop_checks/js_interop_checks.dart'
     show JsInteropDiagnosticReporter;
 import 'package:_js_interop_checks/src/js_interop.dart' as js_interop;
-import 'package:front_end/src/api_prototype/codes.dart'
+import 'package:front_end/src/fasta/fasta_codes.dart'
     show
-        templateJsInteropStaticInteropMockMissingGetterOrSetter,
-        templateJsInteropStaticInteropMockMissingImplements,
         templateJsInteropStaticInteropMockNotStaticInteropType,
         templateJsInteropStaticInteropMockTypeParametersNotAllowed;
 import 'package:kernel/ast.dart';
@@ -39,8 +41,8 @@ class StaticInteropMockValidator {
     if (staticInteropType is! InterfaceType ||
         !js_interop.hasStaticInteropAnnotation(staticInteropType.classNode)) {
       _diagnosticReporter.report(
-          templateJsInteropStaticInteropMockNotStaticInteropType
-              .withArguments(staticInteropType),
+          templateJsInteropStaticInteropMockNotStaticInteropType.withArguments(
+              staticInteropType, true),
           node.fileOffset,
           node.name.text.length,
           node.location?.file);
@@ -80,7 +82,7 @@ class StaticInteropMockValidator {
         if (arg is! DynamicType && arg != typeParams[i].bound) {
           _diagnosticReporter.report(
               templateJsInteropStaticInteropMockTypeParametersNotAllowed
-                  .withArguments(type),
+                  .withArguments(type, true),
               node.fileOffset,
               node.name.text.length,
               node.location?.file);
@@ -102,8 +104,9 @@ class StaticInteropMockValidator {
         _computeImplementableExtensionMembers(staticInteropClass);
     var exportMap = _exportChecker.exportClassToMemberMap[dartClass.reference]!;
 
-    for (var MapEntry(key: exportName, value: descriptors)
-        in exportNameToDescriptors.entries) {
+    for (var exportName in exportNameToDescriptors.keys) {
+      var descriptors = exportNameToDescriptors[exportName]!;
+
       String getAsErrorString(Iterable<ExtensionMemberDescriptor> descriptors) {
         var withExtensionNameAndType = descriptors.map((descriptor) {
           var extension = _descriptorToExtensionName[descriptor]!;
@@ -136,7 +139,7 @@ class StaticInteropMockValidator {
           hasImplementation = descriptors
               .any((descriptor) => _implements(firstMember, descriptor));
         } else {
-          var (:getter, :setter) = _exportChecker.getGetterSetter(dartMembers);
+          var getSet = _exportChecker.getGetterSetter(dartMembers);
 
           var getters = <ExtensionMemberDescriptor>{};
           var setters = <ExtensionMemberDescriptor>{};
@@ -145,10 +148,10 @@ class StaticInteropMockValidator {
           var implementsSetter = false;
           for (var descriptor in descriptors) {
             if (descriptor.isGetter) {
-              implementsGetter |= _implements(getter, descriptor);
+              implementsGetter |= _implements(getSet.getter, descriptor);
               getters.add(descriptor);
             } else if (descriptor.isSetter) {
-              implementsSetter |= _implements(setter, descriptor);
+              implementsSetter |= _implements(getSet.setter, descriptor);
               setters.add(descriptor);
             }
           }
@@ -285,8 +288,8 @@ class StaticInteropMockValidator {
     // Process the stored libraries, and create a mapping between @staticInterop
     // classes and their extensions.
     var staticInteropClassesWithExtensions = <Reference, Set<Extension>>{};
-    for (var extensions in ExportChecker.libraryExtensionMap.values) {
-      for (var extension in extensions) {
+    for (var library in ExportChecker.libraryExtensionMap.keys) {
+      for (var extension in ExportChecker.libraryExtensionMap[library]!) {
         var onType = extension.onType as InterfaceType;
         staticInteropClassesWithExtensions
             .putIfAbsent(onType.classReference, () => {})
@@ -361,13 +364,13 @@ class StaticInteropMockValidator {
 /// parameters.
 class TypeParameterResolver extends ReplacementVisitor {
   @override
-  DartType? visitTypeParameterType(TypeParameterType node, Variance variance) {
+  DartType? visitTypeParameterType(TypeParameterType node, int variance) {
     return node.nonTypeVariableBound;
   }
 
   @override
   DartType? visitStructuralParameterType(
-      StructuralParameterType node, Variance variance) {
+      StructuralParameterType node, int variance) {
     return node.nonTypeVariableBound;
   }
 

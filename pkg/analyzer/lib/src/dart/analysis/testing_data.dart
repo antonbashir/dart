@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/dart/element/type_constraint_gatherer.dart';
 import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/generated/exhaustiveness.dart';
 
@@ -14,9 +13,6 @@ class TestingData {
   final Map<Uri, FlowAnalysisDataForTesting> uriToFlowAnalysisData = {};
 
   final Map<Uri, ExhaustivenessDataForTesting> uriToExhaustivenessData = {};
-
-  final Map<Uri, TypeConstraintGenerationDataForTesting>
-      uriToTypeConstraintGenerationData = {};
 
   /// Called by the constant verifier, to record exhaustiveness data used in
   /// testing.
@@ -30,20 +26,5 @@ class TestingData {
   void recordFlowAnalysisDataForTesting(
       Uri uri, FlowAnalysisDataForTesting result) {
     uriToFlowAnalysisData[uri] = result;
-  }
-
-  /// Called by the type inference engine, to record generated type constraints.
-  ///
-  /// The procedure is destructive to [result] in the sense that it reuses its
-  /// internal data structures where possible to avoid extra allocations.
-  void recordTypeConstraintGenerationDataForTesting(
-      Uri uri, TypeConstraintGenerationDataForTesting result) {
-    TypeConstraintGenerationDataForTesting? existing =
-        uriToTypeConstraintGenerationData[uri];
-    if (existing != null) {
-      existing.mergeIn(result);
-    } else {
-      uriToTypeConstraintGenerationData[uri] = result;
-    }
   }
 }

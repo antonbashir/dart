@@ -32,31 +32,28 @@ class ConvertSelectedFormalParametersToNamed extends RefactoringProducer {
   String get title => constTitle;
 
   @override
-  Future<ComputeStatus> compute(
+  Future<void> compute(
     List<Object?> commandArguments,
     ChangeBuilder builder,
   ) async {
-    var availability = analyzeAvailability(
+    final availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
-
-    // This should not happen, `isAvailable()` returns `false`.
     if (availability is! Available) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    var selection = await analyzeSelection(
+    final selection = await analyzeSelection(
       available: availability,
     );
 
-    // This should not happen, `isAvailable()` returns `false`.
     if (selection is! ValidSelectionState) {
-      return ComputeStatusFailure();
+      return;
     }
 
-    List<FormalParameterState> reordered;
-    var formalParameters = selection.formalParameters;
-    var allSelectedNamed = formalParameters
+    final List<FormalParameterState> reordered;
+    final formalParameters = selection.formalParameters;
+    final allSelectedNamed = formalParameters
         .where((e) => e.isSelected)
         .every((e) => e.kind.isNamed);
     if (allSelectedNamed) {
@@ -65,7 +62,7 @@ class ConvertSelectedFormalParametersToNamed extends RefactoringProducer {
       reordered = formalParameters.stablePartition((e) => !e.isSelected);
     }
 
-    var formalParameterUpdates = reordered.map(
+    final formalParameterUpdates = reordered.map(
       (formalParameter) {
         if (formalParameter.isSelected) {
           return FormalParameterUpdate(
@@ -81,31 +78,22 @@ class ConvertSelectedFormalParametersToNamed extends RefactoringProducer {
       },
     ).toList();
 
-    var signatureUpdate = MethodSignatureUpdate(
+    final signatureUpdate = MethodSignatureUpdate(
       formalParameters: formalParameterUpdates,
       formalParametersTrailingComma: TrailingComma.ifPresent,
       argumentsTrailingComma: ArgumentsTrailingComma.ifPresent,
     );
 
-    var status = await computeSourceChange(
+    await computeSourceChange(
       selectionState: selection,
       signatureUpdate: signatureUpdate,
       builder: builder,
     );
-
-    switch (status) {
-      case ChangeStatusFailure():
-        return ComputeStatusFailure(
-          reason: 'Failed to compute the change.',
-        );
-      case ChangeStatusSuccess():
-        return ComputeStatusSuccess();
-    }
   }
 
   @override
   bool isAvailable() {
-    var availability = analyzeAvailability(
+    final availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
     if (availability is! Available) {

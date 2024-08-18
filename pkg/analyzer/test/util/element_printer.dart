@@ -7,20 +7,23 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/member.dart';
-import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/summary2/reference.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:test/test.dart';
+
+import 'tree_string_sink.dart';
 
 class ElementPrinter {
   final TreeStringSink _sink;
   final ElementPrinterConfiguration _configuration;
+  final String? _selfUriStr;
 
   ElementPrinter({
     required TreeStringSink sink,
     required ElementPrinterConfiguration configuration,
+    required String? selfUriStr,
   })  : _sink = sink,
-        _configuration = configuration;
+        _configuration = configuration,
+        _selfUriStr = selfUriStr;
 
   void writeDirectiveUri(DirectiveUri? uri) {
     if (uri == null) {
@@ -28,25 +31,25 @@ class ElementPrinter {
     } else if (uri is DirectiveUriWithAugmentation) {
       _sink.writeln('DirectiveUriWithAugmentation');
       _sink.withIndent(() {
-        var uriStr = _stringOfSource(uri.augmentation.source);
+        final uriStr = _stringOfSource(uri.augmentation.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithLibrary) {
       _sink.writeln('DirectiveUriWithLibrary');
       _sink.withIndent(() {
-        var uriStr = _stringOfSource(uri.library.source);
+        final uriStr = _stringOfSource(uri.library.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithUnit) {
       _sink.writeln('DirectiveUriWithUnit');
       _sink.withIndent(() {
-        var uriStr = _stringOfSource(uri.unit.source);
+        final uriStr = _stringOfSource(uri.unit.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithSource) {
       _sink.writeln('DirectiveUriWithSource');
       _sink.withIndent(() {
-        var uriStr = _stringOfSource(uri.source);
+        final uriStr = _stringOfSource(uri.source);
         _sink.writelnWithIndent('source: $uriStr');
       });
     } else if (uri is DirectiveUriWithRelativeUri) {
@@ -81,7 +84,7 @@ class ElementPrinter {
       case PartElement():
         _writePartElement(element);
       default:
-        var referenceStr = _elementToReferenceString(element);
+        final referenceStr = _elementToReferenceString(element);
         _sink.writeln(referenceStr);
     }
   }
@@ -104,7 +107,7 @@ class ElementPrinter {
   }
 
   void writeReference(Reference reference) {
-    var str = _referenceToString(reference);
+    final str = _referenceToString(reference);
     _sink.write(str);
   }
 
@@ -139,7 +142,7 @@ class ElementPrinter {
     if (types != null && types.isNotEmpty) {
       _sink.writelnWithIndent(name);
       _sink.withIndent(() {
-        for (var type in types) {
+        for (final type in types) {
           _sink.writeIndent();
           writeType(type);
         }
@@ -148,15 +151,15 @@ class ElementPrinter {
   }
 
   String _elementToReferenceString(Element element) {
-    var enclosingElement = element.enclosingElement;
-    var reference = (element as ElementImpl).reference;
+    final enclosingElement = element.enclosingElement;
+    final reference = (element as ElementImpl).reference;
     if (reference != null) {
       return _referenceToString(reference);
     } else if (element is ParameterElement &&
         enclosingElement is! GenericFunctionTypeElement) {
       // Positional parameters don't have actual references.
       // But we fabricate one to make the output better.
-      var enclosingStr = enclosingElement != null
+      final enclosingStr = enclosingElement != null
           ? _elementToReferenceString(enclosingElement)
           : 'root';
       return '$enclosingStr::@parameter::${element.name}';
@@ -168,7 +171,7 @@ class ElementPrinter {
         '[',
         element.variables.map(_elementToReferenceString).join(', '),
         ']',
-      ].join();
+      ].join('');
     } else {
       return '${element.name}@${element.nameOffset}';
     }
@@ -178,24 +181,21 @@ class ElementPrinter {
     var parent = reference.parent!;
     if (parent.parent == null) {
       var libraryUriStr = reference.name;
-
-      // Very often we have just the test library.
-      if (libraryUriStr == 'package:test/test.dart') {
-        return '<testLibrary>';
+      if (libraryUriStr == _selfUriStr) {
+        return 'self';
       }
 
-      return _toPosixUriStr(libraryUriStr);
+      // TODO(scheglov): Make it precise again, after Windows.
+      if (libraryUriStr.startsWith('file:')) {
+        return libraryUriStr.substring(libraryUriStr.lastIndexOf('/') + 1);
+      }
+
+      return libraryUriStr;
     }
 
-    // Compress often used library fragments.
-    if (parent.name == '@fragment') {
-      var libraryRef = parent.parent!;
-      if (reference.name == libraryRef.name) {
-        if (libraryRef.name == 'package:test/test.dart') {
-          return '<testLibraryFragment>';
-        }
-        return '${_referenceToString(libraryRef)}::<fragment>';
-      }
+    // Ignore the unit, skip to the library.
+    if (parent.name == '@unit') {
+      return _referenceToString(parent.parent!);
     }
 
     var name = reference.name;
@@ -216,16 +216,8 @@ class ElementPrinter {
     return '{$entriesStr}';
   }
 
-  String _toPosixUriStr(String uriStr) {
-    // TODO(scheglov): Make it precise again, after Windows.
-    if (uriStr.startsWith('file:')) {
-      return uriStr.substring(uriStr.lastIndexOf('/') + 1);
-    }
-    return uriStr;
-  }
-
   String _typeStr(DartType type) {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: true);
   }
 
   void _writeAugmentationImportElement(AugmentationImportElement element) {
@@ -257,24 +249,19 @@ class ElementPrinter {
     _sink.withIndent(() {
       writeNamedElement('base', element.declaration);
 
-      void writeSubstitution(String name, MapSubstitution substitution) {
-        var map = substitution.map;
-        if (map.isNotEmpty) {
-          var mapStr = _substitutionMapStr(map);
-          _sink.writelnWithIndent('$name: $mapStr');
-        }
+      if (element.isLegacy) {
+        _sink.writelnWithIndent('isLegacy: true');
       }
 
-      writeSubstitution(
-        'augmentationSubstitution',
-        element.augmentationSubstitution,
-      );
-
-      writeSubstitution('substitution', element.substitution);
+      var map = element.substitution.map;
+      if (map.isNotEmpty) {
+        var mapStr = _substitutionMapStr(map);
+        _sink.writelnWithIndent('substitution: $mapStr');
+      }
 
       if (_configuration.withRedirectedConstructors) {
         if (element is ConstructorMember) {
-          var redirected = element.redirectedConstructor;
+          final redirected = element.redirectedConstructor;
           writeNamedElement('redirectedConstructor', redirected);
         }
       }

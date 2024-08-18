@@ -28,14 +28,14 @@ class ClassDeclarationTest extends DartSnippetProducerTest {
   String get prefix => ClassDeclaration.prefix;
 
   Future<void> test_class() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 class A {}
   
 ^
 
 class B {}
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

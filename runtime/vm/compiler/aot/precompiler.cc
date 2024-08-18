@@ -535,6 +535,21 @@ void Precompiler::DoCompileAll() {
   IG->object_store()->set_##member(stub_code);
         OBJECT_STORE_STUB_CODE_LIST(DO)
 #undef DO
+
+        {
+          SafepointWriteRwLocker ml(T, T->isolate_group()->program_lock());
+          stub_code = StubCode::GetBuildGenericMethodExtractorStub(
+              global_object_pool_builder());
+        }
+        IG->object_store()->set_build_generic_method_extractor_code(stub_code);
+
+        {
+          SafepointWriteRwLocker ml(T, T->isolate_group()->program_lock());
+          stub_code = StubCode::GetBuildNonGenericMethodExtractorStub(
+              global_object_pool_builder());
+        }
+        IG->object_store()->set_build_nongeneric_method_extractor_code(
+            stub_code);
       }
 
       CollectDynamicFunctionNames();
@@ -1217,7 +1232,8 @@ void Precompiler::AddConstObject(const class Instance& instance) {
     return;
   }
 
-  if (instance.ptr() == Object::sentinel().ptr()) {
+  if (instance.ptr() == Object::sentinel().ptr() ||
+      instance.ptr() == Object::transition_sentinel().ptr()) {
     return;
   }
 
@@ -1328,9 +1344,10 @@ void Precompiler::AddField(const Field& field) {
   fields_to_retain_.Insert(&Field::ZoneHandle(Z, field.ptr()));
 
   if (field.is_static()) {
-    auto field_table = field.is_shared() ? IG->shared_initial_field_table()
-                                         : IG->initial_field_table();
-    const Object& value = Object::Handle(Z, field_table->At(field.field_id()));
+    const Object& value =
+        Object::Handle(Z, IG->initial_field_table()->At(field.field_id()));
+    // Should not be in the middle of initialization while precompiling.
+    ASSERT(value.ptr() != Object::transition_sentinel().ptr());
 
     if (value.ptr() != Object::sentinel().ptr() &&
         value.ptr() != Object::null()) {
@@ -1811,7 +1828,8 @@ static void AddNamesToFunctionsTable(Zone* zone,
     *mangled_name = function.name();
     *mangled_name =
         Function::CreateDynamicInvocationForwarderName(*mangled_name);
-    *dyn_function = function.GetDynamicInvocationForwarder(*mangled_name);
+    *dyn_function = function.GetDynamicInvocationForwarder(*mangled_name,
+                                                           /*allow_add=*/true);
   }
   *mangled_name = Function::CreateDynamicInvocationForwarderName(fname);
   AddNameToFunctionsTable(zone, table, *mangled_name, *dyn_function);
@@ -1885,7 +1903,6 @@ void Precompiler::CollectDynamicFunctionNames() {
     ASSERT(!farray.IsNull());
     if (farray.Length() == 1) {
       function ^= farray.At(0);
-      if (function.IsDynamicallyOverridden()) continue;
 
       // It looks like there is exactly one target for the given name. Though we
       // have to be careful: e.g. A name like `dyn:get:foo` might have a target
@@ -1908,8 +1925,9 @@ void Precompiler::CollectDynamicFunctionNames() {
     }
   }
 
-  function ^= functions_map.GetOrNull(Symbols::GetRuntimeType());
-  get_runtime_type_is_unique_ = !function.IsNull();
+  farray ^= table.GetOrNull(Symbols::GetRuntimeType());
+
+  get_runtime_type_is_unique_ = !farray.IsNull() && (farray.Length() == 1);
 
   if (FLAG_print_unique_targets) {
     UniqueFunctionsMap::Iterator unique_iter(&functions_map);
@@ -1948,15 +1966,8 @@ void Precompiler::TraceForRetainedFunctions() {
         function ^= functions.At(j);
         function.DropUncompiledImplicitClosureFunction();
 
-        bool retained = possibly_retained_functions_.ContainsKey(function);
-#if defined(DART_DYNAMIC_MODULES)
-        // Retain abstract functions annotated with entry point
-        // pragmas as they can be used as targets of interface calls.
-        if (function.is_abstract() &&
-            functions_with_entry_point_pragmas_.ContainsKey(function)) {
-          retained = true;
-        }
-#endif  // defined(DART_DYNAMIC_MODULES)
+        const bool retained =
+            possibly_retained_functions_.ContainsKey(function);
         if (retained) {
           AddTypesOf(function);
         }
@@ -2398,9 +2409,9 @@ void Precompiler::AttachOptimizedTypeTestingStub() {
           : type_(AbstractType::Handle(zone)), types_(types) {}
 
       void VisitObject(ObjectPtr obj) override {
-        const auto cid = obj->GetClassIdOfHeapObject();
-        if (cid == kTypeCid || cid == kFunctionTypeCid ||
-            cid == kRecordTypeCid) {
+        if (obj->GetClassId() == kTypeCid ||
+            obj->GetClassId() == kFunctionTypeCid ||
+            obj->GetClassId() == kRecordTypeCid) {
           type_ ^= obj;
           types_->Add(type_);
         }
@@ -2582,14 +2593,6 @@ void Precompiler::DropTransitiveUserDefinedConstants() {
         if (cls.constants() == Array::null()) {
           continue;
         }
-#if defined(DART_DYNAMIC_MODULES)
-        // Retain constant tables of exported classes to allow constant
-        // canonicalization at runtime.
-        if (HasApiUse(cls)) {
-          continue;
-        }
-#endif  // defined(DART_DYNAMIC_MODULES)
-
         typedef UnorderedHashSet<CanonicalInstanceTraits> CanonicalInstancesSet;
 
         CanonicalInstancesSet constants_set(cls.constants());
@@ -3332,7 +3335,7 @@ void Precompiler::Obfuscate() {
         : script_(Script::Handle(zone)), scripts_(scripts) {}
 
     void VisitObject(ObjectPtr obj) override {
-      if (obj->GetClassIdOfHeapObject() == kScriptCid) {
+      if (obj->GetClassId() == kScriptCid) {
         script_ ^= obj;
         scripts_->Add(Script::Cast(script_));
       }
@@ -3528,8 +3531,15 @@ bool PrecompileParsedFunctionHelper::Compile(CompilationPipeline* pipeline) {
 
       CompilerPassState pass_state(thread(), flow_graph, &speculative_policy,
                                    precompiler_);
+      pass_state.reorder_blocks =
+          FlowGraph::ShouldReorderBlocks(function, optimized());
 
-      if (optimized()) {
+      if (function.ForceOptimize()) {
+        ASSERT(optimized());
+        TIMELINE_DURATION(thread(), CompilerVerbose, "OptimizationPasses");
+        flow_graph = CompilerPass::RunForceOptimizedPipeline(CompilerPass::kAOT,
+                                                             &pass_state);
+      } else if (optimized()) {
         TIMELINE_DURATION(thread(), CompilerVerbose, "OptimizationPasses");
 
         AotCallSpecializer call_specializer(precompiler_, flow_graph,
@@ -3861,7 +3871,7 @@ void Obfuscator::InitializeRenamingMap() {
 // Prevent renaming of methods that are looked up by method recognizer.
 // TODO(dartbug.com/30524) instead call to Obfuscator::Rename from a place
 // where these are looked up.
-#define PREVENT_RENAMING(library, class_name, function_name, recognized_enum,  \
+#define PREVENT_RENAMING(class_name, function_name, recognized_enum,           \
                          fingerprint)                                          \
   do {                                                                         \
     PreventRenaming(#class_name);                                              \
@@ -3873,7 +3883,7 @@ void Obfuscator::InitializeRenamingMap() {
 // Prevent renaming of methods that are looked up by method recognizer.
 // TODO(dartbug.com/30524) instead call to Obfuscator::Rename from a place
 // where these are looked up.
-#define PREVENT_RENAMING(libary, class_name, function_name, recognized_enum,   \
+#define PREVENT_RENAMING(class_name, function_name, recognized_enum,           \
                          fingerprint)                                          \
   do {                                                                         \
     PreventRenaming(#class_name);                                              \

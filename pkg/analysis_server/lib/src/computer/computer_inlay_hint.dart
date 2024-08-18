@@ -5,6 +5,7 @@
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:analysis_server/lsp_protocol/protocol.dart' hide Element;
 import 'package:analysis_server/src/lsp/mapping.dart';
+import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
@@ -24,11 +25,13 @@ class DartInlayHintComputer {
   final path.Context pathContext;
   final LineInfo _lineInfo;
   final CompilationUnit _unit;
+  final bool _isNonNullableByDefault;
   final List<InlayHint> _hints = [];
 
   DartInlayHintComputer(this.pathContext, ResolvedUnitResult result)
       : _unit = result.unit,
-        _lineInfo = result.lineInfo;
+        _lineInfo = result.lineInfo,
+        _isNonNullableByDefault = result.unit.isNonNullableByDefault;
 
   List<InlayHint> compute() {
     _unit.accept(_DartInlayHintComputerVisitor(this));
@@ -44,13 +47,13 @@ class DartInlayHintComputer {
   /// automatically.
   void _addParameterNamePrefix(
       SyntacticEntity nodeOrToken, ParameterElement parameter) {
-    var name = parameter.name;
+    final name = parameter.name;
     if (name.isEmpty) {
       return;
     }
-    var offset = nodeOrToken.offset;
-    var position = toPosition(_lineInfo.getLocation(offset));
-    var labelParts = Either2<List<InlayHintLabelPart>, String>.t1([
+    final offset = nodeOrToken.offset;
+    final position = toPosition(_lineInfo.getLocation(offset));
+    final labelParts = Either2<List<InlayHintLabelPart>, String>.t1([
       InlayHintLabelPart(
         value: '$name:',
         location: _locationForElement(parameter),
@@ -78,9 +81,9 @@ class DartInlayHintComputer {
       return;
     }
 
-    var offset = suffix ? nodeOrToken.end : nodeOrToken.offset;
-    var position = toPosition(_lineInfo.getLocation(offset));
-    var labelParts = <InlayHintLabelPart>[];
+    final offset = suffix ? nodeOrToken.end : nodeOrToken.offset;
+    final position = toPosition(_lineInfo.getLocation(offset));
+    final labelParts = <InlayHintLabelPart>[];
     _appendTypeArgumentParts(labelParts, types);
 
     _hints.add(InlayHint(
@@ -94,9 +97,9 @@ class DartInlayHintComputer {
   ///
   /// Padding will be added between the hint and [node] automatically.
   void _addTypePrefix(SyntacticEntity nodeOrToken, DartType type) {
-    var offset = nodeOrToken.offset;
-    var position = toPosition(_lineInfo.getLocation(offset));
-    var labelParts = <InlayHintLabelPart>[];
+    final offset = nodeOrToken.offset;
+    final position = toPosition(_lineInfo.getLocation(offset));
+    final labelParts = <InlayHintLabelPart>[];
     _appendTypePart(labelParts, type);
     _hints.add(InlayHint(
       label: Either2<List<InlayHintLabelPart>, String>.t1(labelParts),
@@ -111,24 +114,24 @@ class DartInlayHintComputer {
   void _appendRecordParts(List<InlayHintLabelPart> parts, RecordType type) {
     parts.add(InlayHintLabelPart(value: '('));
 
-    var positionalFields = type.positionalFields;
-    var namedFields = type.namedFields;
-    var fieldCount = positionalFields.length + namedFields.length;
+    final positionalFields = type.positionalFields;
+    final namedFields = type.namedFields;
+    final fieldCount = positionalFields.length + namedFields.length;
     var index = 0;
 
-    for (var field in positionalFields) {
+    for (final field in positionalFields) {
       _appendTypePart(parts, field.type);
-      var isLast = index++ == fieldCount - 1;
+      final isLast = index++ == fieldCount - 1;
       if (!isLast) {
         parts.add(InlayHintLabelPart(value: ', '));
       }
     }
     if (namedFields.isNotEmpty) {
       parts.add(InlayHintLabelPart(value: '{'));
-      for (var field in namedFields) {
+      for (final field in namedFields) {
         _appendTypePart(parts, field.type);
         parts.add(InlayHintLabelPart(value: ' ${field.name}'));
-        var isLast = index++ == fieldCount - 1;
+        final isLast = index++ == fieldCount - 1;
         if (!isLast) {
           parts.add(InlayHintLabelPart(value: ', '));
         }
@@ -156,7 +159,7 @@ class DartInlayHintComputer {
     parts.add(InlayHintLabelPart(value: '<'));
     for (int i = 0; i < types.length; i++) {
       _appendTypePart(parts, types[i]);
-      var isLast = i == types.length - 1;
+      final isLast = i == types.length - 1;
       if (!isLast) {
         parts.add(InlayHintLabelPart(value: ', '));
       }
@@ -174,7 +177,8 @@ class DartInlayHintComputer {
       parts.add(InlayHintLabelPart(
         // Write type without type args or nullability suffix. Type args need
         // adding as their own parts, and the nullability suffix does after them.
-        value: type.element?.name ?? type.getDisplayString(),
+        value:
+            type.element?.name ?? type.getDisplayString(withNullability: false),
         location: _locationForElement(type.element),
       ));
       // Call recursively for any nested type arguments.
@@ -183,10 +187,14 @@ class DartInlayHintComputer {
       }
     }
     // Finally add any nullability suffix.
-    switch (type.nullabilitySuffix) {
-      case NullabilitySuffix.question:
-        parts.add(InlayHintLabelPart(value: '?'));
-      default:
+    if (_isNonNullableByDefault) {
+      switch (type.nullabilitySuffix) {
+        case NullabilitySuffix.question:
+          parts.add(InlayHintLabelPart(value: '?'));
+        case NullabilitySuffix.star:
+          parts.add(InlayHintLabelPart(value: '*'));
+        default:
+      }
     }
   }
 
@@ -194,10 +202,10 @@ class DartInlayHintComputer {
     if (element == null) {
       return null;
     }
-    var compilationUnit =
+    final compilationUnit =
         element.thisOrAncestorOfType<CompilationUnitElement>();
-    var path = compilationUnit?.source.fullName;
-    var lineInfo = compilationUnit?.lineInfo;
+    final path = compilationUnit?.source.fullName;
+    final lineInfo = compilationUnit?.lineInfo;
     if (path == null || lineInfo == null || element.nameOffset == -1) {
       return null;
     }
@@ -214,7 +222,7 @@ class DartInlayHintComputer {
       return;
     }
 
-    var typeArgumentTypes = type.typeArguments;
+    final typeArgumentTypes = type.typeArguments;
     if (typeArgumentTypes.isEmpty) {
       return;
     }
@@ -231,9 +239,9 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitArgumentList(ArgumentList node) {
-    for (var argument in node.arguments) {
+    for (final argument in node.arguments) {
       if (argument is! NamedExpression) {
-        var parameter = argument.staticParameterElement;
+        final parameter = argument.staticParameterElement;
         if (parameter != null) {
           _computer._addParameterNamePrefix(argument, parameter);
         }
@@ -254,7 +262,7 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       _computer._addTypePrefix(node.name, declaration.type);
     }
@@ -269,7 +277,7 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       _computer._addTypePrefix(node.name, declaration.type);
     }
@@ -289,11 +297,11 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       // For getters/setters, the type must come before the property keyword,
       // not the name.
-      var token = node.propertyKeyword ?? node.name;
+      final token = node.propertyKeyword ?? node.name;
       _computer._addTypePrefix(token, declaration.returnType);
     }
   }
@@ -320,8 +328,8 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var token = node.leftBracket;
-    var type = node.staticType;
+    final token = node.leftBracket;
+    final type = node.staticType;
     _computer._maybeAddTypeArguments(token, type);
   }
 
@@ -334,7 +342,7 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       _computer._addTypePrefix(node.name, declaration.returnType);
     }
@@ -349,8 +357,8 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var token = node.endToken;
-    var type = node.type;
+    final token = node.endToken;
+    final type = node.type;
     _computer._maybeAddTypeArguments(token, type, suffix: true);
   }
 
@@ -363,8 +371,8 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var token = node.leftBracket;
-    var type = node.staticType;
+    final token = node.leftBracket;
+    final type = node.staticType;
     _computer._maybeAddTypeArguments(token, type);
   }
 
@@ -377,7 +385,7 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       // Prefer to insert before `name` to avoid going before keywords like
       // `required`.
@@ -389,13 +397,13 @@ class _DartInlayHintComputerVisitor extends GeneralizingAstVisitor<void> {
   void visitVariableDeclaration(VariableDeclaration node) {
     super.visitVariableDeclaration(node);
 
-    var parent = node.parent;
+    final parent = node.parent;
     // Unexpected parent or has explicit type.
     if (parent is! VariableDeclarationList || parent.type != null) {
       return;
     }
 
-    var declaration = node.declaredElement;
+    final declaration = node.declaredElement;
     if (declaration != null) {
       _computer._addTypePrefix(node, declaration.type);
     }

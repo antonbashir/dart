@@ -2,7 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/*spec.class: A:explicit=[A.T],needsArgs,test*/
+// @dart = 2.7
+
+/*spec.class: A:explicit=[A.T*],needsArgs,test*/
 /*prod.class: A:needsArgs*/
 class A<T> {
   @pragma('dart2js:noInline')

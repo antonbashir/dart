@@ -2,8 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/linter/lint_names.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/error/error.dart';
@@ -12,7 +13,6 @@ import 'package:analyzer/src/error/codes.g.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
-import 'package:linter/src/linter_lint_codes.dart';
 
 class RemoveComparison extends ResolvedCorrectionProducer {
   @override
@@ -22,20 +22,22 @@ class RemoveComparison extends ResolvedCorrectionProducer {
   final FixKind multiFixKind;
 
   /// Initialize a newly created instance with [DartFixKind.REMOVE_COMPARISON].
-  RemoveComparison({required super.context})
+  RemoveComparison()
       : fixKind = DartFixKind.REMOVE_COMPARISON,
         multiFixKind = DartFixKind.REMOVE_COMPARISON_MULTI;
 
   /// Initialize a newly created instance with [DartFixKind.REMOVE_TYPE_CHECK].
-  RemoveComparison.typeCheck({required super.context})
+  RemoveComparison.typeCheck()
       : fixKind = DartFixKind.REMOVE_TYPE_CHECK,
         multiFixKind = DartFixKind.REMOVE_TYPE_CHECK_MULTI;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedInBulk => true;
 
-  /// Whether the condition will always return `false`.
+  @override
+  bool get canBeAppliedToFile => true;
+
+  /// Return `true` if the condition will always return `false`.
   bool get _conditionIsFalse {
     var errorCode = (diagnostic as AnalysisError).errorCode;
     return errorCode == WarningCode.UNNECESSARY_NAN_COMPARISON_FALSE ||
@@ -43,13 +45,13 @@ class RemoveComparison extends ResolvedCorrectionProducer {
         errorCode == WarningCode.UNNECESSARY_TYPE_CHECK_FALSE;
   }
 
-  /// Whether the condition will always return `true`.
+  /// Return `true` if the condition will always return `true`.
   bool get _conditionIsTrue {
     var errorCode = (diagnostic as AnalysisError).errorCode;
     return errorCode == WarningCode.UNNECESSARY_NAN_COMPARISON_TRUE ||
         errorCode == WarningCode.UNNECESSARY_NULL_COMPARISON_TRUE ||
         errorCode == WarningCode.UNNECESSARY_TYPE_CHECK_TRUE ||
-        errorCode == LinterLintCode.avoid_null_checks_in_equality_operators;
+        errorCode.name == LintNames.avoid_null_checks_in_equality_operators;
   }
 
   @override
@@ -84,33 +86,10 @@ class RemoveComparison extends ResolvedCorrectionProducer {
     }
   }
 
-  /// Splits [text] into lines, and removes one level of indent from each line.
-  ///
-  /// Lines that don't start with indentation are left as is.
-  String indentLeft(String text) {
-    var buffer = StringBuffer();
-    var indent = utils.oneIndent;
-    var eol = utils.endOfLine;
-    var lines = text.split(eol);
-    for (var line in lines) {
-      if (buffer.isNotEmpty) {
-        buffer.write(eol);
-      }
-      String updatedLine;
-      if (line.startsWith(indent)) {
-        updatedLine = line.substring(indent.length);
-      } else {
-        updatedLine = line;
-      }
-      buffer.write(updatedLine);
-    }
-    return buffer.toString();
-  }
-
   Future<void> _ifElement(IfElement node, ChangeBuilder builder) async {
     Future<void> replaceWithElement(CollectionElement element) async {
-      var text = _textWithLeadingComments(element);
-      var unIndented = indentLeft(text);
+      final text = _textWithLeadingComments(element);
+      final unIndented = utils.indentLeft(text);
       await builder.addDartFileEdit(file, (builder) {
         builder.addSimpleReplacement(range.node(node), unIndented);
       });
@@ -119,14 +98,14 @@ class RemoveComparison extends ResolvedCorrectionProducer {
     if (_conditionIsTrue) {
       await replaceWithElement(node.thenElement);
     } else if (_conditionIsFalse) {
-      var elseElement = node.elseElement;
+      final elseElement = node.elseElement;
       if (elseElement != null) {
         await replaceWithElement(elseElement);
       } else {
-        var elements = node.parent.containerElements;
+        final elements = node.parent.containerElements;
         if (elements != null) {
           await builder.addDartFileEdit(file, (builder) {
-            var nodeRange = range.nodeInList(elements, node);
+            final nodeRange = range.nodeInList(elements, node);
             builder.addDeletion(nodeRange);
           });
         }
@@ -136,7 +115,7 @@ class RemoveComparison extends ResolvedCorrectionProducer {
 
   Future<void> _ifStatement(IfStatement node, ChangeBuilder builder) async {
     Future<void> replaceWithBlock(Block replacement) async {
-      var text = utils.getRangeText(
+      final text = utils.getRangeText(
         utils.getLinesRange(
           range.endStart(
             replacement.leftBracket,
@@ -144,7 +123,7 @@ class RemoveComparison extends ResolvedCorrectionProducer {
           ),
         ),
       );
-      var unIndented = indentLeft(text);
+      final unIndented = utils.indentLeft(text);
       await builder.addDartFileEdit(file, (builder) {
         builder.addSimpleReplacement(
           utils.getLinesRangeStatements([node]),
@@ -154,15 +133,15 @@ class RemoveComparison extends ResolvedCorrectionProducer {
     }
 
     Future<void> replaceWithStatement(Statement replacement) async {
-      var text = _textWithLeadingComments(replacement);
-      var unIndented = indentLeft(text);
+      final text = _textWithLeadingComments(replacement);
+      final unIndented = utils.indentLeft(text);
       await builder.addDartFileEdit(file, (builder) {
         builder.addSimpleReplacement(range.node(node), unIndented);
       });
     }
 
-    var thenStatement = node.thenStatement;
-    var elseStatement = node.elseStatement;
+    final thenStatement = node.thenStatement;
+    final elseStatement = node.elseStatement;
     if (_conditionIsTrue) {
       if (thenStatement case Block thenBlock) {
         await replaceWithBlock(thenBlock);
@@ -177,9 +156,9 @@ class RemoveComparison extends ResolvedCorrectionProducer {
           await replaceWithStatement(elseStatement);
         }
       } else {
-        if (node.parent case Block block) {
-          var statement = block.statements;
-          var nodeRange = range.nodeInList(statement, node);
+        if (node.parent case final Block block) {
+          final statement = block.statements;
+          final nodeRange = range.nodeInList(statement, node);
           await builder.addDartFileEdit(file, (builder) {
             builder.addDeletion(nodeRange);
           });
@@ -210,7 +189,7 @@ class RemoveComparison extends ResolvedCorrectionProducer {
 
 extension on AstNode? {
   NodeList<AstNode>? get containerElements {
-    var self = this;
+    final self = this;
     if (self is ListLiteral) {
       return self.elements;
     } else if (self is SetOrMapLiteral) {

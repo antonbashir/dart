@@ -7,6 +7,8 @@
 // The PointerPointer and PointerStruct extension are written by hand since
 // those are not repetitive.
 
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -29,52 +31,22 @@ const configuration = [
   Config("Bool", "bool", kDoNotEmit, 1, since: Version(2, 15)),
 ];
 
-/// A container to generate the extension for.
-class Container {
-  final String name;
-
-  /// Since annotation for the extension.
-  final Version? since;
-
-  const Container(this.name, this.since);
-
-  static const pointer = Container(
-    'Pointer',
-    null,
-  );
-  static const array = Container(
-    'Array',
-    Version(2, 13),
-  );
-
-  static const typedData = Container(
-    'TypedData',
-    Version(3, 5),
-  );
-
-  static const values = [
-    pointer,
-    array,
-    typedData,
-  ];
-}
+const arrayVersion = Version(2, 13);
 
 //
 // Generator.
 //
 
-void main(List<String> arguments) {
-  update(
-    Uri.file('sdk/lib/ffi/ffi.dart'),
-    generatePublicExtension,
-  );
-  update(
-    Uri.file('sdk/lib/_internal/vm/lib/ffi_patch.dart'),
-    generatePatchExtension,
-  );
+main(List<String> arguments) {
+  final args = argParser().parse(arguments);
+  Uri path = Uri.parse(args['path']);
+
+  update(Uri.file('sdk/lib/ffi/ffi.dart'), generatePublicExtension);
+  update(Uri.file('sdk/lib/_internal/vm/lib/ffi_patch.dart'),
+      generatePatchExtension);
 }
 
-void update(Uri fileName, Function(StringBuffer, Config, Container) generator) {
+void update(Uri fileName, Function(StringBuffer, Config, String) generator) {
   final file = File.fromUri(fileName);
   if (!file.existsSync()) {
     print('$fileName does not exist, run from the root of the SDK.');
@@ -98,11 +70,8 @@ void update(Uri fileName, Function(StringBuffer, Config, Container) generator) {
   final buffer = StringBuffer();
   buffer.write(split1[0]);
   buffer.write(header);
-  for (final container in Container.values) {
-    for (final config in configuration) {
-      generator(buffer, config, container);
-    }
-  }
+  configuration.forEach((Config c) => generator(buffer, c, "Pointer"));
+  configuration.forEach((Config c) => generator(buffer, c, "Array"));
   buffer.write(footer);
   buffer.write(split2[1]);
 
@@ -130,10 +99,7 @@ void generateHeader(StringBuffer buffer) {
 }
 
 void generatePublicExtension(
-  StringBuffer buffer,
-  Config config,
-  Container container,
-) {
+    StringBuffer buffer, Config config, String container) {
   final nativeType = config.nativeType;
   final dartType = config.dartType;
   final typedListType = config.typedListType;
@@ -200,6 +166,9 @@ void generatePublicExtension(
     truncate = floatTruncate;
   }
 
+  final sizeTimes =
+      elementSize != 1 ? '${bracketOr(sizeOf(elementSize))} * ' : '';
+
   final alignmentDefault = """
   ///
   /// The [address] must be ${sizeOf(elementSize)}-byte aligned.
@@ -238,11 +207,10 @@ $alignment  external $typedListType asTypedList(
     @Since('3.1') Pointer<Void>? token,
   });
 """;
-  final since =
-      Version.latest(config.since, container.since)?.sinceAnnotation ?? '';
-  switch (container) {
-    case Container.pointer:
-      buffer.write("""
+
+  if (container == "Pointer") {
+    final since = config.since?.sinceAnnotation ?? '';
+    buffer.write("""
 /// Extension on [Pointer] specialized for the type argument [$nativeType].
 $since extension ${nativeType}Pointer on Pointer<$nativeType> {
   /// The $property at [address].
@@ -268,8 +236,6 @@ $platform$truncate$alignment  external void operator []=(int index, $dartType va
   ///
   /// Also `(this + offset).value` is equivalent to `this[offset]`,
   /// and similarly for setting.
-  @Since('3.3')
-  @pragma("vm:prefer-inline")
   Pointer<$nativeType> operator +(int offset) => Pointer.fromAddress(address + sizeOf<$nativeType>() * offset);
 
   /// A pointer to the [offset]th [$nativeType] before this one.
@@ -282,16 +248,16 @@ $platform$truncate$alignment  external void operator []=(int index, $dartType va
   ///
   /// Also, `(this - offset).value` is equivalent to `this[-offset]`,
   /// and similarly for setting,
-  @Since('3.3')
-  @pragma("vm:prefer-inline")
   Pointer<$nativeType> operator -(int offset) => Pointer.fromAddress(address - sizeOf<$nativeType>() * offset);
 
 $asTypedList
 }
 
 """);
-    case Container.array:
-      buffer.write("""
+  } else {
+    final since =
+        Version.latest(config.since, arrayVersion)?.sinceAnnotation ?? '';
+    buffer.write("""
 /// Bounds checking indexing methods on [Array]s of [$nativeType].
 $since extension ${nativeType}Array on Array<$nativeType> {
   external $dartType operator [](int index);
@@ -300,49 +266,11 @@ $since extension ${nativeType}Array on Array<$nativeType> {
 }
 
 """);
-    case Container.typedData:
-      if (typedListType != kDoNotEmit) {
-        buffer.write("""
-$since extension ${typedListType}Address on $typedListType {
-  /// The memory address of the underlying data.
-  ///
-  /// An expression of the form `expression.address` denoting this `address`
-  /// can only occurr as an entire argument expression in the invocation of
-  /// a leaf [Native] external function.
-  ///
-  /// Example:
-  ///
-  /// ```dart import:typed_data
-  /// @Native<Void Function(Pointer<$nativeType>)>(isLeaf: true)
-  /// external void myFunction(Pointer<$nativeType> pointer);
-  ///
-  /// void main() {
-  ///   final list = $typedListType(10);
-  ///   myFunction(list.address);
-  /// }
-  /// ```
-  ///
-  /// The expression before `.address` is evaluated like the left-hand-side of
-  /// an assignment, to something that gives access to the storage behind the
-  /// expression, which can be used both for reading and writing. The `.address`
-  /// then gives a native pointer to that storage.
-  ///
-  /// The `.address` is evaluated just before calling into native code when
-  /// invoking a leaf [Native] external function. This ensures the Dart garbage
-  /// collector will not move the object that the address points in to.
-  external Pointer<$nativeType> get address;
-}
-
-""");
-      }
   }
 }
 
 void generatePatchExtension(
-  StringBuffer buffer,
-  Config config,
-  Container container,
-) {
+    StringBuffer buffer, Config config, String container) {
   final nativeType = config.nativeType;
   final dartType = config.dartType;
   final typedListType = config.typedListType;
@@ -373,51 +301,44 @@ void generatePatchExtension(
   }
 """;
 
-  switch (container) {
-    case Container.pointer:
-      buffer.write("""
+  if (container == "Pointer") {
+    buffer.write("""
 @patch
 extension ${nativeType}Pointer on Pointer<$nativeType> {
   @patch
-  @pragma("vm:prefer-inline")
   $dartType get value => _load$nativeType(this, 0);
 
   @patch
-  @pragma("vm:prefer-inline")
   set value($dartType value) => _store$nativeType(this, 0, value);
 
   @patch
-  @pragma("vm:prefer-inline")
   $dartType operator [](int index) => _load$nativeType(this, ${sizeTimes}index);
 
   @patch
-  @pragma("vm:prefer-inline")
   operator []=(int index, $dartType value) => _store$nativeType(this, ${sizeTimes}index, value);
 
 $asTypedList
 }
 
 """);
-    case Container.array:
-      buffer.write("""
+  } else {
+    buffer.write("""
 @patch
 extension ${nativeType}Array on Array<$nativeType> {
   @patch
   $dartType operator [](int index) {
     _checkIndex(index);
-    return _load$nativeType(_typedDataBase, _offsetInBytes + ${sizeTimes}index,);
+    return _load$nativeType(_typedDataBase, ${sizeTimes}index);
   }
 
   @patch
   operator []=(int index, $dartType value) {
     _checkIndex(index);
-    return _store$nativeType(_typedDataBase, _offsetInBytes + ${sizeTimes}index , value,);
+    return _store$nativeType(_typedDataBase, ${sizeTimes}index, value);
   }
 }
 
 """);
-    case Container.typedData:
-    // Nothing to do, all rewritten in the CFE.
   }
 }
 

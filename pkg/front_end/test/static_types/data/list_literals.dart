@@ -2,22 +2,29 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/*cfe.library: nnbd=false*/
+/*cfe:nnbd.library: nnbd=true*/
+
 main() {
-  /*List<dynamic>!*/
+  /*cfe.List<dynamic>*/
+  /*cfe:nnbd.List<dynamic>!*/
   [];
 
-  /*List<int!>!*/
-  [/*int!*/ 0];
+  /*cfe.List<int>*/
+  /*cfe:nnbd.List<int!>!*/
+  [/*cfe.int*/ /*cfe:nnbd.int!*/ 0];
 
-  /*List<num!>!*/
+  /*cfe.List<num>*/
+  /*cfe:nnbd.List<num!>!*/
   [
-    /*int!*/ 0,
-    /*double!*/ 0.5
+    /*cfe.int*/ /*cfe:nnbd.int!*/ 0,
+    /*cfe.double*/ /*cfe:nnbd.double!*/ 0.5
   ];
 
-  /*List<Object!>!*/
+  /*cfe.List<Object>*/
+  /*cfe:nnbd.List<Object!>!*/
   [
-    /*int!*/ 0,
-    /*String!*/ ''
+    /*cfe.int*/ /*cfe:nnbd.int!*/ 0,
+    /*cfe.String*/ /*cfe:nnbd.String!*/ ''
   ];
 }

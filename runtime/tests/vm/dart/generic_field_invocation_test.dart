@@ -3,8 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 //
 // This test verifies that we invoke closure in fields correctly when going
-// through the slow NSM path rather than the field invocation dispatchers
-// when run in AOT mode.
+// through the slow NSM path rather than the field invocation dispatchers.
+//
+// VMOptions=--no-lazy-dispatchers
 
 import 'package:expect/expect.dart';
 

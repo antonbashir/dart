@@ -42,11 +42,7 @@ mixin PidTracker {
     // TODO(dantup): In Dart-Code DAP, we first try again with sigint and wait
     // for a few seconds before sending sigkill.
     for (var pid in pidsToTerminate) {
-      // Skip any negative pids. On Linux, kill -1 means kill everything that
-      // you can. See https://github.com/dart-lang/sdk/issues/55209 for details.
-      if (pid >= 0) {
-        Process.killPid(pid, signal);
-      }
+      Process.killPid(pid, signal);
     }
   }
 }
@@ -69,8 +65,6 @@ mixin TestAdapter {
     String category,
     String message, {
     int? variablesReference,
-    @Deprecated(
-        'parseStackFrames has no effect, stack frames are always parsed')
     bool? parseStackFrames,
   });
 
@@ -240,21 +234,11 @@ mixin FileUtils {
     return filePath.substring(0, 1).toUpperCase() + filePath.substring(1);
   }
 
-  /// Normalizes a [Uri] via [normalizePath].
-  Uri normalizeUri(Uri uri) {
-    if (uri.isScheme('file')) {
-      final filePath = uri.toFilePath();
-      final normalizedPath = normalizePath(filePath);
-      return Uri.file(normalizedPath);
-    } else if (uri.scheme.endsWith('+file')) {
-      // For virtual file schemes, we need to replace the scheme to use
-      // toFilePath() so we can normalise the path, then convert back.
-      final originalScheme = uri.scheme;
-      final filePath = uri.replace(scheme: 'file').toFilePath();
-      final normalizedPath = normalizePath(filePath);
-      return Uri.file(normalizedPath).replace(scheme: originalScheme);
-    } else {
-      return uri;
+  /// Normalizes a file [Uri] via [normalizePath].
+  Uri normalizeUri(Uri fileUri) {
+    if (!fileUri.isScheme('file')) {
+      return fileUri;
     }
+    return Uri.file(normalizePath(fileUri.toFilePath()));
   }
 }

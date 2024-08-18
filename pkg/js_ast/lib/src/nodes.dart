@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+library js_ast.nodes;
+
 import 'precedence.dart';
 import 'printer.dart';
 
@@ -988,8 +990,9 @@ class While extends Loop {
 class Do extends Loop {
   final Expression condition;
 
-  Do(super.body, this.condition,
-      {JavaScriptNodeSourceInformation? sourceInformation}) {
+  Do(Statement body, this.condition,
+      {JavaScriptNodeSourceInformation? sourceInformation})
+      : super(body) {
     _sourceInformation = sourceInformation;
   }
 
@@ -1246,7 +1249,7 @@ class Case extends SwitchClause {
 }
 
 class Default extends SwitchClause {
-  Default(super.body);
+  Default(Block body) : super(body);
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitDefault(this);
@@ -1380,7 +1383,7 @@ class DartYield extends Statement {
 abstract class Expression extends Node {
   // [precedenceLevel] must not be used before printing, as deferred nodes can
   // have precedence depending on how the deferred node is resolved.
-  Precedence get precedenceLevel;
+  int get precedenceLevel;
 
   // Override for refined return type.
   @override
@@ -1499,7 +1502,7 @@ class LiteralExpression extends Expression {
   // Code that uses LiteralExpression must take care of operator precedences,
   // and put parenthesis if needed.
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 /// [VariableDeclarationList] is a subclass of [Expression] to simplify the AST.
@@ -1539,7 +1542,7 @@ class VariableDeclarationList extends Expression {
   VariableDeclarationList _clone() => VariableDeclarationList(declarations);
 
   @override
-  Precedence get precedenceLevel => Precedence.expression;
+  int get precedenceLevel => EXPRESSION;
 }
 
 /// Forced parenthesized expression. Pretty-printing will emit parentheses based
@@ -1570,7 +1573,7 @@ class Parentheses extends Expression {
   Parentheses _clone() => Parentheses(enclosed);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class Assignment extends Expression {
@@ -1584,7 +1587,7 @@ class Assignment extends Expression {
   Assignment.compound(this.leftHandSide, this.op, this.value);
 
   @override
-  Precedence get precedenceLevel => Precedence.assignment;
+  int get precedenceLevel => ASSIGNMENT;
 
   bool get isCompound => op != null;
 
@@ -1624,7 +1627,7 @@ class VariableInitialization extends Expression {
   }
 
   @override
-  Precedence get precedenceLevel => Precedence.assignment;
+  int get precedenceLevel => ASSIGNMENT;
 
   @override
   T accept<T>(NodeVisitor<T> visitor) =>
@@ -1682,7 +1685,7 @@ class Conditional extends Expression {
   Conditional _clone() => Conditional(condition, then, otherwise);
 
   @override
-  Precedence get precedenceLevel => Precedence.assignment;
+  int get precedenceLevel => ASSIGNMENT;
 }
 
 class Call extends Expression {
@@ -1721,11 +1724,11 @@ class Call extends Expression {
   Call _clone() => Call(target, arguments);
 
   @override
-  Precedence get precedenceLevel => Precedence.call;
+  int get precedenceLevel => CALL;
 }
 
 class New extends Call {
-  New(super.cls, super.arguments);
+  New(Expression cls, List<Expression> arguments) : super(cls, arguments);
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitNew(this);
@@ -1736,9 +1739,6 @@ class New extends Call {
 
   @override
   New _clone() => New(target, arguments);
-
-  @override
-  Precedence get precedenceLevel => Precedence.leftHandSide;
 }
 
 class Binary extends Expression {
@@ -1774,46 +1774,46 @@ class Binary extends Expression {
   bool get isCommaOperator => op == ',';
 
   @override
-  Precedence get precedenceLevel {
+  int get precedenceLevel {
     // TODO(floitsch): switch to constant map.
     switch (op) {
       case '**':
-        return Precedence.exponentiation;
+        return EXPONENTIATION;
       case '*':
       case '/':
       case '%':
-        return Precedence.multiplicative;
+        return MULTIPLICATIVE;
       case '+':
       case '-':
-        return Precedence.additive;
+        return ADDITIVE;
       case '<<':
       case '>>':
       case '>>>':
-        return Precedence.shift;
+        return SHIFT;
       case '<':
       case '>':
       case '<=':
       case '>=':
       case 'instanceof':
       case 'in':
-        return Precedence.relational;
+        return RELATIONAL;
       case '==':
       case '===':
       case '!=':
       case '!==':
-        return Precedence.equality;
+        return EQUALITY;
       case '&':
-        return Precedence.bitAnd;
+        return BIT_AND;
       case '^':
-        return Precedence.bitXor;
+        return BIT_XOR;
       case '|':
-        return Precedence.bitOr;
+        return BIT_OR;
       case '&&':
-        return Precedence.logicalAnd;
+        return LOGICAL_AND;
       case '||':
-        return Precedence.logicalOr;
+        return LOGICAL_OR;
       case ',':
-        return Precedence.expression;
+        return EXPRESSION;
       default:
         throw 'Internal Error: Unhandled binary operator: $op';
     }
@@ -1847,7 +1847,7 @@ class Prefix extends Expression {
   }
 
   @override
-  Precedence get precedenceLevel => Precedence.unary;
+  int get precedenceLevel => UNARY;
 }
 
 class Postfix extends Expression {
@@ -1877,7 +1877,7 @@ class Postfix extends Expression {
   }
 
   @override
-  Precedence get precedenceLevel => Precedence.unary;
+  int get precedenceLevel => UNARY;
 }
 
 RegExp _identifierRE = RegExp(r'^[A-Za-z_$][A-Za-z_$0-9]*$');
@@ -1893,7 +1893,7 @@ abstract class VariableReference extends Expression {
   T accept<T>(NodeVisitor<T> visitor);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 
   @override
   void visitChildren<T>(NodeVisitor<T> visitor) {}
@@ -1903,7 +1903,7 @@ abstract class VariableReference extends Expression {
 }
 
 class VariableUse extends VariableReference {
-  VariableUse(super.name);
+  VariableUse(String name) : super(name);
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitVariableUse(this);
@@ -1922,7 +1922,7 @@ class VariableUse extends VariableReference {
 class VariableDeclaration extends VariableReference implements Declaration {
   final bool allowRename;
 
-  VariableDeclaration(super.name, {this.allowRename = true});
+  VariableDeclaration(String name, {this.allowRename = true}) : super(name);
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitVariableDeclaration(this);
@@ -1936,7 +1936,7 @@ class VariableDeclaration extends VariableReference implements Declaration {
 }
 
 class Parameter extends VariableDeclaration {
-  Parameter(super.name);
+  Parameter(String name) : super(name);
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitParameter(this);
@@ -1992,7 +1992,7 @@ class NamedFunction extends Expression {
   NamedFunction _clone() => NamedFunction(name, function);
 
   @override
-  Precedence get precedenceLevel => Precedence.leftHandSide;
+  int get precedenceLevel => LEFT_HAND_SIDE;
 }
 
 abstract class FunctionExpression extends Expression {
@@ -2038,7 +2038,7 @@ class Fun extends FunctionExpression {
   Fun _clone() => Fun(params, body, asyncModifier: asyncModifier);
 
   @override
-  Precedence get precedenceLevel => Precedence.leftHandSide;
+  int get precedenceLevel => LEFT_HAND_SIDE;
 }
 
 class ArrowFunction extends FunctionExpression {
@@ -2080,22 +2080,28 @@ class ArrowFunction extends FunctionExpression {
       ArrowFunction(params, body, asyncModifier: asyncModifier);
 
   @override
-  Precedence get precedenceLevel => Precedence.assignment;
+  int get precedenceLevel => ASSIGNMENT;
 }
 
-enum AsyncModifier {
-  sync('sync', isAsync: false, isYielding: false),
-  async('async', isAsync: true, isYielding: false),
-  asyncStar('async*', isAsync: true, isYielding: true),
-  syncStar('sync*', isAsync: false, isYielding: true),
-  ;
-
+class AsyncModifier {
+  final int index;
   final bool isAsync;
   final bool isYielding;
   final String description;
 
-  const AsyncModifier(this.description,
+  const AsyncModifier(this.index, this.description,
       {required this.isAsync, required this.isYielding});
+
+  static const AsyncModifier sync =
+      AsyncModifier(0, 'sync', isAsync: false, isYielding: false);
+  static const AsyncModifier async =
+      AsyncModifier(1, 'async', isAsync: true, isYielding: false);
+  static const AsyncModifier asyncStar =
+      AsyncModifier(2, 'async*', isAsync: true, isYielding: true);
+  static const AsyncModifier syncStar =
+      AsyncModifier(3, 'sync*', isAsync: false, isYielding: true);
+
+  static const List<AsyncModifier> values = [sync, async, asyncStar, syncStar];
 
   @override
   String toString() => description;
@@ -2136,7 +2142,7 @@ class PropertyAccess extends Expression {
   PropertyAccess _clone() => PropertyAccess(receiver, selector);
 
   @override
-  Precedence get precedenceLevel => Precedence.leftHandSide;
+  int get precedenceLevel => LEFT_HAND_SIDE;
 }
 
 /// A [DeferredToken] is a placeholder for some [Expression] that is not known
@@ -2167,8 +2173,7 @@ abstract class DeferredNumber extends DeferredToken implements Literal {
   int get value;
 
   @override
-  Precedence get precedenceLevel =>
-      value.isNegative ? Precedence.unary : Precedence.primary;
+  int get precedenceLevel => value.isNegative ? UNARY : PRIMARY;
 }
 
 /// Interface for a deferred string value. An implementation has to provide
@@ -2184,7 +2189,7 @@ abstract class DeferredString extends DeferredToken implements Literal {
   String get value;
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 /// Interface for a deferred [Expression] value. An implementation has to provide
@@ -2210,7 +2215,7 @@ abstract class Literal extends Expression {
   void visitChildren1<R, A>(NodeVisitor1<R, A> visitor, A arg) {}
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class LiteralBool extends Literal {
@@ -2329,8 +2334,7 @@ class LiteralNumber extends Literal {
   LiteralNumber(this.value);
 
   @override
-  Precedence get precedenceLevel =>
-      value.startsWith('-') ? Precedence.unary : Precedence.primary;
+  int get precedenceLevel => value.startsWith('-') ? UNARY : PRIMARY;
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitLiteralNumber(this);
@@ -2373,7 +2377,7 @@ class ArrayInitializer extends Expression {
   ArrayInitializer _clone() => ArrayInitializer(elements);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 /// An empty place in an [ArrayInitializer].
@@ -2396,7 +2400,7 @@ class ArrayHole extends Expression {
   ArrayHole _clone() => ArrayHole();
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class ObjectInitializer extends Expression {
@@ -2436,7 +2440,7 @@ class ObjectInitializer extends Expression {
       ObjectInitializer(properties, isOneLiner: isOneLiner);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class Property extends Node {
@@ -2503,7 +2507,7 @@ class MethodDefinition extends Node implements Property {
 }
 
 /// Tag class for all interpolated positions.
-mixin InterpolatedNode implements Node {
+abstract class InterpolatedNode implements Node {
   dynamic get nameOrPosition;
 
   bool get isNamed => nameOrPosition is String;
@@ -2535,7 +2539,7 @@ class InterpolatedExpression extends Expression with InterpolatedNode {
   InterpolatedExpression _clone() => InterpolatedExpression(nameOrPosition);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class InterpolatedLiteral extends Literal with InterpolatedNode {
@@ -2595,7 +2599,7 @@ class InterpolatedParameter extends Expression
   InterpolatedParameter _clone() => InterpolatedParameter(nameOrPosition);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class InterpolatedSelector extends Expression with InterpolatedNode {
@@ -2622,7 +2626,7 @@ class InterpolatedSelector extends Expression with InterpolatedNode {
   InterpolatedSelector _clone() => InterpolatedSelector(nameOrPosition);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 class InterpolatedStatement extends Statement with InterpolatedNode {
@@ -2680,7 +2684,7 @@ class InterpolatedDeclaration extends Expression
   String get name => throw 'No name for the interpolated node';
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 /// [RegExpLiteral]s, despite being called "Literal", do not inherit from
@@ -2711,7 +2715,7 @@ class RegExpLiteral extends Expression {
   RegExpLiteral _clone() => RegExpLiteral(pattern);
 
   @override
-  Precedence get precedenceLevel => Precedence.primary;
+  int get precedenceLevel => PRIMARY;
 }
 
 /// An asynchronous await.
@@ -2725,7 +2729,7 @@ class Await extends Expression {
   Await(this.expression);
 
   @override
-  Precedence get precedenceLevel => Precedence.unary;
+  int get precedenceLevel => UNARY;
 
   @override
   T accept<T>(NodeVisitor<T> visitor) => visitor.visitAwait(this);

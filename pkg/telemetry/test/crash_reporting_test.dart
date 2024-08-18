@@ -8,12 +8,12 @@ import 'package:http/http.dart';
 import 'package:http/testing.dart';
 import 'package:telemetry/crash_reporting.dart';
 import 'package:test/test.dart';
-
-const String mockTrackingId = 'UA-0';
+import 'package:usage/usage.dart';
 
 void main() {
   group('CrashReportSender', () {
     late MockClient mockClient;
+    late AnalyticsMock analytics;
 
     late Request request;
 
@@ -22,6 +22,8 @@ void main() {
         request = r;
         return Response('crash-report-001', 200);
       });
+
+      analytics = AnalyticsMock()..enabled = true;
     });
 
     EnablementCallback shouldSend;
@@ -31,7 +33,7 @@ void main() {
 
     test('general', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       await sender.sendReport('test-error', StackTrace.current);
@@ -43,7 +45,7 @@ void main() {
 
     test('hits pii filters', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       await sender.sendReport('filter this: filename.exe', StackTrace.current);
@@ -55,7 +57,7 @@ void main() {
 
     test('reportsSent', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       expect(sender.reportsSent, 0);
@@ -71,7 +73,7 @@ void main() {
 
     test('contains message', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       await sender.sendReport('test-error', StackTrace.current,
@@ -85,7 +87,7 @@ void main() {
 
     test('has attachments', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       await sender.sendReport(
@@ -106,7 +108,7 @@ void main() {
 
     test('has ptime', () async {
       CrashReportSender sender = CrashReportSender.prod(
-          mockTrackingId, shouldSend,
+          analytics.trackingId, shouldSend,
           httpClient: mockClient);
 
       await sender.sendReport('test-error', StackTrace.current);

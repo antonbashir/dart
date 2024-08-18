@@ -5,5 +5,4 @@ class C {
 }
 
 main() {}
-
 expect(expected, actual) {}

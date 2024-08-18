@@ -180,7 +180,7 @@ class NamespaceBuilder {
   /// [library].
   Namespace createPublicNamespaceForLibrary(LibraryElement library) {
     Map<String, Element> definedNames = HashMap<String, Element>();
-    for (var unitElement in library.units) {
+    for (final unitElement in library.units) {
       _addPublicNames(definedNames, unitElement);
     }
 
@@ -216,19 +216,19 @@ class NamespaceBuilder {
     for (ClassElement element in compilationUnit.classes) {
       _addIfPublic(definedNames, element);
     }
-    for (var element in compilationUnit.enums) {
+    for (final element in compilationUnit.enums) {
       _addIfPublic(definedNames, element);
     }
     for (ExtensionElement element in compilationUnit.extensions) {
       _addIfPublic(definedNames, element);
     }
-    for (var element in compilationUnit.extensionTypes) {
+    for (final element in compilationUnit.extensionTypes) {
       _addIfPublic(definedNames, element);
     }
     for (FunctionElement element in compilationUnit.functions) {
       _addIfPublic(definedNames, element);
     }
-    for (var element in compilationUnit.mixins) {
+    for (final element in compilationUnit.mixins) {
       _addIfPublic(definedNames, element);
     }
     for (TypeAliasElement element in compilationUnit.typeAliases) {

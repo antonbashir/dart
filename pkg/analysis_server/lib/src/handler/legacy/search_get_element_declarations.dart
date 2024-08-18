@@ -19,9 +19,8 @@ class SearchGetElementDeclarationsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = protocol.SearchGetElementDeclarationsParams.fromRequest(
-        request,
-        clientUriConverter: server.uriConverter);
+    var params =
+        protocol.SearchGetElementDeclarationsParams.fromRequest(request);
 
     protocol.ElementKind getElementKind(search.DeclarationKind kind) {
       return switch (kind) {
@@ -85,6 +84,6 @@ class SearchGetElementDeclarationsHandler extends LegacyHandler {
 
     server.sendResponse(protocol.SearchGetElementDeclarationsResult(
             elementDeclarations, workspaceSymbols.files)
-        .toResponse(request.id, clientUriConverter: server.uriConverter));
+        .toResponse(request.id));
   }
 }

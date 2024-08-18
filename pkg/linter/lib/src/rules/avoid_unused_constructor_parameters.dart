@@ -7,8 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/ascii_utils.dart';
 
 const _desc = r'Avoid defining unused parameters in constructors.';
@@ -34,16 +32,19 @@ class BadTwo {
 ''';
 
 class AvoidUnusedConstructorParameters extends LintRule {
-  AvoidUnusedConstructorParameters() : super(
+  static const LintCode code = LintCode('avoid_unused_constructor_parameters',
+      "The parameter '{0}' is not used in the constructor.",
+      correctionMessage: 'Try using the parameter or removing it.');
+
+  AvoidUnusedConstructorParameters()
+      : super(
             name: 'avoid_unused_constructor_parameters',
             description: _desc,
             details: _details,
-            // TODO(srawlins): This isn't even just about unintentional syntax;
-            // unused parameters can represent code bloat.
-            categories: {LintRuleCategory.unintentional});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_unused_constructor_parameters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -81,7 +82,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
-    if (node.isAugmentation) return;
     if (node.redirectedConstructor != null) return;
     if (node.externalKeyword != null) return;
 

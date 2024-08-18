@@ -229,6 +229,8 @@ ConstructedConstantValue createSymbol(
   InterfaceType type = commonElements.symbolImplementationType;
   FieldEntity field = commonElements.symbolField;
   ConstantValue argument = createString(text);
+  // TODO(johnniwinther): Use type arguments when all uses no longer expect
+  // a [FieldElement].
   var fields = <FieldEntity, ConstantValue>{field: argument};
   return ConstructedConstantValue(type, fields);
 }
@@ -474,7 +476,7 @@ abstract class ArithmeticNumOperation implements BinaryOperation {
   NumConstantValue? fold(ConstantValue left, ConstantValue right) {
     NumConstantValue? _fold(ConstantValue left, ConstantValue right) {
       if (left is NumConstantValue && right is NumConstantValue) {
-        Object? foldedValue;
+        var foldedValue;
         if (left is IntConstantValue && right is IntConstantValue) {
           foldedValue = foldInts(left.intValue, right.intValue);
         } else {
@@ -486,9 +488,10 @@ abstract class ArithmeticNumOperation implements BinaryOperation {
                 right is IntConstantValue &&
                 !isDivide() ||
             isTruncatingDivide()) {
-          return createInt(foldedValue as BigInt);
+          assert(foldedValue is BigInt);
+          return createInt(foldedValue);
         } else {
-          return createDouble(foldedValue as double);
+          return createDouble(foldedValue);
         }
       }
       return null;
@@ -501,8 +504,8 @@ abstract class ArithmeticNumOperation implements BinaryOperation {
 
   bool isDivide() => false;
   bool isTruncatingDivide() => false;
-  Object? foldInts(BigInt left, BigInt right);
-  Object? foldNums(num left, num right);
+  foldInts(BigInt left, BigInt right);
+  foldNums(num left, num right);
 }
 
 class SubtractOperation extends ArithmeticNumOperation {

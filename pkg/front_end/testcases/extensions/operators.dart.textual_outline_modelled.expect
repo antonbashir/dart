@@ -11,7 +11,6 @@ class Complex {
 }
 
 expect(expected, actual) {}
-
 explicit() {}
 
 extension Operators on Complex {
@@ -21,7 +20,5 @@ extension Operators on Complex {
 }
 
 implicit() {}
-
 main() {}
-
 void errors(Complex c) {}

@@ -5,7 +5,6 @@ class C {
 }
 
 main() {}
-
 var v = new C().f(() {
   return 1;
 });

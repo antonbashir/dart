@@ -2,107 +2,87 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/// Utility methods to manipulate JavaScript objects dynamically.
+/// Utility methods to manipulate JS objects dynamically.
 ///
-/// This library is typically meant to be used when the names of properties or
-/// methods are not known statically. This library is similar to `dart:js_util`,
-/// except the methods here are extension methods that use JS types. This
-/// allows code using these functions to also be compiled to WebAssembly.
+/// This library is meant to be used when the names of properties or methods are
+/// not known statically. This library is similar to 'dart:js_util', except
+/// the methods here are extension methods that use JS types. This enables
+/// support with dart2wasm.
 ///
-/// In general, prefer to write JS interop interfaces and external static
-/// interop members using `dart:js_interop`. This library is meant to work
-/// around issues and help with migration from older JS interop libraries.
+/// In general, we expect people to use 'dart:js_interop' and that this library
+/// will be rarely used. Prefer to write JS interop interfaces and external
+/// static interop members using 'dart:js_interop'. The APIs in this library are
+/// meant to work around issues and help with migration from older JS interop
+/// libraries like 'dart:js'.
 ///
-/// > [!NOTE]
-/// > As the name suggests, usage of this library *can* be unsafe. This means
-/// > that safe usage of these methods cannot necessarily be verified
-/// > statically. Prefer using statically analyzable values like constants or
-/// > literals for property or method names so that usage can be verified. This
-/// > library should be used cautiously and only when the same effect cannot be
-/// > achieved with static interop.
+/// As the name suggests, usage of this library is considered unsafe. This means
+/// that safe usage of these methods cannot necessarily be verified statically.
+/// Therefore, they should be used cautiously and only when the same effect
+/// cannot be achieved with static interop.
 ///
 /// {@category Web}
-library;
+library dart.js_interop_unsafe;
 
 import 'dart:js_interop';
 
-/// Utility methods to check, get, set, and call properties on a [JSObject].
-///
-/// See the [JavaScript specification](https://tc39.es/ecma262/#sec-object-type)
-/// for more details on using properties.
 extension JSObjectUnsafeUtilExtension on JSObject {
-  /// Shorthand helper for [hasProperty] to check whether this [JSObject]
-  /// contains the property key [property], but takes and returns a Dart value.
-  bool has(String property) => hasProperty(property.toJS).toDart;
-
-  /// Whether or not this [JSObject] contains the property key [property].
+  /// Whether or not this [JSObject] has a given property.
   external JSBoolean hasProperty(JSAny property);
 
-  /// Shorthand helper for [getProperty] to get the value of the property key
-  /// [property] of this [JSObject], but takes and returns a Dart value.
+  /// Shorthand helper to get String properties.
   JSAny? operator [](String property) => getProperty(property.toJS);
 
-  /// The value of the property key [property] of this [JSObject].
-  external R getProperty<R extends JSAny?>(JSAny property);
+  /// Gets a given [property] from this [JSObject].
+  external T getProperty<T extends JSAny?>(JSAny property);
 
-  /// Shorthand helper for [setProperty] to write the [value] of the property
-  /// key [property] of this [JSObject], but takes a Dart value.
+  /// Shorthand helper to set String properties.
   void operator []=(String property, JSAny? value) =>
       setProperty(property.toJS, value);
 
-  /// Write the [value] of property key [property] of this [JSObject].
+  /// Sets a given [property] with [value] on this [JSObject].
   external void setProperty(JSAny property, JSAny? value);
 
   external JSAny? _callMethod(JSAny method,
       [JSAny? arg1, JSAny? arg2, JSAny? arg3, JSAny? arg4]);
 
-  /// Calls [method] on this [JSObject] with up to four arguments.
+  /// Calls a method on this [JSObject] with up to four arguments and returns
+  /// the result.
   ///
-  /// Returns the result of calling [method], which must be an [R].
-  ///
-  /// This helper doesn't allow passing nulls, as it determines whether an
-  /// argument is passed based on whether it was null or not. Prefer
-  /// [callMethodVarArgs] if you need to pass nulls.
-  R callMethod<R extends JSAny?>(JSAny method,
+  /// TODO(srujzs): This helper doesn't allow passing nulls, as we use null as
+  /// our sentinel to determine if an argument is passed.
+  T callMethod<T extends JSAny?>(JSAny method,
           [JSAny? arg1, JSAny? arg2, JSAny? arg3, JSAny? arg4]) =>
-      _callMethod(method, arg1, arg2, arg3, arg4) as R;
+      _callMethod(method, arg1, arg2, arg3, arg4) as T;
 
   external JSAny? _callMethodVarArgs(JSAny method, [List<JSAny?>? arguments]);
 
-  /// Calls [method] on this [JSObject] with a variable number of [arguments].
-  ///
-  /// Returns the result of calling [method], which must be an [R].
-  R callMethodVarArgs<R extends JSAny?>(JSAny method,
+  /// Calls a method on this [JSObject] with a variable number of arguments and
+  /// returns the result.
+  T callMethodVarArgs<T extends JSAny?>(JSAny method,
           [List<JSAny?>? arguments]) =>
-      _callMethodVarArgs(method, arguments) as R;
+      _callMethodVarArgs(method, arguments) as T;
 
-  /// Deletes the property with key [property] from this [JSObject].
+  /// Deletes the given property from this [JSObject].
   external JSBoolean delete(JSAny property);
 }
 
-/// Utility methods to call [JSFunction]s as constructors.
 extension JSFunctionUnsafeUtilExtension on JSFunction {
   external JSObject _callAsConstructor(
       [JSAny? arg1, JSAny? arg2, JSAny? arg3, JSAny? arg4]);
 
-  /// Calls this [JSFunction] as a constructor with up to four arguments.
+  /// Calls this [JSFunction] as a constructor with up to four arguments and
+  /// returns the constructed [JSObject].
   ///
-  /// Returns the constructed object, which must be an [R].
-  ///
-  /// This helper doesn't allow passing nulls, as it determines whether an
-  /// argument is passed based on whether it was null or not. Prefer
-  /// [callAsConstructorVarArgs] if you need to pass nulls.
-  // TODO(srujzs): The type bound should extend `JSObject`.
-  R callAsConstructor<R>(
+  /// TODO(srujzs): This helper doesn't allow passing nulls, as we use null as
+  /// our sentinel to determine if an argument is passed.
+  T callAsConstructor<T>(
           [JSAny? arg1, JSAny? arg2, JSAny? arg3, JSAny? arg4]) =>
-      _callAsConstructor(arg1, arg2, arg3, arg4) as R;
+      _callAsConstructor(arg1, arg2, arg3, arg4) as T;
 
   external JSObject _callAsConstructorVarArgs([List<JSAny?>? arguments]);
 
   /// Calls this [JSFunction] as a constructor with a variable number of
-  /// arguments.
-  ///
-  /// Returns the constructed [JSObject], which must be an [R].
-  R callAsConstructorVarArgs<R extends JSObject>([List<JSAny?>? arguments]) =>
-      _callAsConstructorVarArgs(arguments) as R;
+  /// arguments and returns the constructed [JSObject].
+  T callAsConstructorVarArgs<T extends JSObject>([List<JSAny?>? arguments]) =>
+      _callAsConstructorVarArgs(arguments) as T;
 }

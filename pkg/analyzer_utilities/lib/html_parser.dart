@@ -12,7 +12,7 @@ import 'html_dom.dart';
 
 /// Given HTML text, return a parsed HTML tree.
 Document parse(String htmlContents, Uri uri) {
-  RegExp commentRegex = RegExp(r'<!--[^>]+-->');
+  final RegExp commentRegex = RegExp(r'<!--[^>]+-->');
 
   Element createElement(XmlElement xmlElement) {
     // element

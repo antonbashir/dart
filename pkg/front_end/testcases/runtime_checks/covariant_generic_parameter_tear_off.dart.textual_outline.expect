@@ -1,7 +1,6 @@
 library test;
 
 typedef void F<T>(T x);
-
 typedef U G<T, U>(T x);
 
 class C<T> {
@@ -10,11 +9,7 @@ class C<T> {
 }
 
 F<num> g1(C<num> c) {}
-
 void g2(C<int> c, Object x) {}
-
 G<List<num>, num> g3(C<num> c) {}
-
 void test() {}
-
 main() {}

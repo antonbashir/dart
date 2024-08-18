@@ -13,11 +13,6 @@ final _vmOptionsRegExp = RegExp(r"// VMOptions=(.*)");
 final _environmentRegExp = RegExp(r"// Environment=(.*)");
 final _packagesRegExp = RegExp(r"// Packages=(.*)");
 final _experimentRegExp = RegExp(r"^--enable-experiment=([a-z0-9,-]+)$");
-final _localFileRegExp = RegExp(
-    r"""^\s*(?:import(?: augment)?|part) """
-    r"""['"](?!package:|dart:)(.*)['"]"""
-    r"""(?: deferred as \w+)?;""",
-    multiLine: true);
 
 List<String> _splitWords(String s) =>
     s.split(' ').where((e) => e != '').toList();
@@ -185,7 +180,12 @@ abstract class _TestFileBase {
 ///     the test output).
 class TestFile extends _TestFileBase {
   /// Read the test file from the given [filePath].
-  factory TestFile.read(Path suiteDirectory, String filePath) {
+  factory TestFile.read(Path suiteDirectory, String filePath) => TestFile.parse(
+      suiteDirectory, filePath, File(filePath).readAsStringSync());
+
+  /// Parse a test file with [contents].
+  factory TestFile.parse(
+      Path suiteDirectory, String filePath, String contents) {
     if (filePath.endsWith('.dill')) {
       return TestFile._(suiteDirectory, Path(filePath), [],
           requirements: [],
@@ -202,8 +202,6 @@ class TestFile extends _TestFileBase {
           environment: {},
           experiments: []);
     }
-
-    final contents = File(filePath).readAsStringSync();
 
     // Required features.
     var requirements =
@@ -291,9 +289,9 @@ class TestFile extends _TestFileBase {
 
     var isMultitest = _multitestRegExp.hasMatch(contents);
 
-    var errorExpectations = <StaticError>[];
+    List<StaticError> errorExpectations;
     try {
-      errorExpectations.addAll(_parseExpectations(filePath));
+      errorExpectations = StaticError.parseExpectations(contents);
     } on FormatException catch (error) {
       throw FormatException(
           "Invalid error expectation syntax in $filePath:\n$error");
@@ -314,38 +312,6 @@ class TestFile extends _TestFileBase {
         otherResources: otherResources,
         experiments: experiments,
         isVmIntermediateLanguageTest: isVmIntermediateLanguageTest);
-  }
-
-  /// Parse expectations from the file with [path].
-  ///
-  /// Recurses to follow local (not `dart:` or `package:`) imports.
-  static List<StaticError> _parseExpectations(String path,
-      {Set<String>? alreadyParsed}) {
-    alreadyParsed ??= {};
-    var file = File(path);
-
-    // Missing files set no expectations.
-    if (!file.existsSync()) return [];
-
-    // Catch import loops.
-    if (!alreadyParsed.add(Uri.parse(path).toString())) return [];
-
-    // Parse one file.
-    var contents = File(path).readAsStringSync();
-    var result = StaticError.parseExpectations(path: path, source: contents);
-
-    // Parse imports and recurse.
-    var matches = _localFileRegExp.allMatches(contents);
-    for (var match in matches) {
-      var localPath = Uri.tryParse(match[1]!);
-      // Broken import paths set no expectations.
-      if (localPath == null) continue;
-      var uriString = Uri.parse(path).resolve(localPath.path).toString();
-      result
-          .addAll(_parseExpectations(uriString, alreadyParsed: alreadyParsed));
-    }
-
-    return result;
   }
 
   /// A special fake test file for representing a VM unit test written in C++.
@@ -443,11 +409,7 @@ class TestFile extends _TestFileBase {
           bool hasStaticWarning = false,
           bool hasSyntaxError = false}) =>
       _MultitestFile(
-          this,
-          path,
-          multitestKey,
-          StaticError.parseExpectations(
-              path: path.toString(), source: contents),
+          this, path, multitestKey, StaticError.parseExpectations(contents),
           hasCompileError: hasCompileError,
           hasRuntimeError: hasRuntimeError,
           hasStaticWarning: hasStaticWarning,

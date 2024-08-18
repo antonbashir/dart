@@ -12,12 +12,11 @@ import 'package:analysis_server/src/services/refactoring/move_top_level_to_file.
 import 'package:language_server_protocol/protocol_generated.dart';
 
 /// A function that can be executed to create a refactoring producer.
-typedef RefactoringProducerGenerator = RefactoringProducer Function(
-    RefactoringContext);
+typedef ProducerGenerator = RefactoringProducer Function(RefactoringContext);
 
 class RefactoringProcessor {
   /// A list of the generators used to produce refactorings.
-  static const Map<String, RefactoringProducerGenerator> generators = {
+  static const Map<String, ProducerGenerator> generators = {
     ConvertAllFormalParametersToNamed.commandName:
         ConvertAllFormalParametersToNamed.new,
     ConvertSelectedFormalParametersToNamed.commandName:
@@ -44,7 +43,7 @@ class RefactoringProcessor {
         continue;
       }
 
-      var isAvailable = producer.isAvailable();
+      final isAvailable = producer.isAvailable();
       if (!isAvailable) {
         continue;
       }
@@ -62,7 +61,7 @@ class RefactoringProcessor {
         'that are not supported by the client',
       );
 
-      var command = entry.key;
+      final command = entry.key;
       assert(
         (() => Commands.serverSupportedCommands.contains(command))(),
         'serverSupportedCommands did not contain $command',

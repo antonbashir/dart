@@ -6,13 +6,12 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/flutter_utils.dart';
 
-const _desc = r'`SizedBox` for whitespace.';
+const _desc = r'SizedBox for whitespace.';
 
 const _details = r'''
-Use `SizedBox` to add whitespace to a layout.
+Use SizedBox to add whitespace to a layout.
 
 A `Container` is a heavier Widget than a `SizedBox`, and as bonus, `SizedBox`
 has a `const` constructor.
@@ -49,15 +48,19 @@ Widget buildRow() {
 ''';
 
 class SizedBoxForWhitespace extends LintRule {
+  static const LintCode code = LintCode('sized_box_for_whitespace',
+      "Use a 'SizedBox' to add whitespace to a layout.",
+      correctionMessage: "Try using a 'SizedBox' rather than a 'Container'.");
+
   SizedBoxForWhitespace()
       : super(
             name: 'sized_box_for_whitespace',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.flutter, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.sized_box_for_whitespace;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -65,6 +68,35 @@ class SizedBoxForWhitespace extends LintRule {
     var visitor = _Visitor(this);
 
     registry.addInstanceCreationExpression(this, visitor);
+  }
+}
+
+class _ArgumentData {
+  var incompatibleParamsFound = false;
+
+  var positionalArgumentFound = false;
+  var seenWidth = false;
+  var seenHeight = false;
+  var seenChild = false;
+  _ArgumentData(ArgumentList node) {
+    for (var argument in node.arguments) {
+      if (argument is! NamedExpression) {
+        positionalArgumentFound = true;
+        return;
+      }
+      var label = argument.name.label;
+      if (label.name == 'width') {
+        seenWidth = true;
+      } else if (label.name == 'height') {
+        seenHeight = true;
+      } else if (label.name == 'child') {
+        seenChild = true;
+      } else if (label.name == 'key') {
+        // key doesn't matter (both SizedBox and Container have it)
+      } else {
+        incompatibleParamsFound = true;
+      }
+    }
   }
 }
 
@@ -79,39 +111,14 @@ class _Visitor extends SimpleAstVisitor {
       return;
     }
 
-    if (_shouldReportForArguments(node.argumentList)) {
+    var data = _ArgumentData(node.argumentList);
+
+    if (data.incompatibleParamsFound || data.positionalArgumentFound) {
+      return;
+    }
+    if (data.seenChild && (data.seenWidth || data.seenHeight) ||
+        data.seenWidth && data.seenHeight) {
       rule.reportLint(node.constructorName);
     }
-  }
-
-  /// Determine if the lint [rule] should be reported for
-  /// the specified [argumentList].
-  static bool _shouldReportForArguments(ArgumentList argumentList) {
-    var hasChild = false;
-    var hasHeight = false;
-    var hasWidth = false;
-
-    for (var argument in argumentList.arguments) {
-      if (argument is! NamedExpression) {
-        // Positional arguments are not supported.
-        return false;
-      }
-      switch (argument.name.label.name) {
-        case 'child':
-          hasChild = true;
-        case 'height':
-          hasHeight = true;
-        case 'width':
-          hasWidth = true;
-        case 'key':
-          // Ignore 'key' as both SizedBox and Container have it.
-          break;
-        case _:
-          // Other named arguments are not supported.
-          return false;
-      }
-    }
-
-    return hasChild && (hasWidth || hasHeight) || hasWidth && hasHeight;
   }
 }

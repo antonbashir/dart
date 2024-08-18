@@ -2,17 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
-import 'package:analysis_server_plugin/src/correction/fix_generators.dart';
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 
-/// Prints lints that are bulk-fixable in a format that can be included in
+/// Print lints that are bulk-fixable in a format that can be included in
 /// analysis options.
 void main() {
-  var bulkFixCodes = registeredFixGenerators.lintProducers.entries
+  final bulkFixCodes = FixProcessor.lintProducerMap.entries
       .where((e) => e.value
-          .where((generator) =>
-              generator(context: StubCorrectionProducerContext.instance)
-                  .canBeAppliedAcrossFiles)
+          .where((generator) => generator().canBeAppliedInBulk)
           .isNotEmpty)
       .map((e) => e.key);
   print('    # bulk-fixable lints');

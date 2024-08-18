@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:front_end/src/api_unstable/ddc.dart';
+import 'package:front_end/src/compute_platform_binaries_location.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/binary/ast_from_binary.dart';
 import 'package:kernel/dart_scope_calculator.dart';
@@ -51,10 +52,9 @@ class ScopeOffsetValidator extends VisitorDefault<void> with VisitorVoidMixin {
   static void validate(Library library) {
     var validator = ScopeOffsetValidator._();
     validator.visitLibrary(library);
-    final importUri = library.importUri.toString();
     // TODO(joshualitt): Currently, there's nothing in `dart:_js_types` that
     // would be indexed. Remove this exception when we add things to it.
-    if (importUri != 'dart:_js_types' && importUri != 'dart:_ddc_only') {
+    if (library.importUri.toString() != 'dart:_js_types') {
       expect(validator.classCount + validator.memberCount, greaterThan(0),
           reason: 'Validation was not empty');
     }

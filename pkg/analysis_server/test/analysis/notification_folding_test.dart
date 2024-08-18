@@ -39,15 +39,13 @@ main async() {}
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_FOLDING) {
-      var params = AnalysisFoldingParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = AnalysisFoldingParams.fromNotification(notification);
       if (params.file == testFile.path) {
         lastRegions = params.regions;
         _regionsReceived.complete();
       }
     } else if (notification.event == SERVER_NOTIFICATION_ERROR) {
-      var params = ServerErrorParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var params = ServerErrorParams.fromNotification(notification);
       throw '${params.message}\n${params.stackTrace}';
     }
   }

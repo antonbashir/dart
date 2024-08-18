@@ -6,13 +6,12 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/leak_detector_visitor.dart';
 
-const _desc = r'Cancel instances of `dart:async` `StreamSubscription`.';
+const _desc = r'Cancel instances of dart.async.StreamSubscription.';
 
 const _details = r'''
-**DO** invoke `cancel` on instances of `dart:async` `StreamSubscription`.
+**DO** invoke `cancel` on instances of `dart.async.StreamSubscription`.
 
 Cancelling instances of StreamSubscription prevents memory leaks and unexpected
 behavior.
@@ -64,19 +63,24 @@ for more information.
 
 ''';
 
+bool _isSubscription(DartType type) =>
+    type.implementsInterface('StreamSubscription', 'dart.async');
+
 class CancelSubscriptions extends LintRule {
+  static const LintCode code = LintCode(
+      'cancel_subscriptions', "Uncancelled instance of 'StreamSubscription'.",
+      correctionMessage: "Try invoking 'cancel' in the function in which the "
+          "'StreamSubscription' was created.");
+
   CancelSubscriptions()
       : super(
             name: 'cancel_subscriptions',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.errorProne,
-              LintRuleCategory.memoryLeaks
-            });
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.cancel_subscriptions;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -88,15 +92,12 @@ class CancelSubscriptions extends LintRule {
 }
 
 class _Visitor extends LeakDetectorProcessors {
-  static final _predicates = {
-    _isSubscription: 'cancel',
+  static const _cancelMethodName = 'cancel';
+
+  @override
+  Map<DartTypePredicate, String> predicates = {
+    _isSubscription: _cancelMethodName
   };
 
   _Visitor(super.rule);
-
-  @override
-  Map<DartTypePredicate, String> get predicates => _predicates;
-
-  static bool _isSubscription(DartType type) =>
-      type.implementsInterface('StreamSubscription', 'dart.async');
 }

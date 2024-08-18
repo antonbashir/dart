@@ -4,12 +4,17 @@
 
 library fasta.tool.additional_targets;
 
-import 'package:compiler/src/kernel/dart2js_target.dart' show Dart2jsTarget;
-import 'package:dart2wasm/target.dart' as wasm show Mode;
-import 'package:dart2wasm/target.dart' show WasmTarget;
-import 'package:dev_compiler/src/kernel/target.dart' show DevCompilerTarget;
 import 'package:kernel/target/targets.dart' show TargetFlags, targets;
-import 'package:vm/modular/target/install.dart' as vm_target_install
+
+import 'package:compiler/src/kernel/dart2js_target.dart' show Dart2jsTarget;
+
+import 'package:dev_compiler/src/kernel/target.dart' show DevCompilerTarget;
+
+import 'package:dart2wasm/target.dart' show WasmTarget;
+
+import 'package:dart2wasm/target.dart' as wasm show Mode;
+
+import 'package:vm/target/install.dart' as vm_target_install
     show installAdditionalTargets;
 
 void installAdditionalTargets() {

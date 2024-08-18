@@ -1161,7 +1161,7 @@ static void JumpIfString(Assembler* assembler,
                          Register cid,
                          Register tmp,
                          Label* target) {
-  assembler->RangeCheck(cid, tmp, kOneByteStringCid, kTwoByteStringCid,
+  assembler->RangeCheck(cid, tmp, kOneByteStringCid, kExternalTwoByteStringCid,
                         Assembler::kIfInRange, target);
 }
 
@@ -1169,7 +1169,7 @@ static void JumpIfNotString(Assembler* assembler,
                             Register cid,
                             Register tmp,
                             Label* target) {
-  assembler->RangeCheck(cid, tmp, kOneByteStringCid, kTwoByteStringCid,
+  assembler->RangeCheck(cid, tmp, kOneByteStringCid, kExternalTwoByteStringCid,
                         Assembler::kIfNotInRange, target);
 }
 
@@ -1398,7 +1398,7 @@ void AsmIntrinsifier::String_getHashCode(Assembler* assembler,
 
 void AsmIntrinsifier::Type_equality(Assembler* assembler,
                                     Label* normal_ir_body) {
-  Label equal, not_equal, equiv_cids_may_be_generic, equiv_cids;
+  Label equal, not_equal, equiv_cids_may_be_generic, equiv_cids, check_legacy;
 
   __ lx(A0, Address(SP, 1 * target::kWordSize));
   __ lx(A1, Address(SP, 0 * target::kWordSize));
@@ -1430,12 +1430,23 @@ void AsmIntrinsifier::Type_equality(Assembler* assembler,
   __ Bind(&equiv_cids);
   __ LoadAbstractTypeNullability(A0, A0);
   __ LoadAbstractTypeNullability(A1, A1);
-  __ bne(A0, A1, &not_equal);
-  // Fall through to equal case if nullability is equal.
+  __ bne(A0, A1, &check_legacy);
+  // Fall through to equal case if nullability is strictly equal.
 
   __ Bind(&equal);
   __ LoadObject(A0, CastHandle<Object>(TrueObject()));
   __ ret();
+
+  // At this point the nullabilities are different, so they can only be
+  // syntactically equivalent if they're both either kNonNullable or kLegacy.
+  // These are the two largest values of the enum, so we can just do a < check.
+  ASSERT(target::Nullability::kNullable < target::Nullability::kNonNullable &&
+         target::Nullability::kNonNullable < target::Nullability::kLegacy);
+  __ Bind(&check_legacy);
+  __ CompareImmediate(A1, target::Nullability::kNonNullable);
+  __ BranchIf(LT, &not_equal);
+  __ CompareImmediate(A0, target::Nullability::kNonNullable);
+  __ BranchIf(GE, &equal);
 
   __ Bind(&not_equal);
   __ LoadObject(A0, CastHandle<Object>(FalseObject()));
@@ -2017,7 +2028,7 @@ void AsmIntrinsifier::Timeline_isDartStreamEnabled(Assembler* assembler,
 #else
   Label true_label;
   // Load TimelineStream*.
-  __ LoadFromOffset(A0, THR, target::Thread::dart_stream_offset());
+  __ lx(A0, Address(THR, target::Thread::dart_stream_offset()));
   // Load uintptr_t from TimelineStream*.
   __ lx(A0, Address(A0, target::TimelineStream::enabled_offset()));
   __ bnez(A0, &true_label, Assembler::kNearJump);

@@ -1,7 +1,5 @@
 typedef A<T> = Class<T>;
-
 typedef B<T extends num> = Class<T>;
-
 class Class<T> {
   const Class();
   @T()
@@ -35,7 +33,6 @@ class Class<T> {
   @T()
   T instanceMethod<S extends T>(T t) {}
 }
-
 extension Extension<T> on T {
   Extension(T t);
   factory Extension.fact(T t) => null;
@@ -48,7 +45,6 @@ extension Extension<T> on T {
   @T()
   T instanceMethod<S extends T>(T t) {}
 }
-
 mixin Mixin<T> {
   Mixin(T t);
   factory Mixin.fact(T t) => null;
@@ -61,5 +57,4 @@ mixin Mixin<T> {
   @T()
   T instanceMethod<S extends T>(T t) {}
 }
-
 main() {}

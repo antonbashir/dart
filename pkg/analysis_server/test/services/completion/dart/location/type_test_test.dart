@@ -64,6 +64,8 @@ void f() { if (v i^ && false) {} }
 replacement
   left: 1
 suggestions
+  case
+    kind: keyword
   is
     kind: keyword
 ''');

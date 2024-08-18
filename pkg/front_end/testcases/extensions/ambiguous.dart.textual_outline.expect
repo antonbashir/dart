@@ -21,5 +21,4 @@ extension B on C {
 class C {}
 
 errors(C c) {}
-
 main() {}

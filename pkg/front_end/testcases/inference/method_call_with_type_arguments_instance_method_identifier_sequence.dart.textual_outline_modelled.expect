@@ -9,5 +9,4 @@ class C {
 class D<T> {}
 
 main() {}
-
 var f = c.f<int>();

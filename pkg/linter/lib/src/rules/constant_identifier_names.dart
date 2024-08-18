@@ -8,7 +8,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../utils.dart';
 
 const _desc = r'Prefer using lowerCamelCase for constant names.';
@@ -46,15 +45,20 @@ class Dice {
 ''';
 
 class ConstantIdentifierNames extends LintRule {
+  static const LintCode code = LintCode('constant_identifier_names',
+      "The constant name '{0}' isn't a lowerCamelCase identifier.",
+      correctionMessage:
+          'Try changing the name to follow the lowerCamelCase style.');
+
   ConstantIdentifierNames()
       : super(
             name: 'constant_identifier_names',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.constant_identifier_names;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -87,22 +91,16 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitEnumConstantDeclaration(EnumConstantDeclaration node) {
-    if (node.isAugmentation) return;
-
     checkIdentifier(node.name);
   }
 
   @override
   void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
-    if (node.isAugmentation) return;
-
     visitVariableDeclarationList(node.variables);
   }
 
   @override
   void visitVariableDeclarationList(VariableDeclarationList node) {
-    if (node.parent?.isAugmentation ?? false) return;
-
     for (var v in node.variables) {
       if (v.isConst) {
         checkIdentifier(v.name);

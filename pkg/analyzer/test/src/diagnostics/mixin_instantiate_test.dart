@@ -30,14 +30,14 @@ void f() {
       error(CompileTimeErrorCode.MIXIN_INSTANTIATE, 45, 1),
     ]);
 
-    var node = findNode.singleInstanceCreationExpression;
+    final node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType
       name: M
-      element: <testLibraryFragment>::@mixin::M
+      element: self::@mixin::M
       type: M
     period: .
     name: SimpleIdentifier
@@ -63,14 +63,14 @@ void f() {
       error(CompileTimeErrorCode.MIXIN_INSTANTIATE, 29, 1),
     ]);
 
-    var node = findNode.singleInstanceCreationExpression;
+    final node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType
       name: M
-      element: <testLibraryFragment>::@mixin::M
+      element: self::@mixin::M
       type: M
     staticElement: <null>
   argumentList: ArgumentList

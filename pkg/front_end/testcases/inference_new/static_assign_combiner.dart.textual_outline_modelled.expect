@@ -1,7 +1,6 @@
 library test;
 
 A get target => throw '';
-
 T f<T>() => throw '';
 
 class A {
@@ -23,11 +22,7 @@ class E {}
 class F {}
 
 main() {}
-
 void set target(B value) {}
-
 void test1() {}
-
 void test2() {}
-
 void test3() {}

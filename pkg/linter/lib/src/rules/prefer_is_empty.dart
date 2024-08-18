@@ -10,9 +10,8 @@ import 'package:analyzer/dart/element/type.dart';
 import '../analyzer.dart';
 import '../ast.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Use `isEmpty` for `Iterable`s and `Map`s.';
+const _desc = r'Use `isEmpty` for Iterables and Maps.';
 const _details = r'''
 **DON'T** use `length` to see if a collection is empty.
 
@@ -38,23 +37,41 @@ if (words.isNotEmpty) return words.join(' ');
 ''';
 
 class PreferIsEmpty extends LintRule {
+  // TODO(brianwilkerson): Both `alwaysFalse` and `alwaysTrue` should be warnings
+  //  rather than lints because they represent a bug rather than a style
+  //  preference.
+  static const LintCode alwaysFalse = LintCode(
+      'prefer_is_empty',
+      "The comparison is always 'false' because the length is always greater "
+          'than or equal to 0.');
+
+  static const LintCode alwaysTrue = LintCode(
+      'prefer_is_empty',
+      "The comparison is always 'true' because the length is always greater "
+          'than or equal to 0.');
+
+  static const LintCode useIsEmpty = LintCode(
+      'prefer_is_empty',
+      "Use 'isEmpty' instead of 'length' to test whether the collection is "
+          'empty.',
+      correctionMessage: "Try rewriting the expression to use 'isEmpty'.");
+
+  static const LintCode useIsNotEmpty = LintCode(
+      'prefer_is_empty',
+      "Use 'isNotEmpty' instead of 'length' to test whether the collection is "
+          'empty.',
+      correctionMessage: "Try rewriting the expression to use 'isNotEmpty'.");
+
   PreferIsEmpty()
       : super(
             name: 'prefer_is_empty',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
-  // TODO(brianwilkerson): Both `alwaysFalse` and `alwaysTrue` should be warnings
-  //  rather than lints because they represent a bug rather than a style
-  //  preference.
   @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.prefer_is_empty_always_false,
-        LinterLintCode.prefer_is_empty_always_true,
-        LinterLintCode.prefer_is_empty_use_is_empty,
-        LinterLintCode.prefer_is_empty_use_is_not_empty
-      ];
+  List<LintCode> get lintCodes =>
+      [alwaysFalse, alwaysTrue, useIsEmpty, useIsNotEmpty];
 
   @override
   void registerNodeProcessors(
@@ -113,39 +130,31 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (value == 0) {
       if (operator.type == TokenType.EQ_EQ ||
           operator.type == TokenType.LT_EQ) {
-        rule.reportLint(expression,
-            errorCode: LinterLintCode.prefer_is_empty_use_is_empty);
+        rule.reportLint(expression, errorCode: PreferIsEmpty.useIsEmpty);
       } else if (operator.type == TokenType.GT ||
           operator.type == TokenType.BANG_EQ) {
-        rule.reportLint(expression,
-            errorCode: LinterLintCode.prefer_is_empty_use_is_not_empty);
+        rule.reportLint(expression, errorCode: PreferIsEmpty.useIsNotEmpty);
       } else if (operator.type == TokenType.LT) {
-        rule.reportLint(expression,
-            errorCode: LinterLintCode.prefer_is_empty_always_false);
+        rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysFalse);
       } else if (operator.type == TokenType.GT_EQ) {
-        rule.reportLint(expression,
-            errorCode: LinterLintCode.prefer_is_empty_always_true);
+        rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysTrue);
       }
     } else if (value == 1) {
       if (constantOnRight) {
         // 'length >= 1' is same as 'isNotEmpty',
         // and 'length < 1' is same as 'isEmpty'
         if (operator.type == TokenType.GT_EQ) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_use_is_not_empty);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.useIsNotEmpty);
         } else if (operator.type == TokenType.LT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_use_is_empty);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.useIsEmpty);
         }
       } else {
         // '1 <= length' is same as 'isNotEmpty',
         // and '1 > length' is same as 'isEmpty'
         if (operator.type == TokenType.LT_EQ) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_use_is_not_empty);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.useIsNotEmpty);
         } else if (operator.type == TokenType.GT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_use_is_empty);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.useIsEmpty);
         }
       }
     } else if (value < 0) {
@@ -154,26 +163,22 @@ class _Visitor extends SimpleAstVisitor<void> {
         if (operator.type == TokenType.EQ_EQ ||
             operator.type == TokenType.LT_EQ ||
             operator.type == TokenType.LT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_always_false);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysFalse);
         } else if (operator.type == TokenType.BANG_EQ ||
             operator.type == TokenType.GT_EQ ||
             operator.type == TokenType.GT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_always_true);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysTrue);
         }
       } else {
         // 'length' is always >= 0, so comparing with negative makes no sense.
         if (operator.type == TokenType.EQ_EQ ||
             operator.type == TokenType.GT_EQ ||
             operator.type == TokenType.GT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_always_false);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysFalse);
         } else if (operator.type == TokenType.BANG_EQ ||
             operator.type == TokenType.LT_EQ ||
             operator.type == TokenType.LT) {
-          rule.reportLint(expression,
-              errorCode: LinterLintCode.prefer_is_empty_always_true);
+          rule.reportLint(expression, errorCode: PreferIsEmpty.alwaysTrue);
         }
       }
     }

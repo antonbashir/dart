@@ -10,7 +10,5 @@ class MyFuture<T> implements Future<T> {
 }
 
 void test() {}
-
 Future foo() => new Future<int>.value(1);
-
 main() {}

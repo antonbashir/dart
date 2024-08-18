@@ -146,7 +146,7 @@ class FSEventsWatcher {
   static void Run(uword arg) {
     FSEventsWatcher* watcher = reinterpret_cast<FSEventsWatcher*>(arg);
     // Only checked in debug mode.
-    watcher->owner_.Acquire();
+    watcher->threadId_ = Thread::GetCurrentThreadId();
     watcher->run_loop_ = CFRunLoopGetCurrent();
     CFRetain(watcher->run_loop_);
 
@@ -165,7 +165,6 @@ class FSEventsWatcher {
 
     CFRelease(watcher->run_loop_);
     watcher->monitor_.Enter();
-    watcher->owner_.Release();
     watcher->run_loop_ = nullptr;
     watcher->monitor_.Notify();
     watcher->monitor_.Exit();
@@ -189,7 +188,7 @@ class FSEventsWatcher {
 
   static void StopCallback(CFRunLoopTimerRef timer, void* info) {
     FSEventsWatcher* watcher = reinterpret_cast<FSEventsWatcher*>(info);
-    DEBUG_ASSERT(watcher->owner_.IsOwnedByCurrentThread());
+    ASSERT(Thread::Compare(watcher->threadId_, Thread::GetCurrentThreadId()));
     CFRunLoopStop(watcher->run_loop_);
   }
 
@@ -229,7 +228,8 @@ class FSEventsWatcher {
     }
     Node* node = static_cast<Node*>(client);
     RELEASE_ASSERT(node->watcher() != nullptr);
-    DEBUG_ASSERT(node->watcher()->owner_.IsOwnedByCurrentThread());
+    ASSERT(Thread::Compare(node->watcher()->threadId_,
+                           Thread::GetCurrentThreadId()));
     for (size_t i = 0; i < num_events; i++) {
       char* path = reinterpret_cast<char**>(event_paths)[i];
       FSEvent event;
@@ -251,7 +251,7 @@ class FSEventsWatcher {
 
   Monitor monitor_;
   CFRunLoopRef run_loop_;
-  platform::ThreadBoundResource owner_;
+  ThreadId threadId_;
 
   DISALLOW_COPY_AND_ASSIGN(FSEventsWatcher);
 };

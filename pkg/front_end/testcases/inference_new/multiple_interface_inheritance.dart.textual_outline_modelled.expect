@@ -21,7 +21,5 @@ class F extends E {
 }
 
 main() {}
-
 void g1(C c) {}
-
 void g2(E e) {}

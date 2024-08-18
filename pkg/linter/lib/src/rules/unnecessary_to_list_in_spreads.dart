@@ -7,9 +7,8 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Unnecessary `toList()` in spreads.';
+const _desc = r'Unnecessary toList() in spreads.';
 
 const _details = r'''
 Unnecessary `toList()` in spreads.
@@ -31,16 +30,20 @@ children: <Widget>[
 ''';
 
 class UnnecessaryToListInSpreads extends LintRule {
+  static const LintCode code = LintCode('unnecessary_to_list_in_spreads',
+      "Unnecessary use of 'toList' in a spread.",
+      correctionMessage: "Try removing the invocation of 'toList'.");
+
   UnnecessaryToListInSpreads()
       : super(
           name: 'unnecessary_to_list_in_spreads',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.brevity},
+          group: Group.style,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_to_list_in_spreads;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

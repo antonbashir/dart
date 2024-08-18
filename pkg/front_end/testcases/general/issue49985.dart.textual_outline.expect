@@ -6,7 +6,5 @@ class B<X, Y> {
 }
 
 mixin Mixin {}
-
 class C<X, Y> = B<X, Y> with Mixin;
-
 var field = A((a, b) => 42);

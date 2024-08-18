@@ -9,6 +9,8 @@
 // and variable gets that look like member invocations, both scenarios are
 // tested.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import '../static_type_helper.dart';
 
 class Base {

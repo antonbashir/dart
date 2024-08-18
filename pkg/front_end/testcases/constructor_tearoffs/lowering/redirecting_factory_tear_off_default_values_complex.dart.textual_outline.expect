@@ -1,5 +1,4 @@
 final bool inSoundMode = <int?>[] is! List<int>;
-
 main() {}
 
 class Class1 {
@@ -19,7 +18,5 @@ class Class1 {
 }
 
 testDefaultValues() {}
-
 expect(expected, actual) {}
-
 throws(Function() f, {bool inSoundModeOnly = false}) {}

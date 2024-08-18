@@ -1,8 +1,8 @@
-# Dart VM Service Protocol 4.15
+# Dart VM Service Protocol 4.13
 
 > Please post feedback to the [observatory-discuss group][discuss-list]
 
-This document describes of _version 4.14_ of the Dart VM Service Protocol. This
+This document describes of _version 4.13_ of the Dart VM Service Protocol. This
 protocol is used to communicate with a running Dart Virtual Machine.
 
 To use the Service Protocol, start the VM with the *--observe* flag.
@@ -1891,6 +1891,9 @@ _Instance_.
 If the field is uninitialized, the _value_ will be the
 _NotInitialized_ [Sentinel](#sentinel).
 
+If the field is being initialized, the _value_ will be the
+_BeingInitialized_ [Sentinel](#sentinel).
+
 ### BoundVariable
 
 ```
@@ -1914,6 +1917,9 @@ in a _Frame_.
 
 If the variable is uninitialized, the _value_ will be the
 _NotInitialized_ [Sentinel](#sentinel).
+
+If the variable is being initialized, the _value_ will be the
+_BeingInitialized_ [Sentinel](#sentinel).
 
 If the variable has been optimized out by the compiler, the _value_
 will be the _OptimizedOut_ [Sentinel](#sentinel).
@@ -2085,9 +2091,6 @@ class @Code extends @Object {
 
   // What kind of code object is this?
   CodeKind kind;
-
-  // This code object's corresponding function.
-  @Function function [optional];
 }
 ```
 
@@ -2100,9 +2103,6 @@ class Code extends Object {
 
   // What kind of code object is this?
   CodeKind kind;
-
-  // This code object's corresponding function.
-  @Function function [optional];
 }
 ```
 
@@ -2967,12 +2967,6 @@ class @Instance extends @Object {
   //   Closure
   @Context closureContext [optional];
 
-  // The receiver captured by tear-off Closure instance.
-  //
-  // Provided for instance kinds:
-  //   Closure
-  @Instance closureReceiver [optional];
-
   // The port ID for a ReceivePort.
   //
   // Provided for instance kinds:
@@ -3194,7 +3188,7 @@ class Instance extends Object {
   //   RegExp
   @Instance pattern [optional];
 
-  // The function associated with a Closure instance.
+// The function associated with a Closure instance.
   //
   // Provided for instance kinds:
   //   Closure
@@ -3205,12 +3199,6 @@ class Instance extends Object {
   // Provided for instance kinds:
   //   Closure
   @Context closureContext [optional];
-
-  // The receiver captured by tear-off Closure instance.
-  //
-  // Provided for instance kinds:
-  //   Closure
-  @Instance closureReceiver [optional];
 
   // Whether this regular expression is case sensitive.
   //
@@ -3296,45 +3284,6 @@ class Instance extends Object {
   // Provided for instance kinds:
   //   UserTag
   string label [optional];
-
-  // The callback for a Finalizer instance.
-  //
-  // Provided for instance kinds:
-  //   Finalizer
-  @Instance callback [optional];
-
-  // The callback for a NativeFinalizer instance.
-  //
-  // Provided for instance kinds:
-  //   NativeFinalizer
-  @Instance callbackAddress [optional];
-
-  // The entries for a (Native)Finalizer instance.
-  //
-  // A set.
-  //
-  // Provided for instance kinds:
-  //   Finalizer
-  //   NativeFinalizer
-  @Instance allEntries [optional];
-
-  // The value being watched for finalization for a FinalizerEntry instance.
-  //
-  // Provided for instance kinds:
-  //   FinalizerEntry
-  @Instance value [optional];
-
-  // The token passed to the finalizer callback for a FinalizerEntry instance.
-  //
-  // Provided for instance kinds:
-  //   FinalizerEntry
-  @Instance token [optional];
-
-  // The detach key for a FinalizerEntry instance.
-  //
-  // Provided for instance kinds:
-  //   FinalizerEntry
-  @Instance detach [optional];
 }
 ```
 
@@ -3442,15 +3391,6 @@ enum InstanceKind {
 
   // An instance of the Dart class UserTag.
   UserTag,
-
-  // An instance of the Dart class Finalizer.
-  Finalizer,
-
-  // An instance of the Dart class NativeFinalizer.
-  NativeFinalizer,
-
-  // An instance of the Dart class FinalizerEntry.
-  FinalizerEntry,
 }
 ```
 
@@ -4188,7 +4128,7 @@ enum SentinelKind {
   // Indicates that a variable or field has not been initialized.
   NotInitialized,
 
-  // Deprecated, no longer used.
+  // Indicates that a variable or field is in the process of being initialized.
   BeingInitialized,
 
   // Indicates that a variable has been eliminated by the optimizing compiler.
@@ -4798,7 +4738,5 @@ version | comments
 4.11 | Added `isGetter` and `isSetter` properties to `@Function` and `Function`.
 4.12 | Added `@TypeParameters` and changed `TypeParameters` to extend `Object`.
 4.13 | Added `librariesAlreadyCompiled` to `getSourceReport`.
-4.14 | Added `Finalizer`, `NativeFinalizer`, and `FinalizerEntry`.
-4.15 | Added `closureReceiver` property to `@Instance` and `Instance`.
 
 [discuss-list]: https://groups.google.com/a/dartlang.org/forum/#!forum/observatory-discuss

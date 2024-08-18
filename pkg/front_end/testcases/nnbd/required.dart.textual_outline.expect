@@ -9,9 +9,7 @@ class Class {
 }
 
 typedef Typedef1 = Function({int a, required int b});
-
 typedef Typedef2({int a, required int b});
-
 Function({int a, required int b}) field = ({int a = 42, required int b}) {};
 
 abstract class A {
@@ -27,7 +25,5 @@ class C extends A {
 }
 
 ok() {}
-
 error() {}
-
 main() {}

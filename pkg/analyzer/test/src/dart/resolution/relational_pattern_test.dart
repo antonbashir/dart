@@ -28,14 +28,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::==
+  element: self::@class::A::@method::==
   matchedValueType: A
 ''');
   }
@@ -51,14 +51,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: dart:core::<fragment>::@class::Object::@method::==
+  element: dart:core::@class::Object::@method::==
   matchedValueType: A
 ''');
   }
@@ -76,14 +76,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::>
+  element: self::@class::A::@method::>
   matchedValueType: A
 ''');
   }
@@ -103,14 +103,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@extension::E::@method::>
+  element: self::@extension::E::@method::>
   matchedValueType: A
 ''');
   }
@@ -128,7 +128,7 @@ void f(A x) {
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_OPERATOR, 50, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
@@ -153,14 +153,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::>=
+  element: self::@class::A::@method::>=
   matchedValueType: A
 ''');
   }
@@ -180,14 +180,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@extension::E::@method::>=
+  element: self::@extension::E::@method::>=
   matchedValueType: A
 ''');
   }
@@ -205,7 +205,7 @@ void f(A x) {
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_OPERATOR, 50, 2),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
@@ -227,14 +227,14 @@ void f(A x) {
   if (x case == 0) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::==
+  element: self::@class::A::@method::==
   matchedValueType: A
 ''');
   }
@@ -252,14 +252,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::<
+  element: self::@class::A::@method::<
   matchedValueType: A
 ''');
   }
@@ -279,14 +279,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@extension::E::@method::<
+  element: self::@extension::E::@method::<
   matchedValueType: A
 ''');
   }
@@ -304,7 +304,7 @@ void f(A x) {
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_OPERATOR, 50, 1),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
@@ -329,14 +329,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::<=
+  element: self::@class::A::@method::<=
   matchedValueType: A
 ''');
   }
@@ -356,14 +356,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@extension::E::@method::<=
+  element: self::@extension::E::@method::<=
   matchedValueType: A
 ''');
   }
@@ -381,7 +381,7 @@ void f(A x) {
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_OPERATOR, 50, 2),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
@@ -406,14 +406,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: !=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::==
+  element: self::@class::A::@method::==
   matchedValueType: A
 ''');
   }
@@ -429,14 +429,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: !=
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: dart:core::<fragment>::@class::Object::@method::==
+  element: dart:core::@class::Object::@method::==
   matchedValueType: A
 ''');
   }
@@ -453,14 +453,14 @@ void f(x, int Function() a) {
       error(CompileTimeErrorCode.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION, 57,
           3),
     ]);
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
   operand: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: int Function()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -468,7 +468,7 @@ RelationalPattern
     staticElement: <null>
     staticInvokeType: int Function()
     staticType: int
-  element: dart:core::<fragment>::@class::Object::@method::==
+  element: dart:core::@class::Object::@method::==
   matchedValueType: dynamic
 ''');
   }
@@ -486,14 +486,14 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    final node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
   operand: IntegerLiteral
     literal: 0
     staticType: int
-  element: <testLibraryFragment>::@class::A::@method::==
+  element: self::@class::A::@method::==
   matchedValueType: A
 ''');
   }

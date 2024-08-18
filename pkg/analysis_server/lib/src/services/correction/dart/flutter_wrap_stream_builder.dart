@@ -3,37 +3,32 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class FlutterWrapStreamBuilder extends ResolvedCorrectionProducer {
-  FlutterWrapStreamBuilder({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_WRAP_STREAM_BUILDER;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var widgetExpr = node.findWidgetExpression;
+    var widgetExpr = Flutter.identifyWidgetExpression(node);
     if (widgetExpr == null) {
       return;
     }
-    if (widgetExpr.typeOrThrow.isExactWidgetTypeStreamBuilder) {
+    if (Flutter.isExactWidgetTypeStreamBuilder(widgetExpr.typeOrThrow)) {
       return;
     }
     var widgetSrc = utils.getNodeText(widgetExpr);
 
-    var streamBuilderElement =
-        await sessionHelper.getFlutterClass('StreamBuilder');
+    var streamBuilderElement = await sessionHelper.getClass(
+      Flutter.widgetsUri,
+      'StreamBuilder',
+    );
     if (streamBuilderElement == null) {
       return;
     }
@@ -47,8 +42,8 @@ class FlutterWrapStreamBuilder extends ResolvedCorrectionProducer {
         builder.writeln('>(');
 
         var indentOld = utils.getLinePrefix(widgetExpr.offset);
-        var indentNew1 = indentOld + utils.oneIndent;
-        var indentNew2 = indentOld + utils.twoIndents;
+        var indentNew1 = indentOld + utils.getIndent(1);
+        var indentNew2 = indentOld + utils.getIndent(2);
 
         builder.write(indentNew1);
         builder.writeln('stream: null,');

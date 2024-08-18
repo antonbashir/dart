@@ -11,5 +11,4 @@ abstract class FuncRef {
 }
 
 foo(Object object) {}
-
 typedef SourceLocation = int;

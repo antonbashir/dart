@@ -5,7 +5,5 @@ class A {
 }
 
 A a = new A();
-
 var c = 0;
-
 main() {}

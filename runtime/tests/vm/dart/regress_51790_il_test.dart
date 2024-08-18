@@ -48,7 +48,7 @@ void matchIL$sumAll(FlowGraph graph) {
         ]),
     'B4' <<
         match.block('Target', [
-          match.DartReturn('v5'),
+          match.Return('v5'),
         ]),
     'B3' <<
         match.block('Target', [

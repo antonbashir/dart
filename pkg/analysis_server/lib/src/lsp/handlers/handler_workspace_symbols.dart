@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -22,12 +21,9 @@ class WorkspaceSymbolHandler extends SharedMessageHandler<WorkspaceSymbolParams,
       WorkspaceSymbolParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<List<SymbolInformation>>> handle(WorkspaceSymbolParams params,
       MessageInfo message, CancellationToken token) async {
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return serverNotInitializedError;
@@ -39,13 +35,13 @@ class WorkspaceSymbolHandler extends SharedMessageHandler<WorkspaceSymbolParams,
     // TODO(dantup): The spec has been updated to allow empty queries. Clients
     // may expect a full list in this case, though we may choose not to send
     // it on performance grounds until they type a filter.
-    var query = params.query;
+    final query = params.query;
     if (query == '') {
       return success([]);
     }
 
-    var supportedSymbolKinds = clientCapabilities.workspaceSymbolKinds;
-    var searchOnlyAnalyzed = !server
+    final supportedSymbolKinds = clientCapabilities.workspaceSymbolKinds;
+    final searchOnlyAnalyzed = !server
         .lspClientConfiguration.global.includeDependenciesInWorkspaceSymbols;
 
     // Cap the number of results we'll return because short queries may match
@@ -74,8 +70,8 @@ class WorkspaceSymbolHandler extends SharedMessageHandler<WorkspaceSymbolParams,
     }
 
     // Map the results to SymbolInformations and flatten the list of lists.
-    var symbols = message.performance.run('convert', (performance) {
-      var declarations = workspaceSymbols.declarations;
+    final symbols = message.performance.run('convert', (performance) {
+      final declarations = workspaceSymbols.declarations;
       performance.getDataInt('declarations').value = declarations.length;
       return declarations.map((declaration) {
         return _asSymbolInformation(
@@ -94,32 +90,32 @@ class WorkspaceSymbolHandler extends SharedMessageHandler<WorkspaceSymbolParams,
     Set<SymbolKind> supportedKinds,
     List<String> filePaths,
   ) {
-    var filePath = filePaths[declaration.fileIndex];
+    final filePath = filePaths[declaration.fileIndex];
 
-    var kind = declarationKindToSymbolKind(
+    final kind = declarationKindToSymbolKind(
       supportedKinds,
       declaration.kind,
     );
-    var range = toRange(
+    final range = toRange(
       declaration.lineInfo,
       declaration.codeOffset,
       declaration.codeLength,
     );
-    var location = Location(
-      uri: uriConverter.toClientUri(filePath),
+    final location = Location(
+      uri: pathContext.toUri(filePath),
       range: range,
     );
 
-    var parameters = declaration.parameters;
-    var hasParameters = parameters != null && parameters.isNotEmpty;
-    var nameSuffix = hasParameters ? (parameters == '()' ? '()' : '(…)') : '';
+    final parameters = declaration.parameters;
+    final hasParameters = parameters != null && parameters.isNotEmpty;
+    final nameSuffix = hasParameters ? (parameters == '()' ? '()' : '(…)') : '';
 
     return SymbolInformation(
-      name: '${declaration.name}$nameSuffix',
-      kind: kind,
-      location: location,
-      containerName: declaration.className ?? declaration.mixinName,
-    );
+        name: '${declaration.name}$nameSuffix',
+        kind: kind,
+        deprecated: null, // We don't have easy access to isDeprecated here.
+        location: location,
+        containerName: declaration.className ?? declaration.mixinName);
   }
 }
 

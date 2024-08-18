@@ -7,5 +7,4 @@ var a = () {
     return;
   }
 };
-
 main() {}

@@ -56,8 +56,6 @@ class Foo {
   //                               ^
   // [cfe] An external or native method can't have a body.
   external Foo.n24(this.x);
-  //               ^^^^
-  // [analyzer] SYNTACTIC_ERROR.EXTERNAL_CONSTRUCTOR_WITH_FIELD_INITIALIZERS
   //                    ^
   // [cfe] An external constructor can't initialize fields.
   external factory Foo.n25(val) = Bar;

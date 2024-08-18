@@ -3,12 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /*library: 
- compilationSequence=[main.dart|package:_macros/src/api.dart|package:macros/macros.dart],
+ compilationSequence=[main.dart|package:_fe_analyzer_shared/src/macros/api.dart],
  declaredMacros=[MyMacro],
  macrosAreAvailable
 */
 
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 
 macro class MyMacro implements Macro {}
 

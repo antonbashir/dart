@@ -24,7 +24,7 @@ class C<T> {}
 var t = C<int>;
 ''');
 
-    var node = findNode.typeLiteral('C<int>;');
+    final node = findNode.typeLiteral('C<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -34,10 +34,10 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@class::C
+    element: self::@class::C
     type: C<int>
   staticType: Type
 ''');
@@ -52,24 +52,24 @@ import 'a.dart' as a;
 var t = a.C<int>;
 ''');
 
-    var node = findNode.typeLiteral('C<int>;');
+    final node = findNode.typeLiteral('C<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
     importPrefix: ImportPrefixReference
       name: a
       period: .
-      element: <testLibraryFragment>::@prefix::a
+      element: self::@prefix::a
     name: C
     typeArguments: TypeArgumentList
       leftBracket: <
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: package:test/a.dart::<fragment>::@class::C
+    element: package:test/a.dart::@class::C
     type: C<int>
   staticType: Type
 ''');
@@ -83,7 +83,7 @@ var t = C<int>;
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 26, 5),
     ]);
 
-    var node = findNode.typeLiteral('C<int>;');
+    final node = findNode.typeLiteral('C<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -93,10 +93,10 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@class::C
+    element: self::@class::C
     type: C<dynamic, dynamic>
   staticType: Type
 ''');
@@ -110,7 +110,7 @@ var t = C<int, int>;
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 23, 10),
     ]);
 
-    var node = findNode.typeLiteral('C<int, int>;');
+    final node = findNode.typeLiteral('C<int, int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -120,14 +120,14 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@class::C
+    element: self::@class::C
     type: C<dynamic>
   staticType: Type
 ''');
@@ -139,10 +139,10 @@ class C<T extends num> {}
 var t = C<String>;
 ''', [
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 36, 6,
-          contextMessages: [message(testFile, 34, 9)]),
+          contextMessages: [message('/home/test/lib/test.dart', 34, 9)]),
     ]);
 
-    var node = findNode.typeLiteral('C<String>;');
+    final node = findNode.typeLiteral('C<String>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -152,10 +152,10 @@ TypeLiteral
       arguments
         NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
       rightBracket: >
-    element: <testLibraryFragment>::@class::C
+    element: self::@class::C
     type: C<String>
   staticType: Type
 ''');
@@ -168,7 +168,7 @@ typedef CA<T> = C<T>;
 var t = CA<int>;
 ''');
 
-    var node = findNode.typeLiteral('CA<int>;');
+    final node = findNode.typeLiteral('CA<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -178,12 +178,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::CA
+    element: self::@typeAlias::CA
     type: C<int>
-      alias: <testLibraryFragment>::@typeAlias::CA
+      alias: self::@typeAlias::CA
         typeArguments
           int
   staticType: Type
@@ -197,7 +197,7 @@ typedef CA<T> = C<T, int>;
 var t = CA<String>;
 ''');
 
-    var node = findNode.typeLiteral('CA<String>;');
+    final node = findNode.typeLiteral('CA<String>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -207,12 +207,12 @@ TypeLiteral
       arguments
         NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::CA
+    element: self::@typeAlias::CA
     type: C<String, int>
-      alias: <testLibraryFragment>::@typeAlias::CA
+      alias: self::@typeAlias::CA
         typeArguments
           String
   staticType: Type
@@ -226,7 +226,7 @@ typedef CA<T> = C<T>;
 var t = CA<void Function()>;
 ''');
 
-    var node = findNode.typeLiteral('CA<void Function()>;');
+    final node = findNode.typeLiteral('CA<void Function()>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -249,9 +249,9 @@ TypeLiteral
             type: void Function()
           type: void Function()
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::CA
+    element: self::@typeAlias::CA
     type: C<void Function()>
-      alias: <testLibraryFragment>::@typeAlias::CA
+      alias: self::@typeAlias::CA
         typeArguments
           void Function()
   staticType: Type
@@ -268,26 +268,26 @@ import 'a.dart' as a;
 var t = a.CA<int>;
 ''');
 
-    var node = findNode.typeLiteral('CA<int>;');
+    final node = findNode.typeLiteral('CA<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
     importPrefix: ImportPrefixReference
       name: a
       period: .
-      element: <testLibraryFragment>::@prefix::a
+      element: self::@prefix::a
     name: CA
     typeArguments: TypeArgumentList
       leftBracket: <
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: package:test/a.dart::<fragment>::@typeAlias::CA
+    element: package:test/a.dart::@typeAlias::CA
     type: C<int>
-      alias: package:test/a.dart::<fragment>::@typeAlias::CA
+      alias: package:test/a.dart::@typeAlias::CA
         typeArguments
           int
   staticType: Type
@@ -301,10 +301,10 @@ typedef CA<T extends num> = C<T>;
 var t = CA<String>;
 ''', [
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 59, 6,
-          contextMessages: [message(testFile, 56, 10)]),
+          contextMessages: [message('/home/test/lib/test.dart', 56, 10)]),
     ]);
 
-    var node = findNode.typeLiteral('CA<String>;');
+    final node = findNode.typeLiteral('CA<String>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -314,12 +314,12 @@ TypeLiteral
       arguments
         NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::CA
+    element: self::@typeAlias::CA
     type: C<String>
-      alias: <testLibraryFragment>::@typeAlias::CA
+      alias: self::@typeAlias::CA
         typeArguments
           String
   staticType: Type
@@ -332,7 +332,7 @@ extension type A<T>(T it) {}
 final v = A<int>;
 ''');
 
-    var node = findNode.typeLiteral('A<int>;');
+    final node = findNode.typeLiteral('A<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -342,10 +342,10 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@extensionType::A
+    element: self::@extensionType::A
     type: A<int>
   staticType: Type
 ''');
@@ -361,24 +361,24 @@ import 'a.dart' as a;
 var t = a.A<int>;
 ''');
 
-    var node = findNode.typeLiteral('A<int>;');
+    final node = findNode.typeLiteral('A<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
     importPrefix: ImportPrefixReference
       name: a
       period: .
-      element: <testLibraryFragment>::@prefix::a
+      element: self::@prefix::a
     name: A
     typeArguments: TypeArgumentList
       leftBracket: <
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: package:test/a.dart::<fragment>::@extensionType::A
+    element: package:test/a.dart::@extensionType::A
     type: A<int>
   staticType: Type
 ''');
@@ -390,7 +390,7 @@ typedef Fn<T> = void Function(T);
 var t = Fn<int>;
 ''');
 
-    var node = findNode.typeLiteral('Fn<int>;');
+    final node = findNode.typeLiteral('Fn<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -400,12 +400,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -421,26 +421,26 @@ import 'a.dart' as a;
 var t = a.Fn<int>;
 ''');
 
-    var node = findNode.typeLiteral('Fn<int>;');
+    final node = findNode.typeLiteral('Fn<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
     importPrefix: ImportPrefixReference
       name: a
       period: .
-      element: <testLibraryFragment>::@prefix::a
+      element: self::@prefix::a
     name: Fn
     typeArguments: TypeArgumentList
       leftBracket: <
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: package:test/a.dart::<fragment>::@typeAlias::Fn
+    element: package:test/a.dart::@typeAlias::Fn
     type: void Function(int)
-      alias: package:test/a.dart::<fragment>::@typeAlias::Fn
+      alias: package:test/a.dart::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -462,7 +462,7 @@ extension E on Type {
       error(CompileTimeErrorCode.UNDEFINED_METHOD_ON_FUNCTION_TYPE, 58, 3),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -472,12 +472,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -502,26 +502,26 @@ extension E on Type {
       error(CompileTimeErrorCode.UNDEFINED_METHOD_ON_FUNCTION_TYPE, 48, 3),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
     importPrefix: ImportPrefixReference
       name: a
       period: .
-      element: <testLibraryFragment>::@prefix::a
+      element: self::@prefix::a
     name: Fn
     typeArguments: TypeArgumentList
       leftBracket: <
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: package:test/a.dart::<fragment>::@typeAlias::Fn
+    element: package:test/a.dart::@typeAlias::Fn
     type: void Function(int)
-      alias: package:test/a.dart::<fragment>::@typeAlias::Fn
+      alias: package:test/a.dart::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -541,7 +541,7 @@ extension E on Type {
 }
 ''');
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -551,12 +551,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -578,7 +578,7 @@ extension E on Type {
       error(CompileTimeErrorCode.UNDEFINED_GETTER_ON_FUNCTION_TYPE, 58, 3),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -588,12 +588,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -613,7 +613,7 @@ extension E on Type {
 }
 ''');
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -623,12 +623,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -650,7 +650,7 @@ extension E on Type {
       error(CompileTimeErrorCode.UNDEFINED_SETTER_ON_FUNCTION_TYPE, 58, 3),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -660,12 +660,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -685,7 +685,7 @@ extension E on Type {
 }
 ''');
 
-    var node = findNode.typeLiteral('Fn<int>');
+    final node = findNode.typeLiteral('Fn<int>');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -695,12 +695,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(int)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           int
   staticType: Type
@@ -715,7 +715,7 @@ var t = Fn<int>;
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 50, 5),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int>;');
+    final node = findNode.typeLiteral('Fn<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -725,12 +725,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(dynamic, dynamic)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           dynamic
           dynamic
@@ -746,7 +746,7 @@ var t = Fn<int, String>;
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 44, 13),
     ]);
 
-    var node = findNode.typeLiteral('Fn<int, String>;');
+    final node = findNode.typeLiteral('Fn<int, String>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -756,16 +756,16 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(dynamic)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           dynamic
   staticType: Type
@@ -778,10 +778,10 @@ typedef Fn<T extends num> = void Function(T);
 var t = Fn<String>;
 ''', [
       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 57, 6,
-          contextMessages: [message(testFile, 54, 10)]),
+          contextMessages: [message('/home/test/lib/test.dart', 54, 10)]),
     ]);
 
-    var node = findNode.typeLiteral('Fn<String>;');
+    final node = findNode.typeLiteral('Fn<String>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -791,12 +791,12 @@ TypeLiteral
       arguments
         NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::Fn
+    element: self::@typeAlias::Fn
     type: void Function(String)
-      alias: <testLibraryFragment>::@typeAlias::Fn
+      alias: self::@typeAlias::Fn
         typeArguments
           String
   staticType: Type
@@ -809,7 +809,7 @@ mixin M<T> {}
 var t = M<int>;
 ''');
 
-    var node = findNode.typeLiteral('M<int>;');
+    final node = findNode.typeLiteral('M<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -819,10 +819,10 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@mixin::M
+    element: self::@mixin::M
     type: M<int>
   staticType: Type
 ''');
@@ -834,7 +834,7 @@ typedef T<E> = E;
 var t = T<int>;
 ''');
 
-    var node = findNode.typeLiteral('T<int>;');
+    final node = findNode.typeLiteral('T<int>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -844,12 +844,12 @@ TypeLiteral
       arguments
         NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::T
+    element: self::@typeAlias::T
     type: int
-      alias: <testLibraryFragment>::@typeAlias::T
+      alias: self::@typeAlias::T
         typeArguments
           int
   staticType: Type
@@ -862,7 +862,7 @@ typedef T<E> = E;
 var t = T<void Function()>;
 ''');
 
-    var node = findNode.typeLiteral('T<void Function()>;');
+    final node = findNode.typeLiteral('T<void Function()>;');
     assertResolvedNodeText(node, r'''
 TypeLiteral
   type: NamedType
@@ -885,9 +885,9 @@ TypeLiteral
             type: void Function()
           type: void Function()
       rightBracket: >
-    element: <testLibraryFragment>::@typeAlias::T
+    element: self::@typeAlias::T
     type: void Function()
-      alias: <testLibraryFragment>::@typeAlias::T
+      alias: self::@typeAlias::T
         typeArguments
           void Function()
   staticType: Type

@@ -31,8 +31,8 @@ class PackageDetailsCache {
       : lastUpdatedUtc = lastUpdated.toUtc();
 
   Duration get cacheTimeRemaining {
-    var cacheAge = DateTime.now().toUtc().difference(lastUpdatedUtc);
-    var cacheTimeRemaining = maxCacheAge - cacheAge;
+    final cacheAge = DateTime.now().toUtc().difference(lastUpdatedUtc);
+    final cacheTimeRemaining = maxCacheAge - cacheAge;
     return cacheTimeRemaining < Duration.zero
         ? Duration.zero
         : cacheTimeRemaining;
@@ -51,7 +51,7 @@ class PackageDetailsCache {
   }
 
   static PackageDetailsCache fromApiResults(List<PubApiPackage> apiPackages) {
-    var packages = Map.fromEntries(apiPackages.map((package) =>
+    final packages = Map.fromEntries(apiPackages.map((package) =>
         MapEntry(package.packageName, PubPackage.fromName(package))));
 
     return PackageDetailsCache._(packages, DateTime.now().toUtc());
@@ -65,34 +65,34 @@ class PackageDetailsCache {
       return null;
     }
 
-    var packagesJson = json['packages'];
+    final packagesJson = json['packages'];
     if (packagesJson is! List<Object?>) {
       return null;
     }
 
-    var packages = <PubPackage>[];
-    for (var packageJson in packagesJson) {
+    final packages = <PubPackage>[];
+    for (final packageJson in packagesJson) {
       if (packageJson is! Map<String, Object?>) {
         return null;
       }
-      var nameJson = packageJson['packageName'];
+      final nameJson = packageJson['packageName'];
       if (nameJson is! String) {
         return null;
       }
       packages.add(PubPackage.fromJson(packageJson));
     }
 
-    var packageMap = Map.fromEntries(
+    final packageMap = Map.fromEntries(
       packages.map(
         (package) => MapEntry(package.packageName, package),
       ),
     );
 
-    var lastUpdatedJson = json['lastUpdated'];
+    final lastUpdatedJson = json['lastUpdated'];
     if (lastUpdatedJson is! String) {
       return null;
     }
-    var lastUpdated = DateTime.tryParse(lastUpdatedJson);
+    final lastUpdated = DateTime.tryParse(lastUpdatedJson);
     if (lastUpdated == null) {
       return null;
     }
@@ -182,7 +182,7 @@ class PubPackageService {
 
   @visibleForTesting
   File get packageCacheFile {
-    var cacheFolder = resourceProvider
+    final cacheFolder = resourceProvider
         .getStateLocation('.pub-package-details-cache')!
       ..create();
     return cacheFolder.getChildAssumingFile('packages.json');
@@ -191,7 +191,7 @@ class PubPackageService {
   /// Begins preloading caches for package names and pub versions.
   void beginCachePreloads(List<String> pubspecs) {
     beginPackageNamePreload();
-    for (var pubspec in pubspecs) {
+    for (final pubspec in pubspecs) {
       fetchPackageVersionsViaPubOutdated(pubspec, pubspecWasModified: false);
     }
   }
@@ -228,7 +228,7 @@ class PubPackageService {
   /// available.
   PubOutdatedPackageDetails? cachedPubOutdatedVersions(
       String pubspecPath, String packageName) {
-    var pubspecCache = _pubspecPackageVersions[pubspecPath];
+    final pubspecCache = _pubspecPackageVersions[pubspecPath];
     return pubspecCache != null ? pubspecCache[packageName] : null;
   }
 
@@ -239,7 +239,7 @@ class PubPackageService {
   /// will only be run if data is not already cached.
   Future<void> fetchPackageVersionsViaPubOutdated(String pubspecPath,
       {required bool pubspecWasModified}) async {
-    var pubCommand = _command;
+    final pubCommand = _command;
     if (pubCommand == null) {
       return;
     }
@@ -259,9 +259,9 @@ class PubPackageService {
       return;
     }
 
-    var results = await pubCommand.outdatedVersions(pubspecPath);
-    var cache = _pubspecPackageVersions.putIfAbsent(pubspecPath, () => {});
-    for (var package in results) {
+    final results = await pubCommand.outdatedVersions(pubspecPath);
+    final cache = _pubspecPackageVersions.putIfAbsent(pubspecPath, () => {});
+    for (final package in results) {
       // We use the versions from the "pub outdated" results but only cache them
       // in-memory for this specific pubspec, as the resolved version may be
       // restricted by constraints/dependencies in the pubspec. The "pub"
@@ -298,7 +298,7 @@ class PubPackageService {
             PackageDetailsCache.maxPackageDetailsRequestsInFlight) {
       _packageDetailsRequestsInFlight++;
       try {
-        var details = await _api.packageInfo(packageName);
+        final details = await _api.packageInfo(packageName);
         if (details != null) {
           packageData = PubPackage.fromDetails(details);
           packageCache?.packages[packageName] = packageData;
@@ -313,13 +313,13 @@ class PubPackageService {
 
   @visibleForTesting
   PackageDetailsCache? readDiskCache() {
-    var file = packageCacheFile;
+    final file = packageCacheFile;
     if (!file.exists) {
       return null;
     }
     try {
-      var contents = file.readAsStringSync();
-      var json = jsonDecode(contents);
+      final contents = file.readAsStringSync();
+      final json = jsonDecode(contents);
       if (json is Map<String, Object?>) {
         return PackageDetailsCache.fromJson(json);
       } else {
@@ -342,20 +342,20 @@ class PubPackageService {
     if (cache == null) {
       return;
     }
-    var file = packageCacheFile;
+    final file = packageCacheFile;
     file.writeAsStringSync(jsonEncode(cache.toJson()));
   }
 
   Future<void> _fetchFromServer() async {
     try {
-      var packages = await _api.allPackages();
+      final packages = await _api.allPackages();
 
       // If we never got a valid response, just skip until the next refresh.
       if (packages == null) {
         return;
       }
 
-      var packageCache = PackageDetailsCache.fromApiResults(packages);
+      final packageCache = PackageDetailsCache.fromApiResults(packages);
       this.packageCache = packageCache;
       writeDiskCache();
     } catch (e) {

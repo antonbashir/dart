@@ -81,14 +81,14 @@ abstract class Devirtualization extends RecursiveVisitor {
 
   bool hasExtraTargetForNull(DirectCallMetadata directCall) =>
       directCall.checkReceiverForNull &&
-      _objectMemberNames.contains(directCall.targetMember!.name);
+      _objectMemberNames.contains(directCall.target.name);
 
   DirectCallMetadata? getDirectCall(TreeNode node, Member? interfaceTarget,
       {bool setter = false});
 
   makeDirectCall(TreeNode node, Member? target, DirectCallMetadata directCall) {
     if (_trace) {
-      print("[devirt] Resolving ${target} to ${directCall.targetMember}"
+      print("[devirt] Resolving ${target} to ${directCall.target}"
           " at ${node.location}");
     }
     _metadata.mapping[node] = directCall;
@@ -113,8 +113,8 @@ abstract class Devirtualization extends RecursiveVisitor {
     // TODO(alexmarkov): Convert _isLegalTargetForMethodInvocation()
     // check into an assertion once front-end implements all override checks.
     if ((directCall != null) &&
-        isMethod(directCall.targetMember!) &&
-        isLegalTargetForMethodInvocation(directCall.targetMember!, arguments) &&
+        isMethod(directCall.target) &&
+        isLegalTargetForMethodInvocation(directCall.target, arguments) &&
         !hasExtraTargetForNull(directCall)) {
       makeDirectCall(node, target, directCall);
     }
@@ -151,7 +151,7 @@ abstract class Devirtualization extends RecursiveVisitor {
     final DirectCallMetadata? directCall = getDirectCall(node, target);
 
     if ((directCall != null) &&
-        isFieldOrGetter(directCall.targetMember!) &&
+        isFieldOrGetter(directCall.target) &&
         !hasExtraTargetForNull(directCall)) {
       makeDirectCall(node, target, directCall);
     }
@@ -188,15 +188,6 @@ abstract class Devirtualization extends RecursiveVisitor {
     super.visitDynamicSet(node);
     _handlePropertySet(node, null);
   }
-
-  @override
-  visitFunctionInvocation(FunctionInvocation node) {
-    super.visitFunctionInvocation(node);
-    final DirectCallMetadata? directCall = getDirectCall(node, null);
-    if (directCall != null) {
-      makeDirectCall(node, null, directCall);
-    }
-  }
 }
 
 /// Devirtualization based on the closed-world class hierarchy analysis.
@@ -218,6 +209,6 @@ class CHADevirtualization extends Devirtualization {
     if (singleTarget == null) {
       return null;
     }
-    return DirectCallMetadata.targetMember(singleTarget, true);
+    return new DirectCallMetadata(singleTarget, true);
   }
 }

@@ -24,12 +24,12 @@ enum E {
 }
 ''');
 
-    var node = findNode.listLiteral('[]');
+    final node = findNode.listLiteral('[]');
     assertResolvedNodeText(node, r'''
 ListLiteral
   leftBracket: [
   rightBracket: ]
-  parameter: <testLibraryFragment>::@enum::E::@constructor::new::@parameter::a
+  parameter: self::@enum::E::@constructor::new::@parameter::a
   staticType: List<int>
 ''');
   }
@@ -42,7 +42,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.genericFunctionType('Function');
+    final node = findNode.genericFunctionType('Function');
     assertResolvedNodeText(node, r'''
 GenericFunctionType
   returnType: NamedType
@@ -55,7 +55,7 @@ GenericFunctionType
     parameter: SimpleFormalParameter
       type: NamedType
         name: double
-        element: dart:core::<fragment>::@class::double
+        element: dart:core::@class::double
         type: double
       declaredElement: @-1
         type: double
@@ -79,7 +79,7 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v.');
+    final node = findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -96,14 +96,14 @@ EnumConstantDeclaration
         IntegerLiteral
           literal: 42
           parameter: ParameterMember
-            base: <testLibraryFragment>::@enum::E::@constructor::named::@parameter::a
+            base: self::@enum::E::@constructor::named::@parameter::a
             substitution: {T: int}
           staticType: int
       rightParenthesis: )
   constructorElement: ConstructorMember
-    base: <testLibraryFragment>::@enum::E::@constructor::named
+    base: self::@enum::E::@constructor::named
     substitution: {T: int}
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -115,7 +115,7 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v(');
+    final node = findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -126,14 +126,14 @@ EnumConstantDeclaration
         IntegerLiteral
           literal: 42
           parameter: ParameterMember
-            base: <testLibraryFragment>::@enum::E::@constructor::new::@parameter::a
+            base: self::@enum::E::@constructor::new::@parameter::a
             substitution: {T: int}
           staticType: int
       rightParenthesis: )
   constructorElement: ConstructorMember
-    base: <testLibraryFragment>::@enum::E::@constructor::new
+    base: self::@enum::E::@constructor::new
     substitution: {T: int}
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -145,7 +145,7 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v<');
+    final node = findNode.enumConstantDeclaration('v<');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -155,7 +155,7 @@ EnumConstantDeclaration
       arguments
         NamedType
           name: double
-          element: dart:core::<fragment>::@class::double
+          element: dart:core::@class::double
           type: double
       rightBracket: >
     constructorSelector: ConstructorSelector
@@ -170,14 +170,14 @@ EnumConstantDeclaration
         IntegerLiteral
           literal: 42
           parameter: ParameterMember
-            base: <testLibraryFragment>::@enum::E::@constructor::named::@parameter::a
+            base: self::@enum::E::@constructor::named::@parameter::a
             substitution: {T: double}
           staticType: double
       rightParenthesis: )
   constructorElement: ConstructorMember
-    base: <testLibraryFragment>::@enum::E::@constructor::named
+    base: self::@enum::E::@constructor::named
     substitution: {T: double}
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -189,7 +189,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v.');
+    final node = findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -205,11 +205,11 @@ EnumConstantDeclaration
       arguments
         IntegerLiteral
           literal: 42
-          parameter: <testLibraryFragment>::@enum::E::@constructor::named::@parameter::a
+          parameter: self::@enum::E::@constructor::named::@parameter::a
           staticType: int
       rightParenthesis: )
-  constructorElement: <testLibraryFragment>::@enum::E::@constructor::named
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  constructorElement: self::@enum::E::@constructor::named
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -221,7 +221,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v(');
+    final node = findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -231,11 +231,11 @@ EnumConstantDeclaration
       arguments
         IntegerLiteral
           literal: 42
-          parameter: <testLibraryFragment>::@enum::E::@constructor::new::@parameter::a
+          parameter: self::@enum::E::@constructor::new::@parameter::a
           staticType: int
       rightParenthesis: )
-  constructorElement: <testLibraryFragment>::@enum::E::@constructor::new
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  constructorElement: self::@enum::E::@constructor::new
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -246,12 +246,12 @@ enum E {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v\n');
+    final node = findNode.enumConstantDeclaration('v\n');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
-  constructorElement: <testLibraryFragment>::@enum::E::@constructor::new
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  constructorElement: self::@enum::E::@constructor::new
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -265,7 +265,7 @@ enum E {
       error(CompileTimeErrorCode.UNDEFINED_ENUM_CONSTRUCTOR_NAMED, 13, 5),
     ]);
 
-    var node = findNode.enumConstantDeclaration('v.');
+    final node = findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -285,7 +285,7 @@ EnumConstantDeclaration
           staticType: int
       rightParenthesis: )
   constructorElement: <null>
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -299,7 +299,7 @@ enum E {
       error(CompileTimeErrorCode.UNDEFINED_ENUM_CONSTRUCTOR_UNNAMED, 11, 1),
     ]);
 
-    var node = findNode.enumConstantDeclaration('v(');
+    final node = findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -313,7 +313,7 @@ EnumConstantDeclaration
           staticType: int
       rightParenthesis: )
   constructorElement: <null>
-  declaredElement: <testLibraryFragment>::@enum::E::@field::v
+  declaredElement: self::@enum::E::@field::v
 ''');
   }
 
@@ -325,7 +325,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.fieldDeclaration('foo =');
+    final node = findNode.fieldDeclaration('foo =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -337,7 +337,7 @@ FieldDeclaration
         initializer: IntegerLiteral
           literal: 42
           staticType: int
-        declaredElement: <testLibraryFragment>::@enum::E::@field::foo
+        declaredElement: self::@enum::E::@field::foo
   semicolon: ;
   declaredElement: <null>
 ''');
@@ -351,7 +351,7 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.methodDeclaration('get foo');
+    final node = findNode.methodDeclaration('get foo');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -369,7 +369,7 @@ MethodDeclaration
         staticType: int
       staticType: Never
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@enum::E::@getter::foo
+  declaredElement: self::@enum::E::@getter::foo
     type: T Function()
 ''');
   }
@@ -394,14 +394,14 @@ enum E implements I {
 }
 ''');
 
-    var node = findNode.implementsClause('implements');
+    final node = findNode.implementsClause('implements');
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
   interfaces
     NamedType
       name: I
-      element: <testLibraryFragment>::@class::I
+      element: self::@class::I
       type: I
 ''');
   }
@@ -427,12 +427,12 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    final node = findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
     name: int
-    element: dart:core::<fragment>::@class::int
+    element: dart:core::@class::int
     type: int
   name: foo
   typeParameters: TypeParameterList
@@ -450,7 +450,7 @@ MethodDeclaration
         element: T@7
         type: T
       name: t
-      declaredElement: <testLibraryFragment>::@enum::E::@method::foo::@parameter::t
+      declaredElement: self::@enum::E::@method::foo::@parameter::t
         type: T
     parameter: SimpleFormalParameter
       type: NamedType
@@ -458,7 +458,7 @@ MethodDeclaration
         element: U@27
         type: U
       name: u
-      declaredElement: <testLibraryFragment>::@enum::E::@method::foo::@parameter::u
+      declaredElement: self::@enum::E::@method::foo::@parameter::u
         type: U
     rightParenthesis: )
   body: ExpressionFunctionBody
@@ -467,7 +467,7 @@ MethodDeclaration
       literal: 0
       staticType: int
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@enum::E::@method::foo
+  declaredElement: self::@enum::E::@method::foo
     type: int Function<U>(T, U)
 ''');
   }
@@ -480,12 +480,12 @@ enum E {
 }
 ''');
 
-    var node = findNode.methodDeclaration('toString()');
+    final node = findNode.methodDeclaration('toString()');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
     name: String
-    element: dart:core::<fragment>::@class::String
+    element: dart:core::@class::String
     type: String
   name: toString
   parameters: FormalParameterList
@@ -496,7 +496,7 @@ MethodDeclaration
     expression: SimpleStringLiteral
       literal: 'E'
     semicolon: ;
-  declaredElement: <testLibraryFragment>::@enum::E::@method::toString
+  declaredElement: self::@enum::E::@method::toString
     type: String Function()
 ''');
   }
@@ -509,14 +509,14 @@ enum E with M {
 }
 ''');
 
-    var node = findNode.withClause('with M');
+    final node = findNode.withClause('with M');
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
   mixinTypes
     NamedType
       name: M
-      element: <testLibraryFragment>::@mixin::M
+      element: self::@mixin::M
       type: M
 ''');
   }
@@ -530,7 +530,7 @@ enum E with M1<int>, M2 {
 }
 ''');
 
-    var node = findNode.withClause('with');
+    final node = findNode.withClause('with');
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
@@ -542,14 +542,14 @@ WithClause
         arguments
           NamedType
             name: int
-            element: dart:core::<fragment>::@class::int
+            element: dart:core::@class::int
             type: int
         rightBracket: >
-      element: <testLibraryFragment>::@mixin::M1
+      element: self::@mixin::M1
       type: M1<int>
     NamedType
       name: M2
-      element: <testLibraryFragment>::@mixin::M2
+      element: self::@mixin::M2
       type: M2<int>
 ''');
   }
@@ -562,7 +562,7 @@ enum E<T> {
 }
 ''');
 
-    var node = findNode.methodDeclaration('set foo');
+    final node = findNode.methodDeclaration('set foo');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   propertyKeyword: set
@@ -575,14 +575,14 @@ MethodDeclaration
         element: T@7
         type: T
       name: a
-      declaredElement: <testLibraryFragment>::@enum::E::@setter::foo::@parameter::a
+      declaredElement: self::@enum::E::@setter::foo::@parameter::a
         type: T
     rightParenthesis: )
   body: BlockFunctionBody
     block: Block
       leftBracket: {
       rightBracket: }
-  declaredElement: <testLibraryFragment>::@enum::E::@setter::foo
+  declaredElement: self::@enum::E::@setter::foo
     type: void Function(T)
 ''');
   }
@@ -596,25 +596,25 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    final node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
-      staticElement: <testLibraryFragment>::@enum::E
+      staticElement: self::@enum::E
       staticType: null
     period: .
     identifier: SimpleIdentifier
       token: _
-      staticElement: <testLibraryFragment>::@enum::E::@getter::_
+      staticElement: self::@enum::E::@getter::_
       staticType: E
-    staticElement: <testLibraryFragment>::@enum::E::@getter::_
+    staticElement: self::@enum::E::@getter::_
     staticType: E
   operator: .
   propertyName: SimpleIdentifier
     token: index
-    staticElement: dart:core::<fragment>::@class::Enum::@getter::index
+    staticElement: dart:core::@class::Enum::@getter::index
     staticType: int
   staticType: int
 ''');

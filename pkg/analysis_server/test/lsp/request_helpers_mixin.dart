@@ -9,7 +9,6 @@ import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/services/completion/dart/feature_computer.dart';
 import 'package:analyzer/source/line_info.dart';
-import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
 import 'package:collection/collection.dart';
 import 'package:language_server_protocol/json_parsing.dart';
 import 'package:path/path.dart' as path;
@@ -21,11 +20,11 @@ import 'change_verifier.dart';
 /// A mixin with helpers for applying LSP edits to strings.
 mixin LspEditHelpersMixin {
   String applyTextEdit(String content, TextEdit edit) {
-    var startPos = edit.range.start;
-    var endPos = edit.range.end;
-    var lineInfo = LineInfo.fromContent(content);
-    var start = lineInfo.getOffsetOfLine(startPos.line) + startPos.character;
-    var end = lineInfo.getOffsetOfLine(endPos.line) + endPos.character;
+    final startPos = edit.range.start;
+    final endPos = edit.range.end;
+    final lineInfo = LineInfo.fromContent(content);
+    final start = lineInfo.getOffsetOfLine(startPos.line) + startPos.character;
+    final end = lineInfo.getOffsetOfLine(endPos.line) + endPos.character;
     return content.replaceRange(start, end, edit.newText);
   }
 
@@ -61,8 +60,8 @@ mixin LspEditHelpersMixin {
         return !(endsBefore || startsAfter);
       }
 
-      for (var change1 in changes) {
-        for (var change2 in changes) {
+      for (final change1 in changes) {
+        for (final change2 in changes) {
           if (change1 != change2 &&
               rangesIntersect(change1.range, change2.range)) {
             throw 'Test helper applyTextEdits does not support applying multiple edits '
@@ -74,16 +73,9 @@ mixin LspEditHelpersMixin {
 
     validateChangesCanBeApplied();
 
-    var indexedEdits = changes.mapIndexed(TextEditWithIndex.new).toList();
+    final indexedEdits = changes.mapIndexed(TextEditWithIndex.new).toList();
     indexedEdits.sort(TextEditWithIndex.compare);
     return indexedEdits.map((e) => e.edit).fold(content, applyTextEdit);
-  }
-
-  /// Returns the text for [range] in [content].
-  String getTextForRange(String content, Range range) {
-    var lineInfo = LineInfo.fromContent(content);
-    var sourceRange = toSourceRange(lineInfo, range).result;
-    return content.substring(sourceRange.offset, sourceRange.end);
   }
 }
 
@@ -107,22 +99,9 @@ mixin LspRequestHelpersMixin {
   /// Whether to include 'clientRequestTime' fields in outgoing messages.
   bool includeClientRequestTime = false;
 
-  /// A stream of [DartTextDocumentContentDidChangeParams] for any
-  /// `dart/textDocumentContentDidChange` notifications.
-  Stream<DartTextDocumentContentDidChangeParams>
-      get dartTextDocumentContentDidChangeNotifications =>
-          notificationsFromServer
-              .where((notification) =>
-                  notification.method ==
-                  CustomMethods.dartTextDocumentContentDidChange)
-              .map((message) => DartTextDocumentContentDidChangeParams.fromJson(
-                  message.params as Map<String, Object?>));
-
-  Stream<NotificationMessage> get notificationsFromServer;
-
   Future<List<CallHierarchyIncomingCall>?> callHierarchyIncoming(
       CallHierarchyItem item) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.callHierarchy_incomingCalls,
       CallHierarchyIncomingCallsParams(item: item),
     );
@@ -132,7 +111,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<CallHierarchyOutgoingCall>?> callHierarchyOutgoing(
       CallHierarchyItem item) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.callHierarchy_outgoingCalls,
       CallHierarchyOutgoingCallsParams(item: item),
     );
@@ -153,7 +132,7 @@ mixin LspRequestHelpersMixin {
       RequestMessage request, T Function(R) fromJson);
 
   Future<List<TextEdit>?> formatDocument(Uri fileUri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_formatting,
       DocumentFormattingParams(
         textDocument: TextDocumentIdentifier(uri: fileUri),
@@ -168,7 +147,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<TextEdit>?> formatOnType(
       Uri fileUri, Position pos, String character) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_onTypeFormatting,
       DocumentOnTypeFormattingParams(
         ch: character,
@@ -184,7 +163,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<TextEdit>?> formatRange(Uri fileUri, Range range) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_rangeFormatting,
       DocumentRangeFormattingParams(
         options: FormattingOptions(
@@ -198,34 +177,6 @@ mixin LspRequestHelpersMixin {
         request, _fromJsonList(TextEdit.fromJson));
   }
 
-  Future<Location?> getAugmentation(
-    Uri uri,
-    Position pos,
-  ) {
-    var request = makeRequest(
-      CustomMethods.augmentation,
-      TextDocumentPositionParams(
-        textDocument: TextDocumentIdentifier(uri: uri),
-        position: pos,
-      ),
-    );
-    return expectSuccessfulResponseTo(request, Location.fromJson);
-  }
-
-  Future<Location?> getAugmented(
-    Uri uri,
-    Position pos,
-  ) {
-    var request = makeRequest(
-      CustomMethods.augmented,
-      TextDocumentPositionParams(
-        textDocument: TextDocumentIdentifier(uri: uri),
-        position: pos,
-      ),
-    );
-    return expectSuccessfulResponseTo(request, Location.fromJson);
-  }
-
   Future<List<Either2<Command, CodeAction>>> getCodeActions(
     Uri fileUri, {
     Range? range,
@@ -237,7 +188,7 @@ mixin LspRequestHelpersMixin {
     range ??= position != null
         ? Range(start: position, end: position)
         : throw 'Supply either a Range or Position for CodeActions requests';
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_codeAction,
       CodeActionParams(
         textDocument: TextDocumentIdentifier(uri: fileUri),
@@ -260,20 +211,9 @@ mixin LspRequestHelpersMixin {
     );
   }
 
-  Future<TextDocumentCodeLensResult> getCodeLens(Uri uri) {
-    var request = makeRequest(
-      Method.textDocument_codeLens,
-      CodeLensParams(
-        textDocument: TextDocumentIdentifier(uri: uri),
-      ),
-    );
-    return expectSuccessfulResponseTo(
-        request, _fromJsonList(CodeLens.fromJson));
-  }
-
   Future<List<ColorPresentation>> getColorPresentation(
       Uri fileUri, Range range, Color color) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_colorPresentation,
       ColorPresentationParams(
         textDocument: TextDocumentIdentifier(uri: fileUri),
@@ -289,13 +229,13 @@ mixin LspRequestHelpersMixin {
 
   Future<List<CompletionItem>> getCompletion(Uri uri, Position pos,
       {CompletionContext? context}) async {
-    var response = await getCompletionList(uri, pos, context: context);
+    final response = await getCompletionList(uri, pos, context: context);
     return response.items;
   }
 
   Future<CompletionList> getCompletionList(Uri uri, Position pos,
       {CompletionContext? context}) async {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_completion,
       CompletionParams(
         context: context,
@@ -303,24 +243,15 @@ mixin LspRequestHelpersMixin {
         position: pos,
       ),
     );
-    var completions =
+    final completions =
         await expectSuccessfulResponseTo(request, CompletionList.fromJson);
     _assertMinimalCompletionListPayload(completions);
     return completions;
   }
 
-  Future<DartTextDocumentContent?> getDartTextDocumentContent(Uri uri) {
-    var request = makeRequest(
-      CustomMethods.dartTextDocumentContent,
-      DartTextDocumentContentParams(uri: uri),
-    );
-    return expectSuccessfulResponseTo(
-        request, DartTextDocumentContent.fromJson);
-  }
-
   Future<Either2<List<Location>, List<LocationLink>>> getDefinition(
       Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_definition,
       TextDocumentPositionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -338,7 +269,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<Location>> getDefinitionAsLocation(Uri uri, Position pos) async {
-    var results = await getDefinition(uri, pos);
+    final results = await getDefinition(uri, pos);
     return results.map(
       (locations) => locations,
       (locationLinks) => throw 'Expected List<Location> got List<LocationLink>',
@@ -347,7 +278,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<LocationLink>> getDefinitionAsLocationLinks(
       Uri uri, Position pos) async {
-    var results = await getDefinition(uri, pos);
+    final results = await getDefinition(uri, pos);
     return results.map(
       (locations) => throw 'Expected List<LocationLink> got List<Location>',
       (locationLinks) => locationLinks,
@@ -355,7 +286,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<DartDiagnosticServer> getDiagnosticServer() {
-    var request = makeRequest(
+    final request = makeRequest(
       CustomMethods.diagnosticServer,
       null,
     );
@@ -363,7 +294,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<ColorInformation>> getDocumentColors(Uri fileUri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_documentColor,
       DocumentColorParams(
         textDocument: TextDocumentIdentifier(uri: fileUri),
@@ -377,7 +308,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<DocumentHighlight>?> getDocumentHighlights(
       Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_documentHighlight,
       TextDocumentPositionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -389,7 +320,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<DocumentLink>?> getDocumentLinks(Uri uri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_documentLink,
       DocumentLinkParams(textDocument: TextDocumentIdentifier(uri: uri)),
     );
@@ -401,7 +332,7 @@ mixin LspRequestHelpersMixin {
 
   Future<Either2<List<DocumentSymbol>, List<SymbolInformation>>>
       getDocumentSymbols(Uri uri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_documentSymbol,
       DocumentSymbolParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -418,7 +349,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<FoldingRange>> getFoldingRanges(Uri uri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_foldingRange,
       FoldingRangeParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -429,7 +360,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<Hover?> getHover(Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_hover,
       TextDocumentPositionParams(
           textDocument: TextDocumentIdentifier(uri: uri), position: pos),
@@ -442,7 +373,7 @@ mixin LspRequestHelpersMixin {
     Position pos, {
     includeDeclarations = false,
   }) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_implementation,
       TextDocumentPositionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -454,7 +385,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<InlayHint>> getInlayHints(Uri uri, Range range) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_inlayHint,
       InlayHintParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -470,7 +401,7 @@ mixin LspRequestHelpersMixin {
     Position pos, {
     bool includeDeclarations = false,
   }) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_references,
       ReferenceParams(
         context: ReferenceContext(includeDeclaration: includeDeclarations),
@@ -488,19 +419,19 @@ mixin LspRequestHelpersMixin {
     String label, {
     CompletionContext? context,
   }) async {
-    var completions = await getCompletion(uri, pos, context: context);
+    final completions = await getCompletion(uri, pos, context: context);
 
-    var completion = completions.singleWhere((c) => c.label == label);
+    final completion = completions.singleWhere((c) => c.label == label);
     expect(completion, isNotNull);
 
-    var result = await resolveCompletion(completion);
+    final result = await resolveCompletion(completion);
     _assertMinimalCompletionItemPayload(result);
     return result;
   }
 
   Future<List<SelectionRange>?> getSelectionRanges(
       Uri uri, List<Position> positions) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_selectionRange,
       SelectionRangeParams(
           textDocument: TextDocumentIdentifier(uri: uri), positions: positions),
@@ -510,7 +441,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<SemanticTokens> getSemanticTokens(Uri uri) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_semanticTokens_full,
       SemanticTokensParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -520,7 +451,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<SemanticTokens> getSemanticTokensRange(Uri uri, Range range) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_semanticTokens_range,
       SemanticTokensRangeParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -532,7 +463,7 @@ mixin LspRequestHelpersMixin {
 
   Future<SignatureHelp?> getSignatureHelp(Uri uri, Position pos,
       [SignatureHelpContext? context]) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_signatureHelp,
       SignatureHelpParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -547,7 +478,7 @@ mixin LspRequestHelpersMixin {
     Uri uri,
     Position pos,
   ) {
-    var request = makeRequest(
+    final request = makeRequest(
       CustomMethods.super_,
       TextDocumentPositionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -559,7 +490,7 @@ mixin LspRequestHelpersMixin {
 
   Future<TextDocumentTypeDefinitionResult> getTypeDefinition(
       Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_typeDefinition,
       TypeDefinitionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -573,11 +504,11 @@ mixin LspRequestHelpersMixin {
     // Definition: Either2<List<Location>, Location>
 
     // Definition = Either2<List<Location>, Location>
-    var definitionCanParse = _generateCanParseFor(
+    final definitionCanParse = _generateCanParseFor(
       _canParseList(Location.canParse),
       Location.canParse,
     );
-    var definitionFromJson = _generateFromJsonFor(
+    final definitionFromJson = _generateFromJsonFor(
       _canParseList(Location.canParse),
       _fromJsonList(Location.fromJson),
       Location.canParse,
@@ -596,7 +527,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<Location>> getTypeDefinitionAsLocation(
       Uri uri, Position pos) async {
-    var results = (await getTypeDefinition(uri, pos))!;
+    final results = (await getTypeDefinition(uri, pos))!;
     return results.map(
       (locationOrList) => locationOrList.map(
         (locations) => locations,
@@ -608,7 +539,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<LocationLink>> getTypeDefinitionAsLocationLinks(
       Uri uri, Position pos) async {
-    var results = (await getTypeDefinition(uri, pos))!;
+    final results = (await getTypeDefinition(uri, pos))!;
     return results.map(
       (locationOrList) => throw 'Expected LocationLinks, got Locations',
       (locationLinks) => locationLinks,
@@ -616,7 +547,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<SymbolInformation>> getWorkspaceSymbols(String query) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.workspace_symbol,
       WorkspaceSymbolParams(query: query),
     );
@@ -625,7 +556,7 @@ mixin LspRequestHelpersMixin {
   }
 
   RequestMessage makeRequest(Method method, ToJsonable? params) {
-    var id = Either2<int, String>.t1(_id++);
+    final id = Either2<int, String>.t1(_id++);
     return RequestMessage(
       id: id,
       method: method,
@@ -638,7 +569,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<WorkspaceEdit> onWillRename(List<FileRename> renames) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.workspace_willRenameFiles,
       RenameFilesParams(files: renames),
     );
@@ -646,12 +577,12 @@ mixin LspRequestHelpersMixin {
   }
 
   Position positionFromOffset(int offset, String contents) {
-    var lineInfo = LineInfo.fromContent(contents);
+    final lineInfo = LineInfo.fromContent(contents);
     return toPosition(lineInfo.getLocation(offset));
   }
 
   Future<List<CallHierarchyItem>?> prepareCallHierarchy(Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_prepareCallHierarchy,
       CallHierarchyPrepareParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -663,7 +594,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<PlaceholderAndRange?> prepareRename(Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_prepareRename,
       TextDocumentPositionParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -674,7 +605,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<List<TypeHierarchyItem>?> prepareTypeHierarchy(Uri uri, Position pos) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.textDocument_prepareTypeHierarchy,
       TypeHierarchyPrepareParams(
         textDocument: TextDocumentIdentifier(uri: uri),
@@ -686,7 +617,7 @@ mixin LspRequestHelpersMixin {
   }
 
   Future<CompletionItem> resolveCompletion(CompletionItem item) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.completionItem_resolve,
       item,
     );
@@ -695,7 +626,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<TypeHierarchyItem>?> typeHierarchySubtypes(
       TypeHierarchyItem item) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.typeHierarchy_subtypes,
       TypeHierarchySubtypesParams(item: item),
     );
@@ -705,7 +636,7 @@ mixin LspRequestHelpersMixin {
 
   Future<List<TypeHierarchyItem>?> typeHierarchySupertypes(
       TypeHierarchyItem item) {
-    var request = makeRequest(
+    final request = makeRequest(
       Method.typeHierarchy_supertypes,
       TypeHierarchySupertypesParams(item: item),
     );
@@ -717,12 +648,12 @@ mixin LspRequestHelpersMixin {
   /// tests to check for any unnecessary data in the payload that could be
   /// reduced.
   void _assertMinimalCompletionItemPayload(CompletionItem completion) {
-    var labelDetails = completion.labelDetails;
-    var textEditInsertRange =
+    final labelDetails = completion.labelDetails;
+    final textEditInsertRange =
         completion.textEdit?.map((ranges) => ranges.insert, (range) => null);
-    var textEditReplaceRange =
+    final textEditReplaceRange =
         completion.textEdit?.map((ranges) => ranges.replace, (range) => null);
-    var sortText = completion.sortText;
+    final sortText = completion.sortText;
 
     // Check fields that default to label if not supplied.
     void expectNotLabel(String? value, String name) {
@@ -785,24 +716,24 @@ mixin LspRequestHelpersMixin {
   /// tests to check for any unnecessary data in the payload that could be
   /// reduced.
   void _assertMinimalCompletionListPayload(CompletionList completions) {
-    for (var completion in completions.items) {
-      var data = completion.data;
-      var commitCharacters = completion.commitCharacters;
-      var insertRange = completion.textEdit
+    for (final completion in completions.items) {
+      final data = completion.data;
+      final commitCharacters = completion.commitCharacters;
+      final insertRange = completion.textEdit
           ?.map((insertReplace) => insertReplace.insert, (textEdit) => null);
-      var replaceRange = completion.textEdit
+      final replaceRange = completion.textEdit
           ?.map((insertReplace) => insertReplace.replace, (textEdit) => null);
-      var combinedRange = completion.textEdit
+      final combinedRange = completion.textEdit
           ?.map((insertReplace) => null, (textEdit) => textEdit.range);
-      var insertTextFormat = completion.insertTextFormat;
-      var insertTextMode = completion.insertTextMode;
+      final insertTextFormat = completion.insertTextFormat;
+      final insertTextMode = completion.insertTextMode;
 
-      var defaults = completions.itemDefaults;
-      var defaultInsertRange = defaults?.editRange
+      final defaults = completions.itemDefaults;
+      final defaultInsertRange = defaults?.editRange
           ?.map((editRange) => editRange.insert, (range) => null);
-      var defaultReplaceRange = defaults?.editRange
+      final defaultReplaceRange = defaults?.editRange
           ?.map((editRange) => editRange.replace, (range) => null);
-      var defaultCombinedRange =
+      final defaultCombinedRange =
           defaults?.editRange?.map((editRange) => null, (range) => range);
 
       _assertMinimalCompletionItemPayload(completion);
@@ -891,8 +822,6 @@ mixin LspVerifyEditHelpersMixin on LspEditHelpersMixin {
 
   String get projectFolderPath;
 
-  ClientUriConverter get uriConverter;
-
   /// A function to get the current contents of a file to apply edits.
   String? getCurrentFileContent(Uri uri);
 
@@ -906,5 +835,5 @@ mixin LspVerifyEditHelpersMixin on LspEditHelpersMixin {
   /// Formats a path relative to the project root always using forward slashes.
   ///
   /// This is used in the text format for comparing edits.
-  String relativeUri(Uri uri) => relativePath(uriConverter.fromClientUri(uri));
+  String relativeUri(Uri uri) => relativePath(pathContext.fromUri(uri));
 }

@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Prefer asserts with message.';
 
@@ -39,15 +38,19 @@ class A {
 ''';
 
 class PreferAssertsWithMessage extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_asserts_with_message', 'Missing a message in an assert.',
+      correctionMessage: 'Try adding a message to the assert.');
+
   PreferAssertsWithMessage()
       : super(
             name: 'prefer_asserts_with_message',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.prefer_asserts_with_message;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

@@ -27,6 +27,8 @@
 namespace dart {
 
 static Dart_CObject cobj_sentinel = {Dart_CObject_kUnsupported, {false}};
+static Dart_CObject cobj_transition_sentinel = {Dart_CObject_kUnsupported,
+                                                {false}};
 static Dart_CObject cobj_dynamic_type = {Dart_CObject_kUnsupported, {false}};
 static Dart_CObject cobj_void_type = {Dart_CObject_kUnsupported, {false}};
 static Dart_CObject cobj_empty_type_arguments = {Dart_CObject_kUnsupported,
@@ -490,7 +492,7 @@ ObjectPtr MessageDeserializationCluster::PostLoadLinkedHash(
   Array& maps = Array::Handle(d->zone(), d->refs());
   maps = maps.Slice(start_index_, stop_index_ - start_index_,
                     /*with_type_argument=*/false);
-  return DartLibraryCalls::RehashObjectsInDartCompactHash(d->thread(), maps);
+  return DartLibraryCalls::RehashObjectsInDartCollection(d->thread(), maps);
 }
 
 class ClassMessageSerializationCluster : public MessageSerializationCluster {
@@ -3214,6 +3216,7 @@ MessageDeserializationCluster* BaseDeserializer::ReadCluster() {
 void MessageSerializer::AddBaseObjects() {
   AddBaseObject(Object::null());
   AddBaseObject(Object::sentinel().ptr());
+  AddBaseObject(Object::transition_sentinel().ptr());
   AddBaseObject(Object::empty_array().ptr());
   AddBaseObject(Object::dynamic_type().ptr());
   AddBaseObject(Object::void_type().ptr());
@@ -3225,6 +3228,7 @@ void MessageSerializer::AddBaseObjects() {
 void MessageDeserializer::AddBaseObjects() {
   AddBaseObject(Object::null());
   AddBaseObject(Object::sentinel().ptr());
+  AddBaseObject(Object::transition_sentinel().ptr());
   AddBaseObject(Object::empty_array().ptr());
   AddBaseObject(Object::dynamic_type().ptr());
   AddBaseObject(Object::void_type().ptr());
@@ -3236,6 +3240,7 @@ void MessageDeserializer::AddBaseObjects() {
 void ApiMessageSerializer::AddBaseObjects() {
   AddBaseObject(PredefinedCObjects::cobj_null());
   AddBaseObject(&cobj_sentinel);
+  AddBaseObject(&cobj_transition_sentinel);
   AddBaseObject(PredefinedCObjects::cobj_empty_array());
   AddBaseObject(&cobj_dynamic_type);
   AddBaseObject(&cobj_void_type);
@@ -3247,6 +3252,7 @@ void ApiMessageSerializer::AddBaseObjects() {
 void ApiMessageDeserializer::AddBaseObjects() {
   AddBaseObject(PredefinedCObjects::cobj_null());
   AddBaseObject(&cobj_sentinel);
+  AddBaseObject(&cobj_transition_sentinel);
   AddBaseObject(PredefinedCObjects::cobj_empty_array());
   AddBaseObject(&cobj_dynamic_type);
   AddBaseObject(&cobj_void_type);
@@ -3452,8 +3458,8 @@ ObjectPtr ReadObjectGraphCopyMessage(Thread* thread, PersistentHandle* handle) {
   if (msg_array.At(1) != Object::null()) {
     const auto& objects_to_rehash = Object::Handle(zone, msg_array.At(1));
     auto& result = Object::Handle(zone);
-    result = DartLibraryCalls::RehashObjectsInDartCompactHash(
-        thread, objects_to_rehash);
+    result = DartLibraryCalls::RehashObjectsInDartCollection(thread,
+                                                             objects_to_rehash);
     if (result.ptr() != Object::null()) {
       msg_obj = result.ptr();
     }

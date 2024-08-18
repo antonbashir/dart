@@ -5,10 +5,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/src/lint/linter.dart'; // ignore: implementation_imports
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const desc =
     'Prefer const literals as parameters of constructors on @immutable classes.';
@@ -38,21 +36,26 @@ A a2 = new A(const {});
 ''';
 
 class PreferConstLiteralsToCreateImmutables extends LintRule {
+  static const LintCode code = LintCode(
+      'prefer_const_literals_to_create_immutables',
+      "Use 'const' literals as arguments to constructors of '@immutable' "
+          'classes.',
+      correctionMessage: "Try adding 'const' before the literal.");
+
   PreferConstLiteralsToCreateImmutables()
       : super(
             name: 'prefer_const_literals_to_create_immutables',
             description: desc,
             details: details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.prefer_const_literals_to_create_immutables;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    var visitor = _Visitor(this);
+    var visitor = _Visitor(this, context);
     registry.addListLiteral(this, visitor);
     registry.addSetOrMapLiteral(this, visitor);
   }
@@ -61,7 +64,9 @@ class PreferConstLiteralsToCreateImmutables extends LintRule {
 class _Visitor extends SimpleAstVisitor<void> {
   final LintRule rule;
 
-  _Visitor(this.rule);
+  final LinterContext context;
+
+  _Visitor(this.rule, this.context);
 
   @override
   void visitListLiteral(ListLiteral node) => _visitTypedLiteral(node);
@@ -90,7 +95,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    if (literal.canBeConst) {
+    if (context.canBeConst(literal)) {
       rule.reportLint(literal);
     }
   }

@@ -14,7 +14,6 @@ import '../elements/entities.dart';
 import '../inferrer/engine.dart' show KernelGlobalTypeInferenceElementData;
 import '../js_backend/inferred_data.dart';
 import '../js_model/element_map.dart';
-import '../js_model/elements.dart';
 import '../js_model/js_world.dart' show JClosedWorld;
 import '../js_model/locals.dart';
 import '../serialization/deferrable.dart';
@@ -338,12 +337,6 @@ class GlobalTypeInferenceResultsImpl implements GlobalTypeInferenceResults {
             member,
             "unexpected input: ConstructorBodyElements are created"
             " after global type inference, no data is available for them."));
-    assert(
-        member is! JParameterStub,
-        failedAt(
-            member,
-            "unexpected input: parameter stub are created"
-            " after global type inference, no data is available for them."));
     // TODO(sigmund,johnniwinther): Make it an error to query for results that
     // don't exist..
     /*assert(memberResults.containsKey(member) || member is JSignatureMethod,
@@ -367,7 +360,7 @@ class GlobalTypeInferenceResultsImpl implements GlobalTypeInferenceResults {
     AbstractValueDomain abstractValueDomain = closedWorld.abstractValueDomain;
 
     // Bailout for closure calls. We're not tracking types of closures.
-    if (selector.isMaybeClosureCall) {
+    if (selector.isClosureCall) {
       // But if the receiver is not callable, the call will fail.
       if (abstractValueDomain.isEmpty(receiver).isDefinitelyTrue ||
           abstractValueDomain.isNull(receiver).isDefinitelyTrue) {

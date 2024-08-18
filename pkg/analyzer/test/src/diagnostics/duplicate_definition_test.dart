@@ -31,32 +31,8 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 31, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
-  }
-
-  test_instance_field_field_augment() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  augment int foo = 42;
-}
-''');
-
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  int foo = 0;
-}
-''');
-
-    await resolveTestFile();
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
   }
 
   test_instance_field_field_field() async {
@@ -68,36 +44,9 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 31, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 16, 3)]),
-    ]);
-  }
-
-  test_instance_field_field_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment class A {
-  int foo = 42;
-}
-''');
-
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-class A {
-  int foo = 0;
-}
-''');
-
-    await resolveTestFile();
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 42, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -109,7 +58,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 35, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -121,7 +70,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 32, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -133,7 +82,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 41, 3,
-          contextMessages: [message(testFile, 22, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 22, 3)]),
     ]);
   }
 
@@ -154,34 +103,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 40, 3,
-          contextMessages: [message(testFile, 20, 3)]),
-    ]);
-  }
-
-  test_instance_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-class C {
-  int get foo => 0;
-}
-
-augment class C {
-  augment int get foo => 0;
-}
-''');
-  }
-
-  test_instance_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class C {
-  int get foo => 0;
-}
-
-augment class C {
-  int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 61, 3,
-          contextMessages: [message(testFile, 20, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 20, 3)]),
     ]);
   }
 
@@ -193,7 +115,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 37, 3,
-          contextMessages: [message(testFile, 20, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 20, 3)]),
     ]);
   }
 
@@ -214,7 +136,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 36, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
@@ -226,34 +148,58 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
   test_instance_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  void foo() {}
-}
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment class A {
   augment void foo() {}
 }
 ''');
-  }
 
-  test_instance_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
+    newFile(testFile.path, r'''
+import augment 'a.dart';
+
 class A {
   void foo() {}
 }
+''');
+
+    await resolveTestFile();
+    assertNoErrorsInResult();
+
+    await resolveFile2(a);
+    assertNoErrorsInResult();
+  }
+
+  test_instance_method_method_inAugmentation() async {
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment class A {
   void foo() {}
 }
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+''');
+
+    newFile(testFile.path, r'''
+import augment 'a.dart';
+
+class A {
+  void foo() {}
+}
+''');
+
+    await resolveTestFile();
+    assertNoErrorsInResult();
+
+    await resolveFile2(a);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 3,
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -265,49 +211,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 32, 3,
-          contextMessages: [message(testFile, 17, 3)]),
-    ]);
-  }
-
-  test_instance_method_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  void foo() {}
-}
-
-augment class A {
-  set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 53, 3,
-          contextMessages: [message(testFile, 17, 3)]),
-    ]);
-  }
-
-  test_instance_operator_operator_augment() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  int operator +(int _) => 0;
-}
-
-augment class A {
-  augment int operator +(int _) => 0;
-}
-''');
-  }
-
-  test_instance_operator_operator_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  int operator +(int _) => 0;
-}
-
-augment class A {
-  int operator +(int _) => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 76, 1,
-          contextMessages: [message(testFile, 25, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
@@ -328,22 +232,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 3,
-          contextMessages: [message(testFile, 16, 3)]),
-    ]);
-  }
-
-  test_instance_setter_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  set foo(_) {}
-}
-
-augment class A {
-  void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -355,34 +244,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 42, 3,
-          contextMessages: [message(testFile, 21, 3)]),
-    ]);
-  }
-
-  test_instance_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-class C {
-  void set foo(_) {}
-}
-
-augment class C {
-  augment void set foo(_) {}
-}
-''');
-  }
-
-  test_instance_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class C {
-  void set foo(_) {}
-}
-
-augment class C {
-  void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 63, 3,
-          contextMessages: [message(testFile, 21, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 3)]),
     ]);
   }
 
@@ -394,7 +256,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 45, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -406,7 +268,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 49, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -418,7 +280,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -430,7 +292,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 3,
-          contextMessages: [message(testFile, 29, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 29, 3)]),
     ]);
   }
 
@@ -451,34 +313,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 27, 3)]),
-    ]);
-  }
-
-  test_static_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  static int get foo => 0;
-}
-
-augment class A {
-  augment static int get foo => 0;
-}
-''');
-  }
-
-  test_static_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  static int get foo => 0;
-}
-
-augment class A {
-  static int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 75, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -490,7 +325,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 51, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -511,7 +346,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -523,34 +358,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 47, 3,
-          contextMessages: [message(testFile, 24, 3)]),
-    ]);
-  }
-
-  test_static_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  static void foo() {}
-}
-
-augment class A {
-  augment static void foo() {}
-}
-''');
-  }
-
-  test_static_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  static void foo() {}
-}
-
-augment class A {
-  static void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 68, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -562,7 +370,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -583,7 +391,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 47, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -595,34 +403,7 @@ class C {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 56, 3,
-          contextMessages: [message(testFile, 28, 3)]),
-    ]);
-  }
-
-  test_static_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  static void set foo(_) {}
-}
-
-augment class A {
-  augment static void set foo(_) {}
-}
-''');
-  }
-
-  test_static_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-class A {
-  static void set foo(_) {}
-}
-
-augment class A {
-  static void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 77, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 3)]),
     ]);
   }
 
@@ -645,7 +426,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 16, 3,
-          contextMessages: [message(testFile, 11, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 11, 3)]),
     ]);
   }
 
@@ -658,7 +439,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 47, 3,
-          contextMessages: [message(testFile, 26, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 26, 3)]),
     ]);
   }
 
@@ -671,7 +452,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 45, 3,
-          contextMessages: [message(testFile, 26, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 26, 3)]),
     ]);
   }
 
@@ -684,7 +465,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 42, 3,
-          contextMessages: [message(testFile, 26, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 26, 3)]),
     ]);
   }
 
@@ -697,7 +478,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 45, 3,
-          contextMessages: [message(testFile, 26, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 26, 3)]),
     ]);
   }
 
@@ -720,36 +501,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 44, 3,
-          contextMessages: [message(testFile, 24, 3)]),
-    ]);
-  }
-
-  test_instance_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  int get foo => 0;
-}
-
-augment enum E {;
-  augment int get foo => 0;
-}
-''');
-  }
-
-  test_instance_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  int get foo => 0;
-}
-
-augment enum E {;
-  int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 65, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -762,7 +514,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 41, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -785,7 +537,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 40, 3,
-          contextMessages: [message(testFile, 21, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 3)]),
     ]);
   }
 
@@ -798,36 +550,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 37, 3,
-          contextMessages: [message(testFile, 21, 3)]),
-    ]);
-  }
-
-  test_instance_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  void foo() {}
-}
-
-augment enum E {;
-  augment void foo() {}
-}
-''');
-  }
-
-  test_instance_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  void foo() {}
-}
-
-augment enum E {;
-  void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 58, 3,
-          contextMessages: [message(testFile, 21, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 3)]),
     ]);
   }
 
@@ -840,7 +563,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 36, 3,
-          contextMessages: [message(testFile, 21, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 3)]),
     ]);
   }
 
@@ -863,7 +586,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 37, 3,
-          contextMessages: [message(testFile, 20, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 20, 3)]),
     ]);
   }
 
@@ -876,36 +599,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 25, 3)]),
-    ]);
-  }
-
-  test_instance_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  void set foo(_) {}
-}
-
-augment enum E {;
-  augment void set foo(_) {}
-}
-''');
-  }
-
-  test_instance_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  void set foo(_) {}
-}
-
-augment enum E {;
-  void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 67, 3,
-          contextMessages: [message(testFile, 25, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 25, 3)]),
     ]);
   }
 
@@ -917,7 +611,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 29, 3,
-          contextMessages: [message(testFile, 11, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 11, 3)]),
     ]);
   }
 
@@ -929,7 +623,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 3,
-          contextMessages: [message(testFile, 11, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 11, 3)]),
     ]);
   }
 
@@ -941,7 +635,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 30, 3,
-          contextMessages: [message(testFile, 11, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 11, 3)]),
     ]);
   }
 
@@ -963,7 +657,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 49, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -976,7 +670,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 53, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -989,7 +683,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -1002,7 +696,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 59, 3,
-          contextMessages: [message(testFile, 33, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 33, 3)]),
     ]);
   }
 
@@ -1025,36 +719,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 58, 3,
-          contextMessages: [message(testFile, 31, 3)]),
-    ]);
-  }
-
-  test_static_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  static int get foo => 0;
-}
-
-augment enum E {;
-  augment static int get foo => 0;
-}
-''');
-  }
-
-  test_static_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  static int get foo => 0;
-}
-
-augment enum E {;
-  static int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 79, 3,
-          contextMessages: [message(testFile, 31, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 31, 3)]),
     ]);
   }
 
@@ -1067,7 +732,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 3,
-          contextMessages: [message(testFile, 31, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 31, 3)]),
     ]);
   }
 
@@ -1090,7 +755,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 3)]),
     ]);
   }
 
@@ -1103,36 +768,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 51, 3,
-          contextMessages: [message(testFile, 28, 3)]),
-    ]);
-  }
-
-  test_static_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  static void foo() {}
-}
-
-augment enum E {;
-  augment static void foo() {}
-}
-''');
-  }
-
-  test_static_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  static void foo() {}
-}
-
-augment enum E {;
-  static void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 72, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 3)]),
     ]);
   }
 
@@ -1145,7 +781,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 3)]),
     ]);
   }
 
@@ -1168,7 +804,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 51, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -1181,36 +817,7 @@ enum E {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 60, 3,
-          contextMessages: [message(testFile, 32, 3)]),
-    ]);
-  }
-
-  test_static_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-enum E {
-  v;
-  static void set foo(_) {}
-}
-
-augment enum E {;
-  augment static void set foo(_) {}
-}
-''');
-  }
-
-  test_static_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-enum E {
-  v;
-  static void set foo(_) {}
-}
-
-augment enum E {;
-  static void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 81, 3,
-          contextMessages: [message(testFile, 32, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 32, 3)]),
     ]);
   }
 }
@@ -1258,34 +865,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 60, 3,
-          contextMessages: [message(testFile, 40, 3)]),
-    ]);
-  }
-
-  test_instance_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  int get foo => 0;
-}
-
-augment extension E {
-  augment int get foo => 0;
-}
-''');
-  }
-
-  test_instance_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  int get foo => 0;
-}
-
-augment extension E {
-  int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 76, 3,
-          contextMessages: [message(testFile, 31, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1298,7 +878,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 57, 3,
-          contextMessages: [message(testFile, 40, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1321,7 +901,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 56, 3,
-          contextMessages: [message(testFile, 37, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 37, 3)]),
     ]);
   }
 
@@ -1334,34 +914,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 53, 3,
-          contextMessages: [message(testFile, 37, 3)]),
-    ]);
-  }
-
-  test_instance_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  void foo() {}
-}
-
-augment extension E {
-  augment void foo() {}
-}
-''');
-  }
-
-  test_instance_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  void foo() {}
-}
-
-augment extension E {
-  void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 69, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 37, 3)]),
     ]);
   }
 
@@ -1374,7 +927,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 52, 3,
-          contextMessages: [message(testFile, 37, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 37, 3)]),
     ]);
   }
 
@@ -1397,7 +950,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 53, 3,
-          contextMessages: [message(testFile, 36, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 36, 3)]),
     ]);
   }
 
@@ -1410,34 +963,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 62, 3,
-          contextMessages: [message(testFile, 41, 3)]),
-    ]);
-  }
-
-  test_instance_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  void set foo(_) {}
-}
-
-augment extension E {
-  augment void set foo(_) {}
-}
-''');
-  }
-
-  test_instance_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  void set foo(_) {}
-}
-
-augment extension E {
-  void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 78, 3,
-          contextMessages: [message(testFile, 32, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 41, 3)]),
     ]);
   }
 
@@ -1450,7 +976,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 65, 3,
-          contextMessages: [message(testFile, 43, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -1463,7 +989,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 69, 3,
-          contextMessages: [message(testFile, 43, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -1476,7 +1002,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 66, 3,
-          contextMessages: [message(testFile, 43, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -1489,7 +1015,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 75, 3,
-          contextMessages: [message(testFile, 49, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 49, 3)]),
     ]);
   }
 
@@ -1512,34 +1038,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 74, 3,
-          contextMessages: [message(testFile, 47, 3)]),
-    ]);
-  }
-
-  test_static_getter_getter_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  static int get foo => 0;
-}
-
-augment extension E {
-  augment static int get foo => 0;
-}
-''');
-  }
-
-  test_static_getter_getter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  static int get foo => 0;
-}
-
-augment extension E {
-  static int get foo => 0;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 90, 3,
-          contextMessages: [message(testFile, 38, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 47, 3)]),
     ]);
   }
 
@@ -1552,7 +1051,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 71, 3,
-          contextMessages: [message(testFile, 47, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 47, 3)]),
     ]);
   }
 
@@ -1575,7 +1074,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 70, 3,
-          contextMessages: [message(testFile, 44, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 3)]),
     ]);
   }
 
@@ -1588,34 +1087,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 67, 3,
-          contextMessages: [message(testFile, 44, 3)]),
-    ]);
-  }
-
-  test_static_method_method_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  static void foo() {}
-}
-
-augment extension E {
-  augment static void foo() {}
-}
-''');
-  }
-
-  test_static_method_method_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  static void foo() {}
-}
-
-augment extension E {
-  static void foo() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 83, 3,
-          contextMessages: [message(testFile, 35, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 3)]),
     ]);
   }
 
@@ -1628,7 +1100,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 66, 3,
-          contextMessages: [message(testFile, 44, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 3)]),
     ]);
   }
 
@@ -1650,7 +1122,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 67, 3,
-          contextMessages: [message(testFile, 43, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -1663,34 +1135,7 @@ extension E on A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 76, 3,
-          contextMessages: [message(testFile, 48, 3)]),
-    ]);
-  }
-
-  test_static_setter_setter_augment() async {
-    await assertNoErrorsInCode(r'''
-extension E on int {
-  static void set foo(_) {}
-}
-
-augment extension E {
-  augment static void set foo(_) {}
-}
-''');
-  }
-
-  test_static_setter_setter_inAugmentation() async {
-    await assertErrorsInCode(r'''
-extension E on int {
-  static void set foo(_) {}
-}
-
-augment extension E {
-  static void set foo(_) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 92, 3,
-          contextMessages: [message(testFile, 39, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 48, 3)]),
     ]);
   }
 
@@ -1701,7 +1146,7 @@ extension E on A {}
 extension E on A {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 41, 1,
-          contextMessages: [message(testFile, 21, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 1)]),
     ]);
   }
 }
@@ -1716,7 +1161,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 57, 3,
-          contextMessages: [message(testFile, 37, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 37, 3)]),
     ]);
   }
 
@@ -1728,7 +1173,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 37, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 37, 3)]),
     ]);
   }
 
@@ -1749,7 +1194,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 53, 3,
-          contextMessages: [message(testFile, 34, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 34, 3)]),
     ]);
   }
 
@@ -1761,7 +1206,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 34, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 34, 3)]),
     ]);
   }
 
@@ -1773,7 +1218,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 49, 3,
-          contextMessages: [message(testFile, 34, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 34, 3)]),
     ]);
   }
 
@@ -1784,7 +1229,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 37, 2,
-          contextMessages: [message(testFile, 21, 2)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 2)]),
     ]);
   }
 
@@ -1795,7 +1240,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 34, 2,
-          contextMessages: [message(testFile, 21, 2)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 2)]),
     ]);
   }
 
@@ -1824,7 +1269,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 33, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 33, 3)]),
     ]);
   }
 
@@ -1836,7 +1281,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 59, 3,
-          contextMessages: [message(testFile, 38, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 38, 3)]),
     ]);
   }
 
@@ -1848,7 +1293,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 62, 3,
-          contextMessages: [message(testFile, 40, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1860,7 +1305,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 66, 3,
-          contextMessages: [message(testFile, 40, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1872,7 +1317,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 63, 3,
-          contextMessages: [message(testFile, 40, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1884,7 +1329,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 72, 3,
-          contextMessages: [message(testFile, 46, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 46, 3)]),
     ]);
   }
 
@@ -1905,7 +1350,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 71, 3,
-          contextMessages: [message(testFile, 44, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 3)]),
     ]);
   }
 
@@ -1917,7 +1362,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 68, 3,
-          contextMessages: [message(testFile, 44, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 44, 3)]),
     ]);
   }
 
@@ -1938,7 +1383,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 67, 3,
-          contextMessages: [message(testFile, 41, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 41, 3)]),
     ]);
   }
 
@@ -1950,7 +1395,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 64, 3,
-          contextMessages: [message(testFile, 41, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 41, 3)]),
     ]);
   }
 
@@ -1962,7 +1407,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 63, 3,
-          contextMessages: [message(testFile, 41, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 41, 3)]),
     ]);
   }
 
@@ -1983,7 +1428,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 64, 3,
-          contextMessages: [message(testFile, 40, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 40, 3)]),
     ]);
   }
 
@@ -1995,7 +1440,7 @@ extension type E(int it) {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 73, 3,
-          contextMessages: [message(testFile, 45, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 45, 3)]),
     ]);
   }
 
@@ -2005,7 +1450,7 @@ extension type E(int it) {}
 extension type E(int it) {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 43, 1,
-          contextMessages: [message(testFile, 15, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 15, 1)]),
     ]);
   }
 }
@@ -2020,7 +1465,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 31, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -2032,7 +1477,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 35, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -2044,7 +1489,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 32, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -2056,7 +1501,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 41, 3,
-          contextMessages: [message(testFile, 22, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 22, 3)]),
     ]);
   }
 
@@ -2077,7 +1522,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 40, 3,
-          contextMessages: [message(testFile, 20, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 20, 3)]),
     ]);
   }
 
@@ -2089,7 +1534,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 37, 3,
-          contextMessages: [message(testFile, 20, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 20, 3)]),
     ]);
   }
 
@@ -2110,7 +1555,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 36, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
@@ -2122,13 +1567,13 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
   test_instance_method_method_augment() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment mixin A {
   augment void foo() {}
@@ -2151,8 +1596,8 @@ mixin A {
   }
 
   test_instance_method_method_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment mixin A {
   void foo() {}
@@ -2173,7 +1618,7 @@ mixin A {
     await resolveFile2(a);
     assertErrorsInResult([
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 3,
-          contextMessages: [message(testFile, 43, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 43, 3)]),
     ]);
   }
 
@@ -2185,7 +1630,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 32, 3,
-          contextMessages: [message(testFile, 17, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 3)]),
     ]);
   }
 
@@ -2206,7 +1651,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 3,
-          contextMessages: [message(testFile, 16, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 16, 3)]),
     ]);
   }
 
@@ -2218,7 +1663,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 42, 3,
-          contextMessages: [message(testFile, 21, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 21, 3)]),
     ]);
   }
 
@@ -2230,7 +1675,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 45, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -2242,7 +1687,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 49, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -2254,7 +1699,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -2266,7 +1711,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 3,
-          contextMessages: [message(testFile, 29, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 29, 3)]),
     ]);
   }
 
@@ -2287,7 +1732,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -2299,7 +1744,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 51, 3,
-          contextMessages: [message(testFile, 27, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 27, 3)]),
     ]);
   }
 
@@ -2320,7 +1765,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 50, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -2332,7 +1777,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 47, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -2344,7 +1789,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 46, 3,
-          contextMessages: [message(testFile, 24, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 24, 3)]),
     ]);
   }
 
@@ -2365,7 +1810,7 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 47, 3,
-          contextMessages: [message(testFile, 23, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 23, 3)]),
     ]);
   }
 
@@ -2377,48 +1822,13 @@ mixin M {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 56, 3,
-          contextMessages: [message(testFile, 28, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 3)]),
     ]);
   }
 }
 
 @reflectiveTest
 class DuplicateDefinitionTest extends PubPackageResolutionTest {
-  test_block_localFunction_wildcard() async {
-    await assertErrorsInCode(r'''
-void f() {
-  void _() {}
-  int _(int _) => 42;
-  String _(int _) => "42";
-}
-''', [
-      error(WarningCode.DEAD_CODE, 13, 11),
-      error(WarningCode.DEAD_CODE, 27, 19),
-      error(WarningCode.DEAD_CODE, 49, 24),
-    ]);
-  }
-
-  test_block_localFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f() {
-  void _() {}
-  int _(int _) => 42;
-  String _(int _) => "42";
-}
-''', [
-      error(WarningCode.UNUSED_ELEMENT, 62, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 75, 1,
-          contextMessages: [message(testFile, 62, 1)]),
-      error(WarningCode.UNUSED_ELEMENT, 75, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 100, 1,
-          contextMessages: [message(testFile, 62, 1)]),
-      error(WarningCode.UNUSED_ELEMENT, 100, 1),
-    ]);
-  }
-
   test_block_localVariable_localVariable() async {
     await assertErrorsInCode(r'''
 void f() {
@@ -2426,34 +1836,10 @@ void f() {
   var a = 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 30, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 17, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 30, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 30, 1,
-          contextMessages: [message(testFile, 17, 1)]),
-    ]);
-  }
-
-  test_block_localVariable_localVariable_wildcard() async {
-    await assertNoErrorsInCode(r'''
-void f() {
-  var _ = 0;
-  var _ = 1;
-}
-''');
-  }
-
-  test_block_localVariable_localVariable_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f() {
-  var _ = 0;
-  var _ = 1;
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 74, 1,
-          contextMessages: [message(testFile, 61, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 1)]),
     ]);
   }
 
@@ -2464,32 +1850,11 @@ void f() {
   var (a) = 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 17, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 17, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 31, 1,
-          contextMessages: [message(testFile, 17, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 31, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 31, 1),
     ]);
-  }
-
-  test_block_localVariable_patternVariable_wildcard() async {
-    await assertNoErrorsInCode(r'''
-void f() {
-  var _ = 0;
-  var (_) = 1;
-}
-''');
-  }
-
-  test_block_localVariable_patternVariable_wildcard_preWildcards() async {
-    await assertNoErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f() {
-  var _ = 0;
-  var (_) = 1;
-}
-''');
   }
 
   test_block_patternVariable_localVariable() async {
@@ -2499,10 +1864,10 @@ void f() {
   var a = 0;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 18, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 32, 1,
-          contextMessages: [message(testFile, 18, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 32, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 18, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 32, 1),
     ]);
   }
 
@@ -2513,10 +1878,10 @@ void f() {
   var (a) = 1;
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 18, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 18, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 33, 1,
-          contextMessages: [message(testFile, 18, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 33, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 18, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 33, 1),
     ]);
   }
 
@@ -2527,27 +1892,7 @@ main() {
 }''', [
       error(WarningCode.UNUSED_CATCH_STACK, 28, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 28, 1,
-          contextMessages: [message(testFile, 25, 1)]),
-    ]);
-  }
-
-  test_catch_wildcard() async {
-    await assertNoErrorsInCode(r'''
-f() {
-  try {} catch (_, _) {}
-}''');
-  }
-
-  test_catch_wildcard_preWildCards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f() {
-  try {} catch (_, _) {}
-}''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 69, 1,
-          contextMessages: [message(testFile, 66, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 25, 1)]),
     ]);
   }
 
@@ -2571,30 +1916,8 @@ f() {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 24, 1,
-          contextMessages: [message(testFile, 17, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 24, 1),
-    ]);
-  }
-
-  test_for_initializers_wildcard() async {
-    await assertNoErrorsInCode(r'''
-f() {
-  for (int _ = 0, _ = 0; ;) {}
-}
-''');
-  }
-
-  test_for_initializers_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f() {
-  for (int _ = 0, _ = 0; ;) {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 68, 1,
-          contextMessages: [message(testFile, 61, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 24, 1),
     ]);
   }
 
@@ -2612,34 +1935,7 @@ class A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 36, 1,
-          contextMessages: [message(testFile, 29, 1)]),
-    ]);
-  }
-
-  test_parameters_constructor_field_first_wildcard() async {
-    await assertErrorsInCode(r'''
-class A {
-  int? _;
-  A(this._, int _);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 17, 1),
-    ]);
-  }
-
-  test_parameters_constructor_field_first_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A {
-  int? _;
-  A(this._, int _);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 61, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 80, 1,
-          contextMessages: [message(testFile, 73, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 29, 1)]),
     ]);
   }
 
@@ -2651,84 +1947,7 @@ class A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 36, 1,
-          contextMessages: [message(testFile, 28, 1)]),
-    ]);
-  }
-
-  test_parameters_constructor_field_second_wildcard() async {
-    await assertErrorsInCode(r'''
-class A {
-  int? _;
-  A(int _, this._);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 17, 1),
-    ]);
-  }
-
-  test_parameters_constructor_field_second_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A {
-  int? _;
-  A(int _, this._);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 61, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 80, 1,
-          contextMessages: [message(testFile, 72, 1)]),
-    ]);
-  }
-
-  test_parameters_constructor_super_first_wildcard() async {
-    await assertErrorsInCode(r'''
-class A {
-  int? _;
-  A(this._);
-}
-class B extends A {
-  B(super._, super._);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 17, 1),
-    ]);
-  }
-
-  test_parameters_constructor_super_first_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A {
-  int? _;
-  A(this._);
-}
-class B extends A {
-  B(super._, super._);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 61, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 118, 1,
-          contextMessages: [message(testFile, 109, 1)]),
-    ]);
-  }
-
-  test_parameters_constructor_this_super_wildcard() async {
-    await assertErrorsInCode(r'''
-class A {
-  final int x, y;
-  A(this.x, [this.y = 0]);
-}
-
-class C extends A {
-  final int _;
-
-  C(this._, super._, [super._]);
-}
-''', [
-      error(WarningCode.UNUSED_FIELD, 90, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 28, 1)]),
     ]);
   }
 
@@ -2737,25 +1956,7 @@ class C extends A {
 typedef void F(int a, double a);
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 29, 1,
-          contextMessages: [message(testFile, 19, 1)]),
-    ]);
-  }
-
-  test_parameters_functionTypeAlias_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef void F(int _, double _);
-''');
-  }
-
-  test_parameters_functionTypeAlias_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef void F(int _, double _);
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 73, 1,
-          contextMessages: [message(testFile, 63, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 19, 1)]),
     ]);
   }
 
@@ -2764,25 +1965,7 @@ typedef void F(int _, double _);
 typedef F = void Function(int a, double a);
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 40, 1,
-          contextMessages: [message(testFile, 30, 1)]),
-    ]);
-  }
-
-  test_parameters_genericFunction_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef F = void Function(int _, double _);
-''');
-  }
-
-  test_parameters_genericFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef F = void Function(int _, double _);
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 84, 1,
-          contextMessages: [message(testFile, 74, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 30, 1)]),
     ]);
   }
 
@@ -2795,32 +1978,7 @@ main() {
 ''', [
       error(WarningCode.UNUSED_ELEMENT, 11, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 27, 1,
-          contextMessages: [message(testFile, 17, 1)]),
-    ]);
-  }
-
-  test_parameters_localFunction_wildcard() async {
-    await assertErrorsInCode(r'''
-f() {
-  g(int _, double _) {};
-}
-''', [
-      error(WarningCode.UNUSED_ELEMENT, 8, 1),
-    ]);
-  }
-
-  test_parameters_localFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f() {
-  g(int _, double _) {};
-}
-''', [
-      error(WarningCode.UNUSED_ELEMENT, 52, 1),
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 68, 1,
-          contextMessages: [message(testFile, 58, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 17, 1)]),
     ]);
   }
 
@@ -2832,31 +1990,7 @@ class A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 28, 1,
-          contextMessages: [message(testFile, 18, 1)]),
-    ]);
-  }
-
-  test_parameters_method_wildcard() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  m(int _, double _) {
-  }
-}
-''');
-  }
-
-  test_parameters_method_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A {
-  m(int _, double _) {
-  }
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 72, 1,
-          contextMessages: [message(testFile, 62, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 18, 1)]),
     ]);
   }
 
@@ -2865,25 +1999,7 @@ class A {
 f(int a, double a) {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 16, 1,
-          contextMessages: [message(testFile, 6, 1)]),
-    ]);
-  }
-
-  test_parameters_topLevelFunction_wildcard() async {
-    await assertNoErrorsInCode(r'''
-f(int _, double _) {}
-''');
-  }
-
-  test_parameters_topLevelFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-f(int _, double _) {}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 60, 1,
-          contextMessages: [message(testFile, 50, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 6, 1)]),
     ]);
   }
 
@@ -2898,10 +2014,10 @@ void f() {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 64, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 64, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 77, 1,
-          contextMessages: [message(testFile, 64, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 77, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 64, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 77, 1),
     ]);
   }
 
@@ -2915,41 +2031,11 @@ void f() {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 49, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 49, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 62, 1,
-          contextMessages: [message(testFile, 49, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 62, 1),
+          contextMessages: [message('/home/test/lib/test.dart', 49, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 62, 1),
     ]);
-  }
-
-  test_switchDefault_localVariable_localVariable_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f() {
-  switch (0) {
-    default:
-      var _;
-      var _;
-  }
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 106, 1,
-          contextMessages: [message(testFile, 93, 1)]),
-    ]);
-  }
-
-  test_switchDefault_localVariable_localVariable_wildcard() async {
-    await assertNoErrorsInCode(r'''
-void f() {
-  switch (0) {
-    default:
-      var _;
-      var _;
-  }
-}
-''');
   }
 
   test_switchPatternCase_localVariable_localVariable() async {
@@ -2962,40 +2048,10 @@ void f() {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 48, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 48, 1),
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 61, 1,
-          contextMessages: [message(testFile, 48, 1)]),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 61, 1),
-    ]);
-  }
-
-  test_switchPatternCase_localVariable_localVariable_wildcard() async {
-    await assertNoErrorsInCode(r'''
-void f() {
-  switch (0) {
-    case 0:
-      var _;
-      var _;
-  }
-}
-''');
-  }
-
-  test_switchPatternCase_localVariable_localVariable_wildcard_preWildCards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f() {
-  switch (0) {
-    case 0:
-      var _;
-      var _;
-  }
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 105, 1,
-          contextMessages: [message(testFile, 92, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 48, 1)]),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 61, 1),
     ]);
   }
 
@@ -3004,25 +2060,7 @@ void f() {
 class A<T, T> {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 11, 1,
-          contextMessages: [message(testFile, 8, 1)]),
-    ]);
-  }
-
-  test_typeParameters_class_wildcard() async {
-    await assertNoErrorsInCode(r'''
-class A<_, _> {}
-''');
-  }
-
-  test_typeParameters_class_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A<_, _> {}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 55, 1,
-          contextMessages: [message(testFile, 52, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 8, 1)]),
     ]);
   }
 
@@ -3031,25 +2069,7 @@ class A<_, _> {}
 typedef void F<T, T>();
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 18, 1,
-          contextMessages: [message(testFile, 15, 1)]),
-    ]);
-  }
-
-  test_typeParameters_functionTypeAlias_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef void F<_, _>();
-''');
-  }
-
-  test_typeParameters_functionTypeAlias_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef void F<_, _>();
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 62, 1,
-          contextMessages: [message(testFile, 59, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 15, 1)]),
     ]);
   }
 
@@ -3058,25 +2078,7 @@ typedef void F<_, _>();
 typedef F = void Function<T, T>();
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 29, 1,
-          contextMessages: [message(testFile, 26, 1)]),
-    ]);
-  }
-
-  test_typeParameters_genericFunction_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef F = void Function<_, _>();
-''');
-  }
-
-  test_typeParameters_genericFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef F = void Function<_, _>();
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 73, 1,
-          contextMessages: [message(testFile, 70, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 26, 1)]),
     ]);
   }
 
@@ -3085,25 +2087,7 @@ typedef F = void Function<_, _>();
 typedef F<T, T> = void Function();
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 13, 1,
-          contextMessages: [message(testFile, 10, 1)]),
-    ]);
-  }
-
-  test_typeParameters_genericTypedef_functionType_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef F<_, _> = void Function();
-''');
-  }
-
-  test_typeParameters_genericTypedef_functionType_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef F<_, _> = void Function();
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 57, 1,
-          contextMessages: [message(testFile, 54, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 10, 1)]),
     ]);
   }
 
@@ -3112,25 +2096,7 @@ typedef F<_, _> = void Function();
 typedef F<T, T> = Map;
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 13, 1,
-          contextMessages: [message(testFile, 10, 1)]),
-    ]);
-  }
-
-  test_typeParameters_genericTypedef_interfaceType_wildcard() async {
-    await assertNoErrorsInCode(r'''
-typedef F<_, _> = Map;
-''');
-  }
-
-  test_typeParameters_genericTypedef_interfaceType_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-typedef F<_, _> = Map;
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 57, 1,
-          contextMessages: [message(testFile, 54, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 10, 1)]),
     ]);
   }
 
@@ -3141,29 +2107,7 @@ class A {
 }
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 22, 1,
-          contextMessages: [message(testFile, 19, 1)]),
-    ]);
-  }
-
-  test_typeParameters_method_wildcard() async {
-    await assertNoErrorsInCode(r'''
-class A {
-  void m<_, _>() {}
-}
-''');
-  }
-
-  test_typeParameters_method_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-class A {
-  void m<_, _>() {}
-}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 66, 1,
-          contextMessages: [message(testFile, 63, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 19, 1)]),
     ]);
   }
 
@@ -3172,25 +2116,7 @@ class A {
 void f<T, T>() {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 10, 1,
-          contextMessages: [message(testFile, 7, 1)]),
-    ]);
-  }
-
-  test_typeParameters_topLevelFunction_wildcard() async {
-    await assertNoErrorsInCode(r'''
-void f<_, _>() {}
-''');
-  }
-
-  test_typeParameters_topLevelFunction_wildcard_preWildcards() async {
-    await assertErrorsInCode(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
-
-void f<_, _>() {}
-''', [
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 54, 1,
-          contextMessages: [message(testFile, 51, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 7, 1)]),
     ]);
   }
 }
@@ -3204,13 +2130,13 @@ class B {}
 class A {}
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 28, 1,
-          contextMessages: [message(testFile, 6, 1)])
+          contextMessages: [message('/home/test/lib/test.dart', 6, 1)])
     ]);
   }
 
   test_class_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment class A {}
 ''');
@@ -3229,8 +2155,8 @@ class A {}
   }
 
   test_mixin_augmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+    final a = newFile('$testPackageLibPath/a.dart', r'''
+library augment 'test.dart';
 
 augment mixin A {}
 ''');
@@ -3249,60 +2175,62 @@ mixin A {}
   }
 
   test_part_library() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var libPath = convertPath('$testPackageLibPath/lib.dart');
+    var aPath = convertPath('$testPackageLibPath/a.dart');
+    newFile(libPath, '''
 part 'a.dart';
 
 class A {}
 ''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+    newFile(aPath, '''
 part of 'lib.dart';
 
 class A {}
 ''');
 
-    await resolveFile(lib);
+    await resolveFile(libPath);
 
-    var aResult = await resolveFile(a);
+    var aResult = await resolveFile(aPath);
     GatheringErrorListener()
       ..addAll(aResult.errors)
       ..assertErrors([
         error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 27, 1,
-            contextMessages: [message(lib, 22, 1)]),
+            contextMessages: [message('/home/test/lib/lib.dart', 22, 1)]),
       ]);
   }
 
   test_part_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var libPath = convertPath('$testPackageLibPath/lib.dart');
+    var aPath = convertPath('$testPackageLibPath/a.dart');
+    var bPath = convertPath('$testPackageLibPath/b.dart');
+    newFile(libPath, '''
 part 'a.dart';
 part 'b.dart';
 ''');
+    newFile(aPath, '''
+part of 'lib.dart';
 
-    var a = newFile('$testPackageLibPath/a.dart', '''
+class A {}
+''');
+    newFile(bPath, '''
 part of 'lib.dart';
 
 class A {}
 ''');
 
-    var b = newFile('$testPackageLibPath/b.dart', '''
-part of 'lib.dart';
+    await resolveFile(libPath);
 
-class A {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
+    var aResult = await resolveFile(aPath);
     GatheringErrorListener()
       ..addAll(aResult.errors)
       ..assertNoErrors();
 
-    var bResult = await resolveFile(b);
+    var bResult = await resolveFile(bPath);
     GatheringErrorListener()
       ..addAll(bResult.errors)
       ..assertErrors([
         error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 27, 1,
-            contextMessages: [message(a, 27, 1)]),
+            contextMessages: [message('/home/test/lib/a.dart', 27, 1)]),
       ]);
   }
 
@@ -3312,50 +2240,7 @@ typedef A = List<int>;
 typedef A = List<int>;
 ''', [
       error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 31, 1,
-          contextMessages: [message(testFile, 8, 1)]),
-    ]);
-  }
-
-  test_variable_variable_augment() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-augment int foo = 42;
-''');
-
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-int foo = 0;
-''');
-
-    await resolveTestFile();
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-  }
-
-  test_variable_variable_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
-
-int foo = 42;
-''');
-
-    newFile(testFile.path, r'''
-import augment 'a.dart';
-
-int foo = 0;
-''');
-
-    await resolveTestFile();
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.DUPLICATE_DEFINITION, 34, 3,
-          contextMessages: [message(testFile, 30, 3)]),
+          contextMessages: [message('/home/test/lib/test.dart', 8, 1)]),
     ]);
   }
 }

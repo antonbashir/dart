@@ -4,7 +4,6 @@
 
 import 'package:async_helper/async_helper.dart';
 import 'package:expect/expect.dart';
-import 'package:expect/variations.dart' as v;
 
 import 'utils.dart';
 
@@ -281,46 +280,41 @@ Future<void> testKeyOrder() async {
   Expect.equals("1:a,2:a", set.join(","));
 }
 
-asyncExpectThrowsTypeErrorOrNSM(Future<void> result) {
-  if (v.checkedParameters) {
-    return asyncExpectThrows<TypeError>(result);
-  } else {
-    return asyncExpectThrows<NoSuchMethodError>(result);
-  }
-}
-
 Future<void> testRuntimeErrors() async {
+  // The checks for the TypeErrors tested in here are omitted in dart2js
+  // production mode.
+  if (dart2jsProductionMode) return;
+
   // Cast variable.
   dynamic nonStream = 3;
-  asyncExpectThrowsTypeErrorOrNSM(() async {
+  asyncExpectThrows<TypeError>(() async {
     <int>[await for (int i in nonStream) 1];
   }());
-  asyncExpectThrowsTypeErrorOrNSM(() async {
+  asyncExpectThrows<TypeError>(() async {
     <int, int>{await for (int i in nonStream) 1: 1};
   }());
-  asyncExpectThrowsTypeErrorOrNSM(() async {
+  asyncExpectThrows<TypeError>(() async {
     <int>{await for (int i in nonStream) 1};
   }());
 
   // Wrong element type.
   dynamic nonInt = "string";
-  asyncExpectThrowsWhen(v.checkedImplicitDowncasts, () async {
+  asyncExpectThrows<TypeError>(() async {
     <int>[
       await for (var i in stream([1])) nonInt
     ];
   }());
-  asyncExpectThrowsWhen(v.checkedImplicitDowncasts, () async {
+  asyncExpectThrows<TypeError>(() async {
     <int, int>{
       await for (var i in stream([1])) nonInt: 1
     };
   }());
-  asyncExpectThrowsWhen(v.checkedImplicitDowncasts, () async {
+  asyncExpectThrows<TypeError>(() async {
     <int, int>{
       await for (var i in stream([1])) 1: nonInt
     };
   }());
-
-  asyncExpectThrowsWhen(v.checkedImplicitDowncasts, () async {
+  asyncExpectThrows<TypeError>(() async {
     <int>{
       await for (var i in stream([1])) nonInt
     };

@@ -19,15 +19,14 @@ import "package:front_end/src/api_prototype/memory_file_system.dart"
     show MemoryFileSystem;
 import "package:front_end/src/api_prototype/terminal_color_support.dart"
     show printDiagnosticMessage;
-import 'package:front_end/src/base/compiler_context.dart' show CompilerContext;
-import 'package:front_end/src/base/incremental_compiler.dart'
-    show IncrementalCompiler;
-import 'package:front_end/src/base/nnbd_mode.dart' show NnbdMode;
 import 'package:front_end/src/base/processed_options.dart'
     show ProcessedOptions;
 import 'package:front_end/src/compute_platform_binaries_location.dart'
     show computePlatformBinariesLocation;
-import 'package:front_end/src/kernel/utils.dart'
+import 'package:front_end/src/fasta/compiler_context.dart' show CompilerContext;
+import 'package:front_end/src/fasta/incremental_compiler.dart'
+    show IncrementalCompiler;
+import 'package:front_end/src/fasta/kernel/utils.dart'
     show serializeComponent, serializeProcedure;
 import 'package:front_end/src/testing/compiler_common.dart';
 import "package:kernel/ast.dart"
@@ -47,14 +46,13 @@ import 'package:kernel/target/targets.dart' show TargetFlags;
 import 'package:kernel/text/ast_to_text.dart' show Printer;
 import "package:testing/src/log.dart" show splitLines;
 import "package:testing/testing.dart"
-    show Chain, ChainContext, Result, Step, TestDescription;
-import 'package:vm/modular/target/vm.dart' show VmTarget;
+    show Chain, ChainContext, Result, Step, TestDescription, runMe;
+import 'package:vm/target/vm.dart' show VmTarget;
 import "package:yaml/yaml.dart" show YamlMap, YamlList, loadYamlNode;
 
 import '../testing_utils.dart' show checkEnvironment;
 import '../utils/kernel_chain.dart' show runDiff, openWrite;
-import 'suite_utils.dart';
-import 'testing/environment_keys.dart';
+import 'testing/suite.dart';
 
 class Context extends ChainContext {
   final CompilerContext compilerContext;
@@ -656,8 +654,8 @@ class CompileExpression extends Step<List<TestCase>, List<TestCase>, Context> {
 Future<Context> createContext(
     Chain suite, Map<String, String> environment) async {
   const Set<String> knownEnvironmentKeys = {
-    EnvironmentKeys.updateExpectations,
-    EnvironmentKeys.fuzz,
+    UPDATE_EXPECTATIONS,
+    "fuzz",
   };
   checkEnvironment(environment, knownEnvironmentKeys);
 
@@ -693,8 +691,6 @@ Future<Context> createContext(
       errors.add(message);
     }
     ..environmentDefines = const {}
-    // TODO(johnniwinther): We should default to strong mode.
-    ..nnbdMode = NnbdMode.Weak
     ..explicitExperimentalFlags = {}
     ..allowedExperimentalFlagsForTesting = const AllowedExperimentalFlags();
 
@@ -712,17 +708,15 @@ Future<Context> createContext(
       errors.add(message);
     }
     ..environmentDefines = const {}
-    ..nnbdMode = NnbdMode.Weak
     ..explicitExperimentalFlags = {ExperimentalFlag.nonNullable: false}
     ..allowedExperimentalFlagsForTesting = const AllowedExperimentalFlags();
 
   final ProcessedOptions optionsNoNNBD =
       new ProcessedOptions(options: optionBuilderNoNNBD, inputs: [entryPoint]);
 
-  final bool updateExpectations =
-      environment[EnvironmentKeys.updateExpectations] == "true";
+  final bool updateExpectations = environment[UPDATE_EXPECTATIONS] == "true";
 
-  final bool fuzz = environment[EnvironmentKeys.fuzz] == "true";
+  final bool fuzz = environment["fuzz"] == "true";
 
   final CompilerContext compilerContext = new CompilerContext(options);
   final CompilerContext compilerContextNoNNBD =
@@ -736,8 +730,5 @@ Future<Context> createContext(
       compilerContext, compilerContextNoNNBD, errors, updateExpectations, fuzz);
 }
 
-void main([List<String> arguments = const []]) => internalMain(
-      createContext,
-      arguments: arguments,
-      displayName: "expression suite",
-    );
+void main([List<String> arguments = const []]) =>
+    runMe(arguments, createContext, configurationPath: "../../testing.json");

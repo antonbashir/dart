@@ -9,5 +9,4 @@ class Foo {
 }
 
 main() {}
-
 void f(@Foo(const []) x) {}

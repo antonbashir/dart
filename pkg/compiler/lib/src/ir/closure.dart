@@ -164,9 +164,7 @@ class NodeBox {
   NodeBox(this.name, this.executableContext);
 }
 
-sealed class VariableUse {}
-
-enum SimpleVariableUse implements VariableUse {
+enum VariableUseKind {
   /// An explicit variable use.
   ///
   /// For type variable this is an explicit as-cast, an is-test or a type
@@ -188,197 +186,147 @@ enum SimpleVariableUse implements VariableUse {
   /// A type variable passed as the type argument of a map literal.
   mapLiteral,
 
+  /// A type variable passed as a type argument to a constructor.
+  constructorTypeArgument,
+
+  /// A type variable passed as a type argument to a static method.
+  staticTypeArgument,
+
+  /// A type variable passed as a type argument to an instance method.
+  instanceTypeArgument,
+
+  /// A type variable passed as a type argument to a local function.
+  localTypeArgument,
+
+  /// A type variable in a parameter type of a member.
+  memberParameter,
+
+  /// A type variable in a parameter type of a local function.
+  localParameter,
+
+  /// A type variable used in a return type of a member.
+  memberReturnType,
+
+  /// A type variable used in a return type of a local function.
+  localReturnType,
+
   /// A type variable in a field type.
   fieldType,
+
+  /// A type argument of an generic instantiation.
+  instantiationTypeArgument,
 }
 
-/// A type variable in a parameter type of a member.
-class MemberParameterVariableUse implements VariableUse {
-  final ir.Member member;
+class VariableUse {
+  final VariableUseKind kind;
+  final ir.Member? member;
+  final ir.LocalFunction? localFunction;
+  final ir.Expression? invocation;
+  final ir.Instantiation? instantiation;
 
-  MemberParameterVariableUse(this.member);
+  const VariableUse._simple(this.kind)
+      : this.member = null,
+        this.localFunction = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  @override
-  int get hashCode => Object.hash(MemberParameterVariableUse, member);
+  VariableUse.memberParameter(this.member)
+      : this.kind = VariableUseKind.memberParameter,
+        this.localFunction = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! MemberParameterVariableUse) return false;
-    return member == other.member;
-  }
+  VariableUse.localParameter(this.localFunction)
+      : this.kind = VariableUseKind.localParameter,
+        this.member = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  @override
-  String toString() => 'MemberParameterVariableUse(member=$member)';
-}
+  VariableUse.memberReturnType(this.member)
+      : this.kind = VariableUseKind.memberReturnType,
+        this.localFunction = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-/// A type variable in a parameter type of a local function.
-class LocalParameterVariableUse implements VariableUse {
-  final ir.LocalFunction localFunction;
+  VariableUse.localReturnType(this.localFunction)
+      : this.kind = VariableUseKind.localReturnType,
+        this.member = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  LocalParameterVariableUse(this.localFunction);
+  VariableUse.constructorTypeArgument(this.member)
+      : this.kind = VariableUseKind.constructorTypeArgument,
+        this.localFunction = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  @override
-  int get hashCode => Object.hash(LocalParameterVariableUse, localFunction);
+  VariableUse.staticTypeArgument(this.member)
+      : this.kind = VariableUseKind.staticTypeArgument,
+        this.localFunction = null,
+        this.invocation = null,
+        this.instantiation = null;
 
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! LocalParameterVariableUse) return false;
-    return localFunction == other.localFunction;
-  }
+  VariableUse.instanceTypeArgument(this.invocation)
+      : this.kind = VariableUseKind.instanceTypeArgument,
+        this.member = null,
+        this.localFunction = null,
+        this.instantiation = null;
 
-  @override
-  String toString() =>
-      'LocalParameterVariableUse(localFunction=$localFunction)';
-}
+  VariableUse.localTypeArgument(this.localFunction, this.invocation)
+      : this.kind = VariableUseKind.localTypeArgument,
+        this.member = null,
+        this.instantiation = null;
 
-/// A type variable used in a return type of a member.
-class MemberReturnTypeVariableUse implements VariableUse {
-  final ir.Member member;
+  VariableUse.instantiationTypeArgument(this.instantiation)
+      : this.kind = VariableUseKind.instantiationTypeArgument,
+        this.member = null,
+        this.localFunction = null,
+        this.invocation = null;
 
-  MemberReturnTypeVariableUse(this.member);
+  static const VariableUse explicit =
+      VariableUse._simple(VariableUseKind.explicit);
 
-  @override
-  int get hashCode => Object.hash(MemberReturnTypeVariableUse, member);
+  static const VariableUse localType =
+      VariableUse._simple(VariableUseKind.localType);
 
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! MemberReturnTypeVariableUse) return false;
-    return member == other.member;
-  }
+  static const VariableUse implicitCast =
+      VariableUse._simple(VariableUseKind.implicitCast);
 
-  @override
-  String toString() => 'MemberReturnTypeVariableUse(member=$member)';
-}
+  static const VariableUse listLiteral =
+      VariableUse._simple(VariableUseKind.listLiteral);
 
-/// A type variable used in a return type of a local function.
-class LocalReturnTypeVariableUse implements VariableUse {
-  final ir.LocalFunction localFunction;
+  static const VariableUse setLiteral =
+      VariableUse._simple(VariableUseKind.setLiteral);
 
-  LocalReturnTypeVariableUse(this.localFunction);
+  static const VariableUse mapLiteral =
+      VariableUse._simple(VariableUseKind.mapLiteral);
 
-  @override
-  int get hashCode => Object.hash(LocalReturnTypeVariableUse, localFunction);
-
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! LocalReturnTypeVariableUse) return false;
-    return localFunction == other.localFunction;
-  }
-
-  @override
-  String toString() =>
-      'LocalReturnTypeVariableUse(localFunction=$localFunction)';
-}
-
-/// A type variable passed as a type argument to a constructor.
-class ConstructorTypeArgumentVariableUse implements VariableUse {
-  final ir.Member member;
-
-  ConstructorTypeArgumentVariableUse(this.member);
-
-  @override
-  int get hashCode => Object.hash(ConstructorTypeArgumentVariableUse, member);
-
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! ConstructorTypeArgumentVariableUse) return false;
-    return member == other.member;
-  }
-
-  @override
-  String toString() => 'ConstructorTypeArgumentVariableUse(member=$member)';
-}
-
-/// A type variable passed as a type argument to a static method.
-class StaticTypeArgumentVariableUse implements VariableUse {
-  final ir.Procedure procedure;
-
-  StaticTypeArgumentVariableUse(this.procedure);
-
-  @override
-  int get hashCode => Object.hash(StaticTypeArgumentVariableUse, procedure);
-
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! StaticTypeArgumentVariableUse) return false;
-    return procedure == other.procedure;
-  }
-
-  @override
-  String toString() => 'StaticTypeArgumentVariableUse(procedure=$procedure)';
-}
-
-/// A type variable passed as a type argument to an instance method.
-class InstanceTypeArgumentVariableUse implements VariableUse {
-  final ir.Expression invocation;
-
-  InstanceTypeArgumentVariableUse(this.invocation);
-
-  @override
-  int get hashCode => Object.hash(InstanceTypeArgumentVariableUse, invocation);
-
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! InstanceTypeArgumentVariableUse) return false;
-    return invocation == other.invocation;
-  }
-
-  @override
-  String toString() =>
-      'InstanceTypeArgumentVariableUse(invocation=$invocation)';
-}
-
-/// A type variable passed as a type argument to a local function.
-class LocalTypeArgumentVariableUse implements VariableUse {
-  final ir.LocalFunction localFunction;
-  final ir.Expression invocation;
-
-  LocalTypeArgumentVariableUse(this.localFunction, this.invocation);
+  static const VariableUse fieldType =
+      VariableUse._simple(VariableUseKind.fieldType);
 
   @override
   int get hashCode =>
-      Object.hash(LocalTypeArgumentVariableUse, localFunction, invocation);
+      kind.hashCode * 11 +
+      member.hashCode * 13 +
+      localFunction.hashCode * 17 +
+      invocation.hashCode * 19 +
+      instantiation.hashCode * 23;
 
   @override
   bool operator ==(other) {
     if (identical(this, other)) return true;
-    if (other is! LocalTypeArgumentVariableUse) return false;
-    return localFunction == other.localFunction &&
-        invocation == other.invocation;
+    if (other is! VariableUse) return false;
+    return kind == other.kind &&
+        member == other.member &&
+        localFunction == other.localFunction &&
+        invocation == other.invocation &&
+        instantiation == other.instantiation;
   }
 
   @override
-  String toString() =>
-      'LocalTypeArgumentVariableUse(localFunction=$localFunction,invocation=$invocation)';
-}
-
-/// A type argument of an generic instantiation.
-class InstantiationTypeArgumentVariableUse implements VariableUse {
-  final ir.Instantiation instantiation;
-
-  InstantiationTypeArgumentVariableUse(this.instantiation);
-
-  @override
-  int get hashCode =>
-      Object.hash(InstantiationTypeArgumentVariableUse, instantiation);
-
-  @override
-  bool operator ==(other) {
-    if (identical(this, other)) return true;
-    if (other is! InstantiationTypeArgumentVariableUse) return false;
-    return instantiation == other.instantiation;
-  }
-
-  @override
-  String toString() =>
-      'InstantiationTypeArgumentVariableUse(instantiation=$instantiation)';
+  String toString() => 'VariableUse(kind=$kind,member=$member,'
+      'localFunction=$localFunction,invocation=$invocation,'
+      'instantiation=$instantiation)';
 }
 
 enum TypeVariableKind { cls, method, local }
@@ -441,7 +389,7 @@ class TypeVariableTypeWithContext implements ir.Node {
   }
 
   @override
-  Never visitChildren(ir.Visitor<Object?> v) {
+  visitChildren(ir.Visitor v) {
     throw UnsupportedError('TypeVariableTypeWithContext.visitChildren');
   }
 

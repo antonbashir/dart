@@ -18,7 +18,7 @@ import 'calls.dart' as calls
 import 'native_code.dart'
     show EntryPointsListener, NativeCodeOracle, PragmaEntryPointsVisitor;
 import 'protobuf_handler.dart' show ProtobufHandler;
-import 'types.dart' show Closure, ConcreteType, RecordShape, TFClass, Type;
+import 'types.dart' show TFClass, Type, ConcreteType, RecordShape;
 import 'utils.dart' show combineHashes;
 import '../pragma.dart' show ConstantPragmaAnnotationParser;
 
@@ -151,13 +151,11 @@ class _ClassHierarchyCache {
 
   void addDynamicCall(Selector selector, Class cl, RapidTypeAnalysis rta) {
     final ClassInfo classInfo = getClassInfo(cl);
-    if (!classInfo.calledDynamicSelectors.contains(selector)) {
-      for (var sub in classInfo.subtypes) {
-        if (sub.calledDynamicSelectors.add(selector) && sub.isAllocated) {
-          final member = sub.getDispatchTarget(selector);
-          if (member != null) {
-            rta.addMember(member);
-          }
+    for (var sub in classInfo.subtypes) {
+      if (sub.calledDynamicSelectors.add(selector) && sub.isAllocated) {
+        final member = sub.getDispatchTarget(selector);
+        if (member != null) {
+          rta.addMember(member);
         }
       }
     }
@@ -165,13 +163,11 @@ class _ClassHierarchyCache {
 
   void addVirtualCall(Selector selector, Class cl, RapidTypeAnalysis rta) {
     final ClassInfo classInfo = getClassInfo(cl);
-    if (!classInfo.calledVirtualSelectors.contains(selector)) {
-      for (var sub in classInfo.subclasses) {
-        if (sub.calledVirtualSelectors.add(selector) && sub.isAllocated) {
-          final member = sub.getDispatchTarget(selector);
-          if (member != null) {
-            rta.addMember(member);
-          }
+    for (var sub in classInfo.subclasses) {
+      if (sub.calledVirtualSelectors.add(selector) && sub.isAllocated) {
+        final member = sub.getDispatchTarget(selector);
+        if (member != null) {
+          rta.addMember(member);
         }
       }
     }
@@ -198,6 +194,13 @@ class RapidTypeAnalysis {
     component.accept(PragmaEntryPointsVisitor(
         _EntryPointsListenerImpl(this), nativeCodeOracle, annotationMatcher));
     run();
+  }
+
+  List<Class> get allocatedClasses {
+    return <Class>[
+      for (var entry in hierarchyCache.classes.entries)
+        if (entry.value.isAllocated) entry.key
+    ];
   }
 
   bool isAllocatedClass(Class cl) =>
@@ -227,18 +230,13 @@ class RapidTypeAnalysis {
     }
   }
 
-  List<Class> run() {
+  void run() {
     final memberVisitor = _MemberVisitor(this);
     while (workList.isNotEmpty || invalidateProtobufFields()) {
       final member = workList.removeLast();
       protobufHandler?.beforeSummaryCreation(member);
       member.accept(memberVisitor);
     }
-
-    return <Class>[
-      for (var entry in hierarchyCache.classes.entries)
-        if (entry.value.isAllocated) entry.key
-    ];
   }
 
   bool invalidateProtobufFields() {
@@ -559,9 +557,6 @@ class _EntryPointsListenerImpl implements EntryPointsListener {
   ConcreteType addAllocatedClass(Class c) => rta.addAllocatedClass(c);
 
   @override
-  void addDynamicallyExtendableClass(Class c) {}
-
-  @override
   Field getRecordPositionalField(RecordShape shape, int pos) =>
       throw 'Unsupported operation';
 
@@ -579,8 +574,4 @@ class _EntryPointsListenerImpl implements EntryPointsListener {
 
   @override
   void recordTearOff(Member target) => throw 'Unsupported operation';
-
-  @override
-  Procedure getClosureCallMethod(Closure closure) =>
-      throw 'Unsupported operation';
 }

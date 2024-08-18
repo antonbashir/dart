@@ -1,5 +1,5 @@
 {
-  "vm": {
+  "none": {
     "libraries": {
       "test": {
         "patches": [

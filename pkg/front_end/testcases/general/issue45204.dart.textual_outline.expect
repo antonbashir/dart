@@ -8,5 +8,4 @@ extension S2<X> on int {
 }
 
 foo() {}
-
 main() {}

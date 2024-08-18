@@ -103,7 +103,6 @@ Future main() async {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitCallsClosureTargetPolymorphic(
     FutureOr<int> Function(int) fun) async {
@@ -116,7 +115,6 @@ Future<int> performAwaitCallsClosureTargetPolymorphic(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitAsyncCallsInstanceTargetPolymorphic(
     Target target) async {
@@ -129,7 +127,6 @@ Future<int> performAwaitAsyncCallsInstanceTargetPolymorphic(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitFutureCallsInstanceTargetPolymorphic(
     Target target) async {
@@ -142,7 +139,6 @@ Future<int> performAwaitFutureCallsInstanceTargetPolymorphic(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitFutureOrCallsInstanceTargetPolymorphic(
     Target target) async {
@@ -155,7 +151,6 @@ Future<int> performAwaitFutureOrCallsInstanceTargetPolymorphic(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitAsyncCalls() async {
   int sum = 0;
@@ -167,7 +162,6 @@ Future<int> performAwaitAsyncCalls() async {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitFutureCalls() async {
   int sum = 0;
@@ -179,7 +173,6 @@ Future<int> performAwaitFutureCalls() async {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitFutureOrCalls() async {
   int sum = 0;
@@ -191,7 +184,6 @@ Future<int> performAwaitFutureOrCalls() async {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitAsyncCallsInstanceTargetPolymorphicManyAwaits(
     Target t) async {
@@ -292,7 +284,6 @@ Future<int> performAwaitAsyncCallsInstanceTargetPolymorphicManyAwaits(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> performAwaitForIterationPolymorphic(
     Stream<int> Function(int) fun) async {
@@ -305,7 +296,6 @@ Future<int> performAwaitForIterationPolymorphic(
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 int performSyncCallsClosureTarget(int Function(int) fun) {
   int sum = 0;
@@ -317,7 +307,6 @@ int performSyncCallsClosureTarget(int Function(int) fun) {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 int performSyncCallsInstanceTargetPolymorphic(Target target) {
   int sum = 0;
@@ -329,7 +318,6 @@ int performSyncCallsInstanceTargetPolymorphic(Target target) {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 int performSyncCalls() {
   int sum = 0;
@@ -341,7 +329,6 @@ int performSyncCalls() {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 int performSyncIterationPolymorphic(Iterable<int> Function(int) fun) {
   int sum = 0;
@@ -353,22 +340,18 @@ int performSyncIterationPolymorphic(Iterable<int> Function(int) fun) {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 FutureOr<int> returnFutureOr(int i) => i;
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> returnFuture(int i) => Future.value(i);
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Future<int> returnAsync(int i) async => i;
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Stream<int> generateNumbersAsyncStar(int limit) async* {
   for (int i = 0; i < limit; ++i) {
@@ -377,7 +360,6 @@ Stream<int> generateNumbersAsyncStar(int limit) async* {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Stream<int> generateNumbersAsyncStar2(int limit) async* {
   for (int i = 0; i < limit; ++i) {
@@ -386,7 +368,6 @@ Stream<int> generateNumbersAsyncStar2(int limit) async* {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Stream<int> generateNumbersManualAsync(int limit) {
   int current = 0;
@@ -414,12 +395,10 @@ Stream<int> generateNumbersManualAsync(int limit) {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 int returnSync(int i) => i;
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Iterable<int> generateNumbersSyncStar(int limit) sync* {
   for (int i = 0; i < limit; ++i) {
@@ -428,7 +407,6 @@ Iterable<int> generateNumbersSyncStar(int limit) sync* {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Iterable<int> generateNumbersSyncStar2(int limit) sync* {
   for (int i = 0; i < limit; ++i) {
@@ -437,13 +415,11 @@ Iterable<int> generateNumbersSyncStar2(int limit) sync* {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Iterable<int> generateNumbersManual(int limit) =>
     Iterable<int>.generate(limit, (int i) => i);
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Iterable<int> generateNumbersSyncStarManyYields(int limit) sync* {
   int i = 0;
@@ -598,7 +574,6 @@ Iterable<int> generateNumbersSyncStarManyYields(int limit) sync* {
 }
 
 @pragma('vm:never-inline')
-@pragma('wasm:never-inline')
 @pragma('dart2js:noInline')
 Stream<int> generateNumbersAsyncStarManyYields(int limit) async* {
   int i = 0;
@@ -754,22 +729,18 @@ Stream<int> generateNumbersAsyncStarManyYields(int limit) async* {
 
 class Target {
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   FutureOr<int> returnFutureOr(int i) => i;
 
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnFuture(int i) => Future.value(i);
 
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnAsync(int i) async => i;
 
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   int returnSync(int i) => i;
 }
@@ -777,25 +748,21 @@ class Target {
 class Target2 extends Target {
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   FutureOr<int> returnFutureOr(int i) => i;
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnFuture(int i) => Future.value(i);
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnAsync(int i) async => i;
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   int returnSync(int i) => i;
 }
@@ -803,25 +770,21 @@ class Target2 extends Target {
 class Target3 extends Target {
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   FutureOr<int> returnFutureOr(int i) => i;
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnFuture(int i) => Future.value(i);
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   Future<int> returnAsync(int i) async => i;
 
   @override
   @pragma('vm:never-inline')
-  @pragma('wasm:never-inline')
   @pragma('dart2js:noInline')
   int returnSync(int i) => i;
 }

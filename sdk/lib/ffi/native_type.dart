@@ -6,40 +6,40 @@ part of dart.ffi;
 
 /// [NativeType]'s subtypes represent a native type in C.
 ///
-/// Not all [NativeType]'s subtypes are constructible in the Dart code. The
-/// non-constructable subtypes serve purely as markers in type signatures.
-abstract final class NativeType {}
-
-/// A [NativeType] with a known size.
-///
-/// Sized native types can be used in [sizeOf] and [AllocatorAlloc.call].
-@Since('3.4')
-abstract final class SizedNativeType implements NativeType {}
+/// [NativeType]'s subtypes are not constructible in the Dart code and serve
+/// purely as markers in type signatures.
+abstract final class NativeType {
+  const NativeType();
+}
 
 /// [Opaque]'s subtypes represent opaque types in C.
 ///
 /// [Opaque]'s subtypes are not constructible in the Dart code and serve purely
 /// as markers in type signatures.
 @Since('2.12')
-abstract base class Opaque implements NativeType {}
+abstract base class Opaque extends NativeType {}
 
 /// [_NativeInteger]'s subtypes represent a native integer in C.
 ///
 /// [_NativeInteger]'s subtypes are not constructible in the Dart code and serve
 /// purely as markers in type signatures.
-abstract final class _NativeInteger implements SizedNativeType {}
+final class _NativeInteger extends NativeType {
+  const _NativeInteger();
+}
 
 /// [_NativeDouble]'s subtypes represent a native float or double in C.
 ///
 /// [_NativeDouble]'s subtypes are not constructible in the Dart code and serve
 /// purely as markers in type signatures.
-abstract final class _NativeDouble implements SizedNativeType {}
+final class _NativeDouble extends NativeType {
+  const _NativeDouble();
+}
 
 /// Represents a native signed 8 bit integer in C.
 ///
 /// [Int8] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-final class Int8 implements _NativeInteger {
+final class Int8 extends _NativeInteger {
   const Int8();
 }
 
@@ -47,7 +47,7 @@ final class Int8 implements _NativeInteger {
 ///
 /// [Int16] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-final class Int16 implements _NativeInteger {
+final class Int16 extends _NativeInteger {
   const Int16();
 }
 
@@ -55,7 +55,7 @@ final class Int16 implements _NativeInteger {
 ///
 /// [Int32] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-final class Int32 implements _NativeInteger {
+final class Int32 extends _NativeInteger {
   const Int32();
 }
 
@@ -63,7 +63,7 @@ final class Int32 implements _NativeInteger {
 ///
 /// [Int64] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-final class Int64 implements _NativeInteger {
+final class Int64 extends _NativeInteger {
   const Int64();
 }
 
@@ -71,7 +71,7 @@ final class Int64 implements _NativeInteger {
 ///
 /// [Uint8] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-final class Uint8 implements _NativeInteger {
+final class Uint8 extends _NativeInteger {
   const Uint8();
 }
 
@@ -79,7 +79,7 @@ final class Uint8 implements _NativeInteger {
 ///
 /// [Uint16] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
-final class Uint16 implements _NativeInteger {
+final class Uint16 extends _NativeInteger {
   const Uint16();
 }
 
@@ -87,7 +87,7 @@ final class Uint16 implements _NativeInteger {
 ///
 /// [Uint32] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
-final class Uint32 implements _NativeInteger {
+final class Uint32 extends _NativeInteger {
   const Uint32();
 }
 
@@ -95,7 +95,7 @@ final class Uint32 implements _NativeInteger {
 ///
 /// [Uint64] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
-final class Uint64 implements _NativeInteger {
+final class Uint64 extends _NativeInteger {
   const Uint64();
 }
 
@@ -103,7 +103,7 @@ final class Uint64 implements _NativeInteger {
 ///
 /// [Float] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
-final class Float implements _NativeDouble {
+final class Float extends _NativeDouble {
   const Float();
 }
 
@@ -111,7 +111,7 @@ final class Float implements _NativeDouble {
 ///
 /// [Double] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
-final class Double implements _NativeDouble {
+final class Double extends _NativeDouble {
   const Double();
 }
 
@@ -120,7 +120,7 @@ final class Double implements _NativeDouble {
 /// [Bool] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
 @Since('2.15')
-final class Bool implements SizedNativeType {
+final class Bool extends NativeType {
   const Bool();
 }
 
@@ -128,7 +128,8 @@ final class Bool implements SizedNativeType {
 ///
 /// [Void] is not constructible in the Dart code and serves purely as marker in
 /// type signatures.
-abstract final class Void implements NativeType {}
+@unsized
+abstract final class Void extends NativeType {}
 
 /// Represents `Dart_Handle` from `dart_api.h` in C.
 ///
@@ -140,7 +141,7 @@ abstract final class Void implements NativeType {}
 /// the duration of the FFI call. For more information on API scopes, refer to
 /// the documentation on `Dart_EnterScope` in `dart_api.h`.
 @Since('2.9')
-abstract final class Handle implements NativeType {}
+abstract final class Handle extends NativeType {}
 
 /// Represents a function type in C.
 ///
@@ -148,7 +149,8 @@ abstract final class Handle implements NativeType {}
 ///
 /// [NativeFunction] is not constructible in the Dart code and serves purely as
 /// marker in type signatures.
-abstract final class NativeFunction<T extends Function> implements NativeType {}
+@unsized
+abstract final class NativeFunction<T extends Function> extends NativeType {}
 
 /// The types of variadic arguments passed in C.
 ///
@@ -215,4 +217,4 @@ abstract final class NativeFunction<T extends Function> implements NativeType {}
 /// [VarArgs] is not constructible in the Dart code and serves purely as marker
 /// in type signatures.
 @Since('3.0')
-abstract final class VarArgs<T extends Record> implements NativeType {}
+abstract final class VarArgs<T extends Record> extends NativeType {}

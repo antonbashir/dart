@@ -1,5 +1,6 @@
+// @dart = 2.9
 library test;
 
-void block_test(List<Object> Function() g) {}
-
-void arrow_test(List<Object> Function() g) {}
+void block_test() {}
+void arrow_test() {}
+main() {}

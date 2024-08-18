@@ -7,7 +7,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Noop primitive operations.';
 
@@ -27,40 +26,28 @@ intValue.truncate();
 
 string.toString();
 string = 'hello\n'
-    ''
-    'world';
+    'world\n'
+    ''; // useless empty string
 
 'string with ${x.toString()}';
-```
-
-Note that the empty string literals at the beginning or end of a string are
-allowed, as they are typically used to format the string literal across multiple
-lines:
-
-```dart
-// OK
-string = ''
-    'hello\n'
-    'world\n';
-
-// OK
-string = 'hello\n'
-    'world\n'
-    '';
 ```
 ''';
 
 class NoopPrimitiveOperations extends LintRule {
+  static const LintCode code = LintCode('noop_primitive_operations',
+      'The expression has no effect and can be removed.',
+      correctionMessage: 'Try removing the expression.');
+
   NoopPrimitiveOperations()
       : super(
           name: 'noop_primitive_operations',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.noop_primitive_operations;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -82,10 +69,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitAdjacentStrings(AdjacentStrings node) {
-    // We allow empty string literals at the beginning or end of a string:
-    // https://github.com/dart-lang/sdk/issues/55541#issuecomment-2073437613
-    for (var i = 1; i < node.strings.length - 1; i++) {
-      var literal = node.strings[i];
+    for (var literal in node.strings) {
       if (literal.stringValue?.isEmpty ?? false) {
         rule.reportLint(literal);
       }

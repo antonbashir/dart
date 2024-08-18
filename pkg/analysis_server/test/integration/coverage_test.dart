@@ -110,12 +110,9 @@ void main() {
 
             // Test that if checked, a test file exists; if not checked, no such
             // file exists.
-            var fileExists = FileSystemEntity.isFileSync(testPath);
-            var isMarkedAsCovered = coveredMembers.contains(fullName);
-            expect(fileExists, isMarkedAsCovered,
-                reason: isMarkedAsCovered
-                    ? '$testName marked as covered but has no test at $testPath'
-                    : '$testName marked as not covered has test at $testPath');
+            expect(FileSystemEntity.isFileSync(testPath),
+                coveredMembers.contains(fullName),
+                reason: '$testName state incorrect');
           });
         }
       });

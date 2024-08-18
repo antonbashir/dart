@@ -19,10 +19,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
-#include <lib/inspect/component/cpp/component.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
@@ -651,7 +651,12 @@ OS::BuildId OS::GetAppBuildId(const uint8_t* snapshot_instructions) {
   if (auto* const image_build_id = instructions_image.build_id()) {
     return {instructions_image.build_id_length(), image_build_id};
   }
-  const uint8_t* dso_base = GetAppDSOBase(snapshot_instructions);
+  Dl_info snapshot_info;
+  if (dladdr(snapshot_instructions, &snapshot_info) == 0) {
+    return {0, nullptr};
+  }
+  const uint8_t* dso_base =
+      static_cast<const uint8_t*>(snapshot_info.dli_fbase);
   const ElfW(Ehdr)& elf_header = *reinterpret_cast<const ElfW(Ehdr)*>(dso_base);
   const ElfW(Phdr)* const phdr_array =
       reinterpret_cast<const ElfW(Phdr)*>(dso_base + elf_header.e_phoff);

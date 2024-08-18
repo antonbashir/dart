@@ -7,6 +7,7 @@ library fasta.test.compile_platform_test;
 import 'dart:io';
 
 import 'package:async_helper/async_helper.dart';
+
 import 'package:expect/expect.dart';
 
 void main(List<String> arguments) {

@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:kernel/ast.dart' as ir;
+import 'package:kernel/type_environment.dart' as ir;
 
 import '../common.dart';
 import '../constants/values.dart';
@@ -60,7 +61,8 @@ class KFieldAnalysis {
               expression.target, _elementMap.coreTypes.createSentinelMethod)) {
         value = LateSentinelConstantValue();
       } else {
-        value = _elementMap.getConstantValue(expression,
+        value = _elementMap.getConstantValue(
+            _elementMap.getStaticTypeContext(fieldElement), expression,
             requireConstant: false, implicitNull: true);
       }
       if (value != null && value.isConstant) {
@@ -71,6 +73,8 @@ class KFieldAnalysis {
     for (ir.Constructor constructor in classNode.constructors) {
       JConstructor constructorElement =
           _elementMap.getConstructor(constructor) as JConstructor;
+      ir.StaticTypeContext staticTypeContext =
+          _elementMap.getStaticTypeContext(constructorElement);
       constructors.add(constructorElement);
       for (ir.Initializer initializer in constructor.initializers) {
         if (initializer is ir.FieldInitializer) {
@@ -85,7 +89,8 @@ class KFieldAnalysis {
 
           Initializer initializerValue = const Initializer.complex();
           ir.Expression value = initializer.value;
-          ConstantValue? constantValue = _elementMap.getConstantValue(value,
+          ConstantValue? constantValue = _elementMap.getConstantValue(
+              staticTypeContext, value,
               requireConstant: false, implicitNull: true);
           if (constantValue != null && constantValue.isConstant) {
             initializerValue = Initializer.direct(constantValue);
@@ -96,9 +101,8 @@ class KFieldAnalysis {
             if (position != -1) {
               if (position >= constructor.function.requiredParameterCount) {
                 constantValue = _elementMap.getConstantValue(
-                    parameter.initializer,
-                    requireConstant: false,
-                    implicitNull: true);
+                    staticTypeContext, parameter.initializer,
+                    requireConstant: false, implicitNull: true);
                 if (constantValue != null && constantValue.isConstant) {
                   initializerValue =
                       Initializer.positional(position, constantValue);
@@ -109,9 +113,8 @@ class KFieldAnalysis {
                   constructor.function.namedParameters.indexOf(parameter);
               if (position != -1) {
                 constantValue = _elementMap.getConstantValue(
-                    parameter.initializer,
-                    requireConstant: false,
-                    implicitNull: true);
+                    staticTypeContext, parameter.initializer,
+                    requireConstant: false, implicitNull: true);
                 if (constantValue != null && constantValue.isConstant) {
                   initializerValue =
                       Initializer.named(parameter.name, constantValue);
@@ -135,7 +138,8 @@ class KFieldAnalysis {
             expression.target, _elementMap.coreTypes.createSentinelMethod)) {
       value = LateSentinelConstantValue();
     } else {
-      value = _elementMap.getConstantValue(expression,
+      value = _elementMap.getConstantValue(
+          _elementMap.getStaticTypeContext(field), expression,
           requireConstant: node.isConst, implicitNull: true);
     }
     if (value != null && !value.isConstant) {

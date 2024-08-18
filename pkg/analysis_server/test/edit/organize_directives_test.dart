@@ -30,7 +30,7 @@ class OrganizeDirectivesTest extends PubPackageAnalysisServerTest {
     // The analysis driver fails to return an error
     var request =
         EditOrganizeDirectivesParams(convertPath('/no/such/file.dart'))
-            .toRequest('0', clientUriConverter: server.uriConverter);
+            .toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -45,8 +45,7 @@ import 'dart:async'
 
 void f() {}
 ''');
-    var request = EditOrganizeDirectivesParams(testFile.path)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditOrganizeDirectivesParams(testFile.path).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -58,7 +57,7 @@ void f() {}
   Future<void> test_BAD_notDartFile() async {
     var request = EditOrganizeDirectivesParams(
       convertPath('/not-a-Dart-file.txt'),
-    ).toRequest('0', clientUriConverter: server.uriConverter);
+    ).toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -68,8 +67,7 @@ void f() {}
   }
 
   Future<void> test_invalidFilePathFormat_notAbsolute() async {
-    var request = EditOrganizeDirectivesParams('test.dart')
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditOrganizeDirectivesParams('test.dart').toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -81,7 +79,7 @@ void f() {}
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var request =
         EditOrganizeDirectivesParams(convertPath('/foo/../bar/test.dart'))
-            .toRequest('0', clientUriConverter: server.uriConverter);
+            .toRequest('0');
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -162,11 +160,9 @@ void f() {
   }
 
   Future<void> _requestOrganize() async {
-    var request = EditOrganizeDirectivesParams(testFile.path)
-        .toRequest('0', clientUriConverter: server.uriConverter);
+    var request = EditOrganizeDirectivesParams(testFile.path).toRequest('0');
     var response = await handleSuccessfulRequest(request);
-    var result = EditOrganizeDirectivesResult.fromResponse(response,
-        clientUriConverter: server.uriConverter);
+    var result = EditOrganizeDirectivesResult.fromResponse(response);
     fileEdit = result.edit;
   }
 }

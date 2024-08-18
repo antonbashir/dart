@@ -370,7 +370,7 @@ void f(A<int> a) {}
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 36, 6),
     ]);
 
-    var node = findNode.namedType('A<int>');
+    final node = findNode.namedType('A<int>');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A
@@ -379,10 +379,10 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
-  element: <testLibraryFragment>::@extensionType::A
+  element: self::@extensionType::A
   type: A
 ''');
   }
@@ -396,7 +396,7 @@ void f(A<int> a) {}
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 42, 6),
     ]);
 
-    var node = findNode.namedType('A<int>');
+    final node = findNode.namedType('A<int>');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A
@@ -405,10 +405,10 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     rightBracket: >
-  element: <testLibraryFragment>::@extensionType::A
+  element: self::@extensionType::A
   type: A<InvalidType, InvalidType>
 ''');
   }
@@ -422,7 +422,7 @@ void f(A<int, String> a) {}
       error(CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS, 39, 14),
     ]);
 
-    var node = findNode.namedType('A<int, String>');
+    final node = findNode.namedType('A<int, String>');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A
@@ -431,14 +431,14 @@ NamedType
     arguments
       NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
       NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
     rightBracket: >
-  element: <testLibraryFragment>::@extensionType::A
+  element: self::@extensionType::A
   type: A<InvalidType>
 ''');
   }

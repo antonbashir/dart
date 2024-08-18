@@ -25,8 +25,7 @@ class AnalysisGetNavigationHandler extends LegacyHandler
 
   @override
   Future<void> handle() async {
-    var params = AnalysisGetNavigationParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisGetNavigationParams.fromRequest(request);
     var file = params.file;
     var offset = params.offset;
     var length = params.length;

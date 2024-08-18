@@ -21,11 +21,11 @@ const maxAttempts = 20;
 late FirestoreDatabase database;
 
 class ResultRecord {
-  final Map<String, dynamic> data;
+  final Map data;
 
   ResultRecord(this.data);
 
-  Map field(String name) => (data['fields'] as Map)[name];
+  Map field(String name) => data['fields'][name] /*!*/;
 
   int get blamelistStartIndex {
     return int.parse(field('blamelist_start_index')['integerValue']);
@@ -61,9 +61,8 @@ Query unapprovedActiveFailuresQuery(String configuration) {
 
 Future<int> getCommitIndex(String commit) async {
   try {
-    var document =
-        (await database.getDocument('commits', commit)).cast<String, dynamic>();
-    var index = (document['fields'] as Map)['index'] as Map;
+    Map document = await database.getDocument('commits', commit);
+    var index = document['fields']['index'];
     if (index['integerValue'] == null) {
       throw Exception('Expected an integer, but got "$index"');
     }
@@ -104,15 +103,14 @@ Future<void> updateBlameLists(String configuration, String commit,
   int attempts = 0;
   do {
     needsRetry = false;
-    var documentPaths = (await database.runQuery(query))
-        .cast<Map>()
+    var documents = (await database.runQuery(query))
         .where((result) => result['document'] != null)
-        .map((result) => (result['document'] as Map)['name'] as String);
-    for (var documentPath in documentPaths) {
+        .map((result) => result['document']['name']);
+    for (var documentPath in documents) {
       database.beginTransaction();
       var documentName = documentPath.split('/').last;
-      final docMap = await database.getDocument('results', documentName);
-      var result = ResultRecord(docMap.cast<String, dynamic>());
+      var result =
+          ResultRecord(await database.getDocument('results', documentName));
       if (commitIndex < result.blamelistStartIndex ||
           commitIndex >= result.blamelistEndIndex) {
         continue;
@@ -153,7 +151,7 @@ Future<void> updateBlameLists(String configuration, String commit,
   } while (needsRetry);
 }
 
-void main(List<String> arguments) async {
+main(List<String> arguments) async {
   var parser = ArgParser()
     ..addOption('auth-token',
         abbr: 'a',
@@ -164,12 +162,12 @@ void main(List<String> arguments) async {
     ..addFlag('staging', abbr: 's', help: 'use staging database');
   var options = parser.parse(arguments);
   if (options.rest.isNotEmpty ||
-      options.option('results') == null ||
-      options.option('auth-token') == null) {
+      options['results'] == null ||
+      options['auth-token'] == null) {
     print(parser.usage);
     exit(1);
   }
-  var results = await loadResultsMap(options.option('results')!);
+  var results = await loadResultsMap(options['results']);
   if (results.isEmpty) {
     print("No test results provided, nothing to update.");
     return;
@@ -178,9 +176,9 @@ void main(List<String> arguments) async {
   var firstResult = Result.fromMap(results.values.first);
   var commit = firstResult.commitHash!;
   var configuration = firstResult.configuration;
-  var project = options.flag('staging') ? 'dart-ci-staging' : 'dart-ci';
+  var project = options['staging'] ? 'dart-ci-staging' : 'dart-ci';
   database = FirestoreDatabase(
-      project, await readGcloudAuthToken(options.option('auth-token')!));
+      project, await readGcloudAuthToken(options['auth-token']));
   await updateBlameLists(configuration, commit, results);
   database.closeClient();
 }

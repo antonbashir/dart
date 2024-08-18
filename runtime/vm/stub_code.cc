@@ -9,7 +9,6 @@
 #include "vm/compiler/assembler/disassembler.h"
 #include "vm/flags.h"
 #include "vm/heap/safepoint.h"
-#include "vm/interpreter.h"
 #include "vm/object_store.h"
 #include "vm/snapshot.h"
 #include "vm/virtual_memory.h"
@@ -91,10 +90,9 @@ void StubCode::Init() {
 #undef STUB_CODE_GENERATE
 #undef STUB_CODE_SET_OBJECT_POOL
 
-CodePtr StubCode::Generate(
-    const char* name,
-    compiler::ObjectPoolBuilder* object_pool_builder,
-    void (compiler::StubCodeCompiler::* GenerateStub)()) {
+CodePtr StubCode::Generate(const char* name,
+                           compiler::ObjectPoolBuilder* object_pool_builder,
+                           void (compiler::StubCodeCompiler::*GenerateStub)()) {
   auto thread = Thread::Current();
   SafepointWriteRwLocker ml(thread, thread->isolate_group()->program_lock());
 
@@ -130,22 +128,8 @@ void StubCode::Cleanup() {
   }
 }
 
-bool StubCode::InInvocationStub(uword pc, bool is_interpreted_frame) {
+bool StubCode::InInvocationStub(uword pc) {
   ASSERT(HasBeenInitialized());
-#if defined(DART_DYNAMIC_MODULES)
-  if (is_interpreted_frame) {
-    // Recognize special marker set up by interpreter in entry frame.
-    return Interpreter::IsEntryFrameMarker(
-        reinterpret_cast<const KBCInstr*>(pc));
-  }
-  {
-    uword entry = StubCode::InvokeDartCodeFromBytecode().EntryPoint();
-    uword size = StubCode::InvokeDartCodeFromBytecodeSize();
-    if ((pc >= entry) && (pc < (entry + size))) {
-      return true;
-    }
-  }
-#endif  // defined(DART_DYNAMIC_MODULES)
   uword entry = StubCode::InvokeDartCode().EntryPoint();
   uword size = StubCode::InvokeDartCodeSize();
   return (pc >= entry) && (pc < (entry + size));
@@ -328,6 +312,50 @@ CodePtr StubCode::GetAllocationStubForTypedData(classid_t class_id) {
 }
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
+#if !defined(TARGET_ARCH_IA32)
+CodePtr StubCode::GetBuildMethodExtractorStub(compiler::ObjectPoolBuilder* pool,
+                                              bool generic) {
+#if !defined(DART_PRECOMPILED_RUNTIME)
+  auto thread = Thread::Current();
+  auto Z = thread->zone();
+  auto object_store = thread->isolate_group()->object_store();
+
+  const auto& closure_allocation_stub =
+      Code::ZoneHandle(Z, object_store->allocate_closure_stub());
+  const auto& context_allocation_stub =
+      Code::ZoneHandle(Z, object_store->allocate_context_stub());
+
+  compiler::ObjectPoolBuilder object_pool_builder;
+  compiler::Assembler assembler(pool != nullptr ? pool : &object_pool_builder);
+  CompilerState compiler_state(thread, /*is_aot=*/FLAG_precompiled_mode,
+                               /*is_optimizing=*/false);
+  compiler::StubCodeCompiler stubCodeCompiler(&assembler, nullptr);
+  stubCodeCompiler.GenerateBuildMethodExtractorStub(
+      closure_allocation_stub, context_allocation_stub, generic);
+
+  const char* name = generic ? "BuildGenericMethodExtractor"
+                             : "BuildNonGenericMethodExtractor";
+  const Code& stub = Code::Handle(Code::FinalizeCodeAndNotify(
+      name, nullptr, &assembler, Code::PoolAttachment::kNotAttachPool,
+      /*optimized=*/false));
+
+  if (pool == nullptr) {
+    stub.set_object_pool(ObjectPool::NewFromBuilder(object_pool_builder));
+  }
+
+#ifndef PRODUCT
+  if (FLAG_support_disassembler && FLAG_disassemble_stubs) {
+    Disassembler::DisassembleStub(name, stub);
+  }
+#endif  // !PRODUCT
+  return stub.ptr();
+#else   // !defined(DART_PRECOMPILED_RUNTIME)
+  UNIMPLEMENTED();
+  return nullptr;
+#endif  // !defined(DART_PRECOMPILED_RUNTIME)
+}
+#endif  // !defined(TARGET_ARCH_IA32)
+
 const Code& StubCode::UnoptimizedStaticCallEntry(intptr_t num_args_tested) {
   switch (num_args_tested) {
     case 0:
@@ -358,6 +386,8 @@ const char* StubCode::NameOfStub(uword entry_point) {
     return "_iso_stub_" #name "Stub";                                          \
   }
   OBJECT_STORE_STUB_CODE_LIST(MATCH)
+  MATCH(build_generic_method_extractor_code, BuildGenericMethodExtractor)
+  MATCH(build_nongeneric_method_extractor_code, BuildNonGenericMethodExtractor)
 #undef MATCH
   return nullptr;
 }

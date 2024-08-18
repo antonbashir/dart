@@ -3,27 +3,20 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/utilities/extensions/flutter.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 abstract class FlutterParentAndChild extends ResolvedCorrectionProducer {
-  FlutterParentAndChild({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   Future<void> swapParentAndChild(
       ChangeBuilder builder,
       InstanceCreationExpression parent,
       InstanceCreationExpression child) async {
     // The child must have its own child.
-    var stableChild = child.childArgument;
+    var stableChild = Flutter.findChildArgument(child);
     if (stableChild == null) {
       return;
     }
@@ -70,7 +63,7 @@ abstract class FlutterParentAndChild extends ResolvedCorrectionProducer {
         // Write all arguments of the parent.
         // Don't write its child.
         for (var argument in parentArgs.arguments) {
-          if (!argument.isChildArgument) {
+          if (!Flutter.isChildArgument(argument)) {
             var text = utils.getNodeText(argument);
             text = utils.replaceSourceIndent(
               text,
@@ -106,21 +99,20 @@ abstract class FlutterParentAndChild extends ResolvedCorrectionProducer {
 }
 
 class FlutterSwapWithChild extends FlutterParentAndChild {
-  FlutterSwapWithChild({required super.context});
-
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_SWAP_WITH_CHILD;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var parent = node.findInstanceCreationExpression;
-    if (parent == null || !parent.isWidgetCreation) {
+    var parent = Flutter.identifyNewExpression(node);
+    if (parent == null || !Flutter.isWidgetCreation(parent)) {
       return;
     }
 
-    var childArgument = parent.childArgument;
+    var childArgument = Flutter.findChildArgument(parent);
     var child = childArgument?.expression;
-    if (child is! InstanceCreationExpression || !child.isWidgetCreation) {
+    if (child is! InstanceCreationExpression ||
+        !Flutter.isWidgetCreation(child)) {
       return;
     }
 

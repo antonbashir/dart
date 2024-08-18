@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -36,9 +36,6 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
       TypeDefinitionParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   // The private type in the return type is dictated by the signature of the
   // super-method and the class's super-class.
   Future<ErrorOr<TextDocumentTypeDefinitionResult>> handle(
@@ -49,7 +46,7 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
       return success(_emptyResult);
     }
 
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return serverNotInitializedError;
@@ -60,35 +57,32 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
     /// to distinguish between codeRange and nameRange (selectionRange), and
     /// also an `originSelectionRange` that tells the client which range the
     /// result is valid for.
-    var supportsLocationLink = clientCapabilities.typeDefinitionLocationLink;
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
+    final supportsLocationLink = clientCapabilities.typeDefinitionLocationLink;
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
 
     return path.mapResult((path) async {
-      var result = await server.getResolvedUnit(path);
+      final result = await server.getResolvedUnit(path);
       if (result == null) {
         return success(_emptyResult);
       }
 
-      var offset = toOffset(result.lineInfo, pos);
+      final offset = toOffset(result.lineInfo, pos);
       return offset.mapResult((offset) async {
-        var node = NodeLocator(offset).searchWithin(result.unit);
+        final node = NodeLocator(offset).searchWithin(result.unit);
         if (node == null) {
           return success(_emptyResult);
         }
 
-        SyntacticEntity originEntity;
+        final SyntacticEntity originEntity;
         DartType? type;
         if (node is NamedType) {
           originEntity = node.name2;
-          var element = node.element;
+          final element = node.element;
           if (element is InterfaceElement) {
             type = element.thisType;
           }
         } else if (node is VariableDeclaration) {
-          originEntity = node.name;
-          type = node.declaredElement?.type;
-        } else if (node is DeclaredIdentifier) {
           originEntity = node.name;
           type = node.declaredElement?.type;
         } else if (node is Expression) {
@@ -109,15 +103,15 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
         }
 
         // Obtain a `LineInfo` for the targets file to map offsets.
-        var targetUnitElement =
+        final targetUnitElement =
             element.thisOrAncestorOfType<CompilationUnitElement>();
-        var targetLineInfo = targetUnitElement?.lineInfo;
+        final targetLineInfo = targetUnitElement?.lineInfo;
         if (targetLineInfo == null) {
           return success(_emptyResult);
         }
 
-        var converter = AnalyzerConverter();
-        var location = converter.locationFromElement(element);
+        final converter = AnalyzerConverter();
+        final location = converter.locationFromElement(element);
         if (location == null) {
           return success(_emptyResult);
         }
@@ -139,7 +133,7 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
   /// Creates an LSP [Location] for the server [location].
   Location _toLocation(plugin.Location location, LineInfo lineInfo) {
     return Location(
-      uri: uriConverter.toClientUri(location.file),
+      uri: pathContext.toUri(location.file),
       range: toRange(lineInfo, location.offset, location.length),
     );
   }
@@ -155,19 +149,19 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
     analyzer.ElementImpl targetElement,
     plugin.Location targetLocation,
   ) {
-    var nameRange =
+    final nameRange =
         toRange(targetLineInfo, targetLocation.offset, targetLocation.length);
 
-    var codeOffset = targetElement.codeOffset;
-    var codeLength = targetElement.codeLength;
-    var codeRange = codeOffset != null && codeLength != null
+    final codeOffset = targetElement.codeOffset;
+    final codeLength = targetElement.codeLength;
+    final codeRange = codeOffset != null && codeLength != null
         ? toRange(targetLineInfo, codeOffset, codeLength)
         : nameRange;
 
     return LocationLink(
       originSelectionRange:
           toRange(originLineInfo, originEntity.offset, originEntity.length),
-      targetUri: uriConverter.toClientUri(targetLocation.file),
+      targetUri: pathContext.toUri(targetLocation.file),
       targetRange: codeRange,
       targetSelectionRange: nameRange,
     );
@@ -177,21 +171,21 @@ class TypeDefinitionHandler extends SharedMessageHandler<TypeDefinitionParams,
   /// invoking Go to Type Definition.
   static DartType? _getType(Expression node) {
     if (node is SimpleIdentifier) {
-      var element = node.staticElement;
+      final element = node.staticElement;
       if (element is InterfaceElement) {
         return element.thisType;
       } else if (element is VariableElement) {
         if (node.inDeclarationContext()) {
           return element.type;
         }
-        var parent = node.parent?.parent;
+        final parent = node.parent?.parent;
         if (parent is NamedExpression && parent.name.label == node) {
           return element.type;
         }
       } else if (node.inSetterContext()) {
-        var writeElement = node.writeElement;
+        final writeElement = node.writeElement;
         if (writeElement is PropertyAccessorElement) {
-          return writeElement.variable2?.type;
+          return writeElement.variable.type;
         }
       }
     }
@@ -206,7 +200,7 @@ class TypeDefinitionRegistrations extends FeatureRegistration
 
   @override
   ToJsonable? get options => TextDocumentRegistrationOptions(
-        documentSelector: dartFiles, // This is currently Dart-specific
+        documentSelector: [dartFiles], // This is currently Dart-specific
       );
 
   @override

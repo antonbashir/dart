@@ -187,8 +187,9 @@ import 'package:somepackage/other.dart';
 
   Future<void> _assertErrorsInCodeInFile(
       String path, String content, List<ExpectedError> expectedErrors) async {
-    var file = newFile(path, content);
-    result = await resolveFile(file);
+    path = convertPath(path);
+    newFile(path, content);
+    result = await resolveFile(path);
 
     var errorListener = GatheringErrorListener();
     errorListener.addAll(result.errors);

@@ -91,10 +91,10 @@ server calls. This file is validated by `coverage_test.dart`.
 - [ ] server.showMessageRequest
 
 ## analytics domain
-- [ ] analytics.isEnabled
-- [ ] analytics.enable
-- [ ] analytics.sendEvent
-- [ ] analytics.sendTiming
+- [x] analytics.isEnabled
+- [x] analytics.enable
+- [x] analytics.sendEvent
+- [x] analytics.sendTiming
 
 ## flutter domain
 - [ ] flutter.getChangeAddForDesignTimeConstructor
@@ -105,4 +105,3 @@ server calls. This file is validated by `coverage_test.dart`.
 
 ## lsp domain
 - [x] lsp.handle
-- [x] lsp.notification

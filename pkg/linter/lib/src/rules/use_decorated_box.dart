@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 import '../util/flutter_utils.dart';
 
 const _desc = r'Use `DecoratedBox`.';
@@ -49,15 +48,20 @@ Widget buildArea() {
 ''';
 
 class UseDecoratedBox extends LintRule {
+  static const LintCode code = LintCode('use_decorated_box',
+      "Use 'DecoratedBox' rather than a 'Container' with only a 'Decoration'.",
+      correctionMessage:
+          "Try replacing the 'Container' with a 'DecoratedBox'.");
+
   UseDecoratedBox()
       : super(
             name: 'use_decorated_box',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.flutter, LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.use_decorated_box;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -65,6 +69,32 @@ class UseDecoratedBox extends LintRule {
     var visitor = _Visitor(this);
 
     registry.addInstanceCreationExpression(this, visitor);
+  }
+}
+
+class _ArgumentData {
+  var positionalArgumentsFound = false;
+  var additionalArgumentsFound = false;
+  var hasDecoration = false;
+  var hasChild = false;
+
+  _ArgumentData(ArgumentList node) {
+    for (var argument in node.arguments) {
+      if (argument is! NamedExpression) {
+        positionalArgumentsFound = true;
+        return;
+      }
+      var label = argument.name.label;
+      if (label.name == 'decoration') {
+        hasDecoration = true;
+      } else if (label.name == 'child') {
+        hasChild = true;
+      } else if (label.name == 'key') {
+        // Ignore key
+      } else {
+        additionalArgumentsFound = true;
+      }
+    }
   }
 }
 
@@ -79,36 +109,14 @@ class _Visitor extends SimpleAstVisitor {
       return;
     }
 
-    if (_shouldReportForArguments(node.argumentList)) {
+    var data = _ArgumentData(node.argumentList);
+
+    if (data.additionalArgumentsFound || data.positionalArgumentsFound) {
+      return;
+    }
+
+    if (data.hasChild && data.hasDecoration) {
       rule.reportLint(node.constructorName);
     }
-  }
-
-  /// Determine if the lint [rule] should be reported for
-  /// the specified [argumentList].
-  static bool _shouldReportForArguments(ArgumentList argumentList) {
-    var hasChild = false;
-    var hasDecoration = false;
-
-    for (var argument in argumentList.arguments) {
-      if (argument is! NamedExpression) {
-        // Positional arguments are not supported.
-        return false;
-      }
-      switch (argument.name.label.name) {
-        case 'child':
-          hasChild = true;
-        case 'decoration':
-          hasDecoration = true;
-        case 'key':
-          // Ignore 'key' as both DecoratedBox and Container have it.
-          break;
-        case _:
-          // Other named arguments are not supported.
-          return false;
-      }
-    }
-
-    return hasChild && hasDecoration;
   }
 }

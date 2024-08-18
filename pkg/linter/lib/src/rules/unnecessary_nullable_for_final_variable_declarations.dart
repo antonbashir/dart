@@ -8,7 +8,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use a non-nullable type for a final variable initialized '
     'with a non-nullable value.';
@@ -30,16 +29,20 @@ final int i = 1;
 ''';
 
 class UnnecessaryNullableForFinalVariableDeclarations extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_nullable_for_final_variable_declarations',
+      'Type could be non-nullable.',
+      correctionMessage: 'Try changing the type to be non-nullable.');
+
   UnnecessaryNullableForFinalVariableDeclarations()
       : super(
             name: 'unnecessary_nullable_for_final_variable_declarations',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.unnecessary_nullable_for_final_variable_declarations;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -58,16 +61,16 @@ class _Visitor extends SimpleAstVisitor<void> {
   final LinterContext context;
   _Visitor(this.rule, this.context);
 
-  void check(AstNode node) {
-    if (node is! DeclaredVariablePattern) return;
-    var type = node.declaredElement?.type;
+  void check(AstNode element) {
+    if (element is! DeclaredVariablePattern) return;
+    var type = element.declaredElement?.type;
     if (type == null) return;
     if (type is DynamicType) return;
-    var valueType = node.matchedValueType;
+    var valueType = element.matchedValueType;
     if (valueType == null) return;
     if (context.typeSystem.isNullable(type) &&
         context.typeSystem.isNonNullable(valueType)) {
-      rule.reportLintForToken(node.name);
+      rule.reportLint(element);
     }
   }
 
@@ -123,7 +126,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     if (context.typeSystem.isNullable(declaredElement.type) &&
         context.typeSystem.isNonNullable(initializerType)) {
-      rule.reportLintForToken(variable.name);
+      rule.reportLint(variable);
     }
   }
 }

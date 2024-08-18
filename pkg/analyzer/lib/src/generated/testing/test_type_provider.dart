@@ -31,6 +31,7 @@ class TestTypeProvider extends TypeProviderImpl {
   ) : super(
           coreLibrary: coreLibrary,
           asyncLibrary: asyncLibrary,
+          isNonNullableByDefault: true,
         );
 }
 

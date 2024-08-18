@@ -4,7 +4,7 @@
 
 library dart2js.common.codegen;
 
-import 'package:js_ast/src/precedence.dart' as js show Precedence;
+import 'package:js_ast/src/precedence.dart' as js show PRIMARY;
 
 import '../common/elements.dart';
 import '../constants/values.dart';
@@ -273,7 +273,7 @@ class _CodegenImpact extends WorldImpactBuilderImpl implements CodegenImpact {
     sb.write('CodegenImpact:');
     WorldImpact.printOn(sb, this);
 
-    void add(String title, Iterable<Object?> iterable) {
+    void add(String title, Iterable iterable) {
       if (iterable.isNotEmpty) {
         sb.write('\n $title:');
         iterable.forEach((e) => sb.write('\n  $e'));
@@ -397,7 +397,7 @@ class CodegenRegistry {
 /// Code generation results computed on-demand.
 ///
 /// This is used in the non-modular codegen enqueuer driving code generation.
-class OnDemandCodegenResults implements CodegenResults {
+class OnDemandCodegenResults extends CodegenResults {
   @override
   final CodegenInputs codegenInputs;
   final FunctionCompiler _functionCompiler;
@@ -405,9 +405,8 @@ class OnDemandCodegenResults implements CodegenResults {
   OnDemandCodegenResults(this.codegenInputs, this._functionCompiler);
 
   @override
-  ({CodegenResult result, bool isGenerated}) getCodegenResults(
-      MemberEntity member) {
-    return (result: _functionCompiler.compile(member), isGenerated: true);
+  CodegenResult getCodegenResults(MemberEntity member) {
+    return _functionCompiler.compile(member);
   }
 }
 
@@ -596,8 +595,7 @@ class ModularExpression extends js.DeferredExpression
   }
 
   @override
-  js.Precedence get precedenceLevel =>
-      _value?.precedenceLevel ?? js.Precedence.primary;
+  int get precedenceLevel => _value?.precedenceLevel ?? js.PRIMARY;
 
   @override
   Iterable<js.Node> get containedNodes {
@@ -2230,33 +2228,25 @@ class ModularName extends js.Name implements js.AstContainer {
 /// Interface for reading the code generation results for all [MemberEntity]s.
 abstract class CodegenResults {
   CodegenInputs get codegenInputs;
-  ({CodegenResult result, bool isGenerated}) getCodegenResults(
-      MemberEntity member);
+  CodegenResult getCodegenResults(MemberEntity member);
 }
 
 /// Deserialized code generation results.
 ///
 /// This is used for modular code generation.
-class DeserializedCodegenResults implements CodegenResults {
+class DeserializedCodegenResults extends CodegenResults {
   @override
   final CodegenInputs codegenInputs;
-  final FunctionCompiler _functionCompiler;
 
   final Map<MemberEntity, CodegenResult> _map;
 
-  DeserializedCodegenResults(
-      this.codegenInputs, this._map, this._functionCompiler);
+  DeserializedCodegenResults(this.codegenInputs, this._map);
 
   @override
-  ({CodegenResult result, bool isGenerated}) getCodegenResults(
-      MemberEntity member) {
+  CodegenResult getCodegenResults(MemberEntity member) {
     // We only access these results once as it is picked up by the work queue
     // so it is safe to remove and free up space in the map. With deferred
     // deserialization this will also free the Deferrable holder.
-    // Some entities such as parameter stubs are generated lazily and so we have
-    // to compile them on the fly.
-    final deserialized = _map.remove(member);
-    if (deserialized != null) return (result: deserialized, isGenerated: false);
-    return (result: _functionCompiler.compile(member), isGenerated: true);
+    return _map.remove(member)!;
   }
 }

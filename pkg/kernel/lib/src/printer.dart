@@ -160,10 +160,6 @@ class AstPrinter {
     }
   }
 
-  void writeLibraryReference(Reference reference) {
-    _sb.write(libraryReferenceToString(reference));
-  }
-
   void writeName(Name? name) {
     _sb.write(nameToString(name,
         includeLibraryName: _strategy.includeLibraryNamesInMembers));

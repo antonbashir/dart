@@ -11,21 +11,19 @@ import 'doc_test.dart' as doc_test;
 import 'engine_test.dart' as engine_test;
 import 'formatter_test.dart' as formatter_test;
 import 'integration_test.dart' as integration_test;
-import 'lint_code_test.dart' as lint_code_test;
 import 'mocks.dart';
 import 'pubspec_test.dart' as pubspec_test;
 import 'rule_test.dart' as rule_test;
 import 'rules/all.dart' as reflective_rule_tests;
 import 'unmocked_sdk_rule_test.dart' as unmocked_sdk_rule_test;
 import 'utils_test.dart' as utils_test;
-import 'validate_incompatible_rules_test.dart' as validate_incompatible_rules;
-import 'validate_no_rule_description_references_test.dart'
+import 'validate_incompatible_rules.dart' as validate_incompatible_rules;
+import 'validate_no_rule_description_references.dart'
     as validate_no_rule_description_references;
 import 'validate_rule_description_format_test.dart'
     as validate_rule_description_format;
 import 'validate_sdk_version_map.dart' as validate_sdk_version_map;
 import 'verify_checks_test.dart' as verify_checks;
-import 'verify_generated_codes_test.dart' as verify_generated_codes;
 import 'verify_machine_json_test.dart' as verify_machine_json;
 import 'verify_reflective_test_suites.dart' as verify_reflective_test_suites;
 
@@ -40,7 +38,6 @@ void main() {
   engine_test.main();
   formatter_test.main();
   integration_test.main();
-  lint_code_test.main();
   pubspec_test.main();
   rule_test.main();
   reflective_rule_tests.main();
@@ -51,7 +48,6 @@ void main() {
   validate_rule_description_format.main();
   validate_sdk_version_map.main();
   verify_checks.main();
-  verify_generated_codes.main();
   verify_machine_json.main();
   verify_reflective_test_suites.main();
 }

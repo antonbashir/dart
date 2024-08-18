@@ -1,4 +1,4 @@
-/*library: languageVersion=%CURRENT_VERSION_MARKER%*/
+/*library: languageVersion=2.8*/
 
 String foo() {
   return "42";

@@ -11,7 +11,5 @@ class A {
 }
 
 main() {}
-
 expect(expected, actual) {}
-
 throws(void Function() f) {}

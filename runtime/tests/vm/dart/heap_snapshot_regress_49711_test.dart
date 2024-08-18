@@ -62,8 +62,6 @@ main() async {
           ['Array', 'List', 'Record'].any((p) => klass.name.contains(p))) {
         Expect.isTrue(fields.length <= object.references.length);
       } else {
-        // For objects with vm-defined layouts, this fails if a new field is
-        // added but runtime/vm/raw_object_fields.cc is not updated accordingly.
         Expect.equals(fields.length, object.references.length, klass.name);
       }
     }

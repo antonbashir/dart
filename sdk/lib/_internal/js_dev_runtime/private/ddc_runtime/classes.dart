@@ -98,7 +98,185 @@ getMixin(clazz) => JS('', 'Object.hasOwnProperty.call(#, #) ? #[#] : null',
 
 final mixinOn = JS('', 'Symbol("mixinOn")');
 
+@JSExportName('implements')
+final implements_ = JS('', 'Symbol("implements")');
+
+/// Returns `null` if [clazz] doesn't directly implement any interfaces or a
+/// a `Function` that when called produces a `List` of the type objects
+/// [clazz] implements.
+///
+/// Note, indirectly (e.g., via superclass) implemented interfaces aren't
+/// included here. See compiler.dart for when/how it is emitted.
+List<Object> Function()? getImplements(clazz) => JS(
+    '',
+    'Object.hasOwnProperty.call(#, #) ? #[#] : null',
+    clazz,
+    implements_,
+    clazz,
+    implements_);
+
+/// The Symbol for storing type arguments on a specialized generic type.
+final _typeArguments = JS('', 'Symbol("typeArguments")');
+
+final _variances = JS('', 'Symbol("variances")');
+
+final _originalDeclaration = JS('', 'Symbol("originalDeclaration")');
+
 final mixinNew = JS('', 'Symbol("dart.mixinNew")');
+
+/// Normalizes `FutureOr` types when they are constructed at runtime.
+///
+/// This normalization should mirror the normalization performed at compile time
+/// in the method named `_normalizeFutureOr()`.
+///
+/// **NOTE** Normalization of FutureOr<T?>? --> FutureOr<T?> is handled in
+/// [nullable].
+normalizeFutureOr(typeConstructor, setBaseClass) {
+  // The canonical version of the generic FutureOr type constructor.
+  var genericFutureOrType =
+      JS('!', '#', generic(typeConstructor, setBaseClass));
+
+  normalize(typeArg) {
+    // Normalize raw FutureOr --> dynamic
+    if (JS<bool>('!', '# == void 0', typeArg)) return _dynamic;
+
+    // FutureOr<dynamic|void|Object?|Object*|Object> -->
+    //   dynamic|void|Object?|Object*|Object
+    if (_isTop(typeArg) ||
+        _equalType(typeArg, Object) ||
+        (_jsInstanceOf(typeArg, LegacyType) &&
+            JS<bool>('!', '#.type === #', typeArg, Object))) {
+      return typeArg;
+    }
+
+    // FutureOr<Never> --> Future<Never>
+    if (_equalType(typeArg, Never)) {
+      return JS('!', '#(#)', getGenericClassStatic<Future>(), typeArg);
+    }
+    // FutureOr<Null> --> Future<Null>?
+    if (_equalType(typeArg, Null)) {
+      return nullable(
+          JS('!', '#(#)', getGenericClassStatic<Future>(), typeArg));
+    }
+    // Otherwise, create the FutureOr<T> type as a normal generic type.
+    var genericType = JS('!', '#(#)', genericFutureOrType, typeArg);
+    // Overwrite the original declaration so that it correctly points back to
+    // this method. This ensures that the we can test a type value returned here
+    // as a FutureOr because it is equal to 'async.FutureOr` (in the JS).
+    JS('!', '#[#] = #', genericType, _originalDeclaration, normalize);
+    // Add FutureOr specific is and as methods.
+    is_FutureOr(obj) =>
+        JS<bool>('!', '#.is(#)', typeArg, obj) ||
+        JS<bool>(
+            '!', '#(#).is(#)', getGenericClassStatic<Future>(), typeArg, obj);
+    JS('!', '#.is = #', genericType, is_FutureOr);
+
+    as_FutureOr(obj) {
+      // Special test to handle case for mixed mode non-nullable FutureOr of a
+      // legacy type. This allows casts like `null as FutureOr<int*>` to work
+      // in weak and sound mode.
+      if (obj == null && _jsInstanceOf(typeArg, LegacyType)) {
+        return obj;
+      }
+
+      if (JS<bool>('!', '#.is(#)', typeArg, obj) ||
+          JS<bool>('!', '#(#).is(#)', getGenericClassStatic<Future>(), typeArg,
+              obj)) {
+        return obj;
+      }
+      return cast(
+          obj, JS('!', '#(#)', getGenericClassStatic<FutureOr>(), typeArg));
+    }
+
+    JS('!', '#.as = #', genericType, as_FutureOr);
+
+    return genericType;
+  }
+
+  return normalize;
+}
+
+/// Memoize a generic type constructor function.
+generic(typeConstructor, setBaseClass) => JS('', '''(() => {
+  let length = $typeConstructor.length;
+  if (length < 1) {
+    $throwInternalError('must have at least one generic type argument');
+  }
+  let resultMap = new Map();
+  // TODO(vsm): Rethink how to clear the resultMap on hot restart.
+  // A simple clear via:
+  //   _cacheMaps.push(resultMap);
+  // will break (a) we hoist type expressions in generated code and
+  // (b) we don't clear those type expressions in the presence of a
+  // hot restart.  Not clearing this map (as we're doing now) should
+  // not affect correctness, but can result in a memory leak across
+  // multiple restarts.
+  function makeGenericType(...args) {
+    if (args.length != length && args.length != 0) {
+      $throwInternalError('requires ' + length + ' or 0 type arguments');
+    }
+    while (args.length < length) args.push(${typeRep<dynamic>()});
+
+    let value = resultMap;
+    for (let i = 0; i < length; i++) {
+      let arg = args[i];
+      if (arg == null) {
+        $throwInternalError('type arguments should not be null: '
+                          + $typeConstructor);
+      }
+      let map = value;
+      value = map.get(arg);
+      if (value === void 0) {
+        if (i + 1 == length) {
+          value = $typeConstructor.apply(null, args);
+          // Save the type constructor and arguments for reflection.
+          if (value) {
+            value[$_typeArguments] = args;
+            value[$_originalDeclaration] = makeGenericType;
+          }
+          map.set(arg, value);
+          if ($setBaseClass != null) $setBaseClass.apply(null, args);
+        } else {
+          value = new Map();
+          map.set(arg, value);
+        }
+      }
+    }
+    return value;
+  }
+  makeGenericType[$_genericTypeCtor] = $typeConstructor;
+  return makeGenericType;
+})()''');
+
+getGenericClass(type) => safeGetOwnProperty(type, _originalDeclaration);
+
+/// Extracts the type argument as the accessor for the JS class.
+///
+/// Should be used in place of [getGenericClass] when we know the class we want
+/// statically.
+///
+/// This value is extracted and inlined by the compiler without any runtime
+/// operations. The implementation here is only provided as a theoretical fall
+/// back and shouldn't actually be run.
+///
+/// For example `getGenericClassStatic<FutureOr>` emits `async.FutureOr$`
+/// directly.
+external getGenericClassStatic<T>();
+
+// TODO(markzipan): Make this non-nullable if we can ensure this returns
+// an empty list or if null and the empty list are semantically the same.
+List? getGenericArgs(type) =>
+    JS<List?>('', '#', safeGetOwnProperty(type, _typeArguments));
+
+List? getGenericArgVariances(type) =>
+    JS<List?>('', '#', safeGetOwnProperty(type, _variances));
+
+void setGenericArgVariances(f, variances) =>
+    JS('', '#[#] = #', f, _variances, variances);
+
+List<TypeVariable> getGenericTypeFormals(genericClass) {
+  return _typeFormalsFromFunction(getGenericTypeCtor(genericClass));
+}
 
 Object instantiateClass(Object genericClass, List<Object> typeArgs) {
   return JS('', '#.apply(null, #)', genericClass, typeArgs);
@@ -131,10 +309,8 @@ getStaticSetters(value) => _getMembers(value, _staticSetterSig);
 
 getGenericTypeCtor(value) => JS('', '#[#]', value, _genericTypeCtor);
 
-/// Returns the type signature storage site for [obj].
-///
-/// This is typically an instance's JS constructor.
-getTypeSignatureContainer(obj) {
+/// Get the type of an object.
+getType(obj) {
   if (obj == null) return JS('!', '#', Object);
 
   // Object.create(null) produces a js object without a prototype.
@@ -147,13 +323,25 @@ getTypeSignatureContainer(obj) {
 getLibraryUri(value) => JS('', '#[#]', value, _libraryUri);
 setLibraryUri(f, uri) => JS('', '#[#] = #', f, _libraryUri, uri);
 
-/// Returns the name of the Dart class represented by [cls].
+/// Returns the name of the Dart class represented by [cls] including the
+/// instantiated type arguments.
 @notNull
 String getClassName(Object? cls) {
   if (cls != null) {
-    var tag = JS('', '#[#]', cls, rti.interfaceTypeRecipePropertyName);
+    var tag = JS_GET_FLAG("NEW_RUNTIME_TYPES")
+        ? JS('', '#[#]', cls, rti.interfaceTypeRecipePropertyName)
+        : JS('', '#[#]', cls, _runtimeType);
     if (tag != null) {
-      return JS<String>('!', '#.name', cls);
+      var name = JS<String>('!', '#.name', cls);
+      var args = getGenericArgs(cls);
+      if (args == null) return name;
+      var result = name + '<';
+      for (var i = 0; i < JS<int>('!', '#.length', args); ++i) {
+        if (i > 0) result += ', ';
+        result += typeName(JS('', '#[#]', args, i));
+      }
+      result += '>';
+      return result;
     }
   }
   return 'unknown (null)';
@@ -170,7 +358,9 @@ bool isJsInterop(obj) {
   if (obj == null) return false;
   if (JS('!', 'typeof # === "function"', obj)) {
     // A function is a Dart function if it has runtime type information.
-    return JS('!', '#[#] == null', obj, JS_GET_NAME(JsGetName.SIGNATURE_NAME));
+    return JS_GET_FLAG('NEW_RUNTIME_TYPES')
+        ? JS('!', '#[#] == null', obj, JS_GET_NAME(JsGetName.SIGNATURE_NAME))
+        : JS('!', '#[#] == null', obj, _runtimeType);
   }
   // Primitive types are not JS interop types.
   if (JS('!', 'typeof # !== "object"', obj)) return false;
@@ -185,45 +375,22 @@ bool isJsInterop(obj) {
   return !_jsInstanceOf(obj, Object);
 }
 
-/// Returns the RTI for an object instance's field or method signature.
-Object? rtiFromSignature(instance, signature) {
-  if (signature == null) return signature;
-  if (JS<bool>('!', 'typeof # == "function"', signature)) {
-    // Signatures for generic types are resolved at runtime. A JS function here
-    // indicates that this signature has not yet been bound to an instance.
-    return JS<Object>('', '#(#)', signature, rti.instanceType(instance));
-  }
-  return signature;
+/// Get the type of a method from a type using the stored signature
+getMethodType(type, name) {
+  var m = getMethods(type);
+  return m != null ? JS('', '#[#]', m, name) : null;
 }
 
-/// Returns the type of a method [name] from an object instance [obj].
-getMethodType(obj, name) {
-  var typeSigHolder = getTypeSignatureContainer(obj);
-  var m = getMethods(typeSigHolder);
-  if (m == null) return null;
-  return rtiFromSignature(obj, JS<Object?>('', '#[#]', m, name));
-}
+/// Returns the default type argument values for the instance method [name] on
+/// the class [type].
+JSArray<Object> getMethodDefaultTypeArgs(type, name) =>
+    JS('!', '#[#]', getMethodsDefaultTypeArgs(type), name);
 
-/// Returns the default type argument values for the instance method [name].
-JSArray<Object> getMethodDefaultTypeArgs(obj, name) {
-  var typeSigHolder = getTypeSignatureContainer(obj);
-  var typeArgsOrFunction =
-      JS<Object>('', '#[#]', getMethodsDefaultTypeArgs(typeSigHolder), name);
-  if (JS<bool>('!', 'typeof # == "function"', typeArgsOrFunction)) {
-    // Signatures for generic types are resolved at runtime.
-    // A JS function here indicates that this signature has not yet been bound
-    // to an instance.
-    typeArgsOrFunction =
-        JS<Object>('', '#(#)', typeArgsOrFunction, rti.instanceType(obj));
-  }
-  return JS<JSArray<Object>>('', '#', typeArgsOrFunction);
-}
-
-/// Returns the type of a setter [name] from an object instance [obj].
-getSetterType(obj, name) {
-  var typeSigHolder = getTypeSignatureContainer(obj);
-  var setters = getSetters(typeSigHolder);
+/// Gets the type of the corresponding setter (this includes writable fields).
+getSetterType(type, name) {
+  var setters = getSetters(type);
   if (setters != null) {
+    var type = JS('', '#[#]', setters, name);
     // TODO(nshahan): setters object has properties installed on the global
     // Object that requires some extra validation to ensure they are intended
     // as setters. ex: dartx.hashCode, dartx._equals, dartx.toString etc.
@@ -231,20 +398,15 @@ getSetterType(obj, name) {
     // There is a value mapped to 'toString' in setters so broken code like this
     // results in very confusing behavior:
     // `d.toString = 99;`
-    var type = JS<Object?>('', '#[#]', setters, name);
-    if (type != null && JS<bool>('!', 'typeof # == "function"', type)) {
-      // Signatures for generic types are resolved at runtime.
-      // A JS function here indicates that this signature has not yet been bound
-      // to an instance.
-      type = JS<Object>('', '#(#)', type, rti.instanceType(obj));
+    if (type != null) {
+      return type;
     }
-    if (type != null) return type;
   }
-  var fields = getFields(typeSigHolder);
+  var fields = getFields(type);
   if (fields != null) {
-    var fieldInfo = JS<Object?>('', '#[#]', fields, name);
+    var fieldInfo = JS('', '#[#]', fields, name);
     if (fieldInfo != null && JS<bool>('!', '!#.isFinal', fieldInfo)) {
-      return rtiFromSignature(obj, JS<Object?>('', '#.type', fieldInfo));
+      return JS('', '#.type', fieldInfo);
     }
   }
   return null;
@@ -474,14 +636,54 @@ definePrimitiveHashCode(proto) {
       getOwnPropertyDescriptor(proto, extensionSymbol('hashCode')));
 }
 
-/// Link the [dartType] to the native [jsType] it is extending as a base class.
-///
-/// Used for generic extension types such as `JSArray<E>`.
+/// Link the extension to the type it's extending as a base class.
+void setBaseClass(@notNull Object derived, @notNull Object base) {
+  jsObjectSetPrototypeOf(
+      JS('', '#.prototype', derived), JS('', '#.prototype', base));
+  // We use __proto__ to track the superclass hierarchy (see isSubtypeOf).
+  jsObjectSetPrototypeOf(derived, base);
+}
+
+/// Like [setBaseClass], but for generic extension types such as `JSArray<E>`.
 void setExtensionBaseClass(@notNull Object dartType, @notNull Object jsType) {
   // Mark the generic type as an extension type and link the prototype objects.
   var dartProto = JS<Object>('!', '#.prototype', dartType);
   JS('', '#[#] = #', dartProto, _extensionType, dartType);
   jsObjectSetPrototypeOf(dartProto, JS('', '#.prototype', jsType));
+}
+
+/// Adds type test predicates to a class/interface type [ctor], using the
+/// provided [isClass] JS Symbol.
+///
+/// This will operate quickly for non-generic types, native extension types,
+/// as well as matching exact generic type arguments:
+///
+///     class C<T> {}
+///     class D extends C<int> {}
+///     main() { dynamic d = new D(); d as C<int>; }
+///
+addTypeTests(ctor, isClass) {
+  if (isClass == null) isClass = JS('', 'Symbol("_is_" + ctor.name)');
+  // TODO(jmesserly): since we know we're dealing with class/interface types,
+  // we can optimize this rather than go through the generic `dart.is` helpers.
+  JS('', '#.prototype[#] = true', ctor, isClass);
+  JS(
+      '',
+      '''#.is = function is_C(obj) {
+    return obj != null && (obj[#] || #(obj, this));
+  }''',
+      ctor,
+      isClass,
+      instanceOf);
+  JS(
+      '',
+      '''#.as = function as_C(obj) {
+    if (obj != null && obj[#]) return obj;
+    return #(obj, this);
+  }''',
+      ctor,
+      isClass,
+      cast);
 }
 
 /// A runtime mapping of interface type recipe to the symbol used to tag the
@@ -508,8 +710,6 @@ Object typeTagSymbol(String recipe) {
 /// The first element of [interfaceRecipes] must always be the type recipe for
 /// the type represented by [classRef].
 void addRtiResources(Object classRef, JSArray<String> interfaceRecipes) {
-  // Create a rti object cache property used in dart:_rti.
-  JS('', '#[#] = null', classRef, rti.constructorRtiCachePropertyName);
   // Attach the [classRef]'s own interface type recipe.
   // The recipe is used in dart:_rti to create an [rti.Rti] instance when
   // needed.
@@ -523,6 +723,44 @@ void addRtiResources(Object classRef, JSArray<String> interfaceRecipes) {
     JS('', '#.# = #', prototype, tagSymbol, true);
   }
 }
+
+/// Pre-initializes types with empty type caches.
+///
+/// Allows us to perform faster lookups on local caches without having to
+/// filter out the prototype chain. Also allows types to remain relatively
+/// monomorphic, which results in faster execution in V8.
+addTypeCaches(type) {
+  if (JS_GET_FLAG('NEW_RUNTIME_TYPES')) {
+    // Create a rti object cache property used in dart:_rti.
+    JS('', '#[#] = null', type, rti.constructorRtiCachePropertyName);
+  } else {
+    JS('', '#[#] = void 0', type, _cachedLegacy);
+    JS('', '#[#] = void 0', type, _cachedNullable);
+    var subtypeCacheMap = JS<Object>('!', 'new Map()');
+    JS('', '#[#] = #', type, _subtypeCache, subtypeCacheMap);
+    JS('', '#.push(#)', _cacheMaps, subtypeCacheMap);
+  }
+}
+
+// TODO(jmesserly): should we do this for all interfaces?
+
+/// The well known symbol for testing `is Future`
+final isFuture = JS('', 'Symbol("_is_Future")');
+
+/// The well known symbol for testing `is Iterable`
+final isIterable = JS('', 'Symbol("_is_Iterable")');
+
+/// The well known symbol for testing `is List`
+final isList = JS('', 'Symbol("_is_List")');
+
+/// The well known symbol for testing `is Map`
+final isMap = JS('', 'Symbol("_is_Map")');
+
+/// The well known symbol for testing `is Stream`
+final isStream = JS('', 'Symbol("_is_Stream")');
+
+/// The well known symbol for testing `is StreamSubscription`
+final isStreamSubscription = JS('', 'Symbol("_is_StreamSubscription")');
 
 /// The default `operator ==` that calls [identical].
 var identityEquals;

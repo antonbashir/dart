@@ -5,6 +5,6 @@
 /*library: macrosAreAvailable*/
 
 // ignore: unused_import
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 
 void main() {}

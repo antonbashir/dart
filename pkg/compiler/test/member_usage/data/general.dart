@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 /*member: A.:invoke*/
 class A {
   /*member: A.method1:invoke*/
@@ -42,7 +44,6 @@ class C extends A {
   method2() {}
 
   @override
-  /*spec.member: C.method4:invoke*/
   method4() {}
 
   /*member: C.getter:read*/
@@ -63,7 +64,6 @@ class D implements B {
   method2() {}
 
   @override
-  /*spec.member: D.method5:invoke*/
   method5() {}
 
   @override
@@ -108,11 +108,10 @@ class F extends B {
   set setter(_) {}
 }
 
-mixin G {
+class G {
   /*member: G.method1:invoke*/
   method1() {}
   method2() {}
-  /*spec.member: G.method4:invoke*/
   method4() {}
 
   /*member: G.getter:read*/
@@ -128,7 +127,6 @@ class I {
   /*member: I.method1:invoke*/
   method1() {}
   method2() {}
-  /*spec.member: I.method4:invoke*/
   method4() {}
 
   /*member: I.getter:read*/
@@ -139,7 +137,7 @@ class I {
 /*member: J.:invoke*/
 class J extends I implements A {}
 
-mixin K {
+class K {
   /*member: K.method1:invoke*/
   method1() {}
   method2() {}
@@ -149,7 +147,7 @@ mixin K {
   set setter(_) {}
 }
 
-mixin class L = Object with K;
+class L = Object with K;
 class L2 = Object with L;
 
 /*member: M.:invoke*/
@@ -204,12 +202,8 @@ class Class1b {
 
 /*member: Class2.:invoke*/
 class Class2 {
-  /*spec.member: Class2.c:
-   init,
-   read
-  */
-  /*prod.member: Class2.c:init,invoke,read=static*/
-  Class1a? c;
+  /*member: Class2.c:init,invoke,read=static*/
+  Class1a c;
 }
 
 /*member: main:invoke*/
@@ -219,6 +213,7 @@ main() {
 }
 
 /*member: method1:invoke*/
+@pragma('dart2js:disableFinal')
 method1() {
   A a = A();
   B b = B();
@@ -237,12 +232,12 @@ method1() {
   o.method1();
   o.getter;
   o.setter = 42;
-  R? r;
-  r!.method3();
+  R r;
+  r.method3();
   r = R(); // Create R after call.
   Class1a();
   Class1b();
-  Class2().c!(0, 1, 2);
+  Class2().c(0, 1, 2);
 }
 
 /*member: method2:invoke*/

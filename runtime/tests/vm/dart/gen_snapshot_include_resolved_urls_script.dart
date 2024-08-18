@@ -5,6 +5,7 @@
 import 'dart:developer';
 import 'dart:isolate' as I;
 
+import 'package:vm_service/vm_service.dart';
 import 'package:vm_service/vm_service_io.dart';
 
 int fib(int n) {

@@ -15,6 +15,254 @@ main() {
 
 @reflectiveTest
 class ImportDirectiveResolutionTest extends PubPackageResolutionTest {
+  test_inAugmentation_library() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'c.dart';
+''');
+
+    newFile('$testPackageLibPath/c.dart', '');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(WarningCode.UNUSED_IMPORT, 33, 8),
+    ]);
+
+    final node = findNode.import('c.dart');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'c.dart'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithLibrary
+      uri: package:test/c.dart
+''');
+  }
+
+  test_inAugmentation_library_fileDoesNotExist() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'c.dart';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 33, 8),
+    ]);
+
+    final node = findNode.import('c.dart');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'c.dart'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithLibrary
+      uri: package:test/c.dart
+''');
+  }
+
+  test_inAugmentation_noRelativeUri() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import ':net';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.INVALID_URI, 33, 6),
+    ]);
+
+    final node = findNode.import('import');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: ':net'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithRelativeUriString
+      relativeUriString: :net
+''');
+  }
+
+  test_inAugmentation_noRelativeUriStr() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import '${'foo'}.dart';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.URI_WITH_INTERPOLATION, 33, 15),
+    ]);
+
+    final node = findNode.import('import');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: StringInterpolation
+    elements
+      InterpolationString
+        contents: '
+      InterpolationExpression
+        leftBracket: ${
+        expression: SimpleStringLiteral
+          literal: 'foo'
+        rightBracket: }
+      InterpolationString
+        contents: .dart'
+    staticType: String
+    stringValue: null
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUri
+''');
+  }
+
+  test_inAugmentation_noSource() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'foo:bar';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 33, 9),
+    ]);
+
+    final node = findNode.import('import');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'foo:bar'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithRelativeUri
+      relativeUri: foo:bar
+''');
+  }
+
+  test_inAugmentation_notLibrary_augmentation() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'c.dart';
+''');
+
+    newFile('$testPackageLibPath/c.dart', r'''
+library augment 'b.dart';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 33, 8),
+    ]);
+
+    final node = findNode.import('c.dart');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'c.dart'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithSource
+      source: package:test/c.dart
+''');
+  }
+
+  test_inAugmentation_notLibrary_partOfName() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'c.dart';
+''');
+
+    newFile('$testPackageLibPath/c.dart', r'''
+part of my.lib;
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 33, 8),
+    ]);
+
+    final node = findNode.import('c.dart');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'c.dart'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithSource
+      source: package:test/c.dart
+''');
+  }
+
+  test_inAugmentation_notLibrary_partOfUri() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+''');
+
+    final b = newFile('$testPackageLibPath/b.dart', r'''
+library augment 'a.dart';
+import 'c.dart';
+''');
+
+    newFile('$testPackageLibPath/c.dart', r'''
+part of 'b.dart';
+''');
+
+    await resolveFile2(b);
+    assertErrorsInResult([
+      error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 33, 8),
+    ]);
+
+    final node = findNode.import('c.dart');
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'c.dart'
+  semicolon: ;
+  element: LibraryImportElement
+    uri: DirectiveUriWithSource
+      source: package:test/c.dart
+''');
+  }
+
   test_inLibrary_combinators_hide() async {
     await assertErrorsInCode(r'''
 import 'dart:math' hide Random;
@@ -22,7 +270,7 @@ import 'dart:math' hide Random;
       error(WarningCode.UNUSED_IMPORT, 7, 11),
     ]);
 
-    var node = findNode.singleImportDirective;
+    final node = findNode.singleImportDirective;
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -34,7 +282,7 @@ ImportDirective
       hiddenNames
         SimpleIdentifier
           token: Random
-          staticElement: dart:math::<fragment>::@class::Random
+          staticElement: dart:math::@class::Random
           staticType: null
   semicolon: ;
   element: LibraryImportElement
@@ -51,7 +299,7 @@ import 'dart:math' hide Unresolved;
       error(WarningCode.UNDEFINED_HIDDEN_NAME, 24, 10),
     ]);
 
-    var node = findNode.singleImportDirective;
+    final node = findNode.singleImportDirective;
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -79,7 +327,7 @@ import 'dart:math' show Random;
       error(WarningCode.UNUSED_IMPORT, 7, 11),
     ]);
 
-    var node = findNode.singleImportDirective;
+    final node = findNode.singleImportDirective;
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -91,7 +339,7 @@ ImportDirective
       shownNames
         SimpleIdentifier
           token: Random
-          staticElement: dart:math::<fragment>::@class::Random
+          staticElement: dart:math::@class::Random
           staticType: null
   semicolon: ;
   element: LibraryImportElement
@@ -108,7 +356,7 @@ import 'dart:math' show Unresolved;
       error(WarningCode.UNDEFINED_SHOWN_NAME, 24, 10),
     ]);
 
-    var node = findNode.singleImportDirective;
+    final node = findNode.singleImportDirective;
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -147,7 +395,7 @@ import 'a.dart'
 var a = A();
 ''');
 
-    var node = findNode.unit;
+    final node = findNode.unit;
     assertResolvedNodeText(node, r'''
 CompilationUnit
   directives
@@ -216,14 +464,14 @@ CompilationUnit
               constructorName: ConstructorName
                 type: NamedType
                   name: A
-                  element: package:test/a.dart::<fragment>::@class::A
+                  element: package:test/a.dart::@class::A
                   type: A
-                staticElement: package:test/a.dart::<fragment>::@class::A::@constructor::new
+                staticElement: package:test/a.dart::@class::A::@constructor::new
               argumentList: ArgumentList
                 leftParenthesis: (
                 rightParenthesis: )
               staticType: A
-            declaredElement: <testLibraryFragment>::@topLevelVariable::a
+            declaredElement: self::@variable::a
       semicolon: ;
       declaredElement: <null>
 ''');
@@ -247,7 +495,7 @@ import 'a.dart'
 var a = A();
 ''');
 
-    var node = findNode.unit;
+    final node = findNode.unit;
     assertResolvedNodeText(node, r'''
 CompilationUnit
   directives
@@ -316,14 +564,14 @@ CompilationUnit
               constructorName: ConstructorName
                 type: NamedType
                   name: A
-                  element: package:test/a_html.dart::<fragment>::@class::A
+                  element: package:test/a_html.dart::@class::A
                   type: A
-                staticElement: package:test/a_html.dart::<fragment>::@class::A::@constructor::new
+                staticElement: package:test/a_html.dart::@class::A::@constructor::new
               argumentList: ArgumentList
                 leftParenthesis: (
                 rightParenthesis: )
               staticType: A
-            declaredElement: <testLibraryFragment>::@topLevelVariable::a
+            declaredElement: self::@variable::a
       semicolon: ;
       declaredElement: <null>
 ''');
@@ -338,7 +586,7 @@ import 'a.dart'
   if (x) ':net';
 ''');
 
-    var node = findNode.configuration('if (');
+    final node = findNode.configuration('if (');
     assertResolvedNodeText(node, r'''
 Configuration
   ifKeyword: if
@@ -366,7 +614,7 @@ import 'a.dart'
   if (x) '${'foo'}.dart';
 ''');
 
-    var node = findNode.configuration('if (');
+    final node = findNode.configuration('if (');
     assertResolvedNodeText(node, r'''
 Configuration
   ifKeyword: if
@@ -404,7 +652,7 @@ import 'a.dart'
   if (x) 'foo:bar';
 ''');
 
-    var node = findNode.configuration('if (');
+    final node = findNode.configuration('if (');
     assertResolvedNodeText(node, r'''
 Configuration
   ifKeyword: if
@@ -432,7 +680,7 @@ import 'a.dart'
   if (x) 'a.dart';
 ''');
 
-    var node = findNode.configuration('if (');
+    final node = findNode.configuration('if (');
     assertResolvedNodeText(node, r'''
 Configuration
   ifKeyword: if
@@ -469,7 +717,7 @@ import 'a.dart'
 var a = A();
 ''');
 
-    var node = findNode.unit;
+    final node = findNode.unit;
     assertResolvedNodeText(node, r'''
 CompilationUnit
   directives
@@ -538,14 +786,14 @@ CompilationUnit
               constructorName: ConstructorName
                 type: NamedType
                   name: A
-                  element: package:test/a_io.dart::<fragment>::@class::A
+                  element: package:test/a_io.dart::@class::A
                   type: A
-                staticElement: package:test/a_io.dart::<fragment>::@class::A::@constructor::new
+                staticElement: package:test/a_io.dart::@class::A::@constructor::new
               argumentList: ArgumentList
                 leftParenthesis: (
                 rightParenthesis: )
               staticType: A
-            declaredElement: <testLibraryFragment>::@topLevelVariable::a
+            declaredElement: self::@variable::a
       semicolon: ;
       declaredElement: <null>
 ''');
@@ -559,7 +807,7 @@ CompilationUnit
 import 'a.dart';
 ''');
 
-    var node = findNode.import('a.dart');
+    final node = findNode.import('a.dart');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -579,7 +827,7 @@ import 'a.dart';
       error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 7, 8),
     ]);
 
-    var node = findNode.import('import');
+    final node = findNode.import('import');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -605,7 +853,7 @@ ImportDirective
 import 'package:foo/foo.dart';
 ''');
 
-    var node = findNode.import('package:foo');
+    final node = findNode.import('package:foo');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -625,7 +873,7 @@ import ':net';
       error(CompileTimeErrorCode.INVALID_URI, 7, 6),
     ]);
 
-    var node = findNode.import('import');
+    final node = findNode.import('import');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -645,7 +893,7 @@ import '${'foo'}.dart';
       error(CompileTimeErrorCode.URI_WITH_INTERPOLATION, 7, 15),
     ]);
 
-    var node = findNode.import('import');
+    final node = findNode.import('import');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -675,7 +923,7 @@ import 'foo:bar';
       error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 7, 9),
     ]);
 
-    var node = findNode.import('import');
+    final node = findNode.import('import');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -690,7 +938,7 @@ ImportDirective
 
   test_inLibrary_notLibrary_augmentation() async {
     newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+library augment 'test.dart';
 ''');
 
     await assertErrorsInCode(r'''
@@ -699,7 +947,7 @@ import 'a.dart';
       error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 7, 8),
     ]);
 
-    var node = findNode.import('a.dart');
+    final node = findNode.import('a.dart');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -723,7 +971,7 @@ import 'a.dart';
       error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 7, 8),
     ]);
 
-    var node = findNode.import('a.dart');
+    final node = findNode.import('a.dart');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -747,7 +995,7 @@ import 'a.dart';
       error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 7, 8),
     ]);
 
-    var node = findNode.import('a.dart');
+    final node = findNode.import('a.dart');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -775,7 +1023,7 @@ import 'package:foo/foo2.dart';
       error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 7, 23),
     ]);
 
-    var node = findNode.import('package:foo');
+    final node = findNode.import('package:foo');
     assertResolvedNodeText(node, r'''
 ImportDirective
   importKeyword: import
@@ -785,223 +1033,6 @@ ImportDirective
   element: LibraryImportElement
     uri: DirectiveUriWithSource
       source: package:foo/foo2.dart
-''');
-  }
-
-  test_inPart_library() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import 'c.dart';
-''');
-
-    newFile('$testPackageLibPath/c.dart', '');
-
-    await resolveFile2(b);
-    // TODO(scheglov): update the hint.
-    // assertErrorsInResult([
-    //   error(WarningCode.UNUSED_IMPORT, 33, 8),
-    // ]);
-
-    var node = findNode.import('c.dart');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: 'c.dart'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithLibrary
-      uri: package:test/c.dart
-''');
-  }
-
-  test_inPart_library_fileDoesNotExist() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import 'c.dart';
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 25, 8),
-    ]);
-
-    var node = findNode.import('c.dart');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: 'c.dart'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithLibrary
-      uri: package:test/c.dart
-''');
-  }
-
-  test_inPart_noRelativeUri() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import ':net';
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.INVALID_URI, 25, 6),
-    ]);
-
-    var node = findNode.import('import');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: ':net'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithRelativeUriString
-      relativeUriString: :net
-''');
-  }
-
-  test_inPart_noRelativeUriStr() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import '${'foo'}.dart';
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.URI_WITH_INTERPOLATION, 25, 15),
-    ]);
-
-    var node = findNode.import('import');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: StringInterpolation
-    elements
-      InterpolationString
-        contents: '
-      InterpolationExpression
-        leftBracket: ${
-        expression: SimpleStringLiteral
-          literal: 'foo'
-        rightBracket: }
-      InterpolationString
-        contents: .dart'
-    staticType: String
-    stringValue: null
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUri
-''');
-  }
-
-  test_inPart_noSource() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import 'foo:bar';
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 25, 9),
-    ]);
-
-    var node = findNode.import('import');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: 'foo:bar'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithRelativeUri
-      relativeUri: foo:bar
-''');
-  }
-
-  test_inPart_notLibrary_partOfName() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import 'c.dart';
-''');
-
-    newFile('$testPackageLibPath/c.dart', r'''
-part of my.lib;
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 25, 8),
-    ]);
-
-    var node = findNode.import('c.dart');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: 'c.dart'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithSource
-      source: package:test/c.dart
-''');
-  }
-
-  test_inPart_notLibrary_partOfUri() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
-import 'c.dart';
-''');
-
-    newFile('$testPackageLibPath/c.dart', r'''
-part of 'b.dart';
-''');
-
-    await resolveFile2(b);
-    assertErrorsInResult([
-      error(CompileTimeErrorCode.IMPORT_OF_NON_LIBRARY, 25, 8),
-    ]);
-
-    var node = findNode.import('c.dart');
-    assertResolvedNodeText(node, r'''
-ImportDirective
-  importKeyword: import
-  uri: SimpleStringLiteral
-    literal: 'c.dart'
-  semicolon: ;
-  element: LibraryImportElement
-    uri: DirectiveUriWithSource
-      source: package:test/c.dart
 ''');
   }
 }

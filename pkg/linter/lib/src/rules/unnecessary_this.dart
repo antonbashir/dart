@@ -8,8 +8,6 @@ import 'package:analyzer/dart/element/element.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../linter_lint_codes.dart';
-import '../util/scope.dart';
 
 const _desc = r"Don't access members with `this` unless avoiding shadowing.";
 
@@ -51,19 +49,19 @@ class Box {
 ''';
 
 class UnnecessaryThis extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_this', "Unnecessary 'this.' qualifier.",
+      correctionMessage: "Try removing 'this.'.");
+
   UnnecessaryThis()
       : super(
             name: 'unnecessary_this',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.brevity,
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style,
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_this;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -102,7 +100,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     }
 
     if (_canReferenceElementWithoutThisPrefix(element, node)) {
-      rule.reportLintForToken(node.thisKeyword);
+      rule.reportLint(parent);
     }
   }
 
@@ -113,7 +111,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     var id = element.displayName;
     var isSetter = element is PropertyAccessorElement && element.isSetter;
-    var result = resolveNameInScope(id, node, shouldResolveSetter: isSetter);
+    var result = context.resolveNameInScope2(id, node, setter: isSetter);
 
     // No result, definitely no shadowing.
     // The requested element is inherited, or from an extension.

@@ -4,7 +4,7 @@
         {
             "name": "foo",
             "rootUri": "../lib/",
-            "languageVersion": "%VERSION_MARKER1%"
+            "languageVersion": "2.5"
         }
     ]
 }

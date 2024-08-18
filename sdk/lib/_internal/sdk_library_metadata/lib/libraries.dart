@@ -54,11 +54,6 @@ const Map<String, LibraryInfo> libraries = const {
     maturity: Maturity.STABLE,
     dart2jsPatchPath: '_internal/js_runtime/lib/collection_patch.dart',
   ),
-  'concurrent': const LibraryInfo(
-    'concurrent/concurrent.dart',
-    categories: 'Server',
-    maturity: Maturity.EXPERIMENTAL,
-  ),
   'convert': const LibraryInfo(
     'convert/convert.dart',
     categories: 'Client,Server',
@@ -229,13 +224,6 @@ const Map<String, LibraryInfo> libraries = const {
     documented: false,
     platforms: DART2JS_PLATFORM,
   ),
-  '_dart2js_only': const LibraryInfo(
-    '_internal/js_runtime/lib/dart2js_only.dart',
-    categories: '',
-    implementation: true,
-    documented: false,
-    platforms: DART2JS_PLATFORM,
-  ),
   '_dart2js_runtime_metrics': const LibraryInfo(
     '_internal/js_runtime/lib/dart2js_runtime_metrics.dart',
     categories: '',
@@ -285,13 +273,7 @@ const Map<String, LibraryInfo> libraries = const {
     platforms: DART2JS_PLATFORM,
   ),
   '_async_status_codes': const LibraryInfo(
-    '_internal/js_shared/lib/synced/async_status_codes.dart',
-    categories: '',
-    documented: false,
-    platforms: DART2JS_PLATFORM,
-  ),
-  '_invocation_mirror_constants': const LibraryInfo(
-    '_internal/js_runtime/lib/synced/invocation_mirror_constants.dart',
+    '_internal/js_runtime/lib/synced/async_status_codes.dart',
     categories: '',
     documented: false,
     platforms: DART2JS_PLATFORM,
@@ -320,17 +302,8 @@ const Map<String, LibraryInfo> libraries = const {
     documented: false,
     platforms: DART2JS_PLATFORM,
   ),
-  "_wasm": const LibraryInfo(
-    '_wasm/wasm_types.dart',
-    categories: '',
-    documented: false,
-  ),
-  "_macros": const LibraryInfo(
-    '_macros/macros.dart',
-    documented: false,
-    platforms: VM_PLATFORM,
-    maturity: Maturity.EXPERIMENTAL,
-  ),
+  "_wasm": const LibraryInfo('_wasm/wasm_types.dart',
+      categories: '', documented: false),
 };
 
 /// Information about a "dart:" library.

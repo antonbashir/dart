@@ -21,6 +21,13 @@ enum ExportStatus {
   nonExportable,
 }
 
+class GetSet {
+  Member? getter;
+  Member? setter;
+
+  GetSet(this.getter, this.setter);
+}
+
 class ExportChecker {
   final JsInteropDiagnosticReporter _diagnosticReporter;
   final Map<Reference, Map<String, Set<Member>>> exportClassToMemberMap = {};
@@ -38,7 +45,7 @@ class ExportChecker {
   ///
   /// [exports] should be a set of members from the [exportClassToMemberMap]. If
   /// missing a getter and/or setter, the corresponding field will be `null`.
-  ({Member? getter, Member? setter}) getGetterSetter(Set<Member> exports) {
+  GetSet getGetterSetter(Set<Member> exports) {
     assert(exports.isNotEmpty && exports.length <= 2);
     Member? getter;
     Member? setter;
@@ -64,7 +71,7 @@ class ExportChecker {
       }
     }
 
-    return (getter: getter, setter: setter);
+    return GetSet(getter, setter);
   }
 
   /// Calculates the overrides, including inheritance, for [cls].
@@ -77,7 +84,7 @@ class ExportChecker {
     var superclass = cls.superclass;
     if (superclass != null && superclass != _objectClass) {
       _collectOverrides(superclass);
-      memberMap = Map.of(_overrideMap[superclass.reference]!);
+      memberMap = Map.from(_overrideMap[superclass.reference]!);
     } else {
       memberMap = {};
     }
@@ -101,6 +108,7 @@ class ExportChecker {
   }
 
   /// Determine if [cls] is exportable, and if so, compute the export members.
+  ///
   ///
   /// Check the following:
   /// - If the class has a `@JSExport` annotation, the value should be empty.
@@ -149,8 +157,8 @@ class ExportChecker {
 
     // Walk through the export map and determine if there are any unresolvable
     // conflicts.
-    for (var MapEntry(key: exportName, value: existingMembers)
-        in exports.entries) {
+    for (var exportName in exports.keys) {
+      var existingMembers = exports[exportName]!;
       if (existingMembers.length == 1) continue;
       if (existingMembers.length == 2) {
         // There are two instances where you can resolve collisions:

@@ -9,7 +9,6 @@ import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'No default cases.';
 
@@ -50,17 +49,22 @@ Enum-like classes are defined as concrete (non-abstract) classes that have:
 ''';
 
 class NoDefaultCases extends LintRule {
+  static const LintCode code = LintCode(
+      'no_default_cases', "Invalid use of 'default' member in a switch.",
+      correctionMessage:
+          'Try enumerating all the possible values of the switch expression.');
+
   NoDefaultCases()
       : super(
           name: 'no_default_cases',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.style},
+          group: Group.style,
           state: State.experimental(),
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.no_default_cases;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

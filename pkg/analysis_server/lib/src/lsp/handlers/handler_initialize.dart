@@ -5,7 +5,6 @@
 import 'dart:io';
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_states.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 
@@ -31,27 +30,27 @@ class InitializeMessageHandler
       params.initializationOptions,
     );
 
-    var workspacePaths = <String>[];
-    var workspaceFolders = params.workspaceFolders;
-    var rootUri = params.rootUri;
-    var rootPath = params.rootPath;
+    final workspacePaths = <String>[];
+    final workspaceFolders = params.workspaceFolders;
+    final rootUri = params.rootUri;
+    final rootPath = params.rootPath;
     // The onlyAnalyzeProjectsWithOpenFiles flag allows opening huge folders
     // without setting them as analysis roots. Instead, analysis roots will be
     // based only on the open files.
     if (!server.onlyAnalyzeProjectsWithOpenFiles) {
       if (workspaceFolders != null) {
         for (var wf in workspaceFolders) {
-          var uri = wf.uri;
+          final uri = wf.uri;
           // Only file URIs are supported, but there's no way to signal this to
           // the LSP client (and certainly not before initialization).
           if (uri.isScheme('file')) {
-            workspacePaths.add(uriConverter.fromClientUri(uri));
+            workspacePaths.add(pathContext.fromUri(uri));
           }
         }
       }
       if (rootUri != null) {
         if (rootUri.isScheme('file')) {
-          workspacePaths.add(uriConverter.fromClientUri(rootUri));
+          workspacePaths.add(pathContext.fromUri(rootUri));
         }
       } else if (rootPath != null) {
         workspacePaths.add(rootPath);
@@ -63,7 +62,7 @@ class InitializeMessageHandler
       workspacePaths,
     );
 
-    var capabilities = server.capabilitiesComputer
+    final capabilities = server.capabilitiesComputer
         .computeServerCapabilities(server.lspClientCapabilities!);
     server.capabilities = capabilities;
 

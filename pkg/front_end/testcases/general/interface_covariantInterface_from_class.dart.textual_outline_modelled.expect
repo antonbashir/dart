@@ -15,5 +15,4 @@ class B<T> implements A<F<T>> {
 }
 
 typedef void F<T>(T t);
-
 void main() {}

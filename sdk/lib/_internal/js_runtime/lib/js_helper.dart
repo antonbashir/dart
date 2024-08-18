@@ -36,8 +36,6 @@ import 'dart:_foreign_helper'
     show
         DART_CLOSURE_TO_JS,
         getInterceptor,
-        ArrayFlags,
-        HArrayFlagsGet,
         JS,
         JS_BUILTIN,
         JS_CONST,
@@ -80,8 +78,6 @@ import 'dart:_rti' as newRti
         Rti;
 
 import 'dart:_load_library_priority';
-
-import 'dart:_invocation_mirror_constants' as mirrors;
 
 part 'annotations.dart';
 part 'constant_map.dart';
@@ -164,18 +160,18 @@ createInvocationMirror(
     String name, internalName, kind, arguments, argumentNames, types) {
   // TODO(sra): [types] (the number of type arguments) could be omitted in the
   // generated stub code to save an argument. Then we would use `types ?? 0`.
-  return JSInvocationMirror(
+  return new JSInvocationMirror(
       name, internalName, kind, arguments, argumentNames, types);
 }
 
 createUnmangledInvocationMirror(
     Symbol symbol, internalName, kind, arguments, argumentNames, types) {
-  return JSInvocationMirror(
+  return new JSInvocationMirror(
       symbol, internalName, kind, arguments, argumentNames, types);
 }
 
 void throwInvalidReflectionError(String memberName) {
-  throw UnsupportedError("Can't use '$memberName' in reflection.");
+  throw new UnsupportedError("Can't use '$memberName' in reflection.");
 }
 
 /// Helper used to instrument calls when the compiler is invoked with
@@ -217,6 +213,10 @@ void traceHelper(dynamic /*int*/ id, dynamic /*String*/ qualifiedName) {
 }
 
 class JSInvocationMirror implements Invocation {
+  static const METHOD = 0;
+  static const GETTER = 1;
+  static const SETTER = 2;
+
   /// When [_memberName] is a String, it holds the mangled name of this
   /// invocation.  When it is a Symbol, it holds the unmangled name.
   var /* String or Symbol */ _memberName;
@@ -231,13 +231,13 @@ class JSInvocationMirror implements Invocation {
 
   Symbol get memberName {
     if (_memberName is Symbol) return _memberName;
-    return _memberName = _symbol_dev.Symbol.unvalidated(_memberName);
+    return _memberName = new _symbol_dev.Symbol.unvalidated(_memberName);
   }
 
-  bool get isMethod => _kind == mirrors.method;
-  bool get isGetter => _kind == mirrors.getter;
-  bool get isSetter => _kind == mirrors.setter;
-  bool get isAccessor => _kind != mirrors.method;
+  bool get isMethod => _kind == METHOD;
+  bool get isGetter => _kind == GETTER;
+  bool get isSetter => _kind == SETTER;
+  bool get isAccessor => _kind != METHOD;
 
   List<Type> get typeArguments {
     if (_typeArgumentCount == 0) return const <Type>[];
@@ -267,12 +267,12 @@ class JSInvocationMirror implements Invocation {
     int namedArgumentsStartIndex =
         _arguments.length - namedArgumentCount - _typeArgumentCount;
     if (namedArgumentCount == 0) return const <Symbol, dynamic>{};
-    var map = Map<Symbol, dynamic>();
+    var map = new Map<Symbol, dynamic>();
     for (int i = 0; i < namedArgumentCount; i++) {
-      map[_symbol_dev.Symbol.unvalidated(_namedArgumentNames[i])] =
+      map[new _symbol_dev.Symbol.unvalidated(_namedArgumentNames[i])] =
           _arguments[namedArgumentsStartIndex + i];
     }
-    return ConstantMapView<Symbol, dynamic>(map);
+    return new ConstantMapView<Symbol, dynamic>(map);
   }
 }
 
@@ -321,10 +321,10 @@ class Primitives {
     }
 
     if (radix is! int) {
-      throw ArgumentError.value(radix, 'radix', 'is not an integer');
+      throw new ArgumentError.value(radix, 'radix', 'is not an integer');
     }
     if (radix < 2 || radix > 36) {
-      throw RangeError.range(radix, 2, 36, 'radix');
+      throw new RangeError.range(radix, 2, 36, 'radix');
     }
     if (radix == 10 && decimalMatch != null) {
       // Cannot fail because we know that the digits are all decimal.
@@ -630,7 +630,7 @@ class Primitives {
             'String.fromCharCode(#, #)', high, low);
       }
     }
-    throw RangeError.range(charCode, 0, 0x10ffff);
+    throw new RangeError.range(charCode, 0, 0x10ffff);
   }
 
   static String stringConcatUnchecked(String string1, String string2) {
@@ -677,25 +677,15 @@ class Primitives {
     return '';
   }
 
-  static int getTimeZoneOffsetInSeconds(DateTime receiver) {
-    // Note that JavaScript's Date and and Dart's DateTime disagree on the sign
-    // of the offset. Subtract to avoid -0.0. The offset in minutes could
-    // contain 'seconds' as fractional minutes.
-    num offsetInMinutes =
-        JS('num', r'#.getTimezoneOffset()', lazyAsJsDate(receiver));
-    return (0 - offsetInMinutes * 60).toInt();
+  static int getTimeZoneOffsetInMinutes(DateTime receiver) {
+    // Note that JS and Dart disagree on the sign of the offset.
+    // Subtract to avoid -0.0
+    return 0 - JS('int', r'#.getTimezoneOffset()', lazyAsJsDate(receiver))
+        as int;
   }
 
-  static int? valueFromDecomposedDate(
-      int years,
-      int month,
-      int day,
-      int hours,
-      int minutes,
-      int seconds,
-      int milliseconds,
-      int microseconds,
-      bool isUtc) {
+  static int? valueFromDecomposedDate(int years, int month, int day, int hours,
+      int minutes, int seconds, int milliseconds, bool isUtc) {
     final int MAX_MILLISECONDS_SINCE_EPOCH = 8640000000000000;
     checkInt(years);
     checkInt(month);
@@ -704,7 +694,6 @@ class Primitives {
     checkInt(minutes);
     checkInt(seconds);
     checkInt(milliseconds);
-    checkInt(microseconds);
     checkBool(isUtc);
     var jsMonth = month - 1;
     // The JavaScript Date constructor 'corrects' year NN to 19NN. Sidestep that
@@ -715,11 +704,6 @@ class Primitives {
       years += 400;
       jsMonth -= 400 * 12;
     }
-    // JavaScript `Date` does not handle microseconds, so ensure the provided
-    // microseconds is in range [0..999].
-    final remainder = microseconds % 1000;
-    milliseconds += (microseconds - remainder) ~/ 1000;
-    microseconds = remainder;
     num value;
     if (isUtc) {
       value = JS('num', r'Date.UTC(#, #, #, #, #, #, #)', years, jsMonth, day,
@@ -730,8 +714,7 @@ class Primitives {
     }
     if (value.isNaN ||
         value < -MAX_MILLISECONDS_SINCE_EPOCH ||
-        value > MAX_MILLISECONDS_SINCE_EPOCH ||
-        value == MAX_MILLISECONDS_SINCE_EPOCH && microseconds != 0) {
+        value > MAX_MILLISECONDS_SINCE_EPOCH) {
       return null;
     }
     return JS('int', '#', value);
@@ -763,7 +746,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getYear(DateTime receiver) {
+  static getYear(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('int', r'(#.getUTCFullYear() + 0)', lazyAsJsDate(receiver))
         : JS('int', r'(#.getFullYear() + 0)', lazyAsJsDate(receiver));
@@ -772,7 +755,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getMonth(DateTime receiver) {
+  static getMonth(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('JSUInt31', r'#.getUTCMonth() + 1', lazyAsJsDate(receiver))
         : JS('JSUInt31', r'#.getMonth() + 1', lazyAsJsDate(receiver));
@@ -781,7 +764,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getDay(DateTime receiver) {
+  static getDay(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('JSUInt31', r'(#.getUTCDate() + 0)', lazyAsJsDate(receiver))
         : JS('JSUInt31', r'(#.getDate() + 0)', lazyAsJsDate(receiver));
@@ -790,7 +773,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getHours(DateTime receiver) {
+  static getHours(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('JSUInt31', r'(#.getUTCHours() + 0)', lazyAsJsDate(receiver))
         : JS('JSUInt31', r'(#.getHours() + 0)', lazyAsJsDate(receiver));
@@ -799,7 +782,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getMinutes(DateTime receiver) {
+  static getMinutes(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('JSUInt31', r'(#.getUTCMinutes() + 0)', lazyAsJsDate(receiver))
         : JS('JSUInt31', r'(#.getMinutes() + 0)', lazyAsJsDate(receiver));
@@ -808,7 +791,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getSeconds(DateTime receiver) {
+  static getSeconds(DateTime receiver) {
     return (receiver.isUtc)
         ? JS('JSUInt31', r'(#.getUTCSeconds() + 0)', lazyAsJsDate(receiver))
         : JS('JSUInt31', r'(#.getSeconds() + 0)', lazyAsJsDate(receiver));
@@ -817,7 +800,7 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getMilliseconds(DateTime receiver) {
+  static getMilliseconds(DateTime receiver) {
     return (receiver.isUtc)
         ? JS(
             'JSUInt31', r'(#.getUTCMilliseconds() + 0)', lazyAsJsDate(receiver))
@@ -827,12 +810,19 @@ class Primitives {
   @pragma('dart2js:noSideEffects')
   @pragma('dart2js:noThrows')
   @pragma('dart2js:noInline')
-  static int getWeekday(DateTime receiver) {
+  static getWeekday(DateTime receiver) {
     int weekday = (receiver.isUtc)
         ? JS('int', r'#.getUTCDay() + 0', lazyAsJsDate(receiver))
         : JS('int', r'#.getDay() + 0', lazyAsJsDate(receiver));
     // Adjust by one because JS weeks start on Sunday.
     return (weekday + 6) % 7 + 1;
+  }
+
+  static num valueFromDateString(str) {
+    if (str is! String) throw argumentErrorValue(str);
+    num value = JS('num', r'Date.parse(#)', str);
+    if (value.isNaN) throw argumentErrorValue(str);
+    return value;
   }
 
   static getProperty(object, key) {
@@ -874,7 +864,12 @@ class Primitives {
         '${JS_GET_NAME(JsGetName.CALL_PREFIX)}\$$argumentCount$names';
 
     return function.noSuchMethod(createUnmangledInvocationMirror(
-        #call, selectorName, mirrors.method, arguments, namedArgumentList, 0));
+        #call,
+        selectorName,
+        JSInvocationMirror.METHOD,
+        arguments,
+        namedArgumentList,
+        0));
   }
 
   /// Implements [Function.apply] for the lazy and startup emitters.
@@ -1093,10 +1088,8 @@ class Primitives {
     }
   }
 
-  static StackTrace? extractStackTrace(Error error) {
-    var jsError = JS('', r'#.$thrownJsError', error);
-    if (jsError == null) return null;
-    return getTraceFromException(jsError);
+  static StackTrace extractStackTrace(Error error) {
+    return getTraceFromException(JS('', r'#.$thrownJsError', error));
   }
 }
 
@@ -1123,17 +1116,17 @@ ioore(receiver, index) {
 /// describes the problem.
 @pragma('dart2js:noInline')
 Error diagnoseIndexError(indexable, index) {
-  if (index is! int) return ArgumentError.value(index, 'index');
+  if (index is! int) return new ArgumentError.value(index, 'index');
   int length = indexable.length;
   // The following returns the same error that would be thrown by calling
   // [IndexError.check] with no optional parameters
   // provided.
   if (index < 0 || index >= length) {
-    return IndexError.withLength(index, length,
+    return new IndexError.withLength(index, length,
         indexable: indexable, name: 'index');
   }
   // The above should always match, but if it does not, use the following.
-  return RangeError.value(index, 'index');
+  return new RangeError.value(index, 'index');
 }
 
 /// Diagnoses a range error. Returns the ArgumentError or RangeError that
@@ -1141,21 +1134,21 @@ Error diagnoseIndexError(indexable, index) {
 @pragma('dart2js:noInline')
 Error diagnoseRangeError(start, end, length) {
   if (start is! int) {
-    return ArgumentError.value(start, 'start');
+    return new ArgumentError.value(start, 'start');
   }
   if (start < 0 || start > length) {
-    return RangeError.range(start, 0, length, 'start');
+    return new RangeError.range(start, 0, length, 'start');
   }
   if (end != null) {
     if (end is! int) {
-      return ArgumentError.value(end, 'end');
+      return new ArgumentError.value(end, 'end');
     }
     if (end < start || end > length) {
-      return RangeError.range(end, start, length, 'end');
+      return new RangeError.range(end, start, length, 'end');
     }
   }
   // The above should always match, but if it does not, use the following.
-  return ArgumentError.value(end, 'end');
+  return new ArgumentError.value(end, 'end');
 }
 
 stringLastIndexOfUnchecked(receiver, element, start) =>
@@ -1164,7 +1157,7 @@ stringLastIndexOfUnchecked(receiver, element, start) =>
 /// 'factory' for constructing ArgumentError.value to keep the call sites small.
 @pragma('dart2js:noInline')
 ArgumentError argumentErrorValue(object) {
-  return ArgumentError.value(object);
+  return new ArgumentError.value(object);
 }
 
 checkNull(object) {
@@ -1205,7 +1198,7 @@ wrapException(ex) {
 
 @pragma('dart2js:never-inline')
 initializeExceptionWrapper(wrapper, ex) {
-  if (ex == null) ex = TypeError();
+  if (ex == null) ex = new TypeError();
   // [unwrapException] looks for the property 'dartException'.
   JS('void', '#.dartException = #', wrapper, ex);
 
@@ -1248,81 +1241,7 @@ Never throwExpressionWithWrapper(ex, wrapper) {
 }
 
 throwUnsupportedError(message) {
-  throw UnsupportedError(message);
-}
-
-/// Called from code generated for the HArrayFlagsCheck instruction.
-///
-/// The operation can be a string, or for more compact generated code, an index
-/// into a small table of operation names.  A missing `operation` or `verb`
-/// argument defaults to index 0.
-@pragma('dart2js:assumeDynamic')
-Never throwUnsupportedOperation(Object o, [Object? operation, Object? verb]) {
-  // Missing argument is defaulted manually.  The calling convention for
-  // top-level methods is that the call site provides the default values. Since
-  // the generated code omits the second or thrid argument, `undefined` is
-  // passed, which presents as Dart `null`.
-  operation ??= 0;
-  verb ??= 0;
-  final wrapper = JS('', 'Error()');
-  throwExpressionWithWrapper(
-      _diagnoseUnsupportedOperation(o, operation, verb), wrapper);
-}
-
-@pragma('dart2js:never-inline')
-Error _diagnoseUnsupportedOperation(
-    Object o, Object encodedOperation, Object encodedVerb) {
-  String operation;
-  String verb;
-
-  if (encodedOperation is String) {
-    operation = encodedOperation;
-  } else {
-    final table = JS<JSArray>('', '#.split(";")', ArrayFlags.operationNames);
-    int tableLength = JS('JSUInt31', '#.length', table);
-    int index = JS('JSUInt31', '#', encodedOperation);
-    if (index > tableLength) {
-      // Verb is also encoded with the operation.
-      // Do math in JavaScript, we know there are no edge cases.
-      // Truncating divide:
-      encodedVerb = JS<int>('', '(# / #) | 0', index, tableLength);
-      index = JS<int>('', '# % #', index, tableLength);
-    }
-    // The index should be valid by construction.
-    operation = JS<String>('', '#[#]', table, index);
-  }
-
-  if (encodedVerb is String) {
-    verb = encodedVerb;
-  } else {
-    final table = JS<JSArray>('', '#.split(";")', ArrayFlags.verbs);
-    // The index should be valid by construction.
-    verb = JS<String>('', '#[#]', table, encodedVerb);
-  }
-
-  String adjective = '';
-  String article = 'a ';
-  String object;
-  if (o is List) {
-    object = 'list';
-  } else {
-    object = 'ByteData';
-  }
-
-  final flags = HArrayFlagsGet(o);
-  if (flags & ArrayFlags.constantCheck != 0) {
-    article = 'a ';
-    adjective = 'constant ';
-  } else if (flags & ArrayFlags.unmodifiableCheck != 0) {
-    article = 'an ';
-    adjective = 'unmodifiable ';
-  } else if (flags & ArrayFlags.fixedLengthCheck != 0) {
-    article = 'a ';
-    adjective = 'fixed-length ';
-  }
-
-  final prefix = "'$operation': ";
-  return UnsupportedError('${prefix}Cannot $verb $article$adjective$object');
+  throw new UnsupportedError(message);
 }
 
 // This is used in open coded for-in loops on arrays.
@@ -1347,7 +1266,7 @@ checkConcurrentModificationError(sameLength, collection) {
 
 @pragma('dart2js:noInline')
 throwConcurrentModificationError(collection) {
-  throw ConcurrentModificationError(collection);
+  throw new ConcurrentModificationError(collection);
 }
 
 /// Helper class for building patterns recognizing native type errors.
@@ -1544,7 +1463,7 @@ class TypeErrorDecoder {
             r'"((?:x|[^x])*)")',
         message);
 
-    return TypeErrorDecoder(
+    return new TypeErrorDecoder(
         arguments, argumentsExpr, expr, method, receiver, pattern);
   }
 
@@ -1905,10 +1824,10 @@ StackTrace getTraceFromException(exception) {
   if (exception is ExceptionAndStackTrace) {
     return exception.stackTrace;
   }
-  if (exception == null) return _StackTrace(exception);
+  if (exception == null) return new _StackTrace(exception);
   _StackTrace? trace = JS('_StackTrace|Null', r'#.$cachedTrace', exception);
   if (trace != null) return trace;
-  trace = _StackTrace(exception);
+  trace = new _StackTrace(exception);
 
   // When storing a property on a primitive value `v`, JavaScript converts the
   // primitive value to an ephemeral wrapper object via `Object(v)`, and then
@@ -2038,7 +1957,7 @@ _invokeClosure(Function closure, int numberOfArguments, var arg1, var arg2,
     case 4:
       return closure(arg1, arg2, arg3, arg4);
   }
-  throw Exception('Unsupported number of arguments for wrapped closure');
+  throw new Exception('Unsupported number of arguments for wrapped closure');
 }
 
 /// Called by generated code to convert a Dart closure to a JS
@@ -2199,9 +2118,9 @@ abstract final class Closure implements Function {
     // TODO(sra): Cache the prototype to avoid the allocation.
     var prototype = isStatic
         ? JS('StaticClosure', 'Object.create(#.constructor.prototype)',
-            StaticClosure())
+            new StaticClosure())
         : JS('BoundClosure', 'Object.create(#.constructor.prototype)',
-            BoundClosure(null, null));
+            new BoundClosure(null, null));
 
     JS('', '#.\$initialize = #', prototype, JS('', '#.constructor', prototype));
 
@@ -2682,7 +2601,7 @@ final class BoundClosure extends TearOffClosure {
   @pragma('dart2js:noInline')
   @pragma('dart2js:noSideEffects')
   static String _computeFieldNamed(String fieldName) {
-    var template = BoundClosure('receiver', 'interceptor');
+    var template = new BoundClosure('receiver', 'interceptor');
     var names = JSArray.markFixedList(
         JS('', 'Object.getOwnPropertyNames(#)', template));
     for (int i = 0; i < names.length; i++) {
@@ -2793,7 +2712,7 @@ bool boolConversionCheck(value) {
 @pragma('dart2js:noInline')
 void checkDeferredIsLoaded(String loadId) {
   if (!_loadedLibraries.contains(loadId)) {
-    throw DeferredNotLoadedError(loadId);
+    throw new DeferredNotLoadedError(loadId);
   }
 }
 
@@ -2833,7 +2752,7 @@ void assertHelper(condition) {
 /// Called by generated code when a static field's initializer references the
 /// field that is currently being initialized.
 void throwCyclicInit(String staticName) {
-  throw _CyclicInitializationError(staticName);
+  throw new _CyclicInitializationError(staticName);
 }
 
 /// Error thrown when a lazily initialized variable cannot be initialized.
@@ -2910,7 +2829,7 @@ String getIsolateAffinityTag(String name) {
 final Map<String, Completer<Null>?> _loadingLibraries = {};
 final Set<String> _loadedLibraries = {};
 
-typedef DeferredLoadCallback = void Function();
+typedef void DeferredLoadCallback();
 
 // Function that will be called every time a new deferred import is loaded.
 DeferredLoadCallback? deferredLoadHook;
@@ -2967,7 +2886,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
   // another that maps the index to a hash.
   var partsMap = JS_EMBEDDED_GLOBAL('', DEFERRED_LIBRARY_PARTS);
   List? indexes = JS('JSExtendableArray|Null', '#[#]', partsMap, loadId);
-  if (indexes == null) return Future.value(null);
+  if (indexes == null) return new Future.value(null);
   List<String> uris = <String>[];
   List<String> hashes = <String>[];
   List index2uri = JS_EMBEDDED_GLOBAL('JSArray', DEFERRED_PART_URIS);
@@ -2980,7 +2899,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
 
   int total = hashes.length;
   assert(total == uris.length);
-  List<bool> waitingForLoad = List.filled(total, true);
+  List<bool> waitingForLoad = new List.filled(total, true);
   int nextHunkToInitialize = 0;
   var isHunkLoaded = JS_EMBEDDED_GLOBAL('', IS_HUNK_LOADED);
   var isHunkInitialized = JS_EMBEDDED_GLOBAL('', IS_HUNK_INITIALIZED);
@@ -3015,7 +2934,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
       } else {
         _addEvent(part: uri, hash: hash, event: 'missing', loadId: loadId);
 
-        throw DeferredLoadException("Loading ${uris[i]} failed: "
+        throw new DeferredLoadException("Loading ${uris[i]} failed: "
             "the code with hash '${hash}' was not loaded.\n"
             "event log:\n${_getEventLog()}\n");
       }
@@ -3038,7 +2957,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
 
   if (JS('bool', 'typeof # === "function"', deferredLibraryMultiLoader)) {
     return _loadAllHunks(
-            deferredLibraryMultiLoader, uris, hashes, loadId, priority, 0)
+            deferredLibraryMultiLoader, uris, hashes, loadId, priority)
         .then((_) {
       waitingForLoad = List.filled(total, false);
       finalizeLoad();
@@ -3049,7 +2968,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
     final hash = hashes[i];
     if (JS('bool', '#(#)', isHunkLoaded, hash)) {
       waitingForLoad[i] = false;
-      return Future.value();
+      return new Future.value();
     }
     return _loadHunk(uris[i], loadId, priority, hash, 0).then((Null _) {
       waitingForLoad[i] = false;
@@ -3057,7 +2976,7 @@ Future<Null> loadDeferredLibrary(String loadId, int priority) {
     });
   }
 
-  return Future.wait(List.generate(total, loadAndInitialize)).then((_) {
+  return Future.wait(new List.generate(total, loadAndInitialize)).then((_) {
     finalizeLoad();
   });
 }
@@ -3177,7 +3096,7 @@ String _computeThisScriptFromTrace() {
         '(function() {'
             'try { throw new Error() } catch(e) { return e.stack }'
             '})()');
-    if (stack == null) throw UnsupportedError('No stack trace');
+    if (stack == null) throw new UnsupportedError('No stack trace');
   }
   var pattern, matches;
 
@@ -3197,17 +3116,11 @@ String _computeThisScriptFromTrace() {
   matches = JS('JSExtendableArray|Null', '#.match(#)', stack, pattern);
   if (matches != null) return JS('String', '#[1]', matches);
 
-  throw UnsupportedError('Cannot extract URI from "$stack"');
-}
-
-Object _buildTrustedScriptUriWithRetry(String hunkName, int retryCount) {
-  return _getBasedScriptUrl(
-      hunkName, retryCount > 0 ? '?dart2jsRetry=$retryCount' : '');
+  throw new UnsupportedError('Cannot extract URI from "$stack"');
 }
 
 Future _loadAllHunks(Object loader, List<String> hunkNames, List<String> hashes,
-    String loadId, int priority, int retryCount) {
-  const int maxRetries = 3;
+    String loadId, int priority) {
   var initializationEventLog = JS_EMBEDDED_GLOBAL('', INITIALIZATION_EVENT_LOG);
   var isHunkLoaded = JS_EMBEDDED_GLOBAL('', IS_HUNK_LOADED);
 
@@ -3228,8 +3141,7 @@ Future _loadAllHunks(Object loader, List<String> hunkNames, List<String> hashes,
       } else {
         hunksToLoad.add(hunkName);
         hashesToLoad.add(hash);
-        Object trustedScriptUri =
-            _buildTrustedScriptUriWithRetry(hunkName, retryCount);
+        Object trustedScriptUri = _getBasedScriptUrl(hunkName, '');
         // [trustedScriptUri] is either a String, in which case `toString()` is
         // an identity function, or it is a TrustedScriptURL and `toString()`
         // returns the sanitized URL.
@@ -3249,76 +3161,48 @@ Future _loadAllHunks(Object loader, List<String> hunkNames, List<String> hashes,
   hunksToLoad.forEach((hunkName) => _loadingLibraries[hunkName] = completer);
   _addEvent(part: loadedHunksString, event: 'downloadMulti', loadId: loadId);
 
-  void failure(error, String context, StackTrace? stackTrace,
-      List<String>? hunksToRetry, List<String>? hashesToRetry) {
-    if (retryCount < maxRetries && hunksToRetry != null) {
-      _addEvent(
-          part: hunksToRetry.join(';'),
-          event: 'retry$retryCount',
-          loadId: loadId);
-      for (var i = 0; i < hunksToRetry.length; i++) {
-        _loadingLibraries[hunksToRetry[i]] = null;
-      }
-      _loadAllHunks(loader, hunksToRetry!, hashesToRetry!, loadId, priority,
-              retryCount + 1)
-          .then((_) => completer.complete(null),
-              onError: completer.completeError);
-    } else {
-      _addEvent(
-          part: loadedHunksString, event: 'downloadFailure', loadId: loadId);
-      hunksToLoad.forEach((hunkName) => _loadingLibraries[hunkName] = null);
-      stackTrace ??= StackTrace.current;
-      completer.completeError(
-          DeferredLoadException('Loading $loadedHunksString failed: $error\n'
-              'Context: $context\n'
-              'event log:\n${_getEventLog()}\n'),
-          stackTrace);
-    }
+  void failure(error, String context, StackTrace? stackTrace) {
+    _addEvent(
+        part: loadedHunksString, event: 'downloadFailure', loadId: loadId);
+    hunksToLoad.forEach((hunkName) => _loadingLibraries[hunkName] = null);
+    stackTrace ??= StackTrace.current;
+    completer.completeError(
+        DeferredLoadException('Loading $loadedHunksString failed: $error\n'
+            'Context: $context\n'
+            'event log:\n${_getEventLog()}\n'),
+        stackTrace);
   }
 
   void success() {
-    List<String> hunksToRetry = [];
-    List<String> hashesToRetry = [];
+    List<String> missingHunks = [];
     for (int i = 0; i < hashesToLoad.length; i++) {
       bool isLoaded = JS('bool', '#(#)', isHunkLoaded, hashesToLoad[i]);
-      if (!isLoaded) {
-        hunksToRetry.add(hunksToLoad[i]);
-        hashesToRetry.add(hashesToLoad[i]);
-      }
+      if (!isLoaded) missingHunks.add(hunksToLoad[i]);
     }
-    if (hunksToRetry.isEmpty) {
+    if (missingHunks.isEmpty) {
       _addEvent(
           part: loadedHunksString, event: 'downloadSuccess', loadId: loadId);
       completer.complete(null);
     } else {
       failure(
-        'Success callback invoked but parts ${hunksToRetry.join(';')} not '
-            'loaded.',
-        '',
-        null,
-        hunksToRetry,
-        hashesToRetry,
-      );
+          'Success callback invoked but parts ${missingHunks.join(';')} not '
+              'loaded.',
+          '',
+          null);
     }
   }
 
   var jsSuccess = convertDartClosureToJS(success, 0);
   var jsFailure = convertDartClosureToJS((error) {
-    failure(
-      unwrapException(error),
-      'js-failure-wrapper',
-      getTraceFromException(error),
-      hunksToLoad,
-      hashesToLoad,
-    );
+    failure(unwrapException(error), 'js-failure-wrapper',
+        getTraceFromException(error));
   }, 1);
 
   try {
     JS('void', '#(#, #, #, #, #)', loader, urisToLoad, jsSuccess, jsFailure,
         loadId, priority);
   } catch (error, stackTrace) {
-    failure(error, "invoking dartDeferredLibraryMultiLoader hook", stackTrace,
-        hunksToLoad, hashesToLoad);
+    failure(error, "invoking dartDeferredLibraryMultiLoader hook", stackTrace);
   }
 
   return Future.wait([...pendingLoads, completer.future]);
@@ -3337,8 +3221,11 @@ Future<Null> _loadHunk(
   }
   completer ??= _loadingLibraries[hunkName] = Completer();
 
-  Object trustedScriptUri =
-      _buildTrustedScriptUriWithRetry(hunkName, retryCount);
+  Object trustedScriptUri = _getBasedScriptUrl(
+      hunkName, retryCount > 0 ? '?dart2jsRetry=$retryCount' : '');
+  // [trustedScriptUri] is either a String, in which case `toString()` is an
+  // identity function, or it is a TrustedScriptURL and `toString()` returns the
+  // sanitized URL.
   String uriAsString = JS('', '#.toString()', trustedScriptUri);
 
   _addEvent(part: hunkName, event: 'download', loadId: loadId);
@@ -3474,7 +3361,7 @@ class _UnreachableError extends AssertionError {
 
 @pragma('dart2js:noInline')
 Never assertUnreachable() {
-  throw _UnreachableError();
+  throw new _UnreachableError();
 }
 
 // Hook to register new global object if necessary.
@@ -3504,7 +3391,7 @@ class _Required {
   const _Required();
 }
 
-const kRequiredSentinel = _Required();
+const kRequiredSentinel = const _Required();
 bool isRequired(Object? value) => identical(kRequiredSentinel, value);
 
 /// Checks that [f] is a function that supports interop.

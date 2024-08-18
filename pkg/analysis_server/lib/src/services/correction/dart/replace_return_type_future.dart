@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
@@ -12,14 +12,14 @@ class ReplaceReturnTypeFuture extends ResolvedCorrectionProducer {
   /// The text for the type argument to 'Future'.
   String _typeArgument = '';
 
-  ReplaceReturnTypeFuture({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
-  List<String> get fixArguments => [_typeArgument];
+  List<Object>? get fixArguments => [_typeArgument];
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_RETURN_TYPE_FUTURE;
@@ -37,11 +37,7 @@ class ReplaceReturnTypeFuture extends ResolvedCorrectionProducer {
     _typeArgument = utils.getNodeText(typeAnnotation);
 
     await builder.addDartFileEdit(file, (builder) {
-      builder.replaceTypeWithFuture(
-        typeAnnotation: typeAnnotation,
-        typeSystem: typeSystem,
-        typeProvider: typeProvider,
-      );
+      builder.replaceTypeWithFuture(typeAnnotation, typeProvider);
     });
   }
 

@@ -1,3 +1,4 @@
+// @dart = 2.9
 library test;
 
 abstract class C {}
@@ -7,5 +8,4 @@ abstract class D<T> {
 }
 
 void test() {}
-
 main() {}

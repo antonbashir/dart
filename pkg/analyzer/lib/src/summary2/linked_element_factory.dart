@@ -92,8 +92,8 @@ class LinkedElementFactory {
     );
     // Check if elements of libraries are ready.
     // This is the case when we have just linked them.
-    for (var uri in libraries) {
-      var element = rootReference['$uri']?.element;
+    for (final uri in libraries) {
+      final element = rootReference['$uri']?.element;
       if (element is LibraryElementImpl) {
         _setMacroExecutorForLibrary(element);
       }
@@ -176,9 +176,15 @@ class LinkedElementFactory {
     }
 
     analysisContext.setTypeProviders(
-      typeProvider: TypeProviderImpl(
+      legacy: TypeProviderImpl(
         coreLibrary: dartCore,
         asyncLibrary: dartAsync,
+        isNonNullableByDefault: false,
+      ),
+      nonNullableByDefault: TypeProviderImpl(
+        coreLibrary: dartCore,
+        asyncLibrary: dartAsync,
+        isNonNullableByDefault: true,
       ),
     );
 
@@ -208,12 +214,12 @@ class LinkedElementFactory {
     }
 
     if (reference.isLibrary) {
-      var uri = uriCache.parse(reference.name);
+      final uri = uriCache.parse(reference.name);
       return createLibraryElementForReading(uri);
     }
 
-    var parentRef = reference.parentNotContainer;
-    var parentElement = elementOfReference(parentRef);
+    final parentRef = reference.parentNotContainer;
+    final parentElement = elementOfReference(parentRef);
 
     // Only classes delay creating children.
     if (parentElement is ClassElementImpl) {
@@ -260,10 +266,10 @@ class LinkedElementFactory {
   /// any session level caches.
   void removeLibraries(Set<Uri> uriSet) {
     addToLogRing('[removeLibraries][uriSet: $uriSet][${StackTrace.current}]');
-    for (var uri in uriSet) {
+    for (final uri in uriSet) {
       _libraryReaders.remove(uri);
       macroSupport?.removeLibrary(uri);
-      var libraryReference = rootReference.removeChild('$uri');
+      final libraryReference = rootReference.removeChild('$uri');
       _disposeLibrary(libraryReference?.element);
     }
 
@@ -307,8 +313,13 @@ class LinkedElementFactory {
       return;
     }
 
-    libraryElement.typeProvider = analysisContext.typeProvider;
-    libraryElement.typeSystem = analysisContext.typeSystem;
+    var isNonNullable = libraryElement.isNonNullableByDefault;
+    libraryElement.typeProvider = isNonNullable
+        ? analysisContext.typeProviderNonNullableByDefault
+        : analysisContext.typeProviderLegacy;
+    libraryElement.typeSystem = isNonNullable
+        ? analysisContext.typeSystemNonNullableByDefault
+        : analysisContext.typeSystemLegacy;
     libraryElement.hasTypeProviderSystemSet = true;
 
     libraryElement.createLoadLibraryFunction();
@@ -321,8 +332,8 @@ class LinkedElementFactory {
   }
 
   void _setMacroExecutorForLibrary(LibraryElementImpl element) {
-    var uri = element.source.uri;
-    var macroExecutor = macroSupport?.forLibrary(uri);
+    final uri = element.source.uri;
+    final macroExecutor = macroSupport?.forLibrary(uri);
     element.bundleMacroExecutor = macroExecutor;
   }
 }

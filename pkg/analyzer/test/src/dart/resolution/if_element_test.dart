@@ -23,14 +23,14 @@ void f(Object x) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case
@@ -57,14 +57,14 @@ final x = 0;
 final y = [ if (x case var a) a ];
 ''');
 
-    var node = findNode.singleIfElement;
+    final node = findNode.singleIfElement;
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@getter::x
+    staticElement: self::@getter::x
     staticType: int
   caseClause: CaseClause
     caseKeyword: case
@@ -104,17 +104,17 @@ void f(Object x) {
       error(CompileTimeErrorCode.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION, 62,
           1),
       error(CompileTimeErrorCode.REFERENCED_BEFORE_DECLARATION, 62, 1,
-          contextMessages: [message(testFile, 56, 1)]),
+          contextMessages: [message('/home/test/lib/test.dart', 56, 1)]),
     ]);
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case
@@ -125,7 +125,7 @@ IfElement
           DeclaredVariablePattern
             type: NamedType
               name: int
-              element: dart:core::<fragment>::@class::int
+              element: dart:core::@class::int
               type: int
             name: a
             declaredElement: a@56
@@ -137,7 +137,7 @@ IfElement
               token: a
               staticElement: a@56
               staticType: int
-            element: dart:core::<fragment>::@class::Object::@method::==
+            element: dart:core::@class::Object::@method::==
             matchedValueType: Object?
         rightBracket: ]
         matchedValueType: Object
@@ -152,9 +152,9 @@ IfElement
           operator: >
           rightOperand: IntegerLiteral
             literal: 0
-            parameter: dart:core::<fragment>::@class::num::@method::>::@parameter::other
+            parameter: dart:core::@class::num::@method::>::@parameter::other
             staticType: int
-          staticElement: dart:core::<fragment>::@class::num::@method::>
+          staticElement: dart:core::@class::num::@method::>
           staticInvokeType: bool Function(num)
           staticType: bool
   rightParenthesis: )
@@ -165,7 +165,7 @@ IfElement
   elseKeyword: else
   elseElement: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -184,14 +184,14 @@ void f(Object x) {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 79, 1),
     ]);
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case
@@ -199,7 +199,7 @@ IfElement
       pattern: DeclaredVariablePattern
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: a
         declaredElement: a@42
@@ -215,9 +215,9 @@ IfElement
           operator: >
           rightOperand: IntegerLiteral
             literal: 0
-            parameter: dart:core::<fragment>::@class::num::@method::>::@parameter::other
+            parameter: dart:core::@class::num::@method::>::@parameter::other
             staticType: int
-          staticElement: dart:core::<fragment>::@class::num::@method::>
+          staticElement: dart:core::@class::num::@method::>
           staticInvokeType: bool Function(num)
           staticType: bool
   rightParenthesis: )
@@ -245,7 +245,7 @@ class A {
       error(CompileTimeErrorCode.NON_BOOL_CONDITION, 32, 5),
     ]);
 
-    var node = findNode.singleIfElement;
+    final node = findNode.singleIfElement;
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
@@ -275,14 +275,14 @@ class A {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case
@@ -293,9 +293,9 @@ IfElement
           constructorName: ConstructorName
             type: NamedType
               name: A
-              element: <testLibraryFragment>::@class::A
+              element: self::@class::A
               type: A
-            staticElement: <testLibraryFragment>::@class::A::@constructor::new
+            staticElement: self::@class::A::@constructor::new
           argumentList: ArgumentList
             leftParenthesis: (
             rightParenthesis: )
@@ -315,7 +315,7 @@ void f(bool Function() a) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
@@ -323,7 +323,7 @@ IfElement
   expression: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: bool Function()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -345,7 +345,7 @@ void f(int Function() a) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
@@ -353,7 +353,7 @@ IfElement
   expression: FunctionExpressionInvocation
     function: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
+      staticElement: self::@function::f::@parameter::a
       staticType: int Function()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -383,14 +383,14 @@ void f(Object x, bool Function() a) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case
@@ -405,7 +405,7 @@ IfElement
         expression: FunctionExpressionInvocation
           function: SimpleIdentifier
             token: a
-            staticElement: <testLibraryFragment>::@function::f::@parameter::a
+            staticElement: self::@function::f::@parameter::a
             staticType: bool Function()
           argumentList: ArgumentList
             leftParenthesis: (
@@ -427,14 +427,14 @@ void f(Object x) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    final node = findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: Object
   caseClause: CaseClause
     caseKeyword: case

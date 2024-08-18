@@ -4,8 +4,8 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
-import 'package:analyzer/src/lint/lint_rule_timers.dart';
 import 'package:analyzer/src/lint/linter.dart';
+import 'package:analyzer/src/services/lint.dart';
 
 /// The type of the function that handles exceptions in lints.
 ///
@@ -22,10 +22,6 @@ class LinterVisitor implements AstVisitor<void> {
   LinterVisitor(this.registry, [LintRuleExceptionHandler? exceptionHandler])
       : exceptionHandler = exceptionHandler ??
             LinterExceptionHandler(propagateExceptions: true).logException;
-
-  void afterLibrary() {
-    _runAfterLibrarySubscriptions(registry._afterLibrary);
-  }
 
   @override
   void visitAdjacentStrings(AdjacentStrings node) {
@@ -78,18 +74,6 @@ class LinterVisitor implements AstVisitor<void> {
   @override
   void visitAugmentationImportDirective(AugmentationImportDirective node) {
     _runSubscriptions(node, registry._forAugmentationImportDirective);
-    node.visitChildren(this);
-  }
-
-  @override
-  void visitAugmentedExpression(AugmentedExpression node) {
-    _runSubscriptions(node, registry._forAugmentedExpression);
-    node.visitChildren(this);
-  }
-
-  @override
-  void visitAugmentedInvocation(AugmentedInvocation node) {
-    _runSubscriptions(node, registry._forAugmentedInvocation);
     node.visitChildren(this);
   }
 
@@ -336,12 +320,6 @@ class LinterVisitor implements AstVisitor<void> {
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
     _runSubscriptions(node, registry._forExtensionDeclaration);
-    node.visitChildren(this);
-  }
-
-  @override
-  void visitExtensionOnClause(ExtensionOnClause node) {
-    _runSubscriptions(node, registry._forExtensionOnClause);
     node.visitChildren(this);
   }
 
@@ -652,12 +630,6 @@ class LinterVisitor implements AstVisitor<void> {
   }
 
   @override
-  void visitMixinOnClause(MixinOnClause node) {
-    _runSubscriptions(node, registry._forMixinOnClause);
-    node.visitChildren(this);
-  }
-
-  @override
   void visitNamedExpression(NamedExpression node) {
     _runSubscriptions(node, registry._forNamedExpression);
     node.visitChildren(this);
@@ -688,12 +660,6 @@ class LinterVisitor implements AstVisitor<void> {
   }
 
   @override
-  void visitNullAwareElement(NullAwareElement node) {
-    _runSubscriptions(node, registry._forNullAwareElement);
-    node.visitChildren(this);
-  }
-
-  @override
   void visitNullCheckPattern(NullCheckPattern node) {
     _runSubscriptions(node, registry._forNullCheckPattern);
     node.visitChildren(this);
@@ -712,9 +678,8 @@ class LinterVisitor implements AstVisitor<void> {
   }
 
   @override
-  // ignore: deprecated_member_use_from_same_package
   void visitOnClause(OnClause node) {
-    _runSubscriptions(node, registry._forMixinOnClause);
+    _runSubscriptions(node, registry._forOnClause);
     node.visitChildren(this);
   }
 
@@ -1083,19 +1048,10 @@ class LinterVisitor implements AstVisitor<void> {
     node.visitChildren(this);
   }
 
-  void _runAfterLibrarySubscriptions(
-      List<_AfterLibrarySubscription> subscriptions) {
-    for (var subscription in subscriptions) {
-      var timer = subscription.timer;
-      timer?.start();
-      subscription.callback();
-      timer?.stop();
-    }
-  }
-
   void _runSubscriptions<T extends AstNode>(
       T node, List<_Subscription<T>> subscriptions) {
-    for (var subscription in subscriptions) {
+    for (int i = 0; i < subscriptions.length; i++) {
+      var subscription = subscriptions[i];
       var timer = subscription.timer;
       timer?.start();
       try {
@@ -1114,7 +1070,6 @@ class LinterVisitor implements AstVisitor<void> {
 /// The container to register visitors for separate AST node types.
 class NodeLintRegistry {
   final bool enableTiming;
-  final List<_AfterLibrarySubscription> _afterLibrary = [];
   final List<_Subscription<AdjacentStrings>> _forAdjacentStrings = [];
   final List<_Subscription<Annotation>> _forAnnotation = [];
   final List<_Subscription<ArgumentList>> _forArgumentList = [];
@@ -1126,8 +1081,6 @@ class NodeLintRegistry {
   final List<_Subscription<AssignmentExpression>> _forAssignmentExpression = [];
   final List<_Subscription<AugmentationImportDirective>>
       _forAugmentationImportDirective = [];
-  final List<_Subscription<AugmentedExpression>> _forAugmentedExpression = [];
-  final List<_Subscription<AugmentedInvocation>> _forAugmentedInvocation = [];
   final List<_Subscription<AwaitExpression>> _forAwaitExpression = [];
   final List<_Subscription<BinaryExpression>> _forBinaryExpression = [];
   final List<_Subscription<Block>> _forBlock = [];
@@ -1179,7 +1132,6 @@ class NodeLintRegistry {
   final List<_Subscription<ExtensionDeclaration>> _forExtensionDeclaration = [];
   final List<_Subscription<ExtensionTypeDeclaration>>
       _forExtensionTypeDeclaration = [];
-  final List<_Subscription<ExtensionOnClause>> _forExtensionOnClause = [];
   final List<_Subscription<ExtensionOverride>> _forExtensionOverride = [];
   final List<_Subscription<ObjectPattern>> _forObjectPattern = [];
   final List<_Subscription<FieldDeclaration>> _forFieldDeclaration = [];
@@ -1244,15 +1196,14 @@ class NodeLintRegistry {
   final List<_Subscription<MethodDeclaration>> _forMethodDeclaration = [];
   final List<_Subscription<MethodInvocation>> _forMethodInvocation = [];
   final List<_Subscription<MixinDeclaration>> _forMixinDeclaration = [];
-  final List<_Subscription<MixinOnClause>> _forMixinOnClause = [];
   final List<_Subscription<NamedExpression>> _forNamedExpression = [];
   final List<_Subscription<NamedType>> _forNamedType = [];
   final List<_Subscription<NativeClause>> _forNativeClause = [];
   final List<_Subscription<NativeFunctionBody>> _forNativeFunctionBody = [];
   final List<_Subscription<NullAssertPattern>> _forNullAssertPattern = [];
-  final List<_Subscription<NullAwareElement>> _forNullAwareElement = [];
   final List<_Subscription<NullCheckPattern>> _forNullCheckPattern = [];
   final List<_Subscription<NullLiteral>> _forNullLiteral = [];
+  final List<_Subscription<OnClause>> _forOnClause = [];
   final List<_Subscription<ParenthesizedExpression>>
       _forParenthesizedExpression = [];
   final List<_Subscription<ParenthesizedPattern>> _forParenthesizedPattern = [];
@@ -1367,16 +1318,6 @@ class NodeLintRegistry {
 
   void addAugmentationImportDirective(LintRule linter, AstVisitor visitor) {
     _forAugmentationImportDirective
-        .add(_Subscription(linter, visitor, _getTimer(linter)));
-  }
-
-  void addAugmentedExpression(LintRule linter, AstVisitor visitor) {
-    _forAugmentedExpression
-        .add(_Subscription(linter, visitor, _getTimer(linter)));
-  }
-
-  void addAugmentedInvocation(LintRule linter, AstVisitor visitor) {
-    _forAugmentedInvocation
         .add(_Subscription(linter, visitor, _getTimer(linter)));
   }
 
@@ -1559,11 +1500,6 @@ class NodeLintRegistry {
 
   void addExtensionDeclaration(LintRule linter, AstVisitor visitor) {
     _forExtensionDeclaration
-        .add(_Subscription(linter, visitor, _getTimer(linter)));
-  }
-
-  void addExtensionOnClause(LintRule linter, AstVisitor visitor) {
-    _forExtensionOnClause
         .add(_Subscription(linter, visitor, _getTimer(linter)));
   }
 
@@ -1798,10 +1734,6 @@ class NodeLintRegistry {
     _forMixinDeclaration.add(_Subscription(linter, visitor, _getTimer(linter)));
   }
 
-  void addMixinOnClause(LintRule linter, AstVisitor visitor) {
-    _forMixinOnClause.add(_Subscription(linter, visitor, _getTimer(linter)));
-  }
-
   void addNamedExpression(LintRule linter, AstVisitor visitor) {
     _forNamedExpression.add(_Subscription(linter, visitor, _getTimer(linter)));
   }
@@ -1834,6 +1766,10 @@ class NodeLintRegistry {
 
   void addObjectPattern(LintRule linter, AstVisitor visitor) {
     _forObjectPattern.add(_Subscription(linter, visitor, _getTimer(linter)));
+  }
+
+  void addOnClause(LintRule linter, AstVisitor visitor) {
+    _forOnClause.add(_Subscription(linter, visitor, _getTimer(linter)));
   }
 
   void addParenthesizedExpression(LintRule linter, AstVisitor visitor) {
@@ -2088,27 +2024,14 @@ class NodeLintRegistry {
     _forYieldStatement.add(_Subscription(linter, visitor, _getTimer(linter)));
   }
 
-  void afterLibrary(LintRule linter, void Function() callback) {
-    _afterLibrary
-        .add(_AfterLibrarySubscription(linter, callback, _getTimer(linter)));
-  }
-
   /// Get the timer associated with the given [linter].
   Stopwatch? _getTimer(LintRule linter) {
     if (enableTiming) {
-      return lintRuleTimers.getTimer(linter);
+      return lintRegistry.getTimer(linter);
     } else {
       return null;
     }
   }
-}
-
-class _AfterLibrarySubscription {
-  final LintRule linter;
-  final void Function() callback;
-  final Stopwatch? timer;
-
-  _AfterLibrarySubscription(this.linter, this.callback, this.timer);
 }
 
 /// A single subscription for a node type, by the specified [linter].

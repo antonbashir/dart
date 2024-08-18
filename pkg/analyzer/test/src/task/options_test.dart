@@ -5,9 +5,9 @@
 import 'dart:mirrors';
 
 import 'package:analyzer/error/error.dart';
+import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/analysis_options/analysis_options_provider.dart';
 import 'package:analyzer/src/error/codes.dart';
-import 'package:analyzer/src/file_system/file_system.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/lint/registry.dart';
@@ -150,7 +150,7 @@ analyzer:
   errors:
     unused_local_variable: ignore
     invalid_assignment: warning
-    assignment_of_do_not_store: error
+    missing_return: error
     dead_code: info
 ''', []);
   }
@@ -280,7 +280,7 @@ analyzer:
 analyzer:
   optional-checks:
     chromeos-manifest
-''', [AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITH_LEGAL_VALUES]);
+''', [AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITH_LEGAL_VALUE]);
   }
 
   test_chromeos_manifest_checks_notAMap() {
@@ -570,16 +570,12 @@ analyzer:
 }
 
 class TestRule extends LintRule {
-  static const LintCode code = LintCode(
-      'fantastic_test_rule', 'Fantastic test rule.',
-      correctionMessage: 'Try fantastic test rule.');
-
   TestRule()
       : super(
           name: 'fantastic_test_rule',
           description: '',
           details: '',
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
 
   TestRule.withName(String name)
@@ -587,9 +583,6 @@ class TestRule extends LintRule {
           name: name,
           description: '',
           details: '',
-          categories: {LintRuleCategory.style},
+          group: Group.style,
         );
-
-  @override
-  LintCode get lintCode => code;
 }

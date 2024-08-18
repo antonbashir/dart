@@ -35,9 +35,9 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
     workspaceFolder2Uri = pathContext.toUri(workspaceFolder2Path);
     workspaceFolder3Uri = pathContext.toUri(workspaceFolder3Path);
 
-    newPackageConfigJsonFile(workspaceFolder1Path, '');
-    newPackageConfigJsonFile(workspaceFolder2Path, '');
-    newPackageConfigJsonFile(workspaceFolder3Path, '');
+    newPubspecYamlFile(workspaceFolder1Path, '');
+    newPubspecYamlFile(workspaceFolder2Path, '');
+    newPubspecYamlFile(workspaceFolder3Path, '');
 
     nonFileWorkspaceFolderUri = Uri.parse('dart-foo:/foo.dart');
   }
@@ -109,10 +109,10 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
 
   Future<void>
       test_changeWorkspaceFolders_addExplicitParentOfImplicit_closeFile() async {
-    var nestedFolderPath =
+    final nestedFolderPath =
         join(workspaceFolder1Path, 'nested', 'deeply', 'in', 'folders');
-    var nestedFilePath = join(nestedFolderPath, 'test.dart');
-    var nestedFileUri = pathContext.toUri(nestedFilePath);
+    final nestedFilePath = join(nestedFolderPath, 'test.dart');
+    final nestedFileUri = pathContext.toUri(nestedFilePath);
     newFile(nestedFilePath, '');
 
     await initialize(allowEmptyRootUri: true);
@@ -146,10 +146,10 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
 
   Future<void>
       test_changeWorkspaceFolders_addExplicitParentOfImplicit_closeFolder() async {
-    var nestedFolderPath =
+    final nestedFolderPath =
         join(workspaceFolder1Path, 'nested', 'deeply', 'in', 'folders');
-    var nestedFilePath = join(nestedFolderPath, 'test.dart');
-    var nestedFileUri = pathContext.toUri(nestedFilePath);
+    final nestedFilePath = join(nestedFolderPath, 'test.dart');
+    final nestedFileUri = pathContext.toUri(nestedFilePath);
     newFile(nestedFilePath, '');
 
     await initialize(allowEmptyRootUri: true);
@@ -184,10 +184,10 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
 
   Future<void>
       test_changeWorkspaceFolders_addImplicitChildOfExplicitParent_closeFile() async {
-    var nestedFolderPath =
+    final nestedFolderPath =
         join(workspaceFolder1Path, 'nested', 'deeply', 'in', 'folders');
-    var nestedFilePath = join(nestedFolderPath, 'test.dart');
-    var nestedFileUri = pathContext.toUri(nestedFilePath);
+    final nestedFilePath = join(nestedFolderPath, 'test.dart');
+    final nestedFileUri = pathContext.toUri(nestedFilePath);
     newFile(nestedFilePath, '');
 
     await initialize(workspaceFolders: [workspaceFolder1Uri]);
@@ -219,10 +219,10 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
 
   Future<void>
       test_changeWorkspaceFolders_addImplicitChildOfExplicitParent_closeFolder() async {
-    var nestedFolderPath =
+    final nestedFolderPath =
         join(workspaceFolder1Path, 'nested', 'deeply', 'in', 'folders');
-    var nestedFilePath = join(nestedFolderPath, 'test.dart');
-    var nestedFileUri = pathContext.toUri(nestedFilePath);
+    final nestedFilePath = join(nestedFolderPath, 'test.dart');
+    final nestedFileUri = pathContext.toUri(nestedFilePath);
     newFile(nestedFilePath, '');
 
     await initialize(workspaceFolders: [workspaceFolder1Uri]);
@@ -255,18 +255,17 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_changeWorkspaceFolders_implicitFile_noProject() async {
-    var nestedFolderPath =
+    final nestedFolderPath =
         join(workspaceFolder1Path, 'nested', 'deeply', 'in', 'folders');
-    var nestedFilePath = join(nestedFolderPath, 'test.dart');
-    var nestedFileUri = pathContext.toUri(nestedFilePath);
+    final nestedFilePath = join(nestedFolderPath, 'test.dart');
+    final nestedFileUri = pathContext.toUri(nestedFilePath);
     newFile(nestedFilePath, '');
 
-    // Ensure no package config in tree.
+    // Ensure no pubspecs in tree.
     deleteFile(
       join(
         workspaceFolder1Path,
-        file_paths.dotDartTool,
-        file_paths.packageConfigJson,
+        file_paths.pubspecYaml,
       ),
     );
 
@@ -336,10 +335,10 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
     // When a file is opened that is outside of the analysis roots, the first
     // analysis driver will be used (see [AbstractAnalysisServer.getAnalysisDriver])
     // and no new root will be created.
-    var workspace1FilePath = join(workspaceFolder1Path, 'test.dart');
+    final workspace1FilePath = join(workspaceFolder1Path, 'test.dart');
     newFile(workspace1FilePath, '');
-    var workspace2FilePath = join(workspaceFolder2Path, 'test.dart');
-    var workspace2FileUri = pathContext.toUri(workspace2FilePath);
+    final workspace2FilePath = join(workspaceFolder2Path, 'test.dart');
+    final workspace2FileUri = pathContext.toUri(workspace2FilePath);
     newFile(workspace2FilePath, '');
 
     await initialize(workspaceFolders: [workspaceFolder1Uri]);
@@ -385,21 +384,19 @@ class ChangeWorkspaceFoldersTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_changeWorkspaceFolders_removeFlushesDiagnostics() async {
-    failTestOnErrorDiagnostic = false;
-
     // Add our standard test project as well as a dummy project.
     await initialize(workspaceFolders: [projectFolderUri, workspaceFolder1Uri]);
 
     // Generate an error in the test project.
-    var firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final firstDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     newFile(mainFilePath, 'String a = 1;');
-    var initialDiagnostics = await firstDiagnosticsUpdate;
+    final initialDiagnostics = await firstDiagnosticsUpdate;
     expect(initialDiagnostics, hasLength(1));
 
     // Ensure the error is removed if we removed the workspace folder.
-    var secondDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    final secondDiagnosticsUpdate = waitForDiagnostics(mainFileUri);
     await changeWorkspaceFolders(remove: [projectFolderUri]);
-    var updatedDiagnostics = await secondDiagnosticsUpdate;
+    final updatedDiagnostics = await secondDiagnosticsUpdate;
     expect(updatedDiagnostics, hasLength(0));
   }
 }

@@ -34,7 +34,6 @@ import 'package:macro/macro.dart';
 @FunctionDeclarationsMacro1()
 /*member: topLevelFunction1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction1GeneratedMethod_() {}
 
@@ -44,7 +43,6 @@ void topLevelFunction1() {}
 @FunctionDeclarationsMacro1()
 /*member: topLevelFunction2:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelFunction2GeneratedMethod_e() {}
 
@@ -54,7 +52,6 @@ external void topLevelFunction2();
 @VariableDeclarationsMacro1()
 /*member: topLevelField1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelField1GeneratedMethod_() {}
 
@@ -64,7 +61,6 @@ int? topLevelField1;
 @VariableDeclarationsMacro1()
 /*member: topLevelField2:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelField2GeneratedMethod_e() {}
 
@@ -74,7 +70,6 @@ external int? topLevelField2;
 @VariableDeclarationsMacro1()
 /*member: topLevelField3:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelField3GeneratedMethod_f() {}
 
@@ -84,7 +79,6 @@ final int? topLevelField3 = null;
 @VariableDeclarationsMacro1()
 /*member: topLevelField4:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelField4GeneratedMethod_l() {}
 
@@ -94,7 +88,6 @@ late int? topLevelField4;
 @FunctionDeclarationsMacro1()
 /*member: topLevelGetter1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelGetter1GeneratedMethod_g() {}
 
@@ -104,7 +97,6 @@ int? get topLevelGetter1 => null;
 @FunctionDeclarationsMacro1()
 /*member: topLevelSetter1=:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void topLevelSetter1GeneratedMethod_s() {}
 
@@ -115,7 +107,6 @@ void set topLevelSetter1(int? value) {}
 @ClassDeclarationsMacro2()
 /*class: Class1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1Introspection() {
   print("constructors='','redirect','fact'");
@@ -124,7 +115,6 @@ void Class1Introspection() {
 }
 
 
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1GeneratedMethod_() {}
 
@@ -133,7 +123,6 @@ class Class1 {
   @ConstructorDeclarationsMacro1()
   /*member: Class1.:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 augment class Class1 {
 void Class1_GeneratedMethod_() {}
@@ -145,7 +134,6 @@ void Class1_GeneratedMethod_() {}
   @ConstructorDeclarationsMacro1()
   /*member: Class1.redirect:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 augment class Class1 {
 void Class1_redirectGeneratedMethod_f() {}
@@ -157,7 +145,6 @@ void Class1_redirectGeneratedMethod_f() {}
   @ConstructorDeclarationsMacro1()
   /*member: Class1.fact:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 augment class Class1 {
 void Class1_factGeneratedMethod_f() {}
@@ -169,7 +156,6 @@ void Class1_factGeneratedMethod_f() {}
   @MethodDeclarationsMacro1()
   /*member: Class1.instanceMethod1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceMethod1GeneratedMethod_() {}
 
@@ -179,7 +165,6 @@ void Class1_instanceMethod1GeneratedMethod_() {}
   @MethodDeclarationsMacro1()
   /*member: Class1.instanceGetter1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceGetter1GeneratedMethod_g() {}
 
@@ -189,7 +174,6 @@ void Class1_instanceGetter1GeneratedMethod_g() {}
   @MethodDeclarationsMacro1()
   /*member: Class1.instanceSetter1=:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceSetter1GeneratedMethod_s() {}
 
@@ -199,7 +183,6 @@ void Class1_instanceSetter1GeneratedMethod_s() {}
   @MethodDeclarationsMacro1()
   /*member: Class1.[]:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_operatorGeneratedMethod_o() {}
 
@@ -209,7 +192,6 @@ void Class1_operatorGeneratedMethod_o() {}
   @FieldDeclarationsMacro1()
   /*member: Class1.instanceField1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceField1GeneratedMethod_() {}
 
@@ -219,7 +201,6 @@ void Class1_instanceField1GeneratedMethod_() {}
   @FieldDeclarationsMacro1()
   /*member: Class1.instanceField2:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceField2GeneratedMethod_f() {}
 
@@ -229,7 +210,6 @@ void Class1_instanceField2GeneratedMethod_f() {}
   @FieldDeclarationsMacro1()
   /*member: Class1.instanceField3:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class1_instanceField3GeneratedMethod_fl() {}
 
@@ -241,7 +221,6 @@ void Class1_instanceField3GeneratedMethod_fl() {}
 @ClassDeclarationsMacro2()
 /*class: Class2:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class2Introspection() {
   print("constructors=");
@@ -250,7 +229,6 @@ void Class2Introspection() {
 }
 
 
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class2GeneratedMethod_a() {}
 
@@ -259,7 +237,6 @@ abstract class Class2 {
   @MethodDeclarationsMacro1()
   /*member: Class2.instanceMethod1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class2_instanceMethod1GeneratedMethod_() {}
 
@@ -269,7 +246,6 @@ void Class2_instanceMethod1GeneratedMethod_() {}
   @FieldDeclarationsMacro1()
   /*member: Class2.instanceField1:
 declarations:
-augment library 'org-dartlang-test:///a/b/c/main.dart';
 
 void Class2_instanceField1GeneratedMethod_a() {}
 

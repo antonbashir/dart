@@ -1,5 +1,5 @@
+// @dart = 2.9
 library test;
 
-f(List<int> o) {}
-
+f() {}
 main() {}

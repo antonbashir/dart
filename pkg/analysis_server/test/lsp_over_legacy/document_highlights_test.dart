@@ -18,16 +18,16 @@ void main() {
 @reflectiveTest
 class DocumentHighlightsTest extends LspOverLegacyTest {
   Future<void> test_highlights() async {
-    var content = '''
+    final content = '''
 var ^a = '';
 void f() {
   a = '';
   print(a);
 }
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var results =
+    final results =
         await getDocumentHighlights(testFileUri, code.position.position);
     expect(results, hasLength(3));
   }

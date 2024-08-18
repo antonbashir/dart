@@ -96,7 +96,7 @@ void f(List<int> x, num a) {
   [a] = x;
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ListPattern
@@ -104,7 +104,7 @@ PatternAssignment
     elements
       AssignedVariablePattern
         name: a
-        element: <testLibraryFragment>::@function::f::@parameter::a
+        element: self::@function::f::@parameter::a
         matchedValueType: int
     rightBracket: ]
     matchedValueType: List<int>
@@ -112,7 +112,7 @@ PatternAssignment
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: List<int>
   patternTypeSchema: List<num>
   staticType: List<int>
@@ -129,13 +129,13 @@ void f(int foo) {
   A(:foo) = A();
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ObjectPattern
     type: NamedType
       name: A
-      element: <testLibraryFragment>::@class::A
+      element: self::@class::A
       type: A
     leftParenthesis: (
     fields
@@ -144,9 +144,9 @@ PatternAssignment
           colon: :
         pattern: AssignedVariablePattern
           name: foo
-          element: <testLibraryFragment>::@function::f::@parameter::foo
+          element: self::@function::f::@parameter::foo
           matchedValueType: int
-        element: <testLibraryFragment>::@class::A::@getter::foo
+        element: self::@class::A::@getter::foo
     rightParenthesis: )
     matchedValueType: A
   equals: =
@@ -154,9 +154,9 @@ PatternAssignment
     constructorName: ConstructorName
       type: NamedType
         name: A
-        element: <testLibraryFragment>::@class::A
+        element: self::@class::A
         type: A
-      staticElement: <testLibraryFragment>::@class::A::@constructor::new
+      staticElement: self::@class::A::@constructor::new
     argumentList: ArgumentList
       leftParenthesis: (
       rightParenthesis: )
@@ -172,21 +172,21 @@ void f(int x, num a) {
   (a) = x;
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ParenthesizedPattern
     leftParenthesis: (
     pattern: AssignedVariablePattern
       name: a
-      element: <testLibraryFragment>::@function::f::@parameter::a
+      element: self::@function::f::@parameter::a
       matchedValueType: int
     rightParenthesis: )
     matchedValueType: int
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: int
   patternTypeSchema: num
   staticType: int
@@ -201,14 +201,14 @@ void f(int a) {
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ParenthesizedPattern
     leftParenthesis: (
     pattern: AssignedVariablePattern
       name: a
-      element: <testLibraryFragment>::@function::f::@parameter::a
+      element: self::@function::f::@parameter::a
       matchedValueType: int
     rightParenthesis: )
     matchedValueType: int
@@ -216,7 +216,7 @@ PatternAssignment
   expression: MethodInvocation
     methodName: SimpleIdentifier
       token: g
-      staticElement: <testLibraryFragment>::@function::g
+      staticElement: self::@function::g
       staticType: T Function<T>()
     argumentList: ArgumentList
       leftParenthesis: (
@@ -236,7 +236,7 @@ void f(({int foo}) x, num a) {
   (foo: a,) = x;
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: RecordPattern
@@ -248,7 +248,7 @@ PatternAssignment
           colon: :
         pattern: AssignedVariablePattern
           name: a
-          element: <testLibraryFragment>::@function::f::@parameter::a
+          element: self::@function::f::@parameter::a
           matchedValueType: int
         element: <null>
     rightParenthesis: )
@@ -256,7 +256,7 @@ PatternAssignment
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: ({int foo})
   patternTypeSchema: ({num foo})
   staticType: ({int foo})
@@ -269,7 +269,7 @@ void f(int a) {
   (:a) = (a: 0);
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: RecordPattern
@@ -280,7 +280,7 @@ PatternAssignment
           colon: :
         pattern: AssignedVariablePattern
           name: a
-          element: <testLibraryFragment>::@function::f::@parameter::a
+          element: self::@function::f::@parameter::a
           matchedValueType: int
         element: <null>
     rightParenthesis: )
@@ -312,7 +312,7 @@ void f((int,) x, num a) {
   (a,) = x;
 }
 ''');
-    var node = findNode.singlePatternAssignment;
+    final node = findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: RecordPattern
@@ -321,7 +321,7 @@ PatternAssignment
       PatternField
         pattern: AssignedVariablePattern
           name: a
-          element: <testLibraryFragment>::@function::f::@parameter::a
+          element: self::@function::f::@parameter::a
           matchedValueType: int
         element: <null>
     rightParenthesis: )
@@ -329,7 +329,7 @@ PatternAssignment
   equals: =
   expression: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@function::f::@parameter::x
+    staticElement: self::@function::f::@parameter::x
     staticType: (int,)
   patternTypeSchema: (num,)
   staticType: (int,)
@@ -349,7 +349,7 @@ void f(a, y) {
       // The reference doesn't resolve so the errors include
       // UNUSED_LOCAL_VARIABLE and UNDEFINED_IDENTIFIER.
       error(ParserErrorCode.PATTERN_ASSIGNMENT_DECLARES_VARIABLE, 25, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 25, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 25, 1),
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 35, 1),
     ]);
   }
@@ -364,7 +364,7 @@ void f(a, y) {
 }
 ''', [
       error(ParserErrorCode.PATTERN_ASSIGNMENT_DECLARES_VARIABLE, 25, 1),
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 25, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 25, 1),
     ]);
   }
 
@@ -390,11 +390,11 @@ void f(num a) {
   a;
 }
 ''');
-    var node = findNode.simple('a;');
+    final node = findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
-  staticElement: <testLibraryFragment>::@function::f::@parameter::a
+  staticElement: self::@function::f::@parameter::a
   staticType: int
 ''');
   }

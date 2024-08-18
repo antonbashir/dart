@@ -19,8 +19,7 @@ class AnalysisGetImportedElementsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = AnalysisGetImportedElementsParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisGetImportedElementsParams.fromRequest(request);
     var file = params.file;
 
     if (server.sendResponseErrorIfInvalidFilePath(request, file)) {

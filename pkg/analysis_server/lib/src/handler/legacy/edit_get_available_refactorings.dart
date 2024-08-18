@@ -9,7 +9,6 @@ import 'package:analysis_server/src/handler/legacy/legacy_handler.dart';
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
-import 'package:analyzer/src/util/file_paths.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
 
 /// The handler for the `edit.getAvailableRefactorings` request.
@@ -21,8 +20,7 @@ class EditGetAvailableRefactoringsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = EditGetAvailableRefactoringsParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = EditGetAvailableRefactoringsParams.fromRequest(request);
     var file = params.file;
     var offset = params.offset;
     var length = params.length;
@@ -30,15 +28,11 @@ class EditGetAvailableRefactoringsHandler extends LegacyHandler {
     if (server.sendResponseErrorIfInvalidFilePath(request, file)) {
       return;
     }
-    if (isMacroGenerated(file)) {
-      sendResult(EditGetAvailableRefactoringsResult([]));
-      return;
-    }
 
     // add refactoring kinds
     var kinds = <RefactoringKind>[];
     // Check nodes.
-    var searchEngine = server.searchEngine;
+    final searchEngine = server.searchEngine;
     {
       var resolvedUnit = await server.getResolvedUnit(file);
       if (resolvedUnit != null) {
@@ -65,7 +59,7 @@ class EditGetAvailableRefactoringsHandler extends LegacyHandler {
       var node = NodeLocator(offset).searchWithin(resolvedUnit.unit);
       var element = server.getElementOfNode(node);
       if (element != null) {
-        var refactoringWorkspace = server.refactoringWorkspace;
+        final refactoringWorkspace = server.refactoringWorkspace;
         // try CONVERT_METHOD_TO_GETTER
         if (element is ExecutableElement) {
           if (ConvertMethodToGetterRefactoring(

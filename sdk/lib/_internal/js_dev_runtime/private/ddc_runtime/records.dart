@@ -20,15 +20,16 @@ final class Shape {
   }
 }
 
-/// Used to store a [Shape] on an instance of a record object.
-final shapeProperty = JS('', 'Symbol("shape")');
-
-/// Used to store a [JSArray] on an instance of a record object containing all
-/// the elements in the record in order.
-final valuesProperty = JS('', 'Symbol("values")');
-
 /// Internal base class for all concrete records.
 final class RecordImpl implements Record {
+  final Shape shape;
+
+  /// Stores the elements of this record.
+  ///
+  /// Contains all positional elements followed by all named elements in the
+  /// order corresponding to names as they appear in [shape].
+  final List values;
+
   /// Cache for faster access after the first call of [hashCode].
   int? _hashCode;
 
@@ -37,17 +38,16 @@ final class RecordImpl implements Record {
   /// NOTE: Does not contain the cached result of the "safe" [_toString] call.
   String? _printed;
 
-  RecordImpl(Shape shape, JSArray values) {
+  RecordImpl(this.shape, this.values) {
+    var valueCount = JS<int>('!', '#.length', values);
     // Coerce all undefined values to null because dynamic gets of record
     // elements rely on the getter returning undefined to signal that the getter
     // does not exist.
-    for (int i = 0; i < values.length; i++) {
+    for (int i = 0; i < valueCount; i++) {
       if (JS<bool>('!', '#[#] === void 0', values, i)) {
         JS('', '#[#] = null', values, i);
       }
     }
-    JS('!', '#[#] = #', this, shapeProperty, shape);
-    JS('!', '#[#] = #', this, valuesProperty, values);
   }
 
   @override
@@ -55,16 +55,12 @@ final class RecordImpl implements Record {
     if (!(other is RecordImpl)) return false;
     // Shapes are canonicalized and stored in a map so there will only ever be
     // one instance of the same shape.
-    if (JS<bool>(
-        '!', '#[#] !== #[#]', this, shapeProperty, other, shapeProperty))
-      return false;
+    if (JS<bool>('!', '# !== #', shape, other.shape)) return false;
     // If the shapes are identical then the two records have the same number of
     // positional elements and the same named elements.
     // This implies: `values.length == other.values.length`.
-    var values = JS<JSArray>('!', '#[#]', this, valuesProperty);
-    var otherValues = JS<JSArray>('!', '#[#]', other, valuesProperty);
     for (var i = 0; i < values.length; i++) {
-      if (values[i] != otherValues[i]) {
+      if (values[i] != other.values[i]) {
         return false;
       }
     }
@@ -75,8 +71,6 @@ final class RecordImpl implements Record {
   int get hashCode {
     final cachedValue = _hashCode;
     if (cachedValue != null) return cachedValue;
-    var shape = JS<Shape>('!', '#[#]', this, shapeProperty);
-    var values = JS<JSArray>('!', '#[#]', this, valuesProperty);
     return _hashCode = Object.hashAll([shape, ...values]);
   }
 
@@ -91,8 +85,6 @@ final class RecordImpl implements Record {
     final cachedValue = _printed;
     if (!safe && cachedValue != null) return cachedValue;
     var buffer = StringBuffer();
-    var shape = JS<Shape>('!', '#[#]', this, shapeProperty);
-    var values = JS<JSArray>('!', '#[#]', this, valuesProperty);
     var posCount = shape.positionals;
     var count = values.length;
 
@@ -181,8 +173,8 @@ Object registerRecord(
   JS('!', '#.prototype = #.prototype', newRecord, recordClass);
   var recordPrototype = JS('', '#.prototype', recordClass);
 
-  _recordGet(@notNull int index) => JS(
-      '!', 'function recordGet() {return this[#][#];}', valuesProperty, index);
+  _recordGet(@notNull int index) =>
+      JS('!', 'function recordGet() {return this.values[#];}', index);
 
   // Add convenience getters for accessing the record's field values.
   var count = 0;
@@ -193,12 +185,7 @@ Object registerRecord(
     count++;
   }
   if (named != null) {
-    for (var name in named) {
-      if (name == 'constructor' || name == 'prototype') {
-        // This renaming is directly coupled to the renaming logic at compile
-        // time in js_names.dart `.memberNameForDartMember()`.
-        name = '_$name';
-      }
+    for (final name in named) {
       defineAccessor(recordPrototype, name,
           get: _recordGet(count), enumerable: true);
       count++;

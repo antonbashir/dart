@@ -5,7 +5,6 @@
 import "dart:_internal" show patch, checkNotNullable;
 
 @patch
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 @pragma("wasm:entry-point")
 class bool {

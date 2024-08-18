@@ -45,7 +45,7 @@ import 'package:meta/meta.dart';
 @internal
 class A {}
 ''');
-    var a = newFile('$fooPackageRootPath/lib/a.dart', '''
+    final a = newFile('$fooPackageRootPath/lib/a.dart', '''
 import 'src/a.dart';
 
 A a = A();
@@ -61,7 +61,7 @@ import 'package:meta/meta.dart';
 @internal
 extension type E(int i) {}
 ''');
-    var a = newFile('$fooPackageRootPath/lib/a.dart', '''
+    final a = newFile('$fooPackageRootPath/lib/a.dart', '''
 import 'src/a.dart';
 
 E e = E(1);

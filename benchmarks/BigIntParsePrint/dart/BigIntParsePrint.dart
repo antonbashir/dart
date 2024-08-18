@@ -14,10 +14,15 @@ import 'native_version_dummy.dart'
 
 // Benchmark BigInt and Int64 formatting and parsing.
 
-// Global sinks used to ensure that the results are not optimized.
+// A global sink that is used in the [check] method ensures that the results are
+// not optimized.
 dynamic sink1, sink2;
 
-final bool runtimeFalse = int.parse('1') == 0;
+void check(bool sink2isEven) {
+  if (sink1.codeUnits.last.isEven != sink2isEven) {
+    throw StateError('Inconsistent $sink1 vs $sink2');
+  }
+}
 
 // These benchmarks measure digit-throughput for parsing and formatting.
 //
@@ -73,10 +78,7 @@ class ParseBigIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -90,10 +92,7 @@ class ParseInt64Benchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -107,10 +106,7 @@ class ParseIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -124,10 +120,7 @@ class ParseJsBigIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(nativeBigInt.isEven(sink2));
   }
 }
 
@@ -155,10 +148,7 @@ class FormatBigIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -187,10 +177,7 @@ class FormatIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -218,10 +205,7 @@ class FormatInt64Benchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(sink2.isEven);
   }
 }
 
@@ -250,10 +234,7 @@ class FormatJsBigIntBenchmark extends Benchmark {
       sink1 = s;
       sink2 = b;
     }
-    if (runtimeFalse) {
-      print(sink1);
-      print(sink2);
-    }
+    check(nativeBigInt.isEven(sink2));
   }
 }
 

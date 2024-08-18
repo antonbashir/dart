@@ -78,6 +78,13 @@ void JitCallSpecializer::VisitInstanceCall(InstanceCallInstr* instr) {
     return;
   }
 
+  if ((op_kind == Token::kASSIGN_INDEX) && TryReplaceWithIndexedOp(instr)) {
+    return;
+  }
+  if ((op_kind == Token::kINDEX) && TryReplaceWithIndexedOp(instr)) {
+    return;
+  }
+
   if (op_kind == Token::kEQ && TryReplaceWithEqualityOp(instr, op_kind)) {
     return;
   }
@@ -114,8 +121,7 @@ void JitCallSpecializer::VisitInstanceCall(InstanceCallInstr* instr) {
       has_one_target = PolymorphicInstanceCallInstr::ComputeRuntimeType(
                            targets) != Type::null();
     } else {
-      has_one_target =
-          !target.is_polymorphic_target() && !target.IsDynamicallyOverridden();
+      has_one_target = !target.is_polymorphic_target();
     }
   }
 

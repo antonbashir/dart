@@ -3,8 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "package:async_helper/async_helper.dart" show asyncTest;
+
 import "package:expect/expect.dart" show Expect;
+
 import "package:kernel/ast.dart";
+
 import 'package:kernel/testing/type_parser_environment.dart' as parser;
 
 final Uri libraryUri = Uri.parse("org-dartlang-test:///library.dart");
@@ -14,8 +17,11 @@ abstract class LegacyUpperBoundTest {
   late Library coreLibrary;
   late Library testLibrary;
 
+  bool get isNonNullableByDefault;
+
   Future<void> parseComponent(String source) {
-    env = new parser.Env(source);
+    env =
+        new parser.Env(source, isNonNullableByDefault: isNonNullableByDefault);
     assert(
         env.component.libraries.length == 2,
         "The test component is expected to have exactly two libraries: "
@@ -37,16 +43,20 @@ abstract class LegacyUpperBoundTest {
     return new Future<void>.value();
   }
 
-  DartType getLegacyLeastUpperBound(DartType a, DartType b);
+  DartType getLegacyLeastUpperBound(DartType a, DartType b,
+      {required bool isNonNullableByDefault});
 
-  void checkLegacyUpTypes(DartType a, DartType b, DartType expected) {
-    DartType actual = getLegacyLeastUpperBound(a, b);
+  void checkLegacyUpTypes(DartType a, DartType b, DartType expected,
+      {required bool isNonNullableByDefault}) {
+    DartType actual = getLegacyLeastUpperBound(a, b,
+        isNonNullableByDefault: isNonNullableByDefault);
     Expect.equals(expected, actual);
   }
 
   void checkLegacyUp(String type1, String type2, String expectedType) {
-    checkLegacyUpTypes(env.parseType(type1), env.parseType(type2),
-        env.parseType(expectedType));
+    checkLegacyUpTypes(
+        env.parseType(type1), env.parseType(type2), env.parseType(expectedType),
+        isNonNullableByDefault: testLibrary.isNonNullableByDefault);
   }
 
   Future<void> test() {

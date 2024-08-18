@@ -16,8 +16,7 @@ class AnalysisSetGeneralSubscriptionsHandler extends LegacyHandler {
 
   @override
   Future<void> handle() async {
-    var params = AnalysisSetGeneralSubscriptionsParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisSetGeneralSubscriptionsParams.fromRequest(request);
     server.setGeneralAnalysisSubscriptions(params.subscriptions);
     sendResult(AnalysisSetGeneralSubscriptionsResult());
   }

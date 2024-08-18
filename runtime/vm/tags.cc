@@ -49,7 +49,7 @@ bool VMTag::IsRuntimeEntryTag(uword id) {
 }
 
 const char* VMTag::RuntimeEntryTagName(uword id) {
-  const void* address = reinterpret_cast<const void*>(id);
+  void* address = reinterpret_cast<void*>(id);
 
 #define CHECK_RUNTIME_ADDRESS(n)                                               \
   if (address == k##n##RuntimeEntry.function())                                \

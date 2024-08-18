@@ -96,7 +96,7 @@ class ApiSignature {
 
   /// Collect a string.
   void addString(String s) {
-    var bytes = const Utf8Encoder().convert(s);
+    final bytes = const Utf8Encoder().convert(s);
     addInt(bytes.length);
     addBytes(bytes);
   }

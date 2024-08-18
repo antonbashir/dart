@@ -3,9 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io';
-import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:async_helper/async_helper.dart';
-import 'package:compiler/src/commandline_options.dart';
 import 'package:compiler/src/compiler.dart';
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
 import 'package:compiler/src/elements/entities.dart';
@@ -22,11 +20,9 @@ import '../helpers/shared_helper.dart';
 main(List<String> args) {
   asyncTest(() async {
     Directory dataDir = Directory.fromUri(Platform.script
-        .resolve('../../../../pkg/_fe_analyzer_shared/test/constants/data'));
-    TestConfig testConfig = TestConfig(dart2jsMarker, 'dart2js',
-        ['${Flags.enableLanguageExperiments}=digit-separators']);
+        .resolve('../../../../pkg/_fe_analyzer_shared/test/constants/data_2'));
     await checkTests<String>(dataDir, ConstantDataComputer(),
-        args: args, testedConfigs: [testConfig]);
+        args: args, testedConfigs: [sharedConfig]);
   });
 }
 
@@ -86,7 +82,9 @@ class ConstantDataExtractor extends IrDataExtractor<String> {
   String? computeNodeValue(Id id, ir.TreeNode node) {
     if (node is ir.ConstantExpression) {
       return constantToText(
-          elementMap.types, elementMap.getConstantValue(node)!);
+          elementMap.types,
+          elementMap.getConstantValue(
+              elementMap.getStaticTypeContext(member), node)!);
     }
     return null;
   }

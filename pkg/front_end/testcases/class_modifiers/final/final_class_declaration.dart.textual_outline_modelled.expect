@@ -3,5 +3,4 @@ abstract final class B {}
 final class A {}
 
 final class C = Object with M;
-
 mixin M {}

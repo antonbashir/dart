@@ -432,9 +432,8 @@ class JsonMLFormatter {
       if (_typeof(child.value) == 'object' ||
           _typeof(child.value) == 'function') {
         var valueSpan = JsonMLElement('span')..setStyle(valueStyle);
-        valueSpan
-            .createObjectTag(child.value)
-            .addAttribute('config', child.config);
+        valueSpan.createObjectTag(child.value)
+          ..addAttribute('config', child.config);
         if (nameSpan != null) {
           li.appendChild(nameSpan);
         }
@@ -568,15 +567,13 @@ class ObjectFormatter extends Formatter {
   bool hasChildren(object) => true;
 
   children(object) {
-    var typeSigHolder = dart.getTypeSignatureContainer(object);
+    var type = dart.getType(object);
     var ret = LinkedHashSet<NameValuePair>();
     // We use a Set rather than a List to avoid duplicates.
     var fields = Set<NameValuePair>();
-    addPropertiesFromSignature(
-        dart.getFields(typeSigHolder), fields, object, true);
+    addPropertiesFromSignature(dart.getFields(type), fields, object, true);
     var getters = Set<NameValuePair>();
-    addPropertiesFromSignature(
-        dart.getGetters(typeSigHolder), getters, object, true);
+    addPropertiesFromSignature(dart.getGetters(type), getters, object, true);
     ret.addAll(sortProperties(fields));
     ret.addAll(sortProperties(getters));
     addMetadataChildren(object, ret);
@@ -649,7 +646,7 @@ class LibraryFormatter implements Formatter {
       // interested in seeing the actual classes.
       if (dart.getGenericTypeCtor(value) != null) return;
 
-      children.add(dart.isDartClass(value)
+      children.add(dart.isType(value)
           ? classChild(name, value)
           : NameValuePair(name: name, value: value));
     });
@@ -975,7 +972,7 @@ class TypeFormatter implements Formatter {
   List<NameValuePair> children(object) => [];
 }
 
-typedef StackTraceMapper = String Function(String stackTrace);
+typedef String StackTraceMapper(String stackTrace);
 
 /// Hook for other parts of the SDK To use to map JS stack traces to Dart
 /// stack traces.

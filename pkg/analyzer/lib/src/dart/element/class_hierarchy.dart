@@ -6,40 +6,36 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
+import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/utilities/extensions/collection.dart';
 
 class ClassHierarchy {
-  final Map<InterfaceElementImpl, _Hierarchy> _map = {};
+  final Map<InterfaceElement, _Hierarchy> _map = {};
 
-  List<ClassHierarchyError> errors(InterfaceElementImpl element) {
+  List<ClassHierarchyError> errors(InterfaceElement element) {
     return _getHierarchy(element).errors;
   }
 
-  List<InterfaceType> implementedInterfaces(InterfaceElementImpl element) {
+  List<InterfaceType> implementedInterfaces(InterfaceElement element) {
     return _getHierarchy(element).interfaces;
   }
 
-  void remove(InterfaceElementImpl element) {
-    assert(element.augmentationTarget == null);
-    element.resetCachedAllSupertypes();
+  void remove(InterfaceElement element) {
+    assert(!element.isAugmentation);
     _map.remove(element);
   }
 
   /// Remove hierarchies for classes defined in specified libraries.
   void removeOfLibraries(Set<Uri> uriSet) {
     _map.removeWhere((element, _) {
-      if (uriSet.contains(element.librarySource.uri)) {
-        element.resetCachedAllSupertypes();
-        return true;
-      }
-      return false;
+      return uriSet.contains(element.librarySource.uri);
     });
   }
 
-  _Hierarchy _getHierarchy(InterfaceElementImpl element) {
-    var augmented = element.augmented;
+  _Hierarchy _getHierarchy(InterfaceElement element) {
+    final augmented = element.augmentedOfDeclaration;
 
     var hierarchy = _map[element];
     if (hierarchy != null) {
@@ -52,7 +48,7 @@ class ClassHierarchy {
     );
     _map[element] = hierarchy;
 
-    var library = element.library;
+    var library = element.library as LibraryElementImpl;
     var typeSystem = library.typeSystem;
     var interfacesMerger = InterfacesMerger(typeSystem);
 
@@ -64,11 +60,12 @@ class ClassHierarchy {
       interfacesMerger.add(type);
 
       var substitution = Substitution.fromInterfaceType(type);
-      var element = type.element as InterfaceElementImpl;
-      var rawInterfaces = implementedInterfaces(element);
+      var rawInterfaces = implementedInterfaces(type.element);
       for (var rawInterface in rawInterfaces) {
         var newInterface =
             substitution.substituteType(rawInterface) as InterfaceType;
+        newInterface =
+            library.toLegacyTypeIfOptOut(newInterface) as InterfaceType;
         interfacesMerger.add(newInterface);
       }
     }
@@ -173,25 +170,39 @@ class _ClassInterfaceType {
       return;
     }
 
-    if (_currentResult == null) {
-      if (_singleType == null) {
-        _singleType = type;
-        return;
-      } else if (type == _singleType) {
-        return;
-      } else {
-        _currentResult = _typeSystem.normalize(_singleType!) as InterfaceType;
+    if (_typeSystem.isNonNullableByDefault) {
+      if (_currentResult == null) {
+        if (_singleType == null) {
+          _singleType = type;
+          return;
+        } else if (type == _singleType) {
+          return;
+        } else {
+          _currentResult = _typeSystem.normalize(_singleType!) as InterfaceType;
+        }
       }
-    }
 
-    var normType = _typeSystem.normalize(type) as InterfaceType;
-    try {
-      _currentResult = _merge(_currentResult!, normType);
-    } catch (e) {
-      _error = IncompatibleInterfacesClassHierarchyError(
-        _currentResult!,
-        type,
-      );
+      var normType = _typeSystem.normalize(type) as InterfaceType;
+      try {
+        _currentResult = _merge(_currentResult!, normType);
+      } catch (e) {
+        _error = IncompatibleInterfacesClassHierarchyError(
+          _currentResult!,
+          type,
+        );
+      }
+    } else {
+      var legacyType = _typeSystem.toLegacyTypeIfOptOut(type) as InterfaceType;
+      if (_currentResult == null) {
+        _currentResult = legacyType;
+      } else {
+        if (legacyType != _currentResult) {
+          _error = IncompatibleInterfacesClassHierarchyError(
+            _currentResult!,
+            legacyType,
+          );
+        }
+      }
     }
   }
 

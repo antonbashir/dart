@@ -14,10 +14,6 @@ class Error {
     return jsonEncode(string);
   }
 
-  @pragma('wasm:entry-point')
-  static Never _throwWithCurrentStackTrace(Object object) =>
-      Error._throw(object, StackTrace.current);
-
   @patch
   StackTrace? get stackTrace => _stackTrace;
 
@@ -65,8 +61,8 @@ class _TypeError extends _Error implements TypeError {
   }
 
   @pragma("wasm:entry-point")
-  static Never _throwAsCheckError(Object? operand, Type? type) {
-    final stackTrace = StackTrace.current;
+  static Never _throwAsCheckError(
+      Object? operand, Type? type, StackTrace stackTrace) {
     final typeError = _TypeError.fromMessageAndStackTrace(
         "Type '${operand.runtimeType}' is not a subtype of type '$type'"
         " in type cast",
@@ -176,45 +172,11 @@ class NoSuchMethodError {
   }
 }
 
-class _AssertionErrorImpl extends AssertionError {
-  _AssertionErrorImpl(Object? message, this._fileUri, this._line, this._column,
-      this._conditionSource)
-      : super(message);
-
-  final String? _fileUri;
-  final int _line;
-  final int _column;
-  final String? _conditionSource;
-
-  String toString() {
-    var failureMessage = "";
-    if (_fileUri != null && _conditionSource != null) {
-      failureMessage += "$_fileUri:${_line}:${_column}\n$_conditionSource\n";
-    }
-    failureMessage +=
-        message != null ? Error.safeToString(message) : "is not true";
-
-    return "Assertion failed: $failureMessage";
-  }
-}
-
 @patch
 class AssertionError {
   @pragma("wasm:entry-point")
-  static Never _throwWithMessage(
-    Object? message,
-    String? fileUri,
-    int line,
-    int column,
-    String? conditionSource,
-  ) {
-    throw _AssertionErrorImpl(
-      message,
-      fileUri,
-      line,
-      column,
-      conditionSource,
-    );
+  static Never _throwWithMessage(Object? message) {
+    throw AssertionError(message);
   }
 }
 

@@ -3,7 +3,5 @@ class Callable {
 }
 
 T id<T>(T x) => x;
-
 foo() {}
-
 main() {}

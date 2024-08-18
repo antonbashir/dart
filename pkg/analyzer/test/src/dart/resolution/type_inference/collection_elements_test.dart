@@ -28,12 +28,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 50, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -54,12 +54,12 @@ void f() async {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -80,12 +80,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -108,12 +108,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.LIST_ELEMENT_TYPE_NOT_ASSIGNABLE, 38, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -134,12 +134,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -163,12 +163,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE, 59, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -189,12 +189,12 @@ void f() async {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -215,12 +215,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -244,12 +244,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.MAP_VALUE_TYPE_NOT_ASSIGNABLE, 47, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -270,12 +270,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -298,12 +298,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.SET_ELEMENT_TYPE_NOT_ASSIGNABLE, 50, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -324,12 +324,12 @@ void f() async {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -350,12 +350,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -378,12 +378,12 @@ T a<T>() => throw '';
       error(CompileTimeErrorCode.SET_ELEMENT_TYPE_NOT_ASSIGNABLE, 38, 1),
     ]);
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -404,12 +404,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -433,12 +433,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -459,12 +459,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -485,12 +485,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -514,12 +514,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -540,12 +540,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -566,12 +566,12 @@ void f() {
 T a<T>() => throw '';
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    final node = findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@function::a
+    staticElement: self::@function::a
     staticType: T Function<T>()
   argumentList: ArgumentList
     leftParenthesis: (

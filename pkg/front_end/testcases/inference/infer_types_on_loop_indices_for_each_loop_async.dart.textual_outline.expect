@@ -19,5 +19,4 @@ abstract class MyStream<T> extends Stream<T> {
 }
 
 test() async {}
-
 main() {}

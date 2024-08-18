@@ -28,7 +28,6 @@ class B {
 }
 
 main() {}
-
 mixin M {
   abstract final dynamic fieldAbstractFinalDynamicOfM;
   abstract num fieldAbstractNonNullableOfM;

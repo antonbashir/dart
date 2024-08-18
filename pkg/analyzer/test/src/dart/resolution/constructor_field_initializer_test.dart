@@ -16,41 +16,6 @@ main() {
 @reflectiveTest
 class ConstructorFieldInitializerResolutionTest
     extends PubPackageResolutionTest {
-  test_fieldOfAugmentation() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-import augment 'test.dart';
-
-class A {
-  int get foo;
-}
-''');
-
-    await assertNoErrorsInCode(r'''
-augment library 'a.dart';
-
-augment class A {
-  final int _foo;
-
-  const A() : _foo = 0;
-
-  augment int get foo => _foo;
-}
-''');
-
-    var node = findNode.singleConstructorFieldInitializer;
-    assertResolvedNodeText(node, r'''
-ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
-    token: _foo
-    staticElement: package:test/a.dart::@fragment::package:test/test.dart::@classAugmentation::A::@field::_foo
-    staticType: null
-  equals: =
-  expression: IntegerLiteral
-    literal: 0
-    staticType: int
-''');
-  }
-
   test_formalParameter() async {
     await assertNoErrorsInCode('''
 class A {
@@ -59,17 +24,17 @@ class A {
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: f
-    staticElement: <testLibraryFragment>::@class::A::@field::f
+    staticElement: self::@class::A::@field::f
     staticType: null
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+    staticElement: self::@class::A::@constructor::new::@parameter::a
     staticType: int
 ''');
   }
@@ -82,12 +47,12 @@ class A {
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@field::x
+    staticElement: self::@class::A::@field::x
     staticType: null
   equals: =
   expression: FunctionExpressionInvocation
@@ -106,14 +71,14 @@ ConstructorFieldInitializer
                 expression: BinaryExpression
                   leftOperand: SimpleIdentifier
                     token: a
-                    staticElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+                    staticElement: self::@class::A::@constructor::new::@parameter::a
                     staticType: int
                   operator: +
                   rightOperand: IntegerLiteral
                     literal: 1
-                    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+                    parameter: dart:core::@class::num::@method::+::@parameter::other
                     staticType: int
-                  staticElement: dart:core::<fragment>::@class::num::@method::+
+                  staticElement: dart:core::@class::num::@method::+
                   staticInvokeType: num Function(num)
                   staticType: int
                 semicolon: ;
@@ -140,12 +105,12 @@ class A {
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@field::x
+    staticElement: self::@class::A::@field::x
     staticType: null
   equals: =
   expression: FunctionExpressionInvocation
@@ -160,14 +125,14 @@ ConstructorFieldInitializer
           expression: BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
-              staticElement: <testLibraryFragment>::@class::A::@constructor::new::@parameter::a
+              staticElement: self::@class::A::@constructor::new::@parameter::a
               staticType: int
             operator: +
             rightOperand: IntegerLiteral
               literal: 1
-              parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
+              parameter: dart:core::@class::num::@method::+::@parameter::other
               staticType: int
-            staticElement: dart:core::<fragment>::@class::num::@method::+
+            staticElement: dart:core::@class::num::@method::+
             staticInvokeType: num Function(num)
             staticType: int
         declaredElement: @43
@@ -198,17 +163,17 @@ const a = 0;
           1),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@field::x
+    staticElement: self::@class::A::@field::x
     staticType: null
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -224,7 +189,7 @@ class X {}
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 24, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -234,7 +199,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -250,17 +215,17 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@field::x
+    staticElement: self::@class::A::@field::x
     staticType: null
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -277,7 +242,7 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 44, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -287,7 +252,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -303,7 +268,7 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -313,7 +278,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -329,17 +294,17 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
     token: x
-    staticElement: <testLibraryFragment>::@class::A::@field::x
+    staticElement: self::@class::A::@field::x
     staticType: null
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -355,7 +320,7 @@ void x() {}
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -365,7 +330,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -381,7 +346,7 @@ var x = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -391,7 +356,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -406,7 +371,7 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 21, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -416,7 +381,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }
@@ -431,7 +396,7 @@ const a = 0;
       error(CompileTimeErrorCode.INITIALIZER_FOR_NON_EXISTENT_FIELD, 18, 5),
     ]);
 
-    var node = findNode.singleConstructorFieldInitializer;
+    final node = findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
   fieldName: SimpleIdentifier
@@ -441,7 +406,7 @@ ConstructorFieldInitializer
   equals: =
   expression: SimpleIdentifier
     token: a
-    staticElement: <testLibraryFragment>::@getter::a
+    staticElement: self::@getter::a
     staticType: int
 ''');
   }

@@ -42,7 +42,7 @@ void StubCodeCompiler::EnsureIsNewOrRemembered() {
   // Page's TLAB use is always ascending.
   Label done;
   __ AndImmediate(TMP, R0, target::kPageMask);
-  __ LoadFromOffset(TMP, TMP, target::Page::original_top_offset());
+  __ LoadFromOffset(TMP, Address(TMP, target::Page::original_top_offset()));
   __ CompareRegisters(R0, TMP);
   __ BranchIf(UNSIGNED_GREATER_EQUAL, &done);
 
@@ -109,6 +109,8 @@ void StubCodeCompiler::GenerateCallToRuntimeStub() {
   // Set thread in NativeArgs.
   __ mov(R0, Operand(THR));
 
+  // There are no runtime calls to closures, so we do not need to set the tag
+  // bits kClosureFunctionBit and kInstanceFunctionBit in argc_tag_.
   ASSERT(argc_tag_offset == 1 * target::kWordSize);
   __ mov(R1, Operand(R4));  // Set argc in target::NativeArguments.
 
@@ -205,6 +207,97 @@ void StubCodeCompiler::GenerateSharedStub(
   GenerateSharedStubGeneric(save_fpu_registers,
                             self_code_stub_offset_from_thread, allow_return,
                             perform_runtime_call);
+}
+
+// R1: The extracted method.
+// R4: The type_arguments_field_offset (or 0)
+// SP+0: The object from which we are tearing a method off.
+void StubCodeCompiler::GenerateBuildMethodExtractorStub(
+    const Code& closure_allocation_stub,
+    const Code& context_allocation_stub,
+    bool generic) {
+  const intptr_t kReceiverOffset = target::frame_layout.param_end_from_fp + 1;
+
+  __ EnterStubFrame();
+
+  // Build type_arguments vector (or null)
+  __ cmp(R4, Operand(0));
+  __ ldr(R3, Address(THR, target::Thread::object_null_offset()), EQ);
+  __ ldr(R0, Address(FP, kReceiverOffset * target::kWordSize), NE);
+  __ ldr(R3, Address(R0, R4), NE);
+
+  // Push type arguments & extracted method.
+  __ Push(R3);
+  __ Push(R1);
+
+  // Allocate context.
+  {
+    Label done, slow_path;
+    if (!FLAG_use_slow_path && FLAG_inline_alloc) {
+      __ TryAllocateArray(kContextCid, target::Context::InstanceSize(1),
+                          &slow_path,
+                          R0,  // instance
+                          R1,  // end address
+                          R2, R3);
+      __ ldr(R1, Address(THR, target::Thread::object_null_offset()));
+      __ str(R1, FieldAddress(R0, target::Context::parent_offset()));
+      __ LoadImmediate(R1, 1);
+      __ str(R1, FieldAddress(R0, target::Context::num_variables_offset()));
+      __ b(&done);
+    }
+
+    __ Bind(&slow_path);
+
+    __ LoadImmediate(/*num_vars=*/R1, 1);
+    __ LoadObject(CODE_REG, context_allocation_stub);
+    __ ldr(R0, FieldAddress(CODE_REG, target::Code::entry_point_offset()));
+    __ blx(R0);
+
+    __ Bind(&done);
+  }
+
+  // Put context in right register for AllocateClosure call.
+  __ MoveRegister(AllocateClosureABI::kContextReg, R0);
+
+  // Store receiver in context
+  __ ldr(AllocateClosureABI::kScratchReg,
+         Address(FP, target::kWordSize * kReceiverOffset));
+  __ StoreIntoObject(AllocateClosureABI::kContextReg,
+                     FieldAddress(AllocateClosureABI::kContextReg,
+                                  target::Context::variable_offset(0)),
+                     AllocateClosureABI::kScratchReg);
+
+  // Pop function.
+  __ Pop(AllocateClosureABI::kFunctionReg);
+
+  // Allocate closure. After this point, we only use the registers in
+  // AllocateClosureABI.
+  __ LoadObject(CODE_REG, closure_allocation_stub);
+  __ ldr(AllocateClosureABI::kScratchReg,
+         FieldAddress(CODE_REG, target::Code::entry_point_offset()));
+  __ blx(AllocateClosureABI::kScratchReg);
+
+  // Populate closure object.
+  __ Pop(AllocateClosureABI::kScratchReg);  // Pop type arguments.
+  __ StoreIntoObjectNoBarrier(
+      AllocateClosureABI::kResultReg,
+      FieldAddress(AllocateClosureABI::kResultReg,
+                   target::Closure::instantiator_type_arguments_offset()),
+      AllocateClosureABI::kScratchReg);
+  // Keep delayed_type_arguments as null if non-generic (see Closure::New).
+  if (generic) {
+    __ LoadObject(AllocateClosureABI::kScratchReg, EmptyTypeArguments());
+    __ StoreIntoObjectNoBarrier(
+        AllocateClosureABI::kResultReg,
+        FieldAddress(AllocateClosureABI::kResultReg,
+                     target::Closure::delayed_type_arguments_offset()),
+        AllocateClosureABI::kScratchReg);
+  }
+
+  __ LeaveStubFrame();
+  // No-op if the two are the same.
+  __ MoveRegister(R0, AllocateClosureABI::kResultReg);
+  __ Ret();
 }
 
 void StubCodeCompiler::GenerateEnterSafepointStub() {
@@ -322,8 +415,9 @@ void StubCodeCompiler::GenerateLoadFfiCallbackMetadataRuntimeFunction(
   __ AndImmediate(dst, dst, FfiCallbackMetadata::kPageMask);
 
   // Load the function from the function table.
-  __ LoadFromOffset(dst, dst,
-                    FfiCallbackMetadata::RuntimeFunctionOffset(function_index));
+  __ LoadFromOffset(
+      dst,
+      Address(dst, FfiCallbackMetadata::RuntimeFunctionOffset(function_index)));
 }
 
 void StubCodeCompiler::GenerateFfiCallbackTrampolineStub() {
@@ -502,7 +596,7 @@ void StubCodeCompiler::GenerateRangeError(bool with_fpu_regs) {
 
 void StubCodeCompiler::GenerateWriteError(bool with_fpu_regs) {
   auto perform_runtime_call = [&]() {
-    __ CallRuntime(kWriteErrorRuntimeEntry, /*argument_count=*/2);
+    __ CallRuntime(kWriteErrorRuntimeEntry, /*argument_count=*/0);
     __ Breakpoint();
   };
 
@@ -564,6 +658,8 @@ static void GenerateCallNativeWithWrapperStub(Assembler* assembler,
   // Set thread in NativeArgs.
   __ mov(R0, Operand(THR));
 
+  // There are no native calls to closures, so we do not need to set the tag
+  // bits kClosureFunctionBit and kInstanceFunctionBit in argc_tag_.
   ASSERT(argc_tag_offset == 1 * target::kWordSize);
   // Set argc in target::NativeArguments: R1 already contains argc.
 
@@ -695,8 +791,8 @@ void StubCodeCompiler::GenerateFixCallersTargetStub() {
   __ Push(R0);  // Preserve receiver.
   __ Push(R9);  // Old cache value (also 2nd return value).
   __ CallRuntime(kFixCallersTargetMonomorphicRuntimeEntry, 2);
-  __ Pop(R9);        // Get target cache object.
-  __ Pop(R0);        // Restore receiver.
+  __ Pop(R9);  // Get target cache object.
+  __ Pop(R0);  // Restore receiver.
   __ Pop(CODE_REG);  // Get target Code object.
   // Remove the stub frame.
   __ LeaveStubFrame();
@@ -846,25 +942,25 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
     }
   }
 
-  ASSERT(kFpuRegisterSize == 4 * target::kWordSize);
-  if (kNumberOfDRegisters > 16) {
-    __ vstmd(DB_W, SP, D16, kNumberOfDRegisters - 16);
-    __ vstmd(DB_W, SP, D0, 16);
-  } else {
-    __ vstmd(DB_W, SP, D0, kNumberOfDRegisters);
-  }
+    ASSERT(kFpuRegisterSize == 4 * target::kWordSize);
+    if (kNumberOfDRegisters > 16) {
+      __ vstmd(DB_W, SP, D16, kNumberOfDRegisters - 16);
+      __ vstmd(DB_W, SP, D0, 16);
+    } else {
+      __ vstmd(DB_W, SP, D0, kNumberOfDRegisters);
+    }
 
-  {
-    __ mov(R0, Operand(SP));  // Pass address of saved registers block.
-    LeafRuntimeScope rt(assembler,
-                        /*frame_size=*/0,
-                        /*preserve_registers=*/false);
-    bool is_lazy =
-        (kind == kLazyDeoptFromReturn) || (kind == kLazyDeoptFromThrow);
-    __ mov(R1, Operand(is_lazy ? 1 : 0));
-    rt.Call(kDeoptimizeCopyFrameRuntimeEntry, 2);
-    // Result (R0) is stack-size (FP - SP) in bytes.
-  }
+    {
+      __ mov(R0, Operand(SP));  // Pass address of saved registers block.
+      LeafRuntimeScope rt(assembler,
+                          /*frame_size=*/0,
+                          /*preserve_registers=*/false);
+      bool is_lazy =
+          (kind == kLazyDeoptFromReturn) || (kind == kLazyDeoptFromThrow);
+      __ mov(R1, Operand(is_lazy ? 1 : 0));
+      rt.Call(kDeoptimizeCopyFrameRuntimeEntry, 2);
+      // Result (R0) is stack-size (FP - SP) in bytes.
+    }
 
   if (kind == kLazyDeoptFromReturn) {
     // Restore result into R1 temporarily.
@@ -918,8 +1014,6 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
   if (kind == kLazyDeoptFromReturn) {
     __ Push(R1);  // Preserve result, it will be GC-d here.
   } else if (kind == kLazyDeoptFromThrow) {
-    // Preserve CODE_REG for one more runtime call.
-    __ Push(CODE_REG);
     __ Push(R1);  // Preserve exception, it will be GC-d here.
     __ Push(R2);  // Preserve stacktrace, it will be GC-d here.
   }
@@ -933,26 +1027,11 @@ static void GenerateDeoptimizationSequence(Assembler* assembler,
   } else if (kind == kLazyDeoptFromThrow) {
     __ Pop(R1);  // Restore stacktrace.
     __ Pop(R0);  // Restore exception.
-    __ Pop(CODE_REG);
   }
   __ LeaveStubFrame();
   // Remove materialization arguments.
   __ add(SP, SP, Operand(R2, ASR, kSmiTagSize));
   // The caller is responsible for emitting the return instruction.
-
-  if (kind == kLazyDeoptFromThrow) {
-    // Unoptimized frame is now ready to accept the exception. Rethrow it to
-    // find the right handler. Ask rethrow machinery to bypass debugger it
-    // was already notified about this exception.
-    __ EnterStubFrame();
-    __ PushImmediate(
-        target::ToRawSmi(0));  // Space for the return value (unused).
-    __ Push(R0);               // Exception
-    __ Push(R1);               // Stacktrace
-    __ PushImmediate(target::ToRawSmi(1));  // Bypass debugger
-    __ CallRuntime(kReThrowRuntimeEntry, 3);
-    __ LeaveStubFrame();
-  }
 }
 
 // R0: result, must be preserved
@@ -1004,8 +1083,8 @@ static void GenerateNoSuchMethodDispatcherBody(Assembler* assembler) {
   __ ldr(R8, Address(IP, target::frame_layout.param_end_from_fp *
                              target::kWordSize));
   __ LoadImmediate(IP, 0);
-  __ Push(IP);             // Result slot.
-  __ Push(R8);             // Receiver.
+  __ Push(IP);  // Result slot.
+  __ Push(R8);  // Receiver.
   __ Push(IC_DATA_REG);    // ICData/MegamorphicCache.
   __ Push(ARGS_DESC_REG);  // Arguments descriptor.
 
@@ -1087,8 +1166,8 @@ void StubCodeCompiler::GenerateAllocateArrayStub() {
     __ ldr(AllocateArrayABI::kResultReg,
            Address(THR, target::Thread::top_offset()));
     __ adds(R3, AllocateArrayABI::kResultReg,
-            Operand(R9));  // Potential next object start.
-    __ b(&slow_case, CS);  // Branch if unsigned overflow.
+            Operand(R9));          // Potential next object start.
+    __ b(&slow_case, CS);          // Branch if unsigned overflow.
 
     // Check if the allocation fits into the remaining space.
     // AllocateArrayABI::kResultReg: potential new object start.
@@ -1227,7 +1306,7 @@ void StubCodeCompiler::GenerateAllocateMintSharedWithoutFPURegsStub() {
 // Called when invoking Dart code from C++ (VM code).
 // Input parameters:
 //   LR : points to return address.
-//   R0 : target code or entry point (in AOT mode).
+//   R0 : target code or entry point (in bare instructions mode).
 //   R1 : arguments descriptor array.
 //   R2 : arguments array.
 //   R3 : current thread.
@@ -1354,143 +1433,6 @@ void StubCodeCompiler::GenerateInvokeDartCodeStub() {
   // Restore the frame pointer and return.
   RESTORES_LR_FROM_FRAME(__ LeaveFrame((1 << FP) | (1 << LR)));
   __ Ret();
-}
-
-// Called when invoking compiled Dart code from interpreted Dart code.
-// Input parameters:
-//   LR : points to return address.
-//   R0 : target code or entry point (in AOT mode).
-//   R1 : arguments descriptor array.
-//   R2 : address of first argument.
-//   R3 : current thread.
-void StubCodeCompiler::GenerateInvokeDartCodeFromBytecodeStub() {
-#if defined(DART_DYNAMIC_MODULES)
-  SPILLS_LR_TO_FRAME(__ EnterFrame((1 << FP) | (1 << LR), 0));
-
-  // Push code object to PC marker slot.
-  __ ldr(IP,
-         Address(R3,
-                 target::Thread::invoke_dart_code_from_bytecode_stub_offset()));
-  __ Push(IP);
-
-  __ PushNativeCalleeSavedRegisters();
-
-  // Set up THR, which caches the current thread in Dart code.
-  if (THR != R3) {
-    __ mov(THR, Operand(R3));
-  }
-
-#if defined(USING_SHADOW_CALL_STACK)
-#error Unimplemented
-#endif
-
-  // Save the current VMTag on the stack.
-  __ LoadFromOffset(R9, THR, target::Thread::vm_tag_offset());
-  __ Push(R9);
-
-  // Save top resource and top exit frame info. Use R4-6 as temporary registers.
-  // StackFrameIterator reads the top exit frame info saved in this frame.
-  __ LoadFromOffset(R4, THR, target::Thread::top_resource_offset());
-  __ Push(R4);
-  __ LoadImmediate(R8, 0);
-  __ StoreToOffset(R8, THR, target::Thread::top_resource_offset());
-
-  __ LoadFromOffset(R8, THR, target::Thread::exit_through_ffi_offset());
-  __ Push(R8);
-  __ LoadImmediate(R8, 0);
-  __ StoreToOffset(R8, THR, target::Thread::exit_through_ffi_offset());
-
-  __ LoadFromOffset(R9, THR, target::Thread::top_exit_frame_info_offset());
-  __ StoreToOffset(R8, THR, target::Thread::top_exit_frame_info_offset());
-
-  // target::frame_layout.exit_link_slot_from_entry_fp must be kept in sync
-  // with the code below.
-#if defined(DART_TARGET_OS_MACOS) || defined(DART_TARGET_OS_MACOS_IOS)
-  ASSERT(target::frame_layout.exit_link_slot_from_entry_fp == -27);
-#else
-  ASSERT(target::frame_layout.exit_link_slot_from_entry_fp == -28);
-#endif
-  __ Push(R9);
-
-  __ EmitEntryFrameVerification(R9);
-
-  // Mark that the thread is executing Dart code. Do this after initializing the
-  // exit link for the profiler.
-  __ LoadImmediate(R9, VMTag::kDartTagId);
-  __ StoreToOffset(R9, THR, target::Thread::vm_tag_offset());
-
-  // Load arguments descriptor array into R4, which is passed to Dart code.
-  __ mov(R4, Operand(R1));
-
-  // Load number of arguments into R9 and adjust count for type arguments.
-  __ ldr(R3,
-         FieldAddress(R4, target::ArgumentsDescriptor::type_args_len_offset()));
-  __ ldr(R9, FieldAddress(R4, target::ArgumentsDescriptor::count_offset()));
-  __ cmp(R3, Operand(0));
-  __ AddImmediate(R9, R9, target::ToRawSmi(1),
-                  NE);  // Include the type arguments.
-  __ SmiUntag(R9);
-
-  // R2 points to first argument.
-  // Set up arguments for the Dart call.
-  Label push_arguments;
-  Label done_push_arguments;
-  __ CompareImmediate(R9, 0);  // check if there are arguments.
-  __ b(&done_push_arguments, EQ);
-  __ LoadImmediate(R1, 0);
-  __ Bind(&push_arguments);
-  __ ldr(R3, Address(R2));
-  __ Push(R3);
-  __ AddImmediate(R2, target::kWordSize);
-  __ AddImmediate(R1, 1);
-  __ cmp(R1, Operand(R9));
-  __ b(&push_arguments, LT);
-  __ Bind(&done_push_arguments);
-
-  // Call the Dart code entrypoint.
-  if (FLAG_precompiled_mode) {
-    __ SetupGlobalPoolAndDispatchTable();
-    __ LoadImmediate(CODE_REG, 0);  // GC safe value into CODE_REG.
-  } else {
-    __ LoadImmediate(PP, 0);  // GC safe value into PP.
-    __ mov(CODE_REG, Operand(R0));
-    __ ldr(R0, FieldAddress(CODE_REG, target::Code::entry_point_offset()));
-  }
-  __ blx(R0);  // R4 is the arguments descriptor array.
-
-  // Get rid of arguments pushed on the stack.
-  __ AddImmediate(
-      SP, FP,
-      target::frame_layout.exit_link_slot_from_entry_fp * target::kWordSize);
-
-  // Restore the saved top exit frame info and top resource back into the
-  // Isolate structure. Uses R9 as a temporary register for this.
-  __ Pop(R9);
-  __ StoreToOffset(R9, THR, target::Thread::top_exit_frame_info_offset());
-  __ Pop(R9);
-  __ StoreToOffset(R9, THR, target::Thread::exit_through_ffi_offset());
-  __ Pop(R9);
-  __ StoreToOffset(R9, THR, target::Thread::top_resource_offset());
-
-  // Restore the current VMTag from the stack.
-  __ Pop(R4);
-  __ StoreToOffset(R4, THR, target::Thread::vm_tag_offset());
-
-#if defined(USING_SHADOW_CALL_STACK)
-#error Unimplemented
-#endif
-
-  __ PopNativeCalleeSavedRegisters();
-
-  __ set_constant_pool_allowed(false);
-
-  // Restore the frame pointer and return.
-  RESTORES_LR_FROM_FRAME(__ LeaveFrame((1 << FP) | (1 << LR)));
-  __ Ret();
-
-#else
-  __ Stop("Not using Dart dynamic modules");
-#endif  // defined(DART_DYNAMIC_MODULES)
 }
 
 // Helper to generate space allocation of context stub.
@@ -1729,7 +1671,8 @@ void StubCodeCompiler::GenerateWriteBarrierWrappersStub() {
 COMPILE_ASSERT(kWriteBarrierObjectReg == R1);
 COMPILE_ASSERT(kWriteBarrierValueReg == R0);
 COMPILE_ASSERT(kWriteBarrierSlotReg == R9);
-static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
+static void GenerateWriteBarrierStubHelper(Assembler* assembler,
+                                           bool cards) {
   Label skip_marking;
   __ Push(R2);
   __ ldr(TMP, FieldAddress(R0, target::Object::tags_offset()));
@@ -1741,7 +1684,7 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
 
   {
     // Atomically clear kNotMarkedBit.
-    Label retry, is_new, done;
+    Label retry, done;
     __ PushList((1 << R2) | (1 << R3) | (1 << R4));  // Spill.
     __ AddImmediate(R3, R0, target::Object::tags_offset() - kHeapObjectTag);
     // R3: Untagged address of header word (ldrex/strex do not support offsets).
@@ -1754,34 +1697,21 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
     __ cmp(R4, Operand(1));
     __ b(&retry, EQ);
 
-    __ tst(R0, Operand(1 << target::ObjectAlignment::kNewObjectBitPosition));
-    __ b(&is_new, NOT_ZERO);
+    __ ldr(R4, Address(THR, target::Thread::marking_stack_block_offset()));
+    __ ldr(R2, Address(R4, target::MarkingStackBlock::top_offset()));
+    __ add(R3, R4, Operand(R2, LSL, target::kWordSizeLog2));
+    __ str(R0, Address(R3, target::MarkingStackBlock::pointers_offset()));
+    __ add(R2, R2, Operand(1));
+    __ str(R2, Address(R4, target::MarkingStackBlock::top_offset()));
+    __ CompareImmediate(R2, target::MarkingStackBlock::kSize);
+    __ b(&done, NE);
 
-    auto mark_stack_push = [&](intptr_t offset, const RuntimeEntry& entry) {
-      __ ldr(R4, Address(THR, offset));
-      __ ldr(R2, Address(R4, target::MarkingStackBlock::top_offset()));
-      __ add(R3, R4, Operand(R2, LSL, target::kWordSizeLog2));
-      __ str(R0, Address(R3, target::MarkingStackBlock::pointers_offset()));
-      __ add(R2, R2, Operand(1));
-      __ str(R2, Address(R4, target::MarkingStackBlock::top_offset()));
-      __ CompareImmediate(R2, target::MarkingStackBlock::kSize);
-      __ b(&done, NE);
-
-      {
-        LeafRuntimeScope rt(assembler, /*frame_size=*/0,
-                            /*preserve_registers=*/true);
-        __ mov(R0, Operand(THR));
-        rt.Call(entry, 1);
-      }
-    };
-
-    mark_stack_push(target::Thread::old_marking_stack_block_offset(),
-                    kOldMarkingStackBlockProcessRuntimeEntry);
-    __ b(&done);
-
-    __ Bind(&is_new);
-    mark_stack_push(target::Thread::new_marking_stack_block_offset(),
-                    kNewMarkingStackBlockProcessRuntimeEntry);
+    {
+      LeafRuntimeScope rt(assembler, /*frame_size=*/0,
+                          /*preserve_registers=*/true);
+      __ mov(R0, Operand(THR));
+      rt.Call(kMarkingStackBlockProcessRuntimeEntry, 1);
+    }
 
     __ Bind(&done);
     __ clrex();
@@ -1859,7 +1789,7 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
     __ Ret();
   }
   if (cards) {
-    Label remember_card_slow, retry;
+    Label remember_card_slow;
 
     // Get card table.
     __ Bind(&remember_card);
@@ -1869,26 +1799,23 @@ static void GenerateWriteBarrierStubHelper(Assembler* assembler, bool cards) {
     __ cmp(TMP, Operand(0));
     __ b(&remember_card_slow, EQ);
 
-    // Atomically dirty the card.
-    __ PushList((1 << R0) | (1 << R1) | (1 << R2));
-    __ AndImmediate(TMP, R1, target::kPageMask);  // Page.
-    __ sub(R9, R9, Operand(TMP));                 // Offset in page.
+    // Dirty the card. Not atomic: we assume mutable arrays are not shared
+    // between threads
+    __ PushList((1 << R0) | (1 << R1));
+    __ AndImmediate(TMP, R1, target::kPageMask);     // Page.
+    __ sub(R9, R9, Operand(TMP));                    // Offset in page.
     __ Lsr(R9, R9, Operand(target::Page::kBytesPerCardLog2));  // Card index.
     __ AndImmediate(R1, R9, target::kBitsPerWord - 1);  // Lsl is not mod 32.
     __ LoadImmediate(R0, 1);                            // Bit offset.
     __ Lsl(R0, R0, R1);                                 // Bit mask.
     __ ldr(TMP,
-           Address(TMP, target::Page::card_table_offset()));    // Card table.
-    __ Lsr(R9, R9, Operand(target::kBitsPerWordLog2));          // Word index.
+           Address(TMP, target::Page::card_table_offset()));  // Card table.
+    __ Lsr(R9, R9, Operand(target::kBitsPerWordLog2));        // Word index.
     __ add(TMP, TMP, Operand(R9, LSL, target::kWordSizeLog2));  // Word address.
-
-    __ Bind(&retry);
-    __ ldrex(R1, TMP);
+    __ ldr(R1, Address(TMP, 0));
     __ orr(R1, R1, Operand(R0));
-    __ strex(R2, R1, TMP);
-    __ cmp(R2, Operand(1));
-    __ b(&retry, EQ);
-    __ PopList((1 << R0) | (1 << R1) | (1 << R2));
+    __ str(R1, Address(TMP, 0));
+    __ PopList((1 << R0) | (1 << R1));
     __ Ret();
 
     // Card table not yet allocated.
@@ -1918,16 +1845,6 @@ static void GenerateAllocateObjectHelper(Assembler* assembler,
 
   {
     Label slow_case;
-
-#if !defined(PRODUCT)
-    {
-      const Register kTraceAllocationTempReg = R8;
-      const Register kCidRegister = R9;
-      __ ExtractClassIdFromTags(kCidRegister, AllocateObjectABI::kTagsReg);
-      __ MaybeTraceAllocation(kCidRegister, &slow_case,
-                              kTraceAllocationTempReg);
-    }
-#endif
 
     const Register kNewTopReg = R8;
 
@@ -1978,9 +1895,6 @@ static void GenerateAllocateObjectHelper(Assembler* assembler,
       __ Bind(&done);
     }  // kFieldReg = R1, kNullReg = R9
 
-    __ AddImmediate(AllocateObjectABI::kResultReg,
-                    AllocateObjectABI::kResultReg, kHeapObjectTag);
-
     // Store parameterized type.
     if (is_cls_parameterized) {
       Label not_parameterized_case;
@@ -1999,14 +1913,17 @@ static void GenerateAllocateObjectHelper(Assembler* assembler,
                            host_type_arguments_field_offset_in_words_offset()));
 
       // Set the type arguments in the new object.
-      __ add(kTypeOffsetReg, AllocateObjectABI::kResultReg,
-             Operand(kTypeOffsetReg, LSL, target::kWordSizeLog2));
-      __ StoreIntoObjectNoBarrier(AllocateObjectABI::kResultReg,
-                                  FieldAddress(kTypeOffsetReg, 0),
-                                  AllocateObjectABI::kTypeArgumentsReg);
+      __ StoreIntoObjectNoBarrier(
+          AllocateObjectABI::kResultReg,
+          Address(AllocateObjectABI::kResultReg, kTypeOffsetReg, LSL,
+                  target::kWordSizeLog2),
+          AllocateObjectABI::kTypeArgumentsReg);
 
       __ Bind(&not_parameterized_case);
     }  // kClsIdReg = R1, kTypeOffsetReg = R9
+
+    __ AddImmediate(AllocateObjectABI::kResultReg,
+                    AllocateObjectABI::kResultReg, kHeapObjectTag);
 
     __ Ret();
 
@@ -2493,7 +2410,7 @@ void StubCodeCompiler::GenerateNArgsCheckInlineCacheStub(
   __ RestoreCodePointer();
   __ LeaveStubFrame();
   Label call_target_function;
-  if (FLAG_precompiled_mode) {
+  if (!FLAG_lazy_dispatchers) {
     GenerateDispatcherCode(assembler, &call_target_function);
   } else {
     __ b(&call_target_function);
@@ -2793,90 +2710,6 @@ void StubCodeCompiler::GenerateLazyCompileStub() {
   __ Branch(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
 }
 
-// Stub for interpreting a function call.
-// R4: Arguments descriptor.
-// R0: Function.
-void StubCodeCompiler::GenerateInterpretCallStub() {
-#if defined(DART_DYNAMIC_MODULES)
-
-  __ EnterStubFrame();
-
-#if defined(DEBUG)
-  {
-    Label ok;
-    // Check that we are always entering from Dart code.
-    __ LoadFromOffset(kWord, R8, THR, target::Thread::vm_tag_offset());
-    __ CompareImmediate(R8, VMTag::kDartTagId);
-    __ b(&ok, EQ);
-    __ Stop("Not coming from Dart code.");
-    __ Bind(&ok);
-  }
-#endif
-
-  // Adjust arguments count for type arguments vector.
-  __ LoadFieldFromOffset(kWord, R2, R4,
-                         target::ArgumentsDescriptor::count_offset());
-  __ SmiUntag(R2);
-  __ LoadFieldFromOffset(kWord, R1, R4,
-                         target::ArgumentsDescriptor::type_args_len_offset());
-  __ cmp(R1, Operand(0));
-  __ AddImmediate(R2, R2, 1, NE);  // Include the type arguments.
-
-  // Compute argv.
-  __ mov(R3, Operand(R2, LSL, 2));
-  __ add(R3, FP, Operand(R3));
-  __ AddImmediate(R3,
-                  target::frame_layout.param_end_from_fp * target::kWordSize);
-
-  // Indicate decreasing memory addresses of arguments with negative argc.
-  __ rsb(R2, R2, Operand(0));
-
-  // Align frame before entering C++ world. Fifth argument passed on the stack.
-  __ ReserveAlignedFrameSpace(1 * target::kWordSize);
-
-  // Pass arguments in registers.
-  // R0: Function.
-  __ mov(R1, Operand(R4));  // Arguments descriptor.
-  // R2: Negative argc.
-  // R3: Argv.
-  __ str(THR, Address(SP, 0));  // Fifth argument: Thread.
-
-  // Save exit frame information to enable stack walking as we are about
-  // to transition to Dart VM C++ code.
-  __ StoreToOffset(kWord, FP, THR,
-                   target::Thread::top_exit_frame_info_offset());
-
-  // Mark that the thread exited generated code through a runtime call.
-  __ LoadImmediate(R5, target::Thread::exit_through_runtime_call());
-  __ StoreToOffset(kWord, R5, THR, target::Thread::exit_through_ffi_offset());
-
-  // Mark that the thread is executing VM code.
-  __ LoadFromOffset(kWord, R5, THR,
-                    target::Thread::interpret_call_entry_point_offset());
-  __ StoreToOffset(kWord, R5, THR, target::Thread::vm_tag_offset());
-
-  __ blx(R5);
-
-  // Mark that the thread is executing Dart code.
-  __ LoadImmediate(R2, VMTag::kDartTagId);
-  __ StoreToOffset(kWord, R2, THR, target::Thread::vm_tag_offset());
-
-  // Mark that the thread has not exited generated Dart code.
-  __ LoadImmediate(R2, 0);
-  __ StoreToOffset(kWord, R2, THR, target::Thread::exit_through_ffi_offset());
-
-  // Reset exit frame information in Isolate's mutator thread structure.
-  __ StoreToOffset(kWord, R2, THR,
-                   target::Thread::top_exit_frame_info_offset());
-
-  __ LeaveStubFrame();
-  __ Ret();
-
-#else
-  __ Stop("Not using Dart dynamic modules");
-#endif  // defined(DART_DYNAMIC_MODULES)
-}
-
 // R9: Contains an ICData.
 void StubCodeCompiler::GenerateICCallBreakpointStub() {
 #if defined(PRODUCT)
@@ -3076,7 +2909,7 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
   COMPILE_ASSERT(kStackTraceObjectReg == R1);
   COMPILE_ASSERT(IsAbiPreservedRegister(R4));
   COMPILE_ASSERT(IsAbiPreservedRegister(THR));
-  __ mov(IP, Operand(R1));  // Copy Stack pointer into IP.
+  __ mov(IP, Operand(R1));   // Copy Stack pointer into IP.
   // TransitionGeneratedToNative might clobber LR if it takes the slow path.
   __ mov(R4, Operand(R0));   // Program counter.
   __ mov(THR, Operand(R3));  // Thread.
@@ -3177,7 +3010,7 @@ void StubCodeCompiler::GenerateOptimizeFunctionStub() {
   __ Push(IP);  // Setup space on stack for return value.
   __ Push(R8);
   __ CallRuntime(kOptimizeInvokedFunctionRuntimeEntry, 1);
-  __ Pop(R0);             // Discard argument.
+  __ Pop(R0);  // Discard argument.
   __ Pop(FUNCTION_REG);   // Get Function object
   __ Pop(ARGS_DESC_REG);  // Restore argument descriptor.
   __ LeaveStubFrame();
@@ -3386,9 +3219,8 @@ void StubCodeCompiler::GenerateICCallThroughCodeStub() {
   if (FLAG_precompiled_mode) {
     const intptr_t entry_offset =
         target::ICData::EntryPointIndexFor(1) * target::kWordSize;
-    __ LoadCompressed(FUNCTION_REG, Address(R8, entry_offset));
-    __ Branch(
-        FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
+    __ LoadCompressed(R0, Address(R8, entry_offset));
+    __ Branch(FieldAddress(R0, target::Function::entry_point_offset()));
   } else {
     const intptr_t code_offset =
         target::ICData::CodeIndexFor(1) * target::kWordSize;

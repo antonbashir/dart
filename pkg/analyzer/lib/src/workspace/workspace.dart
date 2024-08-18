@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/context/packages.dart';
 import 'package:analyzer/src/generated/sdk.dart';
@@ -60,10 +59,6 @@ abstract class Workspace {
 /// understand whether arbitrary file paths represent libraries declared within
 /// a given package in a Workspace.
 abstract class WorkspacePackage {
-  /// Return `true` if this package can have public apis, that is, the package
-  /// has marker files like pubspec.yaml or BUILD.
-  bool get canHavePublicApi => true;
-
   /// Return the experiments enabled for all files in the package.
   ///
   /// Return `null` if this package does not have enabled experiments.
@@ -106,11 +101,6 @@ abstract class WorkspacePackage {
     } else {
       return source.fullName;
     }
-  }
-
-  /// Whether [file] is in a "test" directory of this package.
-  bool isInTestDirectory(File file) {
-    return false;
   }
 
   /// Return a map from the names of packages to the absolute and normalized

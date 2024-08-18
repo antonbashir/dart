@@ -6,10 +6,8 @@ import 'dart:core' hide Type;
 
 import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
-import 'package:kernel/target/targets.dart' show Target, TargetFlags;
 import 'package:kernel/testing/mock_sdk_component.dart';
 import 'package:test/test.dart';
-import 'package:vm/modular/target/vm.dart';
 import 'package:vm/transformations/type_flow/types.dart';
 
 class TestTypeHierarchy extends TypeHierarchy {
@@ -17,18 +15,13 @@ class TestTypeHierarchy extends TypeHierarchy {
   final Map<Class, Type> specializations;
   int classIdCounter = 0;
 
-  TestTypeHierarchy(
-      CoreTypes coreTypes, Target target, this.classes, this.specializations)
-      : super(coreTypes, target);
+  TestTypeHierarchy(CoreTypes coreTypes, this.classes, this.specializations)
+      : super(coreTypes, /*soundNullSafety=*/ true);
 
   @override
-  Type specializeTypeCone(TFClass base, {required bool allowWideCone}) {
+  Type specializeTypeCone(TFClass base, {bool allowWideCone = false}) {
     return specializations[base.classNode]!;
   }
-
-  @override
-  bool hasAllocatedSubtypes(TFClass cls) =>
-      specializeTypeCone(cls, allowWideCone: true) is! EmptyType;
 
   @override
   TFClass getTFClass(Class c) =>
@@ -47,18 +40,9 @@ class TestTypeHierarchy extends TypeHierarchy {
       throw "flattenedTypeArgumentsFor is not supported in the types test.";
 }
 
-class TestingTarget extends VmTarget {
-  TestingTarget() : super(TargetFlags());
-
-  // Mock SDK doesn't have _Closure class, use Function.
-  @override
-  Class concreteClosureClass(CoreTypes coreTypes) => coreTypes.functionClass;
-}
-
 main() {
   final Component component = createMockSdkComponent();
-  final CoreTypes coreTypes = CoreTypes(component);
-  final Target target = TestingTarget();
+  final CoreTypes coreTypes = new CoreTypes(component);
 
   test('types-builder', () {
     final Class c1 = new Class(name: 'C1', fileUri: dummyUri);
@@ -67,18 +51,18 @@ main() {
         typeParameters: [new TypeParameter('E')],
         fileUri: dummyUri);
 
-    final TypesBuilder tb = new TestTypeHierarchy(coreTypes, target, {}, {});
+    final TypesBuilder tb = new TestTypeHierarchy(coreTypes, {}, {});
     final tfc1 = tb.getTFClass(c1);
     final tfc2 = tb.getTFClass(c2);
     final tfFunction = tb.getTFClass(coreTypes.functionClass);
 
-    final InterfaceType t1 = new InterfaceType(c1, Nullability.nullable);
-    final InterfaceType t2Raw = new InterfaceType(c2, Nullability.nullable);
+    final InterfaceType t1 = new InterfaceType(c1, Nullability.legacy);
+    final InterfaceType t2Raw = new InterfaceType(c2, Nullability.legacy);
     final InterfaceType t2Generic =
-        new InterfaceType(c2, Nullability.nullable, [t1]);
+        new InterfaceType(c2, Nullability.legacy, [t1]);
     final DartType t3 = const NullType();
     final FunctionType f1 =
-        new FunctionType([t1], const VoidType(), Nullability.nullable);
+        new FunctionType([t1], const VoidType(), Nullability.legacy);
 
     expect(tb.fromStaticType(const NeverType.nonNullable(), false),
         equals(emptyType));
@@ -263,7 +247,6 @@ main() {
 
     final hierarchy = new TestTypeHierarchy(
         coreTypes,
-        target,
         // classes
         {
           c1: tfc1,
@@ -305,9 +288,9 @@ main() {
     final tfc2 = TFClass(2, c2, {}, null);
     final tfc3 = TFClass(3, c3, {}, null);
 
-    final t1a = InterfaceType(c1, Nullability.nonNullable);
-    final t1b = InterfaceType(c1, Nullability.nonNullable);
-    final t2 = InterfaceType(c2, Nullability.nonNullable);
+    final t1a = InterfaceType(c1, Nullability.legacy);
+    final t1b = InterfaceType(c1, Nullability.legacy);
+    final t2 = InterfaceType(c2, Nullability.legacy);
 
     void eq(dynamic a, dynamic b) {
       expect(a == b, isTrue, reason: "Test case: $a == $b");

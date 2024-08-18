@@ -6,13 +6,12 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Provide a deprecation message, via `@Deprecated("message")`.';
+const _desc = r'Provide a deprecation message, via @Deprecated("message").';
 
 const _details = r'''
 **DO** specify a deprecation message (with migration instructions and/or a
-removal schedule) in the `Deprecated` constructor.
+removal schedule) in the Deprecation constructor.
 
 **BAD:**
 ```dart
@@ -33,15 +32,20 @@ void oldFunction(arg1, arg2) {}
 ''';
 
 class ProvideDeprecationMessage extends LintRule {
+  static const LintCode code = LintCode(
+      'provide_deprecation_message', 'Missing a deprecation message.',
+      correctionMessage:
+          "Try using the constructor to provide a message ('@Deprecated(\"message\")').");
+
   ProvideDeprecationMessage()
       : super(
             name: 'provide_deprecation_message',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.publicInterface});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.provide_deprecation_message;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

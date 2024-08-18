@@ -129,11 +129,19 @@ typedef FixedCache<intptr_t, ExceptionHandlerInfo, 16> HandlerInfoCache;
 // Fixed cache for catch entry state lookup.
 typedef FixedCache<intptr_t, CatchEntryMovesRefPtr, 16> CatchEntryMovesCache;
 
-// List of Isolate group flags.
+// List of Isolate flags with corresponding members of Dart_IsolateFlags and
+// corresponding global command line flags.
+#define BOOL_ISOLATE_FLAG_LIST(V) BOOL_ISOLATE_FLAG_LIST_DEFAULT_GETTER(V)
+
+#define BOOL_ISOLATE_GROUP_FLAG_LIST(V)                                        \
+  BOOL_ISOLATE_GROUP_FLAG_LIST_DEFAULT_GETTER(V)                               \
+  BOOL_ISOLATE_GROUP_FLAG_LIST_CUSTOM_GETTER(V)
+
+// List of Isolate flags with default getters.
 //
 //     V(when, name, bit-name, Dart_IsolateFlags-name, command-line-flag-name)
 //
-#define BOOL_ISOLATE_GROUP_FLAG_LIST(V)                                        \
+#define BOOL_ISOLATE_GROUP_FLAG_LIST_DEFAULT_GETTER(V)                         \
   V(PRECOMPILER, obfuscate, Obfuscate, obfuscate, false)                       \
   V(NONPRODUCT, asserts, EnableAsserts, enable_asserts, FLAG_enable_asserts)   \
   V(NONPRODUCT, use_field_guards, UseFieldGuards, use_field_guards,            \
@@ -144,16 +152,18 @@ typedef FixedCache<intptr_t, CatchEntryMovesRefPtr, 16> CatchEntryMovesCache;
   V(NONPRODUCT, snapshot_is_dontneed_safe, SnapshotIsDontNeedSafe,             \
     snapshot_is_dontneed_safe, false)                                          \
   V(NONPRODUCT, branch_coverage, BranchCoverage, branch_coverage,              \
-    FLAG_branch_coverage)                                                      \
-  V(NONPRODUCT, coverage, Coverage, coverage, FLAG_coverage)
+    FLAG_branch_coverage)
 
-// List of Isolate flags with corresponding members of Dart_IsolateFlags and
-// corresponding global command line flags.
-#define BOOL_ISOLATE_FLAG_LIST(V)                                              \
-  V(NONPRODUCT, is_system_isolate, IsSystemIsolate, is_system_isolate, false)  \
-  V(NONPRODUCT, is_service_isolate, IsServiceIsolate, is_service_isolate,      \
-    false)                                                                     \
-  V(NONPRODUCT, is_kernel_isolate, IsKernelIsolate, is_kernel_isolate, false)
+#define BOOL_ISOLATE_FLAG_LIST_DEFAULT_GETTER(V)                               \
+  V(PRODUCT, copy_parent_code, CopyParentCode, copy_parent_code, false)        \
+  V(PRODUCT, is_system_isolate, IsSystemIsolate, is_system_isolate, false)
+
+// List of Isolate flags with custom getters named #name().
+//
+//     V(when, name, bit-name, Dart_IsolateFlags-name, default_value)
+//
+#define BOOL_ISOLATE_GROUP_FLAG_LIST_CUSTOM_GETTER(V)                          \
+  V(PRODUCT, null_safety, NullSafety, null_safety, false)
 
 // Represents the information used for spawning the first isolate within an
 // isolate group. All isolates within a group will refer to this
@@ -256,7 +266,7 @@ class MutatorThreadPool : public ThreadPool {
   virtual ~MutatorThreadPool() {}
 
  protected:
-  virtual void OnEnterIdleLocked(MutexLocker* ml, ThreadPool::Worker* worker);
+  virtual void OnEnterIdleLocked(MonitorLocker* ml);
 
  private:
   void NotifyIdle();
@@ -270,12 +280,10 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
                void* embedder_data,
                ObjectStore* object_store,
-               Dart_IsolateFlags api_flags,
-               bool is_vm_isolate);
+               Dart_IsolateFlags api_flags);
   IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
                void* embedder_data,
-               Dart_IsolateFlags api_flags,
-               bool is_vm_isolate);
+               Dart_IsolateFlags api_flags);
   ~IsolateGroup();
 
   void RehashConstants(Become* become);
@@ -287,7 +295,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   std::shared_ptr<IsolateGroupSource> shareable_source() const {
     return source_;
   }
-  bool is_vm_isolate() const { return is_vm_isolate_; }
   void* embedder_data() const { return embedder_data_; }
 
   bool initial_spawn_successful() { return initial_spawn_successful_; }
@@ -436,11 +443,30 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
     return FLAG_FOR_##when(bitname##Bit::decode(isolate_group_flags_),         \
                            flag_name);                                         \
   }
-  BOOL_ISOLATE_GROUP_FLAG_LIST(DECLARE_GETTER)
+  BOOL_ISOLATE_GROUP_FLAG_LIST_DEFAULT_GETTER(DECLARE_GETTER)
 #undef FLAG_FOR_NONPRODUCT
 #undef FLAG_FOR_PRECOMPILER
 #undef FLAG_FOR_PRODUCT
 #undef DECLARE_GETTER
+
+  bool null_safety_not_set() const {
+    return !NullSafetySetBit::decode(isolate_group_flags_);
+  }
+
+  bool null_safety() const {
+    ASSERT(!null_safety_not_set());
+    return NullSafetyBit::decode(isolate_group_flags_);
+  }
+
+  void set_null_safety(bool null_safety) {
+    isolate_group_flags_ = NullSafetySetBit::update(true, isolate_group_flags_);
+    isolate_group_flags_ =
+        NullSafetyBit::update(null_safety, isolate_group_flags_);
+  }
+
+  bool use_strict_null_safety_checks() const {
+    return null_safety() || FLAG_strict_null_safety_checks;
+  }
 
   bool should_load_vmservice() const {
     return ShouldLoadVmServiceBit::decode(isolate_group_flags_);
@@ -458,10 +484,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   void set_branch_coverage(bool value) {
     isolate_group_flags_ =
         BranchCoverageBit::update(value, isolate_group_flags_);
-  }
-
-  void set_coverage(bool value) {
-    isolate_group_flags_ = CoverageBit::update(value, isolate_group_flags_);
   }
 
 #if !defined(PRODUCT)
@@ -493,14 +515,18 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   // Class table for the program loaded into this isolate group.
   //
   // This table is modified by kernel loading.
-  ClassTable* class_table() const { return class_table_; }
+  ClassTable* class_table() const {
+    return class_table_;
+  }
 
   // Class table used for heap walks by GC visitors. Usually it
   // is the same table as one in |class_table_|, except when in the
   // middle of the reload.
   //
   // See comment for |ClassTable| class for more details.
-  ClassTable* heap_walk_class_table() const { return heap_walk_class_table_; }
+  ClassTable* heap_walk_class_table() const {
+    return heap_walk_class_table_;
+  }
 
   void CloneClassTableForReload();
   void RestoreOriginalClassTable();
@@ -530,9 +556,9 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   Mutex* unlinked_call_map_mutex() { return &unlinked_call_map_mutex_; }
 #endif
 
-#if !defined(DART_PRECOMPILED_RUNTIME) || defined(DART_DYNAMIC_MODULES)
+#if !defined(DART_PRECOMPILED_RUNTIME)
   Mutex* initializer_functions_mutex() { return &initializer_functions_mutex_; }
-#endif  // !defined(DART_PRECOMPILED_RUNTIME) || defined(DART_DYNAMIC_MODULES)
+#endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
   SafepointRwLock* program_lock() { return program_lock_.get(); }
 
@@ -568,13 +594,11 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   // Prepares all threads in an isolate for Garbage Collection.
   void ReleaseStoreBuffers();
   void FlushMarkingStacks();
-  void EnableIncrementalBarrier(MarkingStack* old_marking_stack,
-                                MarkingStack* new_marking_stack,
+  void EnableIncrementalBarrier(MarkingStack* marking_stack,
                                 MarkingStack* deferred_marking_stack);
   void DisableIncrementalBarrier();
 
-  MarkingStack* old_marking_stack() const { return old_marking_stack_; }
-  MarkingStack* new_marking_stack() const { return new_marking_stack_; }
+  MarkingStack* marking_stack() const { return marking_stack_; }
   MarkingStack* deferred_marking_stack() const {
     return deferred_marking_stack_;
   }
@@ -717,13 +741,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
     isolate_group_flags_ =
         AllClassesFinalizedBit::update(value, isolate_group_flags_);
   }
-  bool has_dynamically_extendable_classes() const {
-    return HasDynamicallyExtendableClassesBit::decode(isolate_group_flags_);
-  }
-  void set_has_dynamically_extendable_classes(bool value) {
-    isolate_group_flags_ =
-        HasDynamicallyExtendableClassesBit::update(value, isolate_group_flags_);
-  }
 
   bool remapping_cids() const {
     return RemappingCidsBit::decode(isolate_group_flags_);
@@ -747,40 +764,14 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
     initial_field_table_ = field_table;
   }
 
-  FieldTable* shared_initial_field_table() const {
-    return shared_initial_field_table_.get();
-  }
-  std::shared_ptr<FieldTable> shared_initial_field_table_shareable() {
-    return shared_initial_field_table_;
-  }
-  void set_shared_initial_field_table(std::shared_ptr<FieldTable> field_table) {
-    shared_initial_field_table_ = field_table;
-  }
-
-  FieldTable* shared_field_table() const { return shared_field_table_.get(); }
-  std::shared_ptr<FieldTable> shared_field_table_shareable() {
-    return shared_field_table_;
-  }
-  void set_shared_field_table(Thread* T, FieldTable* shared_field_table) {
-    shared_field_table_.reset(shared_field_table);
-    T->shared_field_table_values_ = shared_field_table->table();
-  }
-
   MutatorThreadPool* thread_pool() { return thread_pool_.get(); }
 
   void RegisterClass(const Class& cls);
-  void RegisterSharedStaticField(const Field& field,
-                                 const Object& initial_value);
   void RegisterStaticField(const Field& field, const Object& initial_value);
   void FreeStaticField(const Field& field);
 
   Isolate* EnterTemporaryIsolate();
   static void ExitTemporaryIsolate();
-
-  void SetNativeAssetsCallbacks(NativeAssetsApi* native_assets_api) {
-    native_assets_api_ = *native_assets_api;
-  }
-  NativeAssetsApi* native_assets_api() { return &native_assets_api_; }
 
  private:
   friend class Dart;  // For `object_store_ = ` in Dart::Init
@@ -793,15 +784,15 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   V(AllClassesFinalized)                                                       \
   V(EnableAsserts)                                                             \
   V(HasAttemptedReload)                                                        \
+  V(NullSafety)                                                                \
   V(RemappingCids)                                                             \
   V(ShouldLoadVmService)                                                       \
+  V(NullSafetySet)                                                             \
   V(Obfuscate)                                                                 \
   V(UseFieldGuards)                                                            \
   V(UseOsr)                                                                    \
   V(SnapshotIsDontNeedSafe)                                                    \
-  V(BranchCoverage)                                                            \
-  V(Coverage)                                                                  \
-  V(HasDynamicallyExtendableClasses)
+  V(BranchCoverage)
 
   // Isolate group specific flags.
   enum FlagBits {
@@ -828,7 +819,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
 
   const char** obfuscation_map_ = nullptr;
 
-  bool is_vm_isolate_ = false;
+  bool is_vm_isolate_heap_ = false;
   void* embedder_data_ = nullptr;
 
   IdleTimeHandler idle_time_handler_;
@@ -864,8 +855,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
 
 #endif  // !defined(PRODUCT)
 
-  MarkingStack* old_marking_stack_ = nullptr;
-  MarkingStack* new_marking_stack_ = nullptr;
+  MarkingStack* marking_stack_ = nullptr;
   MarkingStack* deferred_marking_stack_ = nullptr;
   std::shared_ptr<IsolateGroupSource> source_;
   std::unique_ptr<ApiState> api_state_;
@@ -885,8 +875,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   intptr_t dispatch_table_snapshot_size_ = 0;
   ArrayPtr saved_unlinked_calls_;
   std::shared_ptr<FieldTable> initial_field_table_;
-  std::shared_ptr<FieldTable> shared_initial_field_table_;
-  std::shared_ptr<FieldTable> shared_field_table_;
   uint32_t isolate_group_flags_ = 0;
 
   NOT_IN_PRECOMPILED(std::unique_ptr<BackgroundCompiler> background_compiler_);
@@ -907,9 +895,9 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   Mutex unlinked_call_map_mutex_;
 #endif
 
-#if !defined(DART_PRECOMPILED_RUNTIME) || defined(DART_DYNAMIC_MODULES)
+#if !defined(DART_PRECOMPILED_RUNTIME)
   Mutex initializer_functions_mutex_;
-#endif  // !defined(DART_PRECOMPILED_RUNTIME) || defined(DART_DYNAMIC_MODULES)
+#endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
   // Protect access to boxed_field_list_.
   Mutex field_list_mutex_;
@@ -928,8 +916,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   intptr_t max_active_mutators_ = 0;
 
   NOT_IN_PRODUCT(GroupDebugger* debugger_ = nullptr);
-
-  NativeAssetsApi native_assets_api_;
 };
 
 // When an isolate sends-and-exits this class represent things that it passed
@@ -1377,9 +1363,18 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   void PauseEventHandler();
 #endif
 
-  bool is_vm_isolate() const { return LoadIsolateFlagsBit<IsVMIsolateBit>(); }
-  void set_is_vm_isolate(bool value) {
-    UpdateIsolateFlagsBit<IsVMIsolateBit>(value);
+  bool is_service_isolate() const {
+    return LoadIsolateFlagsBit<IsServiceIsolateBit>();
+  }
+  void set_is_service_isolate(bool value) {
+    UpdateIsolateFlagsBit<IsServiceIsolateBit>(value);
+  }
+
+  bool is_kernel_isolate() const {
+    return LoadIsolateFlagsBit<IsKernelIsolateBit>();
+  }
+  void set_is_kernel_isolate(bool value) {
+    UpdateIsolateFlagsBit<IsKernelIsolateBit>(value);
   }
 
   bool is_service_registered() const {
@@ -1412,7 +1407,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool name() const {                                                          \
     return FLAG_FOR_##when(LoadIsolateFlagsBit<bitname##Bit>(), flag_name);    \
   }
-  BOOL_ISOLATE_FLAG_LIST(DECLARE_GETTER)
+  BOOL_ISOLATE_FLAG_LIST_DEFAULT_GETTER(DECLARE_GETTER)
 #undef FLAG_FOR_NONPRODUCT
 #undef FLAG_FOR_PRECOMPILER
 #undef FLAG_FOR_PRODUCT
@@ -1425,10 +1420,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     UpdateIsolateFlagsBit<HasAttemptedSteppingBit>(value);
   }
 
-  // Kills all non-system isolates.
   static void KillAllIsolates(LibMsgId msg_id);
-  // Kills all system isolates, excluding the kernel service and VM service.
-  static void KillAllSystemIsolates(LibMsgId msg_id);
   static void KillIfExists(Isolate* isolate, LibMsgId msg_id);
 
   // Lookup an isolate by its main port. Returns nullptr if no matching isolate
@@ -1562,19 +1554,19 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool is_system_isolate_ = false;
   // End accessed from generated code.
 
-  IsolateGroup* const isolate_group_;
+  IsolateGroup* isolate_group_;
   IdleTimeHandler idle_time_handler_;
   std::unique_ptr<IsolateObjectStore> isolate_object_store_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \
   V(IsRunnable)                                                                \
-  V(IsVMIsolate)                                                               \
   V(IsServiceIsolate)                                                          \
   V(IsKernelIsolate)                                                           \
   V(ResumeRequest)                                                             \
   V(HasAttemptedStepping)                                                      \
   V(ShouldPausePostServiceRequest)                                             \
+  V(CopyParentCode)                                                            \
   V(IsSystemIsolate)                                                           \
   V(IsServiceRegistered)
 
@@ -1621,23 +1613,14 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-  enum {
-    kPendingHandlerIndex = 0,
-    kPendingMethodNameIndex,
-    kPendingKeysIndex,
-    kPendingValuesIndex,
-    kPendingReplyPortIndex,
-    kPendingIdIndex,
-    kPendingEntrySize
-  };
+  enum {kPendingHandlerIndex = 0, kPendingMethodNameIndex, kPendingKeysIndex,
+        kPendingValuesIndex,      kPendingReplyPortIndex,  kPendingIdIndex,
+        kPendingEntrySize};
   GrowableObjectArrayPtr pending_service_extension_calls_;
 
   // We use 2 list entries for each registered extension handler.
-  enum {
-    kRegisteredNameIndex = 0,
-    kRegisteredHandlerIndex,
-    kRegisteredEntrySize
-  };
+  enum {kRegisteredNameIndex = 0, kRegisteredHandlerIndex,
+        kRegisteredEntrySize};
   GrowableObjectArrayPtr registered_service_extension_handlers_;
 
   // Used to wake the isolate when it is in the pause event loop.

@@ -11,22 +11,20 @@ import 'package:analysis_server/src/server/crash_reporting_attachments.dart';
 import 'package:analysis_server/src/services/user_prompts/dart_fix_prompt_manager.dart';
 import 'package:analysis_server/src/utilities/mocks.dart';
 import 'package:analyzer/dart/analysis/analysis_options.dart' as analysis;
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/instrumentation/service.dart';
-import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
+import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
-import 'package:analyzer_utilities/test/experiments/experiments.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 import 'package:unified_analytics/unified_analytics.dart';
 
 import 'mocks.dart';
-import 'support/configuration_files.dart';
-import 'test_macros.dart';
+import 'src/utilities/mock_packages.dart';
 
 // TODO(scheglov): this is duplicate
 class AnalysisOptionsFileConfig {
@@ -84,15 +82,7 @@ class BlazeWorkspaceAnalysisServerTest extends ContextResolutionTest {
   }
 }
 
-abstract class ContextResolutionTest with ResourceProviderMixin {
-  /// The byte store that is reused between tests. This allows reusing all
-  /// unlinked and linked summaries for SDK, so that tests run much faster.
-  /// However nothing is preserved between Dart VM runs, so changes to the
-  /// implementation are still fully verified.
-  static final MemoryByteStore _sharedByteStore = MemoryByteStore();
-
-  MemoryByteStore _byteStore = _sharedByteStore;
-
+class ContextResolutionTest with ResourceProviderMixin {
   final TestPluginManager pluginManager = TestPluginManager();
   late final MockServerChannel serverChannel;
   late final LegacyAnalysisServer server;
@@ -101,8 +91,6 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
 
   final List<GeneralAnalysisService> _analysisGeneralServices = [];
   final Map<AnalysisService, List<String>> _analysisFileSubscriptions = {};
-
-  void Function(Notification)? notificationListener;
 
   Folder get sdkRoot => newFolder('/sdk');
 
@@ -137,9 +125,7 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
     return response;
   }
 
-  void processNotification(Notification notification) {
-    notificationListener?.call(notification);
-  }
+  void processNotification(Notification notification) {}
 
   Future<void> removeGeneralAnalysisSubscription(
     GeneralAnalysisService service,
@@ -152,7 +138,7 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
     handleSuccessfulRequest(
       AnalysisSetPriorityFilesParams(
         files.map((e) => e.path).toList(),
-      ).toRequest('0', clientUriConverter: server.uriConverter),
+      ).toRequest('0'),
     );
   }
 
@@ -167,7 +153,7 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
         includedConverted,
         excludedConverted,
         packageRoots: {},
-      ).toRequest('0', clientUriConverter: server.uriConverter),
+      ).toRequest('0'),
     );
   }
 
@@ -193,7 +179,6 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
       CrashReportingAttachmentsBuilder.empty,
       InstrumentationService.NULL_SERVICE,
       dartFixPromptManager: dartFixPromptManager,
-      providedByteStore: _byteStore,
     );
 
     server.pluginManager = pluginManager;
@@ -201,7 +186,7 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
   }
 
   Future<void> tearDown() async {
-    await server.shutdown();
+    await server.dispose();
   }
 
   /// Returns a [Future] that completes when the server's analysis is complete.
@@ -214,23 +199,22 @@ abstract class ContextResolutionTest with ResourceProviderMixin {
     await handleSuccessfulRequest(
       AnalysisSetGeneralSubscriptionsParams(
         _analysisGeneralServices,
-      ).toRequest('0', clientUriConverter: server.uriConverter),
+      ).toRequest('0'),
     );
   }
 }
 
-class PubPackageAnalysisServerTest extends ContextResolutionTest
-    with MockPackagesMixin, ConfigurationFilesMixin, TestMacros {
-  // TODO(scheglov): Consider turning it back into a getter.
-  late String testFilePath = '$testPackageLibPath/test.dart';
-
-  /// Return a list of the experiments that are to be enabled for tests in this
-  /// class, an empty list if there are no experiments that should be enabled.
-  List<String> get experiments => experimentsForTests;
+class PubPackageAnalysisServerTest extends ContextResolutionTest {
+  // If experiments are needed,
+  // add `import 'package:analyzer/dart/analysis/features.dart';`
+  // and list the necessary experiments here.
+  List<String> get experiments => [
+        Feature.inline_class.enableString,
+        Feature.macros.enableString,
+      ];
 
   /// The path that is not in [workspaceRootPath], contains external packages.
-  @override
-  String get packagesRootPath => resourceProvider.convertPath('/packages');
+  String get packagesRootPath => '/packages';
 
   File get testFile => getFile(testFilePath);
 
@@ -241,11 +225,12 @@ class PubPackageAnalysisServerTest extends ContextResolutionTest
 
   String get testFileContent => testFile.readAsStringSync();
 
+  String get testFilePath => '$testPackageLibPath/test.dart';
+
   String get testPackageLibPath => '$testPackageRootPath/lib';
 
   Folder get testPackageRoot => getFolder(testPackageRootPath);
 
-  @override
   String get testPackageRootPath => '$workspaceRootPath/test';
 
   String get testPackageTestPath => '$testPackageRootPath/test';
@@ -262,7 +247,7 @@ class PubPackageAnalysisServerTest extends ContextResolutionTest
     await handleSuccessfulRequest(
       AnalysisSetSubscriptionsParams(
         _analysisFileSubscriptions,
-      ).toRequest('0', clientUriConverter: server.uriConverter),
+      ).toRequest('0'),
     );
   }
 
@@ -274,7 +259,6 @@ class PubPackageAnalysisServerTest extends ContextResolutionTest
   @override
   void createDefaultFiles() {
     writeTestPackageConfig();
-    writeTestPackagePubspecYamlFile('name: test');
 
     writeTestPackageAnalysisOptionsFile(
       AnalysisOptionsFileConfig(
@@ -311,10 +295,11 @@ class PubPackageAnalysisServerTest extends ContextResolutionTest
     return offset;
   }
 
-  /// Call this method if the test needs to use the empty byte store, without
-  /// any information cached.
-  void useEmptyByteStore() {
-    _byteStore = MemoryByteStore();
+  void writePackageConfig(Folder root, PackageConfigFileBuilder config) {
+    newPackageConfigJsonFile(
+      root.path,
+      config.toContent(toUriStr: toUriStr),
+    );
   }
 
   void writeTestPackageAnalysisOptionsFile(AnalysisOptionsFileConfig config) {
@@ -322,6 +307,43 @@ class PubPackageAnalysisServerTest extends ContextResolutionTest
       testPackageRootPath,
       config.toContent(),
     );
+  }
+
+  void writeTestPackageConfig({
+    PackageConfigFileBuilder? config,
+    String? languageVersion,
+    bool flutter = false,
+    bool meta = false,
+  }) {
+    if (config == null) {
+      config = PackageConfigFileBuilder();
+    } else {
+      config = config.copy();
+    }
+
+    config.add(
+      name: 'test',
+      rootPath: testPackageRootPath,
+      languageVersion: languageVersion,
+    );
+
+    if (meta || flutter) {
+      var libFolder = MockPackages.instance.addMeta(resourceProvider);
+      config.add(name: 'meta', rootPath: libFolder.parent.path);
+    }
+
+    if (flutter) {
+      {
+        var libFolder = MockPackages.instance.addUI(resourceProvider);
+        config.add(name: 'ui', rootPath: libFolder.parent.path);
+      }
+      {
+        var libFolder = MockPackages.instance.addFlutter(resourceProvider);
+        config.add(name: 'flutter', rootPath: libFolder.parent.path);
+      }
+    }
+
+    writePackageConfig(testPackageRoot, config);
   }
 
   void writeTestPackagePubspecYamlFile(String content) {

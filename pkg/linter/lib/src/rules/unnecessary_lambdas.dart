@@ -6,10 +6,10 @@ import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/dart_type_utilities.dart';
 
 const _desc = r"Don't create a lambda when a tear-off will do.";
@@ -31,19 +31,23 @@ names.forEach(print);
 
 ''';
 
-Set<Element?> _extractElementsOfSimpleIdentifiers(AstNode node) =>
+Iterable<Element?> _extractElementsOfSimpleIdentifiers(AstNode node) =>
     _IdentifierVisitor().extractElements(node);
 
 class UnnecessaryLambdas extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_lambdas', 'Closure should be a tearoff.',
+      correctionMessage: 'Try using a tearoff rather than a closure.');
+
   UnnecessaryLambdas()
       : super(
             name: 'unnecessary_lambdas',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_lambdas;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -58,16 +62,31 @@ class _FinalExpressionChecker {
 
   _FinalExpressionChecker(this.parameters);
 
-  bool isFinalNode(Expression? node_) {
-    if (node_ == null) {
+  /// Returns whether [element] is a `final` variable or property and not
+  /// `late`.
+  bool isFinalElement(Element? element) {
+    if (element is PropertyAccessorElement) {
+      return element.isSynthetic &&
+          element.variable.isFinal &&
+          !element.variable.isLate;
+    } else if (element is VariableElement) {
+      return element.isFinal && !element.isLate;
+    }
+    return true;
+  }
+
+  bool isFinalNode(Expression? node) {
+    if (node == null) {
       return true;
     }
-
-    var node = node_.unParenthesized;
 
     if (node is FunctionExpression) {
       var referencedElements = _extractElementsOfSimpleIdentifiers(node);
       return !referencedElements.any(parameters.contains);
+    }
+
+    if (node is ParenthesizedExpression) {
+      return isFinalNode(node.expression);
     }
 
     if (node is PrefixedIdentifier) {
@@ -83,7 +102,7 @@ class _FinalExpressionChecker {
       if (parameters.contains(element)) {
         return false;
       }
-      return element.isFinal;
+      return isFinalElement(element);
     }
 
     return false;
@@ -91,11 +110,11 @@ class _FinalExpressionChecker {
 }
 
 class _IdentifierVisitor extends RecursiveAstVisitor {
-  final _elements = <Element?>{};
+  final _elements = <Element?>[];
 
   _IdentifierVisitor();
 
-  Set<Element?> extractElements(AstNode node) {
+  List<Element?> extractElements(AstNode node) {
     node.accept(this);
     return _elements;
   }
@@ -110,12 +129,11 @@ class _IdentifierVisitor extends RecursiveAstVisitor {
 class _Visitor extends SimpleAstVisitor<void> {
   final bool constructorTearOffsEnabled;
   final LintRule rule;
-  final TypeSystem typeSystem;
+  final LinterContext context;
 
-  _Visitor(this.rule, LinterContext context)
-      : constructorTearOffsEnabled = context.libraryElement!.featureSet
-            .isEnabled(Feature.constructor_tearoffs),
-        typeSystem = context.typeSystem;
+  _Visitor(this.rule, this.context)
+      : constructorTearOffsEnabled =
+            context.isEnabled(Feature.constructor_tearoffs);
 
   @override
   void visitFunctionExpression(FunctionExpression node) {
@@ -133,51 +151,37 @@ class _Visitor extends SimpleAstVisitor<void> {
           statement.expression is InvocationExpression) {
         var expression = statement.expression;
         if (expression is InvocationExpression) {
-          // In the code, `(e) { f(e); }`, check `f(e)`.
           _visitInvocationExpression(expression, node);
         }
       }
     } else if (body is ExpressionFunctionBody) {
       var expression = body.expression;
       if (expression is InvocationExpression) {
-        // In the code, `(e) { return f(e); }`, check `f(e)`.
         _visitInvocationExpression(expression, node);
       } else if (constructorTearOffsEnabled &&
           expression is InstanceCreationExpression) {
-        // In the code, `(e) => C(e)`, check `C(e)`.
         _visitInstanceCreation(expression, node);
       }
     }
   }
 
-  /// Checks [expression], the singular child the body of [node], to see whether
-  /// [node] unnecessarily wraps [node].
   void _visitInstanceCreation(
       InstanceCreationExpression expression, FunctionExpression node) {
-    if (expression.isConst || expression.constructorName.type.isDeferred) {
-      return;
-    }
-
-    var nodeType = node.declaredElement?.type;
-    var invocationType = expression.constructorName.staticElement?.type;
-    if (nodeType == null) return;
-    if (invocationType == null) return;
-    // It is possible that the invocation function type is a valid replacement
-    // for the node's function type, even if each of the parameters of `node`
-    // is a valid argument for the corresponding parameter of `expression`.
-    if (!typeSystem.isAssignableTo(invocationType, nodeType)) {
-      return;
-    }
+    if (expression.isConst) return;
 
     var arguments = expression.argumentList.arguments;
-    if (arguments.any((a) => a is! SimpleIdentifier)) return;
-
-    var identifierArguments = arguments.cast<SimpleIdentifier>();
     var parameters = node.parameters?.parameters ?? <FormalParameter>[];
     if (parameters.length != arguments.length) return;
 
+    bool matches(Expression argument, FormalParameter parameter) {
+      if (argument is SimpleIdentifier) {
+        return argument.name == parameter.name?.lexeme;
+      }
+      return false;
+    }
+
     for (var i = 0; i < arguments.length; ++i) {
-      if (identifierArguments[i].name != parameters[i].name?.lexeme) {
+      if (!matches(arguments[i], parameters[i])) {
         return;
       }
     }
@@ -194,10 +198,19 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
+    bool isTearoffAssignable(DartType? assignedType) {
+      if (assignedType != null) {
+        var tearoffType = node.staticInvokeType;
+        if (tearoffType == null ||
+            !context.typeSystem.isSubtypeOf(tearoffType, assignedType)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     var parameters = nodeToLintParams.map((e) => e.declaredElement).toSet();
     if (node is FunctionExpressionInvocation) {
-      if (node.function.mightBeDeferred) return;
-
       // TODO(pq): consider checking for assignability
       // see: https://github.com/dart-lang/linter/issues/1561
       var checker = _FinalExpressionChecker(parameters);
@@ -205,26 +218,38 @@ class _Visitor extends SimpleAstVisitor<void> {
         rule.reportLint(nodeToLint);
       }
     } else if (node is MethodInvocation) {
-      if (node.target.mightBeDeferred) return;
-
-      var tearoffType = node.staticInvokeType;
-      if (tearoffType == null) return;
+      var target = node.target;
+      if (target is SimpleIdentifier) {
+        var element = target.staticElement;
+        if (element is PrefixElement) {
+          for (var import in element.imports) {
+            if (import.isDeferred) {
+              return;
+            }
+          }
+        }
+      }
 
       var parent = nodeToLint.parent;
       if (parent is NamedExpression) {
         var argType = parent.staticType;
-        if (argType == null) return;
-        if (!typeSystem.isSubtypeOf(tearoffType, argType)) return;
+        if (!isTearoffAssignable(argType)) {
+          return;
+        }
       } else if (parent is VariableDeclaration) {
-        var variableType = parent.declaredElement?.type;
-        if (variableType == null) return;
-        if (!typeSystem.isSubtypeOf(tearoffType, variableType)) return;
+        var grandparent = parent.parent;
+        if (grandparent is VariableDeclarationList) {
+          var variableType = grandparent.type?.type;
+          if (!isTearoffAssignable(variableType)) {
+            return;
+          }
+        }
       }
 
       var checker = _FinalExpressionChecker(parameters);
       if (!node.containsNullAwareInvocationInChain() &&
           checker.isFinalNode(node.target) &&
-          node.methodName.staticElement.isFinal &&
+          checker.isFinalElement(node.methodName.staticElement) &&
           node.typeArguments == null) {
         rule.reportLint(nodeToLint);
       }
@@ -232,32 +257,6 @@ class _Visitor extends SimpleAstVisitor<void> {
   }
 }
 
-extension on Expression? {
-  bool get mightBeDeferred {
-    var self = this;
-    var element = switch (self) {
-      PrefixedIdentifier() => self.prefix.staticElement,
-      SimpleIdentifier() => self.staticElement,
-      _ => null,
-    };
-    return element is PrefixElement &&
-        element.imports.any((e) => e.prefix is DeferredImportElementPrefix);
-  }
-}
-
-extension on Element? {
-  /// Returns whether this is a `final` variable or property and not `late`.
-  bool get isFinal {
-    var self = this;
-    if (self is PropertyAccessorElement) {
-      var variable = self.variable2;
-      return self.isSynthetic &&
-          variable != null &&
-          variable.isFinal &&
-          !variable.isLate;
-    } else if (self is VariableElement) {
-      return self.isFinal && !self.isLate;
-    }
-    return true;
-  }
+extension LibraryImportElementExtension on LibraryImportElement {
+  bool get isDeferred => prefix is DeferredImportElementPrefix;
 }

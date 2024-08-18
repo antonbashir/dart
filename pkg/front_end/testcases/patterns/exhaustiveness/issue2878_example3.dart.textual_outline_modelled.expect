@@ -8,5 +8,4 @@ List<List<A>> subs<A>(List<A> list) => switch (list) {
           [x]
         ],
     };
-
 void main() {}

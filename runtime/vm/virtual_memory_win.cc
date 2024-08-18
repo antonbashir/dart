@@ -92,6 +92,10 @@ void VirtualMemory::Cleanup() {
 #endif  // defined(DART_COMPRESSED_POINTERS)
 }
 
+bool VirtualMemory::DualMappingEnabled() {
+  return false;
+}
+
 VirtualMemory* VirtualMemory::AllocateAligned(intptr_t size,
                                               intptr_t alignment,
                                               bool is_executable,
@@ -178,8 +182,7 @@ VirtualMemory::~VirtualMemory() {
   // itself. The only way to release the mapping is to invoke VirtualFree
   // with original base pointer and MEM_RELEASE.
 #if defined(DART_COMPRESSED_POINTERS)
-  if (VirtualMemoryCompressedHeap::Contains(reserved_.pointer()) &&
-      (this != compressed_heap_)) {
+  if (VirtualMemoryCompressedHeap::Contains(reserved_.pointer())) {
     Decommit(reserved_.pointer(), reserved_.size());
     VirtualMemoryCompressedHeap::Free(reserved_.pointer(), reserved_.size());
     return;

@@ -81,7 +81,9 @@ class ListFactorySpecializer extends BaseSpecializer {
       return node;
     }
 
-    final intType = coreTypes.intNonNullableRawType;
+    final intType = contextMember.isNonNullableByDefault
+        ? coreTypes.intLegacyRawType
+        : coreTypes.intNonNullableRawType;
 
     // If the length is a constant, use the constant directly so that the
     // inferrer can see the constant length.
@@ -147,8 +149,12 @@ class ListFactorySpecializer extends BaseSpecializer {
               Name('+'),
               Arguments([IntLiteral(1)]),
               interfaceTarget: intPlus,
-              functionType:
-                  FunctionType([intType], intType, Nullability.nonNullable)),
+              functionType: FunctionType(
+                  [intType],
+                  intType,
+                  contextMember.isNonNullableByDefault
+                      ? Nullability.nonNullable
+                      : Nullability.legacy)),
         )..fileOffset = node.fileOffset,
       ],
       // body, e.g. _list[_i] = expression;
@@ -297,7 +303,7 @@ class ListGenerateLoopBodyInliner extends CloneVisitorNotMembers {
   }
 
   @override
-  TreeNode visitReturnStatement(ReturnStatement node) {
+  visitReturnStatement(ReturnStatement node) {
     // Do the default for return statements in nested functions.
     if (functionNestingLevel > 0) return super.visitReturnStatement(node);
 
@@ -342,7 +348,7 @@ class ListGenerateLoopBodyInliner extends CloneVisitorNotMembers {
 
   /// Nested functions.
   @override
-  TreeNode visitFunctionNode(FunctionNode node) {
+  visitFunctionNode(FunctionNode node) {
     functionNestingLevel++;
     final cloned = super.visitFunctionNode(node);
     functionNestingLevel--;

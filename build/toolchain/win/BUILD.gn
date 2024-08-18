@@ -8,6 +8,7 @@ declare_args() {
 }
 
 import("//build/config/win/visual_studio_version.gni")
+import("//build/toolchain/goma.gni")
 import("//build/toolchain/rbe.gni")
 
 # Should only be running on Windows.
@@ -24,17 +25,8 @@ tool_wrapper_path = rebase_path("tool_wrapper.py", root_build_dir)
 
 ninja_path = rebase_path("//buildtools/ninja/ninja")
 
-if (use_rbe) {
-  compiler_args =
-      rewrapper_args + [ "--labels=type=compile,compiler=clang-cl,lang=cpp" ]
-  if (rbe_os != host_os || rbe_cpu != host_cpu) {
-    compiler_args += [
-      "--env_var_allowlist=INCLUDE",
-      "--inputs=build/rbe,buildtools/$rbe_os-$rbe_cpu/clang/bin/llvm",
-      "--remote_wrapper=../../build/rbe/llvm.sh",
-    ]
-  }
-  compiler_prefix = string_join(" ", compiler_args) + " "
+if (use_goma) {
+  compiler_prefix = "$goma_dir/gomacc.exe "
 } else {
   compiler_prefix = ""
 }
@@ -83,7 +75,7 @@ template("msvc_toolchain") {
       # TODO(brettw) enable this when GN support in the binary has been rolled.
       #precompiled_header_type = "msvc"
       pdbname = "{{target_out_dir}}/{{target_output_name}}_c.pdb"
-      command = "$ninja_path -t msvc -e $env -- $cl /nologo /showIncludes /FC {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /c {{source}} /Fo{{output}} /Fd$pdbname"
+      command = "$ninja_path -t msvc -e $env -- $cl /nologo /showIncludes /FC @$rspfile /c {{source}} /Fo{{output}} /Fd$pdbname"
       depsformat = "msvc"
       description = "CC {{output}}"
       outputs = [
@@ -104,7 +96,7 @@ template("msvc_toolchain") {
       if (is_clang && invoker.current_cpu == "x86") {
         flags = "-m32"
       }
-      command = "$ninja_path -t msvc -e $env -- $cl $flags /nologo /showIncludes /FC {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}} /Fd$pdbname"
+      command = "$ninja_path -t msvc -e $env -- $cl $flags /nologo /showIncludes /FC @$rspfile /c {{source}} /Fo{{output}} /Fd$pdbname"
       depsformat = "msvc"
       description = "CXX {{output}}"
       outputs = [
@@ -140,18 +132,9 @@ template("msvc_toolchain") {
       ]
     }
 
-    if (is_clang) {
-      prefix = rebase_path("$clang_base_path/bin", root_build_dir)
-      lib = "$prefix/lld-link.exe /lib"
-      link = "$prefix/lld-link.exe"
-    } else {
-      lib = "lib.exe"
-      link = "link.exe"
-    }
-
     tool("alink") {
       rspfile = "{{output}}.rsp"
-      command = "$python_path $tool_wrapper_path link-wrapper $env False $lib /nologo /ignore:4221 /OUT:{{output}} @$rspfile"
+      command = "$python_path $tool_wrapper_path link-wrapper $env False lib.exe /nologo /ignore:4221 /OUT:{{output}} @$rspfile"
       description = "LIB {{output}}"
       outputs = [
         # Ignore {{output_extension}} and always use .lib, there's no reason to
@@ -172,7 +155,7 @@ template("msvc_toolchain") {
                                                                                    # foo.dll.lib
       rspfile = "${dllname}.rsp"
 
-      link_command = "$python_path $tool_wrapper_path link-wrapper $env False $link /nologo /IMPLIB:$libname /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
+      link_command = "$python_path $tool_wrapper_path link-wrapper $env False link.exe /nologo /IMPLIB:$libname /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
 
       # TODO(brettw) support manifests
       #manifest_command = "$python_path $tool_wrapper_path manifest-wrapper $env mt.exe -nologo -manifest $manifests -out:${dllname}.manifest"
@@ -225,7 +208,7 @@ template("msvc_toolchain") {
       rspfile = "$binary_output.rsp"
       pdbfile = "$binary_output.pdb"
 
-      link_command = "$python_path $tool_wrapper_path link-wrapper $env False $link /nologo /OUT:$binary_output /PDB:$pdbfile @$rspfile"
+      link_command = "$python_path $tool_wrapper_path link-wrapper $env False link.exe /nologo /OUT:$binary_output /PDB:$pdbfile @$rspfile"
 
       # TODO(brettw) support manifests
       #manifest_command = "$python_path $tool_wrapper_path manifest-wrapper $env mt.exe -nologo -manifest $manifests -out:{{output}}.manifest"
@@ -289,13 +272,6 @@ template("win_toolchains") {
     environment = "environment." + toolchain_arch
     prefix = rebase_path("$clang_base_path/bin", root_build_dir)
     cl = "${compiler_prefix}$prefix/clang-cl.exe"
-    if (use_rbe) {
-      if (toolchain_arch == "x86") {
-        cl = "${cl} --target=i686-pc-windows-msvc"
-      } else if (toolchain_arch == "x64") {
-        cl = "${cl} --target=x86_64-pc-windows-msvc"
-      }
-    }
     toolchain_args = {
       if (defined(invoker.toolchain_args)) {
         forward_variables_from(invoker.toolchain_args, "*")

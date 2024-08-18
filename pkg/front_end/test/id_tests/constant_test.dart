@@ -3,20 +3,18 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io' show Directory, Platform;
-
 import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart'
-    show DataInterpreter, StringDataInterpreter, cfeMarker, runTests;
-import 'package:front_end/src/api_prototype/experimental_flags.dart';
+    show DataInterpreter, StringDataInterpreter, runTests;
 import 'package:front_end/src/testing/id_testing_helper.dart'
     show
-        CfeDataComputer,
         CfeDataExtractor,
-        CfeTestConfig,
+        CfeDataComputer,
         CfeTestResultData,
         FormattedMessage,
         InternalCompilerResult,
         createUriForFileName,
+        defaultCfeConfig,
         onFailure,
         runTestFor;
 import 'package:front_end/src/testing/id_testing_utils.dart';
@@ -29,15 +27,7 @@ Future<void> main(List<String> args) async {
       args: args,
       createUriForFileName: createUriForFileName,
       onFailure: onFailure,
-      runTest: runTestFor(const ConstantsDataComputer(), [
-        const CfeTestConfig(
-          cfeMarker,
-          'cfe with experiments',
-          explicitExperimentalFlags: const {
-            ExperimentalFlag.digitSeparators: true,
-          },
-        )
-      ]));
+      runTest: runTestFor(const ConstantsDataComputer(), [defaultCfeConfig]));
 }
 
 class ConstantsDataComputer extends CfeDataComputer<String> {

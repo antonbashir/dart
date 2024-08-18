@@ -5,19 +5,13 @@
 library fasta.test.outline_suite;
 
 import 'suite_utils.dart' show internalMain;
-import 'testing/environment_keys.dart';
 import 'testing/suite.dart';
 
 Future<FastaContext> createContext(
     Chain suite, Map<String, String> environment) {
-  environment[EnvironmentKeys.soundNullSafety] = "true";
   return FastaContext.create(suite, environment);
 }
 
 Future<void> main([List<String> arguments = const []]) async {
-  await internalMain(
-    createContext,
-    arguments: arguments,
-    displayName: "outline suite",
-  );
+  await internalMain(createContext, arguments: arguments);
 }

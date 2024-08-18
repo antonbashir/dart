@@ -13,6 +13,8 @@
   "canonicalUri": "memory:sdk/tests/web/native/lib2.dart"
 }]*/
 
+// @dart = 2.7
+
 /*class: A:class=[{
   "id": "class/memory:sdk/tests/web/native/lib2.dart::A",
   "kind": "class",

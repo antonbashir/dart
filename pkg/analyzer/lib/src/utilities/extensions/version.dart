@@ -26,12 +26,12 @@ extension VersionConstraintExtension on VersionConstraint {
   }
 
   bool requiresAtLeast(Version version) {
-    var self = this;
+    final self = this;
     if (self is Version) {
       return self >= version;
     }
     if (self is VersionRange) {
-      var min = self.min;
+      final min = self.min;
       if (min == null) {
         return false;
       } else {

@@ -23,24 +23,27 @@ abstract class FunctionCompiler {
   List<CompilerTask> get tasks;
 }
 
-enum _Decision {
-  unknown,
-  mustNotInline,
-  mayInlineInLoopMustNotOutside,
-  canInlineInLoopMustNotOutside,
-  canInlineInLoopMayInlineOutside,
-  canInline,
-}
-
 /*
  * Invariants:
  *   canInline(function) implies canInline(function, insideLoop:true)
  *   !canInline(function, insideLoop: true) implies !canInline(function)
  */
 class FunctionInlineCache {
+  static const int _unknown = -1;
+  static const int _mustNotInline = 0;
+  // May-inline-in-loop means that the function may not be inlined outside loops
+  // but may be inlined in a loop.
+  static const int _mayInlineInLoopMustNotOutside = 1;
+  // The function can be inlined in a loop, but not outside.
+  static const int _canInlineInLoopMustNotOutside = 2;
+  // May-inline means that we know that it can be inlined inside a loop, but
+  // don't know about the general case yet.
+  static const int _canInlineInLoopMayInlineOutside = 3;
+  static const int _canInline = 4;
+
   final AnnotationsData _annotationsData;
 
-  final Map<FunctionEntity, _Decision> _cachedDecisions = {};
+  final Map<FunctionEntity, int> _cachedDecisions = {};
 
   FunctionInlineCache(this._annotationsData) {}
 
@@ -55,94 +58,103 @@ class FunctionInlineCache {
   // Returns `null` otherwise.
   bool? canInline(FunctionEntity element, {required bool insideLoop}) {
     assert(checkFunction(element), failedAt(element));
+    int? decision = _cachedDecisions[element];
 
-    // TODO(sra): Have annotations for mustInline / noInline for constructor
-    // bodies. (There used to be some logic here to have constructor bodies,
-    // inherit the settings from annotations on the generative
-    // constructor. This was conflated with the heuristic decisions, leading
-    // to lack of inlining where it was beneficial.)
-
-    final decision = _cachedDecisions[element] ?? _Decision.unknown;
+    if (decision == null) {
+      // TODO(sra): Have annotations for mustInline / noInline for constructor
+      // bodies. (There used to be some logic here to have constructor bodies,
+      // inherit the settings from annotations on the generative
+      // constructor. This was conflated with the heuristic decisions, leading
+      // to lack of inlining where it was beneficial.)
+      decision = _unknown;
+    }
 
     if (insideLoop) {
       switch (decision) {
-        case _Decision.mustNotInline:
+        case _mustNotInline:
           return false;
 
-        case _Decision.unknown:
-        case _Decision.mayInlineInLoopMustNotOutside:
+        case _unknown:
+        case _mayInlineInLoopMustNotOutside:
           // We know we can't inline outside a loop, but don't know for the
           // loop case. Return `null` to indicate that we don't know yet.
           return null;
 
-        case _Decision.canInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMayInlineOutside:
-        case _Decision.canInline:
+        case _canInlineInLoopMustNotOutside:
+        case _canInlineInLoopMayInlineOutside:
+        case _canInline:
           return true;
       }
     } else {
       switch (decision) {
-        case _Decision.mustNotInline:
-        case _Decision.mayInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMustNotOutside:
+        case _mustNotInline:
+        case _mayInlineInLoopMustNotOutside:
+        case _canInlineInLoopMustNotOutside:
           return false;
 
-        case _Decision.unknown:
-        case _Decision.canInlineInLoopMayInlineOutside:
+        case _unknown:
+        case _canInlineInLoopMayInlineOutside:
           // We know we can inline inside a loop, but don't know for the
           // non-loop case. Return `null` to indicate that we don't know yet.
           return null;
 
-        case _Decision.canInline:
+        case _canInline:
           return true;
       }
     }
+
+    // Quiet static checker.
+    return null;
   }
 
   void markAsInlinable(FunctionEntity element, {required bool insideLoop}) {
     assert(checkFunction(element), failedAt(element));
-    final oldDecision = _cachedDecisions[element] ?? _Decision.unknown;
+    int? oldDecision = _cachedDecisions[element];
+
+    if (oldDecision == null) {
+      oldDecision = _unknown;
+    }
 
     if (insideLoop) {
       switch (oldDecision) {
-        case _Decision.mustNotInline:
+        case _mustNotInline:
           throw failedAt(
               element,
               "Can't mark $element as non-inlinable and inlinable at the "
               "same time.");
 
-        case _Decision.unknown:
+        case _unknown:
           // We know that it can be inlined in a loop, but don't know about the
           // non-loop case yet.
-          _cachedDecisions[element] = _Decision.canInlineInLoopMayInlineOutside;
+          _cachedDecisions[element] = _canInlineInLoopMayInlineOutside;
           break;
 
-        case _Decision.mayInlineInLoopMustNotOutside:
-          _cachedDecisions[element] = _Decision.canInlineInLoopMustNotOutside;
+        case _mayInlineInLoopMustNotOutside:
+          _cachedDecisions[element] = _canInlineInLoopMustNotOutside;
           break;
 
-        case _Decision.canInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMayInlineOutside:
-        case _Decision.canInline:
+        case _canInlineInLoopMustNotOutside:
+        case _canInlineInLoopMayInlineOutside:
+        case _canInline:
           // Do nothing.
           break;
       }
     } else {
       switch (oldDecision) {
-        case _Decision.mustNotInline:
-        case _Decision.mayInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMustNotOutside:
+        case _mustNotInline:
+        case _mayInlineInLoopMustNotOutside:
+        case _canInlineInLoopMustNotOutside:
           throw failedAt(
               element,
               "Can't mark $element as non-inlinable and inlinable at the "
               "same time.");
 
-        case _Decision.unknown:
-        case _Decision.canInlineInLoopMayInlineOutside:
-          _cachedDecisions[element] = _Decision.canInline;
+        case _unknown:
+        case _canInlineInLoopMayInlineOutside:
+          _cachedDecisions[element] = _canInline;
           break;
 
-        case _Decision.canInline:
+        case _canInline:
           // Do nothing.
           break;
       }
@@ -151,51 +163,55 @@ class FunctionInlineCache {
 
   void markAsNonInlinable(FunctionEntity element, {bool insideLoop = true}) {
     assert(checkFunction(element), failedAt(element));
-    final oldDecision = _cachedDecisions[element] ?? _Decision.unknown;
+    int? oldDecision = _cachedDecisions[element];
+
+    if (oldDecision == null) {
+      oldDecision = _unknown;
+    }
 
     if (insideLoop) {
       switch (oldDecision) {
-        case _Decision.canInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMayInlineOutside:
-        case _Decision.canInline:
+        case _canInlineInLoopMustNotOutside:
+        case _canInlineInLoopMayInlineOutside:
+        case _canInline:
           throw failedAt(
               element,
               "Can't mark $element as non-inlinable and inlinable at the "
               "same time.");
 
-        case _Decision.mayInlineInLoopMustNotOutside:
-        case _Decision.unknown:
-          _cachedDecisions[element] = _Decision.mustNotInline;
+        case _mayInlineInLoopMustNotOutside:
+        case _unknown:
+          _cachedDecisions[element] = _mustNotInline;
           break;
 
-        case _Decision.mustNotInline:
+        case _mustNotInline:
           // Do nothing.
           break;
       }
     } else {
       switch (oldDecision) {
-        case _Decision.canInline:
+        case _canInline:
           throw failedAt(
               element,
               "Can't mark $element as non-inlinable and inlinable at the "
               "same time.");
 
-        case _Decision.unknown:
+        case _unknown:
           // We can't inline outside a loop, but we might still be allowed to do
           // so outside.
-          _cachedDecisions[element] = _Decision.mayInlineInLoopMustNotOutside;
+          _cachedDecisions[element] = _mayInlineInLoopMustNotOutside;
           break;
 
-        case _Decision.canInlineInLoopMayInlineOutside:
+        case _canInlineInLoopMayInlineOutside:
           // We already knew that the function could be inlined inside a loop,
           // but didn't have information about the non-loop case. Now we know
           // that it can't be inlined outside a loop.
-          _cachedDecisions[element] = _Decision.canInlineInLoopMustNotOutside;
+          _cachedDecisions[element] = _canInlineInLoopMustNotOutside;
           break;
 
-        case _Decision.mayInlineInLoopMustNotOutside:
-        case _Decision.canInlineInLoopMustNotOutside:
-        case _Decision.mustNotInline:
+        case _mayInlineInLoopMustNotOutside:
+        case _canInlineInLoopMustNotOutside:
+        case _mustNotInline:
           // Do nothing.
           break;
       }

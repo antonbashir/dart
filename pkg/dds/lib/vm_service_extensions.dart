@@ -3,6 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 @Deprecated("Use 'package:dds_service_extensions' instead")
-library;
+library vm_service_extensions;
 
 export 'package:dds_service_extensions/dds_service_extensions.dart';

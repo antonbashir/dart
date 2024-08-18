@@ -201,6 +201,18 @@ class BackendImpacts {
     ],
   );
 
+  late final BackendImpact superNoSuchMethod = BackendImpact(
+    staticUses: [
+      _commonElements.createInvocationMirror,
+      _commonElements.objectNoSuchMethod!
+    ],
+    otherImpacts: [
+      _needsInt('Needed to encode the invocation kind of super.noSuchMethod.'),
+      _needsList('Needed to encode the arguments of super.noSuchMethod.'),
+      _needsString('Needed to encode the name of super.noSuchMethod.')
+    ],
+  );
+
   late final BackendImpact constantMapLiteral = BackendImpact(
     instantiatedClasses: [
       _commonElements.constantMapClass,
@@ -225,6 +237,12 @@ class BackendImpacts {
   BackendImpact _needsInt(String reason) {
     // TODO(johnniwinther): Register [reason] for use in dump-info.
     return intValues;
+  }
+
+  /// Helper for registering that `List` is needed.
+  BackendImpact _needsList(String reason) {
+    // TODO(johnniwinther): Register [reason] for use in dump-info.
+    return listValues;
   }
 
   /// Helper for registering that `String` is needed.
@@ -546,7 +564,6 @@ class BackendImpacts {
   // TODO(sra): Split into refined impacts.
   late final BackendImpact newRtiImpact = BackendImpact(
     staticUses: [
-      if (_options.interopNullAssertions) _commonElements.interopNullAssertion,
       _commonElements.findType,
       _commonElements.instanceType,
       _commonElements.arrayInstanceType,

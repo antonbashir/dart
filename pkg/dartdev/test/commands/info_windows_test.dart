@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 @TestOn('windows')
-library;
 
 import 'dart:io';
 

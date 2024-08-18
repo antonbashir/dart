@@ -413,7 +413,7 @@ class TypeSystem {
     bool isTypedArray =
         _closedWorld.classHierarchy.isInstantiated(typedDataClass) &&
             _abstractValueDomain
-                .isInstanceOf(type.type, typedDataClass)
+                .isInstanceOfOrNull(type.type, typedDataClass)
                 .isDefinitelyTrue;
     bool isConst = (type.type == _abstractValueDomain.constListType);
     bool isFixed = (type.type == _abstractValueDomain.fixedListType) ||
@@ -469,9 +469,7 @@ class TypeSystem {
       ir.TreeNode node,
       MemberEntity element,
       List<TypeInformation> keyTypes,
-      List<TypeInformation> valueTypes,
-      DartType keyStaticType,
-      DartType valueStaticType) {
+      List<TypeInformation> valueTypes) {
     assert(strategy.checkMapNode(node));
     assert(keyTypes.length == valueTypes.length);
     bool isFixed = (type.type == _abstractValueDomain.constMapType);
@@ -505,19 +503,9 @@ class TypeSystem {
         type.type, node, element, keyTypeMask, valueTypeMask);
 
     final keyTypeInfo = KeyInMapTypeInformation(
-        _abstractValueDomain,
-        currentMember,
-        simplifiedKeyType,
-        _abstractValueDomain
-            .createFromStaticType(keyStaticType, nullable: false)
-            .abstractValue);
+        _abstractValueDomain, currentMember, simplifiedKeyType);
     final valueTypeInfo = ValueInMapTypeInformation(
-        _abstractValueDomain,
-        currentMember,
-        simplifiedValueType,
-        _abstractValueDomain
-            .createFromStaticType(valueStaticType, nullable: false)
-            .abstractValue);
+        _abstractValueDomain, currentMember, simplifiedValueType);
     allocatedTypes.add(keyTypeInfo);
     allocatedTypes.add(valueTypeInfo);
 
@@ -572,11 +560,10 @@ class TypeSystem {
             const []));
   }
 
-  TypeInformation allocateRecordFieldGet(ir.TreeNode node, String fieldName,
-      TypeInformation receiverType, MemberEntity caller) {
+  TypeInformation allocateRecordFieldGet(
+      ir.TreeNode node, String fieldName, TypeInformation receiverType) {
     final accessType = RecordFieldAccessTypeInformation(
         _closedWorld.abstractValueDomain,
-        caller,
         fieldName,
         node,
         receiverType,
@@ -671,7 +658,7 @@ class TypeSystem {
     // Optimization: we are iterating over masks twice, but because `masks` is a
     // mapped iterable, we save the intermediate results to avoid computing them
     // again.
-    var list = <AbstractValue>[];
+    var list = [];
     bool isTopIgnoringFlags = false;
     bool mayBeNull = false;
     bool mayBeLateSentinel = false;

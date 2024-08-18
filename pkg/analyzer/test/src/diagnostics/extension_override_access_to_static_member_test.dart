@@ -30,7 +30,7 @@ void f() {
           2),
     ]);
 
-    var node = findNode.functionExpressionInvocation('();');
+    final node = findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
   function: ExtensionOverride
@@ -43,13 +43,13 @@ FunctionExpressionInvocation
           parameter: <null>
           staticType: int
       rightParenthesis: )
-    element: <testLibraryFragment>::@extension::E
+    element: self::@extension::E
     extendedType: int
     staticType: null
   argumentList: ArgumentList
     leftParenthesis: (
     rightParenthesis: )
-  staticElement: <testLibraryFragment>::@extension::E::@method::call
+  staticElement: self::@extension::E::@method::call
   staticInvokeType: void Function()
   staticType: void
 ''');
@@ -108,13 +108,13 @@ MethodInvocation
         SimpleStringLiteral
           literal: 'a'
       rightParenthesis: )
-    element: <testLibraryFragment>::@extension::E
+    element: self::@extension::E
     extendedType: String
     staticType: null
   operator: .
   methodName: SimpleIdentifier
     token: empty
-    staticElement: <testLibraryFragment>::@extension::E::@method::empty
+    staticElement: self::@extension::E::@method::empty
     staticType: String Function()
   argumentList: ArgumentList
     leftParenthesis: (

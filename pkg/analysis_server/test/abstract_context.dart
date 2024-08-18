@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/protocol_server.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analyzer/dart/analysis/analysis_context.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
@@ -12,33 +11,24 @@ import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
+import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/generated/engine.dart' show AnalysisEngine;
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
-import 'package:analyzer/src/test_utilities/platform.dart';
+import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/utilities/extensions/file_system.dart';
-import 'package:analyzer_utilities/test/experiments/experiments.dart';
-import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:linter/src/rules.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
-import 'support/configuration_files.dart';
-import 'test_macros.dart';
+import 'src/utilities/mock_packages.dart';
 
-class AbstractContextTest
-    with
-        MockPackagesMixin,
-        ConfigurationFilesMixin,
-        ResourceProviderMixin,
-        TestMacros {
+class AbstractContextTest with ResourceProviderMixin {
   static bool _lintRulesAreRegistered = false;
 
   static final ByteStore _byteStore = MemoryByteStore();
-
-  /// Whether to rewrite line endings in test code based on platform.
-  bool useLineEndingsForPlatform = false;
 
   final Map<String, String> _declaredVariables = {};
   AnalysisContextCollectionImpl? _analysisContextCollection;
@@ -64,10 +54,16 @@ class AbstractContextTest
 
   /// Return a list of the experiments that are to be enabled for tests in this
   /// class, an empty list if there are no experiments that should be enabled.
-  List<String> get experiments => experimentsForTests;
+  List<String> get experiments => [
+        EnableString.inline_class,
+        EnableString.macros,
+      ];
+
+  String get latestLanguageVersion =>
+      '${ExperimentStatus.currentVersion.major}.'
+      '${ExperimentStatus.currentVersion.minor}';
 
   /// The path that is not in [workspaceRootPath], contains external packages.
-  @override
   String get packagesRootPath => '/packages';
 
   Folder get sdkRoot => newFolder('/sdk');
@@ -80,9 +76,10 @@ class AbstractContextTest
 
   File get testFile => getFile(testFilePath);
 
+  String? get testPackageLanguageVersion => latestLanguageVersion;
+
   String get testPackageLibPath => '$testPackageRootPath/lib';
 
-  @override
   String get testPackageRootPath => '$workspaceRootPath/test';
 
   String get testPackageTestPath => '$testPackageRootPath/test';
@@ -103,7 +100,7 @@ class AbstractContextTest
   }
 
   void assertSourceChange(SourceChange sourceChange, String expected) {
-    var buffer = StringBuffer();
+    final buffer = StringBuffer();
     _writeSourceChangeToBuffer(
       buffer: buffer,
       sourceChange: sourceChange,
@@ -112,7 +109,7 @@ class AbstractContextTest
   }
 
   void changeFile(File file) {
-    var path = file.path;
+    final path = file.path;
     driverFor(file).changeFile(path);
   }
 
@@ -125,41 +122,31 @@ class AbstractContextTest
 
   /// Create an analysis options file based on the given arguments.
   void createAnalysisOptionsFile({
-    List<String> experiments = const [],
-    List<String> cannotIgnore = const [],
-    List<String> lints = const [],
-    Map<String, Object?> errors = const {},
+    List<String>? experiments,
+    List<String>? cannotIgnore,
+    List<String>? lints,
   }) {
     var buffer = StringBuffer();
 
-    if (experiments.isNotEmpty ||
-        cannotIgnore.isNotEmpty ||
-        errors.isNotEmpty) {
+    if (experiments != null || cannotIgnore != null) {
       buffer.writeln('analyzer:');
     }
 
-    if (errors.isNotEmpty) {
-      buffer.writeln('  errors:');
-      for (var error in errors.entries) {
-        buffer.writeln('    ${error.key}: ${error.value}');
-      }
-    }
-
-    if (experiments.isNotEmpty) {
+    if (experiments != null) {
       buffer.writeln('  enable-experiment:');
       for (var experiment in experiments) {
         buffer.writeln('    - $experiment');
       }
     }
 
-    if (cannotIgnore.isNotEmpty) {
+    if (cannotIgnore != null) {
       buffer.writeln('  cannot-ignore:');
       for (var unignorable in cannotIgnore) {
         buffer.writeln('    - $unignorable');
       }
     }
 
-    if (lints.isNotEmpty) {
+    if (lints != null) {
       buffer.writeln('linter:');
       buffer.writeln('  rules:');
       for (var lint in lints) {
@@ -167,7 +154,7 @@ class AbstractContextTest
       }
     }
 
-    writeAnalysisOptionsFile(buffer.toString());
+    newFile(analysisOptionsPath, buffer.toString());
   }
 
   /// Returns the existing analysis driver that should be used to analyze the
@@ -178,16 +165,16 @@ class AbstractContextTest
   }
 
   Future<ParsedUnitResult> getParsedUnit(File file) async {
-    var path = file.path;
-    var session = await sessionFor(fileForContextSelection ?? file);
-    var result = session.getParsedUnit(path);
+    final path = file.path;
+    final session = await sessionFor(fileForContextSelection ?? file);
+    final result = session.getParsedUnit(path);
     return result as ParsedUnitResult;
   }
 
   Future<ResolvedUnitResult> getResolvedUnit(File file) async {
-    var path = file.path;
-    var session = await sessionFor(fileForContextSelection ?? file);
-    var result = await session.getResolvedUnit(path);
+    final path = file.path;
+    final session = await sessionFor(fileForContextSelection ?? file);
+    final result = await session.getResolvedUnit(path);
     return result as ResolvedUnitResult;
   }
 
@@ -197,15 +184,10 @@ class AbstractContextTest
       throw StateError('Only dart files can be changed after analysis.');
     }
 
-    var file = super.newFile(path, normalizeSource(content));
+    final file = super.newFile(path, content);
     _addAnalyzedFileToDrivers(file);
     return file;
   }
-
-  /// Convenience function to normalize newlines in [code] for the current
-  /// platform if [useLineEndingsForPlatform] is `true`.
-  String normalizeSource(String code) =>
-      useLineEndingsForPlatform ? normalizeNewlinesForPlatform(code) : code;
 
   Future<AnalysisSession> sessionFor(File file) async {
     var analysisContext = _contextFor(file);
@@ -218,7 +200,6 @@ class AbstractContextTest
     if (!_lintRulesAreRegistered) {
       registerLintRules();
       _lintRulesAreRegistered = true;
-      registerBuiltInProducers();
     }
 
     setupResourceProvider();
@@ -237,10 +218,9 @@ class AbstractContextTest
 
   void setupResourceProvider() {}
 
-  @mustCallSuper
-  Future<void> tearDown() async {
+  void tearDown() {
+    noSoundNullSafety = true;
     AnalysisEngine.instance.clearCaches();
-    await _analysisContextCollection?.dispose();
   }
 
   /// Update `pubspec.yaml` and create the driver.
@@ -250,9 +230,52 @@ class AbstractContextTest
 
   void verifyCreatedCollection() {}
 
-  /// Writes string content as an analysis options file.
-  void writeAnalysisOptionsFile(String content) {
-    newFile(analysisOptionsPath, content);
+  void writePackageConfig(String path, PackageConfigFileBuilder config) {
+    newFile(path, config.toContent(toUriStr: toUriStr));
+  }
+
+  void writeTestPackageConfig({
+    PackageConfigFileBuilder? config,
+    String? languageVersion,
+    bool flutter = false,
+    bool meta = false,
+    bool vector_math = false,
+  }) {
+    if (config == null) {
+      config = PackageConfigFileBuilder();
+    } else {
+      config = config.copy();
+    }
+
+    config.add(
+      name: 'test',
+      rootPath: testPackageRootPath,
+      languageVersion: languageVersion ?? testPackageLanguageVersion,
+    );
+
+    if (meta || flutter) {
+      var libFolder = MockPackages.instance.addMeta(resourceProvider);
+      config.add(name: 'meta', rootPath: libFolder.parent.path);
+    }
+
+    if (flutter) {
+      {
+        var libFolder = MockPackages.instance.addUI(resourceProvider);
+        config.add(name: 'ui', rootPath: libFolder.parent.path);
+      }
+      {
+        var libFolder = MockPackages.instance.addFlutter(resourceProvider);
+        config.add(name: 'flutter', rootPath: libFolder.parent.path);
+      }
+    }
+
+    if (vector_math) {
+      var libFolder = MockPackages.instance.addVectorMath(resourceProvider);
+      config.add(name: 'vector_math', rootPath: libFolder.parent.path);
+    }
+
+    var path = '$testPackageRootPath/.dart_tool/package_config.json';
+    writePackageConfig(path, config);
   }
 
   void _addAnalyzedFilesToDrivers() {
@@ -266,7 +289,7 @@ class AbstractContextTest
   }
 
   void _addAnalyzedFileToDrivers(File file) {
-    var path = file.path;
+    final path = file.path;
     var collection = _analysisContextCollection;
     if (collection != null) {
       for (var analysisContext in collection.contexts) {
@@ -314,11 +337,11 @@ class AbstractContextTest
     required StringBuffer buffer,
     required SourceChange sourceChange,
   }) {
-    for (var fileEdit in sourceChange.edits) {
-      var file = getFile(fileEdit.file);
+    for (final fileEdit in sourceChange.edits) {
+      final file = getFile(fileEdit.file);
       buffer.writeln('>>>>>>>>>> ${file.posixPath}');
-      var current = file.readAsStringSync();
-      var updated = SourceEdit.applySequence(current, fileEdit.edits);
+      final current = file.readAsStringSync();
+      final updated = SourceEdit.applySequence(current, fileEdit.edits);
       buffer.write(updated);
     }
   }

@@ -11,11 +11,13 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(TopLevelVariableResolutionTest);
+    defineReflectiveTests(TopLevelVariableResolutionTest_WithoutNullSafety);
   });
 }
 
 @reflectiveTest
-class TopLevelVariableResolutionTest extends PubPackageResolutionTest {
+class TopLevelVariableResolutionTest extends PubPackageResolutionTest
+    with TopLevelVariableTestCases {
   /// See https://github.com/dart-lang/sdk/issues/51137
   test_initializer_contextType_dontUseInferredType() async {
     await assertErrorsInCode('''
@@ -27,7 +29,7 @@ final x = f(g, (z) => z.length);
       error(CompileTimeErrorCode.UNCHECKED_PROPERTY_ACCESS_OF_NULLABLE_VALUE,
           108, 6),
     ]);
-    var node = findNode.variableDeclaration('x =');
+    final node = findNode.variableDeclaration('x =');
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -35,7 +37,7 @@ VariableDeclaration
   initializer: MethodInvocation
     methodName: SimpleIdentifier
       token: f
-      staticElement: <testLibraryFragment>::@function::f
+      staticElement: self::@function::f
       staticType: T? Function<T>(T Function(), int Function(T))
     argumentList: ArgumentList
       leftParenthesis: (
@@ -43,9 +45,9 @@ VariableDeclaration
         SimpleIdentifier
           token: g
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::f::@parameter::a
+            base: root::@parameter::a
             substitution: {T: String}
-          staticElement: <testLibraryFragment>::@function::g
+          staticElement: self::@function::g
           staticType: String Function()
         FunctionExpression
           parameters: FormalParameterList
@@ -72,7 +74,7 @@ VariableDeclaration
           declaredElement: @99
             type: InvalidType Function(Object?)
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::f::@parameter::b
+            base: root::@parameter::b
             substitution: {T: String}
           staticType: InvalidType Function(Object?)
       rightParenthesis: )
@@ -80,7 +82,7 @@ VariableDeclaration
     staticType: String?
     typeArgumentTypes
       String
-  declaredElement: <testLibraryFragment>::@topLevelVariable::x
+  declaredElement: self::@variable::x
 ''');
   }
 
@@ -92,7 +94,7 @@ T? f<T>(T Function() a, int Function(T) b) => null;
 String g() => '';
 final String? x = f(g, (z) => z.length);
 ''');
-    var node = findNode.variableDeclaration('x =');
+    final node = findNode.variableDeclaration('x =');
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -100,7 +102,7 @@ VariableDeclaration
   initializer: MethodInvocation
     methodName: SimpleIdentifier
       token: f
-      staticElement: <testLibraryFragment>::@function::f
+      staticElement: self::@function::f
       staticType: T? Function<T>(T Function(), int Function(T))
     argumentList: ArgumentList
       leftParenthesis: (
@@ -108,9 +110,9 @@ VariableDeclaration
         SimpleIdentifier
           token: g
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::f::@parameter::a
+            base: root::@parameter::a
             substitution: {T: String}
-          staticElement: <testLibraryFragment>::@function::g
+          staticElement: self::@function::g
           staticType: String Function()
         FunctionExpression
           parameters: FormalParameterList
@@ -130,14 +132,14 @@ VariableDeclaration
               period: .
               identifier: SimpleIdentifier
                 token: length
-                staticElement: dart:core::<fragment>::@class::String::@getter::length
+                staticElement: dart:core::@class::String::@getter::length
                 staticType: int
-              staticElement: dart:core::<fragment>::@class::String::@getter::length
+              staticElement: dart:core::@class::String::@getter::length
               staticType: int
           declaredElement: @107
             type: int Function(String)
           parameter: ParameterMember
-            base: <testLibraryFragment>::@function::f::@parameter::b
+            base: root::@parameter::b
             substitution: {T: String}
           staticType: int Function(String)
       rightParenthesis: )
@@ -145,10 +147,34 @@ VariableDeclaration
     staticType: String?
     typeArgumentTypes
       String
-  declaredElement: <testLibraryFragment>::@topLevelVariable::x
+  declaredElement: self::@variable::x
 ''');
   }
 
+  test_type_inferred_nonNullify() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.7
+var a = 0;
+''');
+
+    await assertErrorsInCode('''
+import 'a.dart';
+
+var v = a;
+''', [
+      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
+    ]);
+
+    assertType(findElement.topVar('v').type, 'int');
+  }
+}
+
+@reflectiveTest
+class TopLevelVariableResolutionTest_WithoutNullSafety
+    extends PubPackageResolutionTest
+    with TopLevelVariableTestCases, WithoutNullSafetyMixin {}
+
+mixin TopLevelVariableTestCases on PubPackageResolutionTest {
   test_session_getterSetter() async {
     await resolveTestCode('''
 var v = 0;
@@ -171,7 +197,13 @@ var v = 0;
     await resolveTestCode('''
 var v = throw 42;
 ''');
-    assertType(findElement.topVar('v').type, 'Never');
+    assertType(
+      findElement.topVar('v').type,
+      typeStringByNullability(
+        nullable: 'Never',
+        legacy: 'dynamic',
+      ),
+    );
   }
 
   test_type_inferred_noInitializer() async {

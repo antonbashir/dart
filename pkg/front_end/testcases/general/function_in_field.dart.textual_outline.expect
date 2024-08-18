@@ -2,5 +2,4 @@ var x = () {
   var y = 42;
   return y;
 };
-
 main() {}

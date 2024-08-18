@@ -166,7 +166,6 @@ appearing
 appears
 append
 appended
-appending
 appends
 application
 application's
@@ -291,7 +290,6 @@ below
 beneficial
 benefit
 benign
-besides
 best
 bets
 better
@@ -339,7 +337,6 @@ branch
 branched
 branches
 break
-breakage
 breaking
 breakpoint
 breaks
@@ -460,7 +457,6 @@ circularities
 circularity
 circumstance
 circumstances
-clarifying
 clashing
 class
 classes
@@ -566,7 +562,6 @@ completer
 completion
 complex
 compliance
-complication
 component
 components
 composed
@@ -631,7 +626,6 @@ consolidated
 const
 constant
 constants
-constituents
 constitutes
 constrain
 constrained
@@ -839,11 +833,8 @@ dereferenced
 derivation
 derive
 derived
-derives
-descend
 descendant
 descendants
-descends
 describe
 described
 describes
@@ -922,7 +913,6 @@ discover
 discovered
 discovery
 discrepancy
-discrepant
 disk
 dispatch
 dispatches
@@ -994,7 +984,6 @@ edges
 edit
 edition
 editor
-edits
 effect
 effective
 effectively
@@ -1004,7 +993,6 @@ either
 elapsed
 element
 elements
-elided
 eligible
 eliminate
 eliminated
@@ -1072,7 +1060,6 @@ enumerations
 enums
 environment
 equal
-equalities
 equality
 equals
 equate
@@ -1437,7 +1424,6 @@ hermetic
 heuristic
 hex
 hexadecimal
-hi
 hidden
 hide
 hides
@@ -1485,14 +1471,12 @@ ignore
 ignored
 ignores
 ignoring
-ill
 illegal
 imaginary
 imitation
 immediate
 immediately
 immutable
-impact
 implement
 implementation
 implementations
@@ -1548,13 +1532,11 @@ indicate
 indicated
 indicates
 indicating
-indication
 indices
 indirect
 indirectly
 induce
 induced
-inducing
 infer
 inference
 inferrable
@@ -1622,7 +1604,6 @@ instruction
 instructions
 instrumentation
 instrumented
-insufficient
 int
 intact
 integer
@@ -1859,7 +1840,6 @@ lowercase
 lowered
 lowering
 lowerings
-lowers
 lowest
 machine
 made
@@ -1870,7 +1850,6 @@ mainly
 maintain
 maintains
 major
-majority
 make
 makers
 makes
@@ -1919,7 +1898,6 @@ mechanism
 medium
 meet
 member
-member's
 members
 memory
 mention
@@ -2045,11 +2023,9 @@ neighbors
 neither
 nest
 nested
-nestedness
 nesting
 net
 never
-nevertheless
 new
 newer
 newline
@@ -2081,7 +2057,6 @@ nothing
 notice
 noticed
 notifies
-notions
 now
 nowhere
 null
@@ -2096,14 +2071,12 @@ object
 object's
 objects
 oblivious
-obliviousness
 observation
 observations
 observed
 obtain
 obtained
 obvious
-obviously
 occur
 occurred
 occurrence
@@ -2114,7 +2087,6 @@ odd
 odds
 of
 off
-offer
 offs
 offset
 offsets
@@ -2149,7 +2121,6 @@ optimistically
 optimization
 optimize
 optimized
-optimizer
 option
 optional
 optionally
@@ -2223,7 +2194,6 @@ parentheses
 parenthesis
 parenthesized
 parents
-parsable
 parse
 parsed
 parser
@@ -2360,7 +2330,6 @@ prepending
 prepends
 presence
 present
-presentation
 preserve
 preserved
 preserves
@@ -2442,7 +2411,6 @@ pseudo
 pub
 public
 publications
-publicly
 published
 pull
 punctuation
@@ -2510,7 +2478,6 @@ recognized
 recognizes
 recommend
 recommendations
-recommended
 recomputation
 recomputes
 record
@@ -2553,7 +2520,6 @@ refinements
 reflecting
 reflects
 regardless
-regards
 region
 regions
 register
@@ -2576,7 +2542,6 @@ relations
 relationship
 relationships
 relative
-relaxed
 release
 releases
 relevant
@@ -2595,7 +2560,6 @@ remembered
 remembers
 reminder
 remote
-removable
 remove
 removed
 removes
@@ -2681,7 +2645,6 @@ returned
 returning
 returns
 retype
-reusable
 reuse
 reused
 reuses
@@ -2705,7 +2668,6 @@ rights
 rise
 roles
 roll
-rolled
 root
 roots
 round
@@ -2728,7 +2690,6 @@ same
 sample
 samples
 sanity
-sate
 satisfied
 satisfies
 satisfy
@@ -2800,7 +2761,6 @@ serious
 set
 sets
 setter
-setter's
 setters
 setting
 settings
@@ -2814,7 +2774,6 @@ shadowing
 shake
 shaken
 shape
-shapes
 shard
 shards
 share
@@ -2922,7 +2881,6 @@ specify
 specifying
 speed
 speedup
-spending
 split
 splits
 splitter
@@ -2976,11 +2934,7 @@ strictly
 string
 strings
 stripped
-stripping
-strips
 strong
-stronger
-strongest
 strongly
 struct
 structural
@@ -3026,7 +2980,6 @@ successively
 succinct
 such
 suffice
-sufficiency
 sufficient
 sufficiently
 suffix
@@ -3336,7 +3289,6 @@ unserializable
 unsigned
 unsized
 unskip
-unsolvable
 unsorted
 unsoundness
 unspecified
@@ -3359,7 +3311,6 @@ updater
 updaters
 updates
 updating
-uphold
 upon
 upper
 uppercase
@@ -3380,7 +3331,6 @@ utf
 utilities
 utility
 utilized
-ux
 valid
 validate
 validated

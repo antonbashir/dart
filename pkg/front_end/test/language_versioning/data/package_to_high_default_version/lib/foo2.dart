@@ -4,9 +4,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /*error: errors=LanguageVersionTooHigh*/
-// @dart = %TOO_HIGH_VERSION_MARKER%
+// @dart = 2.9
 
-/*library: languageVersion=%CURRENT_VERSION_MARKER%*/
+/*library: languageVersion=2.8*/
 
 foo2() {
   print("Hello from foo2!");

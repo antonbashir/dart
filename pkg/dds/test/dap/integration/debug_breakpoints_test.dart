@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:dap/dap.dart';
@@ -21,8 +20,7 @@ main() {
   tearDown(() => dap.tearDown());
 
   group('debug mode breakpoints', () {
-    testWithUriConfigurations(() => dap, 'stops at a line breakpoint',
-        () async {
+    test('stops at a line breakpoint', () async {
       final client = dap.client;
       final testFile = dap.createTestFile(simpleBreakpointProgram);
       final breakpointLine = lineWith(testFile, breakpointMarker);
@@ -30,8 +28,7 @@ main() {
       await client.hitBreakpoint(testFile, breakpointLine);
     });
 
-    testWithUriConfigurations(() => dap, 'resolves and updates breakpoints',
-        () async {
+    test('resolves and updates breakpoints', () async {
       final client = dap.client;
       final testFile = dap.createTestFile(simpleBreakpointResolutionProgram);
       final setBreakpointLine = lineWith(testFile, breakpointMarker);
@@ -67,8 +64,7 @@ main() {
       expect(updatedBreakpoint.line, expectedResolvedBreakpointLine);
     });
 
-    testWithUriConfigurations(() => dap, 'resolves modified breakpoints',
-        () async {
+    test('resolves modified breakpoints', () async {
       final client = dap.client;
       final testFile = dap.createTestFile(simpleMultiBreakpointProgram);
       final breakpointLine = lineWith(testFile, breakpointMarker);
@@ -100,13 +96,7 @@ main() {
         }
       }
 
-      // Wait up to a few seconds for the resolved events to come through to
-      // allow for slow CI bots, but exit early if they all arrived.
-      final testUntil = DateTime.now().toUtc().add(const Duration(seconds: 5));
-      while (DateTime.now().toUtc().isBefore(testUntil) &&
-          resolvedBreakpoints.length < addedBreakpoints.length) {
-        await pumpEventQueue(times: 5000);
-      }
+      await pumpEventQueue(times: 5000);
       await breakpointResolveSubscription.cancel();
 
       // Ensure every breakpoint that was added was also resolved.
@@ -468,7 +458,7 @@ void main(List<String> args) async {
         'does not step into external package code with debugExternalPackageLibraries=false',
         () async {
       final client = dap.client;
-      final (otherPackageUri, _) = await dap.createFooPackage();
+      final otherPackageUri = await dap.createFooPackage();
       final testFile = dap.createTestFile('''
 import '$otherPackageUri';
 
@@ -501,7 +491,7 @@ void main(List<String> args) async {
         'steps into external package code with debugExternalPackageLibraries=true',
         () async {
       final client = dap.client;
-      final (otherPackageUri, _) = await dap.createFooPackage();
+      final otherPackageUri = await dap.createFooPackage();
       final testFile = dap.createTestFile('''
 import '$otherPackageUri';
 
@@ -533,7 +523,7 @@ void main(List<String> args) async {
         'steps into other-project package code with debugExternalPackageLibraries=false',
         () async {
       final client = dap.client;
-      final (otherPackageUri, _) = await dap.createFooPackage();
+      final otherPackageUri = await dap.createFooPackage();
       final testFile = dap.createTestFile('''
 import '$otherPackageUri';
 
@@ -598,41 +588,6 @@ void main(List<String> args) async {
       ], eagerError: true);
     });
 
-    test('handles breakpoints correctly in newly spawned isolates', () async {
-      // When calling debugger(), the stop reason is "step" because we can't
-      // tell the difference between a pause from debugger() and one from
-      // stepping.
-      const debuggerStopReason = 'step';
-
-      final client = dap.client;
-      final testFile =
-          dap.createTestFile(multiIsolateBreakpointResolutionProgram);
-      final breakpoint1Line = lineWith(testFile, '$breakpointMarker 1');
-      final breakpoint2Line = lineWith(testFile, '$breakpointMarker 2');
-
-      // Start the app and wait for it to pause.
-      unawaited(client.start(file: testFile));
-      final mainIsolateStop = await client.expectStop(debuggerStopReason);
-
-      // Add and remove a breakpoint to consume "breakpoints/1" in the main
-      // isolate.
-      await client.setBreakpoints(testFile, [breakpoint1Line]);
-      await client.setBreakpoints(testFile, []);
-
-      // Resume so that the new isolate spawns.
-      client.continue_(mainIsolateStop.threadId!);
-      final otherIsolateStop = await client.expectStop(debuggerStopReason);
-
-      // Make sure the stop we got was a new isolate.
-      expect(otherIsolateStop.threadId!, isNot(mainIsolateStop.threadId!));
-
-      // Send the other breakpoint and verify it resolves to the expected line.
-      client.setBreakpoints(testFile, [breakpoint2Line]);
-      final bpResolved = await client.breakpointChangeEvents
-          .firstWhere((e) => e.reason == 'changed');
-      expect(bpResolved.breakpoint.line, breakpoint2Line);
-    });
-
     test('does not fail if two debug clients resume the same thread', () async {
       final testFile = dap.createTestFile(infiniteRunningProgram);
       final breakpointLine = lineWith(testFile, breakpointMarker);
@@ -652,8 +607,7 @@ void main(List<String> args) async {
         client2.start(
           launch: () => client2.attach(
             vmServiceUri: vmServiceUri.toString(),
-            autoResumeOnEntry: false,
-            autoResumeOnExit: false,
+            autoResume: false,
             cwd: dap.testAppDir.path,
           ),
         ),

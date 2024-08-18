@@ -3,15 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:testing/testing.dart'
-    show Chain, ChainContext, Result, Step, TestDescription;
+    show Chain, ChainContext, Result, Step, TestDescription, runMe;
 
 import '../tool/dart_doctest_impl.dart';
-import 'fasta/suite_utils.dart';
 
-void main([List<String> arguments = const []]) => internalMain(createContext,
-    arguments: arguments,
-    displayName: "dartdoctest suite",
-    configurationPath: "../testing.json");
+void main([List<String> arguments = const []]) =>
+    runMe(arguments, createContext, configurationPath: "../testing.json");
 
 Future<Context> createContext(
     Chain suite, Map<String, String> environment) async {
@@ -28,16 +25,20 @@ class Context extends ChainContext {
     const DartDocTestStep(),
   ];
 
+  // Override special handling of negative tests.
   @override
-  Future<List<DartDocTestTestDescription>> list(Chain suite) async {
-    List<DartDocTestTestDescription> result = [];
-    for (TestDescription entry in await super.list(suite)) {
+  Result processTestResult(
+      TestDescription description, Result result, bool last) {
+    return result;
+  }
+
+  @override
+  Stream<DartDocTestTestDescription> list(Chain suite) async* {
+    await for (TestDescription entry in super.list(suite)) {
       List<Test> tests = await dartDocTest.extractTestsFromUri(entry.uri);
       if (tests.isEmpty) continue;
-      result.add(
-          new DartDocTestTestDescription(entry.shortName, entry.uri, tests));
+      yield new DartDocTestTestDescription(entry.shortName, entry.uri, tests);
     }
-    return result;
   }
 
   DartDocTest dartDocTest = new DartDocTest();

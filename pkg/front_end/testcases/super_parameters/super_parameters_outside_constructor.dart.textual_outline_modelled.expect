@@ -12,5 +12,4 @@ class C {
 }
 
 foo(super.x) {}
-
 main() {}

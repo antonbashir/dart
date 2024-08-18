@@ -5,7 +5,6 @@
 import 'package:_fe_analyzer_shared/src/scanner/token.dart' show Keyword;
 import 'package:analysis_server/src/services/correction/status.dart';
 import 'package:analysis_server/src/utilities/strings.dart';
-import 'package:analyzer/src/utilities/extensions/string.dart';
 import 'package:analyzer_plugin/src/utilities/string_utilities.dart';
 
 /// Returns the [RefactoringStatus] with severity:
@@ -172,7 +171,8 @@ RefactoringStatus _validateIdentifier(
   // invalid characters
   for (var i = 0; i < length; i++) {
     var currentChar = identifier.codeUnitAt(i);
-    if (!currentChar.isLetterOrDigitOrUnderscore &&
+    if (!isLetterOrDigit(currentChar) &&
+        currentChar != CHAR_UNDERSCORE &&
         currentChar != CHAR_DOLLAR) {
       var charStr = String.fromCharCode(currentChar);
       var message = "$desc must not contain '$charStr'.";
@@ -181,7 +181,7 @@ RefactoringStatus _validateIdentifier(
   }
   // first character
   var currentChar = identifier.codeUnitAt(0);
-  if (!currentChar.isLetter &&
+  if (!isLetter(currentChar) &&
       currentChar != CHAR_UNDERSCORE &&
       currentChar != CHAR_DOLLAR) {
     var message = '$desc must begin with $beginDesc.';

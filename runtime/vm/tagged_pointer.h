@@ -135,24 +135,22 @@ class ObjectPtr {
   bool IsStringInstance() const { return IsStringClassId(GetClassId()); }
   bool IsRawNull() const { return GetClassId() == kNullCid; }
   bool IsDartInstance() const {
-    return (!IsHeapObject() ||
-            !IsInternalOnlyClassId(GetClassIdOfHeapObject()));
+    return (!IsHeapObject() || !IsInternalOnlyClassId(GetClassId()));
   }
-  // Only works with heap objects.
   bool IsFreeListElement() const {
-    return ((GetClassIdOfHeapObject() == kFreeListElement));
+    return ((GetClassId() == kFreeListElement));
   }
-  // Only works with heap objects.
   bool IsForwardingCorpse() const {
-    return ((GetClassIdOfHeapObject() == kForwardingCorpse));
+    return ((GetClassId() == kForwardingCorpse));
   }
-  // Only works with heap objects.
   bool IsPseudoObject() const {
     return IsFreeListElement() || IsForwardingCorpse();
   }
 
   intptr_t GetClassId() const;
-  intptr_t GetClassIdOfHeapObject() const;
+  intptr_t GetClassIdMayBeSmi() const {
+    return IsHeapObject() ? GetClassId() : static_cast<intptr_t>(kSmiCid);
+  }
 
   void Validate(IsolateGroup* isolate_group) const;
 
@@ -253,7 +251,7 @@ template <typename T>
 struct is_uncompressed_ptr<
     T,
     typename std::enable_if<std::is_base_of<ObjectPtr, T>::value, void>::type>
-    : std::true_type{};
+    : std::true_type {};
 template <typename T, typename Enable = void>
 struct is_compressed_ptr : std::false_type {};
 
@@ -301,7 +299,7 @@ template <typename T>
 struct is_compressed_ptr<
     T,
     typename std::enable_if<std::is_base_of<CompressedObjectPtr, T>::value,
-                            void>::type> : std::true_type{};
+                            void>::type> : std::true_type {};
 template <typename T>
 struct base_ptr_type<
     T,
@@ -377,7 +375,6 @@ DEFINE_TAGGED_POINTER(KernelProgramInfo, Object)
 DEFINE_TAGGED_POINTER(WeakSerializationReference, Object)
 DEFINE_TAGGED_POINTER(WeakArray, Object)
 DEFINE_TAGGED_POINTER(Code, Object)
-DEFINE_TAGGED_POINTER(Bytecode, Object)
 DEFINE_TAGGED_POINTER(ObjectPool, Object)
 DEFINE_TAGGED_POINTER(Instructions, Object)
 DEFINE_TAGGED_POINTER(InstructionsSection, Object)
@@ -426,6 +423,8 @@ DEFINE_TAGGED_POINTER(PointerBase, Instance)
 DEFINE_TAGGED_POINTER(TypedDataBase, PointerBase)
 DEFINE_TAGGED_POINTER(TypedData, TypedDataBase)
 DEFINE_TAGGED_POINTER(TypedDataView, TypedDataBase)
+DEFINE_TAGGED_POINTER(ExternalOneByteString, String)
+DEFINE_TAGGED_POINTER(ExternalTwoByteString, String)
 DEFINE_TAGGED_POINTER(Bool, Instance)
 DEFINE_TAGGED_POINTER(Array, Instance)
 DEFINE_TAGGED_POINTER(ImmutableArray, Array)

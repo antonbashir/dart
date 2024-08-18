@@ -38,13 +38,7 @@ Thread::~Thread() {
   // We should cleanly exit any isolate before destruction.
   ASSERT(isolate_ == nullptr);
   ASSERT(store_buffer_block_ == nullptr);
-  ASSERT(old_marking_stack_block_ == nullptr);
-  ASSERT(new_marking_stack_block_ == nullptr);
-  ASSERT(deferred_marking_stack_block_ == nullptr);
-#if defined(DART_DYNAMIC_MODULES)
-  delete interpreter_;
-  interpreter_ = nullptr;
-#endif
+  ASSERT(marking_stack_block_ == nullptr);
   // There should be no top api scopes at this point.
   ASSERT(api_top_scope() == nullptr);
   // Delete the reusable api scope if there is one.
@@ -79,16 +73,8 @@ Thread::Thread(bool is_vm_isolate)
           TargetCPUFeatures::double_truncate_round_supported() ? 1 : 0),
       tsan_utils_(DO_IF_TSAN(new TsanUtils()) DO_IF_NOT_TSAN(nullptr)),
       task_kind_(kUnknownTask),
-#if defined(SUPPORT_TIMELINE)
-      dart_stream_(ASSERT_NOTNULL(Timeline::GetDartStream())),
-#else
       dart_stream_(nullptr),
-#endif
-#if !defined(PRODUCT)
-      service_extension_stream_(ASSERT_NOTNULL(&Service::extension_stream)),
-#else
       service_extension_stream_(nullptr),
-#endif
       thread_lock_(),
       api_reusable_scope_(nullptr),
       no_callback_scope_depth_(0),
@@ -112,6 +98,14 @@ Thread::Thread(bool is_vm_isolate)
               next_(nullptr) {
 #endif
 
+#if defined(SUPPORT_TIMELINE)
+  dart_stream_ = Timeline::GetDartStream();
+  ASSERT(dart_stream_ != nullptr);
+#endif
+#ifndef PRODUCT
+  service_extension_stream_ = &Service::extension_stream;
+  ASSERT(service_extension_stream_ != nullptr);
+#endif
 #define DEFAULT_INIT(type_name, member_name, init_expr, default_init_value)    \
   member_name = default_init_value;
   CACHED_CONSTANTS_LIST(DEFAULT_INIT)
@@ -274,8 +268,7 @@ const char* Thread::TaskKindToCString(TaskKind kind) {
 void Thread::AssertNonMutatorInvariants() {
   ASSERT(BypassSafepoints());
   ASSERT(store_buffer_block_ == nullptr);
-  ASSERT(old_marking_stack_block_ == nullptr);
-  ASSERT(new_marking_stack_block_ == nullptr);
+  ASSERT(marking_stack_block_ == nullptr);
   ASSERT(deferred_marking_stack_block_ == nullptr);
   AssertNonDartMutatorInvariants();
 }
@@ -335,8 +328,7 @@ void Thread::AssertEmptyThreadInvariants() {
 
   ASSERT(write_barrier_mask_ == UntaggedObject::kGenerationalBarrierMask);
   ASSERT(store_buffer_block_ == nullptr);
-  ASSERT(old_marking_stack_block_ == nullptr);
-  ASSERT(new_marking_stack_block_ == nullptr);
+  ASSERT(marking_stack_block_ == nullptr);
   ASSERT(deferred_marking_stack_block_ == nullptr);
   ASSERT(!is_unwind_in_progress_);
 
@@ -347,7 +339,6 @@ void Thread::AssertEmptyThreadInvariants() {
   // Avoid running these asserts for `vm-isolate`.
   if (active_stacktrace_.untag() != 0) {
     ASSERT(field_table_values_ == nullptr);
-    ASSERT(shared_field_table_values_ == nullptr);
     ASSERT(global_object_pool_ == Object::null());
 #define CHECK_REUSABLE_HANDLE(object) ASSERT(object##_handle_->IsNull());
     REUSABLE_HANDLE_LIST(CHECK_REUSABLE_HANDLE)
@@ -679,7 +670,7 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
 }
 
 void Thread::ReleaseStoreBuffer() {
-  ASSERT(IsAtSafepoint() || OwnsSafepoint() || task_kind_ == kMarkerTask);
+  ASSERT(IsAtSafepoint() || OwnsSafepoint());
   if (store_buffer_block_ == nullptr || store_buffer_block_->IsEmpty()) {
     return;  // Nothing to release.
   }
@@ -822,25 +813,9 @@ void Thread::StoreBufferAcquire() {
   store_buffer_block_ = isolate_group()->store_buffer()->PopNonFullBlock();
 }
 
-void Thread::StoreBufferReleaseGC() {
-  StoreBufferBlock* block = store_buffer_block_;
-  store_buffer_block_ = nullptr;
-  isolate_group()->store_buffer()->PushBlock(block,
-                                             StoreBuffer::kIgnoreThreshold);
-}
-
-void Thread::StoreBufferAcquireGC() {
-  store_buffer_block_ = isolate_group()->store_buffer()->PopNonFullBlock();
-}
-
-void Thread::OldMarkingStackBlockProcess() {
-  OldMarkingStackRelease();
-  OldMarkingStackAcquire();
-}
-
-void Thread::NewMarkingStackBlockProcess() {
-  NewMarkingStackRelease();
-  NewMarkingStackAcquire();
+void Thread::MarkingStackBlockProcess() {
+  MarkingStackRelease();
+  MarkingStackAcquire();
 }
 
 void Thread::DeferredMarkingStackBlockProcess() {
@@ -849,26 +824,9 @@ void Thread::DeferredMarkingStackBlockProcess() {
 }
 
 void Thread::MarkingStackAddObject(ObjectPtr obj) {
-  if (obj->IsNewObject()) {
-    NewMarkingStackAddObject(obj);
-  } else {
-    OldMarkingStackAddObject(obj);
-  }
-}
-
-void Thread::OldMarkingStackAddObject(ObjectPtr obj) {
-  ASSERT(obj->IsOldObject());
-  old_marking_stack_block_->Push(obj);
-  if (old_marking_stack_block_->IsFull()) {
-    OldMarkingStackBlockProcess();
-  }
-}
-
-void Thread::NewMarkingStackAddObject(ObjectPtr obj) {
-  ASSERT(obj->IsNewObject());
-  new_marking_stack_block_->Push(obj);
-  if (new_marking_stack_block_->IsFull()) {
-    NewMarkingStackBlockProcess();
+  marking_stack_block_->Push(obj);
+  if (marking_stack_block_->IsFull()) {
+    MarkingStackBlockProcess();
   }
 }
 
@@ -879,31 +837,22 @@ void Thread::DeferredMarkingStackAddObject(ObjectPtr obj) {
   }
 }
 
-void Thread::OldMarkingStackRelease() {
-  MarkingStackBlock* old_block = old_marking_stack_block_;
-  old_marking_stack_block_ = nullptr;
-  isolate_group()->old_marking_stack()->PushBlock(old_block);
-
+void Thread::MarkingStackRelease() {
+  MarkingStackBlock* block = marking_stack_block_;
+  marking_stack_block_ = nullptr;
   write_barrier_mask_ = UntaggedObject::kGenerationalBarrierMask;
+  isolate_group()->marking_stack()->PushBlock(block);
 }
 
-void Thread::NewMarkingStackRelease() {
-  MarkingStackBlock* new_block = new_marking_stack_block_;
-  new_marking_stack_block_ = nullptr;
-  isolate_group()->new_marking_stack()->PushBlock(new_block);
-}
-
-void Thread::OldMarkingStackAcquire() {
-  old_marking_stack_block_ =
-      isolate_group()->old_marking_stack()->PopEmptyBlock();
-
+void Thread::MarkingStackAcquire() {
+  marking_stack_block_ = isolate_group()->marking_stack()->PopEmptyBlock();
   write_barrier_mask_ = UntaggedObject::kGenerationalBarrierMask |
                         UntaggedObject::kIncrementalBarrierMask;
 }
 
-void Thread::NewMarkingStackAcquire() {
-  new_marking_stack_block_ =
-      isolate_group()->new_marking_stack()->PopEmptyBlock();
+void Thread::MarkingStackFlush() {
+  isolate_group()->marking_stack()->PushBlock(marking_stack_block_);
+  marking_stack_block_ = isolate_group()->marking_stack()->PopEmptyBlock();
 }
 
 void Thread::DeferredMarkingStackRelease() {
@@ -917,27 +866,7 @@ void Thread::DeferredMarkingStackAcquire() {
       isolate_group()->deferred_marking_stack()->PopEmptyBlock();
 }
 
-void Thread::AcquireMarkingStacks() {
-  OldMarkingStackAcquire();
-  NewMarkingStackAcquire();
-  DeferredMarkingStackAcquire();
-}
-
-void Thread::ReleaseMarkingStacks() {
-  OldMarkingStackRelease();
-  NewMarkingStackRelease();
-  DeferredMarkingStackRelease();
-}
-
-void Thread::FlushMarkingStacks() {
-  isolate_group()->old_marking_stack()->PushBlock(old_marking_stack_block_);
-  old_marking_stack_block_ =
-      isolate_group()->old_marking_stack()->PopEmptyBlock();
-
-  isolate_group()->new_marking_stack()->PushBlock(new_marking_stack_block_);
-  new_marking_stack_block_ =
-      isolate_group()->new_marking_stack()->PopEmptyBlock();
-
+void Thread::DeferredMarkingStackFlush() {
   isolate_group()->deferred_marking_stack()->PushBlock(
       deferred_marking_stack_block_);
   deferred_marking_stack_block_ =
@@ -984,12 +913,6 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
-
-#if defined(DART_DYNAMIC_MODULES)
-  if (interpreter() != nullptr) {
-    interpreter()->VisitObjectPointers(visitor);
-  }
-#endif
 
   // Visit the api local scope as it has all the api local handles.
   ApiLocalScope* scope = api_top_scope_;
@@ -1042,12 +965,13 @@ class RestoreWriteBarrierInvariantVisitor : public ObjectPointerVisitor {
   void VisitPointers(ObjectPtr* first, ObjectPtr* last) override {
     for (; first != last + 1; first++) {
       ObjectPtr obj = *first;
+      // Stores into new-space objects don't need a write barrier.
       if (obj->IsImmediateObject()) continue;
 
       // To avoid adding too much work into the remembered set, skip large
       // arrays. Write barrier elimination will not remove the barrier
       // if we can trigger GC between array allocation and store.
-      if (obj->GetClassIdOfHeapObject() == kArrayCid) {
+      if (obj->GetClassId() == kArrayCid) {
         const auto length = Smi::Value(Array::RawCast(obj)->untag()->length());
         if (length > Array::kMaxLengthForWriteBarrierElimination) {
           continue;
@@ -1256,11 +1180,6 @@ bool Thread::TopErrorHandlerIsSetJump() const {
   // False positives: simulator stack and native stack are unordered.
   return true;
 #else
-#if defined(DART_DYNAMIC_MODULES)
-  // False positives: interpreter stack and native stack are unordered.
-  if ((interpreter_ != nullptr) && interpreter_->HasFrame(top_exit_frame_info_))
-    return true;
-#endif
   return reinterpret_cast<uword>(long_jump_base()) < top_exit_frame_info_;
 #endif
 }
@@ -1272,11 +1191,6 @@ bool Thread::TopErrorHandlerIsExitFrame() const {
   // False positives: simulator stack and native stack are unordered.
   return true;
 #else
-#if defined(DART_DYNAMIC_MODULES)
-  // False positives: interpreter stack and native stack are unordered.
-  if ((interpreter_ != nullptr) && interpreter_->HasFrame(top_exit_frame_info_))
-    return true;
-#endif
   return top_exit_frame_info_ < reinterpret_cast<uword>(long_jump_base());
 #endif
 }
@@ -1420,12 +1334,9 @@ void Thread::ResetState() {
 void Thread::SetupMutatorState(TaskKind kind) {
   ASSERT(store_buffer_block_ == nullptr);
 
-  if (isolate_group()->old_marking_stack() != nullptr) {
-    ASSERT(isolate_group()->new_marking_stack() != nullptr);
-    ASSERT(isolate_group()->deferred_marking_stack() != nullptr);
+  if (isolate_group()->marking_stack() != nullptr) {
     // Concurrent mark in progress. Enable barrier for this thread.
-    OldMarkingStackAcquire();
-    NewMarkingStackAcquire();
+    MarkingStackAcquire();
     DeferredMarkingStackAcquire();
   }
 
@@ -1443,8 +1354,7 @@ void Thread::ResetMutatorState() {
   ASSERT(store_buffer_block_ != nullptr);
 
   if (is_marking()) {
-    OldMarkingStackRelease();
-    NewMarkingStackRelease();
+    MarkingStackRelease();
     DeferredMarkingStackRelease();
   }
   StoreBufferRelease();
@@ -1481,8 +1391,6 @@ void Thread::SetupDartMutatorStateDependingOnSnapshot(IsolateGroup* group) {
 #undef INIT_ENTRY_POINT
   }
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
-
-  shared_field_table_values_ = group->shared_field_table()->table();
 }
 
 void Thread::ResetDartMutatorState(Isolate* isolate) {
@@ -1492,7 +1400,6 @@ void Thread::ResetDartMutatorState(Isolate* isolate) {
   is_unwind_in_progress_ = false;
 
   field_table_values_ = nullptr;
-  shared_field_table_values_ = nullptr;
   ONLY_IN_PRECOMPILED(global_object_pool_ = ObjectPool::null());
   ONLY_IN_PRECOMPILED(dispatch_table_array_ = nullptr);
 }

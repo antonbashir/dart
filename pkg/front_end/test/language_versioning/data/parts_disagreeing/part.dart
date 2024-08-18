@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// @dart = %VERSION_MARKER0%
+// @dart = 2.4
 
 part of 'main.dart';
 

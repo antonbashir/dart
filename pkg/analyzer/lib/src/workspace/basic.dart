@@ -27,7 +27,7 @@ class BasicWorkspace extends SimpleWorkspace {
 
   @override
   WorkspacePackage? findPackageFor(String filePath) {
-    Folder folder = provider.getFolder(filePath);
+    final Folder folder = provider.getFolder(filePath);
     if (provider.pathContext.isWithin(root, folder.path)) {
       return theOnlyPackage;
     } else {
@@ -63,12 +63,9 @@ class BasicWorkspacePackage extends WorkspacePackage {
   final String root;
 
   @override
-  final SimpleWorkspace workspace;
+  final BasicWorkspace workspace;
 
   BasicWorkspacePackage(this.root, this.workspace);
-
-  @override
-  bool get canHavePublicApi => false;
 
   @override
   bool contains(Source source) {

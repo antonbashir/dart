@@ -4,5 +4,4 @@ extension on int {
 }
 
 main() {}
-
 void test() {}

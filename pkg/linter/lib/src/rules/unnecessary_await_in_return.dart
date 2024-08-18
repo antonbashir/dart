@@ -7,9 +7,8 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Unnecessary `await` keyword in return.';
+const _desc = r'Unnecessary await keyword in return.';
 
 const _details = r'''
 Avoid returning an awaited expression when the expression type is assignable to
@@ -37,15 +36,19 @@ Future<int> f2() {
 ''';
 
 class UnnecessaryAwaitInReturn extends LintRule {
+  static const LintCode code = LintCode(
+      'unnecessary_await_in_return', "Unnecessary 'await'.",
+      correctionMessage: "Try removing the 'await'.");
+
   UnnecessaryAwaitInReturn()
       : super(
             name: 'unnecessary_await_in_return',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.unnecessary_await_in_return;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

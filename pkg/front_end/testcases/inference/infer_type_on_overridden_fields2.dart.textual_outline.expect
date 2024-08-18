@@ -9,5 +9,4 @@ class B extends A {
 }
 
 foo() {}
-
 main() {}

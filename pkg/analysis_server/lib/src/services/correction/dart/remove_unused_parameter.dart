@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -11,11 +11,14 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveUnusedParameter extends ResolvedCorrectionProducer {
-  RemoveUnusedParameter({required super.context});
+  @override
+  bool get canBeAppliedAutomatically => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.acrossFiles;
+  bool get canBeAppliedInBulk => true;
+
+  @override
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_UNUSED_PARAMETER;
@@ -50,7 +53,7 @@ class RemoveUnusedParameter extends ResolvedCorrectionProducer {
 
     var parameters = parameterList.parameters;
     var index = parameters.indexOf(parameter);
-    var parameter_final = parameter;
+    final parameter_final = parameter;
     await builder.addDartFileEdit(file, (builder) {
       if (index == 0) {
         // Remove the first parameter in the list.

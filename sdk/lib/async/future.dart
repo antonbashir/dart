@@ -219,7 +219,6 @@ abstract class FutureOr<T> {
 ///
 /// Futures can have more than one callback-pair registered. Each successor is
 /// treated independently and is handled as if it was the only successor.
-/// The order in which the individual successors are completed is undefined.
 ///
 /// A future may also fail to ever complete. In that case, no callbacks are
 /// called. That situation should generally be avoided if possible, unless
@@ -253,14 +252,11 @@ abstract interface class Future<T> {
   factory Future(FutureOr<T> computation()) {
     _Future<T> result = new _Future<T>();
     Timer.run(() {
-      FutureOr<T> computationResult;
       try {
-        computationResult = computation();
+        result._complete(computation());
       } catch (e, s) {
         _completeWithErrorCallback(result, e, s);
-        return;
       }
-      result._complete(computationResult);
     });
     return result;
   }
@@ -280,14 +276,11 @@ abstract interface class Future<T> {
   factory Future.microtask(FutureOr<T> computation()) {
     _Future<T> result = new _Future<T>();
     scheduleMicrotask(() {
-      FutureOr<T> computationResult;
       try {
-        computationResult = computation();
+        result._complete(computation());
       } catch (e, s) {
         _completeWithErrorCallback(result, e, s);
-        return;
       }
-      result._complete(computationResult);
     });
     return result;
   }
@@ -308,9 +301,9 @@ abstract interface class Future<T> {
   /// final result = await Future<int>.sync(() => 12);
   /// ```
   factory Future.sync(FutureOr<T> computation()) {
-    FutureOr<T> result;
     try {
-      result = computation();
+      var result = computation();
+      return result is Future<T> ? result : _Future<T>.value(result);
     } catch (error, stackTrace) {
       var future = new _Future<T>();
       AsyncError? replacement = Zone.current.errorCallback(error, stackTrace);
@@ -321,7 +314,6 @@ abstract interface class Future<T> {
       }
       return future;
     }
-    return result is Future<T> ? result : _Future<T>.value(result);
   }
 
   /// Creates a future completed with [value].
@@ -421,19 +413,16 @@ abstract interface class Future<T> {
       throw ArgumentError.value(
           null, "computation", "The type parameter is not nullable");
     }
-    _Future<T> result = _Future<T>();
+    _Future<T> result = new _Future<T>();
     new Timer(duration, () {
       if (computation == null) {
         result._complete(null as T);
       } else {
-        FutureOr<T> computationResult;
         try {
-          computationResult = computation();
+          result._complete(computation());
         } catch (e, s) {
           _completeWithErrorCallback(result, e, s);
-          return;
         }
-        result._complete(computationResult);
       }
     });
     return result;
@@ -490,39 +479,34 @@ abstract interface class Future<T> {
     final _Future<List<T>> _future = _Future<List<T>>();
     List<T?>? values; // Collects the values. Set to null on error.
     int remaining = 0; // How many futures are we waiting for.
-    Object? error; // The first error from a future.
-    StackTrace? stackTrace; // The stackTrace that came with the error.
+    late Object error; // The first error from a future.
+    late StackTrace stackTrace; // The stackTrace that came with the error.
 
     // Handle an error from any of the futures.
     void handleError(Object theError, StackTrace theStackTrace) {
-      var remainingResults = --remaining;
+      remaining--;
       List<T?>? valueList = values;
       if (valueList != null) {
-        // First error, set state to represent error having already happened.
-        values = null;
-        error = theError;
-        stackTrace = theStackTrace;
-        // Then clean up any already successfully produced results.
         if (cleanUp != null) {
           for (var value in valueList) {
             if (value != null) {
-              // Ensure errors from `cleanUp` are uncaught.
+              // Ensure errors from cleanUp are uncaught.
               T cleanUpValue = value;
-              Future.sync(() {
+              new Future.sync(() {
                 cleanUp(cleanUpValue);
               });
             }
           }
         }
-        if (remainingResults == 0 || eagerError) {
+        values = null;
+        if (remaining == 0 || eagerError) {
           _future._completeError(theError, theStackTrace);
+        } else {
+          error = theError;
+          stackTrace = theStackTrace;
         }
-      } else {
-        // Not the first error.
-        if (remainingResults == 0 && !eagerError) {
-          // Last future completed, non-eagerly report the first error.
-          _future._completeError(error!, stackTrace!);
-        }
+      } else if (remaining == 0 && !eagerError) {
+        _future._completeError(error, stackTrace);
       }
     }
 
@@ -532,27 +516,24 @@ abstract interface class Future<T> {
       for (var future in futures) {
         int pos = remaining;
         future.then((T value) {
-          var remainingResults = --remaining;
+          remaining--;
           List<T?>? valueList = values;
           if (valueList != null) {
-            // No errors yet.
-            assert(valueList[pos] == null);
             valueList[pos] = value;
-            if (remainingResults == 0) {
-              _future._completeWithValue(
-                  [for (var value in valueList) value as T]);
+            if (remaining == 0) {
+              _future._completeWithValue(List<T>.from(valueList));
             }
           } else {
-            // Prior error, clean-up this value if necessary.
             if (cleanUp != null && value != null) {
               // Ensure errors from cleanUp are uncaught.
-              Future.sync(() {
+              new Future.sync(() {
                 cleanUp(value);
               });
             }
-            if (remainingResults == 0 && !eagerError) {
-              // Last future completed, non-eagerly report the first error.
-              _future._completeError(error!, stackTrace!);
+            if (remaining == 0 && !eagerError) {
+              // If eagerError is false, and valueList is null, then
+              // error and stackTrace have been set in handleError above.
+              _future._completeError(error, stackTrace);
             }
           }
         }, onError: handleError);
@@ -562,10 +543,9 @@ abstract interface class Future<T> {
         remaining++;
       }
       if (remaining == 0) {
-        // No elements in iterable.
         return _future.._completeWithValue(<T>[]);
       }
-      values = List<T?>.filled(remaining, null);
+      values = new List<T?>.filled(remaining, null);
     } catch (e, st) {
       // The error must have been thrown while iterating over the futures
       // list, or while installing a callback handler on the future.
@@ -1356,6 +1336,9 @@ void _asyncCompleteWithErrorCallback(
     stackTrace = replacement.stackTrace;
   } else {
     stackTrace ??= AsyncError.defaultStackTrace(error);
+  }
+  if (stackTrace == null) {
+    throw "unreachable"; // TODO(lrn): Remove when type promotion works.
   }
   result._asyncCompleteError(error, stackTrace);
 }

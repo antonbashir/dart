@@ -7,7 +7,6 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:dap/dap.dart';
-import 'package:dds_service_extensions/dds_service_extensions.dart';
 import 'package:vm_service/vm_service.dart' as vm;
 
 import '../rpc_error_codes.dart';
@@ -15,12 +14,6 @@ import 'adapters/dart.dart';
 import 'adapters/mixins.dart';
 import 'utils.dart';
 import 'variables.dart';
-
-/// A composite ID for breakpoints made up of an isolate ID and breakpoint ID.
-///
-/// Breakpoint IDs are not unique across all isolates so any place we need to
-/// know about a breakpoint specifically, we must use this.
-typedef _UniqueVmBreakpointId = ({String isolateId, String breakpointId});
 
 /// Manages state of Isolates (called Threads by the DAP protocol).
 ///
@@ -63,6 +56,16 @@ class IsolateManager {
   /// [debugExternalPackageLibraries] in one step.
   bool debugExternalPackageLibraries = true;
 
+  /// Whether to automatically resume new isolates after configuring them.
+  ///
+  /// This setting is almost always `true` because isolates are paused only so
+  /// we can configure them (send breakpoints, pause-on-exceptions,
+  /// setLibraryDebuggables) without races. It is set to `false` during the
+  /// initial connection of an `attachRequest` to allow paused isolates to
+  /// remain paused. In this case, it will be automatically re-set to `true` the
+  /// first time the user resumes.
+  bool autoResumeStartingIsolates = true;
+
   /// Tracks breakpoints last provided by the client so they can be sent to new
   /// isolates that appear after initial breakpoints were sent.
   final Map<String, List<ClientBreakpoint>> _clientBreakpointsByUri = {};
@@ -76,9 +79,8 @@ class IsolateManager {
   /// breakpoint ID.
   ///
   /// When an item is added to this map, any pending events in
-  /// [_breakpointResolvedEventsByVmId] MUST be processed immediately.
-  final Map<_UniqueVmBreakpointId, List<ClientBreakpoint>>
-      _clientBreakpointsByVmId = {};
+  /// [_pendingBreakpointEvents] MUST be processed immediately.
+  final Map<String, List<ClientBreakpoint>> _clientBreakpointsByVmId = {};
 
   /// Tracks `BreakpointAdded` or `BreakpointResolved` events for VM
   /// breakpoints.
@@ -91,8 +93,7 @@ class IsolateManager {
   /// When new breakpoints are added by the client, we must check this map to
   /// see it's al already-resolved breakpoint so that we can send resolution
   /// info to the client.
-  final Map<_UniqueVmBreakpointId, vm.Event> _breakpointResolvedEventsByVmId =
-      {};
+  final Map<String, vm.Event> _breakpointResolvedEventsByVmId = {};
 
   /// Tracks breakpoints created in the VM so they can be removed when the
   /// editor sends new breakpoints (currently the editor just sends a new list
@@ -268,17 +269,6 @@ class IsolateManager {
     await resumeThread(thread.threadId);
   }
 
-  Future<void> readyToResumeIsolate(vm.IsolateRef isolateRef) async {
-    final isolateId = isolateRef.id!;
-
-    final thread = _threadsByIsolateId[isolateId];
-    if (thread == null) {
-      return;
-    }
-
-    await readyToResumeThread(thread.threadId);
-  }
-
   /// Resumes (or steps) an isolate using its client [threadId].
   ///
   /// If the isolate is not paused, or already has a pending resume request
@@ -288,17 +278,7 @@ class IsolateManager {
   /// [vm.StepOption.kOver], a [StepOption.kOverAsyncSuspension] step will be
   /// sent instead.
   Future<void> resumeThread(int threadId, [String? resumeType]) async {
-    await _resume(threadId, resumeType: resumeType);
-  }
-
-  /// Resumes an isolate using its client [threadId].
-  ///
-  /// CAUTION: This should only be used for a tool-initiated resume, not a user-
-  /// initiated resume.
-  ///
-  /// See: https://pub.dev/documentation/dds_service_extensions/latest/dds_service_extensions/DdsExtension/readyToResume.html
-  Future<void> readyToResumeThread(int threadId) async {
-    await _readyToResume(threadId);
+    _resume(threadId, resumeType: resumeType);
   }
 
   /// Rewinds an isolate to an earlier frame using its client [threadId].
@@ -306,15 +286,14 @@ class IsolateManager {
   /// If the isolate is not paused, or already has a pending resume request
   /// in-flight, a request will not be sent.
   Future<void> rewindThread(int threadId, {required int frameIndex}) async {
-    await _resume(
+    _resume(
       threadId,
       resumeType: vm.StepOption.kRewind,
       frameIndex: frameIndex,
     );
   }
 
-  /// Resumes (or steps) an isolate using its client [threadId] on behalf
-  /// of the user.
+  /// Resumes (or steps) an isolate using its client [threadId].
   ///
   /// If the isolate is not paused, or already has a pending resume request
   /// in-flight, a request will not be sent.
@@ -329,6 +308,11 @@ class IsolateManager {
     String? resumeType,
     int? frameIndex,
   }) async {
+    // The first time a user resumes a thread is our signal that the app is now
+    // "running" and future isolates can be auto-resumed. This only affects
+    // attach, as it's already `true` for launch requests.
+    autoResumeStartingIsolates = true;
+
     final thread = _threadsByThreadId[threadId];
     if (thread == null) {
       if (isInvalidThreadId(threadId)) {
@@ -344,7 +328,7 @@ class IsolateManager {
     // Check this thread hasn't already been resumed by another handler in the
     // meantime (for example if the user performs a hot restart or something
     // while we processing some previous events).
-    if (!thread.paused || thread.hasPendingUserResume) {
+    if (!thread.paused || thread.hasPendingResume) {
       return;
     }
 
@@ -358,7 +342,7 @@ class IsolateManager {
     // we can drop them to save memory.
     thread.clearStoredData();
 
-    thread.hasPendingUserResume = true;
+    thread.hasPendingResume = true;
     try {
       await _adapter.vmService?.resume(
         thread.isolate.id!,
@@ -377,57 +361,7 @@ class IsolateManager {
         rethrow;
       }
     } finally {
-      thread.hasPendingUserResume = false;
-    }
-  }
-
-  /// Resumes an isolate using its client [threadId].
-  ///
-  /// CAUTION: This should only be used for a tool-initiated resume, not a user-
-  /// initiated resume.
-  ///
-  /// See: https://pub.dev/documentation/dds_service_extensions/latest/dds_service_extensions/DdsExtension/readyToResume.html
-  Future<void> _readyToResume(int threadId) async {
-    final thread = _threadsByThreadId[threadId];
-    if (thread == null) {
-      if (isInvalidThreadId(threadId)) {
-        throw DebugAdapterException('Thread $threadId was not found');
-      } else {
-        // Otherwise, this thread has exited and we don't need to do anything.
-        // It's possible another debugger unpaused or we're shutting down and
-        // the VM has terminated it.
-        return;
-      }
-    }
-
-    // When we're resuming, all stored objects become invalid and we can drop
-    // to save memory.
-    thread.clearStoredData();
-
-    try {
-      thread.hasPendingDapResume = true;
-      await _adapter.vmService?.readyToResume(thread.isolate.id!);
-    } on UnimplementedError {
-      // Fallback to a regular resume if the DDS version doesn't support
-      // `readyToResume`:
-      return _resume(threadId);
-    } on vm.SentinelException {
-      // It's possible during these async requests that the isolate went away
-      // (for example a shutdown/restart) and we no longer care about
-      // resuming it.
-    } on vm.RPCError catch (e) {
-      if (e.code == RpcErrorCodes.kIsolateMustBePaused) {
-        // It's possible something else resumed the thread (such as if another
-        // debugger is attached), we can just continue.
-      } else if (e.code == RpcErrorCodes.kMethodNotFound) {
-        // Fallback to a regular resume if the DDS service extension isn't
-        // available:
-        return _resume(threadId);
-      } else {
-        rethrow;
-      }
-    } finally {
-      thread.hasPendingDapResume = false;
+      thread.hasPendingResume = false;
     }
   }
 
@@ -464,9 +398,8 @@ class IsolateManager {
   bool isInvalidThreadId(int threadId) => threadId >= _nextThreadNumber;
 
   /// Sends an event informing the client that a thread is stopped at entry.
-  void sendStoppedOnEntryEvent(ThreadInfo thread) {
-    _adapter.sendEvent(
-        StoppedEventBody(reason: 'entry', threadId: thread.threadId));
+  void sendStoppedOnEntryEvent(int threadId) {
+    _adapter.sendEvent(StoppedEventBody(reason: 'entry', threadId: threadId));
   }
 
   /// Records breakpoints for [uri].
@@ -616,9 +549,11 @@ class IsolateManager {
   ///
   /// For [vm.EventKind.kPausePostRequest] which occurs after a restart, the
   /// isolate will be re-configured (pause-exception behaviour, debuggable
-  /// libraries, breakpoints) and we'll declare we are ready to resume.
+  /// libraries, breakpoints) and then (if [autoResumeStartingIsolates] is
+  /// `true`) resumed.
   ///
-  /// For [vm.EventKind.kPauseStart] we'll declare we are ready to resume.
+  /// For [vm.EventKind.kPauseStart] and [autoResumeStartingIsolates] is `true`,
+  /// the isolate will be resumed.
   ///
   /// For breakpoints with conditions that are not met and for logpoints, the
   /// isolate will be automatically resumed.
@@ -628,8 +563,7 @@ class IsolateManager {
   Future<void> _handlePause(vm.Event event) async {
     final eventKind = event.kind;
     final isolate = event.isolate!;
-    final isolateId = isolate.id!;
-    final thread = _threadsByIsolateId[isolateId];
+    final thread = _threadsByIsolateId[isolate.id!];
 
     if (thread == null) {
       return;
@@ -643,17 +577,21 @@ class IsolateManager {
     // after a hot restart.
     if (eventKind == vm.EventKind.kPausePostRequest) {
       await _configureIsolate(thread);
-      await readyToResumeThread(thread.threadId);
+      if (autoResumeStartingIsolates) {
+        await resumeThread(thread.threadId);
+      }
     } else if (eventKind == vm.EventKind.kPauseStart) {
       // Don't resume from a PauseStart if this has already happened (see
       // comments on [thread.hasBeenStarted]).
       if (!thread.startupHandled) {
         thread.startupHandled = true;
-        // Send a Stopped event to inform the client UI the thread is paused and
-        // declare that we are ready to resume (which might result in an
-        // immediate resume).
-        sendStoppedOnEntryEvent(thread);
-        await readyToResumeThread(thread.threadId);
+        // If requested, automatically resume. Otherwise send a Stopped event to
+        // inform the client UI the thread is paused.
+        if (autoResumeStartingIsolates) {
+          await resumeThread(thread.threadId);
+        } else {
+          sendStoppedOnEntryEvent(thread.threadId);
+        }
       }
     } else {
       // PauseExit, PauseBreakpoint, PauseInterrupted, PauseException
@@ -669,16 +607,14 @@ class IsolateManager {
         // When multiple client breakpoints have been folded into a single VM
         // breakpoint, we (arbitrarily) use the first one for conditions and
         // logpoints.
-        final clientBreakpoints = event.pauseBreakpoints!.map((bp) {
-          final uniqueBreakpointId =
-              (isolateId: isolateId, breakpointId: bp.id!);
-          return _clientBreakpointsByVmId[uniqueBreakpointId]
-              ?.firstOrNull
-              ?.breakpoint;
-        }).toSet();
+        final clientBreakpoints = event.pauseBreakpoints!
+            .map((bp) =>
+                _clientBreakpointsByVmId[bp.id!]?.firstOrNull?.breakpoint)
+            .toSet();
 
         // Split into logpoints (which just print messages) and breakpoints.
-        final logPoints = clientBreakpoints.nonNulls
+        final logPoints = clientBreakpoints
+            .whereNotNull()
             .where((bp) => bp.logMessage?.isNotEmpty ?? false)
             .toSet();
         final breakpoints = clientBreakpoints.difference(logPoints);
@@ -696,8 +632,6 @@ class IsolateManager {
         reason = 'step';
       } else if (eventKind == vm.EventKind.kPauseException) {
         reason = 'exception';
-      } else if (eventKind == vm.EventKind.kPauseExit) {
-        reason = 'exit';
       }
 
       // If we stopped at an exception, capture the exception instance so we
@@ -726,11 +660,6 @@ class IsolateManager {
     final isolate = event.isolate!;
     final thread = _threadsByIsolateId[isolate.id!];
     if (thread != null) {
-      // When a thread is resumed, we must inform the client. This is not
-      // necessary when the user has clicked Continue because it is implied.
-      // However, resume events can now be triggered by other things (eg. other
-      // in other IDEs or DevTools) so we must notify the client.
-      _adapter.sendEvent(ContinuedEventBody(threadId: thread.threadId));
       thread.paused = false;
       thread.pauseEvent = null;
       thread.exceptionReference = null;
@@ -763,41 +692,19 @@ class IsolateManager {
   /// we added breakpoints for.
   void _handleBreakpointAddedOrResolved(vm.Event event) {
     final breakpoint = event.breakpoint!;
-    final isolateId = event.isolate!.id!;
     final breakpointId = breakpoint.id!;
-    final uniqueBreakpointId =
-        (isolateId: isolateId, breakpointId: breakpointId);
 
     if (!(breakpoint.resolved ?? false)) {
       // Unresolved breakpoint, don't need to do anything.
       return;
     }
 
-    // If we already have an event, assert that the resolution location is the
-    // same because we are making assumptions that we can reuse these resolution
-    // events to speed up telling the client a breakpoint was resolved.
-    assert(() {
-      final existingResolvedEvent =
-          _breakpointResolvedEventsByVmId[uniqueBreakpointId];
-      if (existingResolvedEvent != null) {
-        final existingLocation =
-            existingResolvedEvent.breakpoint?.location as vm.SourceLocation?;
-        final newLocation = event.breakpoint?.location as vm.SourceLocation?;
-        assert(existingLocation!.line == newLocation!.line);
-        assert(existingLocation!.column == newLocation!.column);
-      }
-      return true;
-    }());
-
     // Store this event so if we get any future breakpoints that resolve to this
     // VM breakpoint, we can access the resolution info.
-    _breakpointResolvedEventsByVmId[(
-      isolateId: isolateId,
-      breakpointId: breakpointId
-    )] = event;
+    _breakpointResolvedEventsByVmId[breakpointId] = event;
 
     // And for existing breakpoints, send (or queue) resolved events.
-    final existingBreakpoints = _clientBreakpointsByVmId[uniqueBreakpointId];
+    final existingBreakpoints = _clientBreakpointsByVmId[breakpointId];
     for (final existingBreakpoint in existingBreakpoints ?? const []) {
       queueBreakpointResolutionEvent(event, existingBreakpoint);
     }
@@ -964,7 +871,9 @@ class IsolateManager {
         try {
           // Some file URIs (like SDK sources) need to be converted to
           // appropriate internal URIs to be able to set breakpoints.
-          final vmUri = await thread.resolvePathToUri(Uri.parse(uri));
+          final vmUri = await thread.resolvePathToUri(
+            Uri.parse(uri).toFilePath(),
+          );
 
           if (vmUri == null) {
             return;
@@ -974,23 +883,18 @@ class IsolateManager {
               isolateId, vmUri.toString(), bp.breakpoint.line,
               column: bp.breakpoint.column);
           final vmBpId = vmBp.id!;
-          final uniqueBreakpointId =
-              (isolateId: isolateId, breakpointId: vmBp.id!);
           existingBreakpointsForIsolateAndUri[vmBpId] = vmBp;
 
           // Store this client breakpoint by the VM ID, so when we get events
           // from the VM we can map them back to client breakpoints (for example
           // to send resolved events).
-          _clientBreakpointsByVmId
-              .putIfAbsent(uniqueBreakpointId, () => [])
-              .add(bp);
+          _clientBreakpointsByVmId.putIfAbsent(vmBpId, () => []).add(bp);
 
           // Queue any resolved events that may have already arrived
           // (either because the VM sent them before responding to us, or
           // because it gave us an existing VM breakpoint because it resolved to
           // the same location as another).
-          final resolvedEvent =
-              _breakpointResolvedEventsByVmId[uniqueBreakpointId];
+          final resolvedEvent = _breakpointResolvedEventsByVmId[vmBpId];
           if (resolvedEvent != null) {
             queueBreakpointResolutionEvent(resolvedEvent, bp);
           }
@@ -1035,14 +939,12 @@ class IsolateManager {
 
     // Pre-resolve all URIs in batch so the call below does not trigger
     // many requests to the server.
-    if (!debugExternalPackageLibraries) {
-      final allUris = libraries
-          .map((library) => library.uri)
-          .nonNulls
-          .map(Uri.parse)
-          .toList();
-      await thread.resolveUrisToPackageLibPathsBatch(allUris);
-    }
+    final allUris = libraries
+        .map((library) => library.uri)
+        .whereNotNull()
+        .map(Uri.parse)
+        .toList();
+    await thread.resolveUrisToPackageLibPathsBatch(allUris);
 
     await Future.wait(libraries.map((library) async {
       final libraryUri = library.uri;
@@ -1117,11 +1019,6 @@ class ThreadInfo with FileUtils {
   var runnable = false;
   var atAsyncSuspension = false;
   int? exceptionReference;
-
-  /// Whether this thread is currently known to be paused in the VM.
-  ///
-  /// Because requests are async, this is not guaranteed to be always correct
-  /// but should represent the state based on the latest VM events.
   var paused = false;
 
   /// Tracks whether an isolates startup routine has been handled.
@@ -1152,22 +1049,18 @@ class ThreadInfo with FileUtils {
   /// tokenPos) can share the same response.
   final _scripts = <String, Future<vm.Script>>{};
 
-  /// A cache of requests (Futures) to resolve URIs to their file-like URIs.
+  /// A cache of requests (Futures) to resolve URIs to their local file paths.
   ///
   /// Used so that multiple requests that require them (for example looking up
   /// locations for stack frames from tokenPos) can share the same response.
   ///
   /// Keys are URIs in string form.
-  /// Values are file-like URIs (file: or similar, such as dart-macro+file:).
-  final _resolvedPaths = <String, Future<Uri?>>{};
+  /// Values are file paths (not file URIs!).
+  final _resolvedPaths = <String, Future<String?>>{};
 
-  /// Whether this isolate has an in-flight user-initiated resume request that
-  /// has not yet been responded to.
-  var hasPendingUserResume = false;
-
-  /// Whether this isolate has an in-flight DAP (readyToResume) resume request
-  /// that has not yet been responded to.
-  var hasPendingDapResume = false;
+  /// Whether this isolate has an in-flight resume request that has not yet
+  /// been responded to.
+  var hasPendingResume = false;
 
   ThreadInfo(this._manager, this.threadId, this.isolate);
 
@@ -1188,59 +1081,33 @@ class ThreadInfo with FileUtils {
     return _manager.getScripts(isolate);
   }
 
-  /// Resolves a source file path (or URI) into a URI for the VM.
+  /// Resolves a source file path into a URI for the VM.
   ///
   /// sdk-path/lib/core/print.dart -> dart:core/print.dart
-  /// c:\foo\bar -> package:foo/bar
-  /// dart-macro+file:///c:/foo/bar -> dart-macro+package:foo/bar
   ///
   /// This is required so that when the user sets a breakpoint in an SDK source
   /// (which they may have navigated to via the Analysis Server) we generate a
   /// valid URI that the VM would create a breakpoint for.
-  ///
-  /// Because the VM supports using `file:` URIs in many places, we usually do
-  /// not need to convert file paths into `package:` URIs, however this will
-  /// be done if [forceResolveFileUris] is `true`.
-  Future<Uri?> resolvePathToUri(
-    Uri sourcePathUri, {
-    bool forceResolveFileUris = false,
-  }) async {
-    final sdkUri = _manager._adapter.convertUriToOrgDartlangSdk(sourcePathUri);
-    if (sdkUri != null) {
-      return sdkUri;
+  Future<Uri?> resolvePathToUri(String filePath) async {
+    var google3Path = _convertPathToGoogle3Uri(filePath);
+    if (google3Path != null) {
+      var result = await _manager._adapter.vmService
+          ?.lookupPackageUris(isolate.id!, [google3Path.toString()]);
+      var uriStr = result?.uris?.first;
+      return uriStr != null ? Uri.parse(uriStr) : null;
     }
 
-    final google3Uri = _convertPathToGoogle3Uri(sourcePathUri);
-    final uri = google3Uri ?? sourcePathUri;
-
-    // As an optimisation, we don't resolve file -> package URIs in many cases
-    // because the VM can set breakpoints for file: URIs anyway. However for
-    // G3 or if [forceResolveFileUris] is set, we will.
-    final performResolve = google3Uri != null || forceResolveFileUris;
-
-    // TODO(dantup): Consider caching results for this like we do for
-    //  resolveUriToPath (and then forceResolveFileUris can be removed and just
-    //  always used).
-    final packageUriList = performResolve
-        ? await _manager._adapter.vmService
-            ?.lookupPackageUris(isolate.id!, [uri.toString()])
-        : null;
-    final packageUriString = packageUriList?.uris?.firstOrNull;
-
-    if (packageUriString != null) {
-      // Use package URI if we resolved something
-      return Uri.parse(packageUriString);
-    } else if (google3Uri != null) {
-      // If we failed to resolve and was a Google3 URI, return null
-      return null;
-    } else {
-      // Otherwise, use the original (file) URI
-      return uri;
-    }
+    // We don't need to call lookupPackageUris in non-google3 because the VM can
+    // handle incoming file:/// URIs for packages, and also the org-dartlang-sdk
+    // URIs directly for SDK sources (we do not need to convert to 'dart:'),
+    // however this method is Future-returning in case this changes in future
+    // and we need to include a call to lookupPackageUris here.
+    return _manager._adapter.convertPathToOrgDartlangSdk(filePath) ??
+        Uri.file(filePath);
   }
 
-  /// Batch resolves source URIs from the VM to a file-like URI for the package
-  /// lib folder.
+  /// Batch resolves source URIs from the VM to a file path for the package lib
+  /// folder.
   ///
   /// This method is more performant than repeatedly calling
   /// [resolveUrisToPackageLibPath] because it resolves multiple URIs in a
@@ -1250,7 +1117,7 @@ class ThreadInfo with FileUtils {
   /// [resolveUriToPath]) so it's reasonable to call this method up-front and
   /// then use [resolveUrisToPackageLibPath] (and [resolveUriToPath]) to read
   /// the results later.
-  Future<List<Uri?>> resolveUrisToPackageLibPathsBatch(
+  Future<List<String?>> resolveUrisToPackageLibPathsBatch(
     List<Uri> uris,
   ) async {
     final results = await resolveUrisToPathsBatch(uris);
@@ -1259,7 +1126,7 @@ class ThreadInfo with FileUtils {
         .toList();
   }
 
-  /// Batch resolves source URIs from the VM to a file-like URI.
+  /// Batch resolves source URIs from the VM to a file path.
   ///
   /// This method is more performant than repeatedly calling [resolveUriToPath]
   /// because it resolves multiple URIs in a single request to the VM.
@@ -1267,7 +1134,7 @@ class ThreadInfo with FileUtils {
   /// Results are cached and shared with [resolveUriToPath] so it's reasonable
   /// to call this method up-front and then use [resolveUriToPath] to read
   /// the results later.
-  Future<List<Uri?>> resolveUrisToPathsBatch(List<Uri> uris) async {
+  Future<List<String?>> resolveUrisToPathsBatch(List<Uri> uris) async {
     // First find the set of URIs we don't already have results for.
     final requiredUris = uris
         .where(isResolvableUri)
@@ -1278,8 +1145,8 @@ class ThreadInfo with FileUtils {
     if (requiredUris.isNotEmpty) {
       // Populate completers for each URI before we start the request so that
       // concurrent calls to this method will not start their own requests.
-      final completers = Map<String, Completer<Uri?>>.fromEntries(
-        requiredUris.map((uri) => MapEntry('$uri', Completer<Uri?>())),
+      final completers = Map<String, Completer<String?>>.fromEntries(
+        requiredUris.map((uri) => MapEntry('$uri', Completer<String?>())),
       );
       completers.forEach(
         (uri, completer) => _resolvedPaths[uri] = completer.future,
@@ -1290,19 +1157,6 @@ class ThreadInfo with FileUtils {
         if (results == null) {
           // If no result, all of the results are null.
           completers.forEach((uri, completer) => completer.complete(null));
-        } else if (results.length != requiredUris.length) {
-          // If the lengths of the lists are different, we have an invalid
-          // response from the VM. This is a bug in the VM/VM Service:
-          // https://github.com/dart-lang/sdk/issues/52632
-
-          final reason =
-              results.length > requiredUris.length ? 'more' : 'fewer';
-          final message =
-              'lookupResolvedPackageUris result contained $reason results than '
-              'the request. See https://github.com/dart-lang/sdk/issues/52632';
-          final error = Exception(message);
-          completers
-              .forEach((uri, completer) => completer.completeError(error));
         } else {
           // Otherwise, complete each one by index with the corresponding value.
           results.map(_convertUriToFilePath).forEachIndexed((i, result) {
@@ -1313,15 +1167,7 @@ class ThreadInfo with FileUtils {
       } catch (e) {
         // We can't leave dangling completers here because others may already
         // be waiting on them, so propagate the error to them.
-        completers.forEach((uri, completer) {
-          // Only complete if not already completed. It's possible an exception
-          // occurred above inside the loop and that some of the completers have
-          // already completed. We don't want to replace a good exception with
-          // "Future already completed".
-          if (!completer.isCompleted) {
-            completer.completeError(e);
-          }
-        });
+        completers.forEach((uri, completer) => completer.completeError(e));
 
         // Don't rethrow here, because it will cause these completers futures
         // to not have error handlers attached which can cause their errors to
@@ -1335,11 +1181,9 @@ class ThreadInfo with FileUtils {
     // because they were either filtered out of [requiredUris] because they were
     // already there, or we then populated completers for them above.
     final futures = uris.map((uri) async {
-      if (_manager._adapter.isSupportedFileScheme(uri)) {
-        return uri;
-      } else {
-        return await _resolvedPaths[uri.toString()];
-      }
+      return uri.isScheme('file')
+          ? uri.toFilePath()
+          : await _resolvedPaths[uri.toString()]!;
     });
     return Future.wait(futures);
   }
@@ -1384,23 +1228,21 @@ class ThreadInfo with FileUtils {
   /// would not be changed.
   final _libraryIsDebuggableById = <String, bool>{};
 
-  /// Resolves a source URI to a file-like URI for the lib folder of its
-  /// package.
+  /// Resolves a source URI to a file path for the lib folder of its package.
   ///
-  /// package:foo/a/b/c/d.dart -> file:///code/packages/foo/lib
-  /// dart-macro+package:foo/a/b/c/d.dart -> dart-macro+file:///code/packages/foo/lib
+  /// package:foo/a/b/c/d.dart -> /code/packages/foo/lib
   ///
   /// This method is an optimisation over calling [resolveUriToPath] where only
   /// the package root is required (for example when determining whether a
   /// package is within the users workspace). This method allows results to be
   /// cached per-package to avoid hitting the VM Service for each individual
   /// library within a package.
-  Future<Uri?> resolveUriToPackageLibPath(Uri uri) async {
+  Future<String?> resolveUriToPackageLibPath(Uri uri) async {
     final result = await resolveUrisToPackageLibPathsBatch([uri]);
     return result.first;
   }
 
-  /// Resolves a source URI from the VM to a file-like URI.
+  /// Resolves a source URI from the VM to a file path.
   ///
   /// dart:core/print.dart -> sdk-path/lib/core/print.dart
   ///
@@ -1408,7 +1250,7 @@ class ThreadInfo with FileUtils {
   /// frame) we open the same file on their local disk. If we downloaded the
   /// source from the VM, they would end up seeing two copies of files (and they
   /// would each have their own breakpoints) which can be confusing.
-  Future<Uri?> resolveUriToPath(Uri uri) async {
+  Future<String?> resolveUriToPath(Uri uri) async {
     final result = await resolveUrisToPathsBatch([uri]);
     return result.first;
   }
@@ -1417,18 +1259,11 @@ class ThreadInfo with FileUtils {
   /// that are round-tripped to the client.
   int storeData(Object data) => _manager.storeData(this, data);
 
-  Uri? _convertPathToGoogle3Uri(Uri input) {
-    // TODO(dantup): Do we need to handle non-file here? Eg. can we have
-    //  dart-macro+file:/// for a google3 path?
-    if (!input.isScheme('file')) {
-      return null;
-    }
-    final inputPath = input.toFilePath();
-
+  Uri? _convertPathToGoogle3Uri(String input) {
     const search = '/google3/';
-    if (inputPath.startsWith('/google') && inputPath.contains(search)) {
-      var idx = inputPath.indexOf(search);
-      var remainingPath = inputPath.substring(idx + search.length);
+    if (input.startsWith('/google') && input.contains(search)) {
+      var idx = input.indexOf(search);
+      var remainingPath = input.substring(idx + search.length);
       return Uri(
         scheme: 'google3',
         host: '',
@@ -1439,24 +1274,15 @@ class ThreadInfo with FileUtils {
     return null;
   }
 
-  /// Converts a VM-returned URI to a file-like URI, taking org-dartlang-sdk
-  /// schemes into account.
+  /// Converts a URI to a file path.
   ///
-  /// Supports file-like URIs and org-dartlang-sdk:// URIs.
-  Uri? _convertUriToFilePath(Uri? input) {
+  /// Supports file:// URIs and org-dartlang-sdk:// URIs.
+  String? _convertUriToFilePath(Uri? input) {
     if (input == null) {
       return null;
-    } else if (_manager._adapter.isSupportedFileScheme(input)) {
-      return input;
+    } else if (input.isScheme('file')) {
+      return input.toFilePath();
     } else {
-      // TODO(dantup): UriConverter should be upgraded to use file-like URIs
-      //  instead of paths, but that might be breaking because it's used
-      //  outside of this package?
-      final uriConverter = _manager._adapter.uriConverter();
-      if (uriConverter != null) {
-        final filePath = uriConverter(input.toString());
-        return filePath != null ? Uri.file(filePath) : null;
-      }
       return _manager._adapter.convertOrgDartlangSdkToPath(input);
     }
   }
@@ -1466,10 +1292,12 @@ class ThreadInfo with FileUtils {
   ///
   /// [uri] should be the equivalent package: URI and is used to know how many
   /// segments to remove from the file path to get to the lib folder.
-  Uri? _trimPathToLibFolder(Uri? fileLikeUri, Uri uri) {
-    if (fileLikeUri == null) {
+  String? _trimPathToLibFolder(String? filePath, Uri uri) {
+    if (filePath == null) {
       return null;
     }
+
+    final fileUri = Uri.file(filePath);
 
     // Track how many segments from the path are from the lib folder to the
     // library that will need to be removed later.
@@ -1477,16 +1305,17 @@ class ThreadInfo with FileUtils {
 
     // It should never be the case that the returned value doesn't have at
     // least as many segments as the path of the URI.
-    assert(uri.pathSegments.length > libraryPathSegments);
-    if (uri.pathSegments.length <= libraryPathSegments) {
-      return fileLikeUri;
+    assert(fileUri.pathSegments.length > libraryPathSegments);
+    if (fileUri.pathSegments.length <= libraryPathSegments) {
+      return filePath;
     }
 
     // Strip off the correct number of segments to the resulting path points
     // to the root of the package:/ URI.
-    final keepSegments = fileLikeUri.pathSegments.length - libraryPathSegments;
-    return fileLikeUri.replace(
-        pathSegments: fileLikeUri.pathSegments.sublist(0, keepSegments));
+    final keepSegments = fileUri.pathSegments.length - libraryPathSegments;
+    return fileUri
+        .replace(pathSegments: fileUri.pathSegments.sublist(0, keepSegments))
+        .toFilePath();
   }
 
   /// Clears all data stored for this thread.
@@ -1505,10 +1334,8 @@ class ThreadInfo with FileUtils {
     //
     // We need to handle msimatched drive letters, and also file vs package
     // URIs.
-    final scriptResolvedUri = await resolvePathToUri(
-      scriptFileUri,
-      forceResolveFileUris: true,
-    );
+    final scriptResolvedUri =
+        await resolvePathToUri(scriptFileUri.toFilePath());
     final candidateUris = {
       scriptFileUri.toString(),
       normalizeUri(scriptFileUri).toString(),

@@ -17,7 +17,7 @@ class BinaryDataSource implements DataSource {
 
   BinaryDataSource(this._bytes, {StringInterner? stringInterner})
       : _stringInterner = stringInterner {
-    final deferredDataStart = readAtOffset(_bytes.length - 4, readUint32);
+    final deferredDataStart = readAtOffset(_bytes.length - 4, _readUint32);
     _deferredOffsetToSize = readAtOffset(deferredDataStart, () {
       final deferredSizesCount = readInt();
       final result = <int, int>{};
@@ -46,7 +46,7 @@ class BinaryDataSource implements DataSource {
     _byteOffset += bytes.length;
     String string = utf8.decode(bytes);
     if (_stringInterner == null) return string;
-    return _stringInterner.internString(string);
+    return _stringInterner!.internString(string);
   }
 
   @override
@@ -68,7 +68,7 @@ class BinaryDataSource implements DataSource {
   }
 
   @override
-  E readEnum<E extends Enum>(List<E> values) {
+  E readEnum<E>(List<E> values) {
     int index = readInt();
     assert(
         0 <= index && index < values.length,
@@ -86,8 +86,7 @@ class BinaryDataSource implements DataSource {
     return value;
   }
 
-  @override
-  int readUint32() {
+  int _readUint32() {
     return (_readByte() << 24) |
         (_readByte() << 16) |
         (_readByte() << 8) |

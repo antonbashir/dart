@@ -2,33 +2,35 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
+import 'package:collection/collection.dart';
 
 class AddCallSuper extends ResolvedCorrectionProducer {
   var _addition = '';
 
-  AddCallSuper({required super.context});
+  @override
+  // Adding as the first statement is not predictably the correct action.
+  bool get canBeAppliedInBulk => false;
 
   @override
-  CorrectionApplicability get applicability =>
-      // Adding as the first statement is not predictably the correct action.
-      CorrectionApplicability.singleLocation;
+  // Adding as the first statement is not predictably the correct action.
+  bool get canBeAppliedToFile => false;
 
   @override
-  List<String> get fixArguments => [_addition];
+  List<Object> get fixArguments => [_addition];
 
   @override
   FixKind get fixKind => DartFixKind.ADD_CALL_SUPER;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var methodDeclaration = node;
+    final methodDeclaration = node;
     if (methodDeclaration is! MethodDeclaration) return;
     var classElement = methodDeclaration
         .thisOrAncestorOfType<ClassDeclaration>()
@@ -51,28 +53,27 @@ class AddCallSuper extends ResolvedCorrectionProducer {
               }
               return null;
             })
-            .nonNulls
+            .whereNotNull()
             .join(', ') ??
         '';
 
     _addition = '$name($argumentList)';
 
     if (body is BlockFunctionBody) {
-      await _block(builder, body.block);
+      await _block(builder, body);
     } else if (body is ExpressionFunctionBody) {
       await _expression(builder, body);
     }
   }
 
-  Future<void> _block(ChangeBuilder builder, Block block) async {
+  Future<void> _block(ChangeBuilder builder, BlockFunctionBody body) async {
+    var location = utils.prepareNewStatementLocation(body.block, true);
+
     await builder.addDartFileEdit(file, (builder) {
-      builder.addInsertion(block.leftBracket.end, (builder) {
-        builder.writeln();
-        builder.write('${builder.getIndent(2)}super.$_addition;');
-        if (block.statements.isEmpty) {
-          builder.writeln();
-          builder.writeIndent();
-        }
+      builder.addInsertion(location.offset, (builder) {
+        builder.write(location.prefix);
+        builder.write('super.$_addition;');
+        builder.write(location.suffix);
       });
     });
   }
@@ -82,7 +83,7 @@ class AddCallSuper extends ResolvedCorrectionProducer {
     var expression = body.expression;
     var semicolon = body.semicolon;
     var prefix = utils.getLinePrefix(expression.offset);
-    var prefixWithLine = eol + prefix + utils.oneIndent;
+    var prefixWithLine = eol + prefix + utils.getIndent(1);
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addSimpleReplacement(

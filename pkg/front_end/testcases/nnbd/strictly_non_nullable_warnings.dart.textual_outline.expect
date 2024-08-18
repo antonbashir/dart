@@ -14,5 +14,4 @@ class B extends A {
 }
 
 warning(String s, List<String> l, Map<String, int> m) {}
-
 main() {}

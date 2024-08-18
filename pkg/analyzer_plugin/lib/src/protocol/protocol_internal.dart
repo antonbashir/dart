@@ -8,7 +8,6 @@ import 'dart:convert' hide JsonDecoder;
 import 'package:analyzer_plugin/protocol/protocol.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
 import 'package:analyzer_plugin/protocol/protocol_generated.dart';
-import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
 import 'package:analyzer_plugin/utilities/change_builder/conflicting_edit_exception.dart';
 
 final Map<String, RefactoringKind> REQUEST_ID_REFACTORING_KINDS =
@@ -218,55 +217,43 @@ RefactoringProblemSeverity? maxRefactoringProblemSeverity(
 
 /// Create a [RefactoringFeedback] corresponding the given [kind].
 RefactoringFeedback refactoringFeedbackFromJson(
-    JsonDecoder jsonDecoder, String jsonPath, Object? json, Map feedbackJson,
-    {ClientUriConverter? clientUriConverter}) {
+    JsonDecoder jsonDecoder, String jsonPath, Object? json, Map feedbackJson) {
   var kind = jsonDecoder.refactoringKind;
   if (kind == RefactoringKind.EXTRACT_LOCAL_VARIABLE) {
-    return ExtractLocalVariableFeedback.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return ExtractLocalVariableFeedback.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.EXTRACT_METHOD) {
-    return ExtractMethodFeedback.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return ExtractMethodFeedback.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.INLINE_LOCAL_VARIABLE) {
-    return InlineLocalVariableFeedback.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return InlineLocalVariableFeedback.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.INLINE_METHOD) {
-    return InlineMethodFeedback.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return InlineMethodFeedback.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.RENAME) {
-    return RenameFeedback.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return RenameFeedback.fromJson(jsonDecoder, jsonPath, json);
   }
   throw StateError('Unexpected refactoring kind');
 }
 
 /// Create a [RefactoringOptions] corresponding the given [kind].
 RefactoringOptions refactoringOptionsFromJson(JsonDecoder jsonDecoder,
-    String jsonPath, Object? json, RefactoringKind kind,
-    {ClientUriConverter? clientUriConverter}) {
+    String jsonPath, Object? json, RefactoringKind kind) {
   if (kind == RefactoringKind.EXTRACT_LOCAL_VARIABLE) {
-    return ExtractLocalVariableOptions.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return ExtractLocalVariableOptions.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.EXTRACT_METHOD) {
-    return ExtractMethodOptions.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return ExtractMethodOptions.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.INLINE_METHOD) {
-    return InlineMethodOptions.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return InlineMethodOptions.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.MOVE_FILE) {
-    return MoveFileOptions.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return MoveFileOptions.fromJson(jsonDecoder, jsonPath, json);
   }
   if (kind == RefactoringKind.RENAME) {
-    return RenameOptions.fromJson(jsonDecoder, jsonPath, json,
-        clientUriConverter: clientUriConverter);
+    return RenameOptions.fromJson(jsonDecoder, jsonPath, json);
   }
   throw StateError('Unexpected refactoring kind');
 }

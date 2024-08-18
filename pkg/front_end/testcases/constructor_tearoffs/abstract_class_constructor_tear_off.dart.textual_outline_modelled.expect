@@ -9,7 +9,5 @@ class NamedMixinApplication = Object with Mixin;
 extension Extension on int {}
 
 main() {}
-
 mixin Mixin {}
-
 test() {}

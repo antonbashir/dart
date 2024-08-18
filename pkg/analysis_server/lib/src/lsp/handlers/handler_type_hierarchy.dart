@@ -8,7 +8,7 @@ import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/computer/computer_lazy_type_hierarchy.dart'
     as type_hierarchy;
-import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -35,16 +35,12 @@ class PrepareTypeHierarchyHandler extends SharedMessageHandler<
     TypeHierarchyPrepareParams,
     TextDocumentPrepareTypeHierarchyResult> with _TypeHierarchyUtils {
   PrepareTypeHierarchyHandler(super.server);
-
   @override
   Method get handlesMessage => Method.textDocument_prepareTypeHierarchy;
 
   @override
   LspJsonHandler<TypeHierarchyPrepareParams> get jsonHandler =>
       TypeHierarchyPrepareParams.jsonHandler;
-
-  @override
-  bool get requiresTrustedCaller => false;
 
   @override
   Future<ErrorOr<TextDocumentPrepareTypeHierarchyResult>> handle(
@@ -55,24 +51,25 @@ class PrepareTypeHierarchyHandler extends SharedMessageHandler<
       return success(const []);
     }
 
-    var clientCapabilities = server.lspClientCapabilities;
+    final clientCapabilities = server.lspClientCapabilities;
     if (clientCapabilities == null) {
       // This should not happen unless a client misbehaves.
       return serverNotInitializedError;
     }
 
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
-    var offset = unit.mapResultSync((unit) => toOffset(unit.lineInfo, pos));
-    return (unit, offset).mapResultsSync((unit, offset) {
-      var computer = type_hierarchy.DartLazyTypeHierarchyComputer(unit);
-      var target = computer.findTarget(offset);
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final offset = await unit.mapResult((unit) => toOffset(unit.lineInfo, pos));
+    return offset.mapResult((offset) {
+      final computer =
+          type_hierarchy.DartLazyTypeHierarchyComputer(unit.result);
+      final target = computer.findTarget(offset);
       if (target == null) {
         return success(null);
       }
 
-      var item = toLspItem(target, unit.lineInfo);
+      final item = toLspItem(target, unit.result.lineInfo);
       return success([item]);
     });
   }
@@ -84,7 +81,7 @@ class TypeHierarchyRegistrations extends FeatureRegistration
 
   @override
   ToJsonable? get options => TypeHierarchyRegistrationOptions(
-        documentSelector: dartFiles,
+        documentSelector: [dartFiles],
       );
 
   @override
@@ -101,7 +98,6 @@ class TypeHierarchySubtypesHandler extends SharedMessageHandler<
     TypeHierarchySubtypesParams,
     TypeHierarchySubtypesResult> with _TypeHierarchyUtils {
   TypeHierarchySubtypesHandler(super.server);
-
   @override
   Method get handlesMessage => Method.typeHierarchy_subtypes;
 
@@ -110,33 +106,27 @@ class TypeHierarchySubtypesHandler extends SharedMessageHandler<
       TypeHierarchySubtypesParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<TypeHierarchySubtypesResult>> handle(
       TypeHierarchySubtypesParams params,
       MessageInfo message,
       CancellationToken token) async {
-    var item = params.item;
-    var data = item.data;
-    var path = pathOfUri(item.uri);
-    var unit = await path.mapResult(requireResolvedUnit);
+    final item = params.item;
+    final data = item.data;
+    final path = pathOfUri(item.uri);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final computer = type_hierarchy.DartLazyTypeHierarchyComputer(unit.result);
 
-    return unit.mapResult((unit) async {
-      var computer = type_hierarchy.DartLazyTypeHierarchyComputer(unit);
+    if (data == null) {
+      return error(
+        ErrorCodes.InvalidParams,
+        'TypeHierarchyItem is missing the data field',
+      );
+    }
 
-      if (data == null) {
-        return error(
-          ErrorCodes.InvalidParams,
-          'TypeHierarchyItem is missing the data field',
-        );
-      }
-
-      var location = ElementLocationImpl.con2(data.ref);
-      var calls = await computer.findSubtypes(location, server.searchEngine);
-      var results = calls != null ? _convertItems(unit, calls) : null;
-      return success(results);
-    });
+    final location = ElementLocationImpl.con2(data.ref);
+    final calls = await computer.findSubtypes(location, server.searchEngine);
+    final results = calls != null ? _convertItems(unit.result, calls) : null;
+    return success(results);
   }
 }
 
@@ -144,7 +134,6 @@ class TypeHierarchySupertypesHandler extends SharedMessageHandler<
     TypeHierarchySupertypesParams,
     TypeHierarchySupertypesResult> with _TypeHierarchyUtils {
   TypeHierarchySupertypesHandler(super.server);
-
   @override
   Method get handlesMessage => Method.typeHierarchy_supertypes;
 
@@ -153,34 +142,28 @@ class TypeHierarchySupertypesHandler extends SharedMessageHandler<
       TypeHierarchySupertypesParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<TypeHierarchySupertypesResult>> handle(
       TypeHierarchySupertypesParams params,
       MessageInfo message,
       CancellationToken token) async {
-    var item = params.item;
-    var data = item.data;
-    var path = pathOfUri(item.uri);
-    var unit = await path.mapResult(requireResolvedUnit);
+    final item = params.item;
+    final data = item.data;
+    final path = pathOfUri(item.uri);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final computer = type_hierarchy.DartLazyTypeHierarchyComputer(unit.result);
 
-    return unit.mapResult((unit) async {
-      var computer = type_hierarchy.DartLazyTypeHierarchyComputer(unit);
+    if (data == null) {
+      return error(
+        ErrorCodes.InvalidParams,
+        'TypeHierarchyItem is missing the data field',
+      );
+    }
 
-      if (data == null) {
-        return error(
-          ErrorCodes.InvalidParams,
-          'TypeHierarchyItem is missing the data field',
-        );
-      }
-
-      var location = ElementLocationImpl.con2(data.ref);
-      var anchor = _toServerAnchor(data);
-      var calls = await computer.findSupertypes(location, anchor: anchor);
-      var results = calls != null ? _convertItems(unit, calls) : null;
-      return success(results);
-    });
+    final location = ElementLocationImpl.con2(data.ref);
+    final anchor = _toServerAnchor(data);
+    final calls = await computer.findSupertypes(location, anchor: anchor);
+    final results = calls != null ? _convertItems(unit.result, calls) : null;
+    return success(results);
   }
 
   /// Reads the anchor from [data] (if available) and converts it to a server
@@ -188,7 +171,7 @@ class TypeHierarchySupertypesHandler extends SharedMessageHandler<
   type_hierarchy.TypeHierarchyAnchor? _toServerAnchor(
     TypeHierarchyItemInfo data,
   ) {
-    var anchor = data.anchor;
+    final anchor = data.anchor;
     return anchor != null
         ? type_hierarchy.TypeHierarchyAnchor(
             location: ElementLocationImpl.con2(anchor.ref),
@@ -210,12 +193,12 @@ mixin _TypeHierarchyUtils on HandlerHelperMixin<AnalysisServer> {
     type_hierarchy.TypeHierarchyItem item,
     LineInfo lineInfo,
   ) {
-    var anchor =
+    final anchor =
         item is type_hierarchy.TypeHierarchyRelatedItem ? item.anchor : null;
     return TypeHierarchyItem(
       name: item.displayName,
       kind: SymbolKind.Class,
-      uri: uriConverter.toClientUri(item.file),
+      uri: pathContext.toUri(item.file),
       range: sourceRangeToRange(lineInfo, item.codeRange),
       selectionRange: sourceRangeToRange(lineInfo, item.nameRange),
       data: TypeHierarchyItemInfo(
@@ -239,9 +222,9 @@ mixin _TypeHierarchyUtils on HandlerHelperMixin<AnalysisServer> {
     Map<String, LineInfo?> lineInfoCache,
     type_hierarchy.TypeHierarchyItem item,
   ) {
-    var filePath = item.file;
-    var lineInfo = lineInfoCache.putIfAbsent(filePath, () {
-      var file = session.getFile(filePath);
+    final filePath = item.file;
+    final lineInfo = lineInfoCache.putIfAbsent(filePath, () {
+      final file = session.getFile(filePath);
       return file is FileResult ? file.lineInfo : null;
     });
     if (lineInfo == null) {
@@ -260,11 +243,11 @@ mixin _TypeHierarchyUtils on HandlerHelperMixin<AnalysisServer> {
     ResolvedUnitResult unit,
     List<type_hierarchy.TypeHierarchyRelatedItem> items,
   ) {
-    var session = unit.session;
-    var lineInfoCache = <String, LineInfo?>{
+    final session = unit.session;
+    final lineInfoCache = <String, LineInfo?>{
       unit.path: unit.lineInfo,
     };
-    var results = convert(
+    final results = convert(
       items,
       (type_hierarchy.TypeHierarchyRelatedItem item) => _convertItem(
         session,

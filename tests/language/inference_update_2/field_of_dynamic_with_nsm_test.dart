@@ -10,6 +10,8 @@
 // containing an implementation of `noSuchMethod` other than the one from
 // `Object`.
 
+// SharedOptions=--enable-experiment=inference-update-2
+
 import 'package:expect/expect.dart';
 
 class C {

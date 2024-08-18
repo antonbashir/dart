@@ -9,5 +9,4 @@ class I {
 }
 
 main() {}
-
 var x = f().g();

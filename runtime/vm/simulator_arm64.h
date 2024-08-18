@@ -17,7 +17,6 @@
 #endif
 
 #include "vm/constants.h"
-#include "vm/random.h"
 
 namespace dart {
 
@@ -143,7 +142,6 @@ class Simulator {
   bool pc_modified_;
   uint64_t icount_;
   static int64_t flag_stop_sim_at_;
-  Random random_;
   SimulatorSetjmpBuffer* last_setjmp_buffer_;
 
   // Registered breakpoints.

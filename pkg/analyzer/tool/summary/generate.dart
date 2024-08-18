@@ -26,7 +26,7 @@ import 'package:analyzer_utilities/tools.dart';
 import 'idl_model.dart' as idl_model;
 import 'mini_ast.dart';
 
-void main(List<String> args) async {
+main(List<String> args) async {
   if (args.length != 1) {
     print('Error: IDL path is required');
     print('usage: dart generate.dart path/to/idl.dart');
@@ -38,13 +38,13 @@ void main(List<String> args) async {
 }
 
 List<GeneratedContent> getAllTargets(String idlPath) {
-  GeneratedFile formatTarget = GeneratedFile('format.dart', (_) async {
+  final GeneratedFile formatTarget = GeneratedFile('format.dart', (_) async {
     _CodeGenerator codeGenerator = _CodeGenerator(idlPath);
     codeGenerator.generateFormatCode();
     return codeGenerator._outBuffer.toString();
   });
 
-  GeneratedFile schemaTarget = GeneratedFile('format.fbs', (_) async {
+  final GeneratedFile schemaTarget = GeneratedFile('format.fbs', (_) async {
     _CodeGenerator codeGenerator = _CodeGenerator(idlPath);
     codeGenerator.generateFlatBufferSchema();
     return codeGenerator._outBuffer.toString();
@@ -152,7 +152,7 @@ class _BaseGenerator {
   /// appropriate.
   void out([String s = '']) {
     if (s == '') {
-      _outBuffer.writeln();
+      _outBuffer.writeln('');
     } else {
       _outBuffer.writeln('$_indentation$s');
     }
@@ -875,7 +875,7 @@ class _FlatBufferSchemaGenerator extends _BaseGenerator {
     // root types.  For now work around this by forcing PackageBundle to be the
     // root type.
     // TODO(paulberry): come up with a better solution.
-    var rootType = _idl.classes['AnalysisDriverResolvedUnit']!;
+    final rootType = _idl.classes['AnalysisDriverResolvedUnit']!;
     out('root_type ${rootType.name};');
     var rootFileIdentifier = rootType.fileIdentifier;
     if (rootFileIdentifier != null) {
@@ -899,6 +899,7 @@ class _FlatBufferSchemaGenerator extends _BaseGenerator {
         typeStr = 'string';
       default:
         typeStr = type.typeName;
+        break;
     }
     if (type.isList) {
       // FlatBuffers don't natively support a packed list of booleans, so we

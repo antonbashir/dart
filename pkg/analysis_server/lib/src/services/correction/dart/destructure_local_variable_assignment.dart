@@ -4,34 +4,26 @@
 
 import 'package:analysis_server/src/protocol_server.dart' hide Element;
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/name_suggestion.dart';
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
-import 'package:analyzer/src/utilities/extensions/collection.dart';
+import 'package:analyzer/src/utilities/extensions/map.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class DestructureLocalVariableAssignment extends ResolvedCorrectionProducer {
-  DestructureLocalVariableAssignment({required super.context});
-
-  @override
-  CorrectionApplicability get applicability =>
-      // TODO(applicability): comment on why.
-      CorrectionApplicability.singleLocation;
-
   @override
   AssistKind get assistKind =>
       DartAssistKind.DESTRUCTURE_LOCAL_VARIABLE_ASSIGNMENT;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var node = this.node;
+    final node = this.node;
     if (node is! VariableDeclaration) return;
     var element = node.declaredElement;
     if (element == null) return;
@@ -66,14 +58,14 @@ class DestructureLocalVariableAssignment extends ResolvedCorrectionProducer {
     var varMap = <ObjectFieldName, List<AstNode>>{};
 
     for (var propertyReference in propertyReferences.entries) {
-      var excludes = unit.findPossibleLocalVariableConflicts(node.offset);
+      var excludes = utils.findPossibleLocalVariableConflicts(node.offset);
       excludes.addAll(namesInScope);
 
       var references = propertyReference.value;
       for (var reference in references) {
         if (reference.inSetterContext) return;
         excludes
-            .addAll(unit.findPossibleLocalVariableConflicts(reference.offset));
+            .addAll(utils.findPossibleLocalVariableConflicts(reference.offset));
       }
 
       var fieldName = ObjectFieldName.forName(propertyReference.key, excludes);

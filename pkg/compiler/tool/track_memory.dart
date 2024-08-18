@@ -21,7 +21,7 @@ import 'dart:convert';
 /// Socket to connect to the vm observatory service.
 late WebSocket socket;
 
-Future<void> main(List<String> args) async {
+main(args) async {
   _printHeader();
   _showProgress(0, 0, 0, 0);
   try {
@@ -45,18 +45,18 @@ Future<void> main(List<String> args) async {
 
 /// Internal counter for request ids.
 int _requestId = 0;
-Map<int, Completer<dynamic>> _pendingResponses = {};
+Map _pendingResponses = {};
 
 /// Subscribe to listen to a vm service data stream.
-Future<void> _streamListen(String streamId) =>
+_streamListen(String streamId) =>
     _sendMessage('streamListen', {'streamId': '$streamId'});
 
 /// Tell the vm service to resume a specific isolate.
-Future<void> _resumeIsolate(String isolateId) =>
+_resumeIsolate(String isolateId) =>
     _sendMessage('resume', {'isolateId': '$isolateId'});
 
 /// Resumes the main isolate if it was paused on start.
-Future<void> _resumeMainIsolateIfPaused() async {
+_resumeMainIsolateIfPaused() async {
   var vm = await _sendMessage('getVM');
   var isolateId = vm['isolates'][0]['id'];
   var isolate = await _sendMessage('getIsolate', {'isolateId': isolateId});
@@ -65,18 +65,16 @@ Future<void> _resumeMainIsolateIfPaused() async {
 }
 
 /// Send a message to the vm service.
-Future<dynamic> _sendMessage(String method,
-    [Map<String, dynamic> args = const {}]) {
+Future _sendMessage(String method, [Map args = const {}]) {
   var id = _requestId++;
-  final completer = new Completer<dynamic>();
-  _pendingResponses[id] = completer;
+  _pendingResponses[id] = new Completer();
   socket.add(jsonEncode({
     'jsonrpc': '2.0',
     'id': '$id',
     'method': '$method',
     'params': args,
   }));
-  return completer.future;
+  return _pendingResponses[id].future;
 }
 
 /// Handle all responses
@@ -86,7 +84,7 @@ void _handleResponse(Object? s) {
     var id = json['id'];
     if (id is String) id = int.parse(id);
     if (id == null || !_pendingResponses.containsKey(id)) return;
-    _pendingResponses.remove(id)!.complete(json['result']);
+    _pendingResponses.remove(id).complete(json['result']);
     return;
   }
 
@@ -101,7 +99,7 @@ void _handleResponse(Object? s) {
 }
 
 /// Handle a `Debug` notification.
-void _handleDebug(Map<String, dynamic> json) {
+_handleDebug(Map json) {
   var isolateId = json['params']['event']['isolate']['id'];
   if (json['params']['event']['kind'] == 'PauseStart') {
     _resumeIsolate(isolateId);
@@ -112,7 +110,7 @@ void _handleDebug(Map<String, dynamic> json) {
 }
 
 /// Handle a `Isolate` notification.
-void _handleIsolate(Map<String, dynamic> json) {
+_handleIsolate(Map json) {
   if (json['params']['event']['kind'] == 'IsolateExit') {
     print('');
     socket.close();
@@ -120,7 +118,7 @@ void _handleIsolate(Map<String, dynamic> json) {
 }
 
 /// Handle a `GC` notification.
-void _handleGC(Map<String, dynamic> json) {
+_handleGC(Map json) {
   // print(new JsonEncoder.withIndent(' ').convert(json));
   var event = json['params']['event'];
   var newUsed = event['new']['used'];
@@ -139,7 +137,7 @@ int lastMaxCapacity = 0;
 
 /// Shows a status line with use/capacity numbers for new/old/total/max,
 /// highlighting in red when capacity increases, and in green when it decreases.
-void _showProgress(int newUsed, int newCapacity, int oldUsed, int oldCapacity) {
+_showProgress(newUsed, newCapacity, oldUsed, oldCapacity) {
   var sb = new StringBuffer();
   sb.write('\r '); // replace the status-line in place
   _writeNumber(sb, lastNewUsed, newUsed);
@@ -170,7 +168,7 @@ void _showProgress(int newUsed, int newCapacity, int oldUsed, int oldCapacity) {
 }
 
 const mega = 1024 * 1024;
-bool _writeNumber(StringBuffer sb, int before, int now, {bool color = false}) {
+_writeNumber(sb, before, now, {color = false}) {
   if (color)
     sb.write(before < now
         ? _RED
@@ -191,7 +189,7 @@ bool _writeNumber(StringBuffer sb, int before, int now, {bool color = false}) {
   return before > now;
 }
 
-void _printHeader() {
+_printHeader() {
   print('''
 Memory usage:
  new generation   | old generation   | total            | max

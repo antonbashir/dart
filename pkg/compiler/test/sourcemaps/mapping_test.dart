@@ -104,7 +104,8 @@ Future runTest(int index, Test test,
       entryPoint: Uri.parse('memory:main.dart'),
       memorySourceFiles: {'main.dart': test.code},
       outputProvider: collector,
-      options: options);
+      options: options,
+      unsafeToTouchSourceFiles: true);
   Expect.isTrue(compilationResult.isSuccess,
       "Unsuccessful compilation of test:\n${test.code}");
   String sourceMapText = collector.getOutput('', api.OutputType.sourceMap)!;

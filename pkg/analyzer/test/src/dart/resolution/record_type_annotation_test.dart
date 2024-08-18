@@ -22,7 +22,7 @@ class A {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -30,12 +30,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -49,7 +49,7 @@ class A {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -57,12 +57,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -77,7 +77,7 @@ void f(({int f1, String f2}) x) {}
       error(ParserErrorCode.EXPERIMENT_NOT_ENABLED, 23, 1),
     ]);
 
-    var node = findNode.singleFormalParameterList;
+    final node = findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
   leftParenthesis: (
@@ -87,7 +87,7 @@ FormalParameterList
       element: <null>
       type: InvalidType
     name: x
-    declaredElement: <testLibraryFragment>::@function::f::@parameter::x
+    declaredElement: self::@function::f::@parameter::x
       type: InvalidType
   rightParenthesis: )
 ''');
@@ -101,7 +101,7 @@ void f((int, String) x) {}
       error(ParserErrorCode.EXPERIMENT_NOT_ENABLED, 23, 1),
     ]);
 
-    var node = findNode.singleFormalParameterList;
+    final node = findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
   leftParenthesis: (
@@ -111,7 +111,7 @@ FormalParameterList
       element: <null>
       type: InvalidType
     name: x
-    declaredElement: <testLibraryFragment>::@function::f::@parameter::x
+    declaredElement: self::@function::f::@parameter::x
       type: InvalidType
   rightParenthesis: )
 ''');
@@ -125,7 +125,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -133,12 +133,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -153,7 +153,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -161,12 +161,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -181,7 +181,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -189,12 +189,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   namedFields: RecordTypeAnnotationNamedFields
     leftBracket: {
@@ -202,7 +202,7 @@ RecordTypeAnnotation
       RecordTypeAnnotationNamedField
         type: NamedType
           name: bool
-          element: dart:core::<fragment>::@class::bool
+          element: dart:core::@class::bool
           type: bool
         name: f3
     rightBracket: }
@@ -219,7 +219,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('({int');
+    final node = findNode.recordTypeAnnotation('({int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -229,13 +229,13 @@ RecordTypeAnnotation
       RecordTypeAnnotationNamedField
         type: NamedType
           name: int
-          element: dart:core::<fragment>::@class::int
+          element: dart:core::@class::int
           type: int
         name: f1
       RecordTypeAnnotationNamedField
         type: NamedType
           name: String
-          element: dart:core::<fragment>::@class::String
+          element: dart:core::@class::String
           type: String
         name: f2
     rightBracket: }
@@ -252,7 +252,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -260,12 +260,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -277,7 +277,7 @@ RecordTypeAnnotation
 void f((int, String) a) {}
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -285,12 +285,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -302,7 +302,7 @@ RecordTypeAnnotation
 (int, String)? f() => throw 0;
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -310,12 +310,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   question: ?
@@ -328,7 +328,7 @@ RecordTypeAnnotation
 (int, String) f() => throw 0;
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -336,12 +336,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)
@@ -356,7 +356,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    final node = findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -364,12 +364,12 @@ RecordTypeAnnotation
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: int
-        element: dart:core::<fragment>::@class::int
+        element: dart:core::@class::int
         type: int
     RecordTypeAnnotationPositionalField
       type: NamedType
         name: String
-        element: dart:core::<fragment>::@class::String
+        element: dart:core::@class::String
         type: String
   rightParenthesis: )
   type: (int, String)

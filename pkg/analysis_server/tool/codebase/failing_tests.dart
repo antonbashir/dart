@@ -17,7 +17,7 @@ import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 Future<void> main() async {
-  var tests = <AnnotatedTest>[];
+  final tests = <AnnotatedTest>[];
 
   // Note: Unauthenticated GitHub API calls are limited to 60 per hour
   // so this script cannot be run often and will fail if there are over
@@ -28,26 +28,27 @@ Future<void> main() async {
   await findFailingTestAnnotations(tests, packagePath: 'analyzer_cli');
   await findFailingTestAnnotations(tests, packagePath: 'analyzer_plugin');
 
-  var issueUris = tests.map((test) => test.issueUri).toSet();
+  final issueUris = tests.map((test) => test.issueUri).toSet();
   print('Found ${tests.length} with ${issueUris.length} unique issues.');
   print('Fetching test statuses from GitHub...');
 
-  var closedIssues = <Uri>{};
-  for (var issueUri in issueUris) {
-    var response = await http.get(issueUri);
+  final closedIssues = <Uri>{};
+  for (final issueUri in issueUris) {
+    final response = await http.get(issueUri);
     if (response.statusCode != 200) {
       throw 'Failed to call GitHub API: ${response.statusCode} - ${response.reasonPhrase}\n${response.body}';
     }
-    var issueData = jsonDecode(response.body) as Map<String, Object?>;
+    final issueData = jsonDecode(response.body) as Map<String, Object?>;
     if (issueData['state'] != 'open') {
       closedIssues.add(issueUri);
     }
   }
 
   print('Found ${closedIssues.length} closed issues:');
-  for (var tests
+  for (final tests
       in tests.where((test) => closedIssues.contains(test.issueUri))) {
-    var relativePath = pathContext.relative(tests.file.path, from: packageRoot);
+    final relativePath =
+        pathContext.relative(tests.file.path, from: packageRoot);
     print('$relativePath ${tests.testName} ${_formatUri(tests.issueUri)}');
   }
 }
@@ -58,20 +59,20 @@ final provider = PhysicalResourceProvider.INSTANCE;
 
 Future<void> findFailingTestAnnotations(List<AnnotatedTest> tests,
     {required String packagePath}) async {
-  var pkgRootPath = pathContext.normalize(packageRoot);
-  var testsPath = pathContext.join(pkgRootPath, packagePath, 'test');
+  final pkgRootPath = pathContext.normalize(packageRoot);
+  final testsPath = pathContext.join(pkgRootPath, packagePath, 'test');
 
-  var collection = AnalysisContextCollection(
+  final collection = AnalysisContextCollection(
     includedPaths: <String>[testsPath],
     resourceProvider: provider,
   );
-  var contexts = collection.contexts;
+  final contexts = collection.contexts;
   if (contexts.length != 1) {
     fail('The directory $testsPath contains multiple analysis contexts.');
   }
 
-  var session = contexts[0].currentSession;
-  var directory = provider.getFolder(testsPath);
+  final session = contexts[0].currentSession;
+  final directory = provider.getFolder(testsPath);
 
   print('Searching for FailedTest/SkippedTest annotations in $packagePath...');
   await _findFailingTestAnnotationsIn(session, testsPath, directory, tests);
@@ -79,24 +80,24 @@ Future<void> findFailingTestAnnotations(List<AnnotatedTest> tests,
 
 Future<void> _findFailingTestAnnotationsIn(AnalysisSession session,
     String testDirPath, Folder directory, List<AnnotatedTest> tests) async {
-  var children = directory.getChildren();
+  final children = directory.getChildren();
   children.sort((first, second) => first.shortName.compareTo(second.shortName));
-  for (var child in children) {
+  for (final child in children) {
     if (child is Folder) {
       await _findFailingTestAnnotationsIn(session, testDirPath, child, tests);
     } else if (child is File && child.shortName.endsWith('_test.dart')) {
-      var path = child.path;
+      final path = child.path;
 
-      var result = session.getParsedUnit(path);
+      final result = session.getParsedUnit(path);
       if (result is! ParsedUnitResult) {
         fail('Could not parse $path');
       }
-      var unit = result.unit;
-      var errors = result.errors;
+      final unit = result.unit;
+      final errors = result.errors;
       if (errors.isNotEmpty) {
         fail('Errors found when parsing $path');
       }
-      var tracker = FailingTestAnnotationTracker(child);
+      final tracker = FailingTestAnnotationTracker(child);
       unit.accept(tracker);
       tests.addAll(tracker.annotatedTests);
     }
@@ -125,17 +126,17 @@ class FailingTestAnnotationTracker extends RecursiveAstVisitor<void> {
   @override
   void visitAnnotation(Annotation node) {
     if (node.name.name == 'FailingTest' || node.name.name == 'SkippedTest') {
-      var issue = node.arguments?.arguments
+      final issue = node.arguments?.arguments
           .whereType<NamedExpression>()
           .where((arg) => arg.name.label.name == 'issue')
           .firstOrNull;
-      var issueUrl = (issue?.expression as SimpleStringLiteral?)?.value;
+      final issueUrl = (issue?.expression as SimpleStringLiteral?)?.value;
       if (issueUrl != null && issueUrl.startsWith('https://github.com/')) {
-        var issueUri = Uri.parse(issueUrl);
-        var apiUri = issueUri.replace(
+        final issueUri = Uri.parse(issueUrl);
+        final apiUri = issueUri.replace(
             host: 'api.github.com',
             pathSegments: ['repos', ...issueUri.pathSegments]);
-        var method = node.parent as MethodDeclaration;
+        final method = node.parent as MethodDeclaration;
         annotatedTests.add(AnnotatedTest(file, method.name.lexeme, apiUri));
       }
     }

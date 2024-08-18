@@ -3,9 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
+import 'package:analysis_server/src/utilities/flutter.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -32,9 +32,6 @@ class DocumentColorPresentationHandler extends SharedMessageHandler<
       ColorPresentationParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<List<ColorPresentation>>> handle(
     ColorPresentationParams params,
     MessageInfo message,
@@ -44,8 +41,8 @@ class DocumentColorPresentationHandler extends SharedMessageHandler<
       return success([]);
     }
 
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
     return unit.mapResult((unit) => _getPresentations(params, unit));
   }
 
@@ -74,7 +71,7 @@ class DocumentColorPresentationHandler extends SharedMessageHandler<
     required String invocationString,
     required bool includeConstKeyword,
   }) async {
-    var builder = ChangeBuilder(session: unit.session);
+    final builder = ChangeBuilder(session: unit.session);
     await builder.addDartFileEdit(unit.path, (builder) {
       builder.addReplacement(editRange, (builder) {
         if (includeConstKeyword) {
@@ -88,16 +85,16 @@ class DocumentColorPresentationHandler extends SharedMessageHandler<
     // We can only apply changes to the same file, so filter any change from the
     // builder to only include this file, otherwise we may corrupt the users
     // source (although hopefully we don't produce edits for other files).
-    var editsForThisFile = builder.sourceChange.edits
+    final editsForThisFile = builder.sourceChange.edits
         .where((edit) => edit.file == unit.path)
         .expand((edit) => edit.edits)
         .toList();
 
     // LSP requires that we separate the main edit (changing the color code)
     // from anything else (imports).
-    var mainEdit =
+    final mainEdit =
         editsForThisFile.singleWhere((edit) => edit.offset == editRange.offset);
-    var otherEdits =
+    final otherEdits =
         editsForThisFile.where((edit) => edit.offset != editRange.offset);
 
     return ColorPresentation(
@@ -117,105 +114,99 @@ class DocumentColorPresentationHandler extends SharedMessageHandler<
     // If this file is outside of analysis roots, we cannot build edits for it
     // so return null to signal to the client that it should not try to modify
     // the source.
-    var analysisContext = unit.session.analysisContext;
+    final analysisContext = unit.session.analysisContext;
     if (!analysisContext.contextRoot.isAnalyzed(unit.path)) {
       return success([]);
     }
 
     // The values in LSP are decimals 0-1 so should be scaled up to 255 that
     // we use internally (except for opacity is which 0-1).
-    var alpha = (params.color.alpha * 255).toInt();
-    var red = (params.color.red * 255).toInt();
-    var green = (params.color.green * 255).toInt();
-    var blue = (params.color.blue * 255).toInt();
-    var opacity = params.color.alpha;
+    final alpha = (params.color.alpha * 255).toInt();
+    final red = (params.color.red * 255).toInt();
+    final green = (params.color.green * 255).toInt();
+    final blue = (params.color.blue * 255).toInt();
+    final opacity = params.color.alpha;
 
-    var editStart = toOffset(unit.lineInfo, params.range.start);
-    var editEnd = toOffset(unit.lineInfo, params.range.end);
+    final editStart = toOffset(unit.lineInfo, params.range.start);
+    final editEnd = toOffset(unit.lineInfo, params.range.end);
 
-    return (editStart, editEnd).mapResults((editStart, editEnd) async {
-      var editRange = SourceRange(editStart, editEnd - editStart);
+    if (editStart.isError) return failure(editStart);
+    if (editEnd.isError) return failure(editEnd);
 
-      var sessionHelper = AnalysisSessionHelper(unit.session);
-      var colorType = await sessionHelper.getFlutterClass('Color');
-      if (colorType == null) {
-        // If we can't find the class (perhaps because this isn't a Flutter
-        // project) we will not include any results. In theory the client should
-        // not be calling this request in that case.
-        return success([]);
-      }
+    final editRange =
+        SourceRange(editStart.result, editEnd.result - editStart.result);
 
-      var requiresConstKeyword =
-          _willRequireConstKeyword(editRange.offset, unit);
-      var colorValue = _colorValueForComponents(alpha, red, green, blue);
-      var colorValueHex =
-          '0x${colorValue.toRadixString(16).toUpperCase().padLeft(8, '0')}';
+    final sessionHelper = AnalysisSessionHelper(unit.session);
+    final colorType = await sessionHelper.getClass(Flutter.widgetsUri, 'Color');
+    if (colorType == null) {
+      // If we can't find the class (perhaps because this isn't a Flutter
+      // project) we will not include any results. In theory the client should
+      // not be calling this request in that case.
+      return success([]);
+    }
 
-      var colorFromARGB = await _createColorPresentation(
-        unit: unit,
-        editRange: editRange,
-        colorType: colorType,
-        label: 'Color.fromARGB($alpha, $red, $green, $blue)',
-        invocationString: '.fromARGB($alpha, $red, $green, $blue)',
-        includeConstKeyword: requiresConstKeyword,
-      );
+    final requiresConstKeyword =
+        _willRequireConstKeyword(editRange.offset, unit);
+    final colorValue = _colorValueForComponents(alpha, red, green, blue);
+    final colorValueHex =
+        '0x${colorValue.toRadixString(16).toUpperCase().padLeft(8, '0')}';
 
-      var colorFromRGBO = await _createColorPresentation(
-        unit: unit,
-        editRange: editRange,
-        colorType: colorType,
-        label: 'Color.fromRGBO($red, $green, $blue, $opacity)',
-        invocationString: '.fromRGBO($red, $green, $blue, $opacity)',
-        includeConstKeyword: requiresConstKeyword,
-      );
+    final colorFromARGB = await _createColorPresentation(
+      unit: unit,
+      editRange: editRange,
+      colorType: colorType,
+      label: 'Color.fromARGB($alpha, $red, $green, $blue)',
+      invocationString: '.fromARGB($alpha, $red, $green, $blue)',
+      includeConstKeyword: requiresConstKeyword,
+    );
 
-      var colorDefault = await _createColorPresentation(
-        unit: unit,
-        editRange: editRange,
-        colorType: colorType,
-        label: 'Color($colorValueHex)',
-        invocationString: '($colorValueHex)',
-        includeConstKeyword: requiresConstKeyword,
-      );
+    final colorFromRGBO = await _createColorPresentation(
+      unit: unit,
+      editRange: editRange,
+      colorType: colorType,
+      label: 'Color.fromRGBO($red, $green, $blue, $opacity)',
+      invocationString: '.fromRGBO($red, $green, $blue, $opacity)',
+      includeConstKeyword: requiresConstKeyword,
+    );
 
-      return success([
-        colorFromARGB,
-        colorFromRGBO,
-        colorDefault,
-      ]);
-    });
+    final colorDefault = await _createColorPresentation(
+      unit: unit,
+      editRange: editRange,
+      colorType: colorType,
+      label: 'Color($colorValueHex)',
+      invocationString: '($colorValueHex)',
+      includeConstKeyword: requiresConstKeyword,
+    );
+
+    return success([
+      colorFromARGB,
+      colorFromRGBO,
+      colorDefault,
+    ]);
   }
 
   /// Checks whether a `const` keyword is required in front of inserted
   /// constructor calls to preserve existing semantics.
-  ///
-  /// `const` should be inserted if the existing expression is constant but
-  /// we are not already in a constant context.
   bool _willRequireConstKeyword(int offset, ResolvedUnitResult unit) {
+    // We should insert `const` if the existing expression is constant, but
+    // we are not already in a constant context.
     var node = NodeLocator2(offset).searchWithin(unit.unit);
-    if (node is! Expression) {
+
+    if (node is! SimpleIdentifier) {
       return false;
     }
 
-    // `const` is unnecessary if we're in a constant context.
-    if (node.inConstantContext) {
-      return false;
-    }
+    final parent = node.parent;
+    final staticElement = parent is PrefixedIdentifier
+        ? parent.staticElement
+        : node.staticElement;
+    final target = staticElement is PropertyAccessorElement
+        ? staticElement.variable
+        : staticElement;
 
-    if (node is InstanceCreationExpression) {
-      return node.isConst;
-    } else if (node is SimpleIdentifier) {
-      var parent = node.parent;
-      var staticElement = parent is PrefixedIdentifier
-          ? parent.staticElement
-          : node.staticElement;
-      var target = staticElement is PropertyAccessorElement
-          ? staticElement.variable2
-          : staticElement;
+    final existingIsConst = target is ConstVariableElement;
+    final isInConstantContext = node.inConstantContext;
 
-      return target is ConstVariableElement;
-    } else {
-      return false;
-    }
+    return existingIsConst && !isInConstantContext;
   }
 }

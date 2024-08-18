@@ -181,7 +181,7 @@ library;
 //
 import self as self;
 import "dart:core" as core;
-import "dart:_compact_hash" as _co;
+import "dart:collection" as col;
 
 import "dart:collection";
 
@@ -198,7 +198,7 @@ class WithEquals extends core::Object /*hasConstConstructor*/  {
     : self::WithEquals::i = i, super core::Object::•()
     ;
   operator ==(core::Object o) → core::bool {
-    return o is self::WithEquals && (o{self::WithEquals} as{Unchecked} self::WithEquals).{self::WithEquals::i}{core::int} =={core::num::==}{(core::Object) → core::bool} this.{self::WithEquals::i}{core::int};
+    return o is self::WithEquals && o{self::WithEquals}.{self::WithEquals::i}{core::int} =={core::num::==}{(core::Object) → core::bool} this.{self::WithEquals::i}{core::int};
   }
 }
 class CustomIterable extends core::Iterable<core::String> /*hasConstConstructor*/  {
@@ -354,7 +354,7 @@ static method main() → dynamic {
   core::print(#C11);
   core::print(#C14);
   core::print( block {
-    final core::Set<core::String> #t2 = new _co::_Set::•<core::String>();
+    final core::Set<core::String> #t2 = new col::_Set::•<core::String>();
     #t2.{core::Set::add}{Invariant}("hello"){(core::String) → core::bool};
   } =>#t2);
   core::print(#C16);

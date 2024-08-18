@@ -9,13 +9,10 @@ part 'global.dart';
 
 class Globals {
   /// Imported globals.
-  final List<ImportedGlobal> imported;
+  final List<Import> imported;
 
   /// Defined globals.
   final List<DefinedGlobal> defined;
 
-  /// Number of named globals.
-  final int namedCount;
-
-  Globals(this.imported, this.defined, this.namedCount);
+  Globals(this.imported, this.defined);
 }

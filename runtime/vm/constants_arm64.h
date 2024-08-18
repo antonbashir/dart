@@ -342,7 +342,6 @@ struct AllocateClosureABI {
   static constexpr Register kResultReg = AllocateObjectABI::kResultReg;
   static constexpr Register kFunctionReg = R1;
   static constexpr Register kContextReg = R2;
-  static constexpr Register kInstantiatorTypeArgsReg = R3;
   static constexpr Register kScratchReg = R4;
 };
 
@@ -584,14 +583,9 @@ class CallingConventions {
   // https://developer.apple.com/documentation/xcode/writing_arm64_code_for_apple_platforms
   static constexpr AlignmentStrategy kArgumentStackAlignment =
       kAlignedToValueSize;
-  //  Varargs are aligned to wordsize.
-  static constexpr AlignmentStrategy kArgumentStackAlignmentVarArgs =
-      kAlignedToWordSize;
 #else
   static constexpr AlignmentStrategy kArgumentStackAlignment =
       kAlignedToWordSize;
-  static constexpr AlignmentStrategy kArgumentStackAlignmentVarArgs =
-      kArgumentStackAlignment;
 #endif
 
   // How fields in compounds are aligned.
@@ -620,15 +614,6 @@ class CallingConventions {
   COMPILE_ASSERT(
       ((R(kFirstNonArgumentRegister) | R(kSecondNonArgumentRegister)) &
        (kArgumentRegisters | R(kPointerToReturnStructRegisterCall))) == 0);
-};
-
-// Register based calling convention used for Dart functions.
-//
-// See |compiler::ComputeCallingConvention| for more details.
-struct DartCallingConvention {
-  static constexpr Register kCpuRegistersForArgs[] = {R1, R2, R3, R5, R6, R7};
-  static constexpr FpuRegister kFpuRegistersForArgs[] = {V0, V1, V2,
-                                                         V3, V4, V5};
 };
 
 #undef R
@@ -1640,22 +1625,6 @@ inline Register ConcreteRegister(LinkRegister) {
 #undef LR
 
 #define LINK_REGISTER (LinkRegister())
-
-// There are many different ARM64 CPUs out there with different alignment
-// requirements which are mostly not very well documented.
-//
-// Apple Silicon CPU Optimization Guide explicitly discourages alignment of
-// branch targets (see section 4.4.3).
-//
-// Aligning to 32 seems like a safe bet based on LLVM's implementation:
-//
-//    https://github.com/llvm/llvm-project/blob/05c1447b3eabe9cc4a27866094e46c57350c5d5a/llvm/lib/Target/AArch64/AArch64Subtarget.cpp#L107
-//
-#if defined(DART_TARGET_OS_MACOS_IOS) || defined(DART_TARGET_OS_MACOS)
-const intptr_t kPreferredLoopAlignment = 1;
-#else
-const intptr_t kPreferredLoopAlignment = 32;
-#endif
 
 }  // namespace dart
 

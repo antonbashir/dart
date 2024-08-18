@@ -10,7 +10,6 @@ import 'package:yaml/yaml.dart';
 
 import '../analyzer.dart';
 import '../ast.dart';
-import '../linter_lint_codes.dart';
 
 const _desc =
     r'Avoid using web-only libraries outside Flutter web plugin packages.';
@@ -18,7 +17,7 @@ const _desc =
 const _details = r'''
 **AVOID** using web libraries, `dart:html`, `dart:js` and 
 `dart:js_util` in Flutter packages that are not web plugins. These libraries are 
-not supported outside of a web context; functionality that depends on them will
+not supported outside a web context; functionality that depends on them will
 fail at runtime in Flutter mobile, and their use is generally discouraged in
 Flutter web.
 
@@ -44,6 +43,10 @@ YamlMap _parseYaml(String content) {
 }
 
 class AvoidWebLibrariesInFlutter extends LintRule {
+  static const LintCode code = LintCode('avoid_web_libraries_in_flutter',
+      "Don't use web-only libraries outside Flutter web plugin packages.",
+      correctionMessage: 'Try finding a different library for your needs.');
+
   /// Cache of most recent analysis root to parsed "hasFlutter" state.
   static final Map<String, bool> _rootHasFlutterCache = {};
 
@@ -52,14 +55,10 @@ class AvoidWebLibrariesInFlutter extends LintRule {
             name: 'avoid_web_libraries_in_flutter',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.errorProne,
-              LintRuleCategory.flutter,
-              LintRuleCategory.web
-            });
+            group: Group.errors);
 
   @override
-  LintCode get lintCode => LinterLintCode.avoid_web_libraries_in_flutter;
+  LintCode get lintCode => code;
 
   bool hasFlutterDep(File? pubspec) {
     if (pubspec == null) {
@@ -99,7 +98,7 @@ class AvoidWebLibrariesInFlutter extends LintRule {
       if (hasFlutter == null) {
         // Clear the previous cache.
         clearCache();
-        var pubspecFile = locatePubspecFile(context.definingUnit.unit);
+        var pubspecFile = locatePubspecFile(context.currentUnit.unit);
         hasFlutter = hasFlutterDep(pubspecFile);
         _rootHasFlutterCache[root] = hasFlutter;
       }

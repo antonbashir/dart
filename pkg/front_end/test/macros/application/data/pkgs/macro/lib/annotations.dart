@@ -3,16 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-import 'package:macros/macros.dart';
+import 'package:_fe_analyzer_shared/src/macros/api.dart';
 
 macro
 
 class AnnotationsMacro
     implements ClassDeclarationsMacro, FunctionDeclarationsMacro {
   final Object? object;
-  final Object? additional;
 
-  const AnnotationsMacro(this.object, [this.additional]);
+  const AnnotationsMacro(this.object);
 
   FutureOr<void> buildDeclarationsForClass(ClassDeclaration clazz,
       MemberDeclarationBuilder builder) {}

@@ -7,6 +7,7 @@
 // Isolate.exit() is invoked from native code, which in turns is invoked
 // from dart code(hence "sandwich"-test).
 
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';

@@ -71,10 +71,6 @@ Uri randomlyAddRequestParams(Uri uri) {
 Future<HttpServer> startServer() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   server.listen((request) async {
-    // Randomly delay starting the response.
-    await Future.delayed(
-      Duration(milliseconds: rng.nextInt(maxResponseDelayMs) + 1),
-    );
     final response = request.response;
     response.write(request.method);
     randomlyAddCookie(response);
@@ -82,9 +78,9 @@ Future<HttpServer> startServer() async {
       // Redirect calls close() on the response.
       return;
     }
-    // Randomly delay finishing the response.
+    // Randomly delay response.
     await Future.delayed(
-      Duration(milliseconds: rng.nextInt(maxResponseDelayMs) + 1),
+      Duration(milliseconds: rng.nextInt(maxResponseDelayMs)),
     );
     await response.close();
   });
@@ -210,7 +206,7 @@ Future<void> hasValidHttpRequests(HttpProfile profile, String method) async {
         expect(requestData.error!.isNotEmpty, true);
 
         // Some data is available even if a request errored out.
-        expect(r.events.length, greaterThanOrEqualTo(0));
+        expect(requestData.events.length, greaterThanOrEqualTo(0));
         expect(fullRequest.requestBody!.length, greaterThanOrEqualTo(0));
 
         // Accessing the following properties should cause an exception for
@@ -220,6 +216,7 @@ Future<void> hasValidHttpRequests(HttpProfile profile, String method) async {
         expectThrows(() => requestData.followRedirects);
         expectThrows(() => requestData.headers);
         expectThrows(() => requestData.maxRedirects);
+        expectThrows(() => requestData.method);
         expectThrows(() => requestData.persistentConnection);
       } else {
         // Invoke all non-nullable getters to ensure each is present in the JSON
@@ -242,8 +239,8 @@ Future<void> hasValidHttpRequests(HttpProfile profile, String method) async {
           if (method == 'POST') {
             // add() was used
             expect(
-              fullRequest.requestBody!,
               <int>[0, 1, 2],
+              fullRequest.requestBody!,
             );
           } else {
             // write() was used.
@@ -258,8 +255,8 @@ Future<void> hasValidHttpRequests(HttpProfile profile, String method) async {
           final responseData = r.response!;
           expect(responseData.statusCode, greaterThanOrEqualTo(100));
           expect(responseData.endTime, isNotNull);
-          expect(responseData.startTime!.isAfter(r.endTime!), true);
-          expect(responseData.startTime!.isBefore(responseData.endTime!), true);
+          expect(responseData.startTime > r.endTime!, true);
+          expect(responseData.endTime! >= responseData.startTime, true);
           expect(utf8.decode(fullRequest.responseBody!), method);
           responseData.headers;
           responseData.compressionState;
@@ -304,8 +301,8 @@ void hasDefaultRequestHeaders(HttpProfile profile) {
     // requests.
     if (!request.isRequestComplete) continue;
     if (!request.request!.hasError) {
-      expect(request.request?.headers?['host'], isNotNull);
-      expect(request.request?.headers?['user-agent'], isNotNull);
+      expect(request.request?.headers['host'], isNotNull);
+      expect(request.request?.headers['user-agent'], isNotNull);
     }
   }
 }
@@ -318,7 +315,7 @@ void hasCustomRequestHeaders(HttpProfile profile) {
     // requests.
     if (!request.isRequestComplete) continue;
     if (!request.request!.hasError) {
-      expect(request.request?.headers?['cookie-eater'], isNotNull);
+      expect(request.request?.headers['cookie-eater'], isNotNull);
     }
   }
 }

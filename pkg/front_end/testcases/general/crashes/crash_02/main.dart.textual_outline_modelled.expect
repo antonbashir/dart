@@ -5,5 +5,4 @@ class C {}
 class D {}
 
 main() {}
-
 mixin A on D, E {}

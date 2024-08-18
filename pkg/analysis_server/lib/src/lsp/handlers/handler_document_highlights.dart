@@ -5,7 +5,6 @@
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/domains/analysis/occurrences.dart';
 import 'package:analysis_server/src/domains/analysis/occurrences_dart.dart';
-import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
@@ -23,9 +22,6 @@ class DocumentHighlightsHandler extends SharedMessageHandler<
       TextDocumentPositionParams.jsonHandler;
 
   @override
-  bool get requiresTrustedCaller => false;
-
-  @override
   Future<ErrorOr<List<DocumentHighlight>?>> handle(
       TextDocumentPositionParams params,
       MessageInfo message,
@@ -34,19 +30,19 @@ class DocumentHighlightsHandler extends SharedMessageHandler<
       return success(const []);
     }
 
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
-    var offset = unit.mapResultSync((unit) => toOffset(unit.lineInfo, pos));
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final offset = await unit.mapResult((unit) => toOffset(unit.lineInfo, pos));
 
-    return (unit, offset).mapResults((unit, requestedOffset) async {
-      var collector = OccurrencesCollectorImpl();
-      addDartOccurrences(collector, unit.unit);
+    return offset.mapResult((requestedOffset) {
+      final collector = OccurrencesCollectorImpl();
+      addDartOccurrences(collector, unit.result.unit);
 
       /// Checks whether an Occurrence offset/length spans the requested
       /// offset.
       ///
-      /// It's possible multiple occurrences might match because some nodes
+      /// It's possible multiple occurences might match because some nodes
       /// such as object destructuring might match multiple elements (for
       /// example the object getter and a declared variable).
       bool spansRequestedPosition(int offset, int length) {
@@ -54,12 +50,12 @@ class DocumentHighlightsHandler extends SharedMessageHandler<
       }
 
       // Find an occurrence that has an instance that spans the position.
-      var occurrences = collector.allOccurrences
+      final occurrences = collector.allOccurrences
           .where((occurrence) => occurrence.offsets.any(
               (offset) => spansRequestedPosition(offset, occurrence.length)))
           .toList();
       if (occurrences.isNotEmpty) {
-        return success(toHighlights(unit.lineInfo, occurrences));
+        return success(toHighlights(unit.result.lineInfo, occurrences));
       }
 
       // No matches.

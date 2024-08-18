@@ -81,71 +81,6 @@ class B extends A {
     ]);
   }
 
-  Future<void> test_class_augmentation() async {
-    addTestFile('''
-import augment 'a.dart';
-
-class MyClass1 {}
-class C {}
-''');
-
-    newFile('$testPackageLibPath/a.dart', '''
-augment library 'test.dart';
-
-augment class C extends MyClass1 {}
- ''');
-    var items = await _getTypeHierarchy('MyClass1 {}');
-    expect(_toJson(items), [
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'MyClass1',
-          'location': anything,
-          'flags': 0
-        },
-        'superclass': 1,
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': [2, 3]
-      },
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'Object',
-          'location': anything,
-          'flags': 0
-        },
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': []
-      },
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'C',
-          'location': anything,
-          'flags': 0
-        },
-        'superclass': 0,
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': []
-      },
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'C',
-          'location': anything,
-          'flags': 0
-        },
-        'superclass': 0,
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': []
-      }
-    ]);
-  }
-
   Future<void> test_class_displayName() async {
     addTestFile('''
 class A<T> {
@@ -228,13 +163,19 @@ library lib_a;
 class A {}
 class B extends A {}
 ''');
-    writePackageConfig(
-      convertPath('$packagesRootPath/pkgA'),
+    newPackageConfigJsonFile(
+      '$packagesRootPath/pkgA',
+      (PackageConfigFileBuilder()
+            ..add(name: 'pkgA', rootPath: '$packagesRootPath/pkgA'))
+          .toContent(toUriStr: toUriStr),
     );
     // reference the package from a project
-    writeTestPackageConfig(
-        config: (PackageConfigFileBuilder()
-          ..add(name: 'pkgA', rootPath: '$packagesRootPath/pkgA')));
+    newPackageConfigJsonFile(
+      testPackageRootPath,
+      (PackageConfigFileBuilder()
+            ..add(name: 'pkgA', rootPath: '$packagesRootPath/pkgA'))
+          .toContent(toUriStr: toUriStr),
+    );
     addTestFile('''
 import 'package:pkgA/libA.dart';
 class C extends A {}
@@ -251,55 +192,6 @@ class C extends A {}
     expect(names, contains('A'));
     expect(names, contains('B'));
     expect(names, contains('C'));
-  }
-
-  Future<void> test_class_extends_sameName_importPrefix() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-class Foo {}
-''');
-
-    addTestFile('''
-import 'a.dart' as foo;
-class Foo extends foo.Foo {}
-''');
-    var items = await _getTypeHierarchy('oo {}');
-    expect(_toJson(items), [
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'Foo',
-          'location': anything,
-          'flags': 0
-        },
-        'superclass': 1,
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': [2]
-      },
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'Object',
-          'location': anything,
-          'flags': 0
-        },
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': []
-      },
-      {
-        'classElement': {
-          'kind': 'CLASS',
-          'name': 'Foo',
-          'location': anything,
-          'flags': 0
-        },
-        'superclass': 0,
-        'interfaces': [],
-        'mixins': [],
-        'subclasses': []
-      },
-    ]);
   }
 
   Future<void> test_class_extendsTypeA() async {
@@ -1124,11 +1016,10 @@ class D extends C {}
     var request = SearchGetTypeHierarchyParams(
             convertPath('/does/not/exist.dart'), 0,
             superOnly: true)
-        .toRequest(requestId, clientUriConverter: server.uriConverter);
+        .toRequest(requestId);
     var response = await serverChannel.simulateRequestFromClient(request);
-    var items = SearchGetTypeHierarchyResult.fromResponse(response,
-            clientUriConverter: server.uriConverter)
-        .hierarchyItems;
+    var items =
+        SearchGetTypeHierarchyResult.fromResponse(response).hierarchyItems;
     expect(items, isNull);
   }
 
@@ -1630,7 +1521,7 @@ extension type E(A it) implements A {
   Request _createGetTypeHierarchyRequest(String search, {bool? superOnly}) {
     return SearchGetTypeHierarchyParams(testFile.path, findOffset(search),
             superOnly: superOnly)
-        .toRequest(requestId, clientUriConverter: server.uriConverter);
+        .toRequest(requestId);
   }
 
   Future<List<TypeHierarchyItem>> _getTypeHierarchy(String search,
@@ -1643,15 +1534,11 @@ extension type E(A it) implements A {
     await waitForTasksFinished();
     var request = _createGetTypeHierarchyRequest(search, superOnly: superOnly);
     var response = await serverChannel.simulateRequestFromClient(request);
-    return SearchGetTypeHierarchyResult.fromResponse(response,
-            clientUriConverter: server.uriConverter)
-        .hierarchyItems;
+    return SearchGetTypeHierarchyResult.fromResponse(response).hierarchyItems;
   }
 
   List<Map<String, Object>> _toJson(List<TypeHierarchyItem> items) {
-    return items
-        .map((item) => item.toJson(clientUriConverter: server.uriConverter))
-        .toList();
+    return items.map((item) => item.toJson()).toList();
   }
 
   static Set<String> _toClassNames(List<TypeHierarchyItem> items) {

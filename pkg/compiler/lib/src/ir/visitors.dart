@@ -54,7 +54,7 @@ class DartTypeConverter extends ir.DartTypeVisitor<DartType> {
 
   DartType _convertNullability(
       DartType baseType, ir.DartType nullabilitySource) {
-    final nullability = nullabilitySource.declaredNullability;
+    final nullability = nullabilitySource.nullability;
     switch (nullability) {
       case ir.Nullability.nonNullable:
         return baseType;
@@ -68,8 +68,7 @@ class DartTypeConverter extends ir.DartTypeVisitor<DartType> {
         // nullability of the bound. We don't need a nullability wrapper in this
         // case.
         if (nullabilitySource is ir.TypeParameterType ||
-            nullabilitySource is ir.StructuralParameterType ||
-            nullabilitySource is ir.ExtensionType) {
+            nullabilitySource is ir.StructuralParameterType) {
           return baseType;
         }
 

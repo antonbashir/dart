@@ -63,8 +63,8 @@ class GreatestLowerBoundHelper {
       return T1;
     }
 
-    var T1_isBottom = T1.isBottom;
-    var T2_isBottom = T2.isBottom;
+    var T1_isBottom = _typeSystem.isBottom(T1);
+    var T2_isBottom = _typeSystem.isBottom(T2);
 
     // DOWN(T1, T2) where BOTTOM(T1) and BOTTOM(T2)
     if (T1_isBottom && T2_isBottom) {
@@ -177,19 +177,28 @@ class GreatestLowerBoundHelper {
       return NeverTypeImpl.instance;
     }
 
+    // DOWN(T1*, T2*) = S* where S is DOWN(T1, T2)
+    // DOWN(T1*, T2?) = S* where S is DOWN(T1, T2)
+    // DOWN(T1?, T2*) = S* where S is DOWN(T1, T2)
+    // DOWN(T1*, T2) = S where S is DOWN(T1, T2)
+    // DOWN(T1, T2*) = S where S is DOWN(T1, T2)
     // DOWN(T1?, T2?) = S? where S is DOWN(T1, T2)
     // DOWN(T1?, T2) = S where S is DOWN(T1, T2)
     // DOWN(T1, T2?) = S where S is DOWN(T1, T2)
     if (T1_nullability != NullabilitySuffix.none ||
         T2_nullability != NullabilitySuffix.none) {
+      var resultNullability = NullabilitySuffix.question;
+      if (T1_nullability == NullabilitySuffix.none ||
+          T2_nullability == NullabilitySuffix.none) {
+        resultNullability = NullabilitySuffix.none;
+      } else if (T1_nullability == NullabilitySuffix.star ||
+          T2_nullability == NullabilitySuffix.star) {
+        resultNullability = NullabilitySuffix.star;
+      }
       var T1_none = T1_impl.withNullability(NullabilitySuffix.none);
       var T2_none = T2_impl.withNullability(NullabilitySuffix.none);
       var S = getGreatestLowerBound(T1_none, T2_none);
-      if (T1_nullability == NullabilitySuffix.question &&
-          T2_nullability == NullabilitySuffix.question) {
-        return (S as TypeImpl).withNullability(NullabilitySuffix.question);
-      }
-      return S;
+      return (S as TypeImpl).withNullability(resultNullability);
     }
 
     assert(T1_nullability == NullabilitySuffix.none);
@@ -377,23 +386,23 @@ class GreatestLowerBoundHelper {
   }
 
   DartType _recordType(RecordTypeImpl T1, RecordTypeImpl T2) {
-    var positional1 = T1.positionalFields;
-    var positional2 = T2.positionalFields;
+    final positional1 = T1.positionalFields;
+    final positional2 = T2.positionalFields;
     if (positional1.length != positional2.length) {
       return _typeSystem.typeProvider.neverType;
     }
 
-    var named1 = T1.namedFields;
-    var named2 = T2.namedFields;
+    final named1 = T1.namedFields;
+    final named2 = T2.namedFields;
     if (named1.length != named2.length) {
       return _typeSystem.typeProvider.neverType;
     }
 
-    var positionalFields = <RecordTypePositionalFieldImpl>[];
+    final positionalFields = <RecordTypePositionalFieldImpl>[];
     for (var i = 0; i < positional1.length; i++) {
-      var field1 = positional1[i];
-      var field2 = positional2[i];
-      var type = getGreatestLowerBound(field1.type, field2.type);
+      final field1 = positional1[i];
+      final field2 = positional2[i];
+      final type = getGreatestLowerBound(field1.type, field2.type);
       positionalFields.add(
         RecordTypePositionalFieldImpl(
           type: type,
@@ -401,14 +410,14 @@ class GreatestLowerBoundHelper {
       );
     }
 
-    var namedFields = <RecordTypeNamedFieldImpl>[];
+    final namedFields = <RecordTypeNamedFieldImpl>[];
     for (var i = 0; i < named1.length; i++) {
-      var field1 = named1[i];
-      var field2 = named2[i];
+      final field1 = named1[i];
+      final field2 = named2[i];
       if (field1.name != field2.name) {
         return _typeSystem.typeProvider.neverType;
       }
-      var type = getGreatestLowerBound(field1.type, field2.type);
+      final type = getGreatestLowerBound(field1.type, field2.type);
       namedFields.add(
         RecordTypeNamedFieldImpl(
           name: field1.name,

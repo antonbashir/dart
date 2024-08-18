@@ -10,11 +10,15 @@ import '../dart/resolution/context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(UnnecessaryCastTest);
+    defineReflectiveTests(UnnecessaryCastTestWithNullSafety);
   });
 }
 
 @reflectiveTest
-class UnnecessaryCastTest extends PubPackageResolutionTest {
+class UnnecessaryCastTest extends PubPackageResolutionTest
+    with UnnecessaryCastTestCases, WithoutNullSafetyMixin {}
+
+mixin UnnecessaryCastTestCases on PubPackageResolutionTest {
   test_conditionalExpression_changesResultType_left() async {
     await assertNoErrorsInCode(r'''
 class A {}
@@ -181,17 +185,6 @@ void f(num a) {
     ]);
   }
 
-  test_type_type_asInterfaceTypeTypedef() async {
-    await assertErrorsInCode(r'''
-typedef N = num;
-void f(num a) {
-  a as N;
-}
-''', [
-      error(WarningCode.UNNECESSARY_CAST, 35, 6),
-    ]);
-  }
-
   test_typeParameter_hasBound_same() async {
     await assertNoErrorsInCode(r'''
 void f<T extends num>(T a) {
@@ -222,5 +215,56 @@ void f<T>(T a) {
   a as num;
 }
 ''');
+  }
+}
+
+@reflectiveTest
+class UnnecessaryCastTestWithNullSafety extends PubPackageResolutionTest
+    with UnnecessaryCastTestCases {
+  test_interfaceType_star_toNone() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.7
+int a = 0;
+''');
+
+    await assertErrorsInCode(r'''
+import 'a.dart';
+
+void f() {
+  var b = a as int;
+  b;
+}
+''', [
+      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
+    ]);
+  }
+
+  test_interfaceType_star_toQuestion() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.7
+int a = 0;
+''');
+
+    await assertErrorsInCode(r'''
+import 'a.dart';
+
+void f() {
+  var b = a as int?;
+  b;
+}
+''', [
+      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
+    ]);
+  }
+
+  test_type_type_asInterfaceTypeTypedef() async {
+    await assertErrorsInCode(r'''
+typedef N = num;
+void f(num a) {
+  a as N;
+}
+''', [
+      error(WarningCode.UNNECESSARY_CAST, 35, 6),
+    ]);
   }
 }

@@ -370,7 +370,7 @@ class SsaSimplifyInterceptors extends HBaseVisitor<bool>
     //       print(x.length);  //
     //     }
 
-    void finishInvoke(HInvoke invoke, Selector selector) {
+    finishInvoke(HInvoke invoke, Selector selector) {
       HInstruction callReceiver = invoke.getDartReceiver(_closedWorld)!;
       if (receiver.nonCheck() == callReceiver.nonCheck()) {
         Set<ClassEntity> interceptedClasses = _interceptorData

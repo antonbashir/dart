@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Use generic function type syntax for parameters.';
 
@@ -26,19 +25,23 @@ Iterable<T> where(bool Function(T) predicate) {}
 ''';
 
 class UseFunctionTypeSyntaxForParameters extends LintRule {
+  static const LintCode code = LintCode(
+      'use_function_type_syntax_for_parameters',
+      "Use the generic function type syntax to declare the parameter '{0}'.",
+      correctionMessage: 'Try using the generic function type syntax.');
+
   UseFunctionTypeSyntaxForParameters()
       : super(
             name: 'use_function_type_syntax_for_parameters',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.style});
+            group: Group.style);
 
   @override
   bool get canUseParsedResult => true;
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.use_function_type_syntax_for_parameters;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(

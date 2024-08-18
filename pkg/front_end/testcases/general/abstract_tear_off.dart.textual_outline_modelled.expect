@@ -6,5 +6,4 @@ abstract class Class {
 class ClassImpl implements Class {}
 
 test() {}
-
 typedef F<T> = Class;

@@ -1,5 +1,4 @@
 bool _called = false;
-
 String init(String val) {}
 
 class C {
@@ -7,7 +6,5 @@ class C {
 }
 
 main() {}
-
 expect(expected, actual) {}
-
 throws(void Function() f) {}

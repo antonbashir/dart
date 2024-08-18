@@ -3,19 +3,18 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:_fe_analyzer_shared/src/messages/diagnostic_message.dart';
+import 'package:front_end/src/api_prototype/compiler_options.dart';
+import 'package:front_end/src/api_prototype/kernel_generator.dart';
+import 'package:front_end/src/api_prototype/terminal_color_support.dart';
+import 'package:front_end/src/compute_platform_binaries_location.dart';
+import 'package:front_end/src/fasta/command_line_reporting.dart';
+import 'package:front_end/src/fasta/fasta_codes.dart';
+import 'package:front_end/src/kernel_generator_impl.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/target/targets.dart';
 import 'package:kernel/type_environment.dart';
-
-import '../api_prototype/compiler_options.dart';
-import '../api_prototype/kernel_generator.dart';
-import '../api_prototype/terminal_color_support.dart';
-import '../base/command_line_reporting.dart';
-import '../codes/cfe_codes.dart';
-import '../compute_platform_binaries_location.dart';
-import '../kernel_generator_impl.dart';
 
 typedef PerformAnalysisFunction = void Function(
     DiagnosticMessageHandler onDiagnostic, Component component);
@@ -59,7 +58,7 @@ Future<void> _runAnalysis(CompilerOptions options, Iterable<Uri> entryPoints,
     options,
     retainDataForTesting: true,
     requireMain: false,
-    additionalSources: entryPoints.skip(1).toList(),
+    additionalSources: entryPoints.take(1).toList(),
   ) as InternalCompilerResult;
 
   performAnalysis(options.onDiagnostic!, compilerResult.component!);
@@ -139,7 +138,7 @@ class AnalysisVisitor extends StaticTypeVisitorBase {
         .withArguments(message)
         .withLocation(uri, node.fileOffset, noLength);
     FormattedMessage diagnosticMessage = locatedMessage.withFormatting(
-        formatWithLocationNoSdk(locatedMessage, Severity.warning,
+        format(locatedMessage, Severity.warning,
             location: location, uriToSource: component.uriToSource),
         location.line,
         location.column,

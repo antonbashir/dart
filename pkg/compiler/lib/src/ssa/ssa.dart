@@ -45,7 +45,6 @@ class SsaFunctionCompiler implements FunctionCompiler {
   final SsaOptimizerTask optimizer;
   final SourceInformationStrategy sourceInformationStrategy;
   late final GlobalTypeInferenceResults _globalInferenceResults;
-  late final GlobalTypeInferenceResults _trivialInferenceResults;
   late final CodegenInputs _codegen;
 
   SsaFunctionCompiler(
@@ -65,26 +64,15 @@ class SsaFunctionCompiler implements FunctionCompiler {
   void initialize(GlobalTypeInferenceResults globalInferenceResults,
       CodegenInputs codegen) {
     _globalInferenceResults = globalInferenceResults;
-    _trivialInferenceResults = TrivialGlobalTypeInferenceResults(
-        globalInferenceResults.closedWorld,
-        _globalInferenceResults.globalLocalsMap);
     _codegen = codegen;
-    _builder.onCodegenStart(globalInferenceResults.closedWorld);
+    _builder.onCodegenStart();
   }
 
   /// Generates JavaScript code for [member].
   /// Using the ssa builder, optimizer and code generator.
   @override
   CodegenResult compile(MemberEntity member) {
-    // We don't have inference data for stubs. We could use some inferred types
-    // for the target function but stubs are so simple that this usually doesn't
-    // produce better code. Deserializing inference results is also expensive so
-    // we avoid it here.
-    final inferenceResults = member is JParameterStub
-        ? _trivialInferenceResults
-        : _globalInferenceResults;
     JClosedWorld closedWorld = _globalInferenceResults.closedWorld;
-
     CodegenRegistry registry =
         CodegenRegistry(closedWorld.elementEnvironment, member);
     ModularNamer namer = ModularNamerImpl(
@@ -96,14 +84,14 @@ class SsaFunctionCompiler implements FunctionCompiler {
       return registry.close(null);
     }
 
-    final graph = _builder.build(
-        member, inferenceResults, _codegen, registry, namer, emitter);
+    final graph = _builder.build(member, closedWorld, _globalInferenceResults,
+        _codegen, registry, namer, emitter);
     if (graph == null) {
       return registry.close(null);
     }
 
-    optimizer.optimize(member, graph, _codegen, closedWorld, inferenceResults,
-        registry, _metrics);
+    optimizer.optimize(member, graph, _codegen, closedWorld,
+        _globalInferenceResults, registry, _metrics);
     js.Expression result = generator.generateCode(
         member, graph, _codegen, closedWorld, registry, namer, emitter);
     if (graph.needsAsyncRewrite) {
@@ -190,8 +178,6 @@ class SsaFunctionCompiler implements FunctionCompiler {
             asyncTypeParameter,
             name);
         break;
-      case AsyncMarker.SYNC:
-        throw StateError('Cannot rewrite sync method as async.');
     }
     return rewriter.rewrite(
         code as js.Fun, bodySourceInformation, exitSourceInformation);
@@ -322,6 +308,7 @@ abstract class SsaBuilder {
   /// for [member].
   HGraph? build(
       MemberEntity member,
+      JClosedWorld closedWorld,
       GlobalTypeInferenceResults globalInferenceResults,
       CodegenInputs codegen,
       CodegenRegistry registry,
@@ -345,9 +332,9 @@ class SsaBuilderTask extends CompilerTask {
   @override
   String get name => 'SSA builder';
 
-  void onCodegenStart(JClosedWorld _closedWorld) {
-    _builder = _backendStrategy.createSsaBuilder(
-        this, _closedWorld, _sourceInformationFactory);
+  void onCodegenStart() {
+    _builder =
+        _backendStrategy.createSsaBuilder(this, _sourceInformationFactory);
     metrics = _ssaMetrics;
   }
 
@@ -355,12 +342,13 @@ class SsaBuilderTask extends CompilerTask {
   /// for [member].
   HGraph? build(
       MemberEntity member,
+      JClosedWorld closedWorld,
       GlobalTypeInferenceResults globalInferenceResults,
       CodegenInputs codegen,
       CodegenRegistry registry,
       ModularNamer namer,
       ModularEmitter emitter) {
-    return _builder.build(
-        member, globalInferenceResults, codegen, registry, namer, emitter);
+    return _builder.build(member, closedWorld, globalInferenceResults, codegen,
+        registry, namer, emitter);
   }
 }

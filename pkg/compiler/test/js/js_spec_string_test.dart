@@ -20,7 +20,7 @@ class Listener implements DiagnosticReporter {
 
   @override
   internalError(spannable, message) {
-    errorMessage = message as String;
+    errorMessage = message;
     throw "error";
   }
 
@@ -293,11 +293,11 @@ void main() async {
   testWithSideEffects(types, ' returns:A|B|C;   creates:A;  ',
       returns: ['A', 'B', 'C'], creates: ['A']);
 
-  test(types, 'throws:may', expectedThrows: NativeThrowBehavior.may);
-  test(types, 'throws:never', expectedThrows: NativeThrowBehavior.never);
-  test(types, 'throws:null(1)', expectedThrows: NativeThrowBehavior.nullNsm);
+  test(types, 'throws:may', expectedThrows: NativeThrowBehavior.MAY);
+  test(types, 'throws:never', expectedThrows: NativeThrowBehavior.NEVER);
+  test(types, 'throws:null(1)', expectedThrows: NativeThrowBehavior.NULL_NSM);
   test(types, 'throws:null(1)+may',
-      expectedThrows: NativeThrowBehavior.nullNsmThenMay);
+      expectedThrows: NativeThrowBehavior.NULL_NSM_THEN_MAY);
 
   test(types, 'new:true', expectedNew: true);
   test(types, 'new:false', expectedNew: false);

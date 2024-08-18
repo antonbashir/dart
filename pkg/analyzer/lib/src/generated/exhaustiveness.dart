@@ -10,8 +10,6 @@ import 'package:_fe_analyzer_shared/src/exhaustiveness/shared.dart';
 import 'package:_fe_analyzer_shared/src/exhaustiveness/space.dart';
 import 'package:_fe_analyzer_shared/src/exhaustiveness/static_type.dart';
 import 'package:_fe_analyzer_shared/src/exhaustiveness/types.dart';
-import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
-    show Variance;
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -24,7 +22,7 @@ import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/replacement_visitor.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
-import 'package:pub_semver/pub_semver.dart';
+import 'package:analyzer/src/dart/resolver/variance.dart';
 
 /// The buffer that accumulates types and elements as is, so that they
 /// can be written latter into Dart code that considers imports. It also
@@ -57,7 +55,7 @@ class AnalyzerDartTemplateBuffer
 
   @override
   void writeEnumValue(FieldElement value, String name) {
-    var enumElement = value.enclosingElement;
+    final enumElement = value.enclosingElement;
     if (enumElement is! EnumElement) {
       isComplete = false;
       return;
@@ -145,9 +143,6 @@ class AnalyzerSealedClassOperations
     LibraryElement library = sealedClass.library;
     outer:
     for (Element declaration in library.topLevelElements) {
-      if (declaration is ExtensionTypeElement) {
-        continue;
-      }
       if (declaration != sealedClass && declaration is InterfaceElement) {
         bool checkType(InterfaceType? type) {
           if (type?.element == sealedClass) {
@@ -171,7 +166,7 @@ class AnalyzerSealedClassOperations
           }
         }
         if (declaration is MixinElement) {
-          for (var type in declaration.superclassConstraints) {
+          for (final type in declaration.superclassConstraints) {
             if (checkType(type)) {
               continue outer;
             }
@@ -374,10 +369,6 @@ class AnalyzerTypeOperations implements TypeOperations<DartType> {
   }
 
   @override
-  bool isPotentiallyNullable(DartType type) =>
-      _typeSystem.isPotentiallyNullable(type);
-
-  @override
   bool isRecordType(DartType type) {
     return type is RecordType && !isNullable(type);
   }
@@ -478,12 +469,11 @@ class MissingPatternTypePart extends MissingPatternPart {
 
   @override
   String toString() {
-    return type.getDisplayString();
+    return type.getDisplayString(withNullability: true);
   }
 }
 
 class PatternConverter with SpaceCreator<DartPattern, DartType> {
-  final Version languageVersion;
   final FeatureSet featureSet;
   final AnalyzerExhaustivenessCache cache;
   final Map<Expression, DartObjectImpl> mapPatternKeyValues;
@@ -494,7 +484,6 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
   bool hasInvalidType = false;
 
   PatternConverter({
-    required this.languageVersion,
     required this.featureSet,
     required this.cache,
     required this.mapPatternKeyValues,
@@ -538,10 +527,10 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
           path, contextType, pattern.declaredElement!.type,
           nonNull: nonNull);
     } else if (pattern is ObjectPattern) {
-      var properties = <String, DartPattern>{};
-      var extensionPropertyTypes = <String, DartType>{};
-      for (var field in pattern.fields) {
-        var name = field.effectiveName;
+      final properties = <String, DartPattern>{};
+      final extensionPropertyTypes = <String, DartType>{};
+      for (final field in pattern.fields) {
+        final name = field.effectiveName;
         if (name == null) {
           // Error case, skip field.
           continue;
@@ -569,12 +558,12 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
       return createWildcardSpace(path, contextType, pattern.type?.typeOrThrow,
           nonNull: nonNull);
     } else if (pattern is RecordPatternImpl) {
-      var positionalTypes = <DartType>[];
-      var positionalPatterns = <DartPattern>[];
-      var namedTypes = <String, DartType>{};
-      var namedPatterns = <String, DartPattern>{};
-      for (var field in pattern.fields) {
-        var nameNode = field.name;
+      final positionalTypes = <DartType>[];
+      final positionalPatterns = <DartPattern>[];
+      final namedTypes = <String, DartType>{};
+      final namedPatterns = <String, DartPattern>{};
+      for (final field in pattern.fields) {
+        final nameNode = field.name;
         if (nameNode == null) {
           positionalTypes.add(cache.typeSystem.typeProvider.dynamicType);
           positionalPatterns.add(field.pattern);
@@ -589,7 +578,7 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
           }
         }
       }
-      var recordType = RecordType(
+      final recordType = RecordType(
         positional: positionalTypes,
         named: namedTypes,
         nullabilitySuffix: NullabilitySuffix.none,
@@ -673,7 +662,7 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
           entries: entries,
           hasExplicitTypeArguments: pattern.typeArguments != null);
     } else if (pattern is ConstantPattern) {
-      var value = constantPatternValues[pattern];
+      final value = constantPatternValues[pattern];
       if (value != null) {
         return _convertConstantValue(value, path);
       }
@@ -684,37 +673,32 @@ class PatternConverter with SpaceCreator<DartPattern, DartType> {
     return createUnknownSpace(path);
   }
 
-  @override
-  bool hasLanguageVersion(int major, int minor) {
-    return languageVersion >= Version(major, minor, 0);
-  }
-
   Space _convertConstantValue(DartObjectImpl value, Path path) {
-    var state = value.state;
+    final state = value.state;
     if (value.isNull) {
       return Space(path, StaticType.nullType);
     } else if (state is BoolState) {
-      var value = state.value;
+      final value = state.value;
       if (value != null) {
         return Space(path, cache.getBoolValueStaticType(state.value!));
       }
     } else if (state is RecordState) {
-      var properties = <Key, Space>{};
+      final properties = <Key, Space>{};
       for (var index = 0; index < state.positionalFields.length; index++) {
-        var key = RecordIndexKey(index);
-        var value = state.positionalFields[index];
+        final key = RecordIndexKey(index);
+        final value = state.positionalFields[index];
         properties[key] = _convertConstantValue(value, path.add(key));
       }
-      for (var entry in state.namedFields.entries) {
-        var key = RecordNameKey(entry.key);
+      for (final entry in state.namedFields.entries) {
+        final key = RecordNameKey(entry.key);
         properties[key] = _convertConstantValue(entry.value, path.add(key));
       }
       return Space(path, cache.getStaticType(value.type),
           properties: properties);
     }
-    var type = value.type;
+    final type = value.type;
     if (type is InterfaceType) {
-      var element = type.element;
+      final element = type.element;
       if (element is EnumElement) {
         return Space(path, cache.getEnumElementStaticType(element, value));
       }
@@ -763,8 +747,8 @@ class TypeParameterReplacer extends ReplacementVisitor {
     if (_variance == Variance.contravariant) {
       return _replaceTypeParameterTypes(_typeSystem.typeProvider.neverType);
     } else {
-      var element = node.element as TypeParameterElementImpl;
-      var defaultType = element.defaultType!;
+      final element = node.element as TypeParameterElementImpl;
+      final defaultType = element.defaultType!;
       return _replaceTypeParameterTypes(defaultType);
     }
   }

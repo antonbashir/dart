@@ -64,6 +64,16 @@ io/addlatexhash_test: Skip
 io/issue_46436_test: SkipByDesign # Uses mirrors.
 io/print_test: SkipByDesign # Attempts to spawn dart using Platform.executable
 io/socket_sigpipe_test: SkipByDesign # Spawns server process using Platform.executable
+io/wait_for_event_isolate_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_microtask_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_nested_microtask_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_nested_timer_microtask_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_nested_timer_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_nested_waits_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_timer_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_zone_caught_error_test: SkipByDesign # Uses mirrors.
+io/wait_for_event_zone_test: SkipByDesign # Uses mirrors.
+io/wait_for_test: SkipByDesign # Uses mirrors.
 verbose_gc_to_bmu_test: Skip # Attempts to spawn dart using Platform.executable
 
 [ $sanitizer == asan ]
@@ -96,7 +106,7 @@ io/raw_secure_server_socket_test: Crash
 io/raw_server_socket_cancel_test: Skip # Issue 28182 # This test sometimes hangs on Mac.
 io/socket_many_connections_test: Skip # This test fails with "Too many open files" on the Mac OS buildbot. This is expected as MacOS by default runs with a very low number of allowed open files ('ulimit -n' says something like 256).
 
-[ $compiler == dart2js || $compiler == dart2wasm || $compiler == ddc ]
+[ $compiler == dart2js || $compiler == ddc ]
 *: SkipByDesign
 
 [ $runtime == dart_precompiled || $runtime == vm ]

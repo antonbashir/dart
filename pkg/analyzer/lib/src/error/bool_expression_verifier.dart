@@ -61,11 +61,18 @@ class BoolExpressionVerifier {
             messages: _resolver.computeWhyNotPromotedMessages(
                 expression, whyNotPromoted?.call()));
       } else {
-        _errorReporter.atNode(
-          expression,
-          errorCode,
-          arguments: arguments,
-        );
+        _errorReporter.reportErrorForNode(errorCode, expression, arguments);
+      }
+    } else if (!_resolver.definingLibrary.isNonNullableByDefault) {
+      if (expression is InstanceCreationExpression) {
+        // In pre-null safety code, an implicit cast from a supertype is allowed
+        // unless the expression is an explicit instance creation expression,
+        // with the idea that the cast would likely fail at runtime.
+        var constructor = expression.constructorName.staticElement;
+        if (constructor == null || !constructor.isFactory) {
+          _errorReporter.reportErrorForNode(errorCode, expression, arguments);
+          return;
+        }
       }
     }
   }
@@ -91,14 +98,14 @@ class BoolExpressionVerifier {
 
     if (expression is MethodInvocation) {
       SimpleIdentifier methodName = expression.methodName;
-      _errorReporter.atNode(
-        methodName,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.USE_OF_VOID_RESULT,
+        methodName,
       );
     } else {
-      _errorReporter.atNode(
-        expression,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.USE_OF_VOID_RESULT,
+        expression,
       );
     }
 

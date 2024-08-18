@@ -13,7 +13,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/analysis/session_helper.dart';
-import 'package:analyzer/src/util/file_paths.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 /// [ConvertMethodToGetterRefactoring] implementation.
@@ -54,12 +53,12 @@ class ConvertGetterToMethodRefactoringImpl extends RefactoringImpl
       await _updateElementReferences(element);
     }
     // method
-    var field = element.variable2;
+    var field = element.variable;
     if (field is FieldElement &&
         (field.enclosingElement is InterfaceElement ||
             field.enclosingElement is ExtensionElement)) {
       var elements = await getHierarchyMembers(searchEngine, field);
-      await Future.forEach(elements, (Element member) async {
+      await Future.forEach(elements, (ClassMemberElement member) async {
         if (member is FieldElement) {
           var getter = member.getter;
           if (getter != null && !getter.isSynthetic) {
@@ -130,8 +129,6 @@ class ConvertGetterToMethodRefactoringImpl extends RefactoringImpl
     var matches = await searchEngine.searchReferences(element);
     var references = getSourceReferences(matches);
     for (var reference in references) {
-      // Don't update references in macro-generated files.
-      if (isMacroGenerated(reference.file)) continue;
       var refElement = reference.element;
       var refRange = reference.range;
       // insert "()"

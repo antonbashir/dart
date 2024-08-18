@@ -5,9 +5,8 @@
 // Patch file for dart:developer library.
 
 import 'dart:_internal' show patch;
-
+import 'dart:_foreign_helper' show JS;
 import 'dart:async' show Zone;
-import 'dart:js_interop';
 import 'dart:isolate';
 
 // These values must be kept in sync with developer/timeline.dart.
@@ -19,68 +18,12 @@ const int _flowBeginPatch = 9;
 const int _flowStepPatch = 10;
 const int _flowEndPatch = 11;
 
-@JS('debugger')
-external void _jsDebugger();
-
-@JS('performance')
-external JSAny? get _jsPerformance;
-
-@JS('JSON')
-external JSAny? get _jsJSON;
-
-extension type _JSPerformance(JSObject performance) {
-  @JS('measure')
-  external JSAny? get _measureMethod;
-
-  @JS('mark')
-  external JSAny? get _markMethod;
-
-  @JS('clearMeasures')
-  external JSAny? get _clearMeasuresMethod;
-
-  @JS('clearMarks')
-  external JSAny? get _clearMarksMethod;
-
-  external void measure(
-      JSString measureName, JSString startMark, JSString endMark);
-
-  external void mark(JSString markName, JSObject markOptions);
-
-  external void clearMeasures();
-
-  external void clearMarks();
-}
-
-extension type _JSJSON(JSObject performance) {
-  external JSObject parse(JSString string);
-}
-
-_JSPerformance? _performance = (() {
-  final value = _jsPerformance;
-  if (value.isA<JSObject>()) {
-    final performance = _JSPerformance(value as JSObject);
-    if (performance._measureMethod != null &&
-        performance._markMethod != null &&
-        performance._clearMeasuresMethod != null &&
-        performance._clearMarksMethod != null) {
-      return performance;
-    }
-  }
-  return null;
-})();
-
-_JSJSON _json = (() {
-  final value = _jsJSON;
-  if (value.isA<JSObject>()) {
-    return value as _JSJSON;
-  }
-  throw UnsupportedError('Missing JSON.parse() support');
-})();
-
 @patch
 @pragma('dart2js:tryInline')
 bool debugger({bool when = true, String? message}) {
-  if (when) _jsDebugger();
+  if (when) {
+    JS('', 'debugger');
+  }
   return when;
 }
 
@@ -126,7 +69,9 @@ void _postEvent(String eventKind, String eventData) {
 
 @patch
 bool _isDartStreamEnabled() {
-  return _performance != null;
+  // Timeline requires performance.measure API.
+  return JS('bool', r'typeof performance !== "undefined"') &&
+      JS('bool', r'typeof performance.measure !== "undefined"');
 }
 
 @patch
@@ -136,13 +81,6 @@ int _getTraceClock() {
   // rounding errors.
   return DateTime.now().millisecondsSinceEpoch;
 }
-
-// The sum of the number of "mark" `PerformanceEntry`s and the number of
-// "measure" `PerformanceEntry`s in the browser.
-int _markAndMeasureEntryCount = 0;
-
-// The target upper bound on [_markAndMeasureEntryCount].
-const int _markAndMeasureEntryCountLimit = 10000;
 
 int _taskId = 1;
 
@@ -198,32 +136,11 @@ void _decrementEventCount(String eventName) {
   }
 }
 
-bool get _areAllBeginEventsPaired => _eventNameToCount.isEmpty;
-
 @patch
 void _reportTaskEvent(
     int taskId, int flowId, int type, String name, String argumentsAsJson) {
   // Ignore any unsupported events.
   if (_isUnsupportedEvent(type)) return;
-
-  // Enforce the upper bound on the sum of the number of "mark"
-  // `PerformanceEntry`s and the number of "measure" `PerformanceEntry`s to the
-  // best of our ability. Sometimes the upper bound may be exceeded because we
-  // cannot clear begin events that haven't yet been paired with end events.
-  // `PerformanceEntry`s can only be seen by a user after they record a
-  // performance profile that includes the entries, so our clearing of
-  // `PerformanceEntry`s will never have a negative effect on a user's profiling
-  // experience. For any cleared set of entries: either 1) the user was
-  // recording and captured those entries in a profile, or 2) the user was not
-  // recording and missed their chance to capture those entries, as even if
-  // those entries weren't deleted, it wouldn't be possible to retroactively add
-  // them to a profile.
-  if (_markAndMeasureEntryCount > _markAndMeasureEntryCountLimit &&
-      _areAllBeginEventsPaired) {
-    _performance!.clearMarks();
-    _performance!.clearMeasures();
-    _markAndMeasureEntryCount = 0;
-  }
 
   final isBeginEvent = _isBeginEvent(type);
   final isEndEvent = _isEndEvent(type);
@@ -239,22 +156,25 @@ void _reportTaskEvent(
     _incrementEventCount(currentEventName);
     currentEventName = _postfixWithCount(currentEventName);
   }
+  final markOptions = JS('', '{detail: JSON.parse(#)}', argumentsAsJson);
 
   // Start by creating a mark event.
-  _performance!.mark(currentEventName.toJS, _json.parse(argumentsAsJson.toJS));
-  _markAndMeasureEntryCount++;
+  JS('', 'performance.mark(#, #)', currentEventName, markOptions);
 
   // If it's an end event, then create a measurement from the most recent begin
   // event with the same name.
   if (isEndEvent) {
     final beginEventName = _createEventName(
         taskId: taskId, name: name, isBeginEvent: true, isEndEvent: false);
-    _performance!.measure(name.toJS, _postfixWithCount(beginEventName).toJS,
-        currentEventName.toJS);
-    _markAndMeasureEntryCount++;
+    JS(
+      '',
+      'performance.measure(#, #, #)',
+      name,
+      _postfixWithCount(beginEventName),
+      currentEventName,
+    );
     _decrementEventCount(beginEventName);
   }
-  _markAndMeasureEntryCount.clamp(0, _markAndMeasureEntryCountLimit + 1);
 }
 
 @patch
@@ -323,7 +243,7 @@ final class _FakeUserTag implements UserTag {
     return old;
   }
 
-  static final UserTag _defaultTag = _FakeUserTag('Default');
+  static final UserTag _defaultTag = new _FakeUserTag('Default');
 }
 
 var _currentTag = _FakeUserTag._defaultTag;

@@ -19,7 +19,7 @@ class RemovedLint extends LintRule {
   RemovedLint()
       : super(
           name: 'removed_lint',
-          categories: {LintRuleCategory.style},
+          group: Group.style,
           state: State.removed(since: dart3),
           description: '',
           details: '',

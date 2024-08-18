@@ -2,23 +2,22 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analysis_server/src/services/linter/lint_names.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/error/error.dart';
-import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
-import 'package:linter/src/linter_lint_codes.dart';
 
 class ReplaceWithDecoratedBox extends ResolvedCorrectionProducer {
-  ReplaceWithDecoratedBox({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REPLACE_WITH_DECORATED_BOX;
@@ -45,6 +44,7 @@ class ReplaceWithDecoratedBox extends ResolvedCorrectionProducer {
 
     var deletions = <Token>[];
     var replacements = <AstNode, String>{};
+    var linterContext = getLinterContext(resourceProvider.pathContext);
 
     void replace(Expression expression, {required bool addConst}) {
       if (expression is InstanceCreationExpression && _hasLint(expression)) {
@@ -57,7 +57,7 @@ class ReplaceWithDecoratedBox extends ResolvedCorrectionProducer {
     /// and return whether it can be a `const` or not.
     bool canExpressionBeConst(Expression expression,
         {required bool isReplace}) {
-      var canBeConst = expression.canBeConst;
+      var canBeConst = linterContext.canBeConst(expression);
       if (!canBeConst &&
           isReplace &&
           expression is InstanceCreationExpression &&
@@ -116,7 +116,7 @@ class ReplaceWithDecoratedBox extends ResolvedCorrectionProducer {
     return unitResult.errors.any((error) {
       var errorCode = error.errorCode;
       return errorCode.type == ErrorType.LINT &&
-          errorCode == LinterLintCode.use_decorated_box &&
+          errorCode.name == LintNames.use_decorated_box &&
           error.offset == constructorName.offset &&
           error.length == constructorName.length;
     });

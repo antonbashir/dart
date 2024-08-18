@@ -17,6 +17,7 @@
 namespace dart {
 
 typedef DWORD ThreadLocalKey;
+typedef DWORD ThreadId;
 typedef HANDLE ThreadJoinId;
 
 static const ThreadLocalKey kUnsetThreadLocalKey = TLS_OUT_OF_INDEXES;
@@ -36,6 +37,33 @@ class ThreadInlineImpl {
 
   DISALLOW_ALLOCATION();
   DISALLOW_COPY_AND_ASSIGN(ThreadInlineImpl);
+};
+
+class MutexData {
+ private:
+  MutexData() {}
+  ~MutexData() {}
+
+  SRWLOCK lock_;
+
+  friend class Mutex;
+
+  DISALLOW_ALLOCATION();
+  DISALLOW_COPY_AND_ASSIGN(MutexData);
+};
+
+class MonitorData {
+ private:
+  MonitorData() {}
+  ~MonitorData() {}
+
+  SRWLOCK lock_;
+  CONDITION_VARIABLE cond_;
+
+  friend class Monitor;
+
+  DISALLOW_ALLOCATION();
+  DISALLOW_COPY_AND_ASSIGN(MonitorData);
 };
 
 typedef void (*ThreadDestructor)(void* parameter);

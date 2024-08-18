@@ -7,6 +7,8 @@
 import 'dart:ffi';
 import 'dart:isolate';
 
+import 'package:expect/expect.dart';
+
 import 'dylib_utils.dart';
 
 final ffiTestFunctions = dlopenPlatformSpecific("ffi_test_functions");

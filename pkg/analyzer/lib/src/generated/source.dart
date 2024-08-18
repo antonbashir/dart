@@ -9,11 +9,14 @@ import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/sdk.dart' show DartSdk;
 import 'package:path/path.dart' as path;
 
-@Deprecated("Import 'package:analyzer/source/line_info.dart'")
+// TODO(srawlins): These exports should be deleted. However, it's a lot of work.
+// Downstream clients generally consider use of deprecated exports to be
+// breaking.
+// Soon to be @Deprecated("Import 'package:analyzer/source/line_info.dart'")
 export 'package:analyzer/source/line_info.dart' show LineInfo;
-@Deprecated("Import 'package:analyzer/source/source.dart'")
+// Soon to be @Deprecated("Import 'package:analyzer/source/source.dart'")
 export 'package:analyzer/source/source.dart';
-@Deprecated("Import 'package:analyzer/source/source_range.dart'")
+// Soon to be @Deprecated("Import 'package:analyzer/source/source_range.dart'")
 export 'package:analyzer/source/source_range.dart';
 
 /// Base class providing implementations for the methods in [Source] that don't

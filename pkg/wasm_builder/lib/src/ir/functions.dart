@@ -13,13 +13,16 @@ class Functions {
   final BaseFunction? start;
 
   /// Imported functions.
-  final List<ImportedFunction> imported;
+  final List<Import> imported;
 
   /// Defined functions.
   final List<DefinedFunction> defined;
 
+  /// All functions, in the order they were emitted.
+  final List<BaseFunction> all;
+
   /// Named functions.
   final int namedCount;
 
-  Functions(this.start, this.imported, this.defined, this.namedCount);
+  Functions(this.start, this.imported, this.defined, this.all, this.namedCount);
 }

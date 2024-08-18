@@ -164,9 +164,7 @@ class IndexElementInfo {
           kind = accessor.isGetter
               ? IndexSyntheticElementKind.getter
               : IndexSyntheticElementKind.setter;
-          if (accessor.variable2 case var variable?) {
-            element = variable;
-          }
+          element = accessor.variable;
         }
       } else if (element is MethodElement) {
         Element enclosing = element.enclosingElement;
@@ -556,8 +554,8 @@ class _IndexContributor extends GeneralizingAstVisitor {
 
   /// Record a relation between a super [namedType] and its [Element].
   void recordSuperType(NamedType namedType, IndexRelationKind kind) {
-    var isQualified = namedType.importPrefix != null;
-    var element = namedType.element;
+    final isQualified = namedType.importPrefix != null;
+    final element = namedType.element;
     recordRelation(element, kind, namedType.name2, isQualified);
   }
 
@@ -582,7 +580,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
     _addSubtypeForClassDeclaration(node);
     var declaredElement = node.declaredElement!;
     if (node.extendsClause == null) {
-      var objectElement = declaredElement.supertype?.element;
+      final objectElement = declaredElement.supertype?.element;
       recordRelationOffset(objectElement, IndexRelationKind.IS_EXTENDED_BY,
           node.name.offset, 0, true);
     }
@@ -591,11 +589,11 @@ class _IndexContributor extends GeneralizingAstVisitor {
     // If the class has only a synthetic default constructor, then it
     // implicitly invokes the default super constructor. Associate the
     // invocation with the name of the class.
-    var defaultConstructor = declaredElement.constructors.singleOrNull;
+    final defaultConstructor = declaredElement.constructors.singleOrNull;
     if (defaultConstructor is ConstructorElementImpl &&
         defaultConstructor.isSynthetic) {
       defaultConstructor.isDefaultConstructor;
-      var superConstructor = defaultConstructor.superConstructor;
+      final superConstructor = defaultConstructor.superConstructor;
       if (superConstructor != null) {
         recordRelation(
             superConstructor, IndexRelationKind.IS_INVOKED_BY, node.name, true);
@@ -647,11 +645,11 @@ class _IndexContributor extends GeneralizingAstVisitor {
     // If the constructor does not have an explicit `super` constructor
     // invocation, it implicitly invokes the unnamed constructor.
     if (node.initializers.none((e) => e is SuperConstructorInvocation)) {
-      var element = node.declaredElement as ConstructorElementImpl;
-      var superConstructor = element.superConstructor;
+      final element = node.declaredElement as ConstructorElementImpl;
+      final superConstructor = element.superConstructor;
       if (superConstructor != null) {
-        var offset = node.returnType.offset;
-        var end = (node.name ?? node.returnType).end;
+        final offset = node.returnType.offset;
+        final end = (node.name ?? node.returnType).end;
         recordRelationOffset(superConstructor, IndexRelationKind.IS_INVOKED_BY,
             offset, end - offset, true);
       }
@@ -741,7 +739,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
 
   @override
   void visitExportDirective(ExportDirective node) {
-    var element = node.element;
+    final element = node.element;
     recordUriReference(element?.exportedLibrary, node.uri);
     super.visitExportDirective(node);
   }
@@ -782,7 +780,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
       memberNodes: node.members,
     );
 
-    var declaredElement = node.declaredElement!;
+    final declaredElement = node.declaredElement!;
     recordIsAncestorOf(declaredElement);
 
     super.visitExtensionTypeDeclaration(node);
@@ -811,7 +809,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
 
   @override
   void visitImportDirective(ImportDirective node) {
-    var element = node.element;
+    final element = node.element;
     recordUriReference(element?.importedLibrary, node.uri);
     super.visitImportDirective(node);
   }
@@ -856,14 +854,6 @@ class _IndexContributor extends GeneralizingAstVisitor {
   }
 
   @override
-  void visitMixinOnClause(MixinOnClause node) {
-    for (NamedType namedType in node.superclassConstraints) {
-      recordSuperType(namedType, IndexRelationKind.CONSTRAINS);
-      namedType.accept(this);
-    }
-  }
-
-  @override
   visitNamedType(NamedType node) {
     _recordImportPrefixedElement(
       importPrefix: node.importPrefix,
@@ -875,10 +865,18 @@ class _IndexContributor extends GeneralizingAstVisitor {
   }
 
   @override
+  void visitOnClause(OnClause node) {
+    for (NamedType namedType in node.superclassConstraints) {
+      recordSuperType(namedType, IndexRelationKind.CONSTRAINS);
+      namedType.accept(this);
+    }
+  }
+
+  @override
   void visitPartDirective(PartDirective node) {
-    var partElement = node.element;
+    final partElement = node.element;
     if (partElement is PartElement) {
-      var partElementUri = partElement.uri;
+      final partElementUri = partElement.uri;
       if (partElementUri is DirectiveUriWithUnit) {
         recordUriReference(partElementUri.unit, node.uri);
       }
@@ -888,11 +886,11 @@ class _IndexContributor extends GeneralizingAstVisitor {
 
   @override
   visitPatternField(PatternField node) {
-    var nameNode = node.name;
+    final nameNode = node.name;
     if (nameNode != null) {
-      var nameToken = nameNode.name;
-      int offset;
-      int length;
+      final nameToken = nameNode.name;
+      final int offset;
+      final int length;
       if (nameToken != null) {
         offset = nameToken.offset;
         length = nameToken.length;
@@ -957,7 +955,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
       element = declaredParameterElement(node, element);
     }
 
-    var parent = node.parent;
+    final parent = node.parent;
     if (element != null &&
         element.enclosingElement is CompilationUnitElement &&
         // We're only unprefixed when part of a PrefixedIdentifier if we're
@@ -1032,7 +1030,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
   void _addSubtype(String name,
       {NamedType? superclass,
       WithClause? withClause,
-      MixinOnClause? onClause,
+      OnClause? onClause,
       ImplementsClause? implementsClause,
       required List<ClassMember> memberNodes}) {
     List<String> supertypes = [];
@@ -1151,7 +1149,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
     }
 
     if (importPrefix != null) {
-      var prefixElement = importPrefix.element;
+      final prefixElement = importPrefix.element;
       if (prefixElement is PrefixElement) {
         recordRelationToken(
           importPrefix.element,
@@ -1162,7 +1160,7 @@ class _IndexContributor extends GeneralizingAstVisitor {
         assembler.addPrefixForElement(element, prefix: prefixElement);
       }
     } else {
-      assembler.addPrefixForElement(element);
+      assembler.addPrefixForElement(element, prefix: null);
     }
 
     recordRelationToken(

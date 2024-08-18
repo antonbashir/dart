@@ -4,23 +4,22 @@
 
 import 'dart:io' show Directory, Platform;
 
+import 'package:_fe_analyzer_shared/src/macros/api.dart' hide Library;
+import 'package:_fe_analyzer_shared/src/macros/executor.dart';
+import 'package:_fe_analyzer_shared/src/macros/executor/multi_executor.dart';
+import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart';
 import 'package:_fe_analyzer_shared/src/testing/features.dart';
 import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:front_end/src/api_prototype/experimental_flags.dart';
-import 'package:front_end/src/builder/declaration_builders.dart';
-import 'package:front_end/src/builder/library_builder.dart';
-import 'package:front_end/src/builder/member_builder.dart';
-import 'package:front_end/src/kernel/macro/macro.dart';
+import 'package:front_end/src/fasta/builder/declaration_builders.dart';
+import 'package:front_end/src/fasta/builder/library_builder.dart';
+import 'package:front_end/src/fasta/builder/member_builder.dart';
+import 'package:front_end/src/fasta/kernel/macro/macro.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
 import 'package:front_end/src/testing/id_testing_utils.dart';
 import 'package:kernel/ast.dart' hide Arguments, TypeDeclaration;
-import 'package:macros/macros.dart' hide Library;
-import 'package:macros/src/executor.dart';
-import 'package:macros/src/executor/multi_executor.dart';
-import 'package:macros/src/executor/serialization.dart';
-import 'package:macros/src/executor/span.dart';
 
 Future<void> main(List<String> args) async {
   Directory dataDir =
@@ -44,7 +43,6 @@ class MacroTestConfig extends CfeTestConfig {
       CompilerOptions options, TestData testData) {
     TestMacroExecutor testExecutor =
         options.macroExecutor = new TestMacroExecutor();
-    options.requirePrebuiltMacros = true;
     testExecutor.registerExecutorFactory(() => testExecutor,
         {Uri.parse('package:precompiled_macro/precompiled_macro.dart')});
     return testExecutor;
@@ -286,13 +284,11 @@ class TestMacroExecutor extends MultiMacroExecutor {
 
   @override
   String buildAugmentationLibrary(
-      Uri augmentedLibraryUri,
       Iterable<MacroExecutionResult> macroResults,
       TypeDeclaration Function(Identifier) resolveDeclaration,
       ResolvedIdentifier Function(Identifier) resolveIdentifier,
       TypeAnnotation? Function(OmittedTypeAnnotation) inferOmittedType,
-      {Map<OmittedTypeAnnotation, String>? omittedTypes,
-      List<Span>? spans}) {
+      {Map<OmittedTypeAnnotation, String>? omittedTypes}) {
     return '';
   }
 
@@ -349,10 +345,10 @@ class _MacroInstanceIdentifier implements MacroInstanceIdentifier {
   void serialize(Serializer serializer) => throw UnimplementedError();
 
   @override
-  bool shouldExecute(DeclarationKind declarationKind, Phase phase) => true;
+  bool shouldExecute(DeclarationKind declarationKind, Phase phase) => false;
 
   @override
-  bool supportsDeclarationKind(DeclarationKind declarationKind) => true;
+  bool supportsDeclarationKind(DeclarationKind declarationKind) => false;
 }
 
 class _MacroExecutionResult implements MacroExecutionResult {
@@ -360,13 +356,7 @@ class _MacroExecutionResult implements MacroExecutionResult {
   List<Diagnostic> diagnostics = [];
 
   @override
-  MacroException? exception;
-
-  @override
   Map<Identifier, Iterable<DeclarationCode>> enumValueAugmentations = const {};
-
-  @override
-  Map<Identifier, NamedTypeAnnotationCode> extendsTypeAugmentations = const {};
 
   @override
   Map<Identifier, Iterable<TypeAnnotationCode>> interfaceAugmentations =

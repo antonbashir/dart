@@ -3,5 +3,4 @@ class C {
 }
 
 void test(C c) {}
-
 main() {}

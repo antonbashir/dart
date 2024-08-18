@@ -234,18 +234,15 @@ class Scavenger {
     return max_pool_size > 0 ? max_pool_size : 1;
   }
 
-  Page* head() const { return to_->head(); }
+  Page* head() const {
+    return to_->head();
+  }
 
-  void PruneNew();
-  void PruneDeferred();
-  void Forward(MarkingStackBlock* blocks);
-  void ForwardDeferred();
+  void Prune(MarkingStackBlock** from, MarkingStack* to);
+  void Forward(MarkingStack* stack);
   void PruneWeak(GCLinkedLists* delayed);
   template <typename Type, typename PtrType>
   void PruneWeak(GCLinkedList<Type, PtrType>* list);
-
-  intptr_t NumScavengeWorkers();
-  static intptr_t NumDataFreelists();
 
  private:
   // Ids for time and data records in Heap::GCStats.
@@ -314,6 +311,7 @@ class Scavenger {
   RelaxedAtomic<intptr_t> root_slices_started_ = {0};
   RelaxedAtomic<intptr_t> weak_slices_started_ = {0};
   StoreBufferBlock* blocks_ = nullptr;
+  MarkingStackBlock* mark_blocks_ = nullptr;
   MarkingStackBlock* new_blocks_ = nullptr;
   MarkingStackBlock* deferred_blocks_ = nullptr;
 

@@ -76,7 +76,3 @@ if (current_cpu == "arm" || current_cpu == "arm64") {
     }
   }
 }
-
-if (current_cpu == "arm64") {
-  arm_control_flow_integrity = "none"
-}

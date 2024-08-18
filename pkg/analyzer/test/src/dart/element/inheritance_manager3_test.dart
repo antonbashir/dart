@@ -8,12 +8,12 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:collection/collection.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../util/element_printer.dart';
+import '../../../util/tree_string_sink.dart';
 import '../../summary/elements_base.dart';
 import '../resolution/context_collection_resolution.dart';
 import '../resolution/node_text_expectations.dart';
@@ -21,7 +21,7 @@ import '../resolution/node_text_expectations.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(InheritanceManager3Test);
-    defineReflectiveTests(InheritanceManager3Test_elements);
+    defineReflectiveTests(InheritanceManager3WithoutNullSafetyTest);
     defineReflectiveTests(InheritanceManager3Test_ExtensionType);
     defineReflectiveTests(UpdateNodeTextExpectations);
   });
@@ -29,6 +29,1664 @@ main() {
 
 @reflectiveTest
 class InheritanceManager3Test extends _InheritanceManager3Base {
+  test_getInheritedMap_topMerge_method() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.6
+class A {
+  void foo({int a}) {}
+}
+''');
+
+    await resolveTestCode('''
+import 'a.dart';
+
+class B {
+  void foo({required int? a}) {}
+}
+
+class C implements A, B {
+  void foo({int? a}) {}
+}
+''');
+
+    _assertInheritedMap('C', r'''
+A.foo: void Function({int a})
+''');
+  }
+
+  test_getMember_fromGenericClass_method_returnType() async {
+    await resolveTestCode('''
+abstract class B<E> {
+  T foo<T>();
+}
+''');
+    final B = findElement.classOrMixin('B');
+    final foo = manager.getMember2(B, Name(null, 'foo'))!;
+    final T = foo.typeParameters.single;
+    final returnType = foo.returnType;
+    expect(returnType.element, same(T));
+  }
+
+  test_getMember_fromGenericSuper_method_bound() async {
+    void checkTextendsFooT(TypeParameterElement t) {
+      final otherT = (t.bound as InterfaceType).typeArguments.single.element;
+      expect(otherT, same(t));
+    }
+
+    await resolveTestCode('''
+abstract class Foo<TF> {}
+class Bar implements Foo<Bar> {}
+abstract class A<XA> {
+  T foo<T extends Foo<T>>() => throw '';
+}
+abstract class B<XB> extends A<XB> {}
+''');
+    final XB = findElement.typeParameter('XB');
+    final typeXB = XB.instantiate(nullabilitySuffix: NullabilitySuffix.none);
+    final B = findElement.classOrMixin('B');
+    final typeB = B.instantiate(
+        typeArguments: [typeXB], nullabilitySuffix: NullabilitySuffix.none);
+    final foo = manager.getMember(typeB, Name(null, 'foo'))!;
+    final foo2 = manager.getMember2(B, Name(null, 'foo'))!;
+    checkTextendsFooT(foo.type.typeFormals.single);
+    checkTextendsFooT(foo2.type.typeFormals.single);
+    checkTextendsFooT(foo2.typeParameters.single);
+    checkTextendsFooT(foo.typeParameters.single);
+  }
+
+  test_getMember_fromGenericSuper_method_bound2() async {
+    void checkTextendsFooT(TypeParameterElement t) {
+      final otherT = (t.bound as InterfaceType).typeArguments.single.element;
+      expect(otherT, same(t));
+    }
+
+    await resolveTestCode('''
+abstract class Foo<T> {}
+class Bar implements Foo<Bar> {}
+abstract class A<X> {
+  T foo<T extends Foo<T>>() => throw '';
+}
+abstract class B<X> extends A<X> {}
+typedef C<V> = B<List<V>>;
+abstract class D<XD> extends C<XD> {}
+''');
+    final XD = findElement.typeParameter('XD');
+    final typeXD = XD.instantiate(nullabilitySuffix: NullabilitySuffix.none);
+    final D = findElement.classOrMixin('D');
+    final typeD = D.instantiate(
+        typeArguments: [typeXD], nullabilitySuffix: NullabilitySuffix.none);
+    final foo = manager.getMember(typeD, Name(null, 'foo'))!;
+    final foo2 = manager.getMember2(D, Name(null, 'foo'))!;
+    checkTextendsFooT(foo.type.typeFormals.single);
+    checkTextendsFooT(foo2.type.typeFormals.single);
+    checkTextendsFooT(foo2.typeParameters.single);
+    checkTextendsFooT(foo.typeParameters.single);
+  }
+
+  test_getMember_fromGenericSuper_method_returnType() async {
+    await resolveTestCode('''
+abstract class A<E> {
+  T foo<T>();
+}
+
+abstract class B<E> extends A<E> {}
+''');
+    final B = findElement.classOrMixin('B');
+    final foo = manager.getMember2(B, Name(null, 'foo'))!;
+    final T = foo.typeParameters.single;
+    final returnType = foo.returnType;
+    // Check that the return type uses the same `T` as `<T>`.
+    expect(returnType.element, same(T));
+  }
+
+  test_getMember_fromNotGenericSuper_method_returnType() async {
+    await resolveTestCode('''
+abstract class A {
+  T foo<T>();
+}
+
+abstract class B extends A {}
+''');
+    final B = findElement.classOrMixin('B');
+    final foo = manager.getMember2(B, Name(null, 'foo'))!;
+    final T = foo.typeParameters.single;
+    final returnType = foo.returnType;
+    expect(returnType.element, same(T));
+  }
+
+  test_getMember_mixin_notMerge_replace() async {
+    await resolveTestCode('''
+class A<T> {
+  T foo() => throw 0;
+}
+
+mixin M<T> {
+  T foo() => throw 1;
+}
+
+class X extends A<dynamic> with M<Object?> {}
+class Y extends A<Object?> with M<dynamic> {}
+''');
+    _assertGetMember2(
+      className: 'X',
+      name: 'foo',
+      expected: 'M.foo: Object? Function()',
+    );
+    _assertGetMember2(
+      className: 'Y',
+      name: 'foo',
+      expected: 'M.foo: dynamic Function()',
+    );
+  }
+
+  test_getMember_optIn_inheritsOptIn() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  int foo(int a, int? b) => 0;
+}
+''');
+    await resolveTestCode('''
+import 'a.dart';
+class B extends A {
+  int? bar(int a) => 0;
+}
+''');
+    _assertGetMember(
+      className: 'B',
+      name: 'foo',
+      expected: 'A.foo: int Function(int, int?)',
+    );
+    _assertGetMember(
+      className: 'B',
+      name: 'bar',
+      expected: 'B.bar: int? Function(int)',
+    );
+  }
+
+  test_getMember_optIn_inheritsOptOut() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+// @dart = 2.6
+class A {
+  int foo(int a, int b) => 0;
+}
+''');
+    await resolveTestCode('''
+import 'a.dart';
+class B extends A {
+  int? bar(int a) => 0;
+}
+''');
+    _assertGetMember(
+      className: 'B',
+      name: 'foo',
+      expected: 'A.foo: int* Function(int*, int*)*',
+    );
+    _assertGetMember(
+      className: 'B',
+      name: 'bar',
+      expected: 'B.bar: int? Function(int)',
+    );
+  }
+
+  test_getMember_optIn_topMerge_getter_existing() async {
+    await resolveTestCode('''
+class A {
+  dynamic get foo => 0;
+}
+
+class B {
+  Object? get foo => 0;
+}
+
+class X extends A implements B {}
+''');
+
+    _assertGetMember(
+      className: 'X',
+      name: 'foo',
+      expected: 'B.foo: Object? Function()',
+    );
+  }
+
+  test_getMember_optIn_topMerge_getter_synthetic() async {
+    await resolveTestCode('''
+abstract class A {
+  Future<void> get foo;
+}
+
+abstract class B {
+  Future<dynamic> get foo;
+}
+
+abstract class X extends A implements B {}
+''');
+
+    _assertGetMember(
+      className: 'X',
+      name: 'foo',
+      expected: 'X.foo: Future<Object?> Function()',
+    );
+  }
+
+  test_getMember_optIn_topMerge_method() async {
+    await resolveTestCode('''
+class A {
+  Object? foo(dynamic x) {}
+}
+
+class B {
+  dynamic foo(Object? x) {}
+}
+
+class X extends A implements B {}
+''');
+
+    _assertGetMember(
+      className: 'X',
+      name: 'foo',
+      expected: 'X.foo: Object? Function(Object?)',
+    );
+  }
+
+  test_getMember_optIn_topMerge_setter_existing() async {
+    await resolveTestCode('''
+class A {
+  set foo(dynamic _) {}
+}
+
+class B {
+  set foo(Object? _) {}
+}
+
+class X extends A implements B {}
+''');
+
+    _assertGetMember(
+      className: 'X',
+      name: 'foo=',
+      expected: 'B.foo=: void Function(Object?)',
+    );
+  }
+
+  test_getMember_optIn_topMerge_setter_synthetic() async {
+    await resolveTestCode('''
+abstract class A {
+  set foo(Future<void> _);
+}
+
+abstract class B {
+  set foo(Future<dynamic> _);
+}
+
+abstract class X extends A implements B {}
+''');
+
+    _assertGetMember(
+      className: 'X',
+      name: 'foo=',
+      expected: 'X.foo=: void Function(Future<Object?>)',
+    );
+  }
+
+  test_getMember_optOut_inheritsOptIn() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  int foo(int a, int? b) => 0;
+}
+''');
+    await resolveTestCode('''
+// @dart = 2.6
+import 'a.dart';
+class B extends A {
+  int bar(int a) => 0;
+}
+''');
+    _assertGetMember2(
+      className: 'B',
+      name: 'foo',
+      expected: 'A.foo: int* Function(int*, int*)*',
+    );
+
+    _assertGetMember2(
+      className: 'B',
+      name: 'bar',
+      expected: 'B.bar: int* Function(int*)*',
+    );
+  }
+
+  test_getMember_optOut_mixesOptIn() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  int foo(int a, int? b) => 0;
+}
+''');
+    await resolveTestCode('''
+// @dart = 2.6
+import 'a.dart';
+class B with A {
+  int bar(int a) => 0;
+}
+''');
+    _assertGetMember2(
+      className: 'B',
+      name: 'foo',
+      expected: 'A.foo: int* Function(int*, int*)*',
+    );
+    _assertGetMember2(
+      className: 'B',
+      name: 'bar',
+      expected: 'B.bar: int* Function(int*)*',
+    );
+  }
+
+  test_getMember_optOut_passOptIn() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A {
+  int foo(int a, int? b) => 0;
+}
+''');
+    newFile('$testPackageLibPath/b.dart', r'''
+// @dart = 2.6
+import 'a.dart';
+class B extends A {
+  int bar(int a) => 0;
+}
+''');
+    await resolveTestCode('''
+import 'b.dart';
+class C extends B {}
+''');
+    _assertGetMember(
+      className: 'C',
+      name: 'foo',
+      expected: 'A.foo: int* Function(int*, int*)*',
+    );
+    _assertGetMember(
+      className: 'C',
+      name: 'bar',
+      expected: 'B.bar: int* Function(int*)*',
+    );
+  }
+}
+
+@reflectiveTest
+class InheritanceManager3Test_ExtensionType extends ElementsBaseTest {
+  final printerConfiguration = _InstancePrinterConfiguration();
+
+  @override
+  bool get keepLinkingLibraries => true;
+
+  void assertInterfaceText(InterfaceElementImpl element, String expected) {
+    final actual = _interfaceText(element);
+    if (actual != expected) {
+      print('-------- Actual --------');
+      print('$actual------------------------');
+      NodeTextExpectationsCollector.add(actual);
+    }
+    expect(actual, expected);
+  }
+
+  @override
+  void setUp() {
+    super.setUp();
+    printerConfiguration.withoutIdenticalImplemented = true;
+  }
+
+  test_declareGetter() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  int get foo => 0;
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::A::@getter::foo
+  it: self::@extensionType::A::@getter::it
+declared
+  foo: self::@extensionType::A::@getter::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareGetter_implementClass_precludeGetter() async {
+    final library = await buildLibrary(r'''
+class A {
+  int get foo => 0;
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  int get foo => 0;
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@getter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@getter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@getter::foo
+inheritedMap
+  foo: self::@class::A::@getter::foo
+''');
+  }
+
+  test_declareGetter_implementClass_precludeMethod() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  int get foo => 0;
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@getter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@getter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_declareGetter_implementClass_withSetter() async {
+    final library = await buildLibrary(r'''
+class A {
+  set foo(_) {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  int get foo => 0;
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@getter::foo
+  foo=: self::@class::A::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@getter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@class::A::@setter::foo
+inheritedMap
+  foo=: self::@class::A::@setter::foo
+''');
+  }
+
+  test_declareGetter_static() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  static int get foo => 0;
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::A::@getter::it
+declared
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareMethod() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::A::@getter::it
+declared
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareMethod_implementClass_implementExtensionType_wouldConflict() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+extension type B(A it) {
+  void foo() {}
+}
+
+extension type C(A it) implements A, B {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@extensionType::B::@method::foo
+    self::@class::A::@method::foo
+  it
+    self::@extensionType::B::@getter::it
+inheritedMap
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+''');
+  }
+
+  test_declareMethod_implementClass_method2_wouldConflict() async {
+    final library = await buildLibrary(r'''
+class A {
+  int foo() => 0;
+}
+
+class B {
+  String foo() => '0';
+}
+
+extension type C(Object it) implements A, B {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+    self::@class::B::@method::foo
+''');
+  }
+
+  test_declareMethod_implementClass_noPreclude() async {
+    final library = await buildLibrary(r'''
+class A {}
+
+class B extends A {
+  void foo() {}
+}
+
+extension type C(B it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+''');
+  }
+
+  test_declareMethod_implementClass_precludeGetter() async {
+    final library = await buildLibrary(r'''
+class A {
+  int get foo => 0;
+}
+
+class B extends A {
+  void bar() {}
+}
+
+extension type C(B it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@getter::foo
+inheritedMap
+  foo: self::@class::A::@getter::foo
+''');
+  }
+
+  test_declareMethod_implementClass_precludeMethod() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+class B extends A {
+  void bar() {}
+}
+
+extension type C(B it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_declareMethod_implementClass_precludeSetter() async {
+    final library = await buildLibrary(r'''
+class A {
+  set foo(_) {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@class::A::@setter::foo
+inheritedMap
+  foo=: self::@class::A::@setter::foo
+''');
+  }
+
+  test_declareMethod_implementExtensionType_method2_wouldConflict() async {
+    final library = await buildLibrary(r'''
+extension type A1(int it) {
+  void foo() {}
+}
+
+extension type A2(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A1, A2 {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A1::@method::foo
+    self::@extensionType::A2::@method::foo
+  it
+    self::@extensionType::A1::@getter::it
+    self::@extensionType::A2::@getter::it
+inheritedMap
+  foo: self::@extensionType::A1::@method::foo
+  it: self::@extensionType::A1::@getter::it
+''');
+  }
+
+  test_declareMethod_implementExtensionType_precludeGetter() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  int get foo => 0;
+}
+
+extension type B(int it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@getter::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@getter::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareMethod_implementExtensionType_precludeMethod() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@method::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareMethod_implementExtensionType_precludeSetter() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  set foo(_) {}
+}
+
+extension type B(int it) implements A {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo=
+    self::@extensionType::A::@setter::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo=: self::@extensionType::A::@setter::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareMethod_static() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  static void foo() {}
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::A::@getter::it
+declared
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareSetter() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  set foo(int _) {}
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::A::@setter::foo
+  it: self::@extensionType::A::@getter::it
+declared
+  foo=: self::@extensionType::A::@setter::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareSetter_implementClass_withGetter() async {
+    final library = await buildLibrary(r'''
+class A {
+  int get foo => 0;
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  set foo(_) {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@class::A::@getter::foo
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@getter::foo
+inheritedMap
+  foo: self::@class::A::@getter::foo
+''');
+  }
+
+  test_declareSetter_implementClass_withMethod() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {
+  set foo(_) {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_declareSetter_implementExtensionType_withGetter() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  int get foo => 0;
+}
+
+extension type B(int it) implements A {
+  set foo(_) {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::A::@getter::foo
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@getter::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@getter::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareSetter_implementExtensionType_withMethod() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A {
+  set foo(_) {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@method::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_declareSetter_static() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  static set foo(int _) {}
+}
+''');
+
+    final element = library.extensionType('A');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::A::@getter::it
+declared
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementClass_generic_method() async {
+    final library = await buildLibrary(r'''
+class A<T> {
+  void foo(T a) {}
+}
+
+class B extends A<int> {}
+
+extension type C(B it) implements A<int> {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: MethodMember
+    base: self::@class::A::@method::foo
+    substitution: {T: int}
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    MethodMember
+      base: self::@class::A::@method::foo
+      substitution: {T: int}
+inheritedMap
+  foo: MethodMember
+    base: self::@class::A::@method::foo
+    substitution: {T: int}
+''');
+  }
+
+  test_noDeclaration_implementClass_implementExtensionType_hasConflict_methods() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+extension type B(A it) {
+  void foo() {}
+}
+
+extension type C(A it) implements A, B {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@extensionType::B::@method::foo
+    self::@class::A::@method::foo
+  it
+    self::@extensionType::B::@getter::it
+inheritedMap
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+conflicts
+  HasNonExtensionAndExtensionMemberConflict
+    nonExtension
+      self::@class::A::@method::foo
+    extension
+      self::@extensionType::B::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_implementExtensionType_hasConflict_setters() async {
+    final library = await buildLibrary(r'''
+class A {
+  set foo(int _) {}
+}
+
+extension type B(A it) {
+  set foo(int _) {}
+}
+
+extension type C(A it) implements A, B {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@extensionType::B::@setter::foo
+    self::@class::A::@setter::foo
+  it
+    self::@extensionType::B::@getter::it
+inheritedMap
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+conflicts
+  HasNonExtensionAndExtensionMemberConflict
+    nonExtension
+      self::@class::A::@setter::foo
+    extension
+      self::@extensionType::B::@setter::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_implementExtensionType_noConflict_methodPrecludesSetters() async {
+    final library = await buildLibrary(r'''
+class A {
+  set foo(int _) {}
+}
+
+extension type B(A it) {
+  set foo(int _) {}
+}
+
+extension type C(A it) implements A, B {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo: self::@extensionType::C::@method::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@extensionType::B::@setter::foo
+    self::@class::A::@setter::foo
+  it
+    self::@extensionType::B::@getter::it
+inheritedMap
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementClass_implementExtensionType_noConflict_setterPrecludesMethods() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+extension type B(A it) {
+  void foo() {}
+}
+
+extension type C(A it) implements A, B {
+  set foo(int _) {}
+}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  foo=: self::@extensionType::C::@setter::foo
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@extensionType::B::@method::foo
+    self::@class::A::@method::foo
+  it
+    self::@extensionType::B::@getter::it
+inheritedMap
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementClass_method() async {
+    final library = await buildLibrary(r'''
+class A {
+  void foo() {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@class::A::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_method2_hasConflict() async {
+    final library = await buildLibrary(r'''
+class A {
+  int foo() => 0;
+}
+
+class B {
+  String foo() => '0';
+}
+
+extension type C(Object it) implements A, B {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+    self::@class::B::@method::foo
+conflicts
+  CandidatesConflict
+    self::@class::A::@method::foo
+    self::@class::B::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_method2_noConflict() async {
+    final library = await buildLibrary(r'''
+class A {
+  int foo() => 0;
+}
+
+class B {
+  num foo() => 0;
+}
+
+extension type C(Object it) implements A, B {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@class::A::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+    self::@class::B::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_method2_noConflict2() async {
+    final library = await buildLibrary(r'''
+class A {
+  int foo() => 0;
+}
+
+class B1 extends A {}
+
+class B2 extends A {}
+
+abstract class C implements B1, B2 {}
+
+extension type D(C it) implements B1, B2 {}
+''');
+
+    final element = library.extensionType('D');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@class::A::@method::foo
+  it: self::@extensionType::D::@getter::it
+declared
+  it: self::@extensionType::D::@getter::it
+redeclared
+  foo
+    self::@class::A::@method::foo
+inheritedMap
+  foo: self::@class::A::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementClass_setter() async {
+    final library = await buildLibrary(r'''
+class A {
+  set foo(int _) {}
+}
+
+class B extends A {}
+
+extension type C(B it) implements A {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@class::A::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@class::A::@setter::foo
+inheritedMap
+  foo=: self::@class::A::@setter::foo
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_generic_method() async {
+    final library = await buildLibrary(r'''
+extension type A<T>(T it) {
+  void foo(T a) {}
+}
+
+extension type B(int it) implements A<int> {}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: MethodMember
+    base: self::@extensionType::A::@method::foo
+    substitution: {T: int}
+  it: self::@extensionType::B::@getter::it
+declared
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    MethodMember
+      base: self::@extensionType::A::@method::foo
+      substitution: {T: int}
+  it
+    PropertyAccessorMember
+      base: self::@extensionType::A::@getter::it
+      substitution: {T: int}
+inheritedMap
+  foo: MethodMember
+    base: self::@extensionType::A::@method::foo
+    substitution: {T: int}
+  it: PropertyAccessorMember
+    base: self::@extensionType::A::@getter::it
+    substitution: {T: int}
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_method() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A {}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@method::foo
+  it
+    self::@extensionType::A::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_method2_hasConflict() async {
+    final library = await buildLibrary(r'''
+extension type A1(int it) {
+  void foo() {}
+}
+
+extension type A2(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A1, A2 {}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::B::@getter::it
+declared
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A1::@method::foo
+    self::@extensionType::A2::@method::foo
+  it
+    self::@extensionType::A1::@getter::it
+    self::@extensionType::A2::@getter::it
+inheritedMap
+  foo: self::@extensionType::A1::@method::foo
+  it: self::@extensionType::A1::@getter::it
+conflicts
+  NotUniqueExtensionMemberConflict
+    self::@extensionType::A1::@method::foo
+    self::@extensionType::A2::@method::foo
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_method2_noConflict_setterPrecludes() async {
+    final library = await buildLibrary(r'''
+extension type A1(int it) {
+  void foo() {}
+}
+
+extension type A2(int it) {
+  void foo() {}
+}
+
+extension type B(int it) implements A1, A2 {
+  set foo(int _) {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo=: self::@extensionType::B::@setter::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo
+    self::@extensionType::A1::@method::foo
+    self::@extensionType::A2::@method::foo
+  it
+    self::@extensionType::A1::@getter::it
+    self::@extensionType::A2::@getter::it
+inheritedMap
+  foo: self::@extensionType::A1::@method::foo
+  it: self::@extensionType::A1::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_method2_noConflict_unique() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  void foo() {}
+}
+
+extension type B1(int it) implements A {}
+
+extension type B2(int it) implements A {}
+
+extension type C(int it) implements B1, B2 {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo
+    self::@extensionType::A::@method::foo
+  it
+    self::@extensionType::B1::@getter::it
+    self::@extensionType::B2::@getter::it
+inheritedMap
+  foo: self::@extensionType::A::@method::foo
+  it: self::@extensionType::B1::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_setter2_hasConflict() async {
+    final library = await buildLibrary(r'''
+extension type A1(int it) {
+  set foo(int _) {}
+}
+
+extension type A2(int it) {
+  set foo(int _) {}
+}
+
+extension type B(int it) implements A1, A2 {}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::B::@getter::it
+declared
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo=
+    self::@extensionType::A1::@setter::foo
+    self::@extensionType::A2::@setter::foo
+  it
+    self::@extensionType::A1::@getter::it
+    self::@extensionType::A2::@getter::it
+inheritedMap
+  foo=: self::@extensionType::A1::@setter::foo
+  it: self::@extensionType::A1::@getter::it
+conflicts
+  NotUniqueExtensionMemberConflict
+    self::@extensionType::A1::@setter::foo
+    self::@extensionType::A2::@setter::foo
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_setter2_noConflict_methodPrecludes() async {
+    final library = await buildLibrary(r'''
+extension type A1(int it) {
+  set foo(int _) {}
+}
+
+extension type A2(int it) {
+  set foo(int _) {}
+}
+
+extension type B(int it) implements A1, A2 {
+  void foo() {}
+}
+''');
+
+    final element = library.extensionType('B');
+    assertInterfaceText(element, r'''
+map
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+declared
+  foo: self::@extensionType::B::@method::foo
+  it: self::@extensionType::B::@getter::it
+redeclared
+  foo=
+    self::@extensionType::A1::@setter::foo
+    self::@extensionType::A2::@setter::foo
+  it
+    self::@extensionType::A1::@getter::it
+    self::@extensionType::A2::@getter::it
+inheritedMap
+  foo=: self::@extensionType::A1::@setter::foo
+  it: self::@extensionType::A1::@getter::it
+''');
+  }
+
+  test_noDeclaration_implementExtensionType_setter2_noConflict_unique() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {
+  set foo(int _) {}
+}
+
+extension type B1(int it) implements A {}
+
+extension type B2(int it) implements A {}
+
+extension type C(int it) implements B1, B2 {}
+''');
+
+    final element = library.extensionType('C');
+    assertInterfaceText(element, r'''
+map
+  foo=: self::@extensionType::A::@setter::foo
+  it: self::@extensionType::C::@getter::it
+declared
+  it: self::@extensionType::C::@getter::it
+redeclared
+  foo=
+    self::@extensionType::A::@setter::foo
+  it
+    self::@extensionType::B1::@getter::it
+    self::@extensionType::B2::@getter::it
+inheritedMap
+  foo=: self::@extensionType::A::@setter::foo
+  it: self::@extensionType::B1::@getter::it
+''');
+  }
+
+  test_withObjectMembers() async {
+    final library = await buildLibrary(r'''
+extension type A(int it) {}
+''');
+
+    final element = library.extensionType('A');
+    printerConfiguration.withObjectMembers = true;
+    assertInterfaceText(element, r'''
+map
+  it: self::@extensionType::A::@getter::it
+declared
+  it: self::@extensionType::A::@getter::it
+''');
+  }
+
+  String _interfaceText(InterfaceElementImpl element) {
+    final library = element.library;
+    final inheritance = library.session.inheritanceManager;
+    final interface = inheritance.getInterface(element);
+
+    // Should not throw.
+    inheritance.getInheritedConcreteMap2(element);
+
+    // Ensure that `inheritedMap` field is initialized.
+    inheritance.getInheritedMap2(element);
+
+    final buffer = StringBuffer();
+    final sink = TreeStringSink(
+      sink: buffer,
+      indent: '',
+    );
+    final elementPrinter = ElementPrinter(
+      sink: sink,
+      configuration: ElementPrinterConfiguration(),
+      selfUriStr: '${library.source.uri}',
+    );
+
+    _InterfacePrinter(
+      sink: sink,
+      elementPrinter: elementPrinter,
+      configuration: printerConfiguration,
+    ).write(interface);
+
+    return buffer.toString();
+  }
+}
+
+@reflectiveTest
+class InheritanceManager3WithoutNullSafetyTest
+    extends _InheritanceManager3Base {
   test_getInherited_closestSuper() async {
     await resolveTestCode('''
 class A {
@@ -401,29 +2059,6 @@ class X extends A implements I {
 ''');
     _assertInheritedMap('X', r'''
 A.foo: void Function()
-''');
-  }
-
-  test_getInheritedMap_topMerge_method() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-class A {
-  void foo({int a}) {}
-}
-''');
-
-    await resolveTestCode('''
-import 'a.dart';
-
-class B {
-  void foo({required int? a}) {}
-}
-
-class C implements A, B {
-  void foo({int? a}) {}
-}
-''');
-
-    _assertInheritedMap('C', r'''
 ''');
   }
 
@@ -872,106 +2507,6 @@ class C extends B {
     );
   }
 
-  test_getMember_fromGenericClass_method_returnType() async {
-    await resolveTestCode('''
-abstract class B<E> {
-  T foo<T>();
-}
-''');
-    var B = findElement.classOrMixin('B');
-    var foo = manager.getMember2(B, Name(null, 'foo'))!;
-    var T = foo.typeParameters.single;
-    var returnType = foo.returnType;
-    expect(returnType.element, same(T));
-  }
-
-  test_getMember_fromGenericSuper_method_bound() async {
-    void checkTextendsFooT(TypeParameterElement t) {
-      var otherT = (t.bound as InterfaceType).typeArguments.single.element;
-      expect(otherT, same(t));
-    }
-
-    await resolveTestCode('''
-abstract class Foo<TF> {}
-class Bar implements Foo<Bar> {}
-abstract class A<XA> {
-  T foo<T extends Foo<T>>() => throw '';
-}
-abstract class B<XB> extends A<XB> {}
-''');
-    var XB = findElement.typeParameter('XB');
-    var typeXB = XB.instantiate(nullabilitySuffix: NullabilitySuffix.none);
-    var B = findElement.classOrMixin('B');
-    var typeB = B.instantiate(
-        typeArguments: [typeXB], nullabilitySuffix: NullabilitySuffix.none);
-    var foo = manager.getMember(typeB, Name(null, 'foo'))!;
-    var foo2 = manager.getMember2(B, Name(null, 'foo'))!;
-    checkTextendsFooT(foo.type.typeFormals.single);
-    checkTextendsFooT(foo2.type.typeFormals.single);
-    checkTextendsFooT(foo2.typeParameters.single);
-    checkTextendsFooT(foo.typeParameters.single);
-  }
-
-  test_getMember_fromGenericSuper_method_bound2() async {
-    void checkTextendsFooT(TypeParameterElement t) {
-      var otherT = (t.bound as InterfaceType).typeArguments.single.element;
-      expect(otherT, same(t));
-    }
-
-    await resolveTestCode('''
-abstract class Foo<T> {}
-class Bar implements Foo<Bar> {}
-abstract class A<X> {
-  T foo<T extends Foo<T>>() => throw '';
-}
-abstract class B<X> extends A<X> {}
-typedef C<V> = B<List<V>>;
-abstract class D<XD> extends C<XD> {}
-''');
-    var XD = findElement.typeParameter('XD');
-    var typeXD = XD.instantiate(nullabilitySuffix: NullabilitySuffix.none);
-    var D = findElement.classOrMixin('D');
-    var typeD = D.instantiate(
-        typeArguments: [typeXD], nullabilitySuffix: NullabilitySuffix.none);
-    var foo = manager.getMember(typeD, Name(null, 'foo'))!;
-    var foo2 = manager.getMember2(D, Name(null, 'foo'))!;
-    checkTextendsFooT(foo.type.typeFormals.single);
-    checkTextendsFooT(foo2.type.typeFormals.single);
-    checkTextendsFooT(foo2.typeParameters.single);
-    checkTextendsFooT(foo.typeParameters.single);
-  }
-
-  test_getMember_fromGenericSuper_method_returnType() async {
-    await resolveTestCode('''
-abstract class A<E> {
-  T foo<T>();
-}
-
-abstract class B<E> extends A<E> {}
-''');
-    var B = findElement.classOrMixin('B');
-    var foo = manager.getMember2(B, Name(null, 'foo'))!;
-    var T = foo.typeParameters.single;
-    var returnType = foo.returnType;
-    // Check that the return type uses the same `T` as `<T>`.
-    expect(returnType.element, same(T));
-  }
-
-  test_getMember_fromNotGenericSuper_method_returnType() async {
-    await resolveTestCode('''
-abstract class A {
-  T foo<T>();
-}
-
-abstract class B extends A {}
-''');
-    var B = findElement.classOrMixin('B');
-    var foo = manager.getMember2(B, Name(null, 'foo'))!;
-    var T = foo.typeParameters.single;
-    var returnType = foo.returnType;
-    expect(returnType.element, same(T));
-  }
-
   test_getMember_method_covariantByDeclaration_inherited() async {
     await resolveTestCode('''
 abstract class A {
@@ -1012,155 +2547,6 @@ class C extends B implements A {}
     // TODO(scheglov): It would be nice to use `_assertGetMember`.
     expect(member.declaration, same(findElement.method('foo', of: 'B')));
     expect(member.parameters[0].isCovariant, isTrue);
-  }
-
-  test_getMember_mixin_notMerge_replace() async {
-    await resolveTestCode('''
-class A<T> {
-  T foo() => throw 0;
-}
-
-mixin M<T> {
-  T foo() => throw 1;
-}
-
-class X extends A<dynamic> with M<Object?> {}
-class Y extends A<Object?> with M<dynamic> {}
-''');
-    _assertGetMember2(
-      className: 'X',
-      name: 'foo',
-      expected: 'M.foo: Object? Function()',
-    );
-    _assertGetMember2(
-      className: 'Y',
-      name: 'foo',
-      expected: 'M.foo: dynamic Function()',
-    );
-  }
-
-  test_getMember_optIn_inheritsOptIn() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-class A {
-  int foo(int a, int? b) => 0;
-}
-''');
-    await resolveTestCode('''
-import 'a.dart';
-class B extends A {
-  int? bar(int a) => 0;
-}
-''');
-    _assertGetMember(
-      className: 'B',
-      name: 'foo',
-      expected: 'A.foo: int Function(int, int?)',
-    );
-    _assertGetMember(
-      className: 'B',
-      name: 'bar',
-      expected: 'B.bar: int? Function(int)',
-    );
-  }
-
-  test_getMember_optIn_topMerge_getter_existing() async {
-    await resolveTestCode('''
-class A {
-  dynamic get foo => 0;
-}
-
-class B {
-  Object? get foo => 0;
-}
-
-class X extends A implements B {}
-''');
-
-    _assertGetMember(
-      className: 'X',
-      name: 'foo',
-      expected: 'B.foo: Object? Function()',
-    );
-  }
-
-  test_getMember_optIn_topMerge_getter_synthetic() async {
-    await resolveTestCode('''
-abstract class A {
-  Future<void> get foo;
-}
-
-abstract class B {
-  Future<dynamic> get foo;
-}
-
-abstract class X extends A implements B {}
-''');
-
-    _assertGetMember(
-      className: 'X',
-      name: 'foo',
-      expected: 'X.foo: Future<Object?> Function()',
-    );
-  }
-
-  test_getMember_optIn_topMerge_method() async {
-    await resolveTestCode('''
-class A {
-  Object? foo(dynamic x) {}
-}
-
-class B {
-  dynamic foo(Object? x) {}
-}
-
-class X extends A implements B {}
-''');
-
-    _assertGetMember(
-      className: 'X',
-      name: 'foo',
-      expected: 'X.foo: Object? Function(Object?)',
-    );
-  }
-
-  test_getMember_optIn_topMerge_setter_existing() async {
-    await resolveTestCode('''
-class A {
-  set foo(dynamic _) {}
-}
-
-class B {
-  set foo(Object? _) {}
-}
-
-class X extends A implements B {}
-''');
-
-    _assertGetMember(
-      className: 'X',
-      name: 'foo=',
-      expected: 'B.foo=: void Function(Object?)',
-    );
-  }
-
-  test_getMember_optIn_topMerge_setter_synthetic() async {
-    await resolveTestCode('''
-abstract class A {
-  set foo(Future<void> _);
-}
-
-abstract class B {
-  set foo(Future<dynamic> _);
-}
-
-abstract class X extends A implements B {}
-''');
-
-    _assertGetMember(
-      className: 'X',
-      name: 'foo=',
-      expected: 'X.foo=: void Function(Future<Object?>)',
-    );
   }
 
   test_getMember_preferLatest_mixin() async {
@@ -1405,1364 +2791,6 @@ class B extends A {
   }
 }
 
-@reflectiveTest
-class InheritanceManager3Test_elements extends _InheritanceManager3Base2 {
-  test_interface_candidatesConflict() async {
-    var library = await buildLibrary(r'''
-mixin A {
-  void foo(int _);
-}
-
-abstract class B {
-  void foo(String _);
-}
-
-abstract class C extends Object with A implements B {}
-''');
-
-    var element = library.class_('C');
-    assertInterfaceText(element, r'''
-overridden
-  foo
-    <testLibraryFragment>::@mixin::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-superImplemented
-conflicts
-  CandidatesConflict
-    <testLibraryFragment>::@mixin::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-''');
-  }
-
-  test_interface_candidatesConflict_interfaceInAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-
-mixin A {
-  void foo(int _);
-}
-
-abstract class B {
-  void foo(String _);
-}
-
-abstract class C extends Object with A {}
-''');
-
-    newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-
-augment abstract class C implements B {}
-''');
-
-    var library = await buildFileLibrary(a);
-
-    var element = library.class_('C');
-    assertInterfaceText(element, r'''
-overridden
-  foo
-    package:test/a.dart::<fragment>::@mixin::A::@method::foo
-    package:test/a.dart::<fragment>::@class::B::@method::foo
-superImplemented
-conflicts
-  CandidatesConflict
-    package:test/a.dart::<fragment>::@mixin::A::@method::foo
-    package:test/a.dart::<fragment>::@class::B::@method::foo
-''');
-  }
-
-  test_interface_getterMethodConflict() async {
-    var library = await buildLibrary(r'''
-abstract class A {
-  int get foo;
-}
-
-abstract class B {
-  int foo();
-}
-
-abstract class C implements A, B {}
-''');
-
-    var element = library.class_('C');
-    assertInterfaceText(element, r'''
-overridden
-  foo
-    <testLibraryFragment>::@class::A::@getter::foo
-    <testLibraryFragment>::@class::B::@method::foo
-superImplemented
-conflicts
-  GetterMethodConflict
-    getter: <testLibraryFragment>::@class::A::@getter::foo
-    method: <testLibraryFragment>::@class::B::@method::foo
-''');
-  }
-
-  test_interface_getterMethodConflict_declares() async {
-    var library = await buildLibrary(r'''
-abstract class A {
-  int get foo;
-}
-
-abstract class B {
-  int foo();
-}
-
-abstract class C implements A, B {
-  int foo() => 0;
-}
-''');
-
-    var element = library.class_('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@class::C::@method::foo
-declared
-  foo: <testLibraryFragment>::@class::C::@method::foo
-implemented
-  foo: <testLibraryFragment>::@class::C::@method::foo
-overridden
-  foo
-    <testLibraryFragment>::@class::A::@getter::foo
-    <testLibraryFragment>::@class::B::@method::foo
-superImplemented
-conflicts
-  GetterMethodConflict
-    getter: <testLibraryFragment>::@class::A::@getter::foo
-    method: <testLibraryFragment>::@class::B::@method::foo
-''');
-  }
-}
-
-@reflectiveTest
-class InheritanceManager3Test_ExtensionType extends _InheritanceManager3Base2 {
-  @override
-  void setUp() {
-    super.setUp();
-    printerConfiguration.withoutIdenticalImplemented = true;
-  }
-
-  test_declareGetter() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  int get foo => 0;
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::A::@getter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::A::@getter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareGetter_implementClass_precludeGetter() async {
-    var library = await buildLibrary(r'''
-class A {
-  int get foo => 0;
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  int get foo => 0;
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@getter::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@getter::foo
-''');
-  }
-
-  test_declareGetter_implementClass_precludeMethod() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  int get foo => 0;
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_declareGetter_implementClass_withSetter() async {
-    var library = await buildLibrary(r'''
-class A {
-  set foo(_) {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  int get foo => 0;
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  foo=: <testLibraryFragment>::@class::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@getter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@class::A::@setter::foo
-inheritedMap
-  foo=: <testLibraryFragment>::@class::A::@setter::foo
-''');
-  }
-
-  test_declareGetter_static() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  static int get foo => 0;
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareMethod() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareMethod_implementClass_implementExtensionType_wouldConflict() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-extension type B(A it) {
-  void foo() {}
-}
-
-extension type C(A it) implements A, B {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::B::@method::foo
-    <testLibraryFragment>::@class::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::B::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-''');
-  }
-
-  test_declareMethod_implementClass_method2_wouldConflict() async {
-    var library = await buildLibrary(r'''
-class A {
-  int foo() => 0;
-}
-
-class B {
-  String foo() => '0';
-}
-
-extension type C(Object it) implements A, B {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-''');
-  }
-
-  test_declareMethod_implementClass_noPreclude() async {
-    var library = await buildLibrary(r'''
-class A {}
-
-class B extends A {
-  void foo() {}
-}
-
-extension type C(B it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-''');
-  }
-
-  test_declareMethod_implementClass_precludeGetter() async {
-    var library = await buildLibrary(r'''
-class A {
-  int get foo => 0;
-}
-
-class B extends A {
-  void bar() {}
-}
-
-extension type C(B it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@getter::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@getter::foo
-''');
-  }
-
-  test_declareMethod_implementClass_precludeMethod() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-class B extends A {
-  void bar() {}
-}
-
-extension type C(B it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_declareMethod_implementClass_precludeSetter() async {
-    var library = await buildLibrary(r'''
-class A {
-  set foo(_) {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@class::A::@setter::foo
-inheritedMap
-  foo=: <testLibraryFragment>::@class::A::@setter::foo
-''');
-  }
-
-  test_declareMethod_implementExtensionType_method2_wouldConflict() async {
-    var library = await buildLibrary(r'''
-extension type A1(int it) {
-  void foo() {}
-}
-
-extension type A2(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A1, A2 {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A1::@method::foo
-    <testLibraryFragment>::@extensionType::A2::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A1::@getter::it
-    <testLibraryFragment>::@extensionType::A2::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A1::@method::foo
-  it: <testLibraryFragment>::@extensionType::A1::@getter::it
-''');
-  }
-
-  test_declareMethod_implementExtensionType_precludeGetter() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  int get foo => 0;
-}
-
-extension type B(int it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@getter::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@getter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareMethod_implementExtensionType_precludeMethod() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareMethod_implementExtensionType_precludeSetter() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  set foo(_) {}
-}
-
-extension type B(int it) implements A {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::A::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareMethod_static() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  static void foo() {}
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareSetter() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  set foo(int _) {}
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareSetter_implementClass_withGetter() async {
-    var library = await buildLibrary(r'''
-class A {
-  int get foo => 0;
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  set foo(_) {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@class::A::@getter::foo
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@getter::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@getter::foo
-''');
-  }
-
-  test_declareSetter_implementClass_withMethod() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {
-  set foo(_) {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_declareSetter_implementExtensionType_withGetter() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  int get foo => 0;
-}
-
-extension type B(int it) implements A {
-  set foo(_) {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::A::@getter::foo
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@getter::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@getter::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareSetter_implementExtensionType_withMethod() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A {
-  set foo(_) {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_declareSetter_static() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  static set foo(int _) {}
-}
-''');
-
-    var element = library.extensionType('A');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementClass_generic_method() async {
-    var library = await buildLibrary(r'''
-class A<T> {
-  void foo(T a) {}
-}
-
-class B extends A<int> {}
-
-extension type C(B it) implements A<int> {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: MethodMember
-    base: <testLibraryFragment>::@class::A::@method::foo
-    substitution: {T: int}
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    MethodMember
-      base: <testLibraryFragment>::@class::A::@method::foo
-      substitution: {T: int}
-inheritedMap
-  foo: MethodMember
-    base: <testLibraryFragment>::@class::A::@method::foo
-    substitution: {T: int}
-''');
-  }
-
-  test_noDeclaration_implementClass_implementExtensionType_hasConflict_methods() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-extension type B(A it) {
-  void foo() {}
-}
-
-extension type C(A it) implements A, B {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::B::@method::foo
-    <testLibraryFragment>::@class::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::B::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-conflicts
-  HasNonExtensionAndExtensionMemberConflict
-    nonExtension
-      <testLibraryFragment>::@class::A::@method::foo
-    extension
-      <testLibraryFragment>::@extensionType::B::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_implementExtensionType_hasConflict_setters() async {
-    var library = await buildLibrary(r'''
-class A {
-  set foo(int _) {}
-}
-
-extension type B(A it) {
-  set foo(int _) {}
-}
-
-extension type C(A it) implements A, B {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::B::@setter::foo
-    <testLibraryFragment>::@class::A::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::B::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-conflicts
-  HasNonExtensionAndExtensionMemberConflict
-    nonExtension
-      <testLibraryFragment>::@class::A::@setter::foo
-    extension
-      <testLibraryFragment>::@extensionType::B::@setter::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_implementExtensionType_noConflict_methodPrecludesSetters() async {
-    var library = await buildLibrary(r'''
-class A {
-  set foo(int _) {}
-}
-
-extension type B(A it) {
-  set foo(int _) {}
-}
-
-extension type C(A it) implements A, B {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::C::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::B::@setter::foo
-    <testLibraryFragment>::@class::A::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::B::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementClass_implementExtensionType_noConflict_setterPrecludesMethods() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-extension type B(A it) {
-  void foo() {}
-}
-
-extension type C(A it) implements A, B {
-  set foo(int _) {}
-}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::C::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::B::@method::foo
-    <testLibraryFragment>::@class::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::B::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementClass_method() async {
-    var library = await buildLibrary(r'''
-class A {
-  void foo() {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@class::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_method2_hasConflict() async {
-    var library = await buildLibrary(r'''
-class A {
-  int foo() => 0;
-}
-
-class B {
-  String foo() => '0';
-}
-
-extension type C(Object it) implements A, B {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-conflicts
-  CandidatesConflict
-    <testLibraryFragment>::@class::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_method2_noConflict() async {
-    var library = await buildLibrary(r'''
-class A {
-  int foo() => 0;
-}
-
-class B {
-  num foo() => 0;
-}
-
-extension type C(Object it) implements A, B {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@class::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-    <testLibraryFragment>::@class::B::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_method2_noConflict2() async {
-    var library = await buildLibrary(r'''
-class A {
-  int foo() => 0;
-}
-
-class B1 extends A {}
-
-class B2 extends A {}
-
-abstract class C implements B1, B2 {}
-
-extension type D(C it) implements B1, B2 {}
-''');
-
-    var element = library.extensionType('D');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@class::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::D::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::D::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@class::A::@method::foo
-inheritedMap
-  foo: <testLibraryFragment>::@class::A::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementClass_setter() async {
-    var library = await buildLibrary(r'''
-class A {
-  set foo(int _) {}
-}
-
-class B extends A {}
-
-extension type C(B it) implements A {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@class::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@class::A::@setter::foo
-inheritedMap
-  foo=: <testLibraryFragment>::@class::A::@setter::foo
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_generic_method() async {
-    var library = await buildLibrary(r'''
-extension type A<T>(T it) {
-  void foo(T a) {}
-}
-
-extension type B(int it) implements A<int> {}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: MethodMember
-    base: <testLibraryFragment>::@extensionType::A::@method::foo
-    substitution: {T: int}
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    MethodMember
-      base: <testLibraryFragment>::@extensionType::A::@method::foo
-      substitution: {T: int}
-  it
-    PropertyAccessorMember
-      base: <testLibraryFragment>::@extensionType::A::@getter::it
-      substitution: {T: int}
-inheritedMap
-  foo: MethodMember
-    base: <testLibraryFragment>::@extensionType::A::@method::foo
-    substitution: {T: int}
-  it: PropertyAccessorMember
-    base: <testLibraryFragment>::@extensionType::A::@getter::it
-    substitution: {T: int}
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_method() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A {}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_method2_hasConflict() async {
-    var library = await buildLibrary(r'''
-extension type A1(int it) {
-  void foo() {}
-}
-
-extension type A2(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A1, A2 {}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A1::@method::foo
-    <testLibraryFragment>::@extensionType::A2::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A1::@getter::it
-    <testLibraryFragment>::@extensionType::A2::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A1::@method::foo
-  it: <testLibraryFragment>::@extensionType::A1::@getter::it
-conflicts
-  NotUniqueExtensionMemberConflict
-    <testLibraryFragment>::@extensionType::A1::@method::foo
-    <testLibraryFragment>::@extensionType::A2::@method::foo
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_method2_noConflict_setterPrecludes() async {
-    var library = await buildLibrary(r'''
-extension type A1(int it) {
-  void foo() {}
-}
-
-extension type A2(int it) {
-  void foo() {}
-}
-
-extension type B(int it) implements A1, A2 {
-  set foo(int _) {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo=: <testLibraryFragment>::@extensionType::B::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A1::@method::foo
-    <testLibraryFragment>::@extensionType::A2::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::A1::@getter::it
-    <testLibraryFragment>::@extensionType::A2::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A1::@method::foo
-  it: <testLibraryFragment>::@extensionType::A1::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_method2_noConflict_unique() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  void foo() {}
-}
-
-extension type B1(int it) implements A {}
-
-extension type B2(int it) implements A {}
-
-extension type C(int it) implements B1, B2 {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo
-    <testLibraryFragment>::@extensionType::A::@method::foo
-  it
-    <testLibraryFragment>::@extensionType::B1::@getter::it
-    <testLibraryFragment>::@extensionType::B2::@getter::it
-inheritedMap
-  foo: <testLibraryFragment>::@extensionType::A::@method::foo
-  it: <testLibraryFragment>::@extensionType::B1::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_setter2_hasConflict() async {
-    var library = await buildLibrary(r'''
-extension type A1(int it) {
-  set foo(int _) {}
-}
-
-extension type A2(int it) {
-  set foo(int _) {}
-}
-
-extension type B(int it) implements A1, A2 {}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::A1::@setter::foo
-    <testLibraryFragment>::@extensionType::A2::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::A1::@getter::it
-    <testLibraryFragment>::@extensionType::A2::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::A1::@setter::foo
-  it: <testLibraryFragment>::@extensionType::A1::@getter::it
-conflicts
-  NotUniqueExtensionMemberConflict
-    <testLibraryFragment>::@extensionType::A1::@setter::foo
-    <testLibraryFragment>::@extensionType::A2::@setter::foo
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_setter2_noConflict_methodPrecludes() async {
-    var library = await buildLibrary(r'''
-extension type A1(int it) {
-  set foo(int _) {}
-}
-
-extension type A2(int it) {
-  set foo(int _) {}
-}
-
-extension type B(int it) implements A1, A2 {
-  void foo() {}
-}
-''');
-
-    var element = library.extensionType('B');
-    assertInterfaceText(element, r'''
-map
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-declared
-  foo: <testLibraryFragment>::@extensionType::B::@method::foo
-  it: <testLibraryFragment>::@extensionType::B::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::A1::@setter::foo
-    <testLibraryFragment>::@extensionType::A2::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::A1::@getter::it
-    <testLibraryFragment>::@extensionType::A2::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::A1::@setter::foo
-  it: <testLibraryFragment>::@extensionType::A1::@getter::it
-''');
-  }
-
-  test_noDeclaration_implementExtensionType_setter2_noConflict_unique() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {
-  set foo(int _) {}
-}
-
-extension type B1(int it) implements A {}
-
-extension type B2(int it) implements A {}
-
-extension type C(int it) implements B1, B2 {}
-''');
-
-    var element = library.extensionType('C');
-    assertInterfaceText(element, r'''
-map
-  foo=: <testLibraryFragment>::@extensionType::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::C::@getter::it
-redeclared
-  foo=
-    <testLibraryFragment>::@extensionType::A::@setter::foo
-  it
-    <testLibraryFragment>::@extensionType::B1::@getter::it
-    <testLibraryFragment>::@extensionType::B2::@getter::it
-inheritedMap
-  foo=: <testLibraryFragment>::@extensionType::A::@setter::foo
-  it: <testLibraryFragment>::@extensionType::B1::@getter::it
-''');
-  }
-
-  test_withObjectMembers() async {
-    var library = await buildLibrary(r'''
-extension type A(int it) {}
-''');
-
-    var element = library.extensionType('A');
-    printerConfiguration.withObjectMembers = true;
-    assertInterfaceText(element, r'''
-map
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-declared
-  it: <testLibraryFragment>::@extensionType::A::@getter::it
-''');
-  }
-}
-
 class _InheritanceManager3Base extends PubPackageResolutionTest {
   late final InheritanceManager3 manager;
 
@@ -2783,7 +2811,7 @@ class _InheritanceManager3Base extends PubPackageResolutionTest {
       expect(actual, expected);
 
       if (element is PropertyAccessorElement) {
-        var variable = element.variable2!;
+        var variable = element.variable;
         expect(variable.enclosingElement, same(element.enclosingElement));
         expect(variable.name, element.displayName);
         if (element.isGetter) {
@@ -2836,6 +2864,7 @@ class _InheritanceManager3Base extends PubPackageResolutionTest {
       className: className,
       name: name,
       expected: expected,
+      concrete: false,
     );
 
     _assertGetMember(
@@ -2868,7 +2897,7 @@ class _InheritanceManager3Base extends PubPackageResolutionTest {
       var enclosingElement = element.enclosingElement;
       if (enclosingElement.name == 'Object') continue;
 
-      var typeStr = type.getDisplayString();
+      var typeStr = type.getDisplayString(withNullability: false);
       lines.add('${enclosingElement.name}.${element.name}: $typeStr');
     }
 
@@ -2879,53 +2908,6 @@ class _InheritanceManager3Base extends PubPackageResolutionTest {
       print(actual);
     }
     expect(actual, expected);
-  }
-}
-
-class _InheritanceManager3Base2 extends ElementsBaseTest {
-  final printerConfiguration = _InstancePrinterConfiguration();
-
-  @override
-  bool get keepLinkingLibraries => true;
-
-  void assertInterfaceText(InterfaceElementImpl element, String expected) {
-    var actual = _interfaceText(element);
-    if (actual != expected) {
-      print('-------- Actual --------');
-      print('$actual------------------------');
-      NodeTextExpectationsCollector.add(actual);
-    }
-    expect(actual, expected);
-  }
-
-  String _interfaceText(InterfaceElementImpl element) {
-    var library = element.library;
-    var inheritance = library.session.inheritanceManager;
-    var interface = inheritance.getInterface(element);
-
-    // Should not throw.
-    inheritance.getInheritedConcreteMap2(element);
-
-    // Ensure that `inheritedMap` field is initialized.
-    inheritance.getInheritedMap2(element);
-
-    var buffer = StringBuffer();
-    var sink = TreeStringSink(
-      sink: buffer,
-      indent: '',
-    );
-    var elementPrinter = ElementPrinter(
-      sink: sink,
-      configuration: ElementPrinterConfiguration(),
-    );
-
-    _InterfacePrinter(
-      sink: sink,
-      elementPrinter: elementPrinter,
-      configuration: printerConfiguration,
-    ).write(interface);
-
-    return buffer.toString();
   }
 }
 
@@ -2989,19 +2971,13 @@ class _InterfacePrinter {
 
     _sink.writelnWithIndent('conflicts');
     _sink.withIndent(() {
-      for (var conflict in conflicts) {
+      for (final conflict in conflicts) {
         switch (conflict) {
           case CandidatesConflict _:
             _elementPrinter.writeElementList(
               'CandidatesConflict',
               conflict.candidates,
             );
-          case GetterMethodConflict _:
-            _sink.writelnWithIndent('GetterMethodConflict');
-            _sink.withIndent(() {
-              _elementPrinter.writeNamedElement('getter', conflict.getter);
-              _elementPrinter.writeNamedElement('method', conflict.method);
-            });
           case HasNonExtensionAndExtensionMemberConflict _:
             _sink.writelnWithIndent(
               'HasNonExtensionAndExtensionMemberConflict',
@@ -3046,7 +3022,7 @@ class _InterfacePrinter {
     String name,
     Map<Name, List<ExecutableElement>> map,
   ) {
-    var isEmpty = map.values.flattenedToList.where((element) {
+    final isEmpty = map.values.expand((elements) => elements).where((element) {
       if (_configuration.withObjectMembers) return true;
       return !element.isObjectMember;
     }).isEmpty;
@@ -3054,23 +3030,23 @@ class _InterfacePrinter {
 
     _sink.writelnWithIndent(name);
     _sink.withIndent(() {
-      for (var entry in _sortedEntries(map.entries)) {
-        var name = _nameObjStr(entry.key);
-        var elements = _withoutObject(entry.value);
+      for (final entry in _sortedEntries(map.entries)) {
+        final name = _nameObjStr(entry.key);
+        final elements = _withoutObject(entry.value);
         _elementPrinter.writeElementList(name, elements);
       }
     });
   }
 
   void _writeNameToMap(String name, Map<Name, ExecutableElement> map) {
-    var isEmpty = map.values.none(_shouldWrite);
+    final isEmpty = map.values.none(_shouldWrite);
     if (isEmpty) return;
 
     _sink.writelnWithIndent(name);
     _sink.withIndent(() {
-      for (var entry in _sortedEntries(map.entries)) {
-        var name = _nameObjStr(entry.key);
-        var element = entry.value;
+      for (final entry in _sortedEntries(map.entries)) {
+        final name = _nameObjStr(entry.key);
+        final element = entry.value;
         if (_shouldWrite(element)) {
           _elementPrinter.writeNamedElement(name, element);
         }
@@ -3080,13 +3056,6 @@ class _InterfacePrinter {
 }
 
 extension on LibraryElementImpl {
-  ClassElementImpl class_(String name) {
-    return topLevelElements
-        .whereType<ClassElementImpl>()
-        .where((element) => !element.isAugmentation)
-        .singleWhere((e) => e.name == name);
-  }
-
   ExtensionTypeElementImpl extensionType(String name) {
     return topLevelElements
         .whereType<ExtensionTypeElementImpl>()

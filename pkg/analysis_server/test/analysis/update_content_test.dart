@@ -29,8 +29,7 @@ class UpdateContentTest extends PubPackageAnalysisServerTest {
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_ERRORS) {
-      var decoded = AnalysisErrorsParams.fromNotification(notification,
-          clientUriConverter: server.uriConverter);
+      var decoded = AnalysisErrorsParams.fromNotification(notification);
       String format(AnalysisError e) => '${e.location.startLine}: ${e.message}';
       filesErrors[getFile(decoded.file)] = decoded.errors.map(format).toList();
     }
@@ -52,7 +51,7 @@ class UpdateContentTest extends PubPackageAnalysisServerTest {
         testFile.path: ChangeContentOverlay([
           SourceEdit(0, 0, ''),
         ]),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     assertResponseFailure(
       response,
@@ -65,7 +64,7 @@ class UpdateContentTest extends PubPackageAnalysisServerTest {
     var response = await handleRequest(
       AnalysisUpdateContentParams({
         'test.dart': AddContentOverlay(''),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     expect(
       response,
@@ -77,7 +76,7 @@ class UpdateContentTest extends PubPackageAnalysisServerTest {
     var response = await handleRequest(
       AnalysisUpdateContentParams({
         convertPath('/foo/../bar/test.dart'): AddContentOverlay(''),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     expect(
       response,
@@ -87,8 +86,8 @@ class UpdateContentTest extends PubPackageAnalysisServerTest {
 
   Future<void> test_multiple_contexts() async {
     writePackageConfig(
-      workspaceRootPath,
-      config: PackageConfigFileBuilder()
+      getFolder(workspaceRootPath),
+      PackageConfigFileBuilder()
         ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa'),
     );
 
@@ -124,8 +123,7 @@ void g() {
       // Overlay the content of baz.dart to eliminate the errors.
       await handleSuccessfulRequest(
         AnalysisUpdateContentParams(
-                {aaa.path: AddContentOverlay('void f() {}')})
-            .toRequest('0', clientUriConverter: server.uriConverter),
+            {aaa.path: AddContentOverlay('void f() {}')}).toRequest('0'),
       );
     }
 
@@ -147,7 +145,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         '/project/main.dart': AddContentOverlay('import "target.dart";'),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     expect(filesErrors, {
@@ -158,7 +156,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         '/project/target.dart': AddContentOverlay('import "none.dart";')
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     expect(filesErrors, {
@@ -181,7 +179,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         b.path: AddContentOverlay(''),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     expect(filesErrors[a], isEmpty);
@@ -191,7 +189,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         b.path: RemoveContentOverlay(),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     expect(filesErrors[a], isEmpty);
@@ -209,7 +207,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay('void f() {} void f() {}'),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     // clear errors and make a no-op change
@@ -219,7 +217,7 @@ void g() {
         testFile.path: ChangeContentOverlay([
           SourceEdit(5, 1, 'f'),
         ]),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     // errors should have been resent
@@ -236,7 +234,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay('void f() {} void f() {}'),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     // clear errors and make a no-op change
@@ -246,7 +244,7 @@ void g() {
         testFile.path: ChangeContentOverlay([
           SourceEdit(5, 1, 'f'),
         ]),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     await waitForTasksFinished();
     // errors should have been resent
@@ -262,7 +260,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams(<String, Object>{
         filePath: AddContentOverlay(fileContent),
-      }).toRequest('0', clientUriConverter: server.uriConverter),
+      }).toRequest('0'),
     );
     var params = pluginManager.analysisUpdateContentParams!;
     var files = params.files;
@@ -281,7 +279,7 @@ void g() {
           SourceEdit(8, 1, "'"),
           SourceEdit(18, 1, "'"),
         ]),
-      }).toRequest('1', clientUriConverter: server.uriConverter),
+      }).toRequest('1'),
     );
     params = pluginManager.analysisUpdateContentParams!;
     expect(params, isNotNull);
@@ -298,7 +296,7 @@ void g() {
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams(<String, Object>{
         filePath: RemoveContentOverlay(),
-      }).toRequest('2', clientUriConverter: server.uriConverter),
+      }).toRequest('2'),
     );
     params = pluginManager.analysisUpdateContentParams!;
     expect(params, isNotNull);

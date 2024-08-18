@@ -2,14 +2,18 @@
   "version": 1,
   "experimentSets": {
     "sdkExperiments": [],
-    "macros": [
-      "enhanced-parts",
-      "macros"
+    "extensionTypes": [
+      "inline-class"
     ]
   },
   "sdk": {
     "default": {
       "experimentSet": "sdkExperiments"
+    },
+    "libraries": {
+      "js_interop": {
+        "experimentSet": "extensionTypes"
+      }
     },
     "_example_libraries": {
       "ui": {
@@ -18,8 +22,8 @@
     }
   },
   "packages": {
-    "json": {
-      "experimentSet": "macros"
+    "web": {
+      "experimentSet": "extensionTypes"
     }
   }
 }

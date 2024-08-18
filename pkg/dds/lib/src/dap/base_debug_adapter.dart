@@ -143,21 +143,16 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
           'sendResponse was not called in ${request.command}');
     } catch (e, s) {
       // TODO(helin24): Consider adding an error type to DebugAdapterException.
-      final isDapException = e is DebugAdapterException;
-      final messageText = isDapException ? e.message : '$e';
+      final messageText = e is DebugAdapterException ? e.message : '$e';
       final errorMessage = Message(
         id: ErrorMessageType.general,
-        format: '{message}',
-        // We include stack in the payload for debugging, but we don't include
-        // it in format above because we don't want it used to build the error
-        // shown to the user.
+        format: '{message}\n{stack}',
         variables: {'message': messageText, 'stack': '$s'},
         // DAP specification did not specify how to handle the case where
         // showUser does not exist. VSCode defaults to true, but some other
         // systems might default it to false.
-        // Only show errors that are intended to be shown to the user. These
-        // include any errors in LaunchRequest or AttachRequest.
-        showUser: isDapException && e.showToUser == true,
+        // Always pass true to be consistent.
+        showUser: true,
       );
       final response = Response(
         success: false,
@@ -173,7 +168,7 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
 
   Future<void> initializeRequest(
     Request request,
-    DartInitializeRequestArguments args,
+    InitializeRequestArguments args,
     void Function(Capabilities) sendResponse,
   );
 
@@ -330,7 +325,7 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
       handle(
         request,
         initializeRequest,
-        DartInitializeRequestArguments.fromJson,
+        InitializeRequestArguments.fromJson,
         responseWriter,
       );
     } else if (request.command == 'launch') {

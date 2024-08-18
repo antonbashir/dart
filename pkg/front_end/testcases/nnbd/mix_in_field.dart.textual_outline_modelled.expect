@@ -5,7 +5,6 @@ class Class extends Object with Mixin {
 }
 
 main() {}
-
 mixin Mixin {
   FutureOr<Null> m;
 }

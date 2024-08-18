@@ -5,39 +5,16 @@
 import("../../sdk_args.gni")
 
 config("binaryen_flags") {
-  cflags = []
-  if (is_clang || !is_win) {
-    # Clang or GCC
-    cflags += [
-      "-Wno-deprecated-declarations",
-      "-Wno-unused-but-set-parameter",
-      "-Wno-unused-function",
+  if (is_clang) {
+    cflags = [ "-Wno-unused-but-set-parameter" ]
+  } else if (!is_win) {
+    cflags = [
       "-Wno-unused-variable",
-      "-Wno-pessimizing-move",
-      "-Wno-sign-compare",
-      "-Wno-range-loop-construct",
+
+      # Bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86465#c16 triggered by
+      # https://github.com/WebAssembly/binaryen/blob/cdb7aeab40b4c522de20b242019f7e88641445d5/src/wasm/wasm-type.cpp#L530.
+      "-Wno-maybe-uninitialized",
     ]
-
-    if (is_clang) {
-      # Clang
-      cflags += [
-        "-Wno-header-hygiene",
-        "-Wno-unused-private-field",
-        "-Wno-inconsistent-missing-override",
-        "-Wno-unknown-warning-option",
-      ]
-    } else {
-      # GCC
-      cflags += [
-        "-Wno-redundant-move",
-        "-Wno-uninitialized",
-        "-Wno-init-list-lifetime",
-
-        # Bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86465#c16 triggered by
-        # https://github.com/WebAssembly/binaryen/blob/cdb7aeab40b4c522de20b242019f7e88641445d5/src/wasm/wasm-type.cpp#L530.
-        "-Wno-maybe-uninitialized",
-      ]
-    }
   }
 
   if (is_win) {
@@ -75,14 +52,12 @@ source_set("binaryen_sources") {
     "src/src/analysis",
     "src/src/asmjs",
     "src/src/cfg",
-    "src/src/emscripten-optimizer",
     "src/src/ir",
-    "src/src/parser",
     "src/src/passes",
     "src/src/support",
-    "src/src/tools/fuzzing",
     "src/src/wasm",
-    "src/third_party/llvm-project",
+    "src/src/tools/fuzzing",
+    "src/src/emscripten-optimizer",
   ]
 
   # We avoid listing all sources manually, this means when updating
@@ -100,10 +75,7 @@ source_set("binaryen_sources") {
     }
   }
 
-  include_dirs = [
-    "src/src",
-    "src/third_party/llvm-project/include",
-  ]
+  include_dirs = [ "src/src" ]
 
   # Ensure WasmIntrinsics.cpp/config.h files are generated.
   deps = [ ":generate_needed_files" ]

@@ -6,10 +6,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/file_source.dart';
-import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/context/packages.dart';
-import 'package:analyzer/src/file_system/file_system.dart';
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
@@ -53,7 +50,7 @@ class BlazeFileUriResolver extends ResourceUriResolver {
     String filePath = fileUriToNormalizedPath(provider.pathContext, uri);
     var file = workspace.findFile(filePath);
     if (file != null) {
-      return FileSource(file, uri);
+      return file.createSource(uri);
     }
     return null;
   }
@@ -98,7 +95,7 @@ class BlazePackageUriResolver extends UriResolver {
     if (fullFilePath != null) {
       var file = _workspace.findFile(fullFilePath);
       if (file != null) {
-        return FileSource(file, uri);
+        source = file.createSource(uri);
       }
     }
     _sourceCache[uri] = source;
@@ -451,7 +448,7 @@ class BlazeWorkspace extends Workspace
     for (var folder in startFolder.withAncestors) {
       var parent = folder.parent;
 
-      var blazeOutFolder = parent.getChildAssumingFolder('blaze-out');
+      final blazeOutFolder = parent.getChildAssumingFolder('blaze-out');
       if (blazeOutFolder.exists) {
         // Found the "out" folder; must be a Blaze workspace.
         String root = parent.path;
@@ -508,7 +505,7 @@ class BlazeWorkspace extends Workspace
   /// If no "bin" folder is found in any of those locations, empty list is
   /// returned.
   static List<String> _findBinFolderPaths(Folder root) {
-    var out = root.getChildAssumingFolder('blaze-out');
+    final out = root.getChildAssumingFolder('blaze-out');
     if (!out.exists) {
       return [];
     }
@@ -546,7 +543,7 @@ class BlazeWorkspace extends Workspace
       return null;
     }
 
-    var pattern = RegExp(r'(^|\s+)_version\s*=\s*"(\d+\.\d+)"');
+    final pattern = RegExp(r'(^|\s+)_version\s*=\s*"(\d+\.\d+)"');
     for (var match in pattern.allMatches(content)) {
       return Version.parse('${match.group(2)}.0');
     }
@@ -598,13 +595,6 @@ class BlazeWorkspacePackage extends WorkspacePackage {
 
     var path = source.fullName;
     return workspace.findPackageFor(path)?.root == root;
-  }
-
-  @override
-  bool isInTestDirectory(File file) {
-    var resourceProvider = workspace.provider;
-    var packageRoot = resourceProvider.getFolder(root);
-    return packageRoot.getChildAssumingFolder('test').contains(file.path);
   }
 
   @override

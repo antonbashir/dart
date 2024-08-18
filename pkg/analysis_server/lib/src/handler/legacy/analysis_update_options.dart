@@ -19,8 +19,7 @@ class AnalysisUpdateOptionsHandler extends LegacyHandler {
   @override
   Future<void> handle() async {
     // options
-    var params = AnalysisUpdateOptionsParams.fromRequest(request,
-        clientUriConverter: server.uriConverter);
+    var params = AnalysisUpdateOptionsParams.fromRequest(request);
     var newOptions = params.options;
     var updaters = <OptionUpdater>[];
     var generateHints = newOptions.generateHints;

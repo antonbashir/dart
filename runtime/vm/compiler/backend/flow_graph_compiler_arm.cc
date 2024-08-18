@@ -26,6 +26,7 @@
 namespace dart {
 
 DEFINE_FLAG(bool, trap_on_deoptimization, false, "Trap on deoptimization.");
+DEFINE_FLAG(bool, unbox_doubles, true, "Optimize double arithmetic.");
 DECLARE_FLAG(bool, enable_simd_inline);
 
 void FlowGraphCompiler::ArchSpecificInitialization() {
@@ -63,6 +64,10 @@ FlowGraphCompiler::~FlowGraphCompiler() {
   for (int i = 0; i < block_info_.length(); ++i) {
     ASSERT(!block_info_[i]->jump_label()->IsLinked());
   }
+}
+
+bool FlowGraphCompiler::SupportsUnboxedDoubles() {
+  return FLAG_unbox_doubles;
 }
 
 bool FlowGraphCompiler::SupportsUnboxedSimd128() {
@@ -224,6 +229,50 @@ void FlowGraphCompiler::GenerateBoolToJump(Register bool_register,
   __ b(is_true, true_condition);
   __ b(is_false);
   __ Bind(&fall_through);
+}
+
+void FlowGraphCompiler::GenerateMethodExtractorIntrinsic(
+    const Function& extracted_method,
+    intptr_t type_arguments_field_offset) {
+  // No frame has been setup here.
+  ASSERT(!__ constant_pool_allowed());
+  DEBUG_ASSERT(extracted_method.IsNotTemporaryScopedHandle());
+
+  const Code& build_method_extractor =
+      Code::ZoneHandle(extracted_method.IsGeneric()
+                           ? isolate_group()
+                                 ->object_store()
+                                 ->build_generic_method_extractor_code()
+                           : isolate_group()
+                                 ->object_store()
+                                 ->build_nongeneric_method_extractor_code());
+
+  const intptr_t stub_index =
+      __ object_pool_builder().FindObject(build_method_extractor);
+  const intptr_t function_index =
+      __ object_pool_builder().FindObject(extracted_method);
+
+  // We use a custom pool register to preserve caller PP.
+  Register kPoolReg = R0;
+
+  // R1 = extracted function
+  // R4 = offset of type argument vector (or 0 if class is not generic)
+  if (FLAG_precompiled_mode) {
+    kPoolReg = PP;
+  } else {
+    __ LoadFieldFromOffset(kPoolReg, CODE_REG,
+                           compiler::target::Code::object_pool_offset());
+  }
+  __ LoadImmediate(R4, type_arguments_field_offset);
+  __ LoadFieldFromOffset(
+      R1, kPoolReg,
+      compiler::target::ObjectPool::element_offset(function_index));
+  __ LoadFieldFromOffset(
+      CODE_REG, kPoolReg,
+      compiler::target::ObjectPool::element_offset(stub_index));
+  __ Branch(compiler::FieldAddress(
+      CODE_REG,
+      compiler::target::Code::entry_point_offset(Code::EntryKind::kUnchecked)));
 }
 
 void FlowGraphCompiler::EmitFrameEntry() {
@@ -544,11 +593,23 @@ void FlowGraphCompiler::EmitInstanceCallAOT(const ICData& ic_data,
   __ LoadFromOffset(
       R0, SP,
       (ic_data.SizeWithoutTypeArgs() - 1) * compiler::target::kWordSize);
-  // The AOT runtime will replace the slot in the object pool with the
-  // entrypoint address - see app_snapshot.cc.
-  const auto snapshot_behavior =
-      compiler::ObjectPoolBuilderEntry::kResetToSwitchableCallMissEntryPoint;
-  CLOBBERS_LR(__ LoadUniqueObject(LR, initial_stub, AL, snapshot_behavior));
+  if (FLAG_precompiled_mode) {
+    // The AOT runtime will replace the slot in the object pool with the
+    // entrypoint address - see app_snapshot.cc.
+    const auto snapshot_behavior =
+        compiler::ObjectPoolBuilderEntry::kResetToSwitchableCallMissEntryPoint;
+    CLOBBERS_LR(__ LoadUniqueObject(LR, initial_stub, AL, snapshot_behavior));
+  } else {
+    __ LoadUniqueObject(CODE_REG, initial_stub);
+    const intptr_t entry_point_offset =
+        entry_kind == Code::EntryKind::kNormal
+            ? compiler::target::Code::entry_point_offset(
+                  Code::EntryKind::kMonomorphic)
+            : compiler::target::Code::entry_point_offset(
+                  Code::EntryKind::kMonomorphicUnchecked);
+    CLOBBERS_LR(
+        __ ldr(LR, compiler::FieldAddress(CODE_REG, entry_point_offset)));
+  }
   __ LoadUniqueObject(R9, data);
   CLOBBERS_LR(__ blx(LR));
 

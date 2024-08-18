@@ -217,12 +217,8 @@ abstract class MemberUsage extends AbstractUsage<MemberUse> {
   ///
   /// For a function this is a normal invocation, for a field this is a read
   /// access followed by an invocation of the function-like value.
-  ///
-  /// If [forceAccesses] is true, the provided [accesses] will be applied to
-  /// this usage even if there are no matching pending invokes.
   EnumSet<MemberUse> invoke(
-          EnumSet<Access> accesses, CallStructure callStructure,
-          {bool forceAccesses = false}) =>
+          EnumSet<Access> accesses, CallStructure callStructure) =>
       MemberUses.NONE;
 
   @override
@@ -322,19 +318,13 @@ class PropertyUsage extends MemberUsage {
 
   @override
   EnumSet<MemberUse> invoke(
-      EnumSet<Access> accesses, CallStructure callStructure,
-      {bool forceAccesses = false}) {
+      EnumSet<Access> accesses, CallStructure callStructure) {
     // We use `hasRead` here instead of `hasInvoke` because getters only have
     // 'normal use' (they cannot be closurized). This means that invoking an
     // already read getter does not result a new member use.
     bool alreadyHasRead = hasRead;
     reads.addAll(potentialReads.removeAll(Accesses.staticAccess));
-    final removedPotentialInvokes = potentialInvokes.removeAll(accesses);
-    if (forceAccesses) {
-      invokes.addAll(accesses);
-    } else {
-      invokes.addAll(removedPotentialInvokes);
-    }
+    invokes.addAll(potentialInvokes.removeAll(accesses));
     if (alreadyHasRead) {
       return MemberUses.NONE;
     }
@@ -455,19 +445,13 @@ class FieldUsage extends MemberUsage {
 
   @override
   EnumSet<MemberUse> invoke(
-      EnumSet<Access> accesses, CallStructure callStructure,
-      {bool forceAccesses = false}) {
+      EnumSet<Access> accesses, CallStructure callStructure) {
     // We use `hasRead` here instead of `hasInvoke` because fields only have
     // 'normal use' (they cannot be closurized). This means that invoking an
     // already read field does not result a new member use.
     bool alreadyHasRead = hasRead;
     reads.addAll(potentialReads.removeAll(Accesses.staticAccess));
-    final removedPotentialInvokes = potentialInvokes.removeAll(accesses);
-    if (forceAccesses) {
-      invokes.addAll(accesses);
-    } else {
-      invokes.addAll(removedPotentialInvokes);
-    }
+    invokes.addAll(potentialInvokes.removeAll(accesses));
     if (alreadyHasRead) {
       return MemberUses.NONE;
     }
@@ -560,16 +544,10 @@ class MethodUsage extends MemberUsage {
 
   @override
   EnumSet<MemberUse> invoke(
-      EnumSet<Access> accesses, CallStructure callStructure,
-      {bool forceAccesses = false}) {
+      EnumSet<Access> accesses, CallStructure callStructure) {
     bool alreadyHasInvoke = hasInvoke;
     parameterUsage.invoke(callStructure);
-    final removedPotentialInvokes = potentialInvokes.removeAll(accesses);
-    if (forceAccesses) {
-      invokes.addAll(accesses);
-    } else {
-      invokes.addAll(removedPotentialInvokes);
-    }
+    invokes.addAll(potentialInvokes.removeAll(accesses));
     if (alreadyHasInvoke) {
       return MemberUses.NONE;
     } else {
@@ -717,7 +695,7 @@ class ParameterUsage {
 
   ParameterUsage.cloned(this._parameterStructure,
       {required bool hasInvoke,
-      required int? providedPositionalParameters,
+      required providedPositionalParameters,
       required bool areAllTypeParametersProvided,
       required Set<String>? unprovidedNamedParameters})
       : _hasInvoke = hasInvoke,

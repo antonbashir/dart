@@ -9,8 +9,8 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analyzer.dart';
+import '../ast.dart';
 import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../util/flutter_utils.dart';
 
 const _desc = r'DO reference all public properties in debug methods.';
@@ -67,16 +67,22 @@ class Absorber extends Widget {
 ''';
 
 class DiagnosticDescribeAllProperties extends LintRule {
+  static const LintCode code = LintCode(
+      'diagnostic_describe_all_properties',
+      "The public property isn't described by either 'debugFillProperties' or "
+          "'debugDescribeChildren'.",
+      correctionMessage: 'Try describing the property.');
+
   DiagnosticDescribeAllProperties()
       : super(
           name: 'diagnostic_describe_all_properties',
           description: _desc,
           details: _details,
-          categories: {LintRuleCategory.errorProne, LintRuleCategory.flutter},
+          group: Group.errors,
         );
 
   @override
-  LintCode get lintCode => LinterLintCode.diagnostic_describe_all_properties;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -123,7 +129,7 @@ class _Visitor extends SimpleAstVisitor {
   }
 
   bool skipForDiagnostic({Element? element, DartType? type, Token? name}) =>
-      name.isPrivate || _isOverridingMember(element) || isWidgetProperty(type);
+      isPrivate(name) || _isOverridingMember(element) || isWidgetProperty(type);
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {

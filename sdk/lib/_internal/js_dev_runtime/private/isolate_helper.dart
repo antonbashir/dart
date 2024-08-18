@@ -42,11 +42,14 @@ class TimerImpl implements Timer {
       int currentHotRestartIteration = dart.hotRestartIteration;
       void internalCallback() {
         _handle = null;
+        dart.removeAsyncCallback();
         _tick = 1;
         if (currentHotRestartIteration == dart.hotRestartIteration) {
           callback();
         }
       }
+
+      dart.addAsyncCallback();
 
       _handle = JS(
           'int', '#.setTimeout(#, #)', global, internalCallback, milliseconds);
@@ -58,6 +61,7 @@ class TimerImpl implements Timer {
   TimerImpl.periodic(int milliseconds, void callback(Timer timer))
       : _once = false {
     if (hasTimer()) {
+      dart.addAsyncCallback();
       int start = JS<int>('!', 'Date.now()');
       int currentHotRestartIteration = dart.hotRestartIteration;
       _handle = JS<int>('!', '#.setInterval(#, #)', global, () {
@@ -85,6 +89,7 @@ class TimerImpl implements Timer {
   void cancel() {
     if (hasTimer()) {
       if (_handle == null) return;
+      dart.removeAsyncCallback();
       if (_once) {
         JS('void', '#.clearTimeout(#)', global, _handle);
       } else {

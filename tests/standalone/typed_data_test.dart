@@ -298,8 +298,7 @@ void testGetAtIndex(TypedData list, num initial_value) {
   }
 }
 
-void testSetAtIndex(TypedDataList list, num initial_value,
-    [bool use_double = false]) {
+void testSetAtIndex(List list, num initial_value, [bool use_double = false]) {
   void validate([reinit = true]) {
     for (int i = 0; i < list.length; i++) {
       Expect.equals(initial_value, list[i]);
@@ -307,7 +306,7 @@ void testSetAtIndex(TypedDataList list, num initial_value,
     }
   }
 
-  var bdata = new ByteData.view(list.buffer);
+  var bdata = new ByteData.view((list as TypedData).buffer);
   for (int i = 0; i < bdata.lengthInBytes; i++) {
     bdata.setUint8(i, 42);
   }

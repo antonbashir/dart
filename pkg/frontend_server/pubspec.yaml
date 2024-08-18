@@ -16,9 +16,9 @@ dependencies:
   dev_compiler: any
   front_end: any
   kernel: any
-  macros: any
   package_config: any
   path: any
+  usage: any
   vm: any
 
 # Use 'any' constraints here; we get our versions from the DEPS file.

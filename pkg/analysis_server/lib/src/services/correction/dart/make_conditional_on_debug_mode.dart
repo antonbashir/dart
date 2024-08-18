@@ -2,9 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
@@ -13,13 +12,10 @@ class MakeConditionalOnDebugMode extends ResolvedCorrectionProducer {
   static final Uri _foundationUri =
       Uri.parse('package:flutter/foundation.dart');
 
-  MakeConditionalOnDebugMode({required super.context});
-
   @override
-  CorrectionApplicability get applicability =>
-      // This fix isn't enabled for fix-all or bulk fix because it doesn't
-      // currently account for having multiple `print` invocations in sequence.
-      CorrectionApplicability.singleLocation;
+  // This fix isn't enabled for fix-all or bulk fix because it doesn't currently
+  // account for having multiple `print` invocations in sequence.
+  bool get canBeAppliedToFile => false;
 
   @override
   FixKind get fixKind => DartFixKind.MAKE_CONDITIONAL_ON_DEBUG_MODE;
@@ -29,14 +25,14 @@ class MakeConditionalOnDebugMode extends ResolvedCorrectionProducer {
     if (unitResult.session.uriConverter.uriToPath(_foundationUri) == null) {
       return;
     }
-    var printInvocation = node.findSimplePrintInvocation();
+    var printInvocation = utils.findSimplePrintInvocation(node);
     if (printInvocation != null) {
       var indent = utils.getLinePrefix(printInvocation.offset);
       await builder.addDartFileEdit(file, (builder) {
         builder.addInsertion(printInvocation.offset, (builder) {
           builder.writeln('if (kDebugMode) {');
           builder.write(indent);
-          builder.write(utils.oneIndent);
+          builder.write(utils.getIndent(1));
         });
         builder.addInsertion(printInvocation.end, (builder) {
           builder.writeln();

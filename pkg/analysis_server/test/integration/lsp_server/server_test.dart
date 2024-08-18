@@ -23,18 +23,18 @@ class ServerTest extends AbstractLspAnalysisServerIntegrationTest {
 
     // Send the custom request to the LSP server to get the Dart diagnostic
     // server info.
-    var server = await getDiagnosticServer();
+    final server = await getDiagnosticServer();
 
     expect(server.port, isNotNull);
     expect(server.port, isNonZero);
     expect(server.port, isPositive);
 
     // Ensure the server was actually started.
-    var client = HttpClient();
+    final client = HttpClient();
     var request = await client
         .getUrl(Uri.parse('http://localhost:${server.port}/status'));
-    var response = await request.close();
-    var responseBody = await utf8.decodeStream(response.cast<List<int>>());
+    final response = await request.close();
+    final responseBody = await utf8.decodeStream(response.cast<List<int>>());
     expect(responseBody, contains('<title>Analysis Server</title>'));
   }
 
@@ -49,7 +49,7 @@ class ServerTest extends AbstractLspAnalysisServerIntegrationTest {
         onTimeout: () =>
             fail('Server channel did not close within 10 seconds'));
 
-    var exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
+    final exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
         onTimeout: () => fail('Server process did not exit within 10 seconds'));
 
     expect(exitCode, equals(1));
@@ -64,7 +64,7 @@ class ServerTest extends AbstractLspAnalysisServerIntegrationTest {
         onTimeout: () =>
             fail('Server channel did not close within 10 seconds'));
 
-    var exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
+    final exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
         onTimeout: () => fail('Server process did not exit within 10 seconds'));
 
     expect(exitCode, equals(0));
@@ -78,7 +78,7 @@ class ServerTest extends AbstractLspAnalysisServerIntegrationTest {
     sendExit();
 
     await channel.closed;
-    var exitCode = await client!.exitCode;
+    final exitCode = await client!.exitCode;
 
     expect(exitCode, equals(1));
   }
@@ -91,7 +91,7 @@ class ServerTest extends AbstractLspAnalysisServerIntegrationTest {
         onTimeout: () =>
             fail('Server channel did not close within 10 seconds'));
 
-    var exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
+    final exitCode = await client!.exitCode.timeout(const Duration(seconds: 10),
         onTimeout: () => fail('Server process did not exit within 10 seconds'));
 
     expect(exitCode, equals(0));

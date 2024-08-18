@@ -116,7 +116,7 @@ class A {
   }
 }
 ''', [
-      error(WarningCode.UNUSED_LOCAL_VARIABLE, 129, 1),
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 129, 1),
     ]);
   }
 

@@ -8,4 +8,6 @@
 #include "vm/symbols.h"
 #include "vm/unit_test.h"
 
-namespace dart {}  // namespace dart
+namespace dart {
+
+}  // namespace dart

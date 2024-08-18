@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// @dart = 2.7
+
 @pragma('dart2js:noInline')
 @pragma('dart2js:assumeDynamic')
 value(o) => o;
@@ -41,21 +43,21 @@ class Class2a {}
 class Class2b {}
 
 // Checks are needed both with and without --omit-implicit-checks.
-/*class: Class3a:*/
+/*class: Class3a:checkedInstance*/
 class Class3a {}
 
 // Checks are needed neither with nor without --omit-implicit-checks.
 /*class: Class3b:*/
 class Class3b {}
 
-/*spec.class: Class4a:*/
+/*spec.class: Class4a:checkedInstance*/
 class Class4a<T> {}
 
-/*spec.class: Class4b:*/
+/*spec.class: Class4b:checkedInstance*/
 class Class4b<T> {}
 
 // Checks are needed both with and without --omit-implicit-checks.
-/*class: Class5a:*/
+/*class: Class5a:checkedInstance*/
 class Class5a<T> {}
 
 // Checks are needed neither with nor without --omit-implicit-checks.
@@ -63,7 +65,7 @@ class Class5a<T> {}
 class Class5b<T> {}
 
 // Checks are needed both with and without --omit-implicit-checks.
-/*class: Class6a:*/
+/*class: Class6a:checkedInstance*/
 class Class6a<T> {}
 
 // Checks are needed neither with nor without --omit-implicit-checks.

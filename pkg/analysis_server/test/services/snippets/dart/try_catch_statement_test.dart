@@ -28,12 +28,12 @@ class TryCatchStatementTest extends DartSnippetProducerTest {
   String get prefix => TryCatchStatement.prefix;
 
   Future<void> test_tryCatch() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   tr^
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));
@@ -64,14 +64,14 @@ void f() {
   }
 
   Future<void> test_tryCatch_indentedInsideBlock() async {
-    var code = TestCode.parse(r'''
+    final code = TestCode.parse(r'''
 void f() {
   if (true) {
     tr^
   }
 }
 ''');
-    var snippet = await expectValidSnippet(code);
+    final snippet = await expectValidSnippet(code);
     expect(snippet.prefix, prefix);
     expect(snippet.label, label);
     expect(snippet.change.edits, hasLength(1));

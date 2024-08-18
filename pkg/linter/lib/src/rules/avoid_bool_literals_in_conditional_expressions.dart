@@ -6,12 +6,11 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../linter_lint_codes.dart';
 
-const _desc = r'Avoid `bool` literals in conditional expressions.';
+const _desc = r'Avoid bool literals in conditional expressions.';
 
 const _details = r'''
-**AVOID** `bool` literals in conditional expressions.
+**AVOID** bool literals in conditional expressions.
 
 **BAD:**
 ```dart
@@ -32,16 +31,21 @@ condition && boolExpression
 ''';
 
 class AvoidBoolLiteralsInConditionalExpressions extends LintRule {
+  static const LintCode code = LintCode(
+      'avoid_bool_literals_in_conditional_expressions',
+      "Conditional expressions with a 'bool' literal can be simplified.",
+      correctionMessage:
+          "Try rewriting the expression to use either '&&' or '||'.");
+
   AvoidBoolLiteralsInConditionalExpressions()
       : super(
             name: 'avoid_bool_literals_in_conditional_expressions',
             description: _desc,
             details: _details,
-            categories: {LintRuleCategory.brevity});
+            group: Group.style);
 
   @override
-  LintCode get lintCode =>
-      LinterLintCode.avoid_bool_literals_in_conditional_expressions;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -61,8 +65,8 @@ class _Visitor extends SimpleAstVisitor<void> {
   @override
   void visitConditionalExpression(ConditionalExpression node) {
     var typeProvider = context.typeProvider;
-    var thenExp = node.thenExpression.unParenthesized;
-    var elseExp = node.elseExpression.unParenthesized;
+    var thenExp = node.thenExpression;
+    var elseExp = node.elseExpression;
 
     if (thenExp.staticType == typeProvider.boolType &&
         elseExp.staticType == typeProvider.boolType) {

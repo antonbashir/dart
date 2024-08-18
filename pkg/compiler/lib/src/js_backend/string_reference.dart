@@ -60,8 +60,6 @@
 /// names.
 library js_backend.string_reference;
 
-import 'package:js_ast/src/precedence.dart' as js_precedence;
-
 import '../constants/values.dart' show StringConstantValue;
 import '../js/js.dart' as js;
 import '../serialization/serialization.dart';
@@ -133,7 +131,7 @@ class StringReference extends js.DeferredExpression implements js.AstContainer {
   // Precedence will be CALL or LEFT_HAND_SIDE depending on what expression the
   // reference is resolved to.
   @override
-  js_precedence.Precedence get precedenceLevel => value.precedenceLevel;
+  int get precedenceLevel => value.precedenceLevel;
 
   @override
   StringReference withSourceInformation(

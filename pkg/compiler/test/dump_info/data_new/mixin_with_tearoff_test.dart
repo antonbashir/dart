@@ -33,6 +33,14 @@
   "code": "B.JSInt_methods = J.JSInt.prototype;\n"
 },
   {
+  "id": "constant/B.JSString_methods = J.JSString.prototype;\n",
+  "kind": "constant",
+  "name": "",
+  "size": 43,
+  "outputUnit": "outputUnit/main",
+  "code": "B.JSString_methods = J.JSString.prototype;\n"
+},
+  {
   "id": "constant/B.JavaScriptObject_methods = J.JavaScriptObject.prototype;\n",
   "kind": "constant",
   "name": "",
@@ -41,20 +49,20 @@
   "code": "B.JavaScriptObject_methods = J.JavaScriptObject.prototype;\n"
 },
   {
-  "id": "constant/B.Type_Object_QJv = A.typeLiteral(\"Object\");\n",
+  "id": "constant/B.Type_Object_xQ6 = A.typeLiteral(\"Object\");\n",
   "kind": "constant",
   "name": "",
   "size": 45,
   "outputUnit": "outputUnit/main",
-  "code": "B.Type_Object_QJv = A.typeLiteral(\"Object\");\n"
+  "code": "B.Type_Object_xQ6 = A.typeLiteral(\"Object\");\n"
 },
   {
-  "id": "constant/B.Type_dynamic_PLF = A.typeLiteral(\"@\");\n",
+  "id": "constant/B.Type_dynamic_0Rz = A.typeLiteral(\"@\");\n",
   "kind": "constant",
   "name": "",
   "size": 41,
   "outputUnit": "outputUnit/main",
-  "code": "B.Type_dynamic_PLF = A.typeLiteral(\"@\");\n"
+  "code": "B.Type_dynamic_0Rz = A.typeLiteral(\"@\");\n"
 }],
  deferredFiles=[{}],
  dependencies=[{}],

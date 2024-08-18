@@ -863,11 +863,10 @@ final Matcher isSourceChange =
 ///   "length": int
 ///   "replacement": String
 ///   "id": optional String
-///   "description": optional String
 /// }
 final Matcher isSourceEdit = LazyMatcher(() => MatchesJsonObject(
     'SourceEdit', {'offset': isInt, 'length': isInt, 'replacement': isString},
-    optionalFields: {'id': isString, 'description': isString}));
+    optionalFields: {'id': isString}));
 
 /// SourceFileEdit
 ///

@@ -11,17 +11,15 @@ import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/generic_inferrer.dart';
-import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
-import 'package:analyzer/src/dart/element/type_constraint_gatherer.dart';
 import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/resolver/applicable_extensions.dart';
 import 'package:analyzer/src/dart/resolver/resolution_result.dart';
 import 'package:analyzer/src/error/codes.dart';
-import 'package:analyzer/src/generated/inference_log.dart';
 import 'package:analyzer/src/generated/resolver.dart';
+import 'package:analyzer/src/util/either.dart';
 import 'package:analyzer/src/utilities/extensions/string.dart';
 
 class ExtensionMemberResolver {
@@ -35,6 +33,9 @@ class ExtensionMemberResolver {
 
   bool get _genericMetadataIsEnabled =>
       _resolver.definingLibrary.featureSet.isEnabled(Feature.generic_metadata);
+
+  bool get _isNonNullableByDefault =>
+      _resolver.definingLibrary.featureSet.isEnabled(Feature.non_nullable);
 
   TypeProvider get _typeProvider => _resolver.typeProvider;
 
@@ -75,20 +76,24 @@ class ExtensionMemberResolver {
     ).substituteType(element.extendedType);
   }
 
-  /// Returns the most specific accessible extension, applicable to [type],
+  /// Return the most specific extension in the current scope for this [type],
   /// that defines the member with the given [name].
   ///
-  /// If no applicable extensions are found, returns [ResolutionResult.none].
+  /// If no applicable extensions, return [ResolutionResult.none].
   ///
-  /// If the match is ambiguous, reports an error on the [nameEntity], and
-  /// returns [ResolutionResult.ambiguous].
+  /// If the match is ambiguous, report an error on the [nameEntity], and
+  /// return [ResolutionResult.ambiguous].
   ResolutionResult findExtension(
-      DartType type, SyntacticEntity nameEntity, Name name) {
+    DartType type,
+    SyntacticEntity nameEntity,
+    String name,
+  ) {
     var extensions = _resolver.definingLibrary.accessibleExtensions
-        .havingMemberWithBaseName(name)
+        .hasMemberWithBaseName(name)
         .applicableTo(
           targetLibrary: _resolver.definingLibrary,
           targetType: type,
+          strictInference: _resolver.analysisOptions.strictInference,
         );
 
     if (extensions.isEmpty) {
@@ -100,27 +105,31 @@ class ExtensionMemberResolver {
     }
 
     var mostSpecific = _chooseMostSpecific(extensions);
-    if (mostSpecific.length == 1) {
-      return mostSpecific.first.asResolutionResult;
-    }
-
-    // The most specific extension is ambiguous.
-    _errorReporter.atEntity(
-      nameEntity,
-      CompileTimeErrorCode.AMBIGUOUS_EXTENSION_MEMBER_ACCESS,
-      arguments: [
-        name.name,
-        mostSpecific.map((e) {
-          var name = e.extension.name;
-          if (name != null) {
-            return "extension '$name'";
-          }
-          var type = e.extension.extendedType.getDisplayString();
-          return "unnamed extension on '$type'";
-        }).commaSeparatedWithAnd,
-      ],
+    return mostSpecific.map(
+      (extension) {
+        return extension.asResolutionResult;
+      },
+      (noneMoreSpecific) {
+        _errorReporter.reportErrorForOffset(
+          CompileTimeErrorCode.AMBIGUOUS_EXTENSION_MEMBER_ACCESS,
+          nameEntity.offset,
+          nameEntity.length,
+          [
+            name,
+            noneMoreSpecific.map((e) {
+              var name = e.extension.name;
+              if (name != null) {
+                return "extension '$name'";
+              }
+              var type = e.extension.extendedType
+                  .getDisplayString(withNullability: _isNonNullableByDefault);
+              return "unnamed extension on '$type'";
+            }).commaSeparatedWithAnd,
+          ],
+        );
+        return ResolutionResult.ambiguous;
+      },
     );
-    return ResolutionResult.ambiguous;
   }
 
   /// Resolve the [name] (without `=`) to the corresponding getter and setter
@@ -154,6 +163,9 @@ class ExtensionMemberResolver {
     var setterMember =
         setter != null ? ExecutableMember.from2(setter, substitution) : null;
 
+    getterMember = _resolver.toLegacyElement(getterMember);
+    setterMember = _resolver.toLegacyElement(setterMember);
+
     return ResolutionResult(getter: getterMember, setter: setterMember);
   }
 
@@ -166,19 +178,19 @@ class ExtensionMemberResolver {
 
     if (!_isValidContext(node)) {
       if (!_isCascadeTarget(node)) {
-        _errorReporter.atNode(
-          node,
+        _errorReporter.reportErrorForNode(
           CompileTimeErrorCode.EXTENSION_OVERRIDE_WITHOUT_ACCESS,
+          node,
         );
       }
-      nodeImpl.setPseudoExpressionStaticType(_dynamicType);
+      nodeImpl.staticType = _dynamicType;
     }
 
     var arguments = node.argumentList.arguments;
     if (arguments.length != 1) {
-      _errorReporter.atNode(
-        node.argumentList,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.INVALID_EXTENSION_ARGUMENT_COUNT,
+        node.argumentList,
       );
       nodeImpl.typeArgumentTypes = _listOfDynamic(typeParameters);
       nodeImpl.extendedType = _dynamicType;
@@ -192,9 +204,7 @@ class ExtensionMemberResolver {
       receiverType = _typeSystem.promoteToNonNull(receiverType);
     }
 
-    var typeArgumentTypes = _inferTypeArguments(node, receiverType,
-        dataForTesting: _resolver.inferenceHelper.dataForTesting,
-        nodeForTesting: node)!;
+    var typeArgumentTypes = _inferTypeArguments(node, receiverType)!;
     nodeImpl.typeArgumentTypes = typeArgumentTypes;
 
     var substitution = Substitution.fromPairs(
@@ -213,19 +223,17 @@ class ExtensionMemberResolver {
     );
 
     if (receiverType is VoidType) {
-      _errorReporter.atNode(
-        receiverExpression,
-        CompileTimeErrorCode.USE_OF_VOID_RESULT,
-      );
+      _errorReporter.reportErrorForNode(
+          CompileTimeErrorCode.USE_OF_VOID_RESULT, receiverExpression);
     } else if (!_typeSystem.isAssignableTo(receiverType, extendedType,
         strictCasts: _resolver.analysisOptions.strictCasts)) {
       var whyNotPromoted =
           whyNotPromotedList.isEmpty ? null : whyNotPromotedList[0];
-      _errorReporter.atNode(
-        receiverExpression,
+      _errorReporter.reportErrorForNode(
         CompileTimeErrorCode.EXTENSION_OVERRIDE_ARGUMENT_NOT_ASSIGNABLE,
-        arguments: [receiverType, extendedType],
-        contextMessages: _resolver.computeWhyNotPromotedMessages(
+        receiverExpression,
+        [receiverType, extendedType],
+        _resolver.computeWhyNotPromotedMessages(
             receiverExpression, whyNotPromoted?.call()),
       );
     }
@@ -244,11 +252,12 @@ class ExtensionMemberResolver {
         var parameterBound = parameter.bound;
         if (parameterBound != null) {
           parameterBound = substitution.substituteType(parameterBound);
+          parameterBound = _typeSystem.toLegacyTypeIfOptOut(parameterBound);
           if (!_typeSystem.isSubtypeOf(argument, parameterBound)) {
-            _errorReporter.atNode(
-              typeArgumentList.arguments[i],
+            _errorReporter.reportErrorForNode(
               CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
-              arguments: [argument, parameter.name, parameterBound],
+              typeArgumentList.arguments[i],
+              [argument, parameter.name, parameterBound],
             );
           }
         }
@@ -256,10 +265,11 @@ class ExtensionMemberResolver {
     }
   }
 
-  /// Returns a list with either the most specific extension, or, if the most
-  /// specific is ambiguous, then the extensions that are ambiguous.
-  List<InstantiatedExtensionWithMember> _chooseMostSpecific(
-      List<InstantiatedExtensionWithMember> extensions) {
+  /// Return either the most specific extension, or a list of the extensions
+  /// that are ambiguous.
+  Either2<InstantiatedExtensionWithMember,
+          List<InstantiatedExtensionWithMember>>
+      _chooseMostSpecific(List<InstantiatedExtensionWithMember> extensions) {
     InstantiatedExtensionWithMember? bestSoFar;
     var noneMoreSpecific = <InstantiatedExtensionWithMember>[];
     for (var candidate in extensions) {
@@ -294,22 +304,23 @@ class ExtensionMemberResolver {
     }
 
     if (bestSoFar != null) {
-      return [bestSoFar];
+      return Either2.t1(bestSoFar);
+    } else {
+      return Either2.t2(noneMoreSpecific);
     }
-
-    return noneMoreSpecific;
   }
 
-  /// Given the generic [node], either returns types specified explicitly in its
-  /// type arguments, or infer type arguments from the given [receiverType].
+  /// Given the generic [element] element, either return types specified
+  /// explicitly in [typeArguments], or infer type arguments from the given
+  /// [receiverType].
   ///
   /// If the number of explicit type arguments is different than the number
-  /// of extension's type parameters, or inference fails, returns `dynamic`
+  /// of extension's type parameters, or inference fails, return `dynamic`
   /// for all type parameters.
   List<DartType>? _inferTypeArguments(
-      ExtensionOverride node, DartType receiverType,
-      {required TypeConstraintGenerationDataForTesting? dataForTesting,
-      required AstNode? nodeForTesting}) {
+    ExtensionOverride node,
+    DartType receiverType,
+  ) {
     var element = node.element;
     var typeParameters = element.typeParameters;
     var typeArguments = node.typeArguments;
@@ -325,31 +336,26 @@ class ExtensionMemberResolver {
         // We can safely assume `element.name` is non-`null` because type
         // arguments can only be applied to explicit extension overrides, and
         // explicit extension overrides cannot refer to unnamed extensions.
-        _errorReporter.atNode(
-          typeArguments,
+        _errorReporter.reportErrorForNode(
           CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS_EXTENSION,
-          arguments: [element.name!, typeParameters.length, arguments.length],
+          typeArguments,
+          [element.name!, typeParameters.length, arguments.length],
         );
         return _listOfDynamic(typeParameters);
       }
     } else {
-      inferenceLogWriter?.enterGenericInference(
-          typeParameters, element.extendedType);
       var inferrer = GenericInferrer(
         _typeSystem,
         typeParameters,
         errorReporter: _errorReporter,
-        errorEntity: node.name,
+        errorNode: SimpleIdentifierImpl(node.name),
         genericMetadataIsEnabled: _genericMetadataIsEnabled,
         strictInference: _resolver.analysisOptions.strictInference,
-        typeSystemOperations: _resolver.flowAnalysis.typeOperations,
-        dataForTesting: dataForTesting,
       );
       inferrer.constrainArgument(
         receiverType,
         element.extendedType,
         'extendedType',
-        nodeForTesting: nodeForTesting,
       );
       return inferrer.chooseFinalTypes();
     }

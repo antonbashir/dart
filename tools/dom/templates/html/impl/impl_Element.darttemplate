@@ -865,7 +865,9 @@ $endif
    * Called by the DOM when this element has been inserted into the live
    * document.
    *
-   * Warning: This API is part of multiple custom element APIs that are no [longer supported](https://github.com/dart-lang/sdk/issues/49536).
+   * More information can be found in the
+   * [Custom Elements](http://w3c.github.io/webcomponents/spec/custom/#dfn-attached-callback)
+   * draft specification.
    */
   void attached() {
     // For the deprecation period, call the old callback.
@@ -876,7 +878,8 @@ $endif
    * Called by the DOM when this element has been removed from the live
    * document.
    *
-   * Warning: This API is part of multiple custom element APIs that are no [longer supported](https://github.com/dart-lang/sdk/issues/49536).
+   * More information can be found in the
+   * [Custom Elements](http://w3c.github.io/webcomponents/spec/custom/#dfn-detached-callback)
    * draft specification.
    */
   void detached() {

@@ -2,7 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-mixin Bar<C> {
+// TODO(https://github.com/dart-lang/sdk/issues/51557): Decide if the mixins
+// being applied in this test should be "mixin", "mixin class" or the test
+// should be left at 2.19.
+// @dart=2.19
+
+abstract class Bar<C> {
   final List<C> _one = [];
 
   final bool _two = Foo is C;
@@ -10,7 +15,7 @@ mixin Bar<C> {
 
 class Foo extends Object with Bar {}
 
-mixin A<E> {}
+abstract class A<E> {}
 
 abstract class B<E> extends Object with A<E> {}
 
@@ -19,7 +24,7 @@ class C extends B<int> {
   C(this._string);
 }
 
-mixin D<T> {}
+abstract class D<T> {}
 
 abstract class E<T> = Object with D<T>;
 

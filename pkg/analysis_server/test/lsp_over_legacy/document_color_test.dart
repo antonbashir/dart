@@ -24,15 +24,15 @@ class DocumentColorTest extends LspOverLegacyTest {
   }
 
   Future<void> test_color() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/material.dart';
 
 const red = [!Colors.red!];
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var results = await getDocumentColors(testFileUri);
-    var result = results.single;
+    final results = await getDocumentColors(testFileUri);
+    final result = results.single;
 
     expect(result.color.alpha, 1);
     expect(result.color.red, 1);
@@ -42,17 +42,17 @@ const red = [!Colors.red!];
   }
 
   Future<void> test_presentation() async {
-    var content = '''
+    final content = '''
 import 'package:flutter/material.dart';
 
 const red = [!Colors.red!];
 ''';
-    var code = TestCode.parse(content);
+    final code = TestCode.parse(content);
     newFile(testFilePath, code.code);
-    var colorResults = await getDocumentColors(testFileUri);
-    var colorResult = colorResults.single;
+    final colorResults = await getDocumentColors(testFileUri);
+    final colorResult = colorResults.single;
 
-    var colors = await getColorPresentation(
+    final colors = await getColorPresentation(
         testFileUri, code.range.range, colorResult.color);
     expect(
       colors.map((c) => c.label),

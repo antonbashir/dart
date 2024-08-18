@@ -17,7 +17,7 @@ main() {
 class ImportOfNotAugmentationTest extends PubPackageResolutionTest {
   test_inLibrary_augmentation() async {
     newFile('$testPackageLibPath/a.dart', r'''
-augment library 'test.dart';
+library augment 'test.dart';
 ''');
 
     await assertNoErrorsInCode('''

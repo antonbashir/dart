@@ -9,19 +9,17 @@ import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart';
 import 'package:front_end/src/api_prototype/compiler_options.dart';
 import 'package:front_end/src/api_prototype/experimental_flags.dart';
-import 'package:front_end/src/base/scope.dart';
-import 'package:front_end/src/builder/builder.dart';
-import 'package:front_end/src/builder/member_builder.dart';
-import 'package:front_end/src/source/source_class_builder.dart';
-import 'package:front_end/src/source/source_constructor_builder.dart';
-import 'package:front_end/src/source/source_factory_builder.dart';
-import 'package:front_end/src/source/source_member_builder.dart';
-import 'package:front_end/src/source/source_procedure_builder.dart';
+import 'package:front_end/src/fasta/builder/builder.dart';
+import 'package:front_end/src/fasta/builder/member_builder.dart';
+import 'package:front_end/src/fasta/source/source_class_builder.dart';
+import 'package:front_end/src/fasta/source/source_constructor_builder.dart';
+import 'package:front_end/src/fasta/source/source_factory_builder.dart';
+import 'package:front_end/src/fasta/source/source_member_builder.dart';
+import 'package:front_end/src/fasta/source/source_procedure_builder.dart';
+import 'package:front_end/src/fasta/scope.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
 import 'package:front_end/src/testing/id_testing_utils.dart';
 import 'package:kernel/ast.dart';
-
-import '../utils/symbolic_language_versions.dart';
 
 Future<void> main(List<String> args) async {
   Directory dataDir = new Directory.fromUri(Platform.script.resolve('data'));
@@ -30,13 +28,25 @@ Future<void> main(List<String> args) async {
       createUriForFileName: createUriForFileName,
       onFailure: onFailure,
       runTest: runTestFor(const PatchingDataComputer(), [
-        new TestConfigWithLanguageVersion(cfeMarker, 'cfe',
+        new TestConfigWithLanguageVersion(
+            cfeMarker, 'cfe with libraries specification',
             librariesSpecificationUri: createUriForFileName('libraries.json'),
-            experimentalFlags: {},
+            experimentalFlags: {ExperimentalFlag.nonNullable: false},
+            allowedExperimentalFlags: const AllowedExperimentalFlags()),
+        new TestConfigWithLanguageVersion(cfeWithNnbdMarker,
+            'cfe with libraries specification and non-nullable',
+            librariesSpecificationUri: createUriForFileName('libraries.json'),
+            experimentalFlags: {ExperimentalFlag.nonNullable: true},
             allowedExperimentalFlags: const AllowedExperimentalFlags())
       ]),
-      preProcessFile: replaceMarkersWithVersions,
-      postProcessFile: replaceVersionsWithMarkers);
+      skipMap: {
+        cfeMarker: [
+          'opt_in',
+          'opt_in_patch',
+          'opt_out',
+          'opt_out_patch',
+        ]
+      });
 }
 
 class TestConfigWithLanguageVersion extends CfeTestConfig {
@@ -51,8 +61,7 @@ class TestConfigWithLanguageVersion extends CfeTestConfig {
 
   @override
   void customizeCompilerOptions(CompilerOptions options, TestData testData) {
-    options.currentSdkVersion =
-        SymbolicLanguageVersion.currentVersion.version.toText();
+    options.currentSdkVersion = "2.9999";
   }
 }
 
@@ -104,6 +113,7 @@ class Tags {
   static const String kernelMembers = 'kernel-members';
   static const String initializers = 'initializers';
   static const String error = 'message';
+  static const String isNonNullableByDefault = 'nnbd';
   static const String patch = 'patch';
   static const String isAbstract = 'isAbstract';
 }
@@ -114,6 +124,13 @@ class PatchingDataExtractor extends CfeDataExtractor<Features> {
       : super(compilerResult, actualMap);
 
   @override
+  Features computeLibraryValue(Id id, Library library) {
+    Features features = new Features();
+    features[Tags.isNonNullableByDefault] = '${library.isNonNullableByDefault}';
+    return features;
+  }
+
+  @override
   Features computeClassValue(Id id, Class cls) {
     SourceClassBuilder clsBuilder =
         lookupClassBuilder(compilerResult, cls) as SourceClassBuilder;
@@ -122,7 +139,7 @@ class PatchingDataExtractor extends CfeDataExtractor<Features> {
     if (cls.isAbstract) {
       features.add(Tags.isAbstract);
     }
-    clsBuilder.nameSpace
+    clsBuilder.scope
         .filteredNameIterator(
             includeDuplicates: false, includeAugmentations: false)
         .forEach((String name, Builder builder) {
@@ -163,13 +180,13 @@ class PatchingDataExtractor extends CfeDataExtractor<Features> {
             as SourceMemberBuilder?;
     List<MemberBuilder>? patchMembers;
     if (memberBuilder is SourceProcedureBuilder) {
-      patchMembers = memberBuilder.augmentationsForTesting;
+      patchMembers = memberBuilder.patchesForTesting;
     }
     if (memberBuilder is DeclaredSourceConstructorBuilder) {
-      patchMembers = memberBuilder.augmentationsForTesting;
+      patchMembers = memberBuilder.patchesForTesting;
     }
     if (memberBuilder is SourceFactoryBuilder) {
-      patchMembers = memberBuilder.augmentationsForTesting;
+      patchMembers = memberBuilder.patchesForTesting;
     }
     if (patchMembers != null) {
       features.add(Tags.patch);

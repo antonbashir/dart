@@ -1,27 +1,13 @@
+// @dart = 2.9
 library test;
 
-double? topLevelDouble2;
-
 double getDouble() => 0.0;
-
-double topLevelDouble = 0;
-
-int? topLevelInt2;
-
+double topLevelDouble;
 int getInt() => 0;
-
-int topLevelInt = 0;
-
+int topLevelInt;
 main() {}
-
-num? topLevelNum2;
-
 num getNum() => 0;
-
-num topLevelNum = 0;
-
+num topLevelNum;
 void test1() {}
-
 void test2() {}
-
 void test3() {}

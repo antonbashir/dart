@@ -7,5 +7,4 @@ class ParallaxOptions {
 }
 
 main() {}
-
 test() => const ParallaxOptions();

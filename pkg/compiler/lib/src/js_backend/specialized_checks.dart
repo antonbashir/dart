@@ -10,9 +10,7 @@ import '../js_backend/interceptor_data.dart' show InterceptorData;
 import '../js_model/js_world.dart' show JClosedWorld;
 import '../universe/class_hierarchy.dart' show ClassHierarchy;
 
-sealed class IsTestSpecialization {}
-
-enum SimpleIsTestSpecialization implements IsTestSpecialization {
+enum _Kind {
   isNull,
   isNotNull,
   isString,
@@ -20,57 +18,74 @@ enum SimpleIsTestSpecialization implements IsTestSpecialization {
   isNum,
   isInt,
   isArrayTop,
+  isInstanceof,
 }
 
-class InstanceOfIsTestSpecialization implements IsTestSpecialization {
-  final InterfaceType interfaceType;
+class IsTestSpecialization {
+  static const isNull = IsTestSpecialization._(_Kind.isNull);
+  static const isNotNull = IsTestSpecialization._(_Kind.isNotNull);
+  static const isString = IsTestSpecialization._(_Kind.isString);
+  static const isBool = IsTestSpecialization._(_Kind.isBool);
+  static const isNum = IsTestSpecialization._(_Kind.isNum);
+  static const isInt = IsTestSpecialization._(_Kind.isInt);
+  static const isArrayTop = IsTestSpecialization._(_Kind.isArrayTop);
 
-  const InstanceOfIsTestSpecialization(this.interfaceType);
+  final _Kind _kind;
+  final InterfaceType? _type;
+
+  const IsTestSpecialization._(this._kind) : _type = null;
+
+  const IsTestSpecialization._instanceof(InterfaceType type)
+      : _kind = _Kind.isInstanceof,
+        _type = type;
+
+  bool get isInstanceof => _kind == _Kind.isInstanceof;
+
+  InterfaceType get interfaceType {
+    assert(_kind == _Kind.isInstanceof);
+    return _type!;
+  }
 }
 
 class SpecializedChecks {
   static IsTestSpecialization? findIsTestSpecialization(
-      DartType dartType, MemberEntity compiland, JClosedWorld closedWorld,
-      {required bool experimentNullSafetyChecks}) {
+      DartType dartType, MemberEntity compiland, JClosedWorld closedWorld) {
     if (dartType is LegacyType) {
       DartType base = dartType.baseType;
       // `Never*` accepts only `null`.
-      if (base is NeverType) return SimpleIsTestSpecialization.isNull;
+      if (base is NeverType) return IsTestSpecialization.isNull;
       // `Object*` is top and should be handled by constant folding.
       if (base.isObject) return null;
-      return _findIsTestSpecialization(base, compiland, closedWorld,
-          experimentNullSafetyChecks: experimentNullSafetyChecks);
+      return _findIsTestSpecialization(base, compiland, closedWorld);
     }
-    return _findIsTestSpecialization(dartType, compiland, closedWorld,
-        experimentNullSafetyChecks: experimentNullSafetyChecks);
+    return _findIsTestSpecialization(dartType, compiland, closedWorld);
   }
 
   static IsTestSpecialization? _findIsTestSpecialization(
-      DartType dartType, MemberEntity compiland, JClosedWorld closedWorld,
-      {required bool experimentNullSafetyChecks}) {
+      DartType dartType, MemberEntity compiland, JClosedWorld closedWorld) {
     if (dartType is InterfaceType) {
       ClassEntity element = dartType.element;
       JCommonElements commonElements = closedWorld.commonElements;
 
       if (element == commonElements.nullClass ||
           element == commonElements.jsNullClass) {
-        return SimpleIsTestSpecialization.isNull;
+        return IsTestSpecialization.isNull;
       }
 
       if (element == commonElements.jsStringClass ||
           element == commonElements.stringClass) {
-        return SimpleIsTestSpecialization.isString;
+        return IsTestSpecialization.isString;
       }
 
       if (element == commonElements.jsBoolClass ||
           element == commonElements.boolClass) {
-        return SimpleIsTestSpecialization.isBool;
+        return IsTestSpecialization.isBool;
       }
 
       if (element == commonElements.doubleClass ||
           element == commonElements.jsNumberClass ||
           element == commonElements.numClass) {
-        return SimpleIsTestSpecialization.isNum;
+        return IsTestSpecialization.isNum;
       }
 
       if (element == commonElements.jsIntClass ||
@@ -78,7 +93,7 @@ class SpecializedChecks {
           element == commonElements.jsUInt32Class ||
           element == commonElements.jsUInt31Class ||
           element == commonElements.jsPositiveIntClass) {
-        return SimpleIsTestSpecialization.isInt;
+        return IsTestSpecialization.isInt;
       }
 
       DartTypes dartTypes = closedWorld.dartTypes;
@@ -94,16 +109,12 @@ class SpecializedChecks {
       }
 
       if (element == commonElements.jsArrayClass) {
-        return SimpleIsTestSpecialization.isArrayTop;
+        return IsTestSpecialization.isArrayTop;
       }
 
       if (dartType.isObject) {
         assert(!dartTypes.isTopType(dartType)); // Checked above.
-        return SimpleIsTestSpecialization.isNotNull;
-      }
-
-      if (experimentNullSafetyChecks && dartType.typeArguments.isNotEmpty) {
-        return null;
+        return IsTestSpecialization.isNotNull;
       }
 
       ClassHierarchy classHierarchy = closedWorld.classHierarchy;
@@ -121,7 +132,7 @@ class SpecializedChecks {
           outputUnitData.hasOnlyNonDeferredImportPathsToClass(
               compiland, topmost)) {
         assert(!dartType.isObject); // Checked above.
-        return InstanceOfIsTestSpecialization(
+        return IsTestSpecialization._instanceof(
             elementEnvironment.getClassInstantiationToBounds(topmost));
       }
 

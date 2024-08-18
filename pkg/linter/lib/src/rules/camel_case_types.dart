@@ -7,8 +7,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 import '../utils.dart';
 
 const _desc = r'Name types using UpperCamelCase.';
@@ -37,18 +35,20 @@ typedef num Adder(num x, num y);
 ''';
 
 class CamelCaseTypes extends LintRule {
+  static const LintCode code = LintCode('camel_case_types',
+      "The type name '{0}' isn't an UpperCamelCase identifier.",
+      correctionMessage:
+          'Try changing the name to follow the UpperCamelCase style.');
+
   CamelCaseTypes()
       : super(
             name: 'camel_case_types',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.effectiveDart,
-              LintRuleCategory.style
-            });
+            group: Group.style);
 
   @override
-  LintCode get lintCode => LinterLintCode.camel_case_types;
+  LintCode get lintCode => code;
 
   @override
   void registerNodeProcessors(
@@ -60,7 +60,6 @@ class CamelCaseTypes extends LintRule {
     registry.addFunctionTypeAlias(this, visitor);
     registry.addEnumDeclaration(this, visitor);
     registry.addExtensionTypeDeclaration(this, visitor);
-    registry.addMixinDeclaration(this, visitor);
   }
 }
 
@@ -78,8 +77,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    if (node.isAugmentation) return;
-
     check(node.name);
   }
 
@@ -90,15 +87,11 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitEnumDeclaration(EnumDeclaration node) {
-    if (node.isAugmentation) return;
-
     check(node.name);
   }
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    if (node.isAugmentation) return;
-
     check(node.name);
   }
 
@@ -109,13 +102,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitGenericTypeAlias(GenericTypeAlias node) {
-    check(node.name);
-  }
-
-  @override
-  void visitMixinDeclaration(MixinDeclaration node) {
-    if (node.isAugmentation) return;
-
     check(node.name);
   }
 }

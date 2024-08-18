@@ -2,19 +2,21 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/lsp_protocol/protocol.dart' hide Element;
-import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
 import 'package:analysis_server/src/lsp/registration/feature_registration.dart';
+import 'package:analysis_server/src/protocol_server.dart' show NavigationTarget;
 import 'package:analysis_server/src/search/element_references.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart'
     show SearchMatch;
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
 import 'package:analyzer/src/util/performance/operation_performance.dart';
+import 'package:analyzer_plugin/src/utilities/navigation/navigation.dart';
+import 'package:analyzer_plugin/utilities/navigation/navigation_dart.dart';
+import 'package:collection/collection.dart';
 
 typedef StaticOptions = Either2<bool, ReferenceOptions>;
 
@@ -35,64 +37,58 @@ class ReferencesHandler
       return success(const []);
     }
 
-    var pos = params.position;
-    var path = pathOfDoc(params.textDocument);
-    var unit = await path.mapResult(requireResolvedUnit);
-    var offset = unit.mapResultSync((unit) => toOffset(unit.lineInfo, pos));
+    final pos = params.position;
+    final path = pathOfDoc(params.textDocument);
+    final unit = await path.mapResult(requireResolvedUnit);
+    final offset = await unit.mapResult((unit) => toOffset(unit.lineInfo, pos));
     return await message.performance.runAsync(
         '_getReferences',
-        (performance) async => (unit, offset).mapResults((unit, offset) =>
-            _getReferences(unit, offset, params, performance)));
+        (performance) async => offset.mapResult((offset) => _getReferences(
+            unit.result, offset, params, unit.result, performance)));
   }
 
-  List<Location> _getDeclarations(Element element) {
-    element = element.nonSynthetic;
-    var unitElement = element.thisOrAncestorOfType<CompilationUnitElement>();
-    if (unitElement == null) {
-      return [];
-    }
+  List<Location> _getDeclarations(ParsedUnitResult result, int offset) {
+    final collector = NavigationCollectorImpl();
+    computeDartNavigation(
+        server.resourceProvider, collector, result, offset, 0);
 
-    return [
-      Location(
-        uri: uriConverter.toClientUri(unitElement.source.fullName),
-        range: toRange(
-            unitElement.lineInfo, element.nameOffset, element.nameLength),
-      )
-    ];
+    return convert(collector.targets, (NavigationTarget target) {
+      final targetFilePath = collector.files[target.fileIndex];
+      final targetFileUri = pathContext.toUri(targetFilePath);
+      final lineInfo = server.getLineInfo(targetFilePath);
+      return lineInfo != null
+          ? navigationTargetToLocation(targetFileUri, target, lineInfo)
+          : null;
+    }).whereNotNull().toList();
   }
 
   Future<ErrorOr<List<Location>?>> _getReferences(
       ResolvedUnitResult result,
       int offset,
       ReferenceParams params,
+      ResolvedUnitResult unit,
       OperationPerformanceImpl performance) async {
     var node = NodeLocator(offset).searchWithin(result.unit);
     node = _getReferenceTargetNode(node);
-
-    var element = switch (server.getElementOfNode(node)) {
-      FieldFormalParameterElement(:var field?) => field,
-      PropertyAccessorElement(:var variable2?) => variable2,
-      (var element) => element,
-    };
-
+    var element = server.getElementOfNode(node);
     if (element == null) {
       return success(null);
     }
 
-    var computer = ElementReferencesComputer(server.searchEngine);
-    var session = element.session ?? result.session;
-    var results = await performance.runAsync(
+    final computer = ElementReferencesComputer(server.searchEngine);
+    final session = element.session ?? unit.session;
+    final results = await performance.runAsync(
         'computer.compute',
         (childPerformance) =>
             computer.compute(element, false, performance: childPerformance));
 
     Location? toLocation(SearchMatch result) {
-      var file = session.getFile(result.file);
+      final file = session.getFile(result.file);
       if (file is! FileResult) {
         return null;
       }
       return Location(
-        uri: uriConverter.toClientUri(result.file),
+        uri: pathContext.toUri(result.file),
         range: toRange(
           file.lineInfo,
           result.sourceRange.offset,
@@ -101,13 +97,13 @@ class ReferencesHandler
       );
     }
 
-    var referenceResults = performance.run(
-        'convert', (_) => convert(results, toLocation).nonNulls.toList());
+    final referenceResults = performance.run(
+        'convert', (_) => convert(results, toLocation).whereNotNull().toList());
 
     if (params.context.includeDeclaration == true) {
-      // Also include the definition for the resolved element.
+      // Also include the definition for the symbol at this location.
       referenceResults.addAll(performance.run(
-          '_getDeclarations', (_) => _getDeclarations(element)));
+          '_getDeclarations', (_) => _getDeclarations(unit, offset)));
     }
 
     return success(referenceResults);

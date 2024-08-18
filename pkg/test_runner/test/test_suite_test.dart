@@ -5,6 +5,7 @@
 // ignore_for_file: unnecessary_string_escapes
 
 import 'package:expect/expect.dart';
+
 import 'package:test_runner/src/test_file.dart';
 
 import 'utils.dart';
@@ -19,14 +20,11 @@ void testNnbdRequirements() {
   // Note: The backslashes are to avoid the test_runner thinking these are
   // Requirements markers for this file itself.
   var testFiles = [
-    createTestFile(source: "", path: "none_test.dart"),
-    createTestFile(source: "/\/ Requirements=nnbd", path: "nnbd_test.dart"),
-    createTestFile(
-        source: "/\/ Requirements=nnbd-legacy", path: "legacy_test.dart"),
-    createTestFile(
-        source: "/\/ Requirements=nnbd-weak", path: "weak_test.dart"),
-    createTestFile(
-        source: "/\/ Requirements=nnbd-strong", path: "strong_test.dart"),
+    parseTestFile("", path: "none_test.dart"),
+    parseTestFile("/\/ Requirements=nnbd", path: "nnbd_test.dart"),
+    parseTestFile("/\/ Requirements=nnbd-legacy", path: "legacy_test.dart"),
+    parseTestFile("/\/ Requirements=nnbd-weak", path: "weak_test.dart"),
+    parseTestFile("/\/ Requirements=nnbd-strong", path: "strong_test.dart"),
   ];
 
   expectTestCases([], testFiles,
@@ -46,11 +44,9 @@ void testVmOptions() {
   // Note: The backslashes are to avoid the test_runner thinking these are
   // Requirements markers for this file itself.
   var testFiles = [
-    createTestFile(source: "", path: "vm_no_options_test.dart"),
-    createTestFile(
-        source: "/\/ VMOptions=--a", path: "vm_one_option_test.dart"),
-    createTestFile(
-        source: "/\/ VMOptions=--a --b\n/\/ VMOptions=--c",
+    parseTestFile("", path: "vm_no_options_test.dart"),
+    parseTestFile("/\/ VMOptions=--a", path: "vm_one_option_test.dart"),
+    parseTestFile("/\/ VMOptions=--a --b\n/\/ VMOptions=--c",
         path: "vm_options_test.dart"),
   ];
 
@@ -69,16 +65,11 @@ void testServiceTestVmOptions() {
   // Note: The backslashes are to avoid the test_runner thinking these are
   // Requirements markers for this file itself.
   var testFiles = [
-    createTestFile(
-        source: "", path: "service_no_options_test.dart", suite: "service"),
-    createTestFile(
-        source: "/\/ VMOptions=--a",
-        path: "service_one_option_test.dart",
-        suite: "service"),
-    createTestFile(
-        source: "/\/ VMOptions=--a --b\n/\/ VMOptions=--c",
-        path: "service_options_test.dart",
-        suite: "service"),
+    parseTestFile("", path: "service_no_options_test.dart", suite: "service"),
+    parseTestFile("/\/ VMOptions=--a",
+        path: "service_one_option_test.dart", suite: "service"),
+    parseTestFile("/\/ VMOptions=--a --b\n/\/ VMOptions=--c",
+        path: "service_options_test.dart", suite: "service"),
   ];
 
   expectTestCases(

@@ -1,24 +1,20 @@
+// @dart = 2.9
 library test;
 
-T f<T>() => throw '';
+T f<T>() => null;
 
 class A {}
 
 class B extends A {
-  B operator *(B v) => throw '';
-  B operator +(C v) => throw '';
-  B operator -(int i) => throw '';
-  C operator &(A v) => throw '';
+  A operator +(C v) => null;
+  B operator *(B v) => null;
+  B operator -(int i) => null;
+  C operator &(A v) => null;
 }
 
 class Base {
-  B operator [](Index i) => throw '';
+  B operator [](Index i) => null;
   void operator []=(Index i, B v) {}
-}
-
-class Base2 {
-  B? operator [](Index i) => throw '';
-  void operator []=(Index i, B? v) {}
 }
 
 class C extends B {}
@@ -26,10 +22,6 @@ class C extends B {}
 class Index {}
 
 class Test extends Base {
-  void test() {}
-}
-
-class Test2 extends Base2 {
   void test() {}
 }
 

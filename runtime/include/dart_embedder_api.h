@@ -59,7 +59,10 @@ CreateKernelServiceIsolate(const IsolateCreationData& data,
 
 // Service isolate configuration.
 struct VmServiceConfiguration {
-  enum { kBindHttpServerToAFreePort = 0, kDoNotAutoStartHttpServer = -1 };
+  enum {
+    kBindHttpServerToAFreePort = 0,
+    kDoNotAutoStartHttpServer = -1
+  };
 
   // Address to which HTTP server will be bound.
   const char* ip;

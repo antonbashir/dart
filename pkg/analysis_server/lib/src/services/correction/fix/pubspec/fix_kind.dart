@@ -5,7 +5,7 @@
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 /// An enumeration of quick fix kinds found in a pubspec file.
-abstract final class PubspecFixKind {
+class PubspecFixKind {
   static const addName = FixKind(
     'pubspec.fix.add.name',
     PubspecFixKindPriority.DEFAULT,
@@ -16,8 +16,11 @@ abstract final class PubspecFixKind {
     PubspecFixKindPriority.DEFAULT,
     'Update pubspec with the missing dependencies',
   );
+
+  /// Prevent the creation of instances of this class.
+  PubspecFixKind._();
 }
 
-abstract final class PubspecFixKindPriority {
+class PubspecFixKindPriority {
   static const int DEFAULT = 50;
 }

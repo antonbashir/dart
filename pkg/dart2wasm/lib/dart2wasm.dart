@@ -8,8 +8,8 @@ import 'package:args/args.dart' as args;
 import 'package:front_end/src/api_unstable/vm.dart' show resolveInputUri;
 import 'package:front_end/src/api_unstable/vm.dart' as fe;
 
-import 'generate_wasm.dart';
-import 'option.dart';
+import 'package:dart2wasm/generate_wasm.dart';
+import 'package:dart2wasm/option.dart';
 
 // Used to allow us to keep defaults on their respective option structs.
 // Note: When adding new options, consider if CLI options should be add
@@ -18,13 +18,15 @@ final WasmCompilerOptions _d = WasmCompilerOptions.defaultOptions();
 
 final List<Option> options = [
   Flag("help", (o, _) {}, abbr: "h", negatable: false, defaultsTo: false),
+  Flag("export-all", (o, value) => o.translatorOptions.exportAll = value,
+      defaultsTo: _d.translatorOptions.exportAll),
   Flag("import-shared-memory",
       (o, value) => o.translatorOptions.importSharedMemory = value,
       defaultsTo: _d.translatorOptions.importSharedMemory),
   Flag("inlining", (o, value) => o.translatorOptions.inlining = value,
       defaultsTo: _d.translatorOptions.inlining),
-  Flag("minify", (o, value) => o.translatorOptions.minify = value,
-      defaultsTo: _d.translatorOptions.minify),
+  Flag("name-section", (o, value) => o.translatorOptions.nameSection = value,
+      defaultsTo: _d.translatorOptions.nameSection),
   Flag("polymorphic-specialization",
       (o, value) => o.translatorOptions.polymorphicSpecialization = value,
       defaultsTo: _d.translatorOptions.polymorphicSpecialization),
@@ -32,42 +34,32 @@ final List<Option> options = [
       defaultsTo: _d.translatorOptions.printKernel),
   Flag("print-wasm", (o, value) => o.translatorOptions.printWasm = value,
       defaultsTo: _d.translatorOptions.printWasm),
-  Flag("js-compatibility", (o, value) {
-    o.translatorOptions.jsCompatibility = value;
-    o.environment['dart.wasm.js_compatibility'] = 'true';
-  }, defaultsTo: _d.translatorOptions.jsCompatibility),
+  Flag("js-compatibility",
+      (o, value) => o.translatorOptions.jsCompatibility = value,
+      defaultsTo: _d.translatorOptions.jsCompatibility),
   Flag(
       "enable-asserts", (o, value) => o.translatorOptions.enableAsserts = value,
       defaultsTo: _d.translatorOptions.enableAsserts),
-  Flag("omit-explicit-checks",
-      (o, value) => o.translatorOptions.omitExplicitTypeChecks = value,
-      defaultsTo: _d.translatorOptions.omitExplicitTypeChecks),
-  Flag("omit-implicit-checks",
-      (o, value) => o.translatorOptions.omitImplicitTypeChecks = value,
-      defaultsTo: _d.translatorOptions.omitImplicitTypeChecks),
-  Flag("omit-bounds-checks", (o, value) {
-    o.translatorOptions.omitBoundsChecks = value;
-  }, defaultsTo: _d.translatorOptions.omitBoundsChecks),
-  Flag("verbose", (o, value) => o.translatorOptions.verbose = value,
-      defaultsTo: _d.translatorOptions.verbose),
+  Flag("omit-type-checks",
+      (o, value) => o.translatorOptions.omitTypeChecks = value,
+      defaultsTo: _d.translatorOptions.omitTypeChecks),
   Flag("verify-type-checks",
       (o, value) => o.translatorOptions.verifyTypeChecks = value,
       defaultsTo: _d.translatorOptions.verifyTypeChecks),
-  Flag("enable-experimental-wasm-interop",
-      (o, value) => o.translatorOptions.enableExperimentalWasmInterop = value,
-      defaultsTo: _d.translatorOptions.enableExperimentalWasmInterop),
   IntOption(
       "inlining-limit", (o, value) => o.translatorOptions.inliningLimit = value,
       defaultsTo: "${_d.translatorOptions.inliningLimit}"),
   IntOption("shared-memory-max-pages",
       (o, value) => o.translatorOptions.sharedMemoryMaxPages = value),
+  UriOption("dart-sdk", (o, value) => o.sdkPath = value,
+      defaultsTo: "${_d.sdkPath}"),
   UriOption("packages", (o, value) => o.packagesPath = value),
   UriOption("libraries-spec", (o, value) => o.librariesSpecPath = value),
   UriOption("platform", (o, value) => o.platformPath = value),
   IntMultiOption(
       "watch", (o, values) => o.translatorOptions.watchPoints = values),
   StringMultiOption(
-      "define", (o, values) => o.environment.addAll(processEnvironment(values)),
+      "define", (o, values) => o.environment = processEnvironment(values),
       abbr: "D"),
   StringMultiOption(
       "enable-experiment",
@@ -75,8 +67,6 @@ final List<Option> options = [
           o.feExperimentalFlags = processFeExperimentalFlags(values)),
   StringOption("multi-root-scheme", (o, value) => o.multiRootScheme = value),
   UriMultiOption("multi-root", (o, values) => o.multiRoots = values),
-  StringMultiOption("delete-tostring-package-uri",
-      (o, values) => o.deleteToStringPackageUri = values),
   StringOption("depfile", (o, value) => o.depFile = value),
   StringOption(
       "js-runtime-output", (o, value) => o.outputJSRuntimeFile = value),
@@ -89,13 +79,6 @@ final List<Option> options = [
   StringOption(
       "dump-kernel-after-tfa", (o, value) => o.dumpKernelAfterTfa = value,
       hide: true),
-  Flag("enable-experimental-ffi",
-      (o, value) => o.translatorOptions.enableExperimentalFfi = value,
-      defaultsTo: _d.translatorOptions.enableExperimentalFfi),
-  // Use same flag with dart2js for disabling source maps.
-  Flag("no-source-maps",
-      (o, value) => o.translatorOptions.generateSourceMaps = !value,
-      defaultsTo: !_d.translatorOptions.generateSourceMaps),
 ];
 
 Map<fe.ExperimentalFlag, bool> processFeExperimentalFlags(
@@ -122,6 +105,9 @@ WasmCompilerOptions parseArguments(List<String> arguments) {
   Never usage() {
     print("Usage: dart2wasm [<options>] <infile.dart> <outfile.wasm>");
     print("");
+    print("*NOTE*: Wasm compilation is experimental.");
+    print("The support may change, or be removed, with no advance notice.");
+    print("");
     print("Options:");
     for (String line in parser.usage.split('\n')) {
       print('\t$line');
@@ -145,20 +131,15 @@ WasmCompilerOptions parseArguments(List<String> arguments) {
         arg.applyToOptions(compilerOptions, results[arg.name]);
       }
     }
-    if ((compilerOptions.librariesSpecPath == null) ==
-        (compilerOptions.platformPath == null)) {
-      print('Either --libraries-spec or --platform has to be supplied.');
-      usage();
-    }
     return compilerOptions;
   } catch (e, s) {
     print(s);
-    print('Argument Error: $e');
+    print('Argument Error: ' + e.toString());
     usage();
   }
 }
 
 Future<int> main(List<String> args) async {
   WasmCompilerOptions options = parseArguments(args);
-  return generateWasm(options, errorPrinter: stderr.writeln);
+  return generateWasm(options);
 }

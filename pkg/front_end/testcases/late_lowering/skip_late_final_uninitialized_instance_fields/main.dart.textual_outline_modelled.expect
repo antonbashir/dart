@@ -10,13 +10,8 @@ class Class {
 }
 
 late final int initializedFinalTopLevelField = 0;
-
 late final int uninitializedFinalTopLevelField;
-
 late int initializedNonFinalTopLevelField = 0;
-
 late int uninitializedNonFinalTopLevelField;
-
 main() {}
-
 method() {}

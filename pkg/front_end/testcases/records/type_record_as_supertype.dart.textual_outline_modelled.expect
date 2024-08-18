@@ -25,7 +25,5 @@ abstract class C4 with G<RR> {}
 class G<X> {}
 
 main() {}
-
 typedef R = Record;
-
 typedef RR = R;

@@ -3,11 +3,7 @@ class A<T> {
 }
 
 S foo<S>() => throw "foo";
-
 wrap<R>(R Function() f) {}
-
 wrap2<R>(A<R> Function() f) {}
-
 bar() {}
-
 main() {}

@@ -56,7 +56,7 @@ foo(param) {
 
 const String REM3 = r"""
 foo(param) {
-  dynamic a = param ? 123 : null;
+  var a = param ? 123 : null;
   return 100.remainder(a);
   // No specialization for possibly null inputs.
   // present: 'remainder'

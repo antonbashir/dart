@@ -4,22 +4,25 @@
 
 part of "core_patch.dart";
 
-@pragma('vm:deeply-immutable')
 abstract final class _IntegerImplementation implements int {
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   num operator +(num other) => other._addFromInteger(this);
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   num operator -(num other) => other._subFromInteger(this);
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   num operator *(num other) => other._mulFromInteger(this);
 
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator ~/(num other) {
@@ -34,6 +37,7 @@ abstract final class _IntegerImplementation implements int {
   }
 
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   num operator %(num other) {
@@ -44,6 +48,7 @@ abstract final class _IntegerImplementation implements int {
   }
 
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator -() {
@@ -53,16 +58,19 @@ abstract final class _IntegerImplementation implements int {
   }
 
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator &(int other) =>
       unsafeCast<_IntegerImplementation>(other)._bitAndFromInteger(this);
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator |(int other) =>
       unsafeCast<_IntegerImplementation>(other)._bitOrFromInteger(this);
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator ^(int other) =>
@@ -72,26 +80,37 @@ abstract final class _IntegerImplementation implements int {
     return other._remainderFromInteger(this);
   }
 
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_bitAndFromInteger")
   external int _bitAndFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_bitOrFromInteger")
   external int _bitOrFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_bitXorFromInteger")
   external int _bitXorFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_shrFromInteger")
   external int _shrFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_ushrFromInteger")
   external int _ushrFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_shlFromInteger")
   external int _shlFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_addFromInteger")
   external int _addFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_subFromInteger")
   external int _subFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_mulFromInteger")
   external int _mulFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_truncDivFromInteger")
   external int _truncDivFromInteger(int other);
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Integer_moduloFromInteger")
   external int _moduloFromInteger(int other);
   int _remainderFromInteger(int other) {
@@ -101,16 +120,19 @@ abstract final class _IntegerImplementation implements int {
   }
 
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator >>(int other) =>
       unsafeCast<_IntegerImplementation>(other)._shrFromInteger(this);
   @pragma("vm:recognized", "graph-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator >>>(int other) =>
       unsafeCast<_IntegerImplementation>(other)._ushrFromInteger(this);
   @pragma("vm:recognized", "asm-intrinsic")
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:never-inline")
   @pragma("vm:disable-unboxed-parameters")
   int operator <<(int other) =>
@@ -166,8 +188,13 @@ abstract final class _IntegerImplementation implements int {
     return this < 0 ? -this : this;
   }
 
-  @pragma('vm:prefer-inline')
-  int get sign => (this >> 63) | (-this >>> 63);
+  int get sign {
+    return (this > 0)
+        ? 1
+        : (this < 0)
+            ? -1
+            : 0;
+  }
 
   bool get isEven => ((this & 1) == 0);
   bool get isOdd => !isEven;
@@ -530,7 +557,6 @@ abstract final class _IntegerImplementation implements int {
   }
 }
 
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 final class _Smi extends _IntegerImplementation {
   factory _Smi._uninstantiable() {
@@ -733,7 +759,6 @@ final class _Smi extends _IntegerImplementation {
 }
 
 // Represents integers that cannot be represented by Smi but fit into 64bits.
-@pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 final class _Mint extends _IntegerImplementation {
   factory _Mint._uninstantiable() {
@@ -744,6 +769,7 @@ final class _Mint extends _IntegerImplementation {
   external int get hashCode;
 
   int get _identityHashCode => hashCode;
+  @pragma("vm:non-nullable-result-type")
   @pragma("vm:external-name", "Mint_bitNegate")
   external int operator ~();
   @pragma("vm:exact-result-type", "dart:core#_Smi")

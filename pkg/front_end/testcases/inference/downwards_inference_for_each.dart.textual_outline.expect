@@ -7,7 +7,5 @@ abstract class MyStream<T> extends Stream<T> {
 }
 
 T F<T>() => throw '';
-
 Future f() async {}
-
 Future main() async {}

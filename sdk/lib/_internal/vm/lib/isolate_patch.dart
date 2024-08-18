@@ -455,7 +455,6 @@ final class Isolate {
 
     final RawReceivePort readyPort =
         new RawReceivePort(null, 'Isolate.spawnUri ready');
-    final enableAsserts = checked;
     try {
       _spawnUri(
           readyPort.sendPort,
@@ -466,7 +465,7 @@ final class Isolate {
           onExit,
           onError,
           errorsAreFatal,
-          enableAsserts,
+          checked,
           null,
           /* environment */
           packageConfigString,
@@ -527,7 +526,7 @@ final class Isolate {
       SendPort? onExit,
       SendPort? onError,
       bool errorsAreFatal,
-      bool? enableAsserts,
+      bool? checked,
       List? environment,
       String? packageConfig,
       String? debugName);
@@ -653,14 +652,8 @@ final class Isolate {
   @pragma("vm:external-name", "Isolate_exit_")
   external static Never _exit(SendPort? finalMessagePort, Object? message);
 
-  @pragma("vm:entry-point")
-  static bool _mayExit = true;
-
   @patch
   static Never exit([SendPort? finalMessagePort, Object? message]) {
-    if (!_mayExit) {
-      throw UnsupportedError("Isolate.exit");
-    }
     _exit(finalMessagePort, message);
   }
 

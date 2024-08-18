@@ -1796,7 +1796,9 @@ void Assembler::CompareRegisters(Register a, Register b) {
   cmpl(a, b);
 }
 
-void Assembler::Load(Register reg, const Address& address, OperandSize type) {
+void Assembler::LoadFromOffset(Register reg,
+                               const Address& address,
+                               OperandSize type) {
   switch (type) {
     case kByte:
       return movsxb(reg, address);
@@ -1815,7 +1817,9 @@ void Assembler::Load(Register reg, const Address& address, OperandSize type) {
   }
 }
 
-void Assembler::Store(Register reg, const Address& address, OperandSize sz) {
+void Assembler::StoreToOffset(Register reg,
+                              const Address& address,
+                              OperandSize sz) {
   switch (sz) {
     case kByte:
     case kUnsignedByte:
@@ -1832,7 +1836,7 @@ void Assembler::Store(Register reg, const Address& address, OperandSize sz) {
   }
 }
 
-void Assembler::Store(const Object& object, const Address& dst) {
+void Assembler::StoreToOffset(const Object& object, const Address& dst) {
   if (target::CanEmbedAsRawPointerInGeneratedCode(object)) {
     movl(dst, Immediate(target::ToRawPointer(object)));
   } else {
@@ -2076,12 +2080,30 @@ void Assembler::CompareObject(Register reg, const Object& object) {
   }
 }
 
-void Assembler::StoreBarrier(Register object,
-                             Register value,
-                             CanBeSmi can_be_smi,
-                             Register scratch) {
+void Assembler::LoadCompressedSmi(Register dest, const Address& slot) {
+  movl(dest, slot);
+#if defined(DEBUG)
+  Label done;
+  BranchIfSmi(dest, &done, kNearJump);
+  Stop("Expected Smi");
+  Bind(&done);
+#endif
+}
+
+void Assembler::StoreIntoObject(Register object,
+                                const Address& dest,
+                                Register value,
+                                CanBeSmi can_be_smi,
+                                MemoryOrder memory_order,
+                                Register scratch) {
   // x.slot = x. Barrier should have be removed at the IL level.
   ASSERT(object != value);
+
+  if (memory_order == kRelease) {
+    StoreRelease(value, dest.base(), dest.disp32());
+  } else {
+    movl(dest, value);
+  }
 
   bool spill_scratch = false;
   if (scratch == kNoRegister) {
@@ -2107,13 +2129,6 @@ void Assembler::StoreBarrier(Register object,
   Label done;
   if (can_be_smi == kValueCanBeSmi) {
     BranchIfSmi(value, &done, kNearJump);
-  } else {
-#if defined(DEBUG)
-    Label passed_check;
-    BranchIfNotSmi(value, &passed_check, kNearJump);
-    Breakpoint();
-    Bind(&passed_check);
-#endif
   }
   if (spill_scratch) {
     pushl(scratch);
@@ -2152,12 +2167,43 @@ void Assembler::StoreBarrier(Register object,
   Bind(&done);
 }
 
-void Assembler::ArrayStoreBarrier(Register object,
-                                  Register slot,
-                                  Register value,
-                                  CanBeSmi can_be_smi,
-                                  Register scratch) {
+void Assembler::StoreIntoObjectNoBarrier(Register object,
+                                         const Address& dest,
+                                         Register value,
+                                         MemoryOrder memory_order) {
+  if (memory_order == kRelease) {
+    StoreRelease(value, dest.base(), dest.disp32());
+  } else {
+    movl(dest, value);
+  }
+#if defined(DEBUG)
+  // We can't assert the incremental barrier is not needed here, only the
+  // generational barrier. We sometimes omit the write barrier when 'value' is
+  // a constant, but we don't eagerly mark 'value' and instead assume it is also
+  // reachable via a constant pool, so it doesn't matter if it is not traced via
+  // 'object'.
+  Label done;
+  BranchIfSmi(value, &done, kNearJump);
+  testb(FieldAddress(value, target::Object::tags_offset()),
+        Immediate(1 << target::UntaggedObject::kNewBit));
+  j(ZERO, &done, Assembler::kNearJump);
+  testb(FieldAddress(object, target::Object::tags_offset()),
+        Immediate(1 << target::UntaggedObject::kOldAndNotRememberedBit));
+  j(ZERO, &done, Assembler::kNearJump);
+  Stop("Write barrier is required");
+  Bind(&done);
+#endif  // defined(DEBUG)
+}
+
+void Assembler::StoreIntoArray(Register object,
+                               Register slot,
+                               Register value,
+                               CanBeSmi can_be_smi,
+                               Register scratch) {
   ASSERT(object != value);
+  movl(Address(slot, 0), value);
+
+  ASSERT(scratch != kNoRegister);
   ASSERT(scratch != object);
   ASSERT(scratch != value);
   ASSERT(scratch != slot);
@@ -2172,13 +2218,6 @@ void Assembler::ArrayStoreBarrier(Register object,
   Label done;
   if (can_be_smi == kValueCanBeSmi) {
     BranchIfSmi(value, &done, kNearJump);
-  } else {
-#if defined(DEBUG)
-    Label passed_check;
-    BranchIfNotSmi(value, &passed_check, kNearJump);
-    Breakpoint();
-    Bind(&passed_check);
-#endif
   }
   movl(scratch, FieldAddress(object, target::Object::tags_offset()));
   shrl(scratch, Immediate(target::UntaggedObject::kBarrierOverlapShift));
@@ -2197,31 +2236,10 @@ void Assembler::ArrayStoreBarrier(Register object,
   Bind(&done);
 }
 
-void Assembler::VerifyStoreNeedsNoWriteBarrier(Register object,
-                                               Register value) {
-  // We can't assert the incremental barrier is not needed here, only the
-  // generational barrier. We sometimes omit the write barrier when 'value' is
-  // a constant, but we don't eagerly mark 'value' and instead assume it is also
-  // reachable via a constant pool, so it doesn't matter if it is not traced via
-  // 'object'.
-  Label done;
-  BranchIfSmi(value, &done, kNearJump);
-  testb(FieldAddress(value, target::Object::tags_offset()),
-        Immediate(1 << target::UntaggedObject::kNewOrEvacuationCandidateBit));
-  j(ZERO, &done, Assembler::kNearJump);
-  testb(FieldAddress(object, target::Object::tags_offset()),
-        Immediate(1 << target::UntaggedObject::kOldAndNotRememberedBit));
-  j(ZERO, &done, Assembler::kNearJump);
-  Stop("Write barrier is required");
-  Bind(&done);
-}
-
-void Assembler::StoreObjectIntoObjectNoBarrier(Register object,
-                                               const Address& dest,
-                                               const Object& value,
-                                               MemoryOrder memory_order,
-                                               OperandSize size) {
-  ASSERT_EQUAL(size, kFourBytes);
+void Assembler::StoreIntoObjectNoBarrier(Register object,
+                                         const Address& dest,
+                                         const Object& value,
+                                         MemoryOrder memory_order) {
   ASSERT(IsOriginalObject(value));
   // Ignoring memory_order.
   // On intel stores have store-release behavior (i.e. stores are not
@@ -2229,11 +2247,11 @@ void Assembler::StoreObjectIntoObjectNoBarrier(Register object,
   // We don't run TSAN on 32 bit systems.
   // Don't call StoreRelease here because we would have to load the immediate
   // into a temp register which causes spilling.
-  if (FLAG_target_thread_sanitizer) {
-    if (memory_order == kRelease) {
-      UNIMPLEMENTED();
-    }
+#if defined(TARGET_USES_THREAD_SANITIZER)
+  if (memory_order == kRelease) {
+    UNIMPLEMENTED();
   }
+#endif
   if (target::CanEmbedAsRawPointerInGeneratedCode(value)) {
     Immediate imm_value(target::ToRawPointer(value));
     movl(dest, imm_value);
@@ -2289,16 +2307,6 @@ void Assembler::LoadDImmediate(XmmRegister dst, double value) {
   pushl(Immediate(Utils::Low32Bits(constant)));
   movsd(dst, Address(ESP, 0));
   addl(ESP, Immediate(2 * target::kWordSize));
-}
-
-void Assembler::LoadQImmediate(XmmRegister dst, simd128_value_t value) {
-  // TODO(5410843): Need to have a code constants table.
-  pushl(Immediate(value.int_storage[3]));
-  pushl(Immediate(value.int_storage[2]));
-  pushl(Immediate(value.int_storage[1]));
-  pushl(Immediate(value.int_storage[0]));
-  movups(dst, Address(ESP, 0));
-  addl(ESP, Immediate(4 * target::kWordSize));
 }
 
 void Assembler::FloatNegate(XmmRegister f) {
@@ -2565,8 +2573,7 @@ void Assembler::ExitFullSafepoint(Register scratch,
 
 void Assembler::TransitionNativeToGenerated(Register scratch,
                                             bool exit_safepoint,
-                                            bool ignore_unwind_in_progress,
-                                            bool set_tag) {
+                                            bool ignore_unwind_in_progress) {
   if (exit_safepoint) {
     ExitFullSafepoint(scratch, ignore_unwind_in_progress);
   } else {
@@ -2584,10 +2591,7 @@ void Assembler::TransitionNativeToGenerated(Register scratch,
   }
 
   // Mark that the thread is executing Dart code.
-  if (set_tag) {
-    movl(Assembler::VMTagAddress(),
-         Immediate(target::Thread::vm_tag_dart_id()));
-  }
+  movl(Assembler::VMTagAddress(), Immediate(target::Thread::vm_tag_dart_id()));
   movl(Address(THR, target::Thread::execution_state_offset()),
        Immediate(target::Thread::generated_execution_state()));
 
@@ -3123,18 +3127,6 @@ void Assembler::EnsureHasClassIdInDEBUG(intptr_t cid,
   Breakpoint();
   Bind(&matches);
 #endif
-}
-
-bool Assembler::AddressCanHoldConstantIndex(const Object& constant,
-                                            bool is_external,
-                                            intptr_t cid,
-                                            intptr_t index_scale) {
-  if (!IsSafeSmi(constant)) return false;
-  const int64_t index = target::SmiValue(constant);
-  const int64_t offset =
-      is_external ? 0 : (target::Instance::DataOffsetFor(cid) - kHeapObjectTag);
-  const int64_t disp = index * index_scale + offset;
-  return Utils::IsInt(32, disp);
 }
 
 Address Assembler::ElementAddressForIntIndex(bool is_external,

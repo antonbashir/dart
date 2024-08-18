@@ -66,23 +66,6 @@ class A extends Object with int {}
     ]);
   }
 
-  test_class_int_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-augment class A with int {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.MIXIN_OF_DISALLOWED_CLASS, 47, 3),
-    ]);
-  }
-
   test_class_Null() async {
     await assertErrorsInCode('''
 class A extends Object with Null {}
@@ -196,23 +179,6 @@ enum E with int {
 }
 ''', [
       error(CompileTimeErrorCode.MIXIN_OF_DISALLOWED_CLASS, 12, 3),
-    ]);
-  }
-
-  test_enum_int_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-import augment 'b.dart';
-enum A {v}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-augment library 'a.dart';
-augment enum A with int {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(CompileTimeErrorCode.MIXIN_OF_DISALLOWED_CLASS, 46, 3),
     ]);
   }
 }

@@ -6,7 +6,7 @@ import "dart:convert";
 import "dart:io";
 import "package:kernel/kernel.dart";
 
-Future<void> main(List<String> args) async {
+main(List<String> args) async {
   // Ensure right args are passed.
   if (args.length < 1) {
     print("usage: ${Platform.script} a.dill");

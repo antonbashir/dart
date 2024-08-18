@@ -1,5 +1,4 @@
 var result;
-
 extension Extension on int {
   int instanceMethod() => 1;
   int instanceMethod() => 2;
@@ -32,11 +31,7 @@ extension Extension on int {
   void set instanceMethodAndSetter2(int value) {}
   int instanceMethodAndSetter2() => 1;
 }
-
 test() {}
-
 main() {}
-
 expect(expected, actual) {}
-
 throws(dynamic Function() f) {}

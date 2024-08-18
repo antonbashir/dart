@@ -11,10 +11,10 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/utilities/extensions/string.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:test/test.dart';
 
 import '../../util/element_printer.dart';
+import '../../util/tree_string_sink.dart';
 
 /// Prints AST as a tree, with properties and children.
 class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
@@ -128,26 +128,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeElement('element', node.element);
-    });
-  }
-
-  @override
-  void visitAugmentedExpression(AugmentedExpression node) {
-    _sink.writeln('AugmentedExpression');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-      _writeElement('element', node.element);
-      _writeType('staticType', node.staticType);
-    });
-  }
-
-  @override
-  void visitAugmentedInvocation(AugmentedInvocation node) {
-    _sink.writeln('AugmentedInvocation');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-      _writeElement('element', node.element);
-      _writeType('staticType', node.staticType);
     });
   }
 
@@ -438,7 +418,7 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       if (_withResolution) {
-        var element = node.declaredElement;
+        final element = node.declaredElement;
         if (element != null) {
           _sink.writeWithIndent('declaredElement: ');
           _sink.writeIf(element.hasImplicitType, 'hasImplicitType ');
@@ -569,14 +549,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeDeclaredElement(node.declaredElement);
-    });
-  }
-
-  @override
-  void visitExtensionOnClause(ExtensionOnClause node) {
-    _sink.writeln('ExtensionOnClause');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
     });
   }
 
@@ -1052,14 +1024,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitMixinOnClause(MixinOnClause node) {
-    _sink.writeln('MixinOnClause');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-    });
-  }
-
-  @override
   void visitNamedExpression(NamedExpression node) {
     _sink.writeln('NamedExpression');
     _sink.withIndent(() {
@@ -1067,8 +1031,8 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
       _writeParameterElement(node);
       // Types of the node and its expression must be the same.
       if (node.expression.staticType != node.staticType) {
-        var nodeType = node.staticType;
-        var expressionType = node.expression.staticType;
+        final nodeType = node.staticType;
+        final expressionType = node.expression.staticType;
         fail(
           'Must be the same:\n'
           'nodeType: $nodeType\n'
@@ -1098,14 +1062,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitNullAwareElement(NullAwareElement node) {
-    _sink.writeln('NullAwareElement');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-    });
-  }
-
-  @override
   void visitNullCheckPattern(NullCheckPattern node) {
     _sink.writeln('NullCheckPattern');
     _sink.withIndent(() {
@@ -1130,6 +1086,14 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writePatternMatchedValueType(node);
+    });
+  }
+
+  @override
+  void visitOnClause(OnClause node) {
+    _sink.writeln('OnClause');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
     });
   }
 
@@ -1693,8 +1657,8 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
 
   void _assertFormalParameterDeclaredElement(FormalParameter node) {
     if (_withResolution) {
-      var declaredElement = node.declaredElement;
-      var expected = _expectedFormalParameterElements(node);
+      final declaredElement = node.declaredElement;
+      final expected = _expectedFormalParameterElements(node);
       _assertHasIdenticalElement(expected, declaredElement);
     }
   }
@@ -1714,7 +1678,7 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
 
   /// Check that the actual parent of [child] is [parent].
   void _checkParentOfChild(AstNode parent, AstNode child) {
-    var actualParent = child.parent;
+    final actualParent = child.parent;
     if (actualParent == null) {
       fail('''
 No parent.
@@ -1821,7 +1785,6 @@ Expected parent: (${parent.runtimeType}) $parent
     _sink.withIndent(() {
       var infoString = codeBlock.infoString;
       _sink.writelnWithIndent('infoString: ${infoString ?? '<empty>'}');
-      _sink.writelnWithIndent('type: ${codeBlock.type}');
       assert(codeBlock.lines.isNotEmpty);
       _sink.writelnWithIndent('lines');
       _sink.withIndent(() {
@@ -1886,7 +1849,7 @@ Expected parent: (${parent.runtimeType}) $parent
   /// writes the corresponding parameter element.
   void _writeParameterElement(Expression node) {
     if (configuration.withParameterElements) {
-      var parent = node.parent;
+      final parent = node.parent;
       if (parent is ArgumentList ||
           parent is AssignmentExpression && parent.rightHandSide == node ||
           parent is BinaryExpression && parent.rightOperand == node ||
@@ -1926,7 +1889,7 @@ Expected parent: (${parent.runtimeType}) $parent
 
   void _writePatternMatchedValueType(DartPattern node) {
     if (_withResolution) {
-      var matchedValueType = node.matchedValueType;
+      final matchedValueType = node.matchedValueType;
       if (matchedValueType != null) {
         _writeType('matchedValueType', matchedValueType);
       } else {
@@ -1982,7 +1945,7 @@ Expected parent: (${parent.runtimeType}) $parent
   }
 
   static void _assertHasIdenticalElement<T>(List<T> elements, T expected) {
-    for (var element in elements) {
+    for (final element in elements) {
       if (identical(element, expected)) {
         return;
       }
@@ -2017,21 +1980,21 @@ Expected parent: (${parent.runtimeType}) $parent
   static List<ParameterElement> _expectedFormalParameterElements(
     FormalParameter node,
   ) {
-    var parametersParent = node.parentFormalParameterList.parent;
+    final parametersParent = node.parentFormalParameterList.parent;
     if (parametersParent is ConstructorDeclaration) {
-      var declaredElement = parametersParent.declaredElement!;
+      final declaredElement = parametersParent.declaredElement!;
       return declaredElement.parameters;
     } else if (parametersParent is FormalParameter) {
-      var declaredElement = parametersParent.declaredElement!;
+      final declaredElement = parametersParent.declaredElement!;
       return declaredElement.parameters;
     } else if (parametersParent is FunctionExpression) {
-      var declaredElement = parametersParent.declaredElement!;
+      final declaredElement = parametersParent.declaredElement!;
       return declaredElement.parameters;
     } else if (parametersParent is GenericFunctionTypeImpl) {
-      var declaredElement = parametersParent.declaredElement!;
+      final declaredElement = parametersParent.declaredElement!;
       return declaredElement.parameters;
     } else if (parametersParent is MethodDeclaration) {
-      var declaredElement = parametersParent.declaredElement!;
+      final declaredElement = parametersParent.declaredElement!;
       return declaredElement.parameters;
     }
     throw UnimplementedError(

@@ -4,6 +4,7 @@
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
@@ -15,12 +16,23 @@ import 'package:analyzer/src/error/codes.dart';
 class GetterSetterTypesVerifier {
   final TypeSystemImpl _typeSystem;
   final ErrorReporter _errorReporter;
+  final bool _strictCasts;
 
   GetterSetterTypesVerifier({
     required TypeSystemImpl typeSystem,
     required ErrorReporter errorReporter,
+    required bool strictCasts,
   })  : _typeSystem = typeSystem,
-        _errorReporter = errorReporter;
+        _errorReporter = errorReporter,
+        _strictCasts = strictCasts;
+
+  ErrorCode get _errorCode {
+    return _isNonNullableByDefault
+        ? CompileTimeErrorCode.GETTER_NOT_SUBTYPE_SETTER_TYPES
+        : CompileTimeErrorCode.GETTER_NOT_ASSIGNABLE_SETTER_TYPES;
+  }
+
+  bool get _isNonNullableByDefault => _typeSystem.isNonNullableByDefault;
 
   void checkExtension(ExtensionElement element) {
     for (var getter in element.accessors) {
@@ -47,7 +59,7 @@ class GetterSetterTypesVerifier {
         if (setter != null && setter.parameters.length == 1) {
           var getterType = getter.returnType;
           var setterType = setter.parameters[0].type;
-          if (!_typeSystem.isSubtypeOf(getterType, setterType)) {
+          if (!_match(getterType, setterType)) {
             Element errorElement;
             if (getter.enclosingElement == element) {
               if (element is ExtensionTypeElement &&
@@ -74,10 +86,10 @@ class GetterSetterTypesVerifier {
               setterName = '$setterClassName.$setterName';
             }
 
-            _errorReporter.atElement(
+            _errorReporter.reportErrorForElement(
+              _errorCode,
               errorElement,
-              CompileTimeErrorCode.GETTER_NOT_SUBTYPE_SETTER_TYPES,
-              arguments: [getterName, getterType, setterType, setterName],
+              [getterName, getterType, setterType, setterName],
             );
           }
         }
@@ -100,16 +112,23 @@ class GetterSetterTypesVerifier {
       var getterType = _getGetterType(getter);
       var setterType = _getSetterType(setter);
       if (setterType != null) {
-        if (!_typeSystem.isSubtypeOf(getterType, setterType)) {
+        if (!_match(getterType, setterType)) {
           var name = getter.name;
-          _errorReporter.atElement(
+          _errorReporter.reportErrorForElement(
+            _errorCode,
             getter,
-            CompileTimeErrorCode.GETTER_NOT_SUBTYPE_SETTER_TYPES,
-            arguments: [name, getterType, setterType, name],
+            [name, getterType, setterType, name],
           );
         }
       }
     }
+  }
+
+  bool _match(DartType getterType, DartType setterType) {
+    return _isNonNullableByDefault
+        ? _typeSystem.isSubtypeOf(getterType, setterType)
+        : _typeSystem.isAssignableTo(getterType, setterType,
+            strictCasts: _strictCasts);
   }
 
   /// Return the return type of the [getter].

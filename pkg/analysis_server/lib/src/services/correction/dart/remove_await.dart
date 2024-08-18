@@ -2,19 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class RemoveAwait extends ResolvedCorrectionProducer {
-  RemoveAwait({required super.context});
+  @override
+  bool get canBeAppliedInBulk => true;
 
   @override
-  CorrectionApplicability get applicability =>
-      CorrectionApplicability.automatically;
+  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.REMOVE_AWAIT;
@@ -24,9 +24,9 @@ class RemoveAwait extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var awaitExpression = node;
+    final awaitExpression = node;
     if (awaitExpression is AwaitExpression) {
-      var awaitToken = awaitExpression.awaitKeyword;
+      final awaitToken = awaitExpression.awaitKeyword;
       await builder.addDartFileEdit(file, (builder) {
         builder.addDeletion(range.startStart(awaitToken, awaitToken.next!));
       });

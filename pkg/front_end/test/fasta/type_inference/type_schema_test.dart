@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:front_end/src/type_inference/type_schema.dart';
+import 'package:front_end/src/fasta/type_inference/type_schema.dart';
 import 'package:kernel/ast.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -29,43 +29,35 @@ class UnknownTypeTest {
     expect(isKnown(unknownType), isFalse);
     expect(isKnown(const DynamicType()), isTrue);
     var classA = new Class(name: 'A', fileUri: dummyUri);
-    var A = new InterfaceType(classA, Nullability.nonNullable);
+    var A = new InterfaceType(classA, Nullability.legacy);
     var typedefF = new Typedef('F', A, fileUri: dummyUri);
     expect(isKnown(A), isTrue);
-    expect(isKnown(new InterfaceType(classA, Nullability.nonNullable, [A])),
-        isTrue);
+    expect(isKnown(new InterfaceType(classA, Nullability.legacy, [A])), isTrue);
     expect(
-        isKnown(
-            new InterfaceType(classA, Nullability.nonNullable, [unknownType])),
+        isKnown(new InterfaceType(classA, Nullability.legacy, [unknownType])),
         isFalse);
-    expect(
-        isKnown(
-            new FunctionType([], const VoidType(), Nullability.nonNullable)),
+    expect(isKnown(new FunctionType([], const VoidType(), Nullability.legacy)),
         isTrue);
-    expect(isKnown(new FunctionType([], unknownType, Nullability.nonNullable)),
+    expect(isKnown(new FunctionType([], unknownType, Nullability.legacy)),
         isFalse);
-    expect(
-        isKnown(
-            new FunctionType([A], const VoidType(), Nullability.nonNullable)),
+    expect(isKnown(new FunctionType([A], const VoidType(), Nullability.legacy)),
         isTrue);
     expect(
         isKnown(new FunctionType(
-            [unknownType], const VoidType(), Nullability.nonNullable)),
+            [unknownType], const VoidType(), Nullability.legacy)),
         isFalse);
     expect(
-        isKnown(new FunctionType([], const VoidType(), Nullability.nonNullable,
+        isKnown(new FunctionType([], const VoidType(), Nullability.legacy,
             namedParameters: [new NamedType('x', A)])),
         isTrue);
     expect(
-        isKnown(new FunctionType([], const VoidType(), Nullability.nonNullable,
+        isKnown(new FunctionType([], const VoidType(), Nullability.legacy,
             namedParameters: [new NamedType('x', unknownType)])),
         isFalse);
-    expect(isKnown(new TypedefType(typedefF, Nullability.nonNullable)), isTrue);
-    expect(isKnown(new TypedefType(typedefF, Nullability.nonNullable, [A])),
-        isTrue);
+    expect(isKnown(new TypedefType(typedefF, Nullability.legacy)), isTrue);
+    expect(isKnown(new TypedefType(typedefF, Nullability.legacy, [A])), isTrue);
     expect(
-        isKnown(
-            new TypedefType(typedefF, Nullability.nonNullable, [unknownType])),
+        isKnown(new TypedefType(typedefF, Nullability.legacy, [unknownType])),
         isFalse);
   }
 
@@ -106,8 +98,8 @@ class UnknownTypeTest {
     expect(typeSchemaToString(unknownType), '?');
     expect(
         typeSchemaToString(new FunctionType(
-            [unknownType, unknownType], unknownType, Nullability.nonNullable)),
-        '(?, ?) → ?');
+            [unknownType, unknownType], unknownType, Nullability.legacy)),
+        '(?, ?) →* ?');
   }
 
   void test_visitChildren() {

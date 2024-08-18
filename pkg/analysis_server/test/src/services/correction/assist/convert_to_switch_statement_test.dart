@@ -249,42 +249,6 @@ void f(Object? x) {
 ''');
   }
 
-  Future<void> test_single_expression_greaterOrEqualThan() async {
-    await resolveTestCode('''
-void f(int x) {
-  if (x >= 100) {
-    0;
-  }
-}
-''');
-    await assertHasAssistAt('if', '''
-void f(int x) {
-  switch (x) {
-    case >= 100:
-      0;
-  }
-}
-''');
-  }
-
-  Future<void> test_single_expression_greaterThan() async {
-    await resolveTestCode('''
-void f(int x) {
-  if (x > 100) {
-    0;
-  }
-}
-''');
-    await assertHasAssistAt('if', '''
-void f(int x) {
-  switch (x) {
-    case > 100:
-      0;
-  }
-}
-''');
-  }
-
   Future<void> test_single_expression_isType() async {
     await resolveTestCode('''
 void f(Object? x) {
@@ -337,53 +301,6 @@ void f(Object? x) {
   }
 }
 ''');
-  }
-
-  Future<void> test_single_expression_lessOrEqualThan() async {
-    await resolveTestCode('''
-void f(int x) {
-  if (x <= 100) {
-    0;
-  }
-}
-''');
-    await assertHasAssistAt('if', '''
-void f(int x) {
-  switch (x) {
-    case <= 100:
-      0;
-  }
-}
-''');
-  }
-
-  Future<void> test_single_expression_lessThan() async {
-    await resolveTestCode('''
-void f(int x) {
-  if (x < 100) {
-    0;
-  }
-}
-''');
-    await assertHasAssistAt('if', '''
-void f(int x) {
-  switch (x) {
-    case < 100:
-      0;
-  }
-}
-''');
-  }
-
-  Future<void> test_single_expression_lessThan_notLiteral() async {
-    await resolveTestCode('''
-void f(int x, int y) {
-  if (x < y) {
-    0;
-  }
-}
-''');
-    await assertNoAssistAt('if');
   }
 
   Future<void> test_single_expression_notEqNull() async {

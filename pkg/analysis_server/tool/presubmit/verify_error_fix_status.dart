@@ -4,10 +4,7 @@
 
 import 'dart:io';
 
-import 'package:analysis_server/src/services/correction/fix/analysis_options/fix_generator.dart';
-import 'package:analysis_server/src/services/correction/fix/pubspec/fix_generator.dart';
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
-import 'package:analysis_server_plugin/src/correction/fix_generators.dart';
+import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:analyzer/src/lint/registry.dart';
@@ -23,11 +20,11 @@ void main() {
   }
 }
 
-PhysicalResourceProvider _resourceProvider = PhysicalResourceProvider.INSTANCE;
+PhysicalResourceProvider resourceProvider = PhysicalResourceProvider.INSTANCE;
 
 /// Returns the path to the file containing the status information.
 String statusFilePath() {
-  var pathContext = _resourceProvider.pathContext;
+  var pathContext = resourceProvider.pathContext;
   var packageRoot = pathContext.normalize(package_root.packageRoot);
   return pathContext.join(packageRoot, 'analysis_server', 'lib', 'src',
       'services', 'correction', 'error_fix_status.yaml');
@@ -43,7 +40,6 @@ String? verifyErrorFixStatus() {
   }
   statusInfo!; // This is non-null when `error` is `null`.
   registerLintRules();
-  registerBuiltInProducers();
   var lintRuleCodes = {
     for (var rule in Registry.ruleRegistry.rules) ...rule.lintCodes,
   };
@@ -64,7 +60,7 @@ String? verifyErrorFixStatus() {
       errorData.codesWithNoEntry.add(name);
     } else if (info is YamlMap) {
       var markedAsHavingFix = info['status'] == 'hasFix';
-      if (code.hasFix) {
+      if (hasFix(code)) {
         if (!markedAsHavingFix) {
           errorData.codesWithFixes.add(name);
         }
@@ -82,7 +78,7 @@ String? verifyErrorFixStatus() {
       errorData.codesWithNoEntry.add(name);
     } else if (info is YamlMap) {
       var markedAsHavingFix = info['status'] == 'hasFix';
-      if (lintCode.hasFix) {
+      if (hasFix(lintCode)) {
         if (!markedAsHavingFix) {
           errorData.codesWithFixes.add(name);
         }
@@ -116,7 +112,7 @@ String? verifyErrorFixStatus() {
 /// Returns the content of the file containing the status information, parsed
 /// as a YAML map.
 (String? error, YamlMap? info) _statusInfo() {
-  var statusFile = _resourceProvider.getFile(statusFilePath());
+  var statusFile = resourceProvider.getFile(statusFilePath());
   var document = loadYamlDocument(statusFile.readAsStringSync());
   var statusInfo = document.contents;
   if (statusInfo is! YamlMap) {
@@ -182,20 +178,4 @@ class ErrorData {
       codesWithNoEntry.isNotEmpty ||
       codesWithoutFixes.isNotEmpty ||
       entriesWithNoCode.isNotEmpty;
-}
-
-extension on ErrorCode {
-  /// Whether this [ErrorCode] is likely to have a fix associated with
-  /// it.
-  bool get hasFix {
-    var self = this;
-    if (self is LintCode) {
-      return registeredFixGenerators.lintProducers.containsKey(self) ||
-          registeredFixGenerators.lintMultiProducers.containsKey(self);
-    }
-    return registeredFixGenerators.nonLintProducers.containsKey(self) ||
-        registeredFixGenerators.nonLintMultiProducers.containsKey(self) ||
-        AnalysisOptionsFixGenerator.codesWithFixes.contains(self) ||
-        PubspecFixGenerator.codesWithFixes.contains(self);
-  }
 }

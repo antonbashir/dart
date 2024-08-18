@@ -6,8 +6,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
-import '../extensions.dart';
-import '../linter_lint_codes.dart';
 
 const _desc = r'Prefer typing uninitialized variables and fields.';
 
@@ -58,21 +56,22 @@ class GoodClass {
 ''';
 
 class PreferTypingUninitializedVariables extends LintRule {
+  static const LintCode forField = LintCode(
+      'prefer_typing_uninitialized_variables',
+      'An uninitialized field should have an explicit type annotation.',
+      correctionMessage: 'Try adding a type annotation.');
+
+  static const LintCode forVariable = LintCode(
+      'prefer_typing_uninitialized_variables',
+      'An uninitialized variable should have an explicit type annotation.',
+      correctionMessage: 'Try adding a type annotation.');
+
   PreferTypingUninitializedVariables()
       : super(
             name: 'prefer_typing_uninitialized_variables',
             description: _desc,
             details: _details,
-            categories: {
-              LintRuleCategory.errorProne,
-              LintRuleCategory.unintentional
-            });
-
-  @override
-  List<LintCode> get lintCodes => [
-        LinterLintCode.prefer_typing_uninitialized_variables_for_field,
-        LinterLintCode.prefer_typing_uninitialized_variables_for_local_variable
-      ];
+            group: Group.style);
 
   @override
   void registerNodeProcessors(
@@ -89,14 +88,16 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitVariableDeclarationList(VariableDeclarationList node) {
-    if (node.type != null) return;
+    if (node.type != null) {
+      return;
+    }
+
+    var code = node.parent is FieldDeclaration
+        ? PreferTypingUninitializedVariables.forField
+        : PreferTypingUninitializedVariables.forVariable;
 
     for (var v in node.variables) {
-      if (v.initializer == null && !v.isAugmentation) {
-        var code = node.parent is FieldDeclaration
-            ? LinterLintCode.prefer_typing_uninitialized_variables_for_field
-            : LinterLintCode
-                .prefer_typing_uninitialized_variables_for_local_variable;
+      if (v.initializer == null) {
         rule.reportLint(v, errorCode: code);
       }
     }

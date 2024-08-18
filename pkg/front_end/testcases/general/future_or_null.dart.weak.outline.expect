@@ -1,0 +1,9 @@
+library /*isLegacy*/;
+import self as self;
+
+import "dart:async";
+
+static get foo() → FutureOr<Null>*
+  ;
+static method main() → dynamic
+  ;

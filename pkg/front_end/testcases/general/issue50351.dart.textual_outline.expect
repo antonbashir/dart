@@ -10,5 +10,4 @@ class C {
 }
 
 String? something() => 'something';
-
 void main() {}

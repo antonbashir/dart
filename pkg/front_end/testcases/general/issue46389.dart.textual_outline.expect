@@ -15,5 +15,4 @@ mixin B<X> {
 class C extends A with B<num> {}
 
 void main() {}
-
 throws(void Function() f) {}

@@ -783,19 +783,22 @@ class Type extends Member {
       gen.writeln("String get type => 'Response';");
       gen.writeln();
       gen.writeln('''
-Map<String, dynamic> toJson() => <String, Object?>{
-    ...?json,
-    'type': type,
-  };
-''');
+Map<String, dynamic> toJson() {
+  final localJson = json;
+  final result = localJson == null ? <String, dynamic>{} : Map<String, dynamic>.of(localJson);
+  result['type'] = type;
+  return result;
+}''');
     } else if (name == 'TimelineEvent') {
       // TimelineEvent doesn't have any declared properties as the response is
       // fairly dynamic. Return the json directly.
       gen.writeln('''
-          Map<String, dynamic> toJson() => <String, Object?>{
-              ...?json,
-              'type': 'TimelineEvent',
-            };
+          Map<String, dynamic> toJson() {
+            final localJson = json;
+            final result = localJson == null ? <String, dynamic>{} : Map<String, dynamic>.of(localJson);
+            result['type'] = 'TimelineEvent';
+            return result;
+          }
       ''');
     } else {
       if (isResponse) {
@@ -807,38 +810,39 @@ Map<String, dynamic> toJson() => <String, Object?>{
       if (isResponse) {
         gen.writeln('@override');
       }
-      gen.write('Map<String, dynamic> toJson() =>');
-      gen.writeln('<String, Object?>{');
-      if (superName != null && superName != 'Response') {
-        // The base Response type doesn't have a toJson.
-        gen.writeln('...super.toJson(),');
+      gen.writeln('Map<String, dynamic> toJson() {');
+      if (superName == null || superName == 'Response') {
+        // The base Response type doesn't have a toJson
+        gen.writeln('final json = <String, dynamic>{};');
+      } else {
+        gen.writeln('final json = super.toJson();');
       }
 
       // Only Response objects have a `type` field, as defined by protocol.
       if (isResponse) {
         // Overwrites "type" from the super class if we had one.
-        gen.writeln("'type': type,");
+        gen.writeln("json['type'] = type;");
       }
 
       var requiredFields = fields.where((f) => !f.optional);
       if (requiredFields.isNotEmpty) {
+        gen.writeln('json.addAll({');
         for (var field in requiredFields) {
           gen.write("'${field.name}': ");
           generateSerializedFieldAccess(field, gen);
           gen.writeln(',');
         }
+        gen.writeln('});');
       }
 
       var optionalFields = fields.where((f) => f.optional);
       for (var field in optionalFields) {
-        var fieldName = field.name;
-        var patternVariableName = '${fieldName}Value';
-        gen.write('if (');
+        gen.write("_setIfNotNull(json, '${field.name}', ");
         generateSerializedFieldAccess(field, gen);
-        gen.writeln(' case final $patternVariableName?)');
-        gen.writeln("  '$fieldName': $patternVariableName,");
+        gen.writeln(');');
       }
-      gen.writeln('};');
+      gen.writeln('return json;');
+      gen.writeln('}');
       gen.writeln();
     }
 
@@ -1052,7 +1056,7 @@ class TypeField extends Member {
 
   @override
   String? get docs {
-    String str = _docs ?? '';
+    String str = _docs == null ? '' : _docs!;
     if (type.isMultipleReturns) {
       str += '\n\n[$generatableName] can be one of '
           '${joinLast(type.types.map((t) => '[$t]'), ', ', ' or ')}.';

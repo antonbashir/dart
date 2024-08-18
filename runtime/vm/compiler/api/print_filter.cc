@@ -48,7 +48,8 @@ static bool PassesFilter(const char* filter,
 #endif
 
   char* save_ptr;  // Needed for strtok_r.
-  const char* scrubbed_name = function.QualifiedScrubbedNameCString();
+  const char* scrubbed_name =
+      String::Handle(function.QualifiedScrubbedName()).ToCString();
   const char* function_name = function.ToFullyQualifiedCString();
   intptr_t function_name_len = strlen(function_name);
 

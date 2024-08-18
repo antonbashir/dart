@@ -14,15 +14,10 @@ class Class {
 }
 
 int nonNullableTopLevelFieldReads = 0;
-
 int nullableTopLevelFieldReads = 0;
-
 late final int? nullableTopLevelField =
     nullableTopLevelFieldReads++ == 0 ? nullableTopLevelField.hashCode : 0;
-
 late final int nonNullableTopLevelField =
     nonNullableTopLevelFieldReads++ == 0 ? nonNullableTopLevelField + 1 : 0;
-
 throws(f(), String message) {}
-
 void main() {}

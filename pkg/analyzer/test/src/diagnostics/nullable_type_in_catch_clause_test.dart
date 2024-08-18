@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -106,5 +107,18 @@ class A<B> {
 ''', [
       error(WarningCode.NULLABLE_TYPE_IN_CATCH_CLAUSE, 40, 1),
     ]);
+  }
+
+  test_optOut() async {
+    noSoundNullSafety = false;
+    await assertNoErrorsInCode('''
+// @dart = 2.7
+
+void f() {
+  try {
+  } on dynamic {
+  }
+}
+''');
   }
 }

@@ -1,4 +1,4 @@
-/*library: languageVersion=%CURRENT_VERSION_MARKER%*/
+/*library: languageVersion=2.8*/
 library pack;
 
 part /*error: errors=LanguageVersionMismatchInPart*/ 'package:pack/src/part.dart';

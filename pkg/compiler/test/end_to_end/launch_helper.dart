@@ -23,6 +23,7 @@ List<String> dart2JsCommand(List<String> args) {
     basePath = parentPath;
   }
   final command = <String>[];
+  command.add('--no-sound-null-safety');
   if (Platform.packageConfig != null) {
     command.add('--packages=${Platform.packageConfig}');
   }

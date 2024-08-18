@@ -14,17 +14,12 @@ part of 'core_patch.dart';
 @pragma("wasm:prefer-inline")
 _Type _literal<T>() => unsafeCast(T);
 
-extension on WasmArray<WasmI32> {
-  @pragma("wasm:prefer-inline")
-  bool get isEmpty => length.toWasmI32() == 0.toWasmI32();
-}
-
 extension on WasmArray<_Type> {
   @pragma("wasm:prefer-inline")
-  bool get isEmpty => length.toWasmI32() == 0.toWasmI32();
+  bool get isEmpty => length == 0;
 
   @pragma("wasm:prefer-inline")
-  bool get isNotEmpty => length.toWasmI32() != 0.toWasmI32();
+  bool get isNotEmpty => length != 0;
 
   @pragma("wasm:prefer-inline")
   WasmArray<_Type> map(_Type Function(_Type) fun) {
@@ -57,9 +52,26 @@ extension on WasmArray<_NamedParameter> {
   }
 }
 
-extension on WasmArray<String> {
+// TODO: Remove any occurence of `List`s in this file.
+extension on List<_Type> {
   @pragma("wasm:prefer-inline")
-  bool get isNotEmpty => length != 0;
+  WasmArray<_Type> toWasmArray() {
+    if (isEmpty) return const WasmArray<_Type>.literal(<_Type>[]);
+    final result = WasmArray<_Type>.filled(length, this[0]);
+    for (int i = 1; i < length; ++i) {
+      result[i] = this[i];
+    }
+    return result;
+  }
+}
+
+// Direct getter to bypass the covariance check and the bounds check when
+// indexing into a Dart list. This makes the indexing more efficient and avoids
+// performing type checks while performing type checks.
+extension _BypassListIndexingChecks<T> on List<T> {
+  @pragma("wasm:prefer-inline")
+  T _getUnchecked(int index) =>
+      unsafeCast(unsafeCast<_ListBase<T>>(this)._data[index]);
 }
 
 // TODO(joshualitt): We can cache the result of [_FutureOrType.asFuture].
@@ -69,7 +81,7 @@ abstract class _Type implements Type {
   const _Type(this.isDeclaredNullable);
 
   @pragma("wasm:prefer-inline")
-  bool _testID(WasmI32 value) => ClassID.getID(this) == value;
+  bool _testID(int value) => ClassID.getID(this) == value;
 
   bool get isBottom => _testID(ClassID.cidBottomType);
   bool get isTop => _testID(ClassID.cidTopType);
@@ -131,7 +143,6 @@ class _TopType extends _Type {
   _Type get _asNullable => _literal<Object?>();
 
   @override
-  @pragma("wasm:static-dispatch")
   bool _checkInstance(Object o) => true;
 
   @override
@@ -204,7 +215,7 @@ class _FunctionTypeParameterType extends _Type {
 
   @override
   int get hashCode {
-    int hash = mix64(ClassID.cidFunctionTypeParameterType.toIntSigned());
+    int hash = mix64(ClassID.cidFunctionTypeParameterType);
     hash = mix64(hash ^ (isDeclaredNullable ? 1 : 0));
     return mix64(hash ^ index.hashCode);
   }
@@ -242,7 +253,7 @@ class _FutureOrType extends _Type {
 
   @override
   int get hashCode {
-    int hash = mix64(ClassID.cidFutureOrType.toIntSigned());
+    int hash = mix64(ClassID.cidFutureOrType);
     hash = mix64(hash ^ (isDeclaredNullable ? 1 : 0));
     return mix64(hash ^ typeArgument.hashCode);
   }
@@ -263,7 +274,7 @@ class _FutureOrType extends _Type {
 
 @pragma("wasm:entry-point")
 class _InterfaceType extends _Type {
-  final WasmI32 classId;
+  final int classId;
   final WasmArray<_Type> typeArguments;
 
   @pragma("wasm:entry-point")
@@ -274,23 +285,12 @@ class _InterfaceType extends _Type {
   _Type get _asNullable => _InterfaceType(classId, true, typeArguments);
 
   @override
-  @pragma("wasm:static-dispatch")
   bool _checkInstance(Object o) {
     // We don't need to check whether the object is of interface type, since
     // non-interface class IDs ([Object], closures, records) will be rejected by
     // the interface type subtype check.
-    if (typeArguments.length == 0) {
-      return _TypeUniverse.isObjectInterfaceSubtype0(o, classId);
-    }
-    if (typeArguments.length == 1) {
-      return _TypeUniverse.isObjectInterfaceSubtype1(
-          o, classId, typeArguments[0]);
-    }
-    if (typeArguments.length == 2) {
-      return _TypeUniverse.isObjectInterfaceSubtype2(
-          o, classId, typeArguments[0], typeArguments[1]);
-    }
-    return _TypeUniverse.isObjectInterfaceSubtypeN(o, classId, typeArguments);
+    return _typeUniverse.isInterfaceSubtypeInner(
+        ClassID.getID(o), Object._getTypeArguments(o), null, this, null);
   }
 
   @override
@@ -308,8 +308,8 @@ class _InterfaceType extends _Type {
 
   @override
   int get hashCode {
-    int hash = mix64(ClassID.cidInterfaceType.toIntSigned());
-    hash = mix64(hash ^ classId.toIntSigned());
+    int hash = mix64(ClassID.cidInterfaceType);
+    hash = mix64(hash ^ classId);
     hash = mix64(hash ^ (isDeclaredNullable ? 1 : 0));
     for (int i = 0; i < typeArguments.length; i++) {
       hash = mix64(hash ^ typeArguments[i].hashCode);
@@ -320,8 +320,7 @@ class _InterfaceType extends _Type {
   @override
   String toString() {
     StringBuffer s = StringBuffer();
-    final int index = classId.toIntSigned();
-    s.write(_typeNames?[index] ?? 'minified:Class$index');
+    s.write(_getTypeNames()[classId]);
     if (typeArguments.isNotEmpty) {
       s.write("<");
       for (int i = 0; i < typeArguments.length; i++) {
@@ -354,7 +353,7 @@ class _NamedParameter {
 
   @override
   int get hashCode {
-    int hash = mix64(ClassID.cidNamedParameter.toIntSigned());
+    int hash = mix64(ClassID.cidNamedParameter);
     hash = mix64(hash ^ name.hashCode);
     hash = mix64(hash ^ type.hashCode);
     return mix64(hash ^ (isRequired ? 1 : 0));
@@ -398,7 +397,6 @@ class _FunctionType extends _Type {
   // representations that don't have this overhead in the common case.
   final int typeParameterOffset;
   final WasmArray<_Type> typeParameterBounds;
-  @pragma("wasm:entry-point")
   final WasmArray<_Type> typeParameterDefaults;
   final _Type returnType;
   final WasmArray<_Type> positionalParameters;
@@ -430,8 +428,8 @@ class _FunctionType extends _Type {
   @override
   bool _checkInstance(Object o) {
     if (ClassID.getID(o) != ClassID.cid_Closure) return false;
-    return _TypeUniverse.isFunctionSubtype(
-        _Closure._getClosureRuntimeType(unsafeCast(o)), null, this, null);
+    return _typeUniverse.isFunctionSubtype(
+        _getFunctionRuntimeType(unsafeCast(o)), null, this, null);
   }
 
   bool operator ==(Object o) {
@@ -467,7 +465,7 @@ class _FunctionType extends _Type {
 
   @override
   int get hashCode {
-    int hash = mix64(ClassID.cidFunctionType.toIntSigned());
+    int hash = mix64(ClassID.cidFunctionType);
     for (int i = 0; i < typeParameterBounds.length; i++) {
       hash = mix64(hash ^ typeParameterBounds[i].hashCode);
     }
@@ -533,7 +531,7 @@ class _AbstractRecordType extends _Type {
 
   @override
   bool _checkInstance(Object o) {
-    return _isRecordClassId(ClassID.getID(o));
+    return _isRecordInstance(o);
   }
 
   @override
@@ -544,8 +542,8 @@ class _AbstractRecordType extends _Type {
 
 @pragma("wasm:entry-point")
 class _RecordType extends _Type {
-  final WasmArray<String> names;
-  final WasmArray<_Type> fieldTypes;
+  final List<String> names;
+  final List<_Type> fieldTypes;
 
   @pragma("wasm:entry-point")
   _RecordType(this.names, this.fieldTypes, super.isDeclaredNullable);
@@ -555,8 +553,7 @@ class _RecordType extends _Type {
 
   @override
   bool _checkInstance(Object o) {
-    if (!_isRecordClassId(ClassID.getID(o))) return false;
-    return unsafeCast<Record>(o)._checkRecordType(fieldTypes, names);
+    return _typeUniverse.isSubtype(_getActualRuntimeType(o), null, this, null);
   }
 
   @override
@@ -567,7 +564,7 @@ class _RecordType extends _Type {
     final int numNames = names.length;
 
     for (int i = 0; i < numPositionals; i += 1) {
-      buffer.write(fieldTypes[i]);
+      buffer.write(fieldTypes._getUnchecked(i));
       if (i != fieldTypes.length - 1) {
         buffer.write(', ');
       }
@@ -576,8 +573,8 @@ class _RecordType extends _Type {
     if (names.isNotEmpty) {
       buffer.write('{');
       for (int i = 0; i < numNames; i += 1) {
-        final String fieldName = names[i];
-        final _Type fieldType = fieldTypes[numPositionals + i];
+        final String fieldName = names._getUnchecked(i);
+        final _Type fieldType = fieldTypes._getUnchecked(numPositionals + i);
         buffer.write(fieldType);
         buffer.write(' ');
         buffer.write(fieldName);
@@ -605,7 +602,8 @@ class _RecordType extends _Type {
     }
 
     for (int fieldIdx = 0; fieldIdx < fieldTypes.length; fieldIdx += 1) {
-      if (fieldTypes[fieldIdx] != other.fieldTypes[fieldIdx]) {
+      if (fieldTypes._getUnchecked(fieldIdx) !=
+          other.fieldTypes._getUnchecked(fieldIdx)) {
         return false;
       }
     }
@@ -619,39 +617,9 @@ class _RecordType extends _Type {
       identical(names, other.names);
 }
 
-/// Maps each class id representing a type to the offset of that type-checker
-/// row in [_typeRowDisplacementTable].
-external WasmArray<WasmI32> get _typeRowDisplacementOffsets;
-
-/// Tells whether a class `Sub` is a subclass of another class `Base.
-///
-/// Used via
-/// ```
-///    baseOffset = _typeRowDisplacementOffsets[Base.classId]`
-///    index = baseOffset + Sub.classId
-///    value = _typeRowDisplacementTable[index]
-///    if (value == Base.classId) {
-///      // => Sub.classId is a subclass of Base.classId
-///      // => Can use `index` into `_typeRowDisplacementSubstTable[index]`
-///    }
-///```
-external WasmArray<WasmI32> get _typeRowDisplacementTable;
-
-/// Holds the canonical type argument substitution index for matching table
-/// entries (see above).
-///
-/// If `index` matches in [_typeRowDisplacementTable] then the same index can be
-/// used in this array to find the type argument substitution array for
-/// translating type arguments from a base class to a direct/indirect class.
-external WasmArray<WasmArray<_Type>> get _typeRowDisplacementSubstTable;
-
-/// The names of all classes (indexed by class id) or null (if `--minify` was
-/// used)
-external WasmArray<String>? get _typeNames;
-
-/// The non-negative index into [_typeRowDisplacementSubstTable] that represents
-/// that no substitution is needed.
-external WasmI32 get _noSubstitutionIndex;
+external WasmArray<WasmArray<WasmI32>> _getTypeRulesSupers();
+external WasmArray<WasmArray<WasmArray<_Type>>> _getTypeRulesSubstitutions();
+external WasmArray<String> _getTypeNames();
 
 /// Type parameter environment used while comparing function types.
 ///
@@ -698,7 +666,20 @@ class _Environment {
   }
 }
 
-abstract class _TypeUniverse {
+class _TypeUniverse {
+  /// 'Map' of classId to the transitive set of super classes it implements.
+  final WasmArray<WasmArray<WasmI32>> typeRulesSupers;
+
+  /// 'Map' of classId, and super offset(from [typeRulesSupers]) to a list of
+  /// type substitutions.
+  final WasmArray<WasmArray<WasmArray<_Type>>> typeRulesSubstitutions;
+
+  const _TypeUniverse._(this.typeRulesSupers, this.typeRulesSubstitutions);
+
+  factory _TypeUniverse.create() {
+    return _TypeUniverse._(_getTypeRulesSupers(), _getTypeRulesSubstitutions());
+  }
+
   static _Type substituteInterfaceTypeParameter(
       _InterfaceTypeParameterType typeParameter,
       WasmArray<_Type> substitutions) {
@@ -752,33 +733,19 @@ abstract class _TypeUniverse {
           substituteTypeArgument(type.as<_FutureOrType>().typeArgument,
               substitutions, rootFunction));
     } else if (type.isInterface) {
-      final interfaceType = type.as<_InterfaceType>();
-      final arguments = interfaceType.typeArguments;
-      if (arguments.isEmpty) return interfaceType;
-      final newArguments =
-          WasmArray<_Type>.filled(arguments.length, _literal<dynamic>());
-      for (WasmI32 i = 0.toWasmI32();
-          i < arguments.length.toWasmI32();
-          i += 1.toWasmI32()) {
-        newArguments[i.toIntSigned()] = substituteTypeArgument(
-            arguments[i.toIntSigned()], substitutions, rootFunction);
+      _InterfaceType interfaceType = type.as<_InterfaceType>();
+      final typeArguments = WasmArray<_Type>.filled(
+          interfaceType.typeArguments.length, _literal<dynamic>());
+      for (int i = 0; i < typeArguments.length; i++) {
+        typeArguments[i] = substituteTypeArgument(
+            interfaceType.typeArguments[i], substitutions, rootFunction);
       }
       return _InterfaceType(interfaceType.classId,
-          interfaceType.isDeclaredNullable, newArguments);
+          interfaceType.isDeclaredNullable, typeArguments);
     } else if (type.isInterfaceTypeParameterType) {
       assert(rootFunction == null);
       return substituteInterfaceTypeParameter(
           type.as<_InterfaceTypeParameterType>(), substitutions);
-    } else if (type.isRecord) {
-      final recordType = type.as<_RecordType>();
-      final fieldTypes = WasmArray<_Type>.filled(
-          recordType.fieldTypes.length, _literal<dynamic>());
-      for (int i = 0; i < recordType.fieldTypes.length; i++) {
-        fieldTypes[i] = substituteTypeArgument(
-            recordType.fieldTypes[i], substitutions, rootFunction);
-      }
-      return _RecordType(
-          recordType.names, fieldTypes, recordType.isDeclaredNullable);
     } else if (type.isFunction) {
       _FunctionType functionType = type.as<_FunctionType>();
       bool isRoot = identical(type, rootFunction);
@@ -861,175 +828,75 @@ abstract class _TypeUniverse {
     return _FutureOrType(declaredNullability, typeArgument);
   }
 
-  static bool isInterfaceSubtype(_InterfaceType s, _Environment? sEnv,
-      _InterfaceType t, _Environment? tEnv) {
-    final sId = s.classId;
-    final tId = t.classId;
-
-    // Return early if [sId] isn't a direct/indirect subclass of [tId].
-    final WasmI32 substitutionIndex = _checkSubclassRelationship(sId, tId);
-    if (substitutionIndex == (-1).toWasmI32()) return false;
-
-    // Return early if we don't have to check type arguments as the destination
-    // type is non-generic.
-    final tTypeArguments = t.typeArguments;
-    if (tTypeArguments.isEmpty) return true;
-
-    final sTypeArguments = s.typeArguments;
-    return areTypeArgumentsSubtypes(
-        sTypeArguments, sEnv, tTypeArguments, tEnv, substitutionIndex);
-  }
-
-  static bool isObjectInterfaceSubtype0(Object o, WasmI32 tId) {
-    final WasmI32 sId = ClassID.getID(o);
-    return _checkSubclassRelationship(sId, tId) != (-1).toWasmI32();
-  }
-
-  static bool isObjectInterfaceSubtype1(
-      Object o, WasmI32 tId, _Type tTypeArgument0) {
-    final WasmI32 sId = ClassID.getID(o);
-
-    // Return early if [sId] isn't a direct/indirect subclass of [tId].
-    final WasmI32 substitutionIndex = _checkSubclassRelationship(sId, tId);
-    if (substitutionIndex == (-1).toWasmI32()) return false;
-
-    // Check individual type arguments without substitution (fast case).
-    final sTypeArguments = Object._getTypeArguments(o);
-    return areTypeArgumentsSubtypes1(
-        sTypeArguments, tTypeArgument0, substitutionIndex);
-  }
-
-  static bool isObjectInterfaceSubtype2(
-      Object o, WasmI32 tId, _Type tTypeArgument0, _Type tTypeArgument1) {
-    final WasmI32 sId = ClassID.getID(o);
-
-    // Return early if [sId] isn't a direct/indirect subclass of [tId].
-    final WasmI32 substitutionIndex = _checkSubclassRelationship(sId, tId);
-    if (substitutionIndex == (-1).toWasmI32()) return false;
-
-    // Check individual type arguments without substitution (fast case).
-    final sTypeArguments = Object._getTypeArguments(o);
-    return areTypeArgumentsSubtypes2(
-        sTypeArguments, tTypeArgument0, tTypeArgument1, substitutionIndex);
-  }
-
-  static bool isObjectInterfaceSubtypeN(
-      Object o, WasmI32 tId, WasmArray<_Type> tTypeArguments) {
-    final WasmI32 sId = ClassID.getID(o);
-
-    // Return early if [sId] isn't a direct/indirect subclass of [tId].
-    final WasmI32 substitutionIndex = _checkSubclassRelationship(sId, tId);
-    if (substitutionIndex == (-1).toWasmI32()) return false;
-
-    // Return early if we don't have to check type arguments as the destination
-    // type is non-generic.
-    if (tTypeArguments.isEmpty) return true;
-
-    // Check individual type arguments without substitution (fast case).
-    final sTypeArguments = Object._getTypeArguments(o);
-    return areTypeArgumentsSubtypes(
-        sTypeArguments, null, tTypeArguments, null, substitutionIndex);
-  }
-
-  static bool areTypeArgumentsSubtypes1(WasmArray<_Type> sTypeArguments,
-      _Type tTypeArgument0, WasmI32 substitutionIndex) {
-    // Check individual type arguments without substitution (fast case).
-    if (substitutionIndex == _noSubstitutionIndex) {
-      return isSubtype(sTypeArguments[0], null, tTypeArgument0, null);
-    }
-
-    // Substitue each argument before performing the subtype check (slow case).
-    final substitutions =
-        _typeRowDisplacementSubstTable[substitutionIndex.toIntSigned()];
-    assert(substitutions.length == 1);
-    final sArgForClassT =
-        substituteTypeArgument(substitutions[0], sTypeArguments, null);
-    return isSubtype(sArgForClassT, null, tTypeArgument0, null);
-  }
-
-  static bool areTypeArgumentsSubtypes2(WasmArray<_Type> sTypeArguments,
-      _Type tTypeArgument0, _Type tTypeArgument1, WasmI32 substitutionIndex) {
-    // Check individual type arguments without substitution (fast case).
-    if (substitutionIndex == _noSubstitutionIndex) {
-      return isSubtype(sTypeArguments[1], null, tTypeArgument1, null) &&
-          isSubtype(sTypeArguments[0], null, tTypeArgument0, null);
-    }
-
-    // Substitue each argument before performing the subtype check (slow case).
-    final substitutions =
-        _typeRowDisplacementSubstTable[substitutionIndex.toIntSigned()];
-    assert(substitutions.length == 2);
-    final sArg1ForClassT =
-        substituteTypeArgument(substitutions[1], sTypeArguments, null);
-    final sArg0ForClassT =
-        substituteTypeArgument(substitutions[0], sTypeArguments, null);
-    return isSubtype(sArg0ForClassT, null, tTypeArgument0, null) &&
-        isSubtype(sArg1ForClassT, null, tTypeArgument1, null);
-  }
-
-  static bool areTypeArgumentsSubtypes(
-      WasmArray<_Type> sTypeArguments,
-      _Environment? sEnv,
-      WasmArray<_Type> tTypeArguments,
-      _Environment? tEnv,
-      WasmI32 substitutionIndex) {
-    // Check individual type arguments without substitution (fast case).
-    if (substitutionIndex == _noSubstitutionIndex) {
-      for (int i = 0; i < tTypeArguments.length; i++) {
-        if (!isSubtype(sTypeArguments[i], sEnv, tTypeArguments[i], tEnv)) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    // Substitute each argument before performing the subtype check (slow case).
-    final substitutions =
-        _typeRowDisplacementSubstTable[substitutionIndex.toIntSigned()];
-    assert(substitutions.length == tTypeArguments.length);
-    for (int i = 0; i < tTypeArguments.length; i++) {
-      final sArgForClassT =
-          substituteTypeArgument(substitutions[i], sTypeArguments, null);
-      if (!isSubtype(sArgForClassT, sEnv, tTypeArguments[i], tEnv)) {
+  bool areTypeArgumentsSubtypes(WasmArray<_Type> sArgs, _Environment? sEnv,
+      WasmArray<_Type> tArgs, _Environment? tEnv) {
+    assert(sArgs.length == tArgs.length);
+    for (int i = 0; i < sArgs.length; i++) {
+      if (!isSubtype(sArgs[i], sEnv, tArgs[i], tEnv)) {
         return false;
       }
     }
     return true;
   }
 
-  /// Checks that [sId] is direct/indirect subclass of [tId] and obtains
-  /// substitution array index to translate [sId]s type arguments to [tId]s
-  /// type arguments.
-  ///
-  /// Returns `null` if [sId] does not have [tId] in its transitive
-  /// extends/implements chain or
-  @pragma('wasm:prefer-inline')
-  static WasmI32 _checkSubclassRelationship(WasmI32 sId, WasmI32 tId) {
-    // Caller should ensure that the target cannot be a top type (which is
-    // usually the case as callers have an [_InterfaceType].
-    assert(!_isObjectClassId(tId));
-
-    // The [sSupers] array below doesn't encode the class itself.
-    if (sId == tId) return _noSubstitutionIndex;
-
-    return _checkSubclassRelationshipViaTable(sId, tId);
+  bool isInterfaceSubtype(_InterfaceType s, _Environment? sEnv,
+      _InterfaceType t, _Environment? tEnv) {
+    return isInterfaceSubtypeInner(s.classId, s.typeArguments, sEnv, t, tEnv);
   }
 
-  @pragma('wasm:prefer-inline')
-  static WasmI32 _checkSubclassRelationshipViaTable(WasmI32 sId, WasmI32 tId) {
-    final offset = _typeRowDisplacementOffsets;
-    final table = _typeRowDisplacementTable;
+  bool isInterfaceSubtypeInner(int sId, WasmArray<_Type> sTypeArguments,
+      _Environment? sEnv, _InterfaceType t, _Environment? tEnv) {
+    int tId = t.classId;
 
-    final WasmI32 index = offset[tId.toIntSigned()] + sId;
-    if (index.geU(table.length.toWasmI32())) return (-1).toWasmI32();
-    final value = table[index.toIntSigned()];
-    if (value == tId) return index;
-    if (value == -tId) return _noSubstitutionIndex;
-    return (-1).toWasmI32();
+    // If we have the same class, simply compare type arguments.
+    if (sId == tId) {
+      return areTypeArgumentsSubtypes(
+          sTypeArguments, sEnv, t.typeArguments, tEnv);
+    }
+
+    // Otherwise, check if [s] is a subtype of [t], and if it is then compare
+    // [s]'s type substitutions with [t]'s type arguments.
+    final WasmArray<WasmI32> sSupers = typeRulesSupers[sId];
+    if (sSupers.length == 0) return false;
+    int sSuperIndexOfT = -1;
+    for (int i = 0; i < sSupers.length; i++) {
+      if (sSupers.readUnsigned(i) == tId) {
+        sSuperIndexOfT = i;
+        break;
+      }
+    }
+    if (sSuperIndexOfT == -1) return false;
+    assert(sSuperIndexOfT < typeRulesSubstitutions[sId].length);
+
+    // Return early if we don't have to check type arguments.
+    WasmArray<_Type> substitutions =
+        typeRulesSubstitutions[sId][sSuperIndexOfT];
+    if (substitutions.isEmpty && sTypeArguments.isEmpty) {
+      return true;
+    }
+
+    // If we have empty type arguments then create a list of dynamic type
+    // arguments.
+    WasmArray<_Type> typeArgumentsForSubstitution =
+        substitutions.isNotEmpty && sTypeArguments.isEmpty
+            ? WasmArray<_Type>.filled(substitutions.length, _literal<dynamic>())
+            : sTypeArguments;
+
+    // Finally substitute arguments. We must do this upfront so we can normalize
+    // the type.
+    // TODO(joshualitt): This process is expensive so we should cache the
+    // result.
+    final substituted =
+        WasmArray<_Type>.filled(substitutions.length, _literal<dynamic>());
+    for (int i = 0; i < substitutions.length; i++) {
+      substituted[i] = substituteTypeArgument(
+          substitutions[i], typeArgumentsForSubstitution, null);
+    }
+    return areTypeArgumentsSubtypes(substituted, sEnv, t.typeArguments, tEnv);
   }
 
-  static bool isFunctionSubtype(_FunctionType s, _Environment? sEnv,
-      _FunctionType t, _Environment? tEnv) {
+  bool isFunctionSubtype(_FunctionType s, _Environment? sEnv, _FunctionType t,
+      _Environment? tEnv) {
     // Set up environments
     sEnv = _Environment(sEnv, s);
     tEnv = _Environment(tEnv, t);
@@ -1113,7 +980,7 @@ abstract class _TypeUniverse {
     return true;
   }
 
-  static bool isRecordSubtype(
+  bool isRecordSubtype(
       _RecordType s, _Environment? sEnv, _RecordType t, _Environment? tEnv) {
     // [s] <: [t] iff s and t have the same shape and fields of `s` are
     // subtypes of the same field in `t` by index.
@@ -1123,8 +990,8 @@ abstract class _TypeUniverse {
 
     final int numFields = s.fieldTypes.length;
     for (int fieldIdx = 0; fieldIdx < numFields; fieldIdx += 1) {
-      if (!isSubtype(
-          s.fieldTypes[fieldIdx], sEnv, t.fieldTypes[fieldIdx], tEnv)) {
+      if (!isSubtype(s.fieldTypes._getUnchecked(fieldIdx), sEnv,
+          t.fieldTypes._getUnchecked(fieldIdx), tEnv)) {
         return false;
       }
     }
@@ -1134,8 +1001,7 @@ abstract class _TypeUniverse {
 
   // Subtype check based off of sdk/lib/_internal/js_runtime/lib/rti.dart.
   // Returns true if [s] is a subtype of [t], false otherwise.
-  static bool isSubtype(
-      _Type s, _Environment? sEnv, _Type t, _Environment? tEnv) {
+  bool isSubtype(_Type s, _Environment? sEnv, _Type t, _Environment? tEnv) {
     // Reflexivity:
     if (identical(s, t)) return true;
 
@@ -1239,11 +1105,12 @@ abstract class _TypeUniverse {
   }
 
   // Check whether two types are both subtypes of each other.
-  static bool areEquivalent(
-      _Type s, _Environment? sEnv, _Type t, _Environment? tEnv) {
+  bool areEquivalent(_Type s, _Environment? sEnv, _Type t, _Environment? tEnv) {
     return isSubtype(s, sEnv, t, tEnv) && isSubtype(t, tEnv, s, sEnv);
   }
 }
+
+_TypeUniverse _typeUniverse = _TypeUniverse.create();
 
 @pragma("wasm:entry-point")
 @pragma("wasm:prefer-inline")
@@ -1261,121 +1128,8 @@ bool _isSubtype(Object? o, _Type t) {
 
 @pragma("wasm:entry-point")
 @pragma("wasm:prefer-inline")
-bool _isInterfaceSubtype(Object? o, bool isDeclaredNullable, WasmI32 tId,
-    WasmArray<_Type> typeArguments) {
-  final t = _InterfaceType(tId, isDeclaredNullable, typeArguments);
-  if (o == null) return t.isDeclaredNullable;
-  return t._checkInstance(o);
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-bool _isInterfaceSubtype0(Object? o, bool isDeclaredNullable, WasmI32 tId) {
-  if (o == null) return isDeclaredNullable;
-  return _TypeUniverse.isObjectInterfaceSubtype0(o, tId);
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-bool _isInterfaceSubtype1(
-    Object? o, bool isDeclaredNullable, WasmI32 tId, _Type tTypeArgument0) {
-  if (o == null) return isDeclaredNullable;
-  return _TypeUniverse.isObjectInterfaceSubtype1(o, tId, tTypeArgument0);
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-bool _isInterfaceSubtype2(Object? o, bool isDeclaredNullable, WasmI32 tId,
-    _Type tTypeArgument0, _Type tTypeArgument1) {
-  if (o == null) return isDeclaredNullable;
-  return _TypeUniverse.isObjectInterfaceSubtype2(
-      o, tId, tTypeArgument0, tTypeArgument1);
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
 bool _isTypeSubtype(_Type s, _Type t) {
-  return _TypeUniverse.isSubtype(s, null, t, null);
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-void _asSubtype(Object? o, _Type t) {
-  if (!_isSubtype(o, t)) {
-    _TypeError._throwAsCheckError(o, t);
-  }
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-void _asInterfaceSubtype(Object? o, bool isDeclaredNullable, WasmI32 tId,
-    WasmArray<_Type> typeArguments) {
-  if (!_isInterfaceSubtype(o, isDeclaredNullable, tId, typeArguments)) {
-    _throwInterfaceTypeAsCheckError(o, isDeclaredNullable, tId, typeArguments);
-  }
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-void _asInterfaceSubtype0(Object? o, bool isDeclaredNullable, WasmI32 tId) {
-  if (!_isInterfaceSubtype0(o, isDeclaredNullable, tId)) {
-    _throwInterfaceTypeAsCheckError0(o, isDeclaredNullable, tId);
-  }
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-void _asInterfaceSubtype1(
-    Object? o, bool isDeclaredNullable, WasmI32 tId, _Type typeArgument0) {
-  if (!_isInterfaceSubtype1(o, isDeclaredNullable, tId, typeArgument0)) {
-    _throwInterfaceTypeAsCheckError1(o, isDeclaredNullable, tId, typeArgument0);
-  }
-}
-
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-void _asInterfaceSubtype2(Object? o, bool isDeclaredNullable, WasmI32 tId,
-    _Type typeArgument0, _Type typeArgument1) {
-  if (!_isInterfaceSubtype2(
-      o, isDeclaredNullable, tId, typeArgument0, typeArgument1)) {
-    _throwInterfaceTypeAsCheckError2(
-        o, isDeclaredNullable, tId, typeArgument0, typeArgument1);
-  }
-}
-
-@pragma('wasm:never-inline')
-void _throwInterfaceTypeAsCheckError0(
-    Object? o, bool isDeclaredNullable, WasmI32 tId) {
-  final typeArguments = const WasmArray<_Type>.literal([]);
-  _TypeError._throwAsCheckError(
-      o, _InterfaceType(tId, isDeclaredNullable, typeArguments));
-}
-
-@pragma("wasm:entry-point")
-@pragma('wasm:never-inline')
-void _throwInterfaceTypeAsCheckError1(
-    Object? o, bool isDeclaredNullable, WasmI32 tId, _Type typeArgument0) {
-  final typeArguments = WasmArray<_Type>.literal([typeArgument0]);
-  _TypeError._throwAsCheckError(
-      o, _InterfaceType(tId, isDeclaredNullable, typeArguments));
-}
-
-@pragma("wasm:entry-point")
-@pragma('wasm:never-inline')
-void _throwInterfaceTypeAsCheckError2(Object? o, bool isDeclaredNullable,
-    WasmI32 tId, _Type typeArgument0, _Type typeArgument1) {
-  final typeArguments =
-      WasmArray<_Type>.literal([typeArgument0, typeArgument1]);
-  _TypeError._throwAsCheckError(
-      o, _InterfaceType(tId, isDeclaredNullable, typeArguments));
-}
-
-@pragma("wasm:entry-point")
-@pragma('wasm:never-inline')
-void _throwInterfaceTypeAsCheckError(Object? o, bool isDeclaredNullable,
-    WasmI32 tId, WasmArray<_Type> typeArguments) {
-  _TypeError._throwAsCheckError(
-      o, _InterfaceType(tId, isDeclaredNullable, typeArguments));
+  return _typeUniverse.isSubtype(s, null, t, null);
 }
 
 @pragma("wasm:entry-point")
@@ -1416,12 +1170,16 @@ class _TypeCheckVerificationError extends Error {
 ///
 /// [namedArguments] is a list of `Symbol` and `Object?` pairs.
 @pragma("wasm:entry-point")
-bool _checkClosureShape(
-    _FunctionType functionType,
-    WasmArray<_Type> typeArguments,
-    WasmArray<Object?> positionalArguments,
-    WasmArray<dynamic> namedArguments) {
-  if (typeArguments.length != functionType.typeParameterDefaults.length) {
+bool _checkClosureShape(_FunctionType functionType, List<_Type> typeArguments,
+    List<Object?> positionalArguments, List<dynamic> namedArguments) {
+  // Check type args, add default types to the type list if its empty
+  if (typeArguments.isEmpty) {
+    final defaults = functionType.typeParameterDefaults;
+    for (int i = 0; i < defaults.length; ++i) {
+      typeArguments.add(defaults[i]);
+    }
+  } else if (typeArguments.length !=
+      functionType.typeParameterDefaults.length) {
     return false;
   }
 
@@ -1446,7 +1204,8 @@ bool _checkClosureShape(
       continue;
     }
 
-    String argName = _symbolToString(namedArguments[namedArgIdx * 2] as Symbol);
+    String argName = _symbolToString(
+        namedArguments._getUnchecked(namedArgIdx * 2) as Symbol);
 
     final cmp = argName.compareTo(param.name);
 
@@ -1483,19 +1242,17 @@ bool _checkClosureShape(
 ///
 /// [namedArguments] is a list of `Symbol` and `Object?` pairs.
 @pragma("wasm:entry-point")
-void _checkClosureType(
-    _FunctionType functionType,
-    WasmArray<_Type> typeArguments,
-    WasmArray<Object?> positionalArguments,
-    WasmArray<dynamic> namedArguments) {
+void _checkClosureType(_FunctionType functionType, List<_Type> typeArguments,
+    List<Object?> positionalArguments, List<dynamic> namedArguments) {
   assert(functionType.typeParameterBounds.length == typeArguments.length);
 
   if (!typeArguments.isEmpty) {
-    for (int i = 0; i < typeArguments.length; i += 1) {
-      final typeArgument = typeArguments[i];
+    final typesAsArray = typeArguments.toWasmArray();
+    for (int i = 0; i < typesAsArray.length; i += 1) {
+      final typeArgument = typesAsArray[i];
       final paramBound = _TypeUniverse.substituteTypeArgument(
-          functionType.typeParameterBounds[i], typeArguments, functionType);
-      if (!_TypeUniverse.isSubtype(typeArgument, null, paramBound, null)) {
+          functionType.typeParameterBounds[i], typesAsArray, functionType);
+      if (!_typeUniverse.isSubtype(typeArgument, null, paramBound, null)) {
         final stackTrace = StackTrace.current;
         final typeError = _TypeError.fromMessageAndStackTrace(
             "Type argument '$typeArgument' is not a "
@@ -1506,12 +1263,12 @@ void _checkClosureType(
     }
 
     functionType = _TypeUniverse.substituteFunctionTypeArgument(
-        functionType, typeArguments);
+        functionType, typesAsArray);
   }
 
   // Check positional arguments
   for (int i = 0; i < positionalArguments.length; i += 1) {
-    final Object? arg = positionalArguments[i];
+    final Object? arg = positionalArguments._getUnchecked(i);
     final _Type paramTy = functionType.positionalParameters[i];
     if (!_isSubtype(arg, paramTy)) {
       // TODO(50991): Positional parameter names not available in runtime
@@ -1525,10 +1282,10 @@ void _checkClosureType(
   int namedParamIdx = 0;
   int namedArgIdx = 0;
   while (namedArgIdx * 2 < namedArguments.length) {
-    final String argName =
-        _symbolToString(namedArguments[namedArgIdx * 2] as Symbol);
+    final String argName = _symbolToString(
+        namedArguments._getUnchecked(namedArgIdx * 2) as Symbol);
     if (argName == functionType.namedParameters[namedParamIdx].name) {
-      final arg = namedArguments[namedArgIdx * 2 + 1];
+      final arg = namedArguments._getUnchecked(namedArgIdx * 2 + 1);
       final paramTy = functionType.namedParameters[namedParamIdx].type;
       if (!_isSubtype(arg, paramTy)) {
         _TypeError._throwArgumentTypeCheckError(
@@ -1542,129 +1299,20 @@ void _checkClosureType(
   }
 }
 
-_Type _getActualRuntimeType(Object object) {
-  final WasmI32 classId = ClassID.getID(object);
-
-  if (_isObjectClassId(classId)) return _literal<Object>();
-  if (_isRecordClassId(classId)) {
-    return Record._getMasqueradedRecordRuntimeType(unsafeCast<Record>(object));
-  }
-  if (_isClosureClassId(classId)) {
-    return _Closure._getClosureRuntimeType(unsafeCast<_Closure>(object));
-  }
-  return _InterfaceType(classId, false, Object._getTypeArguments(object));
-}
+@pragma("wasm:entry-point")
+external _Type _getActualRuntimeType(Object object);
 
 @pragma("wasm:prefer-inline")
 _Type _getActualRuntimeTypeNullable(Object? object) =>
     object == null ? _literal<Null>() : _getActualRuntimeType(object);
 
 @pragma("wasm:entry-point")
-_Type _getMasqueradedRuntimeType(Object object) {
-  final WasmI32 classId = ClassID.getID(object);
-
-  // Fast path: Most usages of `.runtimeType` may be on user-defined classes
-  // (e.g. `Widget.runtimeType`, ...)
-  if (ClassID.firstNonMasqueradedInterfaceClassCid <= classId) {
-    // Non-masqueraded interface type.
-    return _InterfaceType(classId, false, Object._getTypeArguments(object));
-  }
-
-  if (_isObjectClassId(classId)) return _literal<Object>();
-  if (_isRecordClassId(classId)) {
-    return Record._getMasqueradedRecordRuntimeType(unsafeCast<Record>(object));
-  }
-  if (_isClosureClassId(classId)) {
-    return _Closure._getClosureRuntimeType(unsafeCast<_Closure>(object));
-  }
-
-  // This method is not used in the RTT implementation, it's purely used for
-  // producing `Type` objects for `<obj>.runtimeType`.
-  //
-  // => We can use normal `is` checks in here that will be desugared to class-id
-  //    range checks.
-
-  if (object is bool) return _literal<bool>();
-  if (object is int) return _literal<int>();
-  if (object is double) return _literal<double>();
-  if (object is _Type) return _literal<Type>();
-  if (object is WasmListBase) {
-    return _InterfaceType(
-        ClassID.cidList, false, Object._getTypeArguments(object));
-  }
-
-  if (_isJsCompatibility) {
-    if (object is String) return _literal<String>();
-    if (object is TypedData) {
-      if (object is ByteData) return _literal<ByteData>();
-      if (object is Int8List) return _literal<Int8List>();
-      if (object is Uint8List) return _literal<Uint8List>();
-      if (object is Uint8ClampedList) return _literal<Uint8ClampedList>();
-      if (object is Int16List) return _literal<Int16List>();
-      if (object is Uint16List) return _literal<Uint16List>();
-      if (object is Int32List) return _literal<Int32List>();
-      if (object is Uint32List) return _literal<Uint32List>();
-      if (object is Int64List) return _literal<Int64List>();
-      if (object is Uint64List) return _literal<Uint64List>();
-      if (object is Float32List) return _literal<Float32List>();
-      if (object is Float64List) return _literal<Float64List>();
-      if (object is Int32x4List) return _literal<Int32x4List>();
-      if (object is Float32x4List) return _literal<Float32x4List>();
-      if (object is Float64x2List) return _literal<Float64x2List>();
-    }
-    if (object is ByteBuffer) return _literal<ByteBuffer>();
-    if (object is Float32x4) return _literal<Float32x4>();
-    if (object is Float64x2) return _literal<Float64x2>();
-    if (object is Int32x4) return _literal<Int32x4>();
-  } else {
-    if (object is WasmStringBase) return _literal<String>();
-    if (object is WasmTypedDataBase) {
-      if (object is ByteData) return _literal<ByteData>();
-      if (object is Int8List) return _literal<Int8List>();
-      if (object is Uint8List) return _literal<Uint8List>();
-      if (object is Uint8ClampedList) return _literal<Uint8ClampedList>();
-      if (object is Int16List) return _literal<Int16List>();
-      if (object is Uint16List) return _literal<Uint16List>();
-      if (object is Int32List) return _literal<Int32List>();
-      if (object is Uint32List) return _literal<Uint32List>();
-      if (object is Int64List) return _literal<Int64List>();
-      if (object is Uint64List) return _literal<Uint64List>();
-      if (object is Float32List) return _literal<Float32List>();
-      if (object is Float64List) return _literal<Float64List>();
-      if (object is Int32x4List) return _literal<Int32x4List>();
-      if (object is Float32x4List) return _literal<Float32x4List>();
-      if (object is Float64x2List) return _literal<Float64x2List>();
-      if (object is ByteBuffer) return _literal<ByteBuffer>();
-      if (object is Float32x4) return _literal<Float32x4>();
-      if (object is Float64x2) return _literal<Float64x2>();
-      if (object is Int32x4) return _literal<Int32x4>();
-    }
-  }
-
-  // Non-masqueraded interface type.
-  return _InterfaceType(classId, false, Object._getTypeArguments(object));
-}
-
-const bool _isJsCompatibility =
-    bool.fromEnvironment('dart.wasm.js_compatibility');
+external _Type _getMasqueradedRuntimeType(Object object);
 
 @pragma("wasm:prefer-inline")
 _Type _getMasqueradedRuntimeTypeNullable(Object? object) =>
     object == null ? _literal<Null>() : _getMasqueradedRuntimeType(object);
 
-external bool _isObjectClassId(WasmI32 classId);
-external bool _isClosureClassId(WasmI32 classId);
-external bool _isRecordClassId(WasmI32 classId);
+external _FunctionType _getFunctionRuntimeType(Function f);
 
-// Used by the generated code to compare types captured by instantiation
-// closures. Because we don't have a way of forcing adding a member the
-// dispatch table (like the entry-point pragma) we can't generate a virtual
-// call to `_Type.==` directly in the generated code.
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-bool _runtimeTypeEquals(_Type t1, _Type t2) => t1 == t2;
-
-// Same as [_RuntimeTypeEquals], but for `Object.hashCode`.
-@pragma("wasm:entry-point")
-@pragma("wasm:prefer-inline")
-int _runtimeTypeHashCode(_Type t) => t.hashCode;
+external bool _isRecordInstance(Object o);

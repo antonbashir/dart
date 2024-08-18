@@ -28,7 +28,7 @@ void main(List<String> args) async {
   parser.addFlag("help", help: "Show the program usage.", negatable: false);
 
   final options = parser.parse(args);
-  if (options.flag("help")) {
+  if (options["help"]) {
     print("""
 Usage: find_base_commit.dart [OPTION]...
 Find the newest commit that has a full set of results on the builders.
@@ -39,9 +39,9 @@ ${parser.usage}""");
     return;
   }
 
-  int count = int.parse(options.option("count")!);
+  int count = int.parse(options["count"]);
   final globs = List<Glob>.from(
-      options.multiOption("builder").map((String pattern) => Glob(pattern)));
+      options["builder"].map((String pattern) => Glob(pattern)));
 
   // Download the most recent builds from buildbucket.
   const maxBuilds = 1000;
@@ -100,14 +100,14 @@ ${parser.usage}""");
   // can, the first time we see a commit, we know it's newer than all commits
   // we haven't seen yet. The insertion order into the buildersForCommits map
   // will then sorted with the newest commit first.
-  final builds = searchResult["builds"] as List?;
+  final builds = searchResult["builds"];
   if (builds == null) {
     print("No builds found");
     exit(1);
   }
   final buildersForCommits = <String, Set<String>>{};
   for (final build in builds) {
-    final builder = (build["builder"] as Map?)?["builder"];
+    final builder = build["builder"]?["builder"];
     if (builder is! String ||
         builder.endsWith("-beta") ||
         builder.endsWith("-dev") ||
@@ -120,13 +120,13 @@ ${parser.usage}""");
       // Filter way builders we're not interested in.
       continue;
     }
-    final input = (build["input"] as Map?)?["gitilesCommit"] as Map?;
+    final input = build["input"]?["gitilesCommit"];
     if (input == null) {
       // Ignore builds not triggered by a commit, e.g. fuzz-linux.
       continue;
     }
     final ref = input["ref"];
-    if (ref != "refs/heads/${options.option('branch')}") {
+    if (ref != "refs/heads/${options['branch']}") {
       // Ignore builds on the wrong branch.
       continue;
     }
