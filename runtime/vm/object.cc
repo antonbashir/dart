@@ -65,6 +65,7 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -828,9 +829,7 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  {
-    *sentinel_ ^= Sentinel::New();
-  }
+  { *sentinel_ ^= Sentinel::New(); }
 
   // Allocate and initialize optimizing compiler constants.
   {
@@ -2055,7 +2054,6 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     RegisterPrivateClass(cls, Symbols::_ConstSet(), lib);
     pending_classes.Add(cls);
 
-
     lib = Library::LookupLibrary(thread, Symbols::DartFiber());
     if (lib.IsNull()) {
       lib = Library::NewLibraryHelper(Symbols::DartFiber(), true);
@@ -2065,6 +2063,10 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     object_store->set_bootstrap_library(ObjectStore::kFiber, lib);
     ASSERT(!lib.IsNull());
     ASSERT(lib.ptr() == Library::FiberLibrary());
+
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
+    RegisterPrivateClass(cls, Symbols::_Coroutine(), lib);
+    pending_classes.Add(cls);
 
     // Pre-register the async library so we can place the vm class
     // FutureOr there rather than the core library.
@@ -2599,6 +2601,7 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::New<SendPort, RTN::SendPort>(isolate_group);
     cls = Class::New<StackTrace, RTN::StackTrace>(isolate_group);
     cls = Class::New<SuspendState, RTN::SuspendState>(isolate_group);
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
     cls = Class::New<RegExp, RTN::RegExp>(isolate_group);
     cls = Class::New<Number, RTN::Number>(isolate_group);
 
@@ -26609,6 +26612,66 @@ const char* SuspendState::ToCString() const {
 }
 
 CodePtr SuspendState::GetCodeObject() const {
+  ASSERT(pc() != 0);
+#if defined(DART_PRECOMPILED_RUNTIME)
+  NoSafepointScope no_safepoint;
+  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),
+                                   /*is_return_address=*/true);
+  ASSERT(code != Code::null());
+  return code;
+#else
+  ObjectPtr code = *(reinterpret_cast<ObjectPtr*>(
+      untag()->payload() + untag()->frame_size_ +
+      runtime_frame_layout.code_from_fp * kWordSize));
+  return Code::RawCast(code);
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
+}
+
+CoroutinePtr Coroutine::New(uint32_t stack_size, Heap::Space space) {
+  auto raw = Object::Allocate<Coroutine>(space);
+  NoSafepointScope no_safepoint;
+  ASSERT_EQUAL(raw->untag()->pc_, 0);
+  // #if !defined(DART_PRECOMPILED_RUNTIME)
+  //   raw->untag()->frame_capacity_ = frame_capacity;
+  // #endif
+  //   raw->untag()->frame_size_ = frame_size;
+  //   raw->untag()->set_function_data(function_data.ptr());
+  return raw;
+}
+
+#if !defined(DART_PRECOMPILED_RUNTIME)
+void Coroutine::set_frame_capacity(intptr_t frame_capcity) const {
+  ASSERT(frame_capcity >= 0);
+  StoreNonPointer(&untag()->frame_capacity_, frame_capcity);
+}
+#endif
+
+void Coroutine::set_frame_size(intptr_t frame_size) const {
+  ASSERT(frame_size >= 0);
+  StoreNonPointer(&untag()->frame_size_, frame_size);
+}
+
+void Coroutine::set_pc(uword pc) const {
+  StoreNonPointer(&untag()->pc_, pc);
+}
+
+void Coroutine::set_function_data(const Instance& function_data) const {
+  untag()->set_function_data(function_data.ptr());
+}
+
+void Coroutine::set_then_callback(const Closure& then_callback) const {
+  untag()->set_then_callback(then_callback.ptr());
+}
+
+void Coroutine::set_error_callback(const Closure& error_callback) const {
+  untag()->set_error_callback(error_callback.ptr());
+}
+
+const char* Coroutine::ToCString() const {
+  return "Coroutine";
+}
+
+CodePtr Coroutine::GetCodeObject() const {
   ASSERT(pc() != 0);
 #if defined(DART_PRECOMPILED_RUNTIME)
   NoSafepointScope no_safepoint;

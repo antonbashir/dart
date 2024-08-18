@@ -382,6 +382,7 @@ class ObjectPointerVisitor;
   V(_StreamIterator, "_StreamIterator")                                        \
   V(_String, "String")                                                         \
   V(_SuspendState, "_SuspendState")                                            \
+  V(_Coroutine, "_Coroutine")                                                  \
   V(_SyncStarIterator, "_SyncStarIterator")                                    \
   V(_SyncStreamController, "_SyncStreamController")                            \
   V(_TransferableTypedDataImpl, "_TransferableTypedDataImpl")                  \
@@ -444,7 +445,7 @@ class ObjectPointerVisitor;
   V(_initAsync, "_initAsync")                                                  \
   V(_initAsyncStar, "_initAsyncStar")                                          \
   V(_initSyncStar, "_initSyncStar")                                            \
-  V(_coroutineTransfer, "_coroutineTransfer")                                            \
+  V(_coroutineTransfer, "_coroutineTransfer")                                  \
   V(_instanceOf, "_instanceOf")                                                \
   V(_listGetAt, "_listGetAt")                                                  \
   V(_listLength, "_listLength")                                                \

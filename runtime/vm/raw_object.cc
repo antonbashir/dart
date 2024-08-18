@@ -4,7 +4,9 @@
 
 #include "vm/raw_object.h"
 
+#include "vm/class_id.h"
 #include "vm/class_table.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/dart.h"
 #include "vm/heap/become.h"
 #include "vm/heap/freelist.h"
@@ -13,6 +15,7 @@
 #include "vm/object.h"
 #include "vm/runtime_entry.h"
 #include "vm/stack_frame.h"
+#include "vm/tagged_pointer.h"
 #include "vm/visitor.h"
 
 namespace dart {
@@ -176,6 +179,10 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
           static_cast<const SuspendStatePtr>(this);
       intptr_t frame_capacity = raw_suspend_state->untag()->frame_capacity();
       instance_size = SuspendState::InstanceSize(frame_capacity);
+      break;
+    }
+    case kCoroutineCid: {
+      instance_size = Coroutine::InstanceSize();
       break;
     }
     case kTypeArgumentsCid: {
@@ -645,6 +652,12 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
   }
 
   return SuspendState::InstanceSize(raw_obj->untag()->frame_capacity());
+}
+
+intptr_t UntaggedCoroutine::VisitCoroutinePointers(
+    CoroutinePtr raw_obj,
+    ObjectPointerVisitor* visitor) {
+  return Coroutine::InstanceSize();
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {

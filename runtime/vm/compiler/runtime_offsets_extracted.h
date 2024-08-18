@@ -699,6 +699,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -1419,6 +1420,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -2128,6 +2130,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -2850,6 +2853,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -3566,6 +3570,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -4284,6 +4289,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -4995,6 +5001,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -5716,6 +5723,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -6418,6 +6426,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -7130,6 +7139,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -7831,6 +7841,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -8545,6 +8556,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -9253,6 +9265,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -9963,6 +9976,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -10666,6 +10680,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x1c;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x10;
@@ -11379,6 +11394,7 @@ static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize =
     0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize =
     0x18;
@@ -12164,6 +12180,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x10;
@@ -12958,6 +12975,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -13760,6 +13778,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -14556,6 +14575,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -15354,6 +15374,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -16148,6 +16169,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x10;
@@ -16943,6 +16965,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -17727,6 +17750,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x10;
@@ -18512,6 +18536,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -19305,6 +19330,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -20092,6 +20118,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -20881,6 +20908,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;
@@ -21666,6 +21694,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x10;
@@ -22452,6 +22481,7 @@ static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize =
     0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x30;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word
     AOT_SubtypeTestCache_InstanceSize = 0x18;

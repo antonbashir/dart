@@ -16,3 +16,10 @@ class Fiber {
     print(_coroutineTransfer("test"));
   }
 }
+
+@pragma("vm:entry-point")
+class _Coroutine implements Coroutine {
+  @pragma("vm:external-name", "Coroutine_factory")
+  external factory _Coroutine._(int stackSize);
+
+}
