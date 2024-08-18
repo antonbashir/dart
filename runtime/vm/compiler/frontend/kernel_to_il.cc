@@ -1277,10 +1277,10 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       break;
     }
     case MethodRecognizer::kCoroutine_transfer: {
-      const Code& stub =
-          Code::ZoneHandle(Z, IG->object_store()->coroutine_transfer_stub());
-      body += NullConstant();
-      body += TailCall(stub);
+      ASSERT_EQUAL(function.NumParameters(), 1);
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += Call1ArgStub(TokenPosition::kNoSource,
+                           Call1ArgStubInstr::StubId::kCoroutineTransfer);
       break;
     }
     case MethodRecognizer::kTypedList_GetInt8:

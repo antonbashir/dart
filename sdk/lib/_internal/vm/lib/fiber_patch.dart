@@ -6,12 +6,13 @@ external void _fiberSuspend();
 
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
-external void _coroutineTransfer();
+external Object? _coroutineTransfer(Object? nothing);
 
 @patch
 class Fiber {
   @patch
+  @pragma("vm:prefer-inline")
   static void suspend() {
-    _coroutineTransfer();
+    print(_coroutineTransfer("test"));
   }
 }

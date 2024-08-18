@@ -11433,6 +11433,7 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
     kInitAsyncStar,
     kInitSyncStar,
     kFfiAsyncCallbackSend,
+    kCoroutineTransfer,
   };
 
   Call1ArgStubInstr(const InstructionSource& source,

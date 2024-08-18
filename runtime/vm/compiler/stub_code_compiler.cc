@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/compiler/runtime_api.h"
+#include "vm/constants.h"
 #include "vm/flags.h"
 #include "vm/globals.h"
 
@@ -2211,7 +2212,11 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ EnterStubFrame();
-  __ CallRuntime(kCoroutineTransferRuntimeEntry, 0);
+  __ PushObject(NullObject());  // Make space on stack for the return value.
+  __ PushRegister(CallingConventions::kArg1Reg);
+  __ CallRuntime(kCoroutineTransferRuntimeEntry, 1);
+  __ Drop(1);                                      // Drop argument
+  __ PopRegister(CallingConventions::kReturnReg);  // Get result.
   __ LeaveStubFrame();
   __ Ret();
 }

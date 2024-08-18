@@ -1570,6 +1570,9 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
     case StubId::kFfiAsyncCallbackSend:
       name = "FfiAsyncCallbackSend";
       break;
+    case StubId::kCoroutineTransfer:
+      name = "CoroutineTransfer";
+      break;
   }
   f->Printf("%s(", name);
   operand()->PrintTo(f);
