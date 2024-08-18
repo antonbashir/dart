@@ -7039,11 +7039,9 @@ class Code : public Object {
     explicit Comments(const Array& comments);
 
     // Layout of entries describing comments.
-    enum {
-      kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
-      kCommentEntry,       // Comment text as a String.
-      kNumberOfEntries
-    };
+    enum {kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
+          kCommentEntry,       // Comment text as a String.
+          kNumberOfEntries};
 
     const Array& comments_;
     String& string_;
@@ -12703,60 +12701,19 @@ class SuspendState : public Instance {
 
 class Coroutine : public Instance {
  public:
-  static constexpr intptr_t kCoroutineVarIndex = 0;
-
   static intptr_t HeaderSize() { return sizeof(UntaggedCoroutine); }
 
-  static intptr_t InstanceSize() { return RoundedAllocationSize(sizeof(UntaggedCoroutine));}
-
-#if !defined(DART_PRECOMPILED_RUNTIME)
-  static intptr_t frame_capacity_offset() {
-    return OFFSET_OF(UntaggedCoroutine, frame_capacity_);
-  }
-#endif
-  static intptr_t frame_size_offset() {
-    return OFFSET_OF(UntaggedCoroutine, frame_size_);
-  }
-  static intptr_t pc_offset() { return OFFSET_OF(UntaggedCoroutine, pc_); }
-  static intptr_t function_data_offset() {
-    return OFFSET_OF(UntaggedCoroutine, function_data_);
-  }
-  static intptr_t then_callback_offset() {
-    return OFFSET_OF(UntaggedCoroutine, then_callback_);
-  }
-  static intptr_t error_callback_offset() {
-    return OFFSET_OF(UntaggedCoroutine, error_callback_);
-  }
-  static intptr_t payload_offset() {
-    return UntaggedCoroutine::payload_offset();
+  static intptr_t InstanceSize() {
+    return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
   static CoroutinePtr New(uint32_t stack_size, Heap::Space space = Heap::kNew);
 
-  uword pc() const { return untag()->pc_; }
-
-  intptr_t frame_size() const { return untag()->frame_size_; }
-
-  InstancePtr function_data() const { return untag()->function_data(); }
-
-  ClosurePtr then_callback() const { return untag()->then_callback(); }
-
-  ClosurePtr error_callback() const { return untag()->error_callback(); }
-
-  CodePtr GetCodeObject() const;
+  static intptr_t stack_size_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_size_);
+  }
 
  private:
-#if !defined(DART_PRECOMPILED_RUNTIME)
-  void set_frame_capacity(intptr_t frame_capcity) const;
-#endif
-  void set_frame_size(intptr_t frame_size) const;
-  void set_pc(uword pc) const;
-  void set_function_data(const Instance& function_data) const;
-  void set_then_callback(const Closure& then_callback) const;
-  void set_error_callback(const Closure& error_callback) const;
-
-  uint8_t* payload() const { return untag()->payload(); }
-
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);
   friend class Class;
 };

@@ -181,10 +181,6 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
       instance_size = SuspendState::InstanceSize(frame_capacity);
       break;
     }
-    case kCoroutineCid: {
-      instance_size = Coroutine::InstanceSize();
-      break;
-    }
     case kTypeArgumentsCid: {
       const TypeArgumentsPtr raw_array =
           static_cast<const TypeArgumentsPtr>(this);
@@ -241,6 +237,10 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
     }
     case kWeakSerializationReferenceCid: {
       instance_size = WeakSerializationReference::InstanceSize();
+      break;
+    }
+    case kCoroutineCid: {
+      instance_size = Coroutine::InstanceSize();
       break;
     }
     default: {
@@ -582,6 +582,7 @@ NULL_VISITOR(Float64x2)
 NULL_VISITOR(Bool)
 NULL_VISITOR(Capability)
 NULL_VISITOR(SendPort)
+NULL_VISITOR(Coroutine)
 NULL_VISITOR(TransferableTypedData)
 COMPRESSED_VISITOR(Pointer)
 NULL_VISITOR(DynamicLibrary)
@@ -652,12 +653,6 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
   }
 
   return SuspendState::InstanceSize(raw_obj->untag()->frame_capacity());
-}
-
-intptr_t UntaggedCoroutine::VisitCoroutinePointers(
-    CoroutinePtr raw_obj,
-    ObjectPointerVisitor* visitor) {
-  return Coroutine::InstanceSize();
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {

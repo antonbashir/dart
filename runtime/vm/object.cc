@@ -26628,63 +26628,13 @@ CodePtr SuspendState::GetCodeObject() const {
 }
 
 CoroutinePtr Coroutine::New(uint32_t stack_size, Heap::Space space) {
-  auto raw = Object::Allocate<Coroutine>(space);
-  NoSafepointScope no_safepoint;
-  ASSERT_EQUAL(raw->untag()->pc_, 0);
-  // #if !defined(DART_PRECOMPILED_RUNTIME)
-  //   raw->untag()->frame_capacity_ = frame_capacity;
-  // #endif
-  //   raw->untag()->frame_size_ = frame_size;
-  //   raw->untag()->set_function_data(function_data.ptr());
-  return raw;
-}
-
-#if !defined(DART_PRECOMPILED_RUNTIME)
-void Coroutine::set_frame_capacity(intptr_t frame_capcity) const {
-  ASSERT(frame_capcity >= 0);
-  StoreNonPointer(&untag()->frame_capacity_, frame_capcity);
-}
-#endif
-
-void Coroutine::set_frame_size(intptr_t frame_size) const {
-  ASSERT(frame_size >= 0);
-  StoreNonPointer(&untag()->frame_size_, frame_size);
-}
-
-void Coroutine::set_pc(uword pc) const {
-  StoreNonPointer(&untag()->pc_, pc);
-}
-
-void Coroutine::set_function_data(const Instance& function_data) const {
-  untag()->set_function_data(function_data.ptr());
-}
-
-void Coroutine::set_then_callback(const Closure& then_callback) const {
-  untag()->set_then_callback(then_callback.ptr());
-}
-
-void Coroutine::set_error_callback(const Closure& error_callback) const {
-  untag()->set_error_callback(error_callback.ptr());
+  const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(space));
+  result.StoreNonPointer(&result.untag()->stack_size_, stack_size);
+  return result.ptr();
 }
 
 const char* Coroutine::ToCString() const {
   return "Coroutine";
-}
-
-CodePtr Coroutine::GetCodeObject() const {
-  ASSERT(pc() != 0);
-#if defined(DART_PRECOMPILED_RUNTIME)
-  NoSafepointScope no_safepoint;
-  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),
-                                   /*is_return_address=*/true);
-  ASSERT(code != Code::null());
-  return code;
-#else
-  ObjectPtr code = *(reinterpret_cast<ObjectPtr*>(
-      untag()->payload() + untag()->frame_size_ +
-      runtime_frame_layout.code_from_fp * kWordSize));
-  return Code::RawCast(code);
-#endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
 void RegExp::set_pattern(const String& pattern) const {

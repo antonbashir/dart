@@ -3776,34 +3776,8 @@ class UntaggedFutureOr : public UntaggedInstance {
 
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
-
-  NOT_IN_PRECOMPILED(intptr_t frame_capacity_);
-  intptr_t frame_size_;
-  uword pc_;
-
-  COMPRESSED_POINTER_FIELD(InstancePtr, function_data)
-  COMPRESSED_POINTER_FIELD(ClosurePtr, then_callback)
-  COMPRESSED_POINTER_FIELD(ClosurePtr, error_callback)
-  VISIT_FROM(function_data)
-  VISIT_TO(error_callback)
-
- public:
-  uword pc() const { return pc_; }
-
-  intptr_t frame_capacity() const {
-#if defined(DART_PRECOMPILED_RUNTIME)
-    return frame_size_;
-#else
-    return frame_capacity_;
-#endif
-  }
-
-  static intptr_t payload_offset() {
-    return OFFSET_OF_RETURNED_VALUE(UntaggedCoroutine, payload);
-  }
-
-  uint8_t* payload() { OPEN_ARRAY_START(uint8_t, uint8_t); }
-  const uint8_t* payload() const { OPEN_ARRAY_START(uint8_t, uint8_t); }
+  VISIT_NOTHING();
+  uint32_t stack_size_;
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD
