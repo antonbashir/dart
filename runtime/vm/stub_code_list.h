@@ -178,7 +178,8 @@ namespace dart {
   V(AsyncExceptionHandler)                                                     \
   V(CloneSuspendState)                                                         \
   V(FfiAsyncCallbackSend)                                                      \
-  V(UnknownDartCode)
+  V(UnknownDartCode)                                                           \
+  V(CoroutineTransfer)
 
 }  // namespace dart
 

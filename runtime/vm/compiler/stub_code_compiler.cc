@@ -1700,9 +1700,9 @@ EMIT_BOX_ALLOCATION(Int32x4)
 static void GenerateBoxFpuValueStub(Assembler* assembler,
                                     const dart::Class& cls,
                                     const RuntimeEntry& runtime_entry,
-                                    void (Assembler::* store_value)(FpuRegister,
-                                                                    Register,
-                                                                    int32_t)) {
+                                    void (Assembler::*store_value)(FpuRegister,
+                                                                   Register,
+                                                                   int32_t)) {
   Label call_runtime;
   if (!FLAG_use_slow_path && FLAG_inline_alloc) {
     __ TryAllocate(cls, &call_runtime, compiler::Assembler::kFarJump,
@@ -2207,6 +2207,13 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
   GenerateInitSuspendableFunctionStub(
       target::Thread::suspend_state_init_sync_star_entry_point_offset(),
       target::ObjectStore::suspend_state_init_sync_star_offset());
+}
+
+void StubCodeCompiler::GenerateCoroutineTransferStub() {
+  __ EnterStubFrame();
+  __ CallRuntime(kCoroutineTransferRuntimeEntry, 0);
+  __ LeaveStubFrame();
+  __ Ret();
 }
 
 void StubCodeCompiler::GenerateResumeStub() {

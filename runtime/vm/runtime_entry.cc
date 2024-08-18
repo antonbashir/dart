@@ -27,6 +27,7 @@
 #include "vm/message.h"
 #include "vm/message_handler.h"
 #include "vm/object_store.h"
+#include "vm/os.h"
 #include "vm/parser.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
@@ -3757,6 +3758,10 @@ DEFINE_RUNTIME_ENTRY(ResumeFrame, 2) {
   if (!exception.IsNull()) {
     Exceptions::ReThrow(thread, exception, stacktrace);
   }
+}
+
+DEFINE_RUNTIME_ENTRY(CoroutineTransfer, 0) {
+  OS::Print("CoroutineTransfer\n");
 }
 
 void OnEveryRuntimeEntryCall(Thread* thread,
