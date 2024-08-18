@@ -11490,7 +11490,7 @@ class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
         stub_id_(stub_id),
         token_pos_(source.token_pos) {
     SetInputAt(0, first_operand);
-    SetInputAt(1, first_operand);
+    SetInputAt(1, second_operand);
   }
 
   Value* first_operand() const { return inputs_[0]; }

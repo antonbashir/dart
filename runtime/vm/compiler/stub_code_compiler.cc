@@ -2220,6 +2220,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ EnterDartFrame(0);
   __ LoadFieldFromOffset(kFromStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());  
   __ LoadFieldFromOffset(kToStackPointer, kToCoroutine, target::Coroutine::stack_pointer_offset());
+  __ Breakpoint();
   if (!FLAG_precompiled_mode) {
     // __ MoveRegister(kTemp, kSuspendState);
     // __ AddRegisters(kTemp, kFrameSize);
@@ -2263,6 +2264,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 //  __ AddImmediate(ResumeStubABI::kResumePcReg, SuspendStubABI::kResumePcDistance);
 #endif
   __ PopRegister(kTemp);
+  __ AddImmediate(kTemp, SuspendStubABI::kResumePcDistance);
   __ Jump(kTemp);
 }
 
