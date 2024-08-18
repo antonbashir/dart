@@ -12708,14 +12708,19 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t stack,
                           uint32_t size,
-                          uword entry);
+                          uword entry,
+                          uword initialize);
 
   static intptr_t stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
   }
 
-  static intptr_t entry_point_offset() {
-    return OFFSET_OF(UntaggedCoroutine, entry_point_);
+  static intptr_t entry_offset() {
+    return OFFSET_OF(UntaggedCoroutine, entry_);
+  }
+
+  static intptr_t initialize_offset() {
+    return OFFSET_OF(UntaggedCoroutine, initialize_);
   }
 
  private:

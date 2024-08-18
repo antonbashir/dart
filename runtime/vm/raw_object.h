@@ -3777,8 +3777,10 @@ class UntaggedFutureOr : public UntaggedInstance {
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   VISIT_NOTHING();
-  void **stack_pointer_;
-  uword entry_point_;
+  void** stack_pointer_;
+  uword entry_;
+  uword initialize_;
+  uword transfer_;
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

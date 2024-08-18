@@ -26626,10 +26626,22 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t stack, uint32_t size, uword entry) {
-  const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
-  result.StoreNonPointer(&result.untag()->stack_pointer_, (void **)(size + (char *)stack));
-  result.StoreNonPointer(&result.untag()->entry_point_, entry);
+CoroutinePtr Coroutine::New(uintptr_t stack,
+                            uint32_t size,
+                            uword entry,
+                            uword initialize) {
+  const auto& result =
+      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
+  void** stack_pointer = (void**)(size + (char*)stack);
+  if (stack != 0) {
+    *--stack_pointer = (void*)0;
+    *--stack_pointer = (void*)initialize;
+    stack_pointer -= 6;
+    memset(stack_pointer, 0, sizeof(*stack_pointer) * 6);
+  }
+  result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
+  result.StoreNonPointer(&result.untag()->entry_, entry);
+  result.StoreNonPointer(&result.untag()->initialize_, initialize);
   return result.ptr();
 }
 
