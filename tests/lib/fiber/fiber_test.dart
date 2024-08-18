@@ -1,7 +1,7 @@
 import 'dart:developer';
-import 'package:expect/expect.dart';
 import 'dart:fiber';
+import 'package:expect/expect.dart';
 
-void main() {
+Future<void> main() async {
   Fiber.suspend();
 }
