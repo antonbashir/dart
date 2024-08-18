@@ -7,11 +7,6 @@
 #include "vm/native_entry.h"
 
 namespace dart {
-DEFINE_NATIVE_ENTRY(Fiber_suspend, 0, 0) {
-  OS::Print("Suspend\n");
-  return Object::null();
-}
-
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
   ASSERT(
       TypeArguments::CheckedHandle(zone, arguments->NativeArgAt(0)).IsNull());

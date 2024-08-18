@@ -7,7 +7,6 @@
 
 #include "vm/allocation.h"
 #include "vm/frame_layout.h"
-#include "vm/heap/freelist.h"
 #include "vm/object.h"
 #include "vm/stub_code.h"
 

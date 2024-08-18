@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "vm/class_id.h"
 #include "vm/dart_api_state.h"
 #include "vm/flags.h"
 #include "vm/heap/weak_table.h"

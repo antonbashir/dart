@@ -27,7 +27,6 @@
 #include "vm/message.h"
 #include "vm/message_handler.h"
 #include "vm/object_store.h"
-#include "vm/os.h"
 #include "vm/parser.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
