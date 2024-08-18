@@ -13,12 +13,16 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   static void suspend() {
-    print(_coroutineTransfer("test"));
+    print(new _Coroutine(1234));
   }
 }
 
 @pragma("vm:entry-point")
 class _Coroutine implements Coroutine {
+  factory _Coroutine(int stackSize) {
+    return _Coroutine._(stackSize);
+  }
+
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(int stackSize);
 
