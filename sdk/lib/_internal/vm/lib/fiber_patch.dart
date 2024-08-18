@@ -17,5 +17,5 @@ class Fiber {
   final _Coroutine _coroutine;
 
   @patch
-  Fiber({required FiberStack stack, required void Function() entry, }) : _coroutine = _Coroutine._(stack.stack, stack.size, entry);
+  Fiber({required FiberStack stack, required void Function() entry}) : _coroutine = _Coroutine._(stack.pointer, stack.size, entry);
 }
