@@ -160,10 +160,13 @@ static bool CanShareObject(ObjectPtr obj, uword tags) {
           ->untag()
           ->IsImmutable();
     }
+
     // All other objects that have immutability bit set are deeply immutable.
     return true;
   }
 
+  // TODO(https://dartbug.com/55136): Mark Closures as shallowly imutable.
+  // And move this into the if above.
   if (cid == kClosureCid) {
     // We can share a closure iff it doesn't close over any state.
     return Closure::RawCast(obj)->untag()->context() == Object::null();
@@ -190,8 +193,6 @@ static bool MightNeedReHashing(ObjectPtr object) {
   // same hash codes.
   if (cid == kOneByteStringCid) return false;
   if (cid == kTwoByteStringCid) return false;
-  if (cid == kExternalOneByteStringCid) return false;
-  if (cid == kExternalTwoByteStringCid) return false;
   if (cid == kMintCid) return false;
   if (cid == kDoubleCid) return false;
   if (cid == kBoolCid) return false;
@@ -234,7 +235,7 @@ void SetNewSpaceTaggingWord(ObjectPtr to, classid_t cid, uint32_t size) {
   tags = UntaggedObject::NotMarkedBit::update(true, tags);
   tags = UntaggedObject::OldAndNotRememberedBit::update(false, tags);
   tags = UntaggedObject::CanonicalBit::update(false, tags);
-  tags = UntaggedObject::NewBit::update(true, tags);
+  tags = UntaggedObject::NewOrEvacuationCandidateBit::update(true, tags);
   tags = UntaggedObject::ImmutableBit::update(
       IsUnmodifiableTypedDataViewClassId(cid), tags);
 #if defined(HASH_IN_OBJECT_HEADER)
@@ -473,8 +474,6 @@ class IdentityMap {
           break;
         case kOneByteStringCid:
         case kTwoByteStringCid:
-        case kExternalOneByteStringCid:
-        case kExternalTwoByteStringCid:
           hash = String::Hash(static_cast<StringPtr>(object));
           hash = Object::SetCachedHashIfNotSet(object, hash);
           break;
@@ -498,7 +497,7 @@ class IdentityMap {
         malloc(hash_table_capacity_ * sizeof(uint32_t)));
     for (intptr_t i = 0; i < hash_table_capacity_; i++) {
       hash_table_[i] = 0;
-      if (check_for_safepoint && (((i + 1) % KB) == 0)) {
+      if (check_for_safepoint && (((i + 1) % kSlotsPerInterruptCheck) == 0)) {
         thread_->CheckForSafepoint();
       }
     }
@@ -514,7 +513,7 @@ class IdentityMap {
         }
         probe = (probe + 1) & mask;
       }
-      if (check_for_safepoint && (((id + 2) % KB) == 0)) {
+      if (check_for_safepoint && (((id + 2) % kSlotsPerInterruptCheck) == 0)) {
         thread_->CheckForSafepoint();
       }
     }
@@ -1031,7 +1030,7 @@ class RetainingPath {
           if (cid == kClosureCid) {
             closure ^= raw;
             // Only context has to be checked.
-            working_list->Add(closure.context());
+            working_list->Add(closure.RawContext());
             break;
           }
           // These we are not expected to drill into as they can't be on
@@ -1729,12 +1728,12 @@ class ObjectCopy : public Base {
 
 #define COPY_TO(clazz) case kTypedData##clazz##Cid:
 
-      CLASS_LIST_TYPED_DATA(COPY_TO) {
-        typename Types::TypedData casted_from = Types::CastTypedData(from);
-        typename Types::TypedData casted_to = Types::CastTypedData(to);
-        CopyTypedData(casted_from, casted_to);
-        return;
-      }
+        CLASS_LIST_TYPED_DATA(COPY_TO) {
+          typename Types::TypedData casted_from = Types::CastTypedData(from);
+          typename Types::TypedData casted_to = Types::CastTypedData(to);
+          CopyTypedData(casted_from, casted_to);
+          return;
+        }
 #undef COPY_TO
 
       case kByteDataViewCid:
@@ -2096,14 +2095,16 @@ class ObjectCopy : public Base {
     Base::EnqueueWeakReference(from);
   }
 
+  // clang-format off
 #define DEFINE_UNSUPPORTED(clazz)                                              \
   void Copy##clazz(typename Types::clazz from, typename Types::clazz to) {     \
-    FATAL("Objects of type " #clazz " should not occur in object graphs");     \
+      FATAL("Objects of type " #clazz " should not occur in object graphs");   \
   }
 
   FOR_UNSUPPORTED_CLASSES(DEFINE_UNSUPPORTED)
 
 #undef DEFINE_UNSUPPORTED
+  // clang-format on
 
   UntaggedObject* UntagObject(typename Types::Object obj) {
     return Types::GetObjectPtr(obj).Decompress(Base::heap_base_).untag();

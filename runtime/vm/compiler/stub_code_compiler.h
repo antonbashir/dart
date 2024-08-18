@@ -57,12 +57,6 @@ class StubCodeCompiler {
 
   Assembler* assembler;
 
-#if !defined(TARGET_ARCH_IA32)
-  void GenerateBuildMethodExtractorStub(const Code& closure_allocation_stub,
-                                        const Code& context_allocation_stub,
-                                        bool generic);
-#endif
-
   void EnsureIsNewOrRemembered();
   static ArrayPtr BuildStaticCallsTable(
       Zone* zone,
@@ -194,13 +188,18 @@ class StubCodeCompiler {
   // stubs. Check architecture-specific version for inputs/outputs.
   static void GenerateSubtypeNTestCacheStub(Assembler* assembler, int n);
 
-  // Common function for generating InitLateStaticField and
-  // InitLateFinalStaticField stubs.
-  void GenerateInitLateStaticFieldStub(bool is_final);
+  // Common function for generating InitLateStaticField,
+  // InitLateFinalStaticField, InitSharedLateStaticField,
+  // InitSharedLateFinalStaticField,
+  void GenerateInitLateStaticFieldStub(bool is_final, bool is_shared);
 
   // Common function for generating InitLateInstanceField and
   // InitLateFinalInstanceField stubs.
   void GenerateInitLateInstanceFieldStub(bool is_final);
+
+  // Common function for generating AllocateClosure[TA][Generic] stubs.
+  void GenerateAllocateClosureStub(bool has_instantiator_type_args,
+                                   bool is_generic);
 
   // Common function for generating Allocate<TypedData>Array stubs.
   void GenerateAllocateTypedDataArrayStub(intptr_t cid);

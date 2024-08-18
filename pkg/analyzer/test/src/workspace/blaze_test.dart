@@ -229,9 +229,8 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/my/foo/lib/foo1.dart',
       '/workspace/blaze-bin/my/foo/lib/foo1.dart'
     ]);
-    _assertResolve(
-        'package:my.foo/foo1.dart', '/workspace/blaze-bin/my/foo/lib/foo1.dart',
-        exists: true);
+    _assertResolve('package:my.foo/foo1.dart',
+        '/workspace/blaze-bin/my/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_bin_notInWorkspace() {
@@ -240,9 +239,8 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-genfiles/',
       '/workspace/blaze-bin/my/foo/lib/foo1.dart'
     ]);
-    _assertResolve(
-        'package:my.foo/foo1.dart', '/workspace/blaze-bin/my/foo/lib/foo1.dart',
-        exists: true);
+    _assertResolve('package:my.foo/foo1.dart',
+        '/workspace/blaze-bin/my/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_file_bin_pathHasSpace() {
@@ -304,8 +302,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-genfiles/my/foo/lib/foo1.dart'
     ]);
     _assertResolve('package:my.foo/foo1.dart',
-        '/workspace/blaze-genfiles/my/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-genfiles/my/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_genfiles_notInWorkspace() {
@@ -315,8 +312,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-genfiles/my/foo/lib/foo1.dart'
     ]);
     _assertResolve('package:my.foo/foo1.dart',
-        '/workspace/blaze-genfiles/my/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-genfiles/my/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_null_doubleDot() {
@@ -384,8 +380,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart',
     ]);
     _assertResolve('package:foo/foo1.dart',
-        '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_thirdParty_bin_notInWorkspace() {
@@ -395,8 +390,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart',
     ]);
     _assertResolve('package:foo/foo1.dart',
-        '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-bin/third_party/dart/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_thirdParty_doesNotExist() {
@@ -417,8 +411,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/third_party/dart/foo/lib/foo1.dart',
     ]);
     _assertResolve('package:foo/foo1.dart',
-        '/workspace/third_party/dart/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/third_party/dart/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_thirdParty_genfiles() {
@@ -429,8 +422,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart',
     ]);
     _assertResolve('package:foo/foo1.dart',
-        '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_thirdParty_genfiles_notInWorkspace() {
@@ -440,8 +432,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart',
     ]);
     _assertResolve('package:foo/foo1.dart',
-        '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart',
-        exists: true);
+        '/workspace/blaze-genfiles/third_party/dart/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_workspace_doesNotExist() {
@@ -461,8 +452,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
       '/workspace/my/foo/lib/foo1.dart',
     ]);
     _assertResolve(
-        'package:my.foo/foo1.dart', '/workspace/my/foo/lib/foo1.dart',
-        exists: true);
+        'package:my.foo/foo1.dart', '/workspace/my/foo/lib/foo1.dart');
   }
 
   void test_resolveAbsolute_workspace_exists_hasSpace() {
@@ -473,7 +463,7 @@ class BlazePackageUriResolverTest with ResourceProviderMixin {
     ]);
     _assertResolve(
         'package:my.foo/foo .dart', '/workspace/my/foo/lib/foo .dart',
-        exists: true, restore: false);
+        restore: false);
   }
 
   void test_restoreAbsolute_noPackageName_workspace() {
@@ -618,10 +608,10 @@ class BlazeWorkspacePackageTest with ResourceProviderMixin {
 
   void test_contains_samePackage() {
     _setUpPackage();
-    final targetFile = newFile('/ws/some/code/lib/code2.dart', '');
-    final targetFile2 = newFile('/ws/some/code/lib/src/code3.dart', '');
-    final targetBinFile = newFile('/ws/some/code/bin/code.dart', '');
-    final targetTestFile = newFile('/ws/some/code/test/code_test.dart', '');
+    var targetFile = newFile('/ws/some/code/lib/code2.dart', '');
+    var targetFile2 = newFile('/ws/some/code/lib/src/code3.dart', '');
+    var targetBinFile = newFile('/ws/some/code/bin/code.dart', '');
+    var targetTestFile = newFile('/ws/some/code/test/code_test.dart', '');
 
     expect(package!.contains(_testSource(targetFile.path)), isTrue);
     expect(package!.contains(_testSource(targetFile2.path)), isTrue);
@@ -633,8 +623,8 @@ class BlazeWorkspacePackageTest with ResourceProviderMixin {
     _setUpPackage();
     newFile('/ws/some/code/lib/code2.dart', '');
     newFile('/ws/some/code/lib/src/code3.dart', '');
-    final file2Source = _inSummarySource('package:some.code/code2.dart');
-    final file3Source = _inSummarySource('package:some.code/src/code2.dart');
+    var file2Source = _inSummarySource('package:some.code/code2.dart');
+    var file3Source = _inSummarySource('package:some.code/src/code2.dart');
 
     expect(package!.contains(file2Source), isTrue);
     expect(package!.contains(file3Source), isTrue);
@@ -701,7 +691,7 @@ class BlazeWorkspacePackageTest with ResourceProviderMixin {
       resourceProvider,
       convertPath('/ws/some/code'),
     )!;
-    final targetFile = newFile('/ws/some/code/lib/code.dart', '');
+    var targetFile = newFile('/ws/some/code/lib/code.dart', '');
 
     package = workspace.findPackageFor(targetFile.path);
     expect(package, isNull);

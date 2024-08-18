@@ -16,7 +16,7 @@ quote isn't escaped (note: we don't lint the other way around, ie, a double
 quoted string with an escaped double quote is not flagged).
 
 It's also rare, but possible, to have strings within string interpolations.  In
-this case, its much more readable to use a single quote somewhere.  So single
+this case, it's much more readable to use a single quote somewhere.  So single
 quotes are allowed either within, or containing, an interpolated string literal.
 Arguably strings within string interpolations should be its own type of lint.
 
@@ -52,7 +52,7 @@ class PreferDoubleQuotes extends LintRule {
             name: 'prefer_double_quotes',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   List<String> get incompatibleRules => const ['prefer_single_quotes'];

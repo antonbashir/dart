@@ -67,12 +67,6 @@ mixin ResolutionTest implements ResourceProviderMixin {
 
   InterfaceType get intType => typeProvider.intType;
 
-  bool get isLegacyLibrary {
-    return !result.libraryElement.isNonNullableByDefault;
-  }
-
-  bool get isNullSafetyEnabled => true;
-
   ClassElement get listElement => typeProvider.listElement;
 
   ClassElement get mapElement => typeProvider.mapElement;
@@ -111,12 +105,12 @@ mixin ResolutionTest implements ResourceProviderMixin {
   }) {
     libraryElement ??= result.libraryElement;
 
-    final buffer = StringBuffer();
-    final sink = TreeStringSink(
+    var buffer = StringBuffer();
+    var sink = TreeStringSink(
       sink: buffer,
       indent: '',
     );
-    final elementPrinter = ElementPrinter(
+    var elementPrinter = ElementPrinter(
       sink: sink,
       configuration: ElementPrinterConfiguration(),
       selfUriStr: '${libraryElement.source.uri}',
@@ -148,7 +142,6 @@ mixin ResolutionTest implements ResourceProviderMixin {
   void assertElement2(
     Object? nodeOrElement, {
     required Element declaration,
-    bool isLegacy = false,
     Map<String, String> substitution = const {},
   }) {
     Element? element;
@@ -162,12 +155,9 @@ mixin ResolutionTest implements ResourceProviderMixin {
     expect(actualDeclaration, same(declaration));
 
     if (element is Member) {
-      expect(element.isLegacy, isLegacy);
       assertSubstitution(element.substitution, substitution);
-    } else {
-      if (isLegacy || substitution.isNotEmpty) {
-        fail('Expected to be a Member: (${element.runtimeType}) $element');
-      }
+    } else if (substitution.isNotEmpty) {
+      fail('Expected to be a Member: (${element.runtimeType}) $element');
     }
   }
 
@@ -183,9 +173,7 @@ mixin ResolutionTest implements ResourceProviderMixin {
   }
 
   void assertElementString(Element element, String expected) {
-    var str = element.getDisplayString(
-      withNullability: isNullSafetyEnabled,
-    );
+    var str = element.getDisplayString();
     expect(str, expected);
   }
 
@@ -220,22 +208,18 @@ mixin ResolutionTest implements ResourceProviderMixin {
     String content,
     List<ExpectedError> expectedErrors,
   ) async {
-    path = convertPath(path);
-    newFile(path, content);
-
-    var result = await resolveFile(path);
+    var file = newFile(path, content);
+    var result = await resolveFile(file);
     assertErrorsInResolvedUnit(result, expectedErrors);
 
     return result;
   }
 
   Future<void> assertErrorsInFile2(
-    String path,
+    File file,
     List<ExpectedError> expectedErrors,
   ) async {
-    path = convertPath(path);
-
-    var result = await resolveFile(path);
+    var result = await resolveFile(file);
     assertErrorsInResolvedUnit(result, expectedErrors);
   }
 
@@ -281,17 +265,32 @@ mixin ResolutionTest implements ResourceProviderMixin {
     assertErrorsInResult(const []);
   }
 
-  void assertParsedNodeText(
-    AstNode node,
-    String expected, {
-    bool skipArgumentList = false,
-  }) {
-    var actual = _parsedNodeText(
-      node,
-      skipArgumentList: skipArgumentList,
+  void assertParsedNodeText(AstNode node, String expected) {
+    var buffer = StringBuffer();
+    var sink = TreeStringSink(
+      sink: buffer,
+      indent: '',
     );
+
+    var elementPrinter = ElementPrinter(
+      sink: sink,
+      configuration: ElementPrinterConfiguration(),
+      selfUriStr: null,
+    );
+
+    node.accept(
+      ResolvedAstPrinter(
+        sink: sink,
+        elementPrinter: elementPrinter,
+        configuration: ResolvedNodeTextConfiguration(),
+        withResolution: false,
+      ),
+    );
+
+    var actual = buffer.toString();
     if (actual != expected) {
-      print(actual);
+      print('-------- Actual --------');
+      print('$actual------------------------');
       NodeTextExpectationsCollector.add(actual);
     }
     expect(actual, expected);
@@ -302,14 +301,16 @@ mixin ResolutionTest implements ResourceProviderMixin {
     String expected, {
     void Function(ResolvedLibraryResultPrinterConfiguration)? configure,
   }) {
-    final configuration = ResolvedLibraryResultPrinterConfiguration();
+    var configuration = ResolvedLibraryResultPrinterConfiguration();
     configure?.call(configuration);
 
-    final buffer = StringBuffer();
-    final sink = TreeStringSink(sink: buffer, indent: '');
+    var buffer = StringBuffer();
+    var sink = TreeStringSink(sink: buffer, indent: '');
+    var idProvider = IdProvider();
     ResolvedLibraryResultPrinter(
       configuration: configuration,
       sink: sink,
+      idProvider: idProvider,
       elementPrinter: ElementPrinter(
         sink: sink,
         configuration: ElementPrinterConfiguration(),
@@ -317,7 +318,7 @@ mixin ResolutionTest implements ResourceProviderMixin {
       ),
     ).write(result);
 
-    final actual = buffer.toString();
+    var actual = buffer.toString();
     if (actual != expected) {
       print('-------- Actual --------');
       print('$actual------------------------');
@@ -403,19 +404,8 @@ mixin ResolutionTest implements ResourceProviderMixin {
           messageContains: messageContains,
           expectedContextMessages: contextMessages);
 
-  List<ExpectedError> expectedErrorsByNullability({
-    required List<ExpectedError> nullable,
-    required List<ExpectedError> legacy,
-  }) {
-    if (isNullSafetyEnabled) {
-      return nullable;
-    } else {
-      return legacy;
-    }
-  }
-
   String getMacroCode(String relativePath) {
-    final code = MacrosEnvironment.instance.packageAnalyzerFolder
+    var code = MacrosEnvironment.instance.packageAnalyzerFolder
         .getChildAssumingFile('test/src/summary/macro/$relativePath')
         .readAsStringSync();
     return code.replaceAll('/*macro*/', 'macro');
@@ -472,18 +462,18 @@ mixin ResolutionTest implements ResourceProviderMixin {
     }
   }
 
-  ExpectedContextMessage message(String filePath, int offset, int length) =>
-      ExpectedContextMessage(convertPath(filePath), offset, length);
+  ExpectedContextMessage message(File file, int offset, int length) =>
+      ExpectedContextMessage(file, offset, length);
 
   Matcher multiplyDefinedElementMatcher(List<Element> elements) {
     return _MultiplyDefinedElementMatcher(elements);
   }
 
-  Future<ResolvedUnitResult> resolveFile(String path);
+  Future<ResolvedUnitResult> resolveFile(File file);
 
   /// Resolve [file] into [result].
   Future<void> resolveFile2(File file) async {
-    result = await resolveFile(file.path);
+    result = await resolveFile(file);
 
     findNode = FindNode(result.content, result.unit);
     findElement = FindElement(result.unit);
@@ -491,7 +481,7 @@ mixin ResolutionTest implements ResourceProviderMixin {
 
   /// Create a new file with the [path] and [content], resolve it into [result].
   Future<void> resolveFileCode(String path, String content) {
-    final file = newFile(path, content);
+    var file = newFile(path, content);
     return resolveFile2(file);
   }
 
@@ -505,31 +495,9 @@ mixin ResolutionTest implements ResourceProviderMixin {
     return resolveFile2(testFile);
   }
 
-  /// Choose the type display string, depending on whether the [result] is
-  /// non-nullable or legacy.
-  String typeStr(String nonNullable, String legacy) {
-    if (result.libraryElement.isNonNullableByDefault) {
-      return nonNullable;
-    } else {
-      return legacy;
-    }
-  }
-
   /// Return a textual representation of the [type] that is appropriate for
   /// tests.
-  String typeString(DartType type) =>
-      type.getDisplayString(withNullability: isNullSafetyEnabled);
-
-  String typeStringByNullability({
-    required String nullable,
-    required String legacy,
-  }) {
-    if (isNullSafetyEnabled) {
-      return nullable;
-    } else {
-      return legacy;
-    }
-  }
+  String typeString(DartType type) => type.getDisplayString();
 
   Matcher _elementMatcher(Object? elementOrMatcher) {
     if (elementOrMatcher is Element) {
@@ -539,39 +507,13 @@ mixin ResolutionTest implements ResourceProviderMixin {
     }
   }
 
-  String _parsedNodeText(
-    AstNode node, {
-    bool skipArgumentList = false,
-  }) {
-    final buffer = StringBuffer();
-    final sink = TreeStringSink(
-      sink: buffer,
-      indent: '',
-    );
-    final elementPrinter = ElementPrinter(
-      sink: sink,
-      configuration: ElementPrinterConfiguration(),
-      selfUriStr: '${result.libraryElement.source.uri}',
-    );
-    node.accept(
-      ResolvedAstPrinter(
-        sink: sink,
-        elementPrinter: elementPrinter,
-        configuration: ResolvedNodeTextConfiguration()
-          ..skipArgumentList = skipArgumentList,
-        withResolution: false,
-      ),
-    );
-    return buffer.toString();
-  }
-
   String _resolvedNodeText(AstNode node) {
-    final buffer = StringBuffer();
-    final sink = TreeStringSink(
+    var buffer = StringBuffer();
+    var sink = TreeStringSink(
       sink: buffer,
       indent: '',
     );
-    final elementPrinter = ElementPrinter(
+    var elementPrinter = ElementPrinter(
       sink: sink,
       configuration: ElementPrinterConfiguration()
         ..withInterfaceTypeElements =
@@ -613,10 +555,6 @@ class _ElementMatcher extends Matcher {
       }
 
       if (element is Member) {
-        if (element.isLegacy != false) {
-          return false;
-        }
-
         test.assertSubstitution(element.substitution, const {});
         return true;
       } else {
@@ -649,7 +587,13 @@ class _MultiplyDefinedElementMatcher extends Matcher {
 }
 
 extension ResolvedUnitResultExtension on ResolvedUnitResult {
+  FindElement get findElement {
+    return FindElement(unit);
+  }
+
   FindNode get findNode {
     return FindNode(content, unit);
   }
+
+  String get uriStr => '$uri';
 }

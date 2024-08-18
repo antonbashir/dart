@@ -42,4 +42,29 @@ suggestions
     kind: keyword
 ''');
   }
+
+  Future<void> test_name_withBody() async {
+    allowedIdentifiers = {'Test', 'Test {}'};
+    await computeSuggestions('''
+mixin ^ {}
+''');
+    assertResponse(r'''
+suggestions
+  Test
+    kind: identifier
+''');
+  }
+
+  Future<void> test_name_withoutBody() async {
+    allowedIdentifiers = {'Test', 'Test {}'};
+    await computeSuggestions('''
+mixin ^
+''');
+    assertResponse(r'''
+suggestions
+  Test {}
+    kind: identifier
+    selection: 6
+''');
+  }
 }

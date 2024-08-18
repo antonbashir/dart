@@ -11,7 +11,7 @@ import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart';
 import '../ir/runtime_type_analysis.dart';
-import '../js_model/elements.dart' show JLocalFunction;
+import '../js_model/elements.dart' show JLocalFunction, JParameterStub;
 import '../kernel/kernel_world.dart';
 import '../options.dart';
 import '../serialization/serialization.dart';
@@ -268,6 +268,8 @@ class TypeVariableTests {
   MethodNode _getMethodNode(Entity function) {
     return _methods.putIfAbsent(function, () {
       MethodNode node;
+      List<DartType> boundTypes = [];
+
       if (function is FunctionEntity) {
         Name? instanceName;
         bool isCallTarget;
@@ -284,11 +286,39 @@ class TypeVariableTests {
             isCallTarget: isCallTarget,
             instanceName: instanceName,
             isNoSuchMethod: isNoSuchMethod);
+        _elementEnvironment
+            .getFunctionTypeVariables(function)
+            .forEach((typeVariable) {
+          boundTypes.add(
+              _elementEnvironment.getTypeVariableBound(typeVariable.element));
+        });
       } else {
-        ParameterStructure parameterStructure = ParameterStructure.fromType(
-            _elementEnvironment.getLocalFunctionType(function as Local));
+        final functionType =
+            _elementEnvironment.getLocalFunctionType(function as Local);
+        ParameterStructure parameterStructure =
+            ParameterStructure.fromType(functionType);
         node = MethodNode(function, parameterStructure, isCallTarget: true);
+        functionType.typeVariables.forEach((typeVariable) {
+          boundTypes.add(typeVariable.bound);
+        });
       }
+
+      // Add dependencies to any type variables in the function's parameter
+      // bounds. Usages of this function's type parameter implies potential
+      // usage of the bound type parameters. Deeply nested scopes are explored
+      // recursively via _getMethodNode and _getClassNode.
+      boundTypes.forEach((DartType bound) {
+        bound.forEachTypeVariable((boundTypeVariable) {
+          final boundTypeEntity = boundTypeVariable.element.typeDeclaration;
+          if (boundTypeEntity == function) return;
+          if (boundTypeEntity is ClassEntity) {
+            node.addDependency(_getClassNode(boundTypeEntity));
+          } else {
+            node.addDependency(_getMethodNode(boundTypeEntity));
+          }
+        });
+      });
+
       return node;
     });
   }
@@ -527,6 +557,17 @@ class TypeVariableTests {
     return sb.toString();
   }
 
+  void _addImpliedChecks(DartType type) {
+    if (type is FutureOrType) {
+      _addImplicitCheck(_commonElements.futureType(type.typeArgument));
+      _addImplicitCheck(type.typeArgument);
+    } else if (type is TypeVariableType) {
+      _addImplicitChecksViaInstantiation(type);
+    } else if (type is RecordType) {
+      _addImplicitChecks(type.fields);
+    }
+  }
+
   /// Register the implicit is-test of [type].
   ///
   /// If [type] is of the form `FutureOr<X>`, also register the implicit
@@ -534,20 +575,21 @@ class TypeVariableTests {
   void _addImplicitCheck(DartType type) {
     var typeWithoutNullability = type.withoutNullability;
     if (implicitIsChecks.add(typeWithoutNullability)) {
-      if (typeWithoutNullability is FutureOrType) {
-        _addImplicitCheck(
-            _commonElements.futureType(typeWithoutNullability.typeArgument));
-        _addImplicitCheck(typeWithoutNullability.typeArgument);
-      } else if (typeWithoutNullability is TypeVariableType) {
-        _addImplicitChecksViaInstantiation(typeWithoutNullability);
-      } else if (typeWithoutNullability is RecordType) {
-        _addImplicitChecks(typeWithoutNullability.fields);
-      }
+      _addImpliedChecks(typeWithoutNullability);
     }
   }
 
   void _addImplicitChecks(Iterable<DartType> types) {
-    types.forEach(_addImplicitCheck);
+    List<DartType> newChecks = [];
+    // Add any new types to [implicitIsChecks] before recursing to avoid each
+    // one growing the call stack.
+    types.forEach((type) {
+      var typeWithoutNullability = type.withoutNullability;
+      if (implicitIsChecks.add(typeWithoutNullability)) {
+        newChecks.add(typeWithoutNullability);
+      }
+    });
+    newChecks.forEach(_addImpliedChecks);
   }
 
   void _addImplicitChecksViaInstantiation(TypeVariableType variable) {
@@ -579,16 +621,7 @@ class TypeVariableTests {
 
   void _collectResults() {
     _world.isChecks.forEach((DartType type) {
-      var typeWithoutNullability = type.withoutNullability;
-      if (typeWithoutNullability is FutureOrType) {
-        _addImplicitCheck(
-            _commonElements.futureType(typeWithoutNullability.typeArgument));
-        _addImplicitCheck(typeWithoutNullability.typeArgument);
-      } else if (typeWithoutNullability is TypeVariableType) {
-        _addImplicitChecksViaInstantiation(typeWithoutNullability);
-      } else if (typeWithoutNullability is RecordType) {
-        _addImplicitChecks(typeWithoutNullability.fields);
-      }
+      _addImpliedChecks(type.withoutNullability);
     });
 
     // Compute type arguments of classes that use one of their type variables in
@@ -854,6 +887,7 @@ class RuntimeTypesNeedImpl implements RuntimeTypesNeed {
 
   @override
   bool methodNeedsTypeArguments(FunctionEntity function) {
+    if (function is JParameterStub) function = function.target;
     return methodsNeedingTypeArguments.contains(function);
   }
 
@@ -1179,11 +1213,10 @@ class RuntimeTypesNeedBuilderImpl implements RuntimeTypesNeedBuilder {
       type = type.withoutNullability;
       if (type is InterfaceType) {
         return [type.element];
-      } else if (type is NeverType ||
-          type is DynamicType ||
-          type is VoidType ||
-          type is AnyType ||
-          type is ErasedType) {
+      } else if (closedWorld.dartTypes.isTopType(type)) {
+        neededOnAll = true;
+        return const [];
+      } else if (type is NeverType) {
         // No classes implied.
         return const [];
       } else if (type is FunctionType) {
@@ -1238,21 +1271,21 @@ class RuntimeTypesNeedBuilderImpl implements RuntimeTypesNeedBuilder {
               SubclassResult result = closedWorld.classHierarchy
                   .commonSubclasses(receiverClass, ClassQuery.SUBTYPE,
                       argumentClass, ClassQuery.SUBTYPE);
-              switch (result.kind) {
-                case SubclassResultKind.EMPTY:
+              switch (result) {
+                case SimpleSubclassResult.empty:
                   break;
-                case SubclassResultKind.EXACT1:
-                case SubclassResultKind.SUBCLASS1:
-                case SubclassResultKind.SUBTYPE1:
+                case SimpleSubclassResult.exact1:
+                case SimpleSubclassResult.subclass1:
+                case SimpleSubclassResult.subtype1:
                   addClass(receiverClass);
                   break;
-                case SubclassResultKind.EXACT2:
-                case SubclassResultKind.SUBCLASS2:
-                case SubclassResultKind.SUBTYPE2:
+                case SimpleSubclassResult.exact2:
+                case SimpleSubclassResult.subclass2:
+                case SimpleSubclassResult.subtype2:
                   addClass(argumentClass);
                   break;
-                case SubclassResultKind.SET:
-                  for (ClassEntity cls in result.classes) {
+                case SetSubclassResult(:final classes):
+                  for (ClassEntity cls in classes) {
                     addClass(cls);
                     if (neededOnAll) break;
                   }

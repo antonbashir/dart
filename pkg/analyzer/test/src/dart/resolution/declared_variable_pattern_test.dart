@@ -26,7 +26,7 @@ void f(int x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: final
@@ -48,7 +48,7 @@ void f(x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 46, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: final
@@ -70,7 +70,7 @@ void f() {
   final [a] = [0];
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -93,7 +93,7 @@ void f() {
   final [...a] = [0, 1, 2];
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ListPattern
   leftBracket: [
@@ -118,7 +118,7 @@ void f() {
   final {0: a} = {0: 1};
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 MapPattern
   leftBracket: {
@@ -146,7 +146,7 @@ void f() {
   final int(sign: a) = 0;
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -177,7 +177,7 @@ void f() {
   final (a) = 0;
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 ParenthesizedPattern
   leftParenthesis: (
@@ -198,7 +198,7 @@ void f() {
   final (a,) = (0,);
 }
 ''');
-    final node = findNode.singlePatternVariableDeclaration.pattern;
+    var node = findNode.singlePatternVariableDeclaration.pattern;
     assertResolvedNodeText(node, r'''
 RecordPattern
   leftParenthesis: (
@@ -226,7 +226,7 @@ void f(x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 40, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   type: NamedType
@@ -251,7 +251,7 @@ void f<T>(T x) {
       error(HintCode.UNUSED_LOCAL_VARIABLE, 54, 1),
     ]);
 
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: var
@@ -259,31 +259,6 @@ DeclaredVariablePattern
   declaredElement: hasImplicitType y@54
     type: T
   matchedValueType: T & int
-''');
-  }
-
-  test_var_fromLegacy() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 2.10
-final x = <int>[];
-''');
-    await assertErrorsInCode(r'''
-// ignore:import_of_legacy_library_into_null_safe
-import 'a.dart';
-void f() {
-  if (x case var y) {}
-}
-''', [
-      error(HintCode.UNUSED_LOCAL_VARIABLE, 95, 1),
-    ]);
-    final node = findNode.singleGuardedPattern.pattern;
-    assertResolvedNodeText(node, r'''
-DeclaredVariablePattern
-  keyword: var
-  name: y
-  declaredElement: hasImplicitType y@95
-    type: List<int>
-  matchedValueType: List<int*>*
 ''');
   }
 
@@ -295,7 +270,7 @@ void f(int x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 33, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: var
@@ -314,7 +289,7 @@ void f(Never? x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 36, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: var
@@ -333,7 +308,7 @@ void f(Null x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 34, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: var
@@ -341,31 +316,6 @@ DeclaredVariablePattern
   declaredElement: hasImplicitType y@34
     type: dynamic
   matchedValueType: Null
-''');
-  }
-
-  test_var_nullOrEquivalent_nullStar() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 2.10
-Null x = null;
-''');
-    await assertErrorsInCode(r'''
-// ignore:import_of_legacy_library_into_null_safe
-import 'a.dart';
-void f() {
-  if (x case var y) {}
-}
-''', [
-      error(HintCode.UNUSED_LOCAL_VARIABLE, 95, 1),
-    ]);
-    final node = findNode.singleGuardedPattern.pattern;
-    assertResolvedNodeText(node, r'''
-DeclaredVariablePattern
-  keyword: var
-  name: y
-  declaredElement: hasImplicitType y@95
-    type: dynamic
-  matchedValueType: Null*
 ''');
   }
 
@@ -380,7 +330,7 @@ void f(int x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 44, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 DeclaredVariablePattern
   keyword: var
@@ -402,7 +352,7 @@ void f(num x) {
 ''', [
       error(HintCode.UNUSED_LOCAL_VARIABLE, 44, 1),
     ]);
-    final node = findNode.singleGuardedPattern.pattern;
+    var node = findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 CastPattern
   pattern: DeclaredVariablePattern

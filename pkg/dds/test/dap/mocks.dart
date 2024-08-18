@@ -10,6 +10,7 @@ import 'package:dds/dds.dart';
 import 'package:dds/src/dap/adapters/dart_cli_adapter.dart';
 import 'package:dds/src/dap/adapters/dart_test_adapter.dart';
 import 'package:dds/src/dap/isolate_manager.dart';
+import 'package:devtools_shared/devtools_shared.dart' show DTDConnectionInfo;
 import 'package:vm_service/vm_service.dart';
 
 /// A [DartCliDebugAdapter] that captures information about the process that
@@ -75,6 +76,15 @@ class MockDartCliDebugAdapter extends DartCliDebugAdapter {
     this.processArgs = processArgs;
     this.workingDirectory = workingDirectory;
     this.env = env;
+  }
+
+  UriConverter? _uriConverter;
+
+  @override
+  UriConverter? uriConverter() => _uriConverter;
+
+  void setUriConverter(UriConverter uriConverter) {
+    _uriConverter = uriConverter;
   }
 }
 
@@ -188,13 +198,18 @@ class MockVmService implements VmService {
         : throw SentinelException.parse('getIsolate', {});
   }
 
+  List<String>? receivedLookupResolvedPackageUris;
+  UriList? lookupResolvedPackageUrisResponse;
+
   @override
   Future<UriList> lookupResolvedPackageUris(
     String isolateId,
     List<String> uris, {
     bool? local,
   }) async {
-    return UriList(uris: uris.map((e) => null).toList());
+    receivedLookupResolvedPackageUris = uris;
+    return lookupResolvedPackageUrisResponse ??
+        UriList(uris: uris.map((e) => null).toList());
   }
 
   @override
@@ -228,6 +243,9 @@ class MockDartDevelopmentService implements DartDevelopmentService {
 
   @override
   Uri? get devToolsUri => throw UnimplementedError();
+
+  @override
+  DTDConnectionInfo? get hostedDartToolingDaemon => throw UnimplementedError();
 
   @override
   Future<void> get done => throw UnimplementedError();

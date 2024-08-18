@@ -2,15 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:dart2wasm/class_info.dart';
-import 'package:dart2wasm/closures.dart';
-import 'package:dart2wasm/dispatch_table.dart';
-import 'package:dart2wasm/reference_extensions.dart';
-import 'package:dart2wasm/translator.dart';
-
 import 'package:kernel/ast.dart';
-
 import 'package:wasm_builder/wasm_builder.dart' as w;
+
+import 'class_info.dart';
+import 'closures.dart';
+import 'dispatch_table.dart';
+import 'reference_extensions.dart';
+import 'translator.dart';
 
 /// This class is responsible for collecting import and export annotations.
 /// It also creates Wasm functions for Dart members and manages the worklist
@@ -24,6 +23,8 @@ class FunctionCollector {
   final Map<Reference, String> _exports = {};
   // Functions for which code has not yet been generated
   final List<Reference> _worklist = [];
+  // Selector IDs that are invoked via GDT.
+  final Set<int> _calledSelectors = {};
   // Class IDs for classes that are allocated somewhere in the program
   final Set<int> _allocatedClasses = {};
   // For each class ID, which functions should be added to the worklist if an
@@ -63,7 +64,7 @@ class FunctionCollector {
           // `WebAssembly.Function`.
           m.types.splitRecursionGroup();
           w.FunctionType ftype = _makeFunctionType(
-              translator, member.reference, [member.function.returnType], null,
+              translator, member.reference, null,
               isImportOrExport: true);
           m.types.splitRecursionGroup();
           _functions[member.reference] =
@@ -81,8 +82,7 @@ class FunctionCollector {
         // publicly exposed types to be defined in separate recursion groups
         // from GC types.
         m.types.splitRecursionGroup();
-        _makeFunctionType(
-            translator, member.reference, [member.function.returnType], null,
+        _makeFunctionType(translator, member.reference, null,
             isImportOrExport: true);
         m.types.splitRecursionGroup();
       }
@@ -105,9 +105,8 @@ class FunctionCollector {
         _worklist.add(target);
         assert(!node.isInstanceMember);
         assert(!node.isGetter);
-        w.FunctionType ftype = _makeFunctionType(
-            translator, target, [node.function.returnType], null,
-            isImportOrExport: true);
+        w.FunctionType ftype =
+            _makeFunctionType(translator, target, null, isImportOrExport: true);
         w.BaseFunction function = m.functions.define(ftype, "$node");
         _functions[target] = function;
         m.exports.export(export.value, function);
@@ -120,9 +119,12 @@ class FunctionCollector {
     }
 
     // Value classes are always implicitly allocated.
-    allocateClass(translator.classInfo[translator.boxedBoolClass]!.classId);
-    allocateClass(translator.classInfo[translator.boxedIntClass]!.classId);
-    allocateClass(translator.classInfo[translator.boxedDoubleClass]!.classId);
+    recordClassAllocation(
+        translator.classInfo[translator.boxedBoolClass]!.classId);
+    recordClassAllocation(
+        translator.classInfo[translator.boxedIntClass]!.classId);
+    recordClassAllocation(
+        translator.classInfo[translator.boxedDoubleClass]!.classId);
   }
 
   w.BaseFunction? getExistingFunction(Reference target) {
@@ -140,6 +142,10 @@ class FunctionCollector {
     return _getFunctionTypeAndName(target, (ftype, name) => ftype);
   }
 
+  /// Pass the Wasm type and name of the function for [target] to [action].
+  ///
+  /// Name should be used for the Wasm names section entry for the function so
+  /// that the error stack traces will have names expected by the Dart spec.
   T _getFunctionTypeAndName<T>(
       Reference target, T Function(w.FunctionType, String) action) {
     if (target.isTypeCheckerReference) {
@@ -162,30 +168,39 @@ class FunctionCollector {
     Member member = target.asMember;
     final ftype = member.accept1(_FunctionTypeGenerator(translator), target);
 
-    if (target.isInitializerReference) {
-      return action(ftype, '${member} initializer');
-    } else if (target.isConstructorBodyReference) {
-      return action(ftype, '${member} constructor body');
+    String memberName = member.toString();
+    if (memberName.endsWith('.')) {
+      memberName = memberName.substring(0, memberName.length - 1);
     }
 
-    return action(ftype, "${target.asMember}");
+    if (target.isInitializerReference) {
+      return action(ftype, 'new $memberName (initializer)');
+    } else if (target.isConstructorBodyReference) {
+      return action(ftype, 'new $memberName (constructor body)');
+    } else if (member is Procedure && member.isFactory) {
+      return action(ftype, 'new $memberName');
+    } else {
+      return action(ftype, memberName);
+    }
   }
 
-  void activateSelector(SelectorInfo selector) {
-    selector.targets.forEach((classId, target) {
-      if (!target.asMember.isAbstract) {
-        if (_allocatedClasses.contains(classId)) {
-          // Class declaring or inheriting member is allocated somewhere.
-          getFunction(target);
-        } else {
-          // Remember the member in case an allocation is encountered later.
-          _pendingAllocation.putIfAbsent(classId, () => []).add(target);
+  void recordSelectorUse(SelectorInfo selector) {
+    if (_calledSelectors.add(selector.id)) {
+      selector.targets.forEach((classId, target) {
+        if (!target.asMember.isAbstract) {
+          if (_allocatedClasses.contains(classId)) {
+            // Class declaring or inheriting member is allocated somewhere.
+            getFunction(target);
+          } else {
+            // Remember the member in case an allocation is encountered later.
+            _pendingAllocation.putIfAbsent(classId, () => []).add(target);
+          }
         }
-      }
-    });
+      });
+    }
   }
 
-  void allocateClass(int classId) {
+  void recordClassAllocation(int classId) {
     if (_allocatedClasses.add(classId)) {
       // Schedule all members that were pending allocation of this class.
       for (Reference target in _pendingAllocation[classId] ?? const []) {
@@ -209,7 +224,7 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
     if (!node.isInstanceMember) {
       if (target == node.fieldReference) {
         // Static field initializer function
-        return _makeFunctionType(translator, target, [node.type], null);
+        return _makeFunctionType(translator, target, null);
       }
       String kind = target == node.setterReference ? "setter" : "getter";
       throw "No implicit $kind function for static field: $node";
@@ -222,8 +237,7 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
     assert(!node.isAbstract);
     return node.isInstanceMember
         ? translator.dispatchTable.selectorForTarget(node.reference).signature
-        : _makeFunctionType(
-            translator, target, [node.function.returnType], null);
+        : _makeFunctionType(translator, target, null);
   }
 
   @override
@@ -314,7 +328,7 @@ class _FunctionTypeGenerator extends MemberVisitor1<w.FunctionType, Reference> {
     // Add nullable context reference for when the constructor has a non-empty
     // context
     Context? context = closures.contexts[node];
-    w.ValueType? contextRef = null;
+    w.ValueType? contextRef;
 
     if (context != null) {
       assert(!context.isEmpty);
@@ -392,14 +406,17 @@ List<w.ValueType> _getInputTypes(
         .length;
     List<String> names = [for (var p in function.namedParameters) p.name!]
       ..sort();
+    final typeForParam = translator.typeOfParameterVariable;
     Map<String, DartType> nameTypes = {
-      for (var p in function.namedParameters) p.name!: p.type
+      for (var p in function.namedParameters)
+        p.name!: typeForParam(p, p.isRequired)
     };
+    final positionals = function.positionalParameters;
     params = [
-      for (var p in function.positionalParameters) p.type,
+      for (int i = 0; i < positionals.length; ++i)
+        typeForParam(positionals[i], i < function.requiredParameterCount),
       for (String name in names) nameTypes[name]!
     ];
-    function.positionalParameters.map((p) => p.type);
   }
 
   final List<w.ValueType> typeParameters = List.filled(
@@ -420,8 +437,8 @@ List<w.ValueType> _getInputTypes(
   return inputs;
 }
 
-w.FunctionType _makeFunctionType(Translator translator, Reference target,
-    List<DartType> returnTypes, w.ValueType? receiverType,
+w.FunctionType _makeFunctionType(
+    Translator translator, Reference target, w.ValueType? receiverType,
     {bool isImportOrExport = false}) {
   Member member = target.asMember;
 
@@ -441,12 +458,13 @@ w.FunctionType _makeFunctionType(Translator translator, Reference target,
       (isImportOrExport && t is VoidType) ||
       (t is InterfaceType && t.classNode == translator.wasmVoidClass);
 
-  final List<w.ValueType> outputs = emptyOutputList
-      ? const []
-      : returnTypes
-          .where((t) => !isVoidType(t))
-          .map((t) => translateType(t))
-          .toList();
+  final List<w.ValueType> outputs;
+  if (emptyOutputList) {
+    outputs = const [];
+  } else {
+    final DartType returnType = translator.typeOfReturnValue(member);
+    outputs = !isVoidType(returnType) ? [translateType(returnType)] : const [];
+  }
 
   return translator.m.types.defineFunction(inputs, outputs);
 }

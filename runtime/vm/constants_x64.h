@@ -308,6 +308,7 @@ struct AllocateClosureABI {
   static constexpr Register kResultReg = AllocateObjectABI::kResultReg;
   static constexpr Register kFunctionReg = RBX;
   static constexpr Register kContextReg = RDX;
+  static constexpr Register kInstantiatorTypeArgsReg = RCX;
   static constexpr Register kScratchReg = R13;
 };
 
@@ -570,6 +571,8 @@ class CallingConventions {
   // How stack arguments are aligned.
   static constexpr AlignmentStrategy kArgumentStackAlignment =
       kAlignedToWordSize;
+  static constexpr AlignmentStrategy kArgumentStackAlignmentVarArgs =
+      kArgumentStackAlignment;
 
   // How fields in compounds are aligned.
   static constexpr AlignmentStrategy kFieldAlignment = kAlignedToValueSize;
@@ -640,6 +643,8 @@ class CallingConventions {
   // How stack arguments are aligned.
   static constexpr AlignmentStrategy kArgumentStackAlignment =
       kAlignedToWordSize;
+  static constexpr AlignmentStrategy kArgumentStackAlignmentVarArgs =
+      kArgumentStackAlignment;
 
   // How fields in compounds are aligned.
   static constexpr AlignmentStrategy kFieldAlignment = kAlignedToValueSize;
@@ -669,6 +674,16 @@ class CallingConventions {
   COMPILE_ASSERT(
       ((R(kFirstNonArgumentRegister) | R(kSecondNonArgumentRegister)) &
        (kArgumentRegisters | R(kPointerToReturnStructRegisterCall))) == 0);
+};
+
+// Register based calling convention used for Dart functions.
+//
+// See |compiler::ComputeCallingConvention| for more details.
+struct DartCallingConvention {
+  static constexpr Register kCpuRegistersForArgs[] = {RDI, RSI, RDX,
+                                                      RBX, R8,  R9};
+  static constexpr FpuRegister kFpuRegistersForArgs[] = {XMM1, XMM2, XMM3,
+                                                         XMM4, XMM5, XMM6};
 };
 
 #undef R
@@ -703,6 +718,12 @@ class Instr {
 const int MAX_NOP_SIZE = 8;
 
 const uint64_t kBreakInstructionFiller = 0xCCCCCCCCCCCCCCCCL;
+
+// Based on presentation "Causes of Performance Instability due to Code
+// Placement in X86 - Zia Ansari, Intel"[1].
+//
+// [1]: https://www.youtube.com/watch?v=IX16gcX4vDQ
+const intptr_t kPreferredLoopAlignment = 32;
 
 }  // namespace dart
 

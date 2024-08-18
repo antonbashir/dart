@@ -8,10 +8,10 @@ import '../analyzer.dart';
 import '../extensions.dart';
 import '../util/leak_detector_visitor.dart';
 
-const _desc = r'Cancel instances of dart.async.StreamSubscription.';
+const _desc = r'Cancel instances of `dart:async` `StreamSubscription`.';
 
 const _details = r'''
-**DO** invoke `cancel` on instances of `dart.async.StreamSubscription`.
+**DO** invoke `cancel` on instances of `dart:async` `StreamSubscription`.
 
 Cancelling instances of StreamSubscription prevents memory leaks and unexpected
 behavior.
@@ -63,21 +63,19 @@ for more information.
 
 ''';
 
-bool _isSubscription(DartType type) =>
-    type.implementsInterface('StreamSubscription', 'dart.async');
-
 class CancelSubscriptions extends LintRule {
   static const LintCode code = LintCode(
       'cancel_subscriptions', "Uncancelled instance of 'StreamSubscription'.",
       correctionMessage: "Try invoking 'cancel' in the function in which the "
-          "'StreamSubscription' was created.");
+          "'StreamSubscription' was created.",
+      hasPublishedDocs: true);
 
   CancelSubscriptions()
       : super(
             name: 'cancel_subscriptions',
             description: _desc,
             details: _details,
-            group: Group.errors);
+            categories: {Category.errors});
 
   @override
   LintCode get lintCode => code;
@@ -92,12 +90,15 @@ class CancelSubscriptions extends LintRule {
 }
 
 class _Visitor extends LeakDetectorProcessors {
-  static const _cancelMethodName = 'cancel';
-
-  @override
-  Map<DartTypePredicate, String> predicates = {
-    _isSubscription: _cancelMethodName
+  static final _predicates = {
+    _isSubscription: 'cancel',
   };
 
   _Visitor(super.rule);
+
+  @override
+  Map<DartTypePredicate, String> get predicates => _predicates;
+
+  static bool _isSubscription(DartType type) =>
+      type.implementsInterface('StreamSubscription', 'dart.async');
 }

@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -17,17 +19,17 @@ void main() {
 @reflectiveTest
 class OutlineTest extends AbstractLspAnalysisServerTest {
   Future<void> test_afterChange() async {
-    final initialContent = 'class A {}';
-    final updatedContent = 'class B {}';
+    var initialContent = 'class A {}';
+    var updatedContent = 'class B {}';
     await initialize(initializationOptions: {'outline': true});
 
-    final outlineUpdateBeforeChange = waitForOutline(mainFileUri);
+    var outlineUpdateBeforeChange = waitForOutline(mainFileUri);
     await openFile(mainFileUri, initialContent);
-    final outlineBeforeChange = await outlineUpdateBeforeChange;
+    var outlineBeforeChange = await outlineUpdateBeforeChange;
 
-    final outlineUpdateAfterChange = waitForOutline(mainFileUri);
+    var outlineUpdateAfterChange = waitForOutline(mainFileUri);
     await replaceFile(1, mainFileUri, updatedContent);
-    final outlineAfterChange = await outlineUpdateAfterChange;
+    var outlineAfterChange = await outlineUpdateAfterChange;
 
     expect(outlineBeforeChange, isNotNull);
     expect(outlineBeforeChange.children, hasLength(1));
@@ -39,15 +41,15 @@ class OutlineTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_extensions() async {
-    final initialContent = '''
+    var initialContent = '''
 extension StringExtensions on String {}
 extension on String {}
     ''';
     await initialize(initializationOptions: {'outline': true});
 
-    final outlineUpdate = waitForOutline(mainFileUri);
+    var outlineUpdate = waitForOutline(mainFileUri);
     await openFile(mainFileUri, initialContent);
-    final outline = await outlineUpdate;
+    var outline = await outlineUpdate;
 
     expect(outline, isNotNull);
     expect(outline.children, hasLength(2));
@@ -56,7 +58,7 @@ extension on String {}
   }
 
   Future<void> test_initial() async {
-    final content = '''
+    var content = '''
 /// a
 class A {
   /// b
@@ -71,9 +73,9 @@ class A {
 ''';
     await initialize(initializationOptions: {'outline': true});
 
-    final outlineNotification = waitForOutline(mainFileUri);
+    var outlineNotification = waitForOutline(mainFileUri);
     await openFile(mainFileUri, content);
-    final outline = await outlineNotification;
+    var outline = await outlineNotification;
 
     expect(outline, isNotNull);
 
@@ -86,7 +88,7 @@ class A {
     expect(outline.children, hasLength(1));
 
     // class A
-    final classA = outline.children![0];
+    var classA = outline.children![0];
     expect(classA.element.name, equals('A'));
     expect(classA.element.kind, equals('CLASS'));
     expect(
@@ -107,7 +109,7 @@ class A {
     expect(classA.children, hasLength(2));
 
     // b()
-    final methodB = classA.children![0];
+    var methodB = classA.children![0];
     expect(methodB.element.name, equals('b'));
     expect(methodB.element.kind, equals('METHOD'));
     expect(
@@ -128,7 +130,7 @@ class A {
     expect(methodB.children, hasLength(1));
 
     // c()
-    final methodC = methodB.children![0];
+    var methodC = methodB.children![0];
     expect(methodC.element.name, equals('c'));
     expect(methodC.element.kind, equals('FUNCTION'));
     expect(
@@ -152,7 +154,7 @@ class A {
     expect(methodC.children, isNull);
 
     // num get d
-    final fieldD = classA.children![1];
+    var fieldD = classA.children![1];
     expect(fieldD.element.name, equals('d'));
     expect(fieldD.element.kind, equals('GETTER'));
     expect(
@@ -171,5 +173,37 @@ class A {
             start: Position(line: 9, character: 2),
             end: Position(line: 9, character: 17))));
     expect(fieldD.children, isNull);
+  }
+
+  /// As an optimization, when a file is opened but does not contain any changes
+  /// from what was on disk, we skip analysis (in onOverlayCreated).
+  /// We still need to ensure that notifications like Outline (which are
+  /// triggered by analysis results and only sent for open files) are sent to
+  /// the client.
+  Future<void> test_openedWithoutChanges() async {
+    var content = r'''
+class A {}
+''';
+
+    // Create the file on disk so that opening the file won't re-trigger
+    // analysis.
+    newFile(mainFilePath, content);
+
+    // Track when outlines arrive.
+    Outline? mainOutline;
+    unawaited(
+      waitForOutline(mainFileUri).then((outline) => mainOutline = outline),
+    );
+
+    await Future.wait([
+      initialize(initializationOptions: {'outline': true}),
+      waitForAnalysisComplete(),
+    ]);
+    await pumpEventQueue(times: 5000);
+    expect(mainOutline, isNull); // Shouldn't be sent yet, file is not open.
+
+    await openFile(mainFileUri, content);
+    await pumpEventQueue(times: 5000);
+    expect(mainOutline, isNotNull); // Should have been sent now.
   }
 }

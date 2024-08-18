@@ -17,11 +17,10 @@ import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/analysis_options/code_style_options.dart';
 import 'package:analyzer/src/dart/analysis/experiments.dart';
-import 'package:analyzer/src/dart/sdk/sdk.dart';
 import 'package:analyzer/src/generated/source.dart' show SourceFactory;
-import 'package:analyzer/src/services/lint.dart';
+import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/summary/api_signature.dart';
-import 'package:analyzer/src/utilities/legacy.dart';
+import 'package:meta/meta.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 export 'package:analyzer/dart/analysis/analysis_options.dart';
@@ -84,6 +83,10 @@ abstract class AnalysisContext {
   SourceFactory get sourceFactory;
 
   /// Get the [AnalysisOptions] instance for the given [file].
+  ///
+  /// NOTE: this API is experimental and subject to change in a future
+  /// release (see https://github.com/dart-lang/sdk/issues/53876 for context).
+  @experimental
   AnalysisOptions getAnalysisOptionsForFile(File file);
 }
 
@@ -152,11 +155,6 @@ class AnalysisErrorInfoImpl implements AnalysisErrorInfo {
 /// A set of analysis options used to control the behavior of an analysis
 /// context.
 class AnalysisOptionsImpl implements AnalysisOptions {
-  static bool get _runsByDartSdkAtLeast300 {
-    final sdkVersion = runningSdkVersion;
-    return sdkVersion != null && sdkVersion >= Version.parse('3.0.0');
-  }
-
   /// The cached [unlinkedSignature].
   Uint32List? _unlinkedSignature;
 
@@ -172,10 +170,8 @@ class AnalysisOptionsImpl implements AnalysisOptions {
 
   /// The constraint on the language version for every Dart file.
   /// Violations will be reported as analysis errors.
-  VersionConstraint? sourceLanguageConstraint =
-      _runsByDartSdkAtLeast300 && noSoundNullSafety
-          ? VersionConstraint.parse('>= 2.12.0')
-          : null;
+  final VersionConstraint? sourceLanguageConstraint =
+      VersionConstraint.parse('>= 2.12.0');
 
   ExperimentStatus _contextFeatures = ExperimentStatus();
 
@@ -205,6 +201,9 @@ class AnalysisOptionsImpl implements AnalysisOptions {
   /// A list of exclude patterns used to exclude some sources from analysis.
   List<String>? _excludePatterns;
 
+  /// The associated `analysis_options.yaml` file (or `null` if there is none).
+  File? file;
+
   @override
   bool lint = false;
 
@@ -213,7 +212,7 @@ class AnalysisOptionsImpl implements AnalysisOptions {
 
   /// The lint rules that are to be run in an analysis context if [lint] returns
   /// `true`.
-  List<Linter>? _lintRules;
+  List<LintRule>? _lintRules;
 
   /// Indicates whether linter exceptions should be propagated to the caller (by
   /// re-throwing them)
@@ -246,7 +245,7 @@ class AnalysisOptionsImpl implements AnalysisOptions {
 
   /// Initialize a newly created set of analysis options to have their default
   /// values.
-  AnalysisOptionsImpl() {
+  AnalysisOptionsImpl({this.file}) {
     codeStyleOptions = CodeStyleOptionsImpl(this, useFormatter: false);
   }
 
@@ -262,6 +261,7 @@ class AnalysisOptionsImpl implements AnalysisOptions {
     warning = options.warning;
     lintRules = options.lintRules;
     if (options is AnalysisOptionsImpl) {
+      file = options.file;
       enableTiming = options.enableTiming;
       propagateLinterExceptions = options.propagateLinterExceptions;
       strictInference = options.strictInference;
@@ -309,11 +309,11 @@ class AnalysisOptionsImpl implements AnalysisOptions {
   set hint(bool value) => warning = value;
 
   @override
-  List<Linter> get lintRules => _lintRules ??= const <Linter>[];
+  List<LintRule> get lintRules => _lintRules ??= const [];
 
   /// Set the lint rules that are to be run in an analysis context if [lint]
   /// returns `true`.
-  set lintRules(List<Linter> rules) {
+  set lintRules(List<LintRule> rules) {
     _lintRules = rules;
   }
 
@@ -348,9 +348,8 @@ class AnalysisOptionsImpl implements AnalysisOptions {
       }
 
       // Append lints.
-      buffer.addString(linterVersion ?? '');
       buffer.addInt(lintRules.length);
-      for (Linter lintRule in lintRules) {
+      for (var lintRule in lintRules) {
         buffer.addString(lintRule.name);
       }
 

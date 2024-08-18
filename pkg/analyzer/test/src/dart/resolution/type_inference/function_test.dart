@@ -24,7 +24,7 @@ f() {
 }
 ''');
 
-    final node = findNode.methodInvocation('foo(');
+    var node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -37,13 +37,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: root::@parameter::x
+          base: self::@function::foo::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: root::@parameter::y
+          base: self::@function::foo::@parameter::y
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
@@ -65,7 +65,7 @@ f() {
       error(CompileTimeErrorCode.MISSING_REQUIRED_ARGUMENT, 54, 3),
     ]);
 
-    final node = findNode.methodInvocation('foo(');
+    var node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -80,7 +80,7 @@ MethodInvocation
           label: SimpleIdentifier
             token: x
             staticElement: ParameterMember
-              base: root::@parameter::x
+              base: self::@function::foo::@parameter::x
               substitution: {T: int}
             staticType: null
           colon: :
@@ -88,7 +88,7 @@ MethodInvocation
           literal: 1
           staticType: int
         parameter: ParameterMember
-          base: root::@parameter::x
+          base: self::@function::foo::@parameter::x
           substitution: {T: int}
     rightParenthesis: )
   staticInvokeType: void Function({required int x, required int y})
@@ -110,7 +110,7 @@ f() {
           39, 1),
     ]);
 
-    final node = findNode.methodInvocation('foo(');
+    var node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -123,7 +123,7 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: root::@parameter::x
+          base: self::@function::foo::@parameter::x
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
@@ -145,7 +145,7 @@ f() {
       error(CompileTimeErrorCode.EXTRA_POSITIONAL_ARGUMENTS, 44, 1),
     ]);
 
-    final node = findNode.methodInvocation('foo(');
+    var node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -158,13 +158,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: root::@parameter::x
+          base: self::@function::foo::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: root::@parameter::y
+          base: self::@function::foo::@parameter::y
           substitution: {T: int}
         staticType: int
       IntegerLiteral
@@ -190,7 +190,7 @@ f() {
       error(CompileTimeErrorCode.UNDEFINED_NAMED_PARAMETER, 44, 1),
     ]);
 
-    final node = findNode.methodInvocation('foo(');
+    var node = findNode.methodInvocation('foo(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -203,13 +203,13 @@ MethodInvocation
       IntegerLiteral
         literal: 1
         parameter: ParameterMember
-          base: root::@parameter::x
+          base: self::@function::foo::@parameter::x
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
         parameter: ParameterMember
-          base: root::@parameter::y
+          base: self::@function::foo::@parameter::y
           substitution: {T: int}
         staticType: int
       NamedExpression

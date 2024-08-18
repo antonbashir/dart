@@ -9,7 +9,6 @@ import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/resolver/extension_member_resolver.dart';
-import 'package:analyzer/src/dart/resolver/invocation_inference_helper.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inferrer.dart';
 import 'package:analyzer/src/dart/resolver/type_property_resolver.dart';
 import 'package:analyzer/src/error/codes.dart';
@@ -20,13 +19,11 @@ import 'package:analyzer/src/generated/resolver.dart';
 class FunctionExpressionInvocationResolver {
   final ResolverVisitor _resolver;
   final TypePropertyResolver _typePropertyResolver;
-  final InvocationInferenceHelper _inferenceHelper;
 
   FunctionExpressionInvocationResolver({
     required ResolverVisitor resolver,
   })  : _resolver = resolver,
-        _typePropertyResolver = resolver.typePropertyResolver,
-        _inferenceHelper = resolver.inferenceHelper;
+        _typePropertyResolver = resolver.typePropertyResolver;
 
   ErrorReporter get _errorReporter => _resolver.errorReporter;
 
@@ -37,7 +34,7 @@ class FunctionExpressionInvocationResolver {
 
   void resolve(FunctionExpressionInvocationImpl node,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var function = node.function;
 
     if (function is ExtensionOverrideImpl) {
@@ -64,8 +61,10 @@ class FunctionExpressionInvocationResolver {
     }
 
     if (identical(receiverType, NeverTypeImpl.instance)) {
-      _errorReporter.reportErrorForNode(
-          WarningCode.RECEIVER_OF_TYPE_NEVER, function);
+      _errorReporter.atNode(
+        function,
+        WarningCode.RECEIVER_OF_TYPE_NEVER,
+      );
       _unresolved(node, NeverTypeImpl.instance, whyNotPromotedList,
           contextType: contextType);
       return;
@@ -82,12 +81,12 @@ class FunctionExpressionInvocationResolver {
 
     if (callElement == null) {
       if (result.needsGetterError) {
-        _errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION_EXPRESSION,
+        _errorReporter.atNode(
           function,
+          CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION_EXPRESSION,
         );
       }
-      final type = result.isGetterInvalid
+      var type = result.isGetterInvalid
           ? InvalidTypeImpl.instance
           : DynamicTypeImpl.instance;
       _unresolved(node, type, whyNotPromotedList, contextType: contextType);
@@ -95,9 +94,9 @@ class FunctionExpressionInvocationResolver {
     }
 
     if (callElement.kind != ElementKind.METHOD) {
-      _errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION_EXPRESSION,
+      _errorReporter.atNode(
         function,
+        CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION_EXPRESSION,
       );
       _unresolved(node, InvalidTypeImpl.instance, whyNotPromotedList,
           contextType: contextType);
@@ -123,11 +122,15 @@ class FunctionExpressionInvocationResolver {
 
     if (expression is MethodInvocation) {
       SimpleIdentifier methodName = expression.methodName;
-      _errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.USE_OF_VOID_RESULT, methodName, []);
+      _errorReporter.atNode(
+        methodName,
+        CompileTimeErrorCode.USE_OF_VOID_RESULT,
+      );
     } else {
-      _errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.USE_OF_VOID_RESULT, expression, []);
+      _errorReporter.atNode(
+        expression,
+        CompileTimeErrorCode.USE_OF_VOID_RESULT,
+      );
     }
 
     return true;
@@ -135,7 +138,7 @@ class FunctionExpressionInvocationResolver {
 
   void _resolve(FunctionExpressionInvocationImpl node, FunctionType rawType,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var returnType = FunctionExpressionInvocationInferrer(
       resolver: _resolver,
       node: node,
@@ -144,13 +147,12 @@ class FunctionExpressionInvocationResolver {
       contextType: contextType,
     ).resolveInvocation(rawType: rawType);
 
-    _inferenceHelper.recordStaticType(node, returnType,
-        contextType: contextType);
+    node.recordStaticType(returnType, resolver: _resolver);
   }
 
   void _resolveReceiverExtensionOverride(FunctionExpressionInvocationImpl node,
       ExtensionOverride function, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var result = _extensionResolver.getOverrideMember(
       function,
       FunctionElement.CALL_METHOD_NAME,
@@ -159,19 +161,19 @@ class FunctionExpressionInvocationResolver {
     node.staticElement = callElement;
 
     if (callElement == null) {
-      _errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.INVOCATION_OF_EXTENSION_WITHOUT_CALL,
+      _errorReporter.atNode(
         function,
-        [function.name.lexeme],
+        CompileTimeErrorCode.INVOCATION_OF_EXTENSION_WITHOUT_CALL,
+        arguments: [function.name.lexeme],
       );
       return _unresolved(node, DynamicTypeImpl.instance, whyNotPromotedList,
           contextType: contextType);
     }
 
     if (callElement.isStatic) {
-      _errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.EXTENSION_OVERRIDE_ACCESS_TO_STATIC_MEMBER,
+      _errorReporter.atNode(
         node.argumentList,
+        CompileTimeErrorCode.EXTENSION_OVERRIDE_ACCESS_TO_STATIC_MEMBER,
       );
     }
 
@@ -181,7 +183,7 @@ class FunctionExpressionInvocationResolver {
 
   void _unresolved(FunctionExpressionInvocationImpl node, DartType type,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     _setExplicitTypeArgumentTypes(node);
     FunctionExpressionInvocationInferrer(
             resolver: _resolver,
@@ -191,7 +193,7 @@ class FunctionExpressionInvocationResolver {
             whyNotPromotedList: whyNotPromotedList)
         .resolveInvocation(rawType: null);
     node.staticInvokeType = type;
-    node.staticType = type;
+    node.recordStaticType(type, resolver: _resolver);
   }
 
   /// Inference cannot be done, we still want to fill type argument types.

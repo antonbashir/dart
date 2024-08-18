@@ -2,18 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:front_end/src/fasta/type_inference/type_constraint_gatherer.dart';
-import 'package:front_end/src/fasta/type_inference/type_schema.dart';
-import 'package:front_end/src/fasta/type_inference/type_schema_environment.dart';
+import 'package:front_end/src/source/source_library_builder.dart';
+import 'package:front_end/src/type_inference/type_constraint_gatherer.dart';
+import 'package:front_end/src/type_inference/type_inference_engine.dart';
+import 'package:front_end/src/type_inference/type_schema.dart';
+import 'package:front_end/src/type_inference/type_schema_environment.dart';
 import 'package:kernel/ast.dart';
-import 'package:kernel/core_types.dart';
 import 'package:kernel/class_hierarchy.dart';
+import 'package:kernel/core_types.dart';
 import 'package:kernel/testing/type_parser_environment.dart';
+import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
 
 abstract class TypeSchemaEnvironmentTestBase {
-  bool get isNonNullableByDefault;
-
   late Env typeParserEnvironment;
   late TypeSchemaEnvironment typeSchemaEnvironment;
 
@@ -30,15 +31,22 @@ abstract class TypeSchemaEnvironmentTestBase {
   Component get component => typeParserEnvironment.component;
   CoreTypes get coreTypes => typeParserEnvironment.coreTypes;
 
+  late final OperationsCfe _operations;
+
   void parseTestLibrary(String testLibraryText) {
-    typeParserEnvironment = new Env(testLibraryText,
-        isNonNullableByDefault: isNonNullableByDefault);
+    typeParserEnvironment = new Env(testLibraryText);
     typeSchemaEnvironment = new TypeSchemaEnvironment(
         coreTypes, new ClassHierarchy(component, coreTypes));
     assert(
         typeParserEnvironment.component.libraries.length == 2,
         "The tests are supposed to have exactly two libraries: "
         "the core library and the test library.");
+    _operations = new OperationsCfe(typeSchemaEnvironment,
+        fieldNonPromotabilityInfo: FieldNonPromotabilityInfo(
+            fieldNameInfo: {}, individualPropertyReasons: {}),
+        typeCacheNonNullable: {},
+        typeCacheNullable: {},
+        typeCacheLegacy: {});
     Library firstLibrary = typeParserEnvironment.component.libraries.first;
     Library secondLibrary = typeParserEnvironment.component.libraries.last;
     if (firstLibrary.importUri.isScheme("dart") &&
@@ -60,12 +68,8 @@ abstract class TypeSchemaEnvironmentTestBase {
     expect(
         typeSchemaEnvironment.solveTypeConstraint(
             parseConstraint(constraint),
-            isNonNullableByDefault
-                ? coreTypes.objectNullableRawType
-                : new DynamicType(),
-            isNonNullableByDefault
-                ? new NeverType.internal(Nullability.nonNullable)
-                : new NullType(),
+            coreTypes.objectNullableRawType,
+            new NeverType.internal(Nullability.nonNullable),
             grounded: grounded),
         parseType(expected));
   }
@@ -130,8 +134,7 @@ abstract class TypeSchemaEnvironmentTestBase {
         (List<TypeParameter> typeParameterNodes) {
       expect(
           typeSchemaEnvironment.getStandardLowerBound(
-              parseType(type1), parseType(type2),
-              isNonNullableByDefault: isNonNullableByDefault),
+              parseType(type1), parseType(type2)),
           parseType(lowerBound));
     });
   }
@@ -169,16 +172,22 @@ abstract class TypeSchemaEnvironmentTestBase {
               declaredReturnTypeNode,
               typeParameterNodesToInfer,
               returnContextTypeNode,
-              isNonNullableByDefault: isNonNullableByDefault);
+              typeOperations: new OperationsCfe(typeSchemaEnvironment,
+                  fieldNonPromotabilityInfo: new FieldNonPromotabilityInfo(
+                      fieldNameInfo: {}, individualPropertyReasons: {}),
+                  typeCacheNonNullable: {},
+                  typeCacheNullable: {},
+                  typeCacheLegacy: {}),
+              inferenceResultForTesting: null,
+              treeNodeForTesting: null);
       if (formalTypeNodes == null) {
         inferredTypeNodes = typeSchemaEnvironment.choosePreliminaryTypes(
-            gatherer, typeParameterNodesToInfer, inferredTypeNodes,
-            isNonNullableByDefault: isNonNullableByDefault);
+            gatherer, typeParameterNodesToInfer, inferredTypeNodes);
       } else {
-        gatherer.constrainArguments(formalTypeNodes, actualTypeNodes!);
+        gatherer.constrainArguments(formalTypeNodes, actualTypeNodes!,
+            treeNodeForTesting: null);
         inferredTypeNodes = typeSchemaEnvironment.chooseFinalTypes(
-            gatherer, typeParameterNodesToInfer, inferredTypeNodes!,
-            isNonNullableByDefault: isNonNullableByDefault);
+            gatherer, typeParameterNodesToInfer, inferredTypeNodes!);
       }
 
       assert(
@@ -203,7 +212,7 @@ abstract class TypeSchemaEnvironmentTestBase {
         (List<StructuralParameter> typeParameterNodes) {
       assert(typeParameterNodes.length == 1);
 
-      TypeConstraint typeConstraint = parseConstraint(constraints);
+      MergedTypeConstraint typeConstraint = parseConstraint(constraints);
       DartType expectedTypeNode = parseType(expected);
       StructuralParameter typeParameterNode = typeParameterNodes.single;
       List<DartType>? inferredTypeNodes = inferredTypeFromDownwardPhase == null
@@ -214,12 +223,18 @@ abstract class TypeSchemaEnvironmentTestBase {
           {typeParameterNode: typeConstraint},
           [typeParameterNode],
           inferredTypeNodes,
-          isNonNullableByDefault: isNonNullableByDefault,
-          preliminary: downwardsInferPhase);
+          preliminary: downwardsInferPhase,
+          operations: _operations);
 
       expect(inferredTypeNodes.single, expectedTypeNode);
     });
   }
+
+  void checkTypeShapeCheckSufficiency(
+      {required String expressionStaticType,
+      required String checkTargetType,
+      required String typeParameters,
+      required TypeShapeCheckSufficiency sufficiency});
 
   /// Parses a string like "<: T <: S >: R" into a [TypeConstraint].
   ///
@@ -228,8 +243,11 @@ abstract class TypeSchemaEnvironmentTestBase {
   /// where the former adds an upper bound and the latter adds a lower bound.
   /// The bounds are added to the constraint in the order they are mentioned in
   /// the [constraint] string, from left to right.
-  TypeConstraint parseConstraint(String constraint) {
-    TypeConstraint result = new TypeConstraint();
+  MergedTypeConstraint parseConstraint(String constraint) {
+    MergedTypeConstraint result = new MergedTypeConstraint(
+        lower: const UnknownType(),
+        upper: const UnknownType(),
+        origin: const UnknownTypeConstraintOrigin());
     List<String> upperBoundSegments = constraint.split("<:");
     bool firstUpperBoundSegment = true;
     for (String upperBoundSegment in upperBoundSegments) {
@@ -245,12 +263,10 @@ abstract class TypeSchemaEnvironmentTestBase {
         if (firstLowerBoundSegment) {
           firstLowerBoundSegment = false;
           if (segment.isNotEmpty) {
-            typeSchemaEnvironment.addUpperBound(result, parseType(segment),
-                isNonNullableByDefault: isNonNullableByDefault);
+            result.mergeInTypeSchemaUpper(parseType(segment), _operations);
           }
         } else {
-          typeSchemaEnvironment.addLowerBound(result, parseType(segment),
-              isNonNullableByDefault: isNonNullableByDefault);
+          result.mergeInTypeSchemaLower(parseType(segment), _operations);
         }
       }
     }

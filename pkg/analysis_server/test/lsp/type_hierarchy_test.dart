@@ -89,7 +89,7 @@ abstract class AbstractTypeHierarchyTest extends AbstractLspAnalysisServerTest {
     }
 
     await initialize();
-    final result = await prepareTypeHierarchy(
+    var result = await prepareTypeHierarchy(
       mainFileUri,
       code.position.position,
     );
@@ -100,7 +100,7 @@ abstract class AbstractTypeHierarchyTest extends AbstractLspAnalysisServerTest {
 @reflectiveTest
 class PrepareTypeHierarchyTest extends AbstractTypeHierarchyTest {
   Future<void> test_class() async {
-    final content = '''
+    var content = '''
 /*[0*/class /*[1*/MyC^lass1/*1]*/ {}/*0]*/
 ''';
     await _prepareTypeHierarchy(content);
@@ -116,7 +116,7 @@ class PrepareTypeHierarchyTest extends AbstractTypeHierarchyTest {
   }
 
   Future<void> test_extensionType() async {
-    final content = '''
+    var content = '''
 /*[0*/extension type /*[1*/Int^Ext/*1]*/(int a) {}/*0]*/
 ''';
     await _prepareTypeHierarchy(content);
@@ -132,7 +132,7 @@ class PrepareTypeHierarchyTest extends AbstractTypeHierarchyTest {
   }
 
   Future<void> test_nonClass() async {
-    final content = '''
+    var content = '''
 int? a^a;
 ''';
     await _prepareTypeHierarchy(content);
@@ -140,7 +140,7 @@ int? a^a;
   }
 
   Future<void> test_whitespace() async {
-    final content = '''
+    var content = '''
 int? a;
 ^
 int? b;
@@ -155,10 +155,10 @@ class TypeHierarchySubtypesTest extends AbstractTypeHierarchyTest {
   List<TypeHierarchyItem>? subtypes;
 
   Future<void> test_anotherFile() async {
-    final content = '''
+    var content = '''
 class MyCl^ass1 {}
 ''';
-    final otherContent = '''
+    var otherContent = '''
 import 'main.dart';
 
 /*[0*/class /*[1*/MyClass2/*1]*/ extends MyClass1 {}/*0]*/
@@ -176,8 +176,33 @@ import 'main.dart';
         ]));
   }
 
+  Future<void> test_augment_extends() async {
+    var content = '''
+import augment 'other.dart';
+
+class MyCl^ass1 {}
+[!class /*[1*/C/*1]*/ {}!]
+''';
+    var augmentation = '''
+augment library 'main.dart';
+
+augment class C extends MyClass1 {}
+''';
+    await _fetchSubtypes(content, otherContent: augmentation);
+    expect(
+        subtypes,
+        equals([
+          _isItem(
+            'C',
+            mainFileUri,
+            range: code.ranges[0].range,
+            selectionRange: code.ranges[1].range,
+          ),
+        ]));
+  }
+
   Future<void> test_extends() async {
-    final content = '''
+    var content = '''
 class MyCla^ss1 {}
 /*[0*/class /*[1*/MyClass2/*1]*/ extends MyClass1 {}/*0]*/
 ''';
@@ -195,7 +220,7 @@ class MyCla^ss1 {}
   }
 
   Future<void> test_implements() async {
-    final content = '''
+    var content = '''
 class MyCla^ss1 {}
 /*[0*/class /*[1*/MyClass2/*1]*/ implements MyClass1 {}/*0]*/
 /*[2*/extension type /*[3*/E1/*3]*/(MyClass1 a) implements MyClass1 {}/*2]*/
@@ -221,7 +246,7 @@ class MyCla^ss1 {}
   }
 
   Future<void> test_implements_extensionType() async {
-    final content = '''
+    var content = '''
 class A {}
 extension type E^1(A a) {}
 /*[0*/extension type /*[1*/E2/*1]*/(A a) implements E1 {}/*0]*/
@@ -240,7 +265,7 @@ extension type E^1(A a) {}
   }
 
   Future<void> test_on() async {
-    final content = '''
+    var content = '''
 class MyCla^ss1 {}
 /*[0*/mixin /*[1*/MyMixin1/*1]*/ on MyClass1 {}/*0]*/
 ''';
@@ -258,7 +283,7 @@ class MyCla^ss1 {}
   }
 
   Future<void> test_with() async {
-    final content = '''
+    var content = '''
 mixin MyMi^xin1 {}
 /*[0*/class /*[1*/MyClass1/*1]*/ with MyMixin1 {}/*0]*/
 ''';
@@ -288,12 +313,12 @@ class TypeHierarchySupertypesTest extends AbstractTypeHierarchyTest {
   List<TypeHierarchyItem>? supertypes;
 
   Future<void> test_anotherFile() async {
-    final content = '''
+    var content = '''
 import 'other.dart';
 
 class MyCla^ss2 extends MyClass1 {}
 ''';
-    final otherContent = '''
+    var otherContent = '''
 /*[0*/class /*[1*/MyClass1/*1]*/ {}/*0]*/
 ''';
     await _fetchSupertypes(content, otherContent: otherContent);
@@ -309,8 +334,33 @@ class MyCla^ss2 extends MyClass1 {}
         ]));
   }
 
+  Future<void> test_augment_extends() async {
+    var content = '''
+import augment 'other.dart';
+
+[!class /*[1*/MyClass1/*1]*/ {}!]
+class C^s {}
+''';
+    var augmentation = '''
+augment library 'main.dart';
+
+augment class Cs extends MyClass1 {}
+''';
+    await _fetchSupertypes(content, otherContent: augmentation);
+    expect(
+        supertypes,
+        equals([
+          _isItem(
+            'MyClass1',
+            mainFileUri,
+            range: code.ranges[0].range,
+            selectionRange: code.ranges[1].range,
+          ),
+        ]));
+  }
+
   Future<void> test_extends() async {
-    final content = '''
+    var content = '''
 /*[0*/class /*[1*/MyClass1/*1]*/ {}/*0]*/
 class MyCla^ss2 extends MyClass1 {}
 ''';
@@ -328,7 +378,7 @@ class MyCla^ss2 extends MyClass1 {}
   }
 
   Future<void> test_extensionType() async {
-    final content = '''
+    var content = '''
 class A extends B {}
 /*[0*/class /*[1*/B/*1]*/ {}/*0]*/
 /*[2*/extension type /*[3*/E1/*3]*/(A a) {}/*2]*/
@@ -355,7 +405,7 @@ extension type E^2(A a) implements B, E1 {}
 
   /// Ensure that type arguments flow across multiple levels of the tree.
   Future<void> test_generics_typeArgsFlow() async {
-    final content = '''
+    var content = '''
 class A<T1, T2> {}
 class B<T1, T2> extends A<T1, T2> {}
 class C<T1> extends B<T1, String> {}
@@ -369,7 +419,7 @@ class ^E extends D {}
     var names = <String>[];
     while (item != null) {
       names.add(item.name);
-      final supertypes = await typeHierarchySupertypes(item);
+      var supertypes = await typeHierarchySupertypes(item);
       item = (supertypes != null && supertypes.isNotEmpty)
           ? supertypes.single
           : null;
@@ -387,7 +437,7 @@ class ^E extends D {}
   }
 
   Future<void> test_implements() async {
-    final content = '''
+    var content = '''
 /*[0*/class /*[1*/MyClass1/*1]*/ {}/*0]*/
 class MyCla^ss2 implements MyClass1 {}
 ''';
@@ -406,7 +456,7 @@ class MyCla^ss2 implements MyClass1 {}
   }
 
   Future<void> test_on() async {
-    final content = '''
+    var content = '''
 /*[0*/class /*[1*/MyClass1/*1]*/ {}/*0]*/
 mixin MyMix^in1 on MyClass1 {}
 ''';
@@ -424,7 +474,7 @@ mixin MyMix^in1 on MyClass1 {}
   }
 
   Future<void> test_with() async {
-    final content = '''
+    var content = '''
 /*[0*/mixin /*[1*/MyMixin1/*1]*/ {}/*0]*/
 class MyCla^ss1 with MyMixin1 {}
 ''';

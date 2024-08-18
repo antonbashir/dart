@@ -177,7 +177,7 @@ class AnalyzerConverter {
         // Or should we return ElementKind.ENUM_CONSTANT here
         // in either or both of these cases?
         ) {
-      final type = element.type;
+      var type = element.type;
       if (type is InterfaceType && type.element == element.enclosingElement) {
         return plugin.ElementKind.ENUM_CONSTANT;
       }
@@ -188,7 +188,7 @@ class AnalyzerConverter {
   String? _getAliasedTypeString(analyzer.Element element) {
     if (element is analyzer.TypeAliasElement) {
       var aliasedType = element.aliasedType;
-      return aliasedType.getDisplayString(withNullability: false);
+      return aliasedType.getDisplayString();
     }
     return null;
   }
@@ -232,7 +232,7 @@ class AnalyzerConverter {
           closeOptionalString = ']';
         }
       }
-      parameter.appendToWithoutDelimiters(buffer, withNullability: false);
+      parameter.appendToWithoutDelimiters(buffer);
     }
     buffer.write(closeOptionalString);
     buffer.write(')');
@@ -246,14 +246,14 @@ class AnalyzerConverter {
       if (element.kind == analyzer.ElementKind.SETTER) {
         return null;
       }
-      return element.returnType.getDisplayString(withNullability: false);
+      return element.returnType.getDisplayString();
     } else if (element is analyzer.VariableElement) {
-      return element.type.getDisplayString(withNullability: false);
+      return element.type.getDisplayString();
     } else if (element is analyzer.TypeAliasElement) {
       var aliasedType = element.aliasedType;
       if (aliasedType is FunctionType) {
         var returnType = aliasedType.returnType;
-        return returnType.getDisplayString(withNullability: false);
+        return returnType.getDisplayString();
       }
     }
     return null;
@@ -318,20 +318,13 @@ extension ElementExtensions on analyzer.Element? {
   /// Return the compilation unit containing the given [element].
   analyzer.CompilationUnitElement? get _unitElement {
     var currentElement = this;
-    if (currentElement is analyzer.CompilationUnitElement) {
-      return currentElement;
-    }
-    if (currentElement?.enclosingElement is analyzer.LibraryElement) {
-      currentElement = currentElement?.enclosingElement;
-    }
-    if (currentElement is analyzer.LibraryElement) {
-      return currentElement.definingCompilationUnit;
-    }
     for (;
         currentElement != null;
         currentElement = currentElement.enclosingElement) {
       if (currentElement is analyzer.CompilationUnitElement) {
         return currentElement;
+      } else if (currentElement is analyzer.LibraryOrAugmentationElement) {
+        return currentElement.definingCompilationUnit;
       }
     }
     return null;

@@ -101,7 +101,7 @@ class AnalyzeCommand extends DartdevCommand {
     final args = argResults!;
     final globalArgs = globalResults!;
     final suppressAnalytics =
-        !globalArgs['analytics'] || globalArgs['suppress-analytics'];
+        !globalArgs.flag('analytics') || globalArgs.flag('suppress-analytics');
 
     // Find targets from the 'rest' params.
     final List<io.FileSystemEntity> targets = [];
@@ -119,15 +119,18 @@ class AnalyzeCommand extends DartdevCommand {
       }
     }
 
+    /// Errors in analysis_options and pubspec.yaml will be reported first
+    /// and a note that they might be the cause of other errors.
+    final List<AnalysisError> priorityErrors = <AnalysisError>[];
     final List<AnalysisError> errors = <AnalysisError>[];
 
-    final machineFormat = args['format'] == 'machine';
-    final jsonFormat = args['format'] == 'json';
-    final printMemory = args['memory'] && jsonFormat;
+    final machineFormat = args.option('format') == 'machine';
+    final jsonFormat = args.option('format') == 'json';
+    final printMemory = args.flag('memory') && jsonFormat;
 
     io.Directory sdkPath;
     if (args.wasParsed('sdk-path')) {
-      sdkPath = io.Directory(args['sdk-path'] as String);
+      sdkPath = io.Directory(args.option('sdk-path')!);
       if (!sdkPath.existsSync()) {
         usageException('Invalid Dart SDK path: ${sdkPath.path}');
       }
@@ -163,25 +166,36 @@ class AnalyzeCommand extends DartdevCommand {
 
     final targetsNames =
         targets.map((entity) => path.basename(entity.path)).join(', ');
-    final progress =
-        machineFormat ? null : log.progress('Analyzing $targetsNames');
+    final progress = machineFormat || jsonFormat
+        ? null
+        : log.progress('Analyzing $targetsNames');
 
     final AnalysisServer server = AnalysisServer(
       _packagesFile(),
       sdkPath,
       targets,
-      cacheDirectoryPath: args['cache'],
+      cacheDirectoryPath: args.option('cache'),
       commandName: 'analyze',
       argResults: args,
+      disableStatusNotificationDebouncing: true,
       enabledExperiments: args.enabledExperiments,
       suppressAnalytics: suppressAnalytics,
     );
 
     server.onErrors.listen((FileAnalysisErrors fileErrors) {
+      var isPriorityFile = const {'analysis_options.yaml', 'pubspec.yaml'}
+          .contains(path.basename(fileErrors.file));
+
       // Record the issues found (but filter out to do comments unless they've
       // been upgraded from INFO).
-      errors.addAll(fileErrors.errors.where((AnalysisError error) =>
-          error.type != 'TODO' || error.severity != 'INFO'));
+      for (var error in fileErrors.errors.where((AnalysisError error) =>
+          error.type != 'TODO' || error.severity != 'INFO')) {
+        if (isPriorityFile && error.severity == 'ERROR') {
+          priorityErrors.add(error);
+        } else {
+          errors.add(error);
+        }
+      }
     });
 
     int pid = await server.start();
@@ -197,7 +211,7 @@ class AnalyzeCommand extends DartdevCommand {
     server.onCrash.then((_) {
       log.stderr('The analysis server shut down unexpectedly.');
       log.stdout('Please report this at dartbug.com.');
-      io.exit(1);
+      io.exit(_Result.crash.exitCode);
     });
 
     await server.analysisFinished;
@@ -213,15 +227,18 @@ class AnalyzeCommand extends DartdevCommand {
 
     progress?.finish(showTiming: true);
 
-    if (errors.isEmpty) {
-      if (printMemory && usageInfo != null) {
-        emitJsonFormat(log, errors, usageInfo);
-      } else if (!machineFormat) {
+    if (priorityErrors.isEmpty && errors.isEmpty) {
+      if (jsonFormat) {
+        emitJsonFormat(log, [], usageInfo);
+      } else if (!machineFormat && !server.serverErrorReceived) {
         log.stdout('No issues found!');
       }
-      return 0;
+      return server.serverErrorReceived
+          ? _Result.crash.exitCode
+          : _Result.success.exitCode;
     }
 
+    priorityErrors.sort();
     errors.sort();
 
     if (machineFormat) {
@@ -231,21 +248,43 @@ class AnalyzeCommand extends DartdevCommand {
     } else {
       var relativeTo = targets.length == 1 ? targets.single : null;
 
-      emitDefaultFormat(
-        log,
-        errors,
-        relativeToDir: relativeTo is io.File
-            ? relativeTo.parent
-            : relativeTo as io.Directory?,
-        verbose: verbose,
-      );
+      /// Helper to emit a set of errors.
+      void emit(List<AnalysisError> errors) {
+        emitDefaultFormat(
+          log,
+          errors,
+          relativeToDir: relativeTo is io.File
+              ? relativeTo.parent
+              : relativeTo as io.Directory?,
+          verbose: verbose,
+        );
+      }
+
+      if (priorityErrors.isNotEmpty) {
+        log.stdout('');
+        log.stdout("Errors were found in 'pubspec.yaml' and/or "
+            "'analysis_options.yaml' which might result in either invalid "
+            'diagnostics being produced or valid diagnostics being missed.');
+
+        emit(priorityErrors);
+        if (errors.isNotEmpty) {
+          log.stdout('Errors in remaining files.');
+        }
+      }
+
+      if (errors.isNotEmpty) {
+        emit(errors);
+      }
+
+      final errorCount = priorityErrors.length + errors.length;
+      log.stdout('$errorCount ${pluralize('issue', errorCount)} found.');
     }
 
     bool hasErrors = false;
     bool hasWarnings = false;
     bool hasInfos = false;
 
-    for (final AnalysisError error in errors) {
+    for (final AnalysisError error in priorityErrors.followedBy(errors)) {
       hasErrors |= error.isError;
       hasWarnings |= error.isWarning;
       hasInfos |= error.isInfo;
@@ -254,24 +293,24 @@ class AnalyzeCommand extends DartdevCommand {
     // Return an error code in the range [0-3] dependent on the severity of
     // the issue(s) found.
     if (hasErrors) {
-      return 3;
+      return _Result.errors.exitCode;
     }
 
-    bool fatalWarnings = args['fatal-warnings'];
-    bool fatalInfos = args['fatal-infos'];
+    bool fatalWarnings = args.flag('fatal-warnings');
+    bool fatalInfos = args.flag('fatal-infos');
 
     if (fatalWarnings && hasWarnings) {
-      return 2;
+      return _Result.warnings.exitCode;
     } else if (fatalInfos && hasInfos) {
-      return 1;
+      return _Result.infos.exitCode;
     } else {
-      return 0;
+      return _Result.success.exitCode;
     }
   }
 
   io.File? _packagesFile() {
-    var path = argResults!['packages'];
-    if (path is String) {
+    var path = argResults!.option('packages');
+    if (path != null) {
       var file = io.File(path);
       if (!file.existsSync()) {
         usageException("The file doesn't exist: $path");
@@ -340,9 +379,6 @@ class AnalyzeCommand extends DartdevCommand {
     }
 
     log.stdout('');
-
-    final errorCount = errors.length;
-    log.stdout('$errorCount ${pluralize('issue', errorCount)} found.');
   }
 
   @visibleForTesting
@@ -447,4 +483,26 @@ class AnalyzeCommand extends DartdevCommand {
     String relative = path.relative(givenPath, from: fromPath);
     return relative.length <= givenPath.length ? relative : givenPath;
   }
+}
+
+/// The possible results of analysis and their exit codes.
+enum _Result {
+  /// Analysis completed and there are no diagnostics.
+  success(0),
+
+  /// Analysis completed and there are INFO diagnostics.
+  infos(1),
+
+  /// Analysis completed and there are warning diagnostics.
+  warnings(2),
+
+  /// Analysis completed and there are error diagnostics.
+  errors(3),
+
+  /// The analysis server failed in a way that may make the results invalid.
+  crash(4);
+
+  final int exitCode;
+
+  const _Result(this.exitCode);
 }

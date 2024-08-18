@@ -26,12 +26,17 @@ class ObjectDataSink implements DataSink {
   }
 
   @override
-  void writeEnum(dynamic value) {
+  void writeEnum<E extends Enum>(E value) {
     _data!.add(value);
   }
 
   @override
   void writeInt(int value) {
+    _data!.add(value);
+  }
+
+  @override
+  void writeUint32(int value) {
     _data!.add(value);
   }
 
@@ -48,6 +53,22 @@ class ObjectDataSink implements DataSink {
     writer();
     final endIndex = length;
     _data![sizeIndex] = endIndex - startIndex;
+  }
+
+  final List<(int, int)> _deferredOffsets = [];
+
+  @override
+  void startDeferred() {
+    final sizeIndex = length;
+    writeInt(0); // Padding so the offset won't collide with a nested write.
+    final startIndex = length;
+    _deferredOffsets.add((sizeIndex, startIndex));
+  }
+
+  @override
+  void endDeferred() {
+    final (sizeIndex, startIndex) = _deferredOffsets.removeLast();
+    _data![sizeIndex] = length - startIndex;
   }
 
   @override

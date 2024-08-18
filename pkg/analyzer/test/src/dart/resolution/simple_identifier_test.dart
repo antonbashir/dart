@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/error/codes.dart';
-import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -16,6 +15,148 @@ main() {
 
 @reflectiveTest
 class SimpleIdentifierResolutionTest extends PubPackageResolutionTest {
+  test_augment_topLevel_function_with_function() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment void foo() {}
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+void foo() {}
+
+void f() {
+  foo;
+}
+''');
+
+    var node = findNode.simple('foo;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: self::@augmentation::package:test/a.dart::@functionAugmentation::foo
+  staticType: void Function()
+''');
+  }
+
+  test_augment_topLevel_getter_with_getter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment int get foo => 1;
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+int get foo => 0;
+
+void f() {
+  foo;
+}
+''');
+
+    var node = findNode.simple('foo;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: self::@augmentation::package:test/a.dart::@getterAugmentation::foo
+  staticType: int
+''');
+  }
+
+  test_augment_topLevel_setter_with_setter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment set foo(int _) {}
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+set foo(int _) {}
+
+void f() {
+  foo = 0;
+}
+''');
+
+    var node = findNode.singleAssignmentExpression;
+    assertResolvedNodeText(node, r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: self::@augmentation::package:test/a.dart::@setterAugmentation::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@augmentation::package:test/a.dart::@setterAugmentation::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_augment_topLevel_variable_with_getter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment int get foo() => 1;
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+int foo = 0;
+
+void f() {
+  foo;
+}
+''');
+
+    var node = findNode.simple('foo;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: self::@augmentation::package:test/a.dart::@getterAugmentation::foo
+  staticType: int
+''');
+  }
+
+  test_augment_topLevel_variable_with_variable() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment int foo = 1;
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+int foo = 0;
+
+void f() {
+  foo;
+}
+''');
+
+    var node = findNode.simple('foo;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: self::@getter::foo
+  staticType: int
+''');
+  }
+
   test_dynamic_explicitCore() async {
     await assertNoErrorsInCode(r'''
 import 'dart:core';
@@ -25,7 +166,7 @@ main() {
 }
 ''');
 
-    final node = findNode.simple('dynamic;');
+    var node = findNode.simple('dynamic;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: dynamic
@@ -45,7 +186,7 @@ main() {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 42, 7),
     ]);
 
-    final node = findNode.simple('dynamic;');
+    var node = findNode.simple('dynamic;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: dynamic
@@ -61,7 +202,7 @@ main() {
 }
 ''');
 
-    final node = findNode.simple('dynamic;');
+    var node = findNode.simple('dynamic;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: dynamic
@@ -80,7 +221,7 @@ enum E<T> {
 }
 ''');
 
-    final node = findNode.simple('T;');
+    var node = findNode.simple('T;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: T
@@ -98,7 +239,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.simple('a;');
+    var node = findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -120,7 +261,7 @@ class C {
       error(CompileTimeErrorCode.RETURN_IN_GENERATIVE_CONSTRUCTOR, 43, 1),
     ]);
 
-    final node = findNode.simple('a;');
+    var node = findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -142,7 +283,7 @@ class C {
           CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_CONSTRUCTOR, 33, 1),
     ]);
 
-    final node = findNode.simple('a;');
+    var node = findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -162,40 +303,13 @@ void f() {
 }
 ''');
 
-    final node = findNode.simple('a);');
+    var node = findNode.simple('a);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   parameter: self::@function::foo::@parameter::a
   staticElement: self::@getter::a
   staticType: int
-''');
-  }
-
-  test_functionReference() async {
-    noSoundNullSafety = false;
-    await assertErrorsInCode('''
-// @dart = 2.7
-import 'dart:math';
-
-class A {
-  const A(_);
-}
-
-@A([min])
-main() {}
-''', [
-      error(CompileTimeErrorCode.COULD_NOT_INFER, 66, 5),
-    ]);
-
-    final node = findNode.simple('min]');
-    assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: min
-  staticElement: FunctionMember
-    base: dart:math::@function::min
-    isLegacy: true
-  staticType: T* Function<T extends num*>(T*, T*)*
 ''');
   }
 
@@ -233,9 +347,32 @@ int Function() foo(A? a) {
     assertType(identifier, 'A?');
   }
 
+  test_inClass_getterInherited_setterDeclaredLocally() async {
+    await assertNoErrorsInCode('''
+class A {
+  int get foo => 7;
+}
+class B extends A {
+  set foo(int _) {}
+
+  void f() {
+    foo;
+  }
+}
+''');
+
+    var node = findNode.simple('foo;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: foo
+  staticElement: self::@class::A::@getter::foo
+  staticType: int
+''');
+  }
+
   test_inClass_inDeclaration_augmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   int get foo => 0;
@@ -253,7 +390,7 @@ class A {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -271,7 +408,7 @@ extension E on int Function(double) {
 }
 ''');
 
-    final node = findNode.simple('call;');
+    var node = findNode.simple('call;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: call
@@ -289,7 +426,7 @@ extension E on int Function<T>(T) {
 }
 ''');
 
-    final node = findNode.simple('call;');
+    var node = findNode.simple('call;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: call
@@ -309,7 +446,7 @@ extension E<T extends ({int foo})> on T {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -327,7 +464,7 @@ extension E<T extends (int, String)> on T {
 }
 ''');
 
-    final node = findNode.simple(r'$1;');
+    var node = findNode.simple(r'$1;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: $1
@@ -345,7 +482,7 @@ extension E on ({int foo}) {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -365,7 +502,7 @@ extension E on ({int foo}) {
 }
 ''');
 
-    final node = findNode.simple('bar;');
+    var node = findNode.simple('bar;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: bar
@@ -385,7 +522,7 @@ extension E on ({int foo}) {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 46, 3),
     ]);
 
-    final node = findNode.simple('bar;');
+    var node = findNode.simple('bar;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: bar
@@ -403,7 +540,7 @@ extension E on (int, String) {
 }
 ''');
 
-    final node = findNode.simple(r'$1;');
+    var node = findNode.simple(r'$1;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: $1
@@ -421,7 +558,7 @@ extension E on (int, String) {
 }
 ''');
 
-    final node = findNode.simple(r'$2;');
+    var node = findNode.simple(r'$2;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: $2
@@ -441,7 +578,7 @@ extension E on (int, String) {
 }
 ''');
 
-    final node = findNode.simple(r'$3;');
+    var node = findNode.simple(r'$3;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: $3
@@ -461,7 +598,7 @@ extension E on (int, String) {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 48, 2),
     ]);
 
-    final node = findNode.simple(r'$3;');
+    var node = findNode.simple(r'$3;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: $3
@@ -481,7 +618,7 @@ extension type A(int it) {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -505,7 +642,7 @@ extension type X(B it) implements A {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -516,7 +653,7 @@ SimpleIdentifier
 
   test_inMixin_inDeclaration_augmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment mixin A {
   int get foo => 0;
@@ -534,7 +671,7 @@ mixin A {
 }
 ''');
 
-    final node = findNode.simple('foo;');
+    var node = findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -565,7 +702,7 @@ main() {
 }
 ''');
 
-    final node = findNode.simple('Never;');
+    var node = findNode.simple('Never;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: Never

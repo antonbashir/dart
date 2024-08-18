@@ -6,7 +6,6 @@ import 'package:analysis_server/lsp_protocol/protocol.dart' as lsp;
 import 'package:analysis_server/src/computer/computer_hover.dart';
 import 'package:analysis_server/src/lsp/dartdoc.dart';
 import 'package:analysis_server/src/lsp/mapping.dart';
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/ast/element_locator.dart';
@@ -21,7 +20,6 @@ class DartTypeArgumentsSignatureComputer {
   final AstNode? _node;
   final Set<lsp.MarkupKind>? preferredFormats;
   late TypeArgumentList _argumentList;
-  final bool _isNonNullableByDefault;
   final DocumentationPreference documentationPreference;
 
   DartTypeArgumentsSignatureComputer(
@@ -30,8 +28,7 @@ class DartTypeArgumentsSignatureComputer {
     int offset,
     this.preferredFormats, {
     this.documentationPreference = DocumentationPreference.full,
-  })  : _node = NodeLocator(offset).searchWithin(unit),
-        _isNonNullableByDefault = unit.isNonNullableByDefault;
+  }) : _node = NodeLocator(offset).searchWithin(unit);
 
   /// The [TypeArgumentList] node located by [compute].
   TypeArgumentList get argumentList => _argumentList;
@@ -44,7 +41,7 @@ class DartTypeArgumentsSignatureComputer {
     if (argumentList == null) {
       return null;
     }
-    final parent = argumentList.parent;
+    var parent = argumentList.parent;
     Element? element;
     if (parent is NamedType) {
       element = parent.element;
@@ -58,9 +55,8 @@ class DartTypeArgumentsSignatureComputer {
 
     _argumentList = argumentList;
 
-    final label =
-        element.getDisplayString(withNullability: _isNonNullableByDefault);
-    final documentation = DartUnitHoverComputer.computePreferredDocumentation(
+    var label = element.getDisplayString();
+    var documentation = DartUnitHoverComputer.computePreferredDocumentation(
         _dartdocInfo, element, documentationPreference);
 
     return _toSignatureHelp(
@@ -90,14 +86,13 @@ class DartTypeArgumentsSignatureComputer {
     String? documentation,
     List<TypeParameterElement> typeParameters,
   ) {
-    final parameters = typeParameters
+    var parameters = typeParameters
         .map((param) => lsp.ParameterInformation(
-              label: param.getDisplayString(
-                  withNullability: _isNonNullableByDefault),
+              label: param.getDisplayString(),
             ))
         .toList();
 
-    final signatures = [
+    var signatures = [
       lsp.SignatureInformation(
         label: label,
         documentation: documentation != null

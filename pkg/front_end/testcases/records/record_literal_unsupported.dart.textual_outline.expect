@@ -1,5 +1,7 @@
-// @dart = 2.9
+// @dart = 2.12
+
 method() {}
+
 sorting() {}
 
 class Class {

@@ -184,6 +184,11 @@ class PageSpace {
   }
   void EvaluateAfterLoading() {
     page_space_controller_.EvaluateAfterLoading(usage_);
+
+    MutexLocker ml(&pages_lock_);
+    for (Page* page = pages_; page != nullptr; page = page->next()) {
+      page->set_never_evacuate(true);
+    }
   }
 
   intptr_t UsedInWords() const { return usage_.used_in_words; }
@@ -230,7 +235,7 @@ class PageSpace {
   void VisitObjectsUnsafe(ObjectVisitor* visitor) const;
   void VisitObjectPointers(ObjectPointerVisitor* visitor) const;
 
-  void VisitRememberedCards(ObjectPointerVisitor* visitor) const;
+  void VisitRememberedCards(PredicateObjectPointerVisitor* visitor) const;
   void ResetProgressBars() const;
 
   // Collect the garbage in the page space using mark-sweep or mark-compact.
@@ -302,6 +307,9 @@ class PageSpace {
   void PauseConcurrentMarking();
   void ResumeConcurrentMarking();
   void YieldConcurrentMarking();
+  void PushDependencyToConcurrentMarking() {
+    pause_concurrent_marking_.fetch_or(0);
+  }
 
   Monitor* tasks_lock() const { return &tasks_lock_; }
   intptr_t tasks() const { return tasks_; }
@@ -327,14 +335,16 @@ class PageSpace {
     DEBUG_ASSERT(tasks_lock_.IsOwnedByCurrentThread());
     concurrent_marker_tasks_active_ = val;
   }
-  bool pause_concurrent_marking() const { return pause_concurrent_marking_; }
+  bool pause_concurrent_marking() const {
+    return pause_concurrent_marking_.load() != 0;
+  }
   Phase phase() const { return phase_; }
   void set_phase(Phase val) { phase_ = val; }
 
   void SetupImagePage(void* pointer, uword size, bool is_executable);
 
   // Return any bump allocation block to the freelist.
-  void AbandonBumpAllocation();
+  void ReleaseBumpAllocation();
   // Have threads release marking stack blocks, etc.
   void AbandonMarkingForShutdown();
 
@@ -407,6 +417,7 @@ class PageSpace {
   void FreePages(Page* pages);
 
   void CollectGarbageHelper(Thread* thread, bool compact, bool finalize);
+  void VerifyStoreBuffers(const char* msg);
   void SweepNew();
   void SweepLarge();
   void Sweep(bool exclusive);
@@ -467,7 +478,7 @@ class PageSpace {
   intptr_t tasks_;
   intptr_t concurrent_marker_tasks_;
   intptr_t concurrent_marker_tasks_active_;
-  RelaxedAtomic<bool> pause_concurrent_marking_;
+  AcqRelAtomic<uword> pause_concurrent_marking_;
   Phase phase_;
 
 #if defined(DEBUG)
@@ -491,8 +502,11 @@ class PageSpace {
   friend class PageSpaceController;
   friend class ConcurrentSweeperTask;
   friend class GCCompactor;
+  friend class GCIncrementalCompactor;
+  friend class PrologueTask;
+  friend class EpilogueTask;
   friend class CompactorTask;
-  friend void DumpStackFrame(intptr_t frame_index, uword pc, uword fp);
+  friend class Code;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(PageSpace);
 };

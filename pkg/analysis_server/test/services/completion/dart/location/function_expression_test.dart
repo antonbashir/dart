@@ -93,8 +93,6 @@ suggestions
     kind: keyword
   async*
     kind: keyword
-  sync*
-    kind: keyword
 ''');
   }
 
@@ -109,8 +107,6 @@ suggestions
   async
     kind: keyword
   async*
-    kind: keyword
-  sync*
     kind: keyword
 ''');
   }
@@ -127,8 +123,6 @@ suggestions
     kind: keyword
   async*
     kind: keyword
-  sync*
-    kind: keyword
 ''');
   }
 
@@ -140,11 +134,13 @@ void f() {foo(() ^}}
 ''');
     assertResponse(r'''
 suggestions
+  const
+    kind: keyword
+  true
+    kind: keyword
   async
     kind: keyword
   async*
-    kind: keyword
-  const
     kind: keyword
   false
     kind: keyword
@@ -153,8 +149,6 @@ suggestions
   switch
     kind: keyword
   sync*
-    kind: keyword
-  true
     kind: keyword
 ''');
   }

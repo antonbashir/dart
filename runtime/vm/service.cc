@@ -25,6 +25,7 @@
 #include "vm/debugger.h"
 #include "vm/heap/safepoint.h"
 #include "vm/isolate.h"
+#include "vm/json_stream.h"
 #include "vm/kernel_isolate.h"
 #include "vm/lockers.h"
 #include "vm/message.h"
@@ -518,15 +519,6 @@ static bool CheckDebuggerDisabled(Thread* thread, JSONStream* js) {
     js->PrintError(kFeatureDisabled, "Debugger is disabled.");
     return true;
   }
-  return false;
-#endif
-}
-
-static bool CheckCompilerDisabled(Thread* thread, JSONStream* js) {
-#if defined(DART_PRECOMPILED_RUNTIME)
-  js->PrintError(kFeatureDisabled, "Compiler is disabled in AOT mode.");
-  return true;
-#else
   return false;
 #endif
 }
@@ -3740,10 +3732,6 @@ static void GetSourceReport(Thread* thread, JSONStream* js) {
 #if defined(DART_PRECOMPILED_RUNTIME)
   js->PrintError(kFeatureDisabled, "disabled in AOT mode and PRODUCT.");
 #else
-  if (CheckCompilerDisabled(thread, js)) {
-    return;
-  }
-
   char* reports_str = Utils::StrDup(js->LookupParam("reports"));
   const EnumListParameter* reports_parameter =
       static_cast<const EnumListParameter*>(get_source_report_params[1]);
@@ -3854,10 +3842,6 @@ static void ReloadSources(Thread* thread, JSONStream* js) {
 #if defined(DART_PRECOMPILED_RUNTIME)
   js->PrintError(kFeatureDisabled, "Compiler is disabled in AOT mode.");
 #else
-  if (CheckCompilerDisabled(thread, js)) {
-    return;
-  }
-
   IsolateGroup* isolate_group = thread->isolate_group();
   if (isolate_group->library_tag_handler() == nullptr) {
     js->PrintError(kFeatureDisabled,
@@ -3937,14 +3921,17 @@ static void AddBreakpointCommon(Thread* thread,
   }
   ASSERT(!script_uri.IsNull());
   Breakpoint* bpt = nullptr;
-  bpt = thread->isolate()->debugger()->SetBreakpointAtLineCol(script_uri, line,
-                                                              col);
-  if (bpt == nullptr) {
+  const Error& error =
+      Error::Handle(thread->isolate()->debugger()->SetBreakpointAtLineCol(
+          script_uri, line, col, &bpt));
+  if (!error.IsNull()) {
     js->PrintError(kCannotAddBreakpoint,
-                   "%s: Cannot add breakpoint at line '%s'", js->method(),
-                   line_param);
+                   "%s: Cannot add breakpoint at line %s. Error occurred "
+                   "when resolving breakpoint location: %s.",
+                   js->method(), line_param, error.ToErrorCString());
     return;
   }
+  ASSERT(bpt != nullptr);
   bpt->PrintJSON(js);
 }
 
@@ -4010,14 +3997,18 @@ static void AddBreakpointAtEntry(Thread* thread, JSONStream* js) {
     return;
   }
   const Function& function = Function::Cast(obj);
-  Breakpoint* bpt =
-      thread->isolate()->debugger()->SetBreakpointAtEntry(function, false);
-  if (bpt == nullptr) {
+  Breakpoint* bpt = nullptr;
+  const Error& error =
+      Error::Handle(thread->isolate()->debugger()->SetBreakpointAtEntry(
+          function, false, &bpt));
+  if (!error.IsNull()) {
     js->PrintError(kCannotAddBreakpoint,
-                   "%s: Cannot add breakpoint at function '%s'", js->method(),
-                   function.ToCString());
+                   "%s: Cannot add breakpoint at function '%s'. Error occurred "
+                   "when resolving breakpoint location: %s.",
+                   js->method(), function.ToCString(), error.ToErrorCString());
     return;
   }
+  ASSERT(bpt != nullptr);
   bpt->PrintJSON(js);
 }
 
@@ -4039,13 +4030,18 @@ static void AddBreakpointAtActivation(Thread* thread, JSONStream* js) {
     return;
   }
   const Instance& closure = Instance::Cast(obj);
-  Breakpoint* bpt = thread->isolate()->debugger()->SetBreakpointAtActivation(
-      closure, /*single_shot=*/false);
-  if (bpt == nullptr) {
+  Breakpoint* bpt;
+  const Error& error =
+      Error::Handle(thread->isolate()->debugger()->SetBreakpointAtActivation(
+          closure, /*single_shot=*/false, &bpt));
+  if (!error.IsNull()) {
     js->PrintError(kCannotAddBreakpoint,
-                   "%s: Cannot add breakpoint at activation", js->method());
+                   "%s: Cannot add breakpoint at activation. Error occurred "
+                   "when resolving breakpoint location: %s.",
+                   js->method(), error.ToErrorCString());
     return;
   }
+  ASSERT(bpt != nullptr);
   bpt->PrintJSON(js);
 }
 
@@ -4751,7 +4747,7 @@ static intptr_t GetProcessMemoryUsageHelper(JSONStream* js) {
         timeline.AddProperty("name", "Timeline");
         timeline.AddProperty(
             "description",
-            "Timeline events from dart:developer and Dart_TimelineEvent");
+            "Timeline events from dart:developer and Dart_RecordTimelineEvent");
         intptr_t size = Timeline::recorder()->Size();
         vm_size += size;
         timeline.AddProperty64("size", size);
@@ -4940,7 +4936,7 @@ class PersistentHandleVisitor : public HandleVisitor {
         "callbackAddress", "0x%" Px "",
         reinterpret_cast<uintptr_t>(weak_persistent_handle->callback()));
     // Attempt to include a native symbol name.
-    char* name = NativeSymbolResolver::LookupSymbolName(
+    const char* name = NativeSymbolResolver::LookupSymbolName(
         reinterpret_cast<uword>(weak_persistent_handle->callback()), nullptr);
     obj.AddProperty("callbackSymbolName", (name == nullptr) ? "" : name);
     if (name != nullptr) {
@@ -5252,8 +5248,7 @@ class SystemServiceIsolateVisitor : public IsolateVisitor {
   virtual ~SystemServiceIsolateVisitor() {}
 
   void VisitIsolate(Isolate* isolate) {
-    if (IsSystemIsolate(isolate) &&
-        !Dart::VmIsolateNameEquals(isolate->name())) {
+    if (IsSystemIsolate(isolate) && !isolate->is_vm_isolate()) {
       jsarr_->AddValue(isolate);
     }
   }
@@ -5337,7 +5332,7 @@ void Service::PrintJSONForVM(JSONStream* js, bool ref) {
     JSONArray jsarr_isolate_groups(&jsobj, "systemIsolateGroups");
     IsolateGroup::ForEach([&jsarr_isolate_groups](IsolateGroup* isolate_group) {
       // Don't surface the vm-isolate since it's not a "real" isolate.
-      if (Dart::VmIsolateNameEquals(isolate_group->source()->name)) {
+      if (isolate_group->is_vm_isolate()) {
         return;
       }
       if (isolate_group->is_system_isolate_group()) {
@@ -5762,10 +5757,6 @@ static const MethodParameter* const set_trace_class_allocation_params[] = {
 };
 
 static void SetTraceClassAllocation(Thread* thread, JSONStream* js) {
-  if (CheckCompilerDisabled(thread, js)) {
-    return;
-  }
-
   const char* class_id = js->LookupParam("classId");
   const bool enable = BoolParameter::Parse(js->LookupParam("enable"));
   intptr_t cid = -1;
@@ -5847,19 +5838,17 @@ static void GetDefaultClassesAliases(Thread* thread, JSONStream* js) {
     CLASS_LIST_SETS(DEFINE_ADD_VALUE_F_CID)
   }
 #define DEFINE_ADD_MAP_KEY(clazz)                                              \
-  {                                                                            \
-    JSONArray internals(&map, #clazz);                                         \
-    DEFINE_ADD_VALUE_F_CID(TypedData##clazz)                                   \
-    DEFINE_ADD_VALUE_F_CID(TypedData##clazz##View)                             \
-    DEFINE_ADD_VALUE_F_CID(ExternalTypedData##clazz)                           \
-    DEFINE_ADD_VALUE_F_CID(UnmodifiableTypedData##clazz##View)                 \
+  {JSONArray internals(&map, #clazz);                                          \
+  DEFINE_ADD_VALUE_F_CID(TypedData##clazz)                                     \
+  DEFINE_ADD_VALUE_F_CID(TypedData##clazz##View)                               \
+  DEFINE_ADD_VALUE_F_CID(ExternalTypedData##clazz)                             \
+  DEFINE_ADD_VALUE_F_CID(UnmodifiableTypedData##clazz##View)                   \
   }
   CLASS_LIST_TYPED_DATA(DEFINE_ADD_MAP_KEY)
 #undef DEFINE_ADD_MAP_KEY
 #define DEFINE_ADD_MAP_KEY(clazz)                                              \
-  {                                                                            \
-    JSONArray internals(&map, #clazz);                                         \
-    DEFINE_ADD_VALUE_F_CID(Ffi##clazz)                                         \
+  {JSONArray internals(&map, #clazz);                                          \
+  DEFINE_ADD_VALUE_F_CID(Ffi##clazz)                                           \
   }
   CLASS_LIST_FFI(DEFINE_ADD_MAP_KEY)
 #undef DEFINE_ADD_MAP_KEY

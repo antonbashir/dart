@@ -5,6 +5,7 @@
 import 'package:analysis_server/protocol/protocol_generated.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/plugin/plugin_manager.dart';
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/instrumentation/service.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
@@ -28,19 +29,20 @@ class FixesTest extends PubPackageAnalysisServerTest {
   @override
   Future<void> setUp() async {
     super.setUp();
+    registerBuiltInProducers();
     await setRoots(included: [workspaceRootPath], excluded: []);
   }
 
   Future<void> test_fileOutsideRoot() async {
-    final outsideFile = '/foo/test.dart';
+    var outsideFile = '/foo/test.dart';
     newFile(outsideFile, 'bad code to create error');
 
     // Set up the original project, as the code fix code won't run at all
     // if there are no contexts.
     await waitForTasksFinished();
 
-    var request =
-        EditGetFixesParams(convertPath(outsideFile), 0).toRequest('0');
+    var request = EditGetFixesParams(convertPath(outsideFile), 0)
+        .toRequest('0', clientUriConverter: server.uriConverter);
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -113,7 +115,8 @@ bar() {
   }
 
   Future<void> test_invalidFilePathFormat_notAbsolute() async {
-    var request = EditGetFixesParams('test.dart', 0).toRequest('0');
+    var request = EditGetFixesParams('test.dart', 0)
+        .toRequest('0', clientUriConverter: server.uriConverter);
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -124,7 +127,7 @@ bar() {
 
   Future<void> test_invalidFilePathFormat_notNormalized() async {
     var request = EditGetFixesParams(convertPath('/foo/../bar/test.dart'), 0)
-        .toRequest('0');
+        .toRequest('0', clientUriConverter: server.uriConverter);
     var response = await handleRequest(request);
     assertResponseFailure(
       response,
@@ -150,23 +153,18 @@ print(1)
   }
 
   Future<void> test_suggestImportFromDifferentAnalysisRoot() async {
-    newPackageConfigJsonFile(
-      '$workspaceRootPath/aaa',
-      (PackageConfigFileBuilder()
-            ..add(name: 'aaa', rootPath: '$workspaceRootPath/aaa')
-            ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'))
-          .toContent(toUriStr: toUriStr),
+    writePackageConfig(
+      convertPath('$workspaceRootPath/aaa'),
+      config: (PackageConfigFileBuilder()
+        ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb')),
     );
     newPubspecYamlFile('$workspaceRootPath/aaa', r'''
 dependencies:
   bbb: any
 ''');
 
-    newPackageConfigJsonFile(
-      '$workspaceRootPath/bbb',
-      (PackageConfigFileBuilder()
-            ..add(name: 'bbb', rootPath: '$workspaceRootPath/bbb'))
-          .toContent(toUriStr: toUriStr),
+    writePackageConfig(
+      convertPath('$workspaceRootPath/bbb'),
     );
     newFile('$workspaceRootPath/bbb/lib/target.dart', 'class Foo() {}');
     newFile(
@@ -175,7 +173,7 @@ dependencies:
         '$workspaceRootPath/bbb/lib/target.template.dart', 'class Foo() {}');
 
     // Configure the test file.
-    final file =
+    var file =
         newFile('$workspaceRootPath/aaa/main.dart', 'void f() { Foo(); }');
 
     await waitForTasksFinished();
@@ -198,14 +196,16 @@ dependencies:
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         name: AddContentOverlay(contents),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
   }
 
   Future<List<AnalysisErrorFixes>> _getFixes(File file, int offset) async {
-    var request = EditGetFixesParams(file.path, offset).toRequest('0');
+    var request = EditGetFixesParams(file.path, offset)
+        .toRequest('0', clientUriConverter: server.uriConverter);
     var response = await handleSuccessfulRequest(request);
-    var result = EditGetFixesResult.fromResponse(response);
+    var result = EditGetFixesResult.fromResponse(response,
+        clientUriConverter: server.uriConverter);
     return result.fixes;
   }
 

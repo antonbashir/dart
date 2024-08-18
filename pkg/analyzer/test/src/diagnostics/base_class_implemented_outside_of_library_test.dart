@@ -39,7 +39,7 @@ base class Bar implements Foo {}
   }
 
   test_class_outside_sealed() async {
-    final a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = newFile('$testPackageLibPath/a.dart', r'''
 base class A {}
 ''');
 
@@ -55,7 +55,7 @@ base class C implements B {}
         text:
             "The class 'A' can't be implemented outside of its library because it's a base class.",
         contextMessages: [
-          ExpectedContextMessage(a.path, 11, 1,
+          ExpectedContextMessage(a, 11, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -66,7 +66,7 @@ base class C implements B {}
   test_class_outside_sealed_noBase() async {
     // Instead of emitting [SUBTYPE_OF_BASE_IS_NOT_BASE_FINAL_OR_SEALED], we
     // tell the user that they can't implement an indirect base supertype.
-    final a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = newFile('$testPackageLibPath/a.dart', r'''
 base class A {}
 ''');
 
@@ -82,7 +82,7 @@ class C implements B {}
         text:
             "The class 'A' can't be implemented outside of its library because it's a base class.",
         contextMessages: [
-          ExpectedContextMessage(a.path, 11, 1,
+          ExpectedContextMessage(a, 11, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],
@@ -145,7 +145,7 @@ base class C = Object with M implements B;
   }
 
   test_classTypeAlias_outside() async {
-    final a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = newFile('$testPackageLibPath/a.dart', r'''
 base class A {}
 ''');
 
@@ -162,7 +162,7 @@ base class C = Object with M implements B;
         text:
             "The class 'A' can't be implemented outside of its library because it's a base class.",
         contextMessages: [
-          ExpectedContextMessage(a.path, 11, 1,
+          ExpectedContextMessage(a, 11, 1,
               text:
                   "The type 'B' is a subtype of 'A', and 'A' is defined here.")
         ],

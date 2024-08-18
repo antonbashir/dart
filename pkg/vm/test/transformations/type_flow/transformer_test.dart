@@ -7,15 +7,16 @@ import 'dart:io';
 import 'package:dart2wasm/record_class_generator.dart'
     show generateRecordClasses;
 import 'package:dart2wasm/target.dart' show WasmTarget;
-import 'package:kernel/target/targets.dart';
+import 'package:front_end/src/api_unstable/vm.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/kernel.dart';
-import 'package:front_end/src/api_unstable/vm.dart';
+import 'package:kernel/target/targets.dart';
 import 'package:test/test.dart';
-import 'package:vm/target/install.dart' show installAdditionalTargets;
+import 'package:vm/modular/target/install.dart' show installAdditionalTargets;
 import 'package:vm/transformations/pragma.dart'
     show ConstantPragmaAnnotationParser;
+import 'package:vm/transformations/type_flow/config.dart';
 import 'package:vm/transformations/type_flow/transformer.dart'
     show transformComponent;
 
@@ -23,8 +24,12 @@ import '../../common_test_utils.dart';
 
 final Uri pkgVmDir = Platform.script.resolve('../../..');
 
-void runTestCase(Uri source, List<Uri>? linkedDependencies,
-    List<String>? experimentalFlags, String? targetName) async {
+void runTestCase(
+    Uri source,
+    List<Uri>? linkedDependencies,
+    List<String>? experimentalFlags,
+    String? targetName,
+    TFAConfiguration tfaConfig) async {
   targetName ??= "vm";
   // Install all VM targets and dart2wasm.
   installAdditionalTargets();
@@ -37,13 +42,18 @@ void runTestCase(Uri source, List<Uri>? linkedDependencies,
 
   final coreTypes = new CoreTypes(component);
 
+  bool useRapidTypeAnalysis = true;
   if (target is WasmTarget) {
+    // Keep these flags in-sync with pkg/dart2wasm/lib/compile.dart
+    useRapidTypeAnalysis = false;
     target.recordClasses = generateRecordClasses(component, coreTypes);
   }
 
   component = transformComponent(target, coreTypes, component,
       matcher: new ConstantPragmaAnnotationParser(coreTypes, target),
-      treeShakeProtobufs: true);
+      config: tfaConfig,
+      treeShakeProtobufs: true,
+      useRapidTypeAnalysis: useRapidTypeAnalysis);
 
   String actual = kernelLibraryToString(component.mainMethod!.enclosingLibrary);
 
@@ -98,7 +108,19 @@ class TestOptions {
 
   static const Option<String?> target = Option('--target', StringValue());
 
-  static const List<Option> options = [linked, enableExperiment, target];
+  static const Option<int?> maxAllocatedTypesInSetSpecialization =
+      Option('--tfa.maxAllocatedTypesInSetSpecialization', IntValue());
+
+  static const Option<int?> maxInterfaceInvocationsPerSelector =
+      Option('--tfa.maxInterfaceInvocationsPerSelector', IntValue());
+
+  static const List<Option> options = [
+    linked,
+    enableExperiment,
+    target,
+    maxAllocatedTypesInSetSpecialization,
+    maxInterfaceInvocationsPerSelector
+  ];
 }
 
 void main(List<String> args) {
@@ -122,6 +144,7 @@ void main(List<String> args) {
         List<Uri>? linkDependencies;
         List<String>? experimentalFlags;
         String? targetName;
+        TFAConfiguration tfaConfig = defaultTFAConfiguration;
 
         File optionsFile = new File('${path}.options');
         if (optionsFile.existsSync()) {
@@ -135,12 +158,22 @@ void main(List<String> args) {
           }
           experimentalFlags = TestOptions.enableExperiment.read(parsedOptions);
           targetName = TestOptions.target.read(parsedOptions);
+          tfaConfig = TFAConfiguration(
+            maxInterfaceInvocationsPerSelector: TestOptions
+                    .maxInterfaceInvocationsPerSelector
+                    .read(parsedOptions) ??
+                defaultTFAConfiguration.maxInterfaceInvocationsPerSelector,
+            maxAllocatedTypesInSetSpecialization: TestOptions
+                    .maxAllocatedTypesInSetSpecialization
+                    .read(parsedOptions) ??
+                defaultTFAConfiguration.maxAllocatedTypesInSetSpecialization,
+          );
         }
 
         test(
             path,
-            () => runTestCase(
-                entry.uri, linkDependencies, experimentalFlags, targetName));
+            () => runTestCase(entry.uri, linkDependencies, experimentalFlags,
+                targetName, tfaConfig));
       }
     }
   }, timeout: Timeout.none);

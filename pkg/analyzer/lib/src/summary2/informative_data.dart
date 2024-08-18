@@ -4,12 +4,12 @@
 
 import 'dart:typed_data';
 
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/dart/analysis/info_declaration_store.dart';
+import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/summary2/bundle_reader.dart';
@@ -19,7 +19,6 @@ import 'package:analyzer/src/summary2/linked_element_factory.dart';
 import 'package:analyzer/src/summary2/not_serializable_nodes.dart';
 import 'package:analyzer/src/util/collection.dart';
 import 'package:analyzer/src/util/comment.dart';
-import 'package:collection/collection.dart';
 
 Uint8List writeUnitInformative(CompilationUnit unit) {
   var byteSink = ByteSink();
@@ -93,7 +92,7 @@ class InformativeDataApplier {
     var unitReader = SummaryDataReader(unitInfoBytes);
     var unitInfo = _InfoUnit(_infoDeclarationStore, unitReader);
 
-    final enclosing = unitElement.enclosingElement;
+    var enclosing = unitElement.enclosingElement;
     if (enclosing is LibraryElementImpl) {
       if (identical(enclosing.definingCompilationUnit, unitElement)) {
         _applyToLibrary(enclosing, unitInfo);
@@ -177,7 +176,7 @@ class InformativeDataApplier {
           info.parameters,
         );
 
-        final applyOffsets = ApplyConstantOffsets(
+        var applyOffsets = ApplyConstantOffsets(
           info.constantOffsets,
           (applier) {
             applier.applyToMetadata(element);
@@ -186,7 +185,7 @@ class InformativeDataApplier {
           },
         );
 
-        final linkedData = element.linkedData;
+        var linkedData = element.linkedData;
         if (linkedData is PropertyAccessorElementLinkedData) {
           linkedData.applyConstantOffsets = applyOffsets;
         } else {
@@ -207,7 +206,7 @@ class InformativeDataApplier {
     _applyToImports(element, info);
     _applyToExports(element, info);
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.libraryConstantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -217,7 +216,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is LibraryAugmentationElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -238,7 +237,7 @@ class InformativeDataApplier {
       info.typeParameters,
     );
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -253,7 +252,7 @@ class InformativeDataApplier {
       _applyToMethods(element.methods, info.methods);
     }
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is ClassElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
       linkedData.applyInformativeDataToMembers = applyToMembers;
@@ -276,7 +275,7 @@ class InformativeDataApplier {
       info.typeParameters,
     );
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -284,7 +283,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is ClassElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -301,6 +300,10 @@ class InformativeDataApplier {
       infoList,
       (element, info) {
         if (element is ShowElementCombinatorImpl) {
+          element.offset = info.offset;
+          element.end = info.end;
+        }
+        if (element is HideElementCombinatorImpl) {
           element.offset = info.offset;
           element.end = info.end;
         }
@@ -328,7 +331,7 @@ class InformativeDataApplier {
           info.parameters,
         );
 
-        final applyOffsets = ApplyConstantOffsets(
+        var applyOffsets = ApplyConstantOffsets(
           info.constantOffsets,
           (applier) {
             applier.applyToMetadata(element);
@@ -337,7 +340,7 @@ class InformativeDataApplier {
           },
         );
 
-        final linkedData = element.linkedData;
+        var linkedData = element.linkedData;
         if (linkedData is ConstructorElementLinkedData) {
           linkedData.applyConstantOffsets = applyOffsets;
         } else {
@@ -365,7 +368,7 @@ class InformativeDataApplier {
     _applyToAccessors(element.accessors, info.accessors);
     _applyToMethods(element.methods, info.methods);
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -373,7 +376,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is EnumElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -412,7 +415,7 @@ class InformativeDataApplier {
     _applyToAccessors(element.accessors, info.accessors);
     _applyToMethods(element.methods, info.methods);
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -420,7 +423,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is ExtensionElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -441,55 +444,60 @@ class InformativeDataApplier {
       info.typeParameters,
     );
 
-    final representationField = element.representation;
-    final infoRep = info.representation;
-    representationField.nameOffset = infoRep.fieldNameOffset;
-    representationField.setCodeRange(
-      infoRep.fieldCodeOffset,
-      infoRep.fieldCodeLength,
-    );
+    if (element.isAugmentationChainStart) {
+      var representationField = element.fields.first;
+      var infoRep = info.representation;
+      representationField.nameOffset = infoRep.fieldNameOffset;
+      representationField.setCodeRange(
+        infoRep.fieldCodeOffset,
+        infoRep.fieldCodeLength,
+      );
 
-    var fieldApplyOffsets = ApplyConstantOffsets(
-      infoRep.fieldConstantOffsets,
-      (applier) {
-        applier.applyToMetadata(representationField);
-      },
-    );
+      var fieldApplyOffsets = ApplyConstantOffsets(
+        infoRep.fieldConstantOffsets,
+        (applier) {
+          applier.applyToMetadata(representationField);
+        },
+      );
 
-    final fieldLinkedData = representationField.linkedData;
-    if (fieldLinkedData is FieldElementLinkedData) {
-      fieldLinkedData.applyConstantOffsets = fieldApplyOffsets;
+      var fieldLinkedData = representationField.linkedData;
+      if (fieldLinkedData is FieldElementLinkedData) {
+        fieldLinkedData.applyConstantOffsets = fieldApplyOffsets;
+      } else {
+        fieldApplyOffsets.perform();
+      }
+
+      var primaryConstructor = element.constructors.first;
+      primaryConstructor.setCodeRange(
+        infoRep.constructorCodeOffset,
+        infoRep.constructorCodeLength,
+      );
+      primaryConstructor.periodOffset = infoRep.constructorPeriodOffset;
+      primaryConstructor.nameOffset = infoRep.constructorNameOffset;
+      primaryConstructor.nameEnd = infoRep.constructorNameEnd;
+
+      var primaryConstructorParameter = primaryConstructor
+          .parameters_unresolved.first as ParameterElementImpl;
+      primaryConstructorParameter.nameOffset = infoRep.fieldNameOffset;
+      primaryConstructorParameter.setCodeRange(
+        infoRep.fieldCodeOffset,
+        infoRep.fieldCodeLength,
+      );
+
+      var restFields = element.fields.skip(1).toList();
+      _applyToFields(restFields, info.fields);
+
+      var restConstructors = element.constructors.skip(1).toList();
+      _applyToConstructors(restConstructors, info.constructors);
     } else {
-      fieldApplyOffsets.perform();
+      _applyToFields(element.fields, info.fields);
+      _applyToConstructors(element.constructors, info.constructors);
     }
-
-    final primaryConstructor = element.constructors.first;
-    primaryConstructor.setCodeRange(
-      infoRep.constructorCodeOffset,
-      infoRep.constructorCodeLength,
-    );
-    primaryConstructor.periodOffset = infoRep.constructorPeriodOffset;
-    primaryConstructor.nameOffset = infoRep.constructorNameOffset;
-    primaryConstructor.nameEnd = infoRep.constructorNameEnd;
-
-    final primaryConstructorParameter =
-        primaryConstructor.parameters_unresolved.first as ParameterElementImpl;
-    primaryConstructorParameter.nameOffset = infoRep.fieldNameOffset;
-    primaryConstructorParameter.setCodeRange(
-      infoRep.fieldCodeOffset,
-      infoRep.fieldCodeLength,
-    );
-
-    final restFields = element.fields.skip(1).toList();
-    _applyToFields(restFields, info.fields);
-
-    final restConstructors = element.constructors.skip(1).toList();
-    _applyToConstructors(restConstructors, info.constructors);
 
     _applyToAccessors(element.accessors, info.accessors);
     _applyToMethods(element.methods, info.methods);
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -497,7 +505,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is ExtensionTypeElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -518,7 +526,7 @@ class InformativeDataApplier {
         element.nameOffset = info.nameOffset;
         element.documentationComment = info.documentationComment;
 
-        final applyOffsets = ApplyConstantOffsets(
+        var applyOffsets = ApplyConstantOffsets(
           info.constantOffsets,
           (applier) {
             applier.applyToMetadata(element);
@@ -526,7 +534,7 @@ class InformativeDataApplier {
           },
         );
 
-        final linkedData = element.linkedData;
+        var linkedData = element.linkedData;
         if (linkedData is FieldElementLinkedData) {
           linkedData.applyConstantOffsets = applyOffsets;
         } else {
@@ -570,7 +578,7 @@ class InformativeDataApplier {
       info.parameters,
     );
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -579,7 +587,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is FunctionElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -639,7 +647,7 @@ class InformativeDataApplier {
         element as LibraryImportElementImpl;
         element.nameOffset = info.nameOffset;
 
-        final prefixElement = element.prefix?.element;
+        var prefixElement = element.prefix?.element;
         if (prefixElement is PrefixElementImpl) {
           prefixElement.nameOffset = info.prefixOffset;
         }
@@ -668,7 +676,7 @@ class InformativeDataApplier {
       },
     );
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.libraryConstantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -679,7 +687,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is LibraryElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -708,7 +716,7 @@ class InformativeDataApplier {
           info.parameters,
         );
 
-        final applyOffsets = ApplyConstantOffsets(
+        var applyOffsets = ApplyConstantOffsets(
           info.constantOffsets,
           (applier) {
             applier.applyToMetadata(element);
@@ -717,7 +725,7 @@ class InformativeDataApplier {
           },
         );
 
-        final linkedData = element.linkedData;
+        var linkedData = element.linkedData;
         if (linkedData is MethodElementLinkedData) {
           linkedData.applyConstantOffsets = applyOffsets;
         } else {
@@ -744,7 +752,7 @@ class InformativeDataApplier {
     _applyToAccessors(element.accessors, info.accessors);
     _applyToMethods(element.methods, info.methods);
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -752,7 +760,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is MixinElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -769,7 +777,7 @@ class InformativeDataApplier {
     element.nameOffset = info.nameOffset;
     element.documentationComment = info.documentationComment;
 
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       info.constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -777,7 +785,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is TopLevelVariableElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -801,13 +809,13 @@ class InformativeDataApplier {
   }
 
   Uint8List? _getInfoUnitBytes(CompilationUnitElement element) {
-    final uri = element.source.uri;
-    if (_unitsInformativeBytes2[uri] case final bytes?) {
+    var uri = element.source.uri;
+    if (_unitsInformativeBytes2[uri] case var bytes?) {
       return bytes;
     }
 
     switch (element.enclosingElement) {
-      case LibraryAugmentationElementImpl(:final macroGenerated?):
+      case LibraryAugmentationElementImpl(:var macroGenerated?):
         return macroGenerated.informativeBytes;
     }
 
@@ -820,7 +828,7 @@ class InformativeDataApplier {
     List<_InfoFormalParameter>? aliasedFormalParameters,
     List<_InfoTypeParameter>? aliasedTypeParameters,
   }) {
-    final applyOffsets = ApplyConstantOffsets(
+    var applyOffsets = ApplyConstantOffsets(
       constantOffsets,
       (applier) {
         applier.applyToMetadata(element);
@@ -846,7 +854,7 @@ class InformativeDataApplier {
       },
     );
 
-    final linkedData = element.linkedData;
+    var linkedData = element.linkedData;
     if (linkedData is TypeAliasElementLinkedData) {
       linkedData.applyConstantOffsets = applyOffsets;
     } else {
@@ -874,13 +882,13 @@ class _InfoClassDeclaration {
     // TODO(jensj): Possibly we could just save the bytes and the
     // offset and then only read it when/if needed.
     // See https://dart-review.googlesource.com/c/sdk/+/318940.
-    final initialOffset = reader.offset;
+    var initialOffset = reader.offset;
     String cacheKey = cache.createKey(reader, initialOffset);
-    final cached =
+    var cached =
         cache.get<_InfoClassDeclaration>(reader, cacheKey, initialOffset);
     if (cached != null) return cached;
 
-    final result = _InfoClassDeclaration._(
+    var result = _InfoClassDeclaration._(
       codeOffset: reader.readUInt30(),
       codeLength: reader.readUInt30(),
       nameOffset: reader.readUInt30() - nameOffsetDelta,
@@ -1733,7 +1741,7 @@ class _InformativeDataWriter {
     for (var directive in unit.directives) {
       firstDirective ??= directive;
       if (directive is LibraryDirective) {
-        final libraryName = directive.name2;
+        var libraryName = directive.name2;
         if (libraryName != null) {
           nameOffset = libraryName.offset;
           nameLength = libraryName.length;
@@ -1852,7 +1860,7 @@ class _InformativeDataWriter {
     sink.writeUInt30(node.offset);
     sink.writeUInt30(node.length);
 
-    final constructorName = node.constructorName;
+    var constructorName = node.constructorName;
     if (constructorName != null) {
       sink.writeOptionalUInt30(constructorName.period.offset);
       sink.writeUInt30(constructorName.name.offset);
@@ -1864,8 +1872,8 @@ class _InformativeDataWriter {
     }
 
     var fieldBeginToken = node.fieldMetadata.beginToken ?? node.fieldType;
-    final codeOffset = fieldBeginToken.offset;
-    final codeEnd = node.fieldName.end;
+    var codeOffset = fieldBeginToken.offset;
+    var codeEnd = node.fieldName.end;
     sink.writeUInt30(codeOffset);
     sink.writeUInt30(codeEnd - codeOffset);
     sink.writeUInt30(node.fieldName.offset);
@@ -2048,9 +2056,9 @@ class _InfoUnit {
 
   static Uint32List _readUint30ListPossiblyFromCache(
       InfoDeclarationStore cache, SummaryDataReader reader) {
-    final initialOffset = reader.offset;
-    final cacheKey = cache.createKey(reader, initialOffset);
-    final cachedLineStarts =
+    var initialOffset = reader.offset;
+    var cacheKey = cache.createKey(reader, initialOffset);
+    var cachedLineStarts =
         cache.get<Uint32List>(reader, cacheKey, initialOffset);
     if (cachedLineStarts != null) {
       return cachedLineStarts;
@@ -2175,7 +2183,7 @@ class _OffsetsApplier extends _OffsetsAstVisitor {
 
   void _applyToEnumConstantInitializer(ConstFieldElementImpl element) {
     var initializer = element.constantInitializer;
-    if (initializer is InstanceCreationExpression) {
+    if (initializer is InstanceCreationExpressionImpl) {
       initializer.constructorName.type.typeArguments?.accept(this);
       for (var argument in initializer.argumentList.arguments) {
         argument.accept(this);
@@ -2220,6 +2228,18 @@ abstract class _OffsetsAstVisitor extends RecursiveAstVisitor<void> {
   void visitAssignmentExpression(AssignmentExpression node) {
     _tokenOrNull(node.operator);
     super.visitAssignmentExpression(node);
+  }
+
+  @override
+  void visitAugmentedExpression(AugmentedExpression node) {
+    _tokenOrNull(node.augmentedKeyword);
+    super.visitAugmentedExpression(node);
+  }
+
+  @override
+  void visitAugmentedInvocation(AugmentedInvocation node) {
+    _tokenOrNull(node.augmentedKeyword);
+    super.visitAugmentedInvocation(node);
   }
 
   @override

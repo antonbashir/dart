@@ -5,9 +5,9 @@
 import 'dart:mirrors';
 
 import 'package:analyzer/error/error.dart';
-import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/analysis_options/analysis_options_provider.dart';
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/file_system/file_system.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/lint/linter.dart';
 import 'package:analyzer/src/lint/registry.dart';
@@ -150,7 +150,7 @@ analyzer:
   errors:
     unused_local_variable: ignore
     invalid_assignment: warning
-    missing_return: error
+    assignment_of_do_not_store: error
     dead_code: info
 ''', []);
   }
@@ -280,7 +280,7 @@ analyzer:
 analyzer:
   optional-checks:
     chromeos-manifest
-''', [AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITH_LEGAL_VALUE]);
+''', [AnalysisOptionsWarningCode.UNSUPPORTED_OPTION_WITH_LEGAL_VALUES]);
   }
 
   test_chromeos_manifest_checks_notAMap() {
@@ -575,7 +575,7 @@ class TestRule extends LintRule {
           name: 'fantastic_test_rule',
           description: '',
           details: '',
-          group: Group.style,
+          categories: {Category.style},
         );
 
   TestRule.withName(String name)
@@ -583,6 +583,6 @@ class TestRule extends LintRule {
           name: name,
           description: '',
           details: '',
-          group: Group.style,
+          categories: {Category.style},
         );
 }

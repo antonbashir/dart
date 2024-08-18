@@ -93,25 +93,6 @@ extension ArgumentListExtension on ArgumentList {
   }
 }
 
-extension AstNodeNullableExtension on AstNode? {
-  List<ClassMember> get classMembers {
-    final self = this;
-    if (self is ClassDeclaration) {
-      return self.members;
-    } else if (self is EnumDeclaration) {
-      return self.members;
-    } else if (self is ExtensionDeclaration) {
-      return self.members;
-    } else if (self is ExtensionTypeDeclaration) {
-      return self.members;
-    } else if (self is MixinDeclaration) {
-      return self.members;
-    } else {
-      throw UnimplementedError('(${self.runtimeType}) $self');
-    }
-  }
-}
-
 extension ConstructorDeclarationExtension on ConstructorDeclaration {
   bool get isNonRedirectingGenerative {
     // Must be generative.
@@ -144,7 +125,7 @@ extension DartPatternExtension on DartPattern {
   }
 
   DartType? get requiredType {
-    final self = this;
+    var self = this;
     if (self is DeclaredVariablePattern) {
       return self.type?.typeOrThrow;
     } else if (self is ListPattern) {
@@ -213,7 +194,7 @@ extension IdentifierExtension on Identifier {
   }
 
   SimpleIdentifier get simpleName {
-    final self = this;
+    var self = this;
     if (self is SimpleIdentifier) {
       return self;
     } else {
@@ -237,9 +218,9 @@ extension IdentifierExtension on Identifier {
 extension IdentifierImplExtension on IdentifierImpl {
   NamedTypeImpl toNamedType({
     required TypeArgumentListImpl? typeArguments,
-    Token? question,
+    required Token? question,
   }) {
-    final self = this;
+    var self = this;
     if (self is PrefixedIdentifierImpl) {
       return NamedTypeImpl(
         importPrefix: ImportPrefixReferenceImpl(
@@ -290,7 +271,7 @@ extension MethodDeclarationExtension on MethodDeclaration {
 
 extension NamedTypeExtension on NamedType {
   String get qualifiedName {
-    final importPrefix = this.importPrefix;
+    var importPrefix = this.importPrefix;
     if (importPrefix != null) {
       return '${importPrefix.name.lexeme}.${name2.lexeme}';
     } else {
@@ -334,7 +315,7 @@ extension TypeAnnotationExtension on TypeAnnotation {
   /// be already resolved. Every such expression must have the type set,
   /// at least `dynamic`.
   DartType get typeOrThrow {
-    final type = this.type;
+    var type = this.type;
     if (type == null) {
       throw StateError('No type: $this');
     }

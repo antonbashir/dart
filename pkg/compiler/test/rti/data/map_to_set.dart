@@ -2,12 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// @dart = 2.7
-
 /*prod.class: global#Map:deps=[Class],needsArgs*/
 /*spec.class: global#Map:deps=[Class],explicit=[Map,Map<Object?,Object?>],needsArgs,test*/
 
-/*prod.class: global#LinkedHashMap:deps=[Map],implicit=[LinkedHashMap.K],needsArgs*/
+/*prod.class: global#LinkedHashMap:deps=[Map],implicit=[LinkedHashMap.K,LinkedHashMap.V],needsArgs*/
 /*spec.class: global#LinkedHashMap:deps=[Map],explicit=[LinkedHashMap<LinkedHashMap.K,LinkedHashMap.V>],implicit=[LinkedHashMap.K,LinkedHashMap.V],needsArgs,test*/
 
 /*prod.class: global#JsLinkedHashMap:deps=[LinkedHashMap],implicit=[JsLinkedHashMap.K],needsArgs*/

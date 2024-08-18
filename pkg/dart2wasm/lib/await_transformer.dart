@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:dart2wasm/async.dart' as asyncCodeGen;
-
 import 'package:kernel/ast.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
 import 'package:kernel/type_environment.dart';
+
+import 'state_machine.dart' as stateMachineCodeGen;
 
 /// This pass lifts `await` expressions to the top-level. After the pass, all
 /// `await` expressions will have the form:
@@ -363,9 +363,7 @@ class _AwaitTransformer extends Transformer {
     loopBody.add(IfStatement(cond, Block(newBody), BreakStatement(labeled)));
     labeled.body = WhileStatement(BoolLiteral(true), Block(loopBody))
       ..parent = labeled;
-    return Block(<Statement>[]
-      ..addAll(temps)
-      ..add(labeled));
+    return Block(<Statement>[...temps, labeled]);
   }
 
   @override
@@ -423,19 +421,15 @@ class _AwaitTransformer extends Transformer {
       // the current exception after the `await`.
       //
       // TODO (omersa): We could mark [TreeNode]s with `await`s and only do this
-      if (catch_.exception == null) {
-        catch_.exception = VariableDeclaration(null,
-            type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
-            isSynthesized: true)
-          ..parent = catch_;
-      }
-      if (catch_.stackTrace == null) {
-        catch_.stackTrace = VariableDeclaration(null,
-            type: InterfaceType(
-                coreTypes.stackTraceClass, Nullability.nonNullable),
-            isSynthesized: true)
-          ..parent = catch_;
-      }
+      catch_.exception ??= VariableDeclaration(null,
+          type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
+          isSynthesized: true)
+        ..parent = catch_;
+      catch_.stackTrace ??= VariableDeclaration(null,
+          type:
+              InterfaceType(coreTypes.stackTraceClass, Nullability.nonNullable),
+          isSynthesized: true)
+        ..parent = catch_;
 
       var body = visitDelimited(catch_.body);
 
@@ -468,7 +462,7 @@ class _AwaitTransformer extends Transformer {
 
     // Variable for the finalizer block continuation.
     final continuationVar = VariableDeclaration(null,
-        initializer: IntLiteral(asyncCodeGen.continuationFallthrough),
+        initializer: IntLiteral(stateMachineCodeGen.continuationFallthrough),
         type: InterfaceType(coreTypes.intClass, Nullability.nonNullable),
         isSynthesized: true);
 
@@ -668,7 +662,7 @@ class _ExpressionTransformer extends Transformer {
       return variables[index];
     }
     for (var i = variables.length; i <= index; i++) {
-      variables.add(VariableDeclaration(":async_temporary_${i}", type: type));
+      variables.add(VariableDeclaration(":async_temporary_$i", type: type));
     }
     return variables[index];
   }
@@ -774,6 +768,9 @@ class _ExpressionTransformer extends Transformer {
   TreeNode visitRethrow(Rethrow expr) => nullary(expr);
 
   @override
+  TreeNode visitFileUriExpression(FileUriExpression expr) => unary(expr);
+
+  @override
   TreeNode visitVariableGet(VariableGet expr) {
     Expression result = expr;
     // Getting a final or const variable is not an effect so it can be
@@ -788,7 +785,7 @@ class _ExpressionTransformer extends Transformer {
   /// Transform an expression given an action to transform the children. For
   /// this purposes of the await transformer the children should generally be
   /// translated from right to left, in the reverse of evaluation order.
-  Expression transformTreeNode(Expression expr, void action(),
+  Expression transformTreeNode(Expression expr, void Function() action,
       {bool alwaysName = false}) {
     final bool shouldName = alwaysName || seenAwait;
 
@@ -1023,7 +1020,7 @@ class _ExpressionTransformer extends Transformer {
 
   /// Perform an action with a given list of statements so that it cannot emit
   /// statements into the 'outer' list.
-  Expression delimit(Expression action(), List<Statement> inner) {
+  Expression delimit(Expression Function() action, List<Statement> inner) {
     final outer = statements;
     statements = inner;
     final result = action();
@@ -1269,6 +1266,6 @@ class _ExpressionTransformer extends Transformer {
   @override
   TreeNode defaultStatement(Statement stmt) {
     throw UnsupportedError(
-        "Use _rewriteStatement to transform statement: ${stmt}");
+        "Use _rewriteStatement to transform statement: $stmt");
   }
 }

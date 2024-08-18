@@ -41,8 +41,6 @@ class Types with StandardBounds {
         return isSubtypeOf.isSubtypeWhenUsingNullabilities();
       case SubtypeCheckMode.ignoringNullabilities:
         return isSubtypeOf.isSubtypeWhenIgnoringNullabilities();
-      default:
-        throw new StateError("Unhandled subtype checking mode '$mode'");
     }
   }
 
@@ -396,7 +394,7 @@ class Types with StandardBounds {
     }
     IsSubtypeOf result = const IsSubtypeOf.always();
     for (int i = 0; i < s.length; i++) {
-      int variance = p[i].variance;
+      Variance variance = p[i].variance;
       if (variance == Variance.contravariant) {
         result = result.and(performNullabilityAwareSubtypeCheck(t[i], s[i]));
         if (!result.isSubtypeWhenIgnoringNullabilities()) {
@@ -421,10 +419,8 @@ class Types with StandardBounds {
   static List<Object>? typeChecksForTesting;
 
   TypeDeclarationType? getTypeAsInstanceOf(TypeDeclarationType type,
-      TypeDeclaration typeDeclaration, CoreTypes coreTypes,
-      {required bool isNonNullableByDefault}) {
-    return hierarchy.getTypeAsInstanceOf(type, typeDeclaration,
-        isNonNullableByDefault: isNonNullableByDefault);
+      TypeDeclaration typeDeclaration, CoreTypes coreTypes) {
+    return hierarchy.getTypeAsInstanceOf(type, typeDeclaration);
   }
 
   List<DartType>? getTypeArgumentsAsInstanceOf(
@@ -1211,12 +1207,16 @@ class IsFutureOrSubtypeOf extends TypeRelation<FutureOrType> {
     return types
         // Rule 11.
         .performNullabilityAwareSubtypeCheck(
-            s, t.typeArgument.withDeclaredNullability(t.nullability))
+            s,
+            t.typeArgument.withDeclaredNullability(
+                combineNullabilitiesForSubstitution(
+                    t.typeArgument.declaredNullability, t.declaredNullability)))
         // Rule 13.
         .orSubtypeCheckFor(
             s.parameter.bound.withDeclaredNullability(
                 combineNullabilitiesForSubstitution(
-                    s.parameter.bound.nullability, s.nullability)),
+                    s.parameter.bound.declaredNullability,
+                    s.declaredNullability)),
             t,
             types)
         // Rule 10.
@@ -1279,9 +1279,16 @@ class IsFutureOrSubtypeOf extends TypeRelation<FutureOrType> {
   @override
   IsSubtypeOf isExtensionTypeRelated(
       ExtensionType s, FutureOrType t, Types types) {
-    // Rule 11.
-    return types.performNullabilityAwareSubtypeCheck(
-        s, t.typeArgument.withDeclaredNullability(t.nullability));
+    return types
+        // Rule 11.
+        .performNullabilityAwareSubtypeCheck(
+            s, t.typeArgument.withDeclaredNullability(t.nullability))
+        // Rule 10.
+        .orSubtypeCheckFor(
+            s,
+            new InterfaceType(types.hierarchy.coreTypes.futureClass,
+                t.nullability, [t.typeArgument]),
+            types);
   }
 }
 

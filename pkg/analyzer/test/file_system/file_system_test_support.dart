@@ -2,19 +2,29 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer/file_system/physical_file_system.dart';
+import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
+import 'package:watcher/watcher.dart' show ChangeType;
 
 final isFile = TypeMatcher<File>();
 final isFileSystemException = TypeMatcher<FileSystemException>();
 final isFolder = TypeMatcher<Folder>();
 
 final throwsFileSystemException = throwsA(isFileSystemException);
+
+typedef _WatcherChanges = ({
+  List<ChangeType> changes,
+  Future<void> Function() cancel,
+});
 
 abstract class FileSystemTestSupport {
   /// The content used for the file at the [defaultFilePath] if it is created
@@ -38,10 +48,6 @@ abstract class FileSystemTestSupport {
   /// to work.
   String get tempPath;
 
-  /// Create a link from [path] to [target].
-  /// The [target] does not have to exist, can be create later, or not at all.
-  void createLink({required String path, required String target});
-
   /// Return a file accessed through the resource provider. If [exists] is
   /// `true` then the returned file will exist, otherwise it won't. If [content]
   /// is provided then the file will have the given content, otherwise it will
@@ -56,6 +62,11 @@ abstract class FileSystemTestSupport {
   /// otherwise the folder will have the [defaultFolderPath].
   Folder getFolder({required bool exists, String? folderPath});
 
+  /// Return a link accessed through the resource provider. If [target] is
+  /// supplied then the returned link will exist and point to [target],
+  /// otherwise it won't.
+  Link getLink({required String linkPath, String? target});
+
   /// Return a file path composed of the provided parts as defined by the
   /// current path context.
   String join(String part1,
@@ -65,6 +76,38 @@ abstract class FileSystemTestSupport {
           String? part5,
           String? part6]) =>
       provider.pathContext.join(part1, part2, part3, part4, part5, part6);
+
+  /// Subscribes to [watcher], waits for it to become ready, and returns
+  /// a record containing a list of events received (which updates as events
+  /// arrive) and a function to cancel.
+  Future<_WatcherChanges> _subscribeToWatcher(ResourceWatcher watcher) async {
+    var changes = <ChangeType>[];
+    var subscription =
+        watcher.changes.listen((event) => changes.add(event.type));
+
+    await watcher.ready;
+
+    return (changes: changes, cancel: subscription.cancel);
+  }
+
+  /// Waits up to [maxDuration] for [condition] to return `true`.
+  ///
+  /// Throws if condition is not `true` before the time expires.
+  Future<void> _waitFor(
+    FutureOr<bool> Function() condition, [
+    // Set the default max high enough to ensure no flakes on slow bots. We
+    // check periodically and will exit early if the condition is met.
+    Duration maxDuration = const Duration(seconds: 5),
+  ]) async {
+    var endTime = DateTime.now().add(maxDuration);
+    while (DateTime.now().isBefore(endTime)) {
+      if (await condition()) {
+        return;
+      }
+      await pumpEventQueue(times: 1000);
+    }
+    throw 'Condition was not true within $maxDuration';
+  }
 }
 
 /// Unlike most test mixins, this mixin defines some abstract test methods.
@@ -100,7 +143,7 @@ mixin FileTestMixin implements FileSystemTestSupport {
   test_createSource() {
     File file = getFile(exists: true);
 
-    Source source = file.createSource();
+    Source source = FileSource(file);
     expect(source, isNotNull);
     expect(source.fullName, defaultFilePath);
     expect(source.uri, Uri.file(defaultFilePath));
@@ -153,7 +196,7 @@ mixin FileTestMixin implements FileSystemTestSupport {
     var a_path = join(tempPath, 'a.dart');
     var b_path = join(tempPath, 'b.dart');
 
-    createLink(path: b_path, target: a_path);
+    getLink(linkPath: b_path, target: a_path);
     getFile(exists: true, filePath: a_path);
 
     var a = provider.getFile(a_path);
@@ -169,7 +212,7 @@ mixin FileTestMixin implements FileSystemTestSupport {
     var a_path = join(tempPath, 'a.dart');
     var b_path = join(tempPath, 'b.dart');
 
-    createLink(path: b_path, target: a_path);
+    getLink(linkPath: b_path, target: a_path);
 
     var a = provider.getFile(a_path);
     var b = provider.getFile(b_path);
@@ -227,6 +270,77 @@ mixin FileTestMixin implements FileSystemTestSupport {
     File file = getFile(exists: false);
 
     expect(() => file.modificationStamp, throwsA(isFileSystemException));
+  }
+
+  /// Test that we can reuse a [ResourceWatcher] to create a second subscription
+  /// and cancel it at a different time.
+  test_multipleWatchers_staggeredCancel() async {
+    var filePath = path.join(tempPath, 'foo');
+    var file = getFile(filePath: filePath, exists: true);
+
+    // On Windows, package:watcher may miss modification events for files that
+    // were created just before we started watching (see
+    // https://github.com/dart-lang/watcher/issues/159), so add an artificial
+    // delay there to ensure we don't miss events until that issue is resolved.
+    if (provider is PhysicalResourceProvider && Platform.isWindows) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+
+    var resource = provider.getResource(filePath);
+    var watcher = resource.watch();
+
+    var watch1 = await _subscribeToWatcher(watcher);
+    var watch2 = await _subscribeToWatcher(watcher);
+    file.writeAsStringSync('first');
+    await _waitFor(
+      () => watch1.changes.isNotEmpty && watch2.changes.isNotEmpty,
+    );
+
+    // Cancel the second watcher before causing the second event.
+    await watch2.cancel();
+
+    file.writeAsStringSync('second');
+    await _waitFor(() => watch1.changes.length >= 2);
+
+    await watch1.cancel();
+
+    // Watcher 1 should have both events, and watcher 2 should have only the
+    // first one.
+    expect(watch1.changes.length, 2);
+    expect(watch2.changes.length, 1);
+  }
+
+  /// Test that we can reuse a [ResourceWatcher] to create a second subscription
+  /// at a different time.
+  test_multipleWatchers_staggeredSubscribe() async {
+    var filePath = path.join(tempPath, 'foo');
+    var file = getFile(filePath: filePath, exists: true);
+
+    // On Windows, package:watcher may miss modification events for files that
+    // were created just before we started watching (see
+    // https://github.com/dart-lang/watcher/issues/159), so add an artificial
+    // delay there to ensure we don't miss events until that issue is resolved.
+    if (provider is PhysicalResourceProvider && Platform.isWindows) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+
+    var resource = provider.getResource(filePath);
+    var watcher = resource.watch();
+
+    var watch1 = await _subscribeToWatcher(watcher);
+    file.writeAsStringSync('first');
+    await _waitFor(() => watch1.changes.isNotEmpty);
+
+    var watch2 = await _subscribeToWatcher(watcher);
+    file.writeAsStringSync('second');
+    await _waitFor(() => watch2.changes.isNotEmpty);
+
+    await Future.wait([watch1.cancel(), watch2.cancel()]);
+
+    // Watcher 1 should have both events, and watcher 2 should have only the
+    // second.
+    expect(watch1.changes.length, 2);
+    expect(watch2.changes.length, 1);
   }
 
   test_parent2() {
@@ -316,7 +430,7 @@ mixin FileTestMixin implements FileSystemTestSupport {
     var b_path = join(tempPath, 'bbb', 'b.dart');
 
     getFile(exists: true, filePath: a_path);
-    createLink(path: b_path, target: a_path);
+    getLink(linkPath: b_path, target: a_path);
 
     var resolved = provider.getFile(b_path).resolveSymbolicLinksSync();
     expect(resolved.path, a_path);
@@ -330,8 +444,8 @@ mixin FileTestMixin implements FileSystemTestSupport {
     var c = join(tempPath, 'ccc', 'c.dart');
 
     getFile(exists: true, filePath: a);
-    createLink(path: b, target: a);
-    createLink(path: c, target: b);
+    getLink(linkPath: b, target: a);
+    getLink(linkPath: c, target: b);
 
     var resolved = provider.getFile(c).resolveSymbolicLinksSync();
     expect(resolved.path, a);
@@ -343,7 +457,7 @@ mixin FileTestMixin implements FileSystemTestSupport {
     var a = join(tempPath, 'a.dart');
     var b = join(tempPath, 'b.dart');
 
-    createLink(path: b, target: a);
+    getLink(linkPath: b, target: a);
 
     expect(() {
       provider.getFile(b).resolveSymbolicLinksSync();
@@ -543,7 +657,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var foo_path = join(tempPath, 'foo');
     var bar_path = join(tempPath, 'bar');
 
-    createLink(path: bar_path, target: foo_path);
+    getLink(linkPath: bar_path, target: foo_path);
     getFolder(exists: true, folderPath: foo_path);
 
     var foo = provider.getFolder(foo_path);
@@ -559,7 +673,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var foo_path = join(tempPath, 'foo');
     var bar_path = join(tempPath, 'bar');
 
-    createLink(path: bar_path, target: foo_path);
+    getLink(linkPath: bar_path, target: foo_path);
 
     var foo = provider.getFolder(foo_path);
     var bar = provider.getFolder(bar_path);
@@ -684,7 +798,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var a_path = join(tempPath, 'a.dart');
     var b_path = join(tempPath, 'b.dart');
 
-    createLink(path: b_path, target: a_path);
+    getLink(linkPath: b_path, target: a_path);
     var a = getFile(exists: true, filePath: a_path);
 
     var children = provider.getFolder(tempPath).getChildren();
@@ -705,7 +819,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var bar_path = join(tempPath, 'bar');
 
     var foo = getFolder(exists: true, folderPath: foo_path);
-    createLink(path: bar_path, target: foo_path);
+    getLink(linkPath: bar_path, target: foo_path);
 
     var children = provider.getFolder(tempPath).getChildren();
     expect(children, hasLength(2));
@@ -730,7 +844,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
 
     var foo_a = getFile(exists: true, filePath: foo_a_path);
     var foo_b = getFolder(exists: true, folderPath: foo_b_path);
-    createLink(path: bar_path, target: foo_path);
+    getLink(linkPath: bar_path, target: foo_path);
 
     var children = provider.getFolder(bar_path).getChildren();
     expect(children, hasLength(2));
@@ -778,6 +892,61 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     expect(folder.isOrContains(defaultFolderPath), isTrue);
   }
 
+  /// Test that we can reuse a [ResourceWatcher] to create a second subscription
+  /// and cancel it at a different time.
+  test_multipleWatchers_staggeredCancel() async {
+    var folderPath = path.join(tempPath, 'foo');
+    var fileInFolder =
+        getFile(filePath: path.join(folderPath, 'file'), exists: true);
+    var resource = provider.getResource(folderPath);
+    var watcher = resource.watch();
+
+    var watch1 = await _subscribeToWatcher(watcher);
+    var watch2 = await _subscribeToWatcher(watcher);
+    fileInFolder.writeAsStringSync('first');
+    await _waitFor(
+      () => watch1.changes.isNotEmpty && watch2.changes.isNotEmpty,
+    );
+
+    // Cancel the second watcher before causing the second event.
+    await watch2.cancel();
+
+    fileInFolder.writeAsStringSync('second');
+    await _waitFor(() => watch1.changes.length >= 2);
+
+    await watch1.cancel();
+
+    // Watcher 1 should have both events, and watcher 2 should have only the
+    // first one.
+    expect(watch1.changes.length, 2);
+    expect(watch2.changes.length, 1);
+  }
+
+  /// Test that we can reuse a [ResourceWatcher] to create a second subscription
+  /// at a different time.
+  test_multipleWatchers_staggeredSubscribe() async {
+    var folderPath = path.join(tempPath, 'foo');
+    var fileInFolder =
+        getFile(filePath: path.join(folderPath, 'file'), exists: true);
+    var resource = provider.getResource(folderPath);
+    var watcher = resource.watch();
+
+    var watch1 = await _subscribeToWatcher(watcher);
+    fileInFolder.writeAsStringSync('first');
+    await _waitFor(() => watch1.changes.isNotEmpty);
+
+    var watch2 = await _subscribeToWatcher(watcher);
+    fileInFolder.writeAsStringSync('second');
+    await _waitFor(() => watch2.changes.isNotEmpty);
+
+    await Future.wait([watch1.cancel(), watch2.cancel()]);
+
+    // Watcher 1 should have both events, and watcher 2 should have only the
+    // second.
+    expect(watch1.changes.length, 2);
+    expect(watch2.changes.length, 1);
+  }
+
   test_parent() {
     Folder folder = getFolder(exists: true);
 
@@ -805,7 +974,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var bar = join(tempPath, 'bar');
 
     getFolder(exists: true, folderPath: foo);
-    createLink(path: bar, target: foo);
+    getLink(linkPath: bar, target: foo);
 
     var resolved = provider.getFolder(bar).resolveSymbolicLinksSync();
     expect(resolved.path, foo);
@@ -817,7 +986,7 @@ mixin FolderTestMixin implements FileSystemTestSupport {
     var foo = join(tempPath, 'foo');
     var bar = join(tempPath, 'bar');
 
-    createLink(path: bar, target: foo);
+    getLink(linkPath: bar, target: foo);
 
     expect(() {
       provider.getFolder(bar).resolveSymbolicLinksSync();
@@ -880,6 +1049,26 @@ mixin FolderTestMixin implements FileSystemTestSupport {
       }
       _verifyStructure(copiedChild, sourceChild);
     }
+  }
+}
+
+mixin LinkTestMixin implements FileSystemTestSupport {
+  test_exists_created() {
+    var link = getLink(linkPath: join(tempPath, 'link.dart'))
+      ..create(join(tempPath, 'target.dart'));
+    expect(link.exists, isTrue);
+  }
+
+  test_exists_existing() {
+    var link = getLink(
+        linkPath: join(tempPath, 'link.dart'),
+        target: join(tempPath, 'target.dart'));
+    expect(link.exists, isTrue);
+  }
+
+  test_exists_notExisting() {
+    var link = getLink(linkPath: join(tempPath, 'link.dart'));
+    expect(link.exists, isFalse);
   }
 }
 

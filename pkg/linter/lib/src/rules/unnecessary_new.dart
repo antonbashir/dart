@@ -34,14 +34,15 @@ m(){
 class UnnecessaryNew extends LintRule {
   static const LintCode code = LintCode(
       'unnecessary_new', "Unnecessary 'new' keyword.",
-      correctionMessage: "Try removing the 'new' keyword.");
+      correctionMessage: "Try removing the 'new' keyword.",
+      hasPublishedDocs: true);
 
   UnnecessaryNew()
       : super(
             name: 'unnecessary_new',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   bool get canUseParsedResult => true;
@@ -64,7 +65,7 @@ class _Visitor extends SimpleAstVisitor {
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     if (node.keyword?.type == Keyword.NEW) {
-      rule.reportLint(node);
+      rule.reportLintForToken(node.keyword);
     }
   }
 }

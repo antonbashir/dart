@@ -30,34 +30,53 @@ def is_dart_file(path):
     return path.endswith('.dart')
 
 
-def _CheckFormat(input_api,
-                 identification,
-                 extension,
-                 windows,
-                 hasFormatErrors: Callable[[str, str], bool],
-                 should_skip=lambda path: False):
+def get_old_contents(input_api, path):
     local_root = input_api.change.RepositoryRoot()
     upstream = input_api.change._upstream
-    unformatted_files = []
+    return scm.GIT.Capture(['show', upstream + ':' + path],
+                           cwd=local_root,
+                           strip_out=False)
+
+
+def files_to_check_for_format(input_api, extension, exclude_folders):
+    files = []
+    exclude_folders += [
+        "pkg/front_end/testcases/", "pkg/front_end/parser_testcases/"
+    ]
     for git_file in input_api.AffectedTextFiles():
-        if git_file.LocalPath().startswith("pkg/front_end/testcases/"):
+        local_path = git_file.LocalPath()
+        if not local_path.endswith(extension):
             continue
-        if git_file.LocalPath().startswith("pkg/front_end/parser_testcases/"):
+        if any([local_path.startswith(f) for f in exclude_folders]):
             continue
-        if should_skip(git_file.LocalPath()):
-            continue
+        files.append(git_file)
+    return files
+
+
+def _CheckFormat(input_api, identification, extension, windows,
+                 hasFormatErrors: Callable[[str, list, str],
+                                           bool], exclude_folders):
+    files = files_to_check_for_format(input_api, extension, exclude_folders)
+    if not files:
+        return []
+
+    # Check for formatting errors in bulk first. This is orders of magnitude
+    # faster than checking file-by-file on large changes with hundreds of files.
+    if not hasFormatErrors(filenames=[f.AbsoluteLocalPath() for f in files]):
+        return []
+
+    print("Formatting errors found, comparing against old versions.")
+    unformatted_files = []
+    for git_file in files:
         filename = git_file.AbsoluteLocalPath()
-        if filename.endswith(extension) and hasFormatErrors(filename=filename):
+        if hasFormatErrors(filename=filename):
             old_version_has_errors = False
             try:
                 path = git_file.LocalPath()
                 if windows:
                     # Git expects a linux style path.
                     path = path.replace(os.sep, '/')
-                old_contents = scm.GIT.Capture(['show', upstream + ':' + path],
-                                               cwd=local_root,
-                                               strip_out=False)
-                if hasFormatErrors(contents=old_contents):
+                if hasFormatErrors(contents=get_old_contents(input_api, path)):
                     old_version_has_errors = True
             except subprocess.CalledProcessError as e:
                 old_version_has_errors = False
@@ -102,15 +121,22 @@ def _CheckDartFormat(input_api, output_api):
         '--fix-named-default-separator',
     ]
 
-    def HasFormatErrors(filename: str = None, contents: str = None):
+    def HasFormatErrors(filename: str = None,
+                        filenames: list = None,
+                        contents: str = None):
         # Don't look for formatting errors in multitests. Since those are very
         # sensitive to whitespace, many cannot be reformatted without breaking
         # them.
-        if filename and filename.endswith('_test.dart'):
-            with open(filename) as f:
-                contents = f.read()
-                if '//#' in contents:
-                    return False
+        def skip_file(path):
+            if path.endswith('_test.dart'):
+                with open(path, encoding='utf-8') as f:
+                    contents = f.read()
+                    if '//#' in contents:
+                        return True
+            return False
+
+        if filename and skip_file(filename):
+            return False
 
         args = [
             dart,
@@ -138,6 +164,9 @@ def _CheckDartFormat(input_api, output_api):
                 os.unlink(f.name)
         elif contents:
             process = subprocess.run(args, input=contents, text=True)
+        elif filenames:
+            args += [f for f in filenames if not skip_file(f)]
+            process = subprocess.run(args)
         else:
             args.append(filename)
             process = subprocess.run(args)
@@ -149,7 +178,7 @@ def _CheckDartFormat(input_api, output_api):
         return process.returncode == 1
 
     unformatted_files = _CheckFormat(input_api, "dart format", ".dart", windows,
-                                     HasFormatErrors)
+                                     HasFormatErrors, [])
 
     if unformatted_files:
         lineSep = " \\\n"
@@ -185,17 +214,22 @@ def _CheckStatusFiles(input_api, output_api):
         print('WARNING: Status file linter not found: %s' % lint)
         return []
 
-    def HasFormatErrors(filename=None, contents=None):
+    def HasFormatErrors(filename=None, filenames=None, contents=None):
+        if filenames:
+            # The status file linter doesn't support checking files in bulk.
+            # Returning `True` causes `_CheckFormat` to fallback to check
+            # formatting file by file below.
+            return True
         args = [dart, lint] + (['-t'] if contents else [filename])
         process = subprocess.run(args, input=contents, text=True)
         return process.returncode != 0
 
-    def should_skip(path):
-        return (path.startswith("pkg/status_file/test/data/") or
-                path.startswith("pkg/front_end/"))
-
+    exclude_folders = [
+        "pkg/status_file/test/data/",
+        "pkg/front_end/",
+    ]
     unformatted_files = _CheckFormat(input_api, "status file", ".status",
-                                     windows, HasFormatErrors, should_skip)
+                                     windows, HasFormatErrors, exclude_folders)
 
     if unformatted_files:
         normalize = os.path.join(local_root, 'pkg', 'status_file', 'bin',
@@ -295,6 +329,57 @@ def _CheckClangTidy(input_api, output_api):
     ]
 
 
+def _CheckClangFormat(input_api, output_api):
+    """Run clang-format on VM changes."""
+
+    # Only run clang-format on linux x64.
+    if platform.system() != 'Linux' or platform.machine() != 'x86_64':
+        return []
+
+    # Run only for modified .cc or .h files, except for DEPS changes.
+    files = []
+    is_deps = False
+    for f in input_api.AffectedFiles():
+        path = f.LocalPath()
+        if path == 'DEPS' and any(
+                map(lambda content: 'clang' in content[1],
+                    f.ChangedContents())):
+            is_deps = True
+            break
+        if is_cpp_file(path) and os.path.isfile(path):
+            files.append(path)
+
+    if is_deps:
+        find_args = [
+            'find',
+            'runtime/',
+            '-iname',
+            '*.h',
+            '-o',
+            '-iname',
+            '*.cc',
+        ]
+        files = subprocess.check_output(find_args, text=True).split()
+
+    if not files:
+        return []
+
+    args = [
+        'buildtools/linux-x64/clang/bin/clang-format',
+        '--dry-run',
+        '--Werror',
+    ]
+    args.extend(files)
+    stdout = input_api.subprocess.check_output(args).strip()
+    if not stdout:
+        return []
+
+    return [
+        output_api.PresubmitError('The `clang-format` revealed issues:',
+                                  long_text=stdout)
+    ]
+
+
 def _CheckAnalyzerFiles(input_api, output_api):
     """Run analyzer checks on source files."""
 
@@ -324,7 +409,7 @@ def _CheckAnalyzerFiles(input_api, output_api):
            for f in input_api.AffectedFiles()):
         args = [
             "tools/sdks/dart-sdk/bin/dart",
-            "pkg/analysis_server/tool/checks/check_all_yaml.dart",
+            "pkg/linter/tool/checks/check_all_yaml.dart",
         ]
         stdout = input_api.subprocess.check_output(args).strip()
         if not stdout:
@@ -393,7 +478,7 @@ def _CheckCopyrightYear(input_api, output_api):
         path = f.LocalPath()
         if (is_dart_file(path) or is_cpp_file(path)
            ) and f.Action() == 'A' and os.path.isfile(path):
-            with open(path) as f:
+            with open(path, encoding='utf-8') as f:
                 first_line = f.readline()
                 if 'Copyright' in first_line and year not in first_line:
                     files.append(path)
@@ -408,6 +493,26 @@ def _CheckCopyrightYear(input_api, output_api):
     ]
 
 
+def _CheckNoNewObservatoryServiceTests(input_api, output_api):
+    """Ensures that no new tests are added to the Observatory test suite."""
+    files = []
+
+    for f in input_api.AffectedFiles(include_deletes=False):
+        path = f.LocalPath()
+        if is_dart_file(path) and path.startswith(
+                "runtime/observatory/tests/service/") and f.Action(
+                ) == 'A' and os.path.isfile(path):
+            files.append(path)
+
+    if not files:
+        return []
+
+    return [
+        output_api.PresubmitError(
+            'New VM service tests should be added to pkg/vm_service/test, ' +
+            'not runtime/observatory/tests/service:\n' + '\n'.join(files))
+    ]
+
 def _CommonChecks(input_api, output_api):
     results = []
     results.extend(_CheckValidHostsInDEPS(input_api, output_api))
@@ -415,11 +520,13 @@ def _CommonChecks(input_api, output_api):
     results.extend(_CheckStatusFiles(input_api, output_api))
     results.extend(_CheckLayering(input_api, output_api))
     results.extend(_CheckClangTidy(input_api, output_api))
+    results.extend(_CheckClangFormat(input_api, output_api))
     results.extend(_CheckTestMatrixValid(input_api, output_api))
     results.extend(
         input_api.canned_checks.CheckPatchFormatted(input_api, output_api))
     results.extend(_CheckCopyrightYear(input_api, output_api))
     results.extend(_CheckAnalyzerFiles(input_api, output_api))
+    results.extend(_CheckNoNewObservatoryServiceTests(input_api, output_api))
     return results
 
 

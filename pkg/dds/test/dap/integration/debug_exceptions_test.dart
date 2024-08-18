@@ -34,7 +34,9 @@ main() {
       ]);
     });
 
-    test('pauses on uncaught exceptions when mode=Unhandled', () async {
+    testWithUriConfigurations(
+        () => dap, 'pauses on uncaught exceptions when mode=Unhandled',
+        () async {
       final client = dap.client;
       final testFile = dap.createTestFile(simpleThrowingProgram);
 
@@ -86,7 +88,10 @@ main() {
 
       // Expect that there is metadata attached that matches the file/location we
       // expect.
-      expect(mainStackFrameEvent.source?.path, testFile.path);
+      expect(
+        mainStackFrameEvent.source?.path,
+        dap.client.uppercaseDriveLetter(testFile.path),
+      );
       expect(mainStackFrameEvent.line, exceptionLine);
       expect(mainStackFrameEvent.column, 5);
     });

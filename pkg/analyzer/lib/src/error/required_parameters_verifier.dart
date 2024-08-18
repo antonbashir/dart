@@ -15,22 +15,20 @@ import 'package:collection/collection.dart';
 /// Checks for missing arguments for required named parameters.
 class RequiredParametersVerifier extends SimpleAstVisitor<void> {
   final ErrorReporter _errorReporter;
-  final bool _strictCasts;
 
-  RequiredParametersVerifier(this._errorReporter, {required bool strictCasts})
-      : _strictCasts = strictCasts;
+  RequiredParametersVerifier(this._errorReporter);
 
   @override
   void visitAnnotation(Annotation node) {
-    final element = node.element;
-    final argumentList = node.arguments;
+    var element = node.element;
+    var argumentList = node.arguments;
     if (element is ConstructorElement && argumentList != null) {
-      final errorNode = node.constructorIdentifier ?? node.classIdentifier;
+      var errorNode = node.constructorIdentifier ?? node.classIdentifier;
       if (errorNode != null) {
         _check(
           parameters: element.parameters,
           arguments: argumentList.arguments,
-          errorNode: errorNode,
+          errorEntity: errorNode,
         );
       }
     }
@@ -41,7 +39,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
     _check(
       parameters: node.constructorElement?.parameters,
       arguments: node.arguments?.argumentList.arguments ?? <Expression>[],
-      errorNode: node.name,
+      errorEntity: node.name,
     );
   }
 
@@ -52,7 +50,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
       _check(
         parameters: type.parameters,
         arguments: node.argumentList.arguments,
-        errorNode: node,
+        errorEntity: node,
       );
     }
   }
@@ -62,7 +60,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
     _check(
       parameters: node.constructorName.staticElement?.parameters,
       arguments: node.argumentList.arguments,
-      errorNode: node.constructorName,
+      errorEntity: node.constructorName,
     );
   }
 
@@ -74,7 +72,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
         _check(
           parameters: targetType.parameters,
           arguments: node.argumentList.arguments,
-          errorNode: node.argumentList,
+          errorEntity: node.argumentList,
         );
         return;
       }
@@ -83,7 +81,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
     _check(
       parameters: _executableElement(node.methodName.staticElement)?.parameters,
       arguments: node.argumentList.arguments,
-      errorNode: node.methodName,
+      errorEntity: node.methodName,
     );
   }
 
@@ -93,7 +91,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
     _check(
       parameters: _executableElement(node.staticElement)?.parameters,
       arguments: node.argumentList.arguments,
-      errorNode: node,
+      errorEntity: node,
     );
   }
 
@@ -106,7 +104,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
       parameters: _executableElement(node.staticElement)?.parameters,
       enclosingConstructor: enclosingConstructor,
       arguments: node.argumentList.arguments,
-      errorNode: node,
+      errorEntity: node,
     );
   }
 
@@ -114,7 +112,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
     required List<ParameterElement>? parameters,
     ConstructorElement? enclosingConstructor,
     required List<Expression> arguments,
-    required SyntacticEntity errorNode,
+    required SyntacticEntity errorEntity,
   }) {
     if (parameters == null) {
       return;
@@ -125,11 +123,10 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
         String parameterName = parameter.name;
         if (!_containsNamedExpression(
             enclosingConstructor, arguments, parameterName)) {
-          _errorReporter.reportErrorForOffset(
+          _errorReporter.atEntity(
+            errorEntity,
             CompileTimeErrorCode.MISSING_REQUIRED_ARGUMENT,
-            errorNode.offset,
-            errorNode.length,
-            [parameterName],
+            arguments: [parameterName],
           );
         }
       }
@@ -139,20 +136,18 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
           String parameterName = parameter.name;
           if (!_containsNamedExpression(
               enclosingConstructor, arguments, parameterName)) {
-            var reason = annotation.getReason(strictCasts: _strictCasts);
+            var reason = annotation.getReason(strictCasts: true);
             if (reason != null) {
-              _errorReporter.reportErrorForOffset(
+              _errorReporter.atEntity(
+                errorEntity,
                 WarningCode.MISSING_REQUIRED_PARAM_WITH_DETAILS,
-                errorNode.offset,
-                errorNode.length,
-                [parameterName, reason],
+                arguments: [parameterName, reason],
               );
             } else {
-              _errorReporter.reportErrorForOffset(
+              _errorReporter.atEntity(
+                errorEntity,
                 WarningCode.MISSING_REQUIRED_PARAM,
-                errorNode.offset,
-                errorNode.length,
-                [parameterName],
+                arguments: [parameterName],
               );
             }
           }
@@ -234,7 +229,7 @@ class _RequiredAnnotation {
 extension _InstantiatedAnnotation on Annotation {
   SimpleIdentifier? get classIdentifier {
     assert(arguments != null);
-    final name = this.name;
+    var name = this.name;
     if (name is SimpleIdentifier) {
       return _ifClassElement(name);
     } else if (name is PrefixedIdentifier) {
@@ -245,12 +240,12 @@ extension _InstantiatedAnnotation on Annotation {
 
   SimpleIdentifier? get constructorIdentifier {
     assert(arguments != null);
-    final constructorName = _ifConstructorElement(this.constructorName);
+    var constructorName = _ifConstructorElement(this.constructorName);
     if (constructorName != null) {
       return constructorName;
     }
 
-    final name = this.name;
+    var name = this.name;
     if (name is SimpleIdentifier) {
       return _ifConstructorElement(name);
     } else if (name is PrefixedIdentifier) {

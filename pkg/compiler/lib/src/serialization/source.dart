@@ -21,11 +21,17 @@ abstract class DataSource {
   /// Deserialization of a non-negative integer value.
   int readInt();
 
+  /// Deserialization of a non-negative 32 bit integer value. The value might
+  /// not be compacted as with [readInt].
+  int readUint32();
+
   /// Deserialization of an enum value in [values].
-  E readEnum<E>(List<E> values);
+  E readEnum<E extends Enum>(List<E> values);
 
   /// Returns the offset for a deferred entity and skips it in the read queue.
-  /// The offset can later be passed to [readAtOffset] to get the value.
+  /// The offset can later be passed to [readAtOffset] to get the value. This
+  /// block can be written with either [DataSink.writeDeferred] or the
+  /// combination of [DataSink.startDeferred] and [DataSink.endDeferred].
   int readDeferred();
 
   /// Eagerly reads and returns the value for a deferred entity.
@@ -292,6 +298,13 @@ class DataSourceReader {
     return _sourceReader.readInt();
   }
 
+  /// Reads a non-negative 32 bit integer value from this data source. The value
+  /// might not be compacted as with [readInt].
+  int readUint32() {
+    _checkDataKind(DataKind.uint32);
+    return _sourceReader.readUint32();
+  }
+
   /// Reads a potentially `null` non-negative integer value from this data
   /// source.
   ///
@@ -390,7 +403,7 @@ class DataSourceReader {
   ///    ...
   ///    Foo foo = source.readEnum(Foo.values);
   ///
-  E readEnum<E>(List<E> values) {
+  E readEnum<E extends Enum>(List<E> values) {
     _checkDataKind(DataKind.enumValue);
     return _sourceReader.readEnum(values);
   }
@@ -528,32 +541,12 @@ class DataSourceReader {
     return map;
   }
 
-  /// Reads a kernel name node from this data source.
-  ir.Name readName() {
-    String text = readString();
-    ir.Library? library = readValueOrNull(readLibraryNode);
-    return ir.Name(text, library);
-  }
-
   /// Reads a [Name] from this data source.
   Name readMemberName() {
     String text = readString();
     Uri? uri = readValueOrNull(readUri);
     bool setter = readBool();
     return Name(text, uri, isSetter: setter);
-  }
-
-  /// Reads a kernel library dependency node from this data source.
-  ir.LibraryDependency readLibraryDependencyNode() {
-    ir.Library library = readLibraryNode();
-    int index = readInt();
-    return library.dependencies[index];
-  }
-
-  /// Reads a potentially `null` kernel library dependency node from this data
-  /// source.
-  ir.LibraryDependency? readLibraryDependencyNodeOrNull() {
-    return readValueOrNull(readLibraryDependencyNode);
   }
 
   /// Reads a reference to a kernel tree node from this data source.
@@ -843,18 +836,6 @@ class DataSourceReader {
         List<ir.DartType> typeArguments =
             _readDartTypeNodes(functionTypeVariables);
         return ir.InterfaceType(cls, nullability, typeArguments);
-      case DartTypeNodeKind.thisInterfaceType:
-        ir.Class cls = readClassNode();
-        ir.Nullability nullability = readEnum(ir.Nullability.values);
-        List<ir.DartType> typeArguments =
-            _readDartTypeNodes(functionTypeVariables);
-        return ThisInterfaceType(cls, nullability, typeArguments);
-      case DartTypeNodeKind.exactInterfaceType:
-        ir.Class cls = readClassNode();
-        ir.Nullability nullability = readEnum(ir.Nullability.values);
-        List<ir.DartType> typeArguments =
-            _readDartTypeNodes(functionTypeVariables);
-        return ExactInterfaceType(cls, nullability, typeArguments);
       case DartTypeNodeKind.recordType:
         ir.Nullability nullability = readEnum(ir.Nullability.values);
         List<ir.DartType> positional =
@@ -1167,6 +1148,31 @@ class DataSourceReader {
       final local = readLocal() as K;
       V value = f();
       map[local] = value;
+    }
+    return map;
+  }
+
+  /// Reads a map from selectors to [V] values from this data source, calling
+  /// [f] to read each value from the data source.
+  ///
+  /// This is a convenience method to be used together with
+  /// [DataSinkWriter.writeSelectorMap].
+  Map<Selector, V> readSelectorMap<V>(V f(Selector selector)) =>
+      readSelectorMapOrNull<V>(f) ?? {};
+
+  /// Reads a map from selectors to [V] values from this data source, calling
+  /// [f] to read each value from the data source.
+  /// 'null' is returned instead of an empty map.
+  ///
+  /// This is a convenience method to be used together with
+  /// [DataSinkWriter.writeSelectorMap].
+  Map<Selector, V>? readSelectorMapOrNull<V>(V f(Selector selector)) {
+    int count = readInt();
+    if (count == 0) return null;
+    Map<Selector, V> map = {};
+    for (int i = 0; i < count; i++) {
+      final selector = Selector.readFromDataSource(this);
+      map[selector] = f(selector);
     }
     return map;
   }

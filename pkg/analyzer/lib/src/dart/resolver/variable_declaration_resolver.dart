@@ -28,10 +28,10 @@ class VariableDeclarationResolver {
 
     if (initializer == null) {
       if (_strictInference && parent.type == null) {
-        _resolver.errorReporter.reportErrorForNode(
-          WarningCode.INFERENCE_FAILURE_ON_UNINITIALIZED_VARIABLE,
+        _resolver.errorReporter.atNode(
           node,
-          [node.name.lexeme],
+          WarningCode.INFERENCE_FAILURE_ON_UNINITIALIZED_VARIABLE,
+          arguments: [node.name.lexeme],
         );
       }
       return;
@@ -47,7 +47,7 @@ class VariableDeclarationResolver {
       _resolver.flowAnalysis.flow?.lateInitializer_begin(node);
     }
 
-    final contextType = element is! PropertyInducingElementImpl ||
+    var contextType = element is! PropertyInducingElementImpl ||
             element.shouldUseTypeForInitializerInference
         ? element.type
         : UnknownInferredType.instance;

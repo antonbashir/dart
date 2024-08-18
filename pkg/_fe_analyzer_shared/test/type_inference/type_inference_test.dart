@@ -16,11 +16,11 @@ main() {
 
   group('Collection elements:', () {
     group('If:', () {
-      test('Condition context', () {
+      test('Condition schema', () {
         h.run([
           listLiteral(elementType: 'int', [
             ifElement(
-              expr('dynamic').checkContext('bool'),
+              expr('dynamic').checkSchema('bool'),
               expr('Object'),
             ).checkIR('if(expr(dynamic), celt(expr(Object)), noop)'),
           ]),
@@ -39,14 +39,14 @@ main() {
         ]);
       });
 
-      group('Context:', () {
+      group('Schema:', () {
         test('Element type', () {
           h.run([
             listLiteral(elementType: 'int', [
               ifElement(
                 expr('bool'),
-                expr('Object').checkContext('int'),
-                expr('Object').checkContext('int'),
+                expr('Object').checkSchema('int'),
+                expr('Object').checkSchema('int'),
               ).checkIR(
                   'if(expr(bool), celt(expr(Object)), celt(expr(Object)))'),
             ]),
@@ -56,13 +56,13 @@ main() {
     });
 
     group('If-case:', () {
-      test('Expression context', () {
+      test('Expression schema', () {
         h.run([
           listLiteral(elementType: 'int', [
             ifCaseElement(
-              expr('Object').checkContext('?'),
+              expr('Object').checkSchema('_'),
               intLiteral(0).pattern,
-              intLiteral(1).checkContext('int'),
+              intLiteral(1).checkSchema('int'),
             ).checkIR('if(expression: expr(Object), pattern: '
                 'const(0, matchedType: Object), guard: true, '
                 'ifTrue: celt(1), ifFalse: noop)'),
@@ -76,8 +76,8 @@ main() {
             ifCaseElement(
               expr('Object'),
               intLiteral(0).pattern,
-              intLiteral(1).checkContext('int'),
-              intLiteral(2).checkContext('int'),
+              intLiteral(1).checkSchema('int'),
+              intLiteral(2).checkSchema('int'),
             ).checkIR('if(expression: expr(Object), pattern: '
                 'const(0, matchedType: Object), guard: true, '
                 'ifTrue: celt(1), ifFalse: celt(2))'),
@@ -92,7 +92,7 @@ main() {
             ifCaseElement(
               expr('Object'),
               x.pattern().when(x.eq(intLiteral(0))),
-              intLiteral(1).checkContext('int'),
+              intLiteral(1).checkSchema('int'),
             ).checkIR('if(expression: expr(Object), pattern: '
                 'varPattern(x, matchedType: Object, staticType: Object), '
                 'guard: ==(x, 0), ifTrue: celt(1), ifFalse: noop)'),
@@ -107,7 +107,7 @@ main() {
             ifCaseElement(
               expr('Object'),
               x.pattern(type: 'int'), // has type, refutable
-              intLiteral(1).checkContext('int'),
+              intLiteral(1).checkSchema('int'),
             ).checkIR('if(expression: expr(Object), pattern: varPattern(x, '
                 'matchedType: Object, staticType: int), guard: true, '
                 'ifTrue: celt(1), ifFalse: noop)'),
@@ -123,7 +123,7 @@ main() {
               ifCaseElement(
                 expr('Object'),
                 x.pattern().when(expr('int')..errorId = 'GUARD'),
-                intLiteral(0).checkContext('int'),
+                intLiteral(0).checkSchema('int'),
               ),
             ]),
           ], expectedErrors: {
@@ -138,7 +138,7 @@ main() {
               ifCaseElement(
                 expr('Object'),
                 x.pattern().when(expr('bool')),
-                intLiteral(0).checkContext('int'),
+                intLiteral(0).checkSchema('int'),
               ),
             ]),
           ], expectedErrors: {});
@@ -151,7 +151,7 @@ main() {
               ifCaseElement(
                 expr('Object'),
                 x.pattern().when(expr('dynamic')),
-                intLiteral(0).checkContext('int'),
+                intLiteral(0).checkSchema('int'),
               ),
             ]),
           ], expectedErrors: {});
@@ -275,63 +275,63 @@ main() {
     });
 
     group('integer literal', () {
-      test('double context', () {
+      test('double type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: true)
               .checkType('double')
               .checkIR('1.0f')
-              .inContext('double'),
+              .inTypeSchema('double'),
         ]);
       });
 
-      test('int context', () {
+      test('int type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: false)
               .checkType('int')
               .checkIR('1')
-              .inContext('int'),
+              .inTypeSchema('int'),
         ]);
       });
 
-      test('num context', () {
+      test('num type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: false)
               .checkType('int')
               .checkIR('1')
-              .inContext('num'),
+              .inTypeSchema('num'),
         ]);
       });
 
-      test('double? context', () {
+      test('double? type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: true)
               .checkType('double')
               .checkIR('1.0f')
-              .inContext('double?'),
+              .inTypeSchema('double?'),
         ]);
       });
 
-      test('int? context', () {
+      test('int? type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: false)
               .checkType('int')
               .checkIR('1')
-              .inContext('int?'),
+              .inTypeSchema('int?'),
         ]);
       });
 
-      test('unknown context', () {
+      test('unknown type schema', () {
         h.run([
           intLiteral(1, expectConversionToDouble: false)
               .checkType('int')
               .checkIR('1')
-              .inContext('?'),
+              .inTypeSchema('_'),
         ]);
       });
 
-      test('unrelated context', () {
-        // Note: an unrelated context can arise in the case of assigning to a
-        // promoted variable, e.g.:
+      test('unrelated type schema', () {
+        // Note: an unrelated type schema can arise in the case of assigning to
+        // a promoted variable, e.g.:
         //
         //   Object x;
         //   if (x is String) {
@@ -341,7 +341,7 @@ main() {
           intLiteral(1, expectConversionToDouble: false)
               .checkType('int')
               .checkIR('1')
-              .inContext('String'),
+              .inTypeSchema('String'),
         ]);
       });
     });
@@ -355,19 +355,19 @@ main() {
         ]);
       });
 
-      test('scrutinee expression context', () {
+      test('scrutinee expression schema', () {
         h.run([
-          switchExpr(expr('int').checkContext('?'), [
+          switchExpr(expr('int').checkSchema('_'), [
             default_.thenExpr(intLiteral(0)),
-          ]).inContext('num'),
+          ]).inTypeSchema('num'),
         ]);
       });
 
-      test('body expression context', () {
+      test('body expression schema', () {
         h.run([
           switchExpr(expr('int'), [
-            default_.thenExpr(nullLiteral.checkContext('C?')),
-          ]).inContext('C?'),
+            default_.thenExpr(nullLiteral.checkSchema('C?')),
+          ]).inTypeSchema('C?'),
         ]);
       });
 
@@ -390,7 +390,7 @@ main() {
           switchExpr(expr('int'), [
             i
                 .pattern()
-                .when(i.checkType('int').eq(expr('num')).checkContext('bool'))
+                .when(i.checkType('int').eq(expr('num')).checkSchema('bool'))
                 .thenExpr(expr('String')),
           ]).checkIR('switchExpr(expr(int), case(head(varPattern(i, '
               'matchedType: int, staticType: int), ==(i, expr(num)), '
@@ -501,14 +501,95 @@ main() {
           });
         });
       });
+
+      group('Inference update 3:', () {
+        void setupTypesForLub() {
+          // Class hierarchy:
+          //    A
+          //    /\
+          //   /  \
+          // B1<T> B2<T>
+          // | \  / |
+          // |  \/  |
+          // |  /\  |
+          // | /  \ |
+          // C1<T> C2<T>
+          h.addSuperInterfaces('A', (_) => [Type('Object')]);
+          h.addSuperInterfaces('B1', (_) => [Type('A'), Type('Object')]);
+          h.addSuperInterfaces('B2', (_) => [Type('A'), Type('Object')]);
+          h.addSuperInterfaces(
+              'C1',
+              (args) => [
+                    PrimaryType('B1', args: args),
+                    PrimaryType('B2', args: args),
+                    Type('A'),
+                    Type('Object')
+                  ]);
+          h.addSuperInterfaces(
+              'C2',
+              (args) => [
+                    PrimaryType('B1', args: args),
+                    PrimaryType('B2', args: args),
+                    Type('A'),
+                    Type('Object')
+                  ]);
+          h.addLub('C1<Object?>', 'C2<Object?>', 'A');
+          h.addLub('C1<int>', 'C2<double>', 'A');
+          h.addLub('B2<Object?>', 'C1<Object?>', 'B2<Object?>');
+        }
+
+        test("Context used instead of LUB if LUB doesn't satisfy context", () {
+          setupTypesForLub();
+          h.run([
+            switchExpr(expr('int'), [
+              intLiteral(0).pattern.thenExpr(expr('C1<Object?>')),
+              wildcard().thenExpr(expr('C2<Object?>')),
+            ]).checkType('B1<Object?>').inTypeSchema('B1<Object?>'),
+          ]);
+        });
+
+        test('Context is converted to a type using greatest closure', () {
+          setupTypesForLub();
+          h.run([
+            switchExpr(expr('int'), [
+              intLiteral(0).pattern.thenExpr(expr('C1<int>')),
+              wildcard().thenExpr(expr('C2<double>')),
+            ]).checkType('B1<Object?>').inTypeSchema('B1<_>'),
+          ]);
+        });
+
+        test("Context not used if one of the branches doesn't satisfy context",
+            () {
+          setupTypesForLub();
+          h.run([
+            switchExpr(expr('int'), [
+              intLiteral(0).pattern.thenExpr(expr('C1<Object?>')),
+              wildcard().thenExpr(expr('B2<Object?>')),
+            ]).checkType('B2<Object?>').inTypeSchema('B1<Object?>'),
+          ]);
+        });
+
+        test(
+            "when disabled, LUB always used, even if it doesn't satisfy "
+            "context", () {
+          setupTypesForLub();
+          h.disableInferenceUpdate3();
+          h.run([
+            switchExpr(expr('int'), [
+              intLiteral(0).pattern.thenExpr(expr('C1<Object?>')),
+              wildcard().thenExpr(expr('C2<Object?>')),
+            ]).checkType('A').inTypeSchema('B1<Object?>'),
+          ]);
+        });
+      });
     });
 
     group('Map:', () {
       test('downward inference', () {
         h.run([
           mapLiteral(keyType: 'num', valueType: 'Object', [
-            mapEntry(expr('int').checkContext('num'),
-                expr('int').checkContext('Object'))
+            mapEntry(expr('int').checkSchema('num'),
+                expr('int').checkSchema('Object'))
           ]),
         ]);
       });
@@ -532,9 +613,9 @@ main() {
 
   group('Statements:', () {
     group('If:', () {
-      test('Condition context', () {
+      test('Condition schema', () {
         h.run([
-          if_(expr('dynamic').checkContext('bool'), [
+          if_(expr('dynamic').checkSchema('bool'), [
             expr('Object'),
           ]).checkIR('if(expr(dynamic), block(stmt(expr(Object))), noop)'),
         ]);
@@ -557,7 +638,7 @@ main() {
         var x = Var('x');
         h.run([
           ifCase(
-            expr('int').checkContext('?'),
+            expr('int').checkSchema('_'),
             x.pattern(type: 'num'),
             [],
           ).checkIR('ifCase(expr(int), '
@@ -601,7 +682,7 @@ main() {
         var x = Var('x');
         h.run([
           ifCase(
-            expr('num').checkContext('?'),
+            expr('num').checkSchema('_'),
             x.pattern(type: 'int'),
             [],
           ).checkIR('ifCase(expr(num), '
@@ -750,7 +831,7 @@ main() {
       test('const pattern', () {
         h.run([
           switch_(
-            expr('int').checkContext('?'),
+            expr('int').checkSchema('_'),
             [
               intLiteral(0).pattern.then([
                 break_(),
@@ -767,7 +848,7 @@ main() {
           var x = Var('x');
           h.run([
             switch_(
-              expr('int').checkContext('?'),
+              expr('int').checkSchema('_'),
               [
                 x.pattern().then([
                   break_(),
@@ -783,7 +864,7 @@ main() {
           var x = Var('x');
           h.run([
             switch_(
-              expr('int').checkContext('?'),
+              expr('int').checkSchema('_'),
               [
                 x.pattern(type: 'num').then([
                   break_(),
@@ -796,10 +877,10 @@ main() {
         });
       });
 
-      test('scrutinee expression context', () {
+      test('scrutinee expression schema', () {
         h.run([
           switch_(
-            expr('int').checkContext('?'),
+            expr('int').checkSchema('_'),
             [
               intLiteral(0).pattern.then([
                 break_(),
@@ -834,7 +915,7 @@ main() {
             [
               i
                   .pattern()
-                  .when(i.checkType('int').eq(expr('num')).checkContext('bool'))
+                  .when(i.checkType('int').eq(expr('num')).checkSchema('bool'))
                   .then([
                 break_(),
               ]),
@@ -1611,7 +1692,7 @@ main() {
       test('initialized, typed', () {
         var x = Var('x');
         h.run([
-          declare(x, type: 'num', initializer: expr('int').checkContext('num'))
+          declare(x, type: 'num', initializer: expr('int').checkSchema('num'))
               .checkIR('match(expr(int), '
                   'varPattern(x, matchedType: int, staticType: num))'),
         ]);
@@ -1620,7 +1701,7 @@ main() {
       test('initialized, untyped', () {
         var x = Var('x');
         h.run([
-          declare(x, initializer: expr('int').checkContext('?'))
+          declare(x, initializer: expr('int').checkSchema('_'))
               .checkIR('match(expr(int), '
                   'varPattern(x, matchedType: int, staticType: int))'),
         ]);
@@ -1677,7 +1758,7 @@ main() {
             var x = Var('x');
             h.run([
               patternForIn(x.pattern(type: 'num'),
-                      expr('List<int>').checkContext('Iterable<num>'), [])
+                      expr('List<int>').checkSchema('Iterable<num>'), [])
                   .checkIR('forEach(expr(List<int>), varPattern(x, '
                       'matchedType: int, staticType: num), block())'),
             ]);
@@ -1686,7 +1767,7 @@ main() {
             var x = Var('x');
             h.run([
               patternForIn(x.pattern(),
-                      expr('List<int>').checkContext('Iterable<?>'), [])
+                      expr('List<int>').checkSchema('Iterable<_>'), [])
                   .checkIR('forEach(expr(List<int>), varPattern(x, '
                       'matchedType: int, staticType: int), block())'),
             ]);
@@ -1769,7 +1850,7 @@ main() {
             h.run([
               patternForIn(
                 x.pattern(type: 'num'),
-                expr('Stream<int>').checkContext('Stream<num>'),
+                expr('Stream<int>').checkSchema('Stream<num>'),
                 [],
                 hasAwait: true,
               ).checkIR('forEach(expr(Stream<int>), varPattern(x, '
@@ -1781,7 +1862,7 @@ main() {
             h.run([
               patternForIn(
                 x.pattern(),
-                expr('Stream<int>').checkContext('Stream<?>'),
+                expr('Stream<int>').checkSchema('Stream<_>'),
                 [],
                 hasAwait: true,
               ).checkIR('forEach(expr(Stream<int>), varPattern(x, '
@@ -1876,13 +1957,9 @@ main() {
       test('Type schema', () {
         var x = Var('x');
         h.run([
-          ifCase(
-            expr('num'),
-            x.pattern().as_('int'),
-            [],
-          ).checkIR('ifCase(expr(num), castPattern(varPattern(x, '
-              'matchedType: int, staticType: int), int, matchedType: num), '
-              'variables(x), true, block(), noop)'),
+          match(x.pattern().as_('int'), expr('num').checkSchema('_')).checkIR(
+              'match(expr(num), castPattern(varPattern(x, '
+              'matchedType: int, staticType: int), int, matchedType: num))'),
         ]);
       });
 
@@ -1937,6 +2014,38 @@ main() {
           ]);
         });
       });
+
+      group('Fully covered due to extension type erasure:', () {
+        test('Cast to representation type', () {
+          // If an `as` pattern fully covers the matched value type due to
+          // extension type erasure, the "matchedTypeIsSubtypeOfRequired"
+          // warning should not be issued.
+          h.addSuperInterfaces('E', (_) => [Type('Object?')]);
+          h.addExtensionTypeErasure('E', 'int');
+          h.run([
+            ifCase(expr('E'), wildcard().as_('int'), [
+              checkReachable(true),
+            ], [
+              checkReachable(false),
+            ]),
+          ]);
+        });
+
+        test('Cast to extension type', () {
+          // If an `as` pattern fully covers the matched value type due to
+          // extension type erasure, the "matchedTypeIsSubtypeOfRequired"
+          // warning should not be issued.
+          h.addSuperInterfaces('E', (_) => [Type('Object?')]);
+          h.addExtensionTypeErasure('E', 'int');
+          h.run([
+            ifCase(expr('int'), wildcard().as_('E'), [
+              checkReachable(true),
+            ], [
+              checkReachable(false),
+            ]),
+          ]);
+        });
+      });
     });
 
     group('Const or literal:', () {
@@ -1964,7 +2073,7 @@ main() {
                   mapPatternEntry(expr('int'), x.pattern()),
                 ],
               ),
-              expr('dynamic').checkContext('Map<bool, int>'),
+              expr('dynamic').checkSchema('Map<bool, int>'),
             ),
           ]);
         });
@@ -1973,7 +2082,7 @@ main() {
             h.run([
               match(
                 mapPattern([])..errorId = 'PATTERN',
-                expr('dynamic').checkContext('Map<?, ?>'),
+                expr('dynamic').checkSchema('Map<_, _>'),
               ),
             ], expectedErrors: {
               'emptyMapPattern(pattern: PATTERN)',
@@ -1989,7 +2098,7 @@ main() {
                   mapPatternEntry(expr('bool'), x.pattern(type: 'int?')),
                   mapPatternEntry(expr('bool'), y.pattern(type: 'num')),
                 ]),
-                expr('dynamic').checkContext('Map<?, int>'),
+                expr('dynamic').checkSchema('Map<_, int>'),
               ),
             ]);
           });
@@ -2007,7 +2116,7 @@ main() {
                 valueType: 'int',
                 elements: [
                   mapPatternEntry(
-                    expr('Object').checkContext('bool'),
+                    expr('Object').checkSchema('bool'),
                     x.pattern(),
                   ),
                 ],
@@ -2027,7 +2136,7 @@ main() {
               expr('Map<bool, int>'),
               mapPattern([
                 mapPatternEntry(
-                  expr('Object').checkContext('bool'),
+                  expr('Object').checkSchema('bool'),
                   x.pattern(),
                 ),
               ]),
@@ -2046,7 +2155,7 @@ main() {
               expr('dynamic'),
               mapPattern([
                 mapPatternEntry(
-                  expr('Object').checkContext('?'),
+                  expr('Object').checkSchema('_'),
                   x.pattern(),
                 ),
               ]),
@@ -2065,7 +2174,7 @@ main() {
               expr('error'),
               mapPattern([
                 mapPatternEntry(
-                  expr('Object').checkContext('?'),
+                  expr('Object').checkSchema('_'),
                   x.pattern(),
                 ),
               ]),
@@ -2084,7 +2193,7 @@ main() {
               expr('String'),
               mapPattern([
                 mapPatternEntry(
-                  expr('Object').checkContext('?'),
+                  expr('Object').checkSchema('_'),
                   x.pattern(),
                 ),
               ]),
@@ -2106,7 +2215,7 @@ main() {
                 valueType: 'num',
                 elements: [
                   mapPatternEntry(
-                    expr('Object').checkContext('Object'),
+                    expr('Object').checkSchema('Object'),
                     wildcard(),
                   ),
                 ],
@@ -2127,7 +2236,7 @@ main() {
                 valueType: 'num',
                 elements: [
                   mapPatternEntry(
-                    expr('Object').checkContext('Object'),
+                    expr('Object').checkSchema('Object'),
                     wildcard(),
                   ),
                 ],
@@ -2147,7 +2256,7 @@ main() {
                 valueType: 'int',
                 elements: [
                   mapPatternEntry(
-                    expr('Object').checkContext('bool'),
+                    expr('Object').checkSchema('bool'),
                     wildcard(),
                   ),
                 ],
@@ -2251,14 +2360,14 @@ main() {
           var x = Var('x');
           h.run([
             match(listPattern([x.pattern()], elementType: 'int'),
-                expr('dynamic').checkContext('List<int>')),
+                expr('dynamic').checkSchema('List<int>')),
           ]);
         });
 
         group('Implicit element type:', () {
           test('No elements', () {
             h.run([
-              match(listPattern([]), expr('dynamic').checkContext('List<?>')),
+              match(listPattern([]), expr('dynamic').checkSchema('List<_>')),
             ]);
           });
 
@@ -2269,7 +2378,7 @@ main() {
               match(
                   listPattern(
                       [x.pattern(type: 'int?'), y.pattern(type: 'num')]),
-                  expr('dynamic').checkContext('List<int>')),
+                  expr('dynamic').checkSchema('List<int>')),
             ]);
           });
 
@@ -2282,7 +2391,7 @@ main() {
                     listPattern([
                       restPattern(x.pattern(type: 'Iterable<int>')),
                     ]),
-                    expr('List<int>').checkContext('List<int>'),
+                    expr('List<int>').checkSchema('List<int>'),
                   ),
                 ]);
               });
@@ -2295,7 +2404,7 @@ main() {
                         x.pattern(type: 'String')..errorId = 'VAR(x)',
                       )
                     ]),
-                    expr('List<int>').checkContext('List<?>'),
+                    expr('List<int>').checkSchema('List<_>'),
                   )..errorId = 'CONTEXT',
                 ], expectedErrors: {
                   'patternTypeMismatchInIrrefutableContext('
@@ -2309,7 +2418,7 @@ main() {
                 h.run([
                   match(
                     listPattern([restPattern()]),
-                    expr('dynamic').checkContext('List<?>'),
+                    expr('dynamic').checkSchema('List<_>'),
                   ),
                 ]);
               });
@@ -2321,7 +2430,7 @@ main() {
                       x.pattern(type: 'int'),
                       restPattern(),
                     ]),
-                    expr('dynamic').checkContext('List<int>'),
+                    expr('dynamic').checkSchema('List<int>'),
                   ),
                 ]);
               });
@@ -2588,7 +2697,7 @@ main() {
           match(
                   (wildcard(type: 'int?')..errorId = 'WILDCARD1')
                       .and(wildcard(type: 'double?')..errorId = 'WILDCARD2'),
-                  nullLiteral.checkContext('Null'))
+                  nullLiteral.checkSchema('Null'))
               .checkIR('match(null, logicalAndPattern(wildcardPattern('
                   'matchedType: Null), wildcardPattern(matchedType: Null), '
                   'matchedType: Null))'),
@@ -2632,7 +2741,7 @@ main() {
           (match(
             wildcard(type: 'int?').or(wildcard(type: 'double?'))
               ..errorId = 'PATTERN',
-            nullLiteral.checkContext('?'),
+            nullLiteral.checkSchema('_'),
           )..errorId = 'CONTEXT'),
         ], expectedErrors: {
           'refutablePatternInIrrefutableContext(pattern: PATTERN, '
@@ -2860,7 +2969,7 @@ main() {
         var x = Var('x');
         h.run([
           match(x.pattern(type: 'int').nullAssert..errorId = 'PATTERN',
-                  expr('int').checkContext('int?'))
+                  expr('int').checkSchema('int?'))
               .checkIR('match(expr(int), '
                   'nullAssertPattern(varPattern(x, matchedType: int, '
                   'staticType: int), matchedType: int))'),
@@ -2949,7 +3058,7 @@ main() {
         var x = Var('x');
         h.run([
           (match(x.pattern(type: 'int').nullCheck..errorId = 'PATTERN',
-              expr('int').checkContext('?'))
+              expr('int').checkSchema('_'))
             ..errorId = 'CONTEXT'),
         ], expectedErrors: {
           'refutablePatternInIrrefutableContext(pattern: PATTERN, '
@@ -3039,7 +3148,7 @@ main() {
           h.addSuperInterfaces('A', (_) => [Type('Object')]);
           h.run([
             ifCase(
-              expr('A<int>').checkContext('?'),
+              expr('A<int>').checkSchema('_'),
               objectPattern(
                 requiredType: 'B',
                 fields: [
@@ -3056,7 +3165,7 @@ main() {
         test('dynamic type', () {
           h.run([
             ifCase(
-              expr('int').checkContext('?'),
+              expr('int').checkSchema('_'),
               objectPattern(
                 requiredType: 'dynamic',
                 fields: [
@@ -3073,7 +3182,7 @@ main() {
         test('error type', () {
           h.run([
             ifCase(
-              expr('int').checkContext('?'),
+              expr('int').checkSchema('_'),
               objectPattern(
                 requiredType: 'error',
                 fields: [
@@ -3090,7 +3199,7 @@ main() {
         test('Never type', () {
           h.run([
             ifCase(
-              expr('int').checkContext('?'),
+              expr('int').checkSchema('_'),
               objectPattern(
                 requiredType: 'Never',
                 fields: [
@@ -3138,7 +3247,7 @@ main() {
                   Var('foo').pattern().recordField('foo'),
                 ],
               ),
-              expr('int').checkContext('num'),
+              expr('int').checkSchema('num'),
             ).checkIR('match(expr(int), objectPattern(varPattern(foo, '
                 'matchedType: bool, staticType: bool), '
                 'matchedType: int, requiredType: num))'),
@@ -3155,7 +3264,7 @@ main() {
                   Var('foo').pattern().recordField('foo'),
                 ],
               )..errorId = 'PATTERN',
-              expr('num').checkContext('int'),
+              expr('num').checkSchema('int'),
             )..errorId = 'CONTEXT')
                 .checkIR('match(expr(num), objectPattern(varPattern(foo, '
                     'matchedType: bool, staticType: bool), '
@@ -3186,14 +3295,14 @@ main() {
         });
       });
 
-      test('RHS context', () {
+      test('RHS schema', () {
         var x = Var('x');
         h.run([
           declare(x, type: 'num'),
           x
               .pattern()
-              .assign(expr('int').checkContext('num'))
-              .inContext('Object'),
+              .assign(expr('int').checkSchema('num'))
+              .inTypeSchema('Object'),
         ]);
       });
 
@@ -3252,7 +3361,7 @@ main() {
           test('refutable', () {
             h.run([
               ifCase(
-                expr('dynamic').checkContext('?'),
+                expr('dynamic').checkSchema('_'),
                 recordPattern([
                   Var('a').pattern(type: 'int').recordField(),
                   Var('b').pattern().recordField(),
@@ -3272,7 +3381,7 @@ main() {
           test('refutable', () {
             h.run([
               ifCase(
-                expr('error').checkContext('?'),
+                expr('error').checkSchema('_'),
                 recordPattern([
                   Var('a').pattern(type: 'int').recordField(),
                   Var('b').pattern().recordField(),
@@ -3297,7 +3406,7 @@ main() {
                     Var('a').pattern(type: 'int').recordField(),
                     Var('b').pattern().recordField(),
                   ]),
-                  expr('(int, String)').checkContext('(int, ?)'),
+                  expr('(int, String)').checkSchema('(int, _)'),
                 ).checkIR(
                     'match(expr((int, String)), recordPattern(varPattern(a, '
                     'matchedType: int, staticType: int), varPattern(b, '
@@ -3317,7 +3426,7 @@ main() {
                     Var('b').pattern().recordField(),
                   ])
                     ..errorId = 'PATTERN',
-                  expr('(int,)').checkContext('(int, ?)'),
+                  expr('(int,)').checkSchema('(int, _)'),
                 )..errorId = 'CONTEXT')
                     .checkIR('match(expr((int,)), recordPattern(varPattern(a, '
                         'matchedType: Object?, staticType: int), '
@@ -3337,7 +3446,7 @@ main() {
               test('too few', () {
                 h.run([
                   ifCase(
-                    expr('(int,)').checkContext('?'),
+                    expr('(int,)').checkSchema('_'),
                     recordPattern([
                       Var('a').pattern().recordField(),
                       Var('b').pattern().recordField(),
@@ -3354,7 +3463,7 @@ main() {
               test('too many', () {
                 h.run([
                   ifCase(
-                    expr('(int, String)').checkContext('?'),
+                    expr('(int, String)').checkSchema('_'),
                     recordPattern([
                       Var('a').pattern().recordField(),
                     ]),
@@ -3374,7 +3483,7 @@ main() {
             h.addSuperInterfaces('X', (_) => [Type('Object')]);
             h.run([
               ifCase(
-                expr('X').checkContext('?'),
+                expr('X').checkSchema('_'),
                 recordPattern([
                   Var('a').pattern(type: 'int').recordField(),
                   Var('b').pattern().recordField(),
@@ -3394,7 +3503,7 @@ main() {
           test('refutable', () {
             h.run([
               ifCase(
-                expr('dynamic').checkContext('?'),
+                expr('dynamic').checkSchema('_'),
                 recordPattern([
                   Var('a').pattern(type: 'int').recordField('a'),
                   Var('b').pattern().recordField('b'),
@@ -3417,7 +3526,7 @@ main() {
                     Var('a').pattern(type: 'int').recordField('a'),
                     Var('b').pattern().recordField('b'),
                   ]),
-                  expr('({int a, String b})').checkContext('({int a, ? b})'),
+                  expr('({int a, String b})').checkSchema('({int a, _ b})'),
                 ).checkIR('match(expr(({int a, String b})), '
                     'recordPattern(varPattern(a, matchedType: int, '
                     'staticType: int), varPattern(b, matchedType: String, '
@@ -3436,7 +3545,7 @@ main() {
                     Var('b').pattern().recordField('b'),
                   ])
                     ..errorId = 'PATTERN',
-                  expr('({int a})').checkContext('({int a, ? b})'),
+                  expr('({int a})').checkSchema('({int a, _ b})'),
                 )..errorId = 'CONTEXT')
                     .checkIR('match(expr(({int a})), '
                         'recordPattern(varPattern(a, matchedType: Object?, '
@@ -3456,7 +3565,7 @@ main() {
               test('too few', () {
                 h.run([
                   ifCase(
-                    expr('({int a})').checkContext('?'),
+                    expr('({int a})').checkSchema('_'),
                     recordPattern([
                       Var('a').pattern().recordField('a'),
                       Var('b').pattern().recordField('b'),
@@ -3473,7 +3582,7 @@ main() {
               test('too many', () {
                 h.run([
                   ifCase(
-                    expr('({int a, String b})').checkContext('?'),
+                    expr('({int a, String b})').checkSchema('_'),
                     recordPattern([
                       Var('a').pattern().recordField('a'),
                     ]),
@@ -3493,7 +3602,7 @@ main() {
             h.addSuperInterfaces('X', (_) => [Type('Object')]);
             h.run([
               ifCase(
-                expr('X').checkContext('?'),
+                expr('X').checkSchema('_'),
                 recordPattern([
                   Var('a').pattern(type: 'int').recordField('a'),
                   Var('b').pattern().recordField('b'),
@@ -3532,9 +3641,9 @@ main() {
       test('Refutability', () {
         h.run([
           (match(
-            relationalPattern('>', intLiteral(0).checkContext('num'))
+            relationalPattern('>', intLiteral(0).checkSchema('num'))
               ..errorId = 'PATTERN',
-            intLiteral(1).checkContext('?'),
+            intLiteral(1).checkSchema('_'),
           )..errorId = 'CONTEXT')
               .checkIR('match(1, >(0, matchedType: int))'),
         ], expectedErrors: {
@@ -3546,10 +3655,10 @@ main() {
         h.addMember('C', '>', null);
         h.run([
           ifCase(
-            expr('C').checkContext('?'),
+            expr('C').checkSchema('_'),
             relationalPattern(
               '>',
-              intLiteral(0).checkContext('?'),
+              intLiteral(0).checkSchema('_'),
             ),
             [],
           ).checkIR('ifCase(expr(C), >(0, matchedType: C), '
@@ -3560,8 +3669,8 @@ main() {
         test('int >=', () {
           h.run([
             ifCase(
-              expr('int').checkContext('?'),
-              relationalPattern('>=', intLiteral(0).checkContext('num')),
+              expr('int').checkSchema('_'),
+              relationalPattern('>=', intLiteral(0).checkSchema('num')),
               [],
             ).checkIR('ifCase(expr(int), >=(0, matchedType: '
                 'int), variables(), true, block(), noop)')
@@ -3570,8 +3679,8 @@ main() {
         test('Object == nullable', () {
           h.run([
             ifCase(
-              expr('Object').checkContext('?'),
-              relationalPattern('==', expr('int?').checkContext('Object')),
+              expr('Object').checkSchema('_'),
+              relationalPattern('==', expr('int?').checkSchema('Object?')),
               [],
             ).checkIR('ifCase(expr(Object), ==(expr(int?), '
                 'matchedType: Object), variables(), true, block(), noop)')
@@ -3580,34 +3689,144 @@ main() {
         test('Object != nullable', () {
           h.run([
             ifCase(
-              expr('Object').checkContext('?'),
-              relationalPattern('!=', expr('int?').checkContext('Object')),
+              expr('Object').checkSchema('_'),
+              relationalPattern('!=', expr('int?').checkSchema('Object?')),
               [],
             ).checkIR('ifCase(expr(Object), !=(expr(int?), '
                 'matchedType: Object), variables(), true, block(), noop)')
           ]);
         });
-        test('argument type not assignable', () {
-          h.run([
-            ifCase(
-              expr('int').checkContext('?'),
-              relationalPattern('>', expr('String'))..errorId = 'PATTERN',
-              [],
-            ).checkIR('ifCase(expr(int), >(expr(String), '
-                'matchedType: int), variables(), true, block(), noop)')
-          ], expectedErrors: {
-            'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
-                'operandType: String, parameterType: num)'
+
+        group('argument type not assignable:', () {
+          test('basic', () {
+            h.run([
+              ifCase(
+                expr('int').checkSchema('_'),
+                relationalPattern('>', expr('String'))..errorId = 'PATTERN',
+                [],
+              ).checkIR('ifCase(expr(int), >(expr(String), '
+                  'matchedType: int), variables(), true, block(), noop)')
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: String, parameterType: num)'
+            });
+          });
+
+          test('> nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('>', expr('int?'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: int?, parameterType: num)'
+            });
+          });
+
+          test('< nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('<', expr('int?'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: int?, parameterType: num)'
+            });
+          });
+
+          test('>= nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('>=', expr('int?'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: int?, parameterType: num)'
+            });
+          });
+
+          test('<= nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('<=', expr('int?'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: int?, parameterType: num)'
+            });
+          });
+
+          test('extension type to representation', () {
+            h.addSuperInterfaces('E', (_) => [Type('Object?')]);
+            h.addExtensionTypeErasure('E', 'int');
+            h.addMember('C', '>', 'bool Function(int)');
+            h.run([
+              ifCase(
+                expr('C'),
+                relationalPattern('>', expr('E'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: E, parameterType: int)'
+            });
+          });
+
+          test('representation to extension type', () {
+            h.addSuperInterfaces('E', (_) => [Type('Object?')]);
+            h.addExtensionTypeErasure('E', 'int');
+            h.addMember('C', '>', 'bool Function(E)');
+            h.run([
+              ifCase(
+                expr('C'),
+                relationalPattern('>', expr('int'))..errorId = 'PATTERN',
+                [],
+              )
+            ], expectedErrors: {
+              'relationalPatternOperandTypeNotAssignable(pattern: PATTERN, '
+                  'operandType: int, parameterType: E)'
+            });
           });
         });
+
+        group('argument type assignable:', () {
+          test('== nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('==', expr('int?')),
+                [],
+              )
+            ]);
+          });
+
+          test('!= nullable', () {
+            h.run([
+              ifCase(
+                expr('int'),
+                relationalPattern('!=', expr('int?')),
+                [],
+              )
+            ]);
+          });
+        });
+
         test('return type is not assignable to bool', () {
           h.addMember('A', '>', 'int Function(Object)');
           h.run([
             ifCase(
-              expr('A').checkContext('?'),
+              expr('A').checkSchema('_'),
               relationalPattern(
                 '>',
-                expr('String').checkContext('Object'),
+                expr('String').checkSchema('Object'),
                 errorId: 'PATTERN',
               ),
               [],

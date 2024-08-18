@@ -1041,7 +1041,7 @@ class _MockSdkElementsBuilder {
     getter.isStatic = isStatic;
     getter.isSynthetic = false;
     getter.returnType = type;
-    getter.variable = field;
+    getter.variable2 = field;
 
     field.getter = getter;
     return getter;
@@ -1109,7 +1109,7 @@ class _MockSdkElementsBuilder {
   ) {
     classElement.accessors = accessors;
     classElement.fields = accessors
-        .map((accessor) => accessor.variable)
+        .map((accessor) => accessor.variable2)
         .cast<FieldElementImpl>()
         .toList();
   }
@@ -1118,7 +1118,7 @@ class _MockSdkElementsBuilder {
     String name,
     DartType type,
   ) {
-    final variable = ConstTopLevelVariableElementImpl(name, -1)
+    var variable = ConstTopLevelVariableElementImpl(name, -1)
       ..isConst = true
       ..type = type;
     PropertyAccessorElementImpl_ImplicitGetter(variable);

@@ -800,14 +800,19 @@ void FUNCTION_NAME(SecurityContext_UsePrivateKeyBytes)(
   const char* password = SSLCertContext::GetPasswordArgument(args, 2);
 
   int status;
+  EVP_PKEY* key;
   {
     ScopedMemBIO bio(ThrowIfError(Dart_GetNativeArgument(args, 1)));
-    EVP_PKEY* key = GetPrivateKey(bio.bio(), password);
-    status = SSL_CTX_use_PrivateKey(context->context(), key);
-    // SSL_CTX_use_PrivateKey increments the reference count of key on success,
-    // so we have to call EVP_PKEY_free on both success and failure.
-    EVP_PKEY_free(key);
+    key = GetPrivateKey(bio.bio(), password);
   }
+  if (key == nullptr) {
+    Dart_ThrowException(DartUtils::NewDartArgumentError(
+        "Expected private key, but none was found"));
+  }
+  status = SSL_CTX_use_PrivateKey(context->context(), key);
+  // SSL_CTX_use_PrivateKey increments the reference count of key on success,
+  // so we have to call EVP_PKEY_free on both success and failure.
+  EVP_PKEY_free(key);
 
   // TODO(24184): Handle different expected errors here - file missing,
   // incorrect password, file not a PEM, and throw exceptions.
@@ -822,6 +827,8 @@ void FUNCTION_NAME(SecurityContext_Allocate)(Dart_NativeArguments args) {
   SSL_CTX* ctx = SSL_CTX_new(TLS_method());
   SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, SSLCertContext::CertificateCallback);
   SSL_CTX_set_keylog_callback(ctx, SSLCertContext::KeyLogCallback);
+  // If we change the minimum protocol version here, then the documentation
+  // for `SecurityContext.minimumTlsProtocolVersion` must also be changed.
   SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
   SSL_CTX_set_cipher_list(ctx, "HIGH:MEDIUM");
   SSLCertContext* context = new SSLCertContext(ctx);
@@ -894,6 +901,32 @@ void FUNCTION_NAME(SecurityContext_SetAllowTlsRenegotiation)(
   }
   bool allow = DartUtils::GetBooleanValue(allow_tls_handle);
   context->set_allow_tls_renegotiation(allow);
+}
+
+void FUNCTION_NAME(SecurityContext_SetMinimumProtocolVersion)(
+    Dart_NativeArguments args) {
+  SSLCertContext* context = SSLCertContext::GetSecurityContext(args);
+  Dart_Handle protocol_version_handle =
+      ThrowIfError(Dart_GetNativeArgument(args, 1));
+  if (!Dart_IsInteger(protocol_version_handle)) {
+    Dart_ThrowException(DartUtils::NewDartArgumentError(
+        "Non-int argument passed to SetMinimumProtocolVersion"));
+  }
+
+  int protocol_version = DartUtils::GetIntegerValue(protocol_version_handle);
+  if (SSL_CTX_set_min_proto_version(context->context(), protocol_version) ==
+      0) {
+    Dart_ThrowException(DartUtils::NewDartArgumentError(
+        "Invalid protocol version passed to SetMinimumProtocolVersion"));
+  }
+}
+
+void FUNCTION_NAME(SecurityContext_GetMinimumProtocolVersion)(
+    Dart_NativeArguments args) {
+  SSLCertContext* context = SSLCertContext::GetSecurityContext(args);
+
+  Dart_SetIntegerReturnValue(args,
+                             SSL_CTX_get_min_proto_version(context->context()));
 }
 
 void FUNCTION_NAME(X509_Der)(Dart_NativeArguments args) {

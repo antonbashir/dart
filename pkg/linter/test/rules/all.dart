@@ -4,23 +4,36 @@
 
 // ignore_for_file: library_prefixes
 
+import 'always_declare_return_types_test.dart' as always_declare_return_types;
+import 'always_put_required_named_parameters_first_test.dart'
+    as always_put_required_named_parameters_first;
 import 'always_specify_types_test.dart' as always_specify_types;
 import 'always_use_package_imports_test.dart' as always_use_package_imports;
 import 'annotate_overrides_test.dart' as annotate_overrides;
 import 'annotate_redeclares_test.dart' as annotate_redeclares;
 import 'avoid_annotating_with_dynamic_test.dart'
     as avoid_annotating_with_dynamic;
+import 'avoid_bool_literals_in_conditional_expressions_test.dart'
+    as avoid_bool_literals_in_conditional_expressions;
+import 'avoid_catches_without_on_clauses_test.dart'
+    as avoid_catches_without_on_clauses;
 import 'avoid_catching_errors_test.dart' as avoid_catching_errors;
 import 'avoid_classes_with_only_static_members_test.dart'
-    as avoid_class_with_only_static_members;
+    as avoid_classes_with_only_static_members;
 import 'avoid_dynamic_calls_test.dart' as avoid_dynamic_calls;
+import 'avoid_empty_else_test.dart' as avoid_empty_else;
 import 'avoid_equals_and_hash_code_on_mutable_classes_test.dart'
     as avoid_equals_and_hash_code_on_mutable_classes;
 import 'avoid_escaping_inner_quotes_test.dart' as avoid_escaping_inner_quotes;
+import 'avoid_field_initializers_in_non_const_classes_test.dart'
+    as avoid_field_initializers_in_non_const_classes;
 import 'avoid_final_parameters_test.dart' as avoid_final_parameters;
 import 'avoid_function_literals_in_foreach_calls_test.dart'
     as avoid_function_literals_in_foreach_calls;
+import 'avoid_implementing_value_types_test.dart'
+    as avoid_implementing_value_types;
 import 'avoid_init_to_null_test.dart' as avoid_init_to_null;
+import 'avoid_js_rounded_ints_test.dart' as avoid_js_rounded_ints;
 import 'avoid_multiple_declarations_per_line_test.dart'
     as avoid_multiple_declarations_per_line;
 import 'avoid_positional_boolean_parameters_test.dart'
@@ -69,6 +82,8 @@ import 'conditional_uri_does_not_exist_test.dart'
     as conditional_uri_does_not_exist;
 import 'constant_identifier_names_test.dart' as constant_identifier_names;
 import 'control_flow_in_finally_test.dart' as control_flow_in_finally;
+import 'curly_braces_in_flow_control_structures_test.dart'
+    as curly_braces_in_flow_control_structures;
 import 'dangling_library_doc_comments_test.dart'
     as dangling_library_doc_comments;
 import 'depend_on_referenced_packages_test.dart'
@@ -81,6 +96,7 @@ import 'diagnostic_describe_all_properties_test.dart'
 import 'directives_ordering_test.dart' as directives_ordering;
 import 'discarded_futures_test.dart' as discarded_futures;
 import 'do_not_use_environment_test.dart' as do_not_use_environment;
+import 'document_ignores_test.dart' as document_ignores;
 import 'empty_catches_test.dart' as empty_catches;
 import 'empty_constructor_bodies_test.dart' as empty_constructor_bodies;
 import 'empty_statements_test.dart' as empty_statements;
@@ -91,25 +107,34 @@ import 'exhaustive_cases_test.dart' as exhaustive_cases;
 import 'file_names_test.dart' as file_names;
 import 'flutter_style_todos_test.dart' as flutter_style_todos;
 import 'hash_and_equals_test.dart' as hash_and_equals;
+import 'implicit_call_tearoffs_test.dart' as implicit_call_tearoffs;
 import 'implicit_reopen_test.dart' as implicit_reopen;
 import 'invalid_case_patterns_test.dart' as invalid_case_patterns;
+import 'invalid_runtime_check_with_js_interop_types_test.dart'
+    as invalid_runtime_check_with_js_interop_types_test;
 import 'join_return_with_assignment_test.dart' as join_return_with_assignment;
 import 'leading_newlines_in_multiline_strings_test.dart'
     as leading_newlines_in_multiline_strings;
 import 'library_annotations_test.dart' as library_annotations;
 import 'library_names_test.dart' as library_names;
+import 'library_prefixes_test.dart' as library_prefixes;
 import 'library_private_types_in_public_api_test.dart'
     as library_private_types_in_public_api;
 import 'lines_longer_than_80_chars_test.dart' as lines_longer_than_80_chars;
 import 'literal_only_boolean_expressions_test.dart'
     as literal_only_boolean_expressions;
 import 'matching_super_parameters_test.dart' as matching_super_parameters;
+import 'missing_code_block_language_in_doc_comment_test.dart'
+    as missing_code_block_language_in_doc_comment;
 import 'missing_whitespace_between_adjacent_strings_test.dart'
     as missing_whitespace_between_adjacent_strings;
 import 'no_adjacent_strings_in_list_test.dart' as no_adjacent_strings_in_list;
 import 'no_duplicate_case_values_test.dart' as no_duplicate_case_values;
+import 'no_leading_underscores_for_library_prefixes_test.dart'
+    as no_leading_underscores_for_library_prefixes;
 import 'no_leading_underscores_for_local_identifiers_test.dart'
     as no_leading_underscores_for_local_identifiers;
+import 'no_literal_bool_comparisons_test.dart' as no_literal_bool_comparisons;
 import 'no_logic_in_create_state_test.dart' as no_logic_in_create_state;
 import 'no_runtimeType_toString_test.dart' as no_runtimeType_toString;
 import 'no_self_assignments_test.dart' as no_self_assignments;
@@ -124,11 +149,15 @@ import 'omit_local_variable_types_test.dart' as omit_local_variable_types;
 import 'one_member_abstracts_test.dart' as one_member_abstracts;
 import 'only_throw_errors_test.dart' as only_throw_errors;
 import 'overridden_fields_test.dart' as overridden_fields;
+import 'package_names_test.dart' as package_names;
+import 'package_prefixed_library_names_test.dart'
+    as package_prefixed_library_names;
 import 'parameter_assignments_test.dart' as parameter_assignments;
 import 'prefer_adjacent_string_concatenation_test.dart'
     as prefer_adjacent_string_concatenation;
 import 'prefer_asserts_in_initializer_lists_test.dart'
     as prefer_asserts_in_initializer_lists;
+import 'prefer_asserts_with_message_test.dart' as prefer_asserts_with_message;
 import 'prefer_collection_literals_test.dart' as prefer_collection_literals;
 import 'prefer_const_constructors_in_immutables_test.dart'
     as prefer_const_constructors_in_immutables;
@@ -172,6 +201,7 @@ import 'prefer_void_to_null_test.dart' as prefer_void_to_null;
 import 'provide_deprecation_message_test.dart' as provide_deprecation_message;
 import 'public_member_api_docs_test.dart' as public_member_api_docs;
 import 'recursive_getters_test.dart' as recursive_getters;
+import 'require_trailing_commas_test.dart' as require_trailing_commas;
 import 'secure_pubspec_urls_test.dart' as secure_pubspec_urls;
 import 'sized_box_for_whitespace_test.dart' as sized_box_for_whitespace;
 import 'sized_box_shrink_expand_test.dart' as sized_box_shrink_expand;
@@ -190,6 +220,8 @@ import 'type_init_formals_test.dart' as type_init_formals;
 import 'type_literal_in_constant_pattern_test.dart'
     as type_literal_in_constant_pattern;
 import 'unawaited_futures_test.dart' as unawaited_futures;
+import 'unintended_html_in_doc_comment_test.dart'
+    as unintended_html_in_doc_comment;
 import 'unnecessary_await_in_return_test.dart' as unnecessary_await_in_return;
 import 'unnecessary_brace_in_string_interps_test.dart'
     as unnecessary_brace_in_string_interps;
@@ -202,6 +234,7 @@ import 'unnecessary_lambdas_test.dart' as unnecessary_lambdas;
 import 'unnecessary_late_test.dart' as unnecessary_late;
 import 'unnecessary_library_directive_test.dart'
     as unnecessary_library_directive;
+import 'unnecessary_library_name_test.dart' as unnecessary_library_name;
 import 'unnecessary_new_test.dart' as unnecessary_new;
 import 'unnecessary_null_aware_assignments_test.dart'
     as unnecessary_null_aware_assignments;
@@ -256,19 +289,27 @@ import 'valid_regexps_test.dart' as valid_regexps;
 import 'void_checks_test.dart' as void_checks;
 
 void main() {
+  always_declare_return_types.main();
+  always_put_required_named_parameters_first.main();
   always_specify_types.main();
   always_use_package_imports.main();
   annotate_overrides.main();
   annotate_redeclares.main();
   avoid_annotating_with_dynamic.main();
+  avoid_bool_literals_in_conditional_expressions.main();
+  avoid_catches_without_on_clauses.main();
   avoid_catching_errors.main();
-  avoid_class_with_only_static_members.main();
+  avoid_classes_with_only_static_members.main();
   avoid_dynamic_calls.main();
+  avoid_empty_else.main();
   avoid_equals_and_hash_code_on_mutable_classes.main();
   avoid_escaping_inner_quotes.main();
+  avoid_field_initializers_in_non_const_classes.main();
   avoid_final_parameters.main();
   avoid_function_literals_in_foreach_calls.main();
+  avoid_implementing_value_types.main();
   avoid_init_to_null.main();
+  avoid_js_rounded_ints.main();
   avoid_multiple_declarations_per_line.main();
   avoid_positional_boolean_parameters.main();
   avoid_print.main();
@@ -301,6 +342,7 @@ void main() {
   conditional_uri_does_not_exist.main();
   constant_identifier_names.main();
   control_flow_in_finally.main();
+  curly_braces_in_flow_control_structures.main();
   dangling_library_doc_comments.main();
   depend_on_referenced_packages.main();
   deprecated_consistency.main();
@@ -309,6 +351,7 @@ void main() {
   directives_ordering.main();
   discarded_futures.main();
   do_not_use_environment.main();
+  document_ignores.main();
   empty_catches.main();
   empty_constructor_bodies.main();
   empty_statements.main();
@@ -318,20 +361,26 @@ void main() {
   file_names.main();
   flutter_style_todos.main();
   hash_and_equals.main();
+  implicit_call_tearoffs.main();
   implicit_reopen.main();
   invalid_case_patterns.main();
+  invalid_runtime_check_with_js_interop_types_test.main();
   join_return_with_assignment.main();
   leading_newlines_in_multiline_strings.main();
   library_annotations.main();
   library_names.main();
+  library_prefixes.main();
   library_private_types_in_public_api.main();
   lines_longer_than_80_chars.main();
   literal_only_boolean_expressions.main();
   matching_super_parameters.main();
+  missing_code_block_language_in_doc_comment.main();
   missing_whitespace_between_adjacent_strings.main();
   no_adjacent_strings_in_list.main();
   no_duplicate_case_values.main();
+  no_leading_underscores_for_library_prefixes.main();
   no_leading_underscores_for_local_identifiers.main();
+  no_literal_bool_comparisons.main();
   no_logic_in_create_state.main();
   no_runtimeType_toString.main();
   no_self_assignments.main();
@@ -344,9 +393,12 @@ void main() {
   one_member_abstracts.main();
   only_throw_errors.main();
   overridden_fields.main();
+  package_names.main();
+  package_prefixed_library_names.main();
   parameter_assignments.main();
   prefer_adjacent_string_concatenation.main();
   prefer_asserts_in_initializer_lists.main();
+  prefer_asserts_with_message.main();
   prefer_collection_literals.main();
   prefer_const_constructors_in_immutables.main();
   prefer_const_constructors.main();
@@ -379,6 +431,7 @@ void main() {
   provide_deprecation_message.main();
   public_member_api_docs.main();
   recursive_getters.main();
+  require_trailing_commas.main();
   secure_pubspec_urls.main();
   sized_box_for_whitespace.main();
   sized_box_shrink_expand.main();
@@ -394,6 +447,7 @@ void main() {
   type_init_formals.main();
   type_literal_in_constant_pattern.main();
   unawaited_futures.main();
+  unintended_html_in_doc_comment.main();
   unnecessary_await_in_return.main();
   unnecessary_brace_in_string_interps.main();
   unnecessary_breaks.main();
@@ -404,6 +458,7 @@ void main() {
   unnecessary_lambdas.main();
   unnecessary_late.main();
   unnecessary_library_directive.main();
+  unnecessary_library_name.main();
   unnecessary_new.main();
   unnecessary_null_aware_assignments.main();
   unnecessary_null_aware_operator_on_extension_on_nullable.main();

@@ -97,7 +97,7 @@ class AnalyticsManager {
     }
   }
 
-  /// Record information about the number of files and the numer of lines of
+  /// Record information about the number of files and the number of lines of
   /// code in those files, for both immediate files, transitive files, and the
   /// number of unique transitive files.
   void analysisComplete({
@@ -220,7 +220,7 @@ class AnalyticsManager {
   }
 
   Future<void> sendMemoryUsage(MemoryUsageEvent event) async {
-    final delta = event.delta;
+    var delta = event.delta;
     var seconds = event.period?.inSeconds;
 
     assert((event.delta == null) == (event.period == null));
@@ -259,7 +259,7 @@ class AnalyticsManager {
 
   /// The server is shutting down. Report any accumulated analytics data.
   Future<void> shutdown() async {
-    final sessionData = _sessionData;
+    var sessionData = _sessionData;
     if (sessionData == null) {
       return;
     }
@@ -469,7 +469,7 @@ class AnalyticsManager {
     requestData.responseTimes.addValue(responseTime);
   }
 
-  /// Send information about the number of files and the numer of lines of code
+  /// Send information about the number of files and the number of lines of code
   /// in those files.
   Future<void> _sendAnalysisData() async {
     var contextStructure = _contextStructure;

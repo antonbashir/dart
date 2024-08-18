@@ -40,7 +40,6 @@ class SourceFactoryImpl implements SourceFactory {
 
   @override
   DartSdk? get dartSdk {
-    final resolvers = this.resolvers;
     int length = resolvers.length;
     for (int i = 0; i < length; i++) {
       var resolver = resolvers[i];
@@ -57,7 +56,7 @@ class SourceFactoryImpl implements SourceFactory {
       if (resolver is PackageMapUriResolver) {
         return resolver.packageMap;
       }
-      if (resolver is PackageBuildPackageUriResolver) {
+      if (resolver is PackageConfigPackageUriResolver) {
         return resolver.packageMap;
       }
     }

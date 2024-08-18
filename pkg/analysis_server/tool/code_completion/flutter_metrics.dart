@@ -4,7 +4,7 @@
 
 import 'dart:io' as io;
 
-import 'package:analysis_server/src/utilities/flutter.dart';
+import 'package:analysis_server/src/utilities/extensions/flutter.dart';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/context_root.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -30,7 +30,7 @@ Future<void> main(List<String> args) async {
     await computer.compute(rootPath);
     stopwatch.stop();
     var duration = Duration(milliseconds: stopwatch.elapsedMilliseconds);
-    out.writeln('');
+    out.writeln();
     out.writeln('Analysis performed in $duration');
     computer.writeResults(out);
     await out.flush();
@@ -135,7 +135,7 @@ class FlutterDataCollector extends RecursiveAstVisitor<void> {
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     var previousParentWidget = parentWidget;
-    if (Flutter.isWidgetCreation(node)) {
+    if (node.isWidgetCreation) {
       var element = node.constructorName.staticElement;
       if (element == null) {
         throw StateError(
@@ -166,11 +166,11 @@ class FlutterMetricsComputer {
 
   /// Compute the metrics for the file(s) in the [rootPath].
   Future<void> compute(String rootPath) async {
-    final collection = AnalysisContextCollection(
+    var collection = AnalysisContextCollection(
       includedPaths: [rootPath],
       resourceProvider: PhysicalResourceProvider.INSTANCE,
     );
-    final collector = FlutterDataCollector(data);
+    var collector = FlutterDataCollector(data);
     for (var context in collection.contexts) {
       await _computeInContext(context.contextRoot, collector);
     }
@@ -189,7 +189,7 @@ class FlutterMetricsComputer {
   Future<void> _computeInContext(
       ContextRoot root, FlutterDataCollector collector) async {
     // Create a new collection to avoid consuming large quantities of memory.
-    final collection = AnalysisContextCollection(
+    var collection = AnalysisContextCollection(
       includedPaths: root.includedPaths.toList(),
       excludedPaths: root.excludedPaths.toList(),
       resourceProvider: PhysicalResourceProvider.INSTANCE,
@@ -241,14 +241,14 @@ class FlutterMetricsComputer {
 
   /// Write the child data to the [sink].
   void _writeChildData(StringSink sink) {
-    sink.writeln('');
+    sink.writeln();
     sink.writeln('The number of times a widget had a given child.');
     _writeStructureData(sink, data.childData);
   }
 
   /// Write the parent data to the [sink].
   void _writeParentData(StringSink sink) {
-    sink.writeln('');
+    sink.writeln();
     sink.writeln('The number of times a widget had a given parent.');
     _writeStructureData(sink, data.parentData);
   }
@@ -275,7 +275,7 @@ class FlutterMetricsComputer {
 
   /// Write the widget count data to the [sink].
   void _writeWidgetCounts(StringSink sink) {
-    sink.writeln('');
+    sink.writeln();
     sink.writeln('Widget classes by frequency of instantiation');
 
     var total = data.totalWidgetCount;

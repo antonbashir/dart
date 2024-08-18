@@ -17,15 +17,17 @@ Sorting list of pub dependencies makes maintenance easier.
 
 class SortPubDependencies extends LintRule {
   static const LintCode code = LintCode(
-      'sort_pub_dependencies', 'Unsorted dependencies.',
-      correctionMessage: 'Try sorting the dependencies.');
+      'sort_pub_dependencies', 'Dependencies not sorted alphabetically.',
+      correctionMessage:
+          'Try sorting the dependencies alphabetically (A to Z).',
+      hasPublishedDocs: true);
 
   SortPubDependencies()
       : super(
             name: 'sort_pub_dependencies',
             description: _desc,
             details: _details,
-            group: Group.pub);
+            categories: {Category.pub});
 
   @override
   LintCode get lintCode => code;

@@ -117,7 +117,9 @@ const _importKeyword = 'import';
 /// Package is everything until the first `/`.
 int compareDirectives(String a, String b) {
   if (!a.startsWith('package:') || !b.startsWith('package:')) {
-    return a.compareTo(b);
+    if (!a.startsWith('/') && !b.startsWith('/')) {
+      return a.compareTo(b);
+    }
   }
   var indexA = a.indexOf('/');
   var indexB = b.indexOf('/');
@@ -174,7 +176,7 @@ class DirectivesOrdering extends LintRule {
             name: 'directives_ordering',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   void registerNodeProcessors(

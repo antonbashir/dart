@@ -7,10 +7,13 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/generic_inferrer.dart';
+import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
+import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/dart/resolver/resolution_result.dart';
+import 'package:analyzer/src/generated/inference_log.dart';
 
 class InstantiatedExtensionWithMember {
   final _NotInstantiatedExtensionWithMember candidate;
@@ -107,24 +110,23 @@ extension ExtensionsExtensions on Iterable<ExtensionElement> {
   List<InstantiatedExtensionWithoutMember> applicableTo({
     required LibraryElement targetLibrary,
     required DartType targetType,
-    required bool strictInference,
+    required bool strictCasts,
   }) {
-    return map((e) => _NotInstantiatedExtensionWithoutMember(e)).applicableTo(
-      targetLibrary: targetLibrary,
-      targetType: targetType,
-      strictInference: strictInference,
-    );
+    return map((e) => _NotInstantiatedExtensionWithoutMember(e))
+        .applicableTo(targetLibrary: targetLibrary, targetType: targetType);
   }
 
-  List<_NotInstantiatedExtensionWithMember> hasMemberWithBaseName(
-    String baseName,
+  /// Returns the sublist of [ExtensionElement]s that have an instance member
+  /// named [baseName].
+  List<_NotInstantiatedExtensionWithMember> havingMemberWithBaseName(
+    Name baseName,
   ) {
     var result = <_NotInstantiatedExtensionWithMember>[];
     for (var extension in this) {
-      if (baseName == '[]') {
+      if (baseName.name == '[]') {
         ExecutableElement? getter;
         ExecutableElement? setter;
-        for (var method in extension.methods) {
+        for (var method in extension.augmented.methods) {
           if (method.name == '[]') {
             getter = method;
           } else if (method.name == '[]=') {
@@ -141,8 +143,12 @@ extension ExtensionsExtensions on Iterable<ExtensionElement> {
           );
         }
       } else {
-        for (var field in extension.fields) {
-          if (field.name == baseName) {
+        for (var field in extension.augmented.fields) {
+          if (field.isStatic) {
+            continue;
+          }
+          var fieldName = Name(extension.librarySource.uri, field.name);
+          if (fieldName == baseName) {
             result.add(
               _NotInstantiatedExtensionWithMember(
                 extension,
@@ -153,8 +159,12 @@ extension ExtensionsExtensions on Iterable<ExtensionElement> {
             break;
           }
         }
-        for (var method in extension.methods) {
-          if (method.name == baseName) {
+        for (var method in extension.augmented.methods) {
+          if (method.isStatic) {
+            continue;
+          }
+          var methodName = Name(extension.librarySource.uri, method.name);
+          if (methodName == baseName) {
             result.add(
               _NotInstantiatedExtensionWithMember(
                 extension,
@@ -176,7 +186,6 @@ extension NotInstantiatedExtensionsExtensions<R>
   List<R> applicableTo({
     required LibraryElement targetLibrary,
     required DartType targetType,
-    required bool strictInference,
   }) {
     if (identical(targetType, NeverTypeImpl.instance)) {
       return <R>[];
@@ -196,17 +205,25 @@ extension NotInstantiatedExtensionsExtensions<R>
       var freshTypes = getFreshTypeParameters(extension.typeParameters);
       var freshTypeParameters = freshTypes.freshTypeParameters;
       var rawExtendedType = freshTypes.substitute(extension.extendedType);
+      // Casts aren't relevant in extension applicability.
+      var typeSystemOperations =
+          TypeSystemOperations(typeSystem, strictCasts: false);
 
+      inferenceLogWriter?.enterGenericInference(
+          freshTypeParameters, rawExtendedType);
       var inferrer = GenericInferrer(
         typeSystem,
         freshTypeParameters,
         genericMetadataIsEnabled: genericMetadataIsEnabled,
-        strictInference: strictInference,
+        strictInference: false,
+        typeSystemOperations: typeSystemOperations,
+        dataForTesting: null,
       );
       inferrer.constrainArgument(
         targetType,
         rawExtendedType,
         'extendedType',
+        nodeForTesting: null,
       );
       var inferredTypes = inferrer.tryChooseFinalTypes();
       if (inferredTypes == null) {

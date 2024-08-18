@@ -2,18 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/plugin/edit/fix/fix_core.dart';
 import 'package:analysis_server/src/services/correction/bulk_fix_processor.dart';
-import 'package:analysis_server/src/services/correction/change_workspace.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server/src/services/correction/fix_internal.dart';
+import 'package:analysis_server_plugin/edit/fix/dart_fix_context.dart';
+import 'package:analysis_server_plugin/edit/fix/fix.dart';
+import 'package:analysis_server_plugin/src/correction/change_workspace.dart';
+import 'package:analysis_server_plugin/src/correction/dart_change_workspace.dart';
 import 'package:analyzer/error/error.dart';
+import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/error/lint_codes.dart';
 import 'package:analyzer/src/services/available_declarations.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart'
     hide AnalysisError;
-import 'package:analyzer_plugin/utilities/change_builder/change_workspace.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
@@ -41,7 +43,7 @@ abstract class BaseFixProcessorTest extends AbstractSingleUnitTest {
   /// expecting that there is a single remaining error. The error filter should
   /// return `true` if the error should not be ignored.
   Future<AnalysisError> _findErrorToFix(
-      {bool Function(AnalysisError)? errorFilter, int? length}) async {
+      {bool Function(AnalysisError)? errorFilter}) async {
     var errors = testAnalysisResult.errors;
     if (errorFilter != null) {
       if (errors.length == 1) {
@@ -87,7 +89,7 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   late BulkFixProcessor processor;
 
   @override
-  List<String> get experiments => const ['inline-class'];
+  List<String> get experiments => const [];
 
   /// Return the lint code being tested.
   String? get lintCode => null;
@@ -98,9 +100,10 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   }
 
   /// Computes fixes for the pubspecs in the given contexts.
-  Future<void> assertFixPubspec(String original, String expected) async {
+  Future<void> assertFixPubspec(String original, String expected,
+      {File? file}) async {
     var tracker = DeclarationsTracker(MemoryByteStore(), resourceProvider);
-    var analysisContext = contextFor(testFile);
+    var analysisContext = contextFor(file ?? testFile);
     tracker.addContext(analysisContext);
     var processor =
         BulkFixProcessor(TestInstrumentationService(), await workspace);
@@ -244,11 +247,11 @@ abstract class FixInFileProcessorTest extends BaseFixProcessorTest {
 
   /// Computes fixes for the given [error] in [testUnit].
   Future<List<Fix>> _computeFixes(AnalysisError error) async {
-    var context = DartFixContextImpl(
-      TestInstrumentationService(),
-      await workspace,
-      testAnalysisResult,
-      error,
+    var context = DartFixContext(
+      instrumentationService: TestInstrumentationService(),
+      workspace: await workspace,
+      resolvedResult: testAnalysisResult,
+      error: error,
     );
 
     var fixes = await FixInFileProcessor(context).compute();
@@ -294,13 +297,13 @@ abstract class FixProcessorLintTest extends FixProcessorTest {
 
 /// A base class defining support for writing fix processor tests.
 abstract class FixProcessorTest extends BaseFixProcessorTest {
-  /// Return the kind of fixes being tested by this test class.
+  /// The kind of fixes being tested by this test class.
   FixKind get kind;
 
-  /// Asserts that the resolved compilation unit has a fix which produces [expected] output.
+  /// Asserts that the resolved compilation unit has a fix which produces
+  /// [expected] output.
   Future<void> assertHasFix(String expected,
       {bool Function(AnalysisError)? errorFilter,
-      int? length,
       String? target,
       int? expectedNumberOfFixesForKind,
       String? matchFixMessage,
@@ -308,7 +311,6 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
     expected = normalizeSource(expected);
     var error = await _findErrorToFix(
       errorFilter: errorFilter,
-      length: length,
     );
     var fix = await _assertHasFix(error,
         expectedNumberOfFixesForKind: expectedNumberOfFixesForKind,
@@ -316,7 +318,7 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
         allowFixAllFixes: allowFixAllFixes);
     change = fix.change;
 
-    // apply to "file"
+    // Apply to file.
     var fileEdits = change.edits;
     expect(fileEdits, hasLength(1));
 
@@ -544,13 +546,13 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
 
   /// Computes fixes for the given [error] in [testUnit].
   Future<List<Fix>> _computeFixes(AnalysisError error) async {
-    var context = DartFixContextImpl(
-      TestInstrumentationService(),
-      await workspace,
-      testAnalysisResult,
-      error,
+    var context = DartFixContext(
+      instrumentationService: TestInstrumentationService(),
+      workspace: await workspace,
+      resolvedResult: testAnalysisResult,
+      error: error,
     );
-    return await DartFixContributor().computeFixes(context);
+    return await computeFixes(context);
   }
 
   List<Position> _findResultPositions(List<String> searchStrings) {

@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class DocCommentParserTest extends ParserDiagnosticsTest {
   test_animationDirective_namedArgument_blankValue() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -26,7 +26,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('animation');
+    var node = parseResult.findNode.comment('animation');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -47,7 +47,7 @@ Comment
   }
 
   test_animationDirective_namedArgument_missingClosingBrace() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -58,7 +58,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE, 73, 1),
     ]);
 
-    final node = parseResult.findNode.comment('animation');
+    var node = parseResult.findNode.comment('animation');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -79,7 +79,7 @@ Comment
   }
 
   test_animationDirective_namedArgument_missingValueAndClosingBrace() async {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -90,7 +90,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE, 68, 1),
     ]);
 
-    final node = parseResult.findNode.comment('animation');
+    var node = parseResult.findNode.comment('animation');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -111,13 +111,13 @@ Comment
   }
 
   test_codeSpan() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// `a[i]` and [b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     // TODO(srawlins): Parse code into its own node.
     assertParsedNodeText(node, r'''
 Comment
@@ -132,13 +132,13 @@ Comment
 
   test_codeSpan_legacy_blockComment() {
     // TODO(srawlins): I believe we should drop support for `[:` `:]`.
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /** [:xxx [a] yyy:] [b] zzz */
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -151,13 +151,13 @@ Comment
   }
 
   test_codeSpan_unterminated_blockComment() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /** `a[i] and [b] */
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[');
+    var node = parseResult.findNode.comment('a[');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -173,13 +173,13 @@ Comment
   }
 
   test_commentReference_blockComment() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /** [a]. */
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -192,13 +192,13 @@ Comment
   }
 
   test_commentReference_empty() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[]');
+    var node = parseResult.findNode.comment('[]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -211,13 +211,13 @@ Comment
   }
 
   test_commentReference_multiple() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a] and [b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -233,13 +233,13 @@ Comment
   }
 
   test_commentReference_multiple_blockComment() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /** [a] and [b]. */
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -255,13 +255,13 @@ Comment
   }
 
   test_commentReference_new_prefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [new a.A].
 class B {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('new');
+    var node = parseResult.findNode.comment('new');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -279,13 +279,13 @@ Comment
   }
 
   test_commentReference_new_simple() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [new A].
 class B {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('new');
+    var node = parseResult.findNode.comment('new');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -299,13 +299,13 @@ Comment
   }
 
   test_commentReference_operator_withKeyword_notPrefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [operator ==].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('==');
+    var node = parseResult.findNode.comment('==');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -318,13 +318,13 @@ Comment
   }
 
   test_commentReference_operator_withKeyword_prefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [Object.operator ==].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('==');
+    var node = parseResult.findNode.comment('==');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -341,13 +341,13 @@ Comment
   }
 
   test_commentReference_operator_withoutKeyword_notPrefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [==].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('==');
+    var node = parseResult.findNode.comment('==');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -360,13 +360,13 @@ Comment
   }
 
   test_commentReference_operator_withoutKeyword_prefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [Object.==].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('==');
+    var node = parseResult.findNode.comment('==');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -383,13 +383,13 @@ Comment
   }
 
   test_commentReference_prefixedIdentifier() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a.b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a.b');
+    var node = parseResult.findNode.comment('a.b');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -406,13 +406,13 @@ Comment
   }
 
   test_commentReference_simpleIdentifier() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -425,13 +425,13 @@ Comment
   }
 
   test_commentReference_this() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [this].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('this');
+    var node = parseResult.findNode.comment('this');
     // TODO(srawlins): I think there is an intention to parse this as a comment
     // reference.
     assertParsedNodeText(node, r'''
@@ -442,13 +442,13 @@ Comment
   }
 
   test_docImport() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport 'dart:html';
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -465,7 +465,7 @@ Comment
   }
 
   test_docImport_multiple() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// One.
 /// @docImport 'dart:html';
 /// @docImport 'dart:io';
@@ -473,7 +473,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('dart:html');
+    var node = parseResult.findNode.comment('dart:html');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -499,7 +499,7 @@ Comment
   }
 
   test_docImport_nonTerminated() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport 'dart:html'
 class A {}
 ''');
@@ -507,7 +507,7 @@ class A {}
       error(ParserErrorCode.EXPECTED_TOKEN, 15, 11),
     ]);
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -524,7 +524,7 @@ Comment
   }
 
   test_docImport_parseError() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport html
 class A {}
 ''');
@@ -535,7 +535,7 @@ class A {}
       error(ParserErrorCode.EXPECTED_TOKEN, 15, 4),
     ]);
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -552,13 +552,13 @@ Comment
   }
 
   test_docImport_prefixed() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport 'dart:html' as html;
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -578,13 +578,13 @@ Comment
   }
 
   test_docImport_show() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport 'dart:html' show Element, HtmlElement;
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -609,7 +609,7 @@ Comment
   }
 
   test_docImport_unterminatedString() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// @docImport 'dart:html;
 class A {}
 ''');
@@ -618,7 +618,7 @@ class A {}
       error(ScannerErrorCode.UNTERMINATED_STRING_LITERAL, 17, 1),
     ]);
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -635,7 +635,7 @@ Comment
   }
 
   test_docImport_withOtherData() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// ```dart
 /// x;
 /// ```
@@ -647,7 +647,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('docImport');
+    var node = parseResult.findNode.comment('docImport');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -661,6 +661,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: dart
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 3
@@ -673,6 +674,7 @@ Comment
           length: 4
     MdCodeBlock
       infoString: dart
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 58
@@ -695,7 +697,7 @@ Comment
   }
 
   test_endTemplate_missingOpeningTag() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -707,7 +709,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_OPENING_TAG, 26, 15),
     ]);
 
-    final node = parseResult.findNode.comment('endtemplate');
+    var node = parseResult.findNode.comment('endtemplate');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -723,7 +725,7 @@ Comment
   }
 
   test_fencedCodeBlock_blockComment() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /**
  * One.
  * ```
@@ -739,7 +741,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -757,6 +759,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 15
@@ -769,6 +772,7 @@ Comment
           length: 3
     MdCodeBlock
       infoString: dart
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 53
@@ -783,7 +787,7 @@ Comment
   }
 
   test_fencedCodeBlock_empty() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// ```
 /// ```
 /// Text.
@@ -791,7 +795,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text.');
+    var node = parseResult.findNode.comment('Text.');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -801,6 +805,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 3
@@ -812,7 +817,7 @@ Comment
   }
 
   test_fencedCodeBlock_leadingSpaces() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 ///   ```
 ///   a[i] = b[i];
 ///   ```
@@ -820,7 +825,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -830,6 +835,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 3
@@ -844,7 +850,7 @@ Comment
   }
 
   test_fencedCodeBlock_moreThanThreeBackticks() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// ````dart
 /// A code block can contain multiple backticks, as long as it is fewer than
 /// the amount in the opening:
@@ -854,7 +860,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('A code');
+    var node = parseResult.findNode.comment('A code');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -866,6 +872,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: dart
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 3
@@ -886,7 +893,7 @@ Comment
   }
 
   test_fencedCodeBlock_noLeadingSpaces() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 ///```
 ///a[i] = b[i];
 ///```
@@ -894,7 +901,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -904,6 +911,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 3
@@ -918,7 +926,7 @@ Comment
   }
 
   test_fencedCodeBlock_nonDocCommentLines() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// One.
 /// ```
 // This is not part of the doc comment.
@@ -930,7 +938,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -942,6 +950,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 12
@@ -956,7 +965,7 @@ Comment
   }
 
   test_fencedCodeBlock_nonTerminating() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// One.
 /// ```
 /// a[i] = b[i];
@@ -964,7 +973,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -974,6 +983,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 12
@@ -985,7 +995,7 @@ Comment
   }
 
   test_fencedCodeBlock_nonZeroOffset() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// One.
@@ -997,7 +1007,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1009,6 +1019,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 24
@@ -1023,7 +1034,7 @@ Comment
   }
 
   test_fencedCodeBlock_precededByText() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// One. ```
 /// Two.
 /// ```
@@ -1032,7 +1043,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Two.');
+    var node = parseResult.findNode.comment('Two.');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1043,6 +1054,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 25
@@ -1054,7 +1066,7 @@ Comment
   }
 
   test_fencedCodeBlocks() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// One.
 /// ```
 /// a[i] = b[i];
@@ -1068,7 +1080,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1084,6 +1096,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 12
@@ -1096,6 +1109,7 @@ Comment
           length: 4
     MdCodeBlock
       infoString: dart
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 54
@@ -1110,7 +1124,7 @@ Comment
   }
 
   test_hideConstantImplementations() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1119,7 +1133,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('hideConstantImplementations');
+    var node = parseResult.findNode.comment('hideConstantImplementations');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1134,7 +1148,7 @@ Comment
   }
 
   test_indentedCodeBlock_afterBlankLine() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///
 ///    a[i] = b[i];
@@ -1142,7 +1156,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text');
+    var node = parseResult.findNode.comment('Text');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1152,6 +1166,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.indented
       lines
         MdCodeBlockLine
           offset: 17
@@ -1160,14 +1175,14 @@ Comment
   }
 
   test_indentedCodeBlock_afterTextLine_notCodeBlock() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///    a[i] = b[i];
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text');
+    var node = parseResult.findNode.comment('Text');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -1184,13 +1199,13 @@ Comment
   }
 
   test_indentedCodeBlock_firstLine() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 ///    a[i] = b[i];
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1198,6 +1213,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.indented
       lines
         MdCodeBlockLine
           offset: 3
@@ -1206,7 +1222,7 @@ Comment
   }
 
   test_indentedCodeBlock_firstLine_blockComment() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /**
  *
  *     a[i] = b[i];
@@ -1216,7 +1232,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('a[i]');
+    var node = parseResult.findNode.comment('a[i]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -1232,6 +1248,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.indented
       lines
         MdCodeBlockLine
           offset: 10
@@ -1240,7 +1257,7 @@ Comment
   }
 
   test_indentedCodeBlock_withFencedCodeBlock() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///     ```
 ///     a[i] = b[i];
@@ -1250,7 +1267,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text');
+    var node = parseResult.findNode.comment('Text');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1262,6 +1279,7 @@ Comment
   codeBlocks
     MdCodeBlock
       infoString: <empty>
+      type: CodeBlockType.fenced
       lines
         MdCodeBlockLine
           offset: 13
@@ -1276,13 +1294,13 @@ Comment
   }
 
   test_inlineLink() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a](http://www.google.com) [b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -1295,13 +1313,13 @@ Comment
   }
 
   test_linkReference() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a]: http://www.google.com Google [b]
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a]');
+    var node = parseResult.findNode.comment('[a]');
     // TODO(srawlins): Ideally this should not parse `[b]` as a comment
     // reference.
     assertParsedNodeText(node, r'''
@@ -1316,7 +1334,7 @@ Comment
   }
 
   test_nodoc_eol() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///
 /// @nodoc
@@ -1324,7 +1342,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text.');
+    var node = parseResult.findNode.comment('Text.');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1336,7 +1354,7 @@ Comment
   }
 
   test_nodoc_more() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///
 /// @nodocxx
@@ -1344,7 +1362,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text.');
+    var node = parseResult.findNode.comment('Text.');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1355,7 +1373,7 @@ Comment
   }
 
   test_nodoc_space() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// Text.
 ///
 /// @nodoc This is not super public.
@@ -1363,7 +1381,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('Text.');
+    var node = parseResult.findNode.comment('Text.');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1375,13 +1393,13 @@ Comment
   }
 
   test_onlyWhitespace() {
-    final parseResult = parseStringWithErrors('''
+    var parseResult = parseStringWithErrors('''
 ///${"  "}
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('  ');
+    var node = parseResult.findNode.comment('  ');
     assertParsedNodeText(node, '''
 Comment
   tokens
@@ -1390,13 +1408,13 @@ Comment
   }
 
   test_referenceLink() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a link][c] [b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a');
+    var node = parseResult.findNode.comment('[a');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -1409,14 +1427,14 @@ Comment
   }
 
   test_referenceLink_multiline() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// [a link split across multiple
 /// lines][c] [b].
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('[a');
+    var node = parseResult.findNode.comment('[a');
     assertParsedNodeText(node, r'''
 Comment
   references
@@ -1433,7 +1451,7 @@ Comment
   }
 
   test_template() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1444,7 +1462,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('template name');
+    var node = parseResult.findNode.comment('template name');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1466,7 +1484,7 @@ Comment
   }
 
   test_template_containingInnerTags() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1478,7 +1496,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('template name');
+    var node = parseResult.findNode.comment('template name');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1507,7 +1525,7 @@ Comment
   }
 
   test_template_containingInnerTemplate() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1522,7 +1540,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('template name2');
+    var node = parseResult.findNode.comment('template name2');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1557,7 +1575,7 @@ Comment
   }
 
   test_template_missingClosingTag() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1569,7 +1587,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG, 26, 17),
     ]);
 
-    final node = parseResult.findNode.comment('template name');
+    var node = parseResult.findNode.comment('template name');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1587,7 +1605,7 @@ Comment
   }
 
   test_template_missingClosingTag_multiple() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1602,7 +1620,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG, 62, 18),
     ]);
 
-    final node = parseResult.findNode.comment('template name2');
+    var node = parseResult.findNode.comment('template name2');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1628,7 +1646,7 @@ Comment
   }
 
   test_template_missingClosingTag_withInnerTag() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1641,7 +1659,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG, 26, 17),
     ]);
 
-    final node = parseResult.findNode.comment('template name');
+    var node = parseResult.findNode.comment('template name');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1668,7 +1686,7 @@ Comment
   }
 
   test_template_outOfOrderClosingTag() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1685,7 +1703,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_OPENING_TAG, 110, 19),
     ]);
 
-    final node = parseResult.findNode.comment('template name');
+    var node = parseResult.findNode.comment('template name');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1718,7 +1736,7 @@ Comment
   }
 
   test_tool_withRestArguments() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1729,7 +1747,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('tool snippets');
+    var node = parseResult.findNode.comment('tool snippets');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1754,7 +1772,7 @@ Comment
   }
 
   test_unknownDocDirective() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1765,7 +1783,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_UNKNOWN, 28, 6),
     ]);
 
-    final node = parseResult.findNode.comment('yotube');
+    var node = parseResult.findNode.comment('yotube');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1775,7 +1793,7 @@ Comment
   }
 
   test_youTubeDirective() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 int x = 0;
 
 /// Text.
@@ -1784,7 +1802,7 @@ class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('youtube');
+    var node = parseResult.findNode.comment('youtube');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1803,7 +1821,7 @@ Comment
   }
 
   test_youTubeDirective_missingEndBrace() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// {@youtube 600 400 http://google.com
 class A {}
 ''');
@@ -1811,7 +1829,7 @@ class A {}
       error(WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE, 39, 1),
     ]);
 
-    final node = parseResult.findNode.comment('youtube');
+    var node = parseResult.findNode.comment('youtube');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1829,13 +1847,13 @@ Comment
   }
 
   test_youTubeDirective_missingUrl() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// {@youtube 600 400}
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('youtube');
+    var node = parseResult.findNode.comment('youtube');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1852,13 +1870,13 @@ Comment
   }
 
   test_youTubeDirective_missingUrlAndHeight() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// {@youtube 600}
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('youtube');
+    var node = parseResult.findNode.comment('youtube');
     assertParsedNodeText(node, r'''
 Comment
   tokens
@@ -1874,13 +1892,13 @@ Comment
   }
 
   test_youTubeDirective_missingUrlAndHeightAndWidth() {
-    final parseResult = parseStringWithErrors(r'''
+    var parseResult = parseStringWithErrors(r'''
 /// {@youtube }
 class A {}
 ''');
     parseResult.assertNoErrors();
 
-    final node = parseResult.findNode.comment('youtube');
+    var node = parseResult.findNode.comment('youtube');
     assertParsedNodeText(node, r'''
 Comment
   tokens

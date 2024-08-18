@@ -2,12 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// SharedOptions=--enable-experiment=inline-class
-
 // Test the JS array proxy or reference that's created for lists for interop.
 
 import 'dart:js_interop';
-import 'package:expect/minitest.dart';
+import 'package:expect/minitest.dart'; // ignore: deprecated_member_use_from_same_package
 
 @JS()
 external void eval(String code);

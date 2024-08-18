@@ -13,8 +13,6 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import '../../util/feature_sets.dart';
-
 void main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(UtilitiesTest);
@@ -88,25 +86,6 @@ void main() => print('Hello, world!')
         throwsA(const TypeMatcher<ArgumentError>()));
   }
 
-  test_parseFile_featureSet_language_2_9() {
-    String content = '''
-int? f() => 1;
-''';
-    var featureSet = FeatureSets.language_2_9;
-    expect(featureSet.isEnabled(Feature.non_nullable), isFalse);
-    ParseStringResult result = _withMemoryFile(
-        content,
-        (resourceProvider, path) => parseFile(
-            path: path,
-            resourceProvider: resourceProvider,
-            throwIfDiagnostics: false,
-            featureSet: featureSet));
-    expect(result.content, content);
-    expect(result.errors, hasLength(1));
-    expect(result.lineInfo, isNotNull);
-    expect(result.unit.toString(), equals('int? f() => 1;'));
-  }
-
   test_parseFile_featureSet_language_latest() {
     String content = '''
 int? f() => 1;
@@ -174,20 +153,6 @@ void main() => print('Hello, world!')
         throwsA(const TypeMatcher<ArgumentError>()));
   }
 
-  test_parseString_featureSet_nnbd_off() {
-    String content = '''
-int? f() => 1;
-''';
-    var featureSet = FeatureSets.language_2_9;
-    expect(featureSet.isEnabled(Feature.non_nullable), isFalse);
-    ParseStringResult result = parseString(
-        content: content, throwIfDiagnostics: false, featureSet: featureSet);
-    expect(result.content, content);
-    expect(result.errors, hasLength(1));
-    expect(result.lineInfo, isNotNull);
-    expect(result.unit.toString(), equals('int? f() => 1;'));
-  }
-
   test_parseString_featureSet_nnbd_on() {
     String content = '''
 int? f() => 1;
@@ -205,7 +170,7 @@ int? f() => 1;
 
   test_parseString_languageVersion() {
     var content = '''
-// @dart = 2.7
+// @dart = 3.2
 class A {}
 ''';
     var result = parseString(
@@ -215,8 +180,8 @@ class A {}
     );
 
     var languageVersion = result.unit.languageVersionToken!;
-    expect(languageVersion.major, 2);
-    expect(languageVersion.minor, 7);
+    expect(languageVersion.major, 3);
+    expect(languageVersion.minor, 2);
   }
 
   test_parseString_languageVersion_null() {

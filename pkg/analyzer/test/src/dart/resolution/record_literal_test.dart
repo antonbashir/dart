@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/dart/error/syntactic_errors.dart';
+import 'package:analyzer/src/error/codes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -22,7 +23,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.recordLiteral('(f1');
+    var node = findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -57,7 +58,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.recordLiteral('(r');
+    var node = findNode.recordLiteral('(r');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -78,6 +79,31 @@ RecordLiteral
 ''');
   }
 
+  test_hasContext_greatestClosure() async {
+    await assertNoErrorsInCode(r'''
+void f<T>((List<T>, List<T>) x) {}
+
+test(dynamic d) => f((d, d));
+''');
+
+    var node = findNode.recordLiteral('(d,');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    SimpleIdentifier
+      token: d
+      staticElement: self::@function::test::@parameter::d
+      staticType: dynamic
+    SimpleIdentifier
+      token: d
+      staticElement: self::@function::test::@parameter::d
+      staticType: dynamic
+  rightParenthesis: )
+  staticType: (List<Object?>, List<Object?>)
+''');
+  }
+
   test_hasContext_implicitCallReference_named() async {
     await assertNoErrorsInCode(r'''
 class A {
@@ -88,7 +114,7 @@ final a = A();
 final ({void Function() f1}) x = (f1: a);
 ''');
 
-    final node = findNode.recordLiteral('(f1');
+    var node = findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -122,7 +148,7 @@ final a = A();
 final (void Function(), ) x = (a, );
 ''');
 
-    final node = findNode.recordLiteral('(a');
+    var node = findNode.recordLiteral('(a');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -145,7 +171,7 @@ final dynamic a = 0;
 final ({int f1}) x = (f1: a);
 ''');
 
-    final node = findNode.recordLiteral('(f1');
+    var node = findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -160,7 +186,7 @@ RecordLiteral
       expression: SimpleIdentifier
         token: a
         staticElement: self::@getter::a
-        staticType: int
+        staticType: dynamic
   rightParenthesis: )
   staticType: ({int f1})
 ''');
@@ -172,7 +198,7 @@ final dynamic a = 0;
 final (int, ) x = (a, );
 ''');
 
-    final node = findNode.recordLiteral('(a');
+    var node = findNode.recordLiteral('(a');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -180,9 +206,30 @@ RecordLiteral
     SimpleIdentifier
       token: a
       staticElement: self::@getter::a
-      staticType: int
+      staticType: dynamic
   rightParenthesis: )
   staticType: (int,)
+''');
+  }
+
+  test_hasContext_mismatchedTypes() async {
+    await assertNoErrorsInCode(r'''
+f(Object o) {
+  if (o is (int,)) {
+    o = ('',);
+  }
+}
+''');
+
+    var node = findNode.recordLiteral("('',");
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    SimpleStringLiteral
+      literal: ''
+  rightParenthesis: )
+  staticType: (String,)
 ''');
   }
 
@@ -199,7 +246,7 @@ final (A1, A2, A3, {A4 f1, A5 f2}) x = (g(), f1: g(), g(), f2: g(), g());
 T g<T>() => throw 0;
 ''');
 
-    final node = findNode.recordLiteral('(g(),');
+    var node = findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -283,6 +330,131 @@ RecordLiteral
 ''');
   }
 
+  test_hasContext_mixed_namedWherePositionalExpected() async {
+    await assertNoErrorsInCode(r'''
+f(Object o) {
+  if (o is (int,)) {
+    o = (f1: g());
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(f1:');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f1
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: MethodInvocation
+        methodName: SimpleIdentifier
+          token: g
+          staticElement: self::@function::g
+          staticType: T Function<T>()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: dynamic Function()
+        staticType: dynamic
+        typeArgumentTypes
+          dynamic
+  rightParenthesis: )
+  staticType: ({dynamic f1})
+''');
+  }
+
+  test_hasContext_mixed_nameMismatch() async {
+    await assertNoErrorsInCode(r'''
+f(Object o) {
+  if (o is (int, {String f1})) {
+    o = (g(), f2: g());
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(g(),');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: g
+        staticElement: self::@function::g
+        staticType: T Function<T>()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: dynamic Function()
+      staticType: dynamic
+      typeArgumentTypes
+        dynamic
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f2
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: MethodInvocation
+        methodName: SimpleIdentifier
+          token: g
+          staticElement: self::@function::g
+          staticType: T Function<T>()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: dynamic Function()
+        staticType: dynamic
+        typeArgumentTypes
+          dynamic
+  rightParenthesis: )
+  staticType: (dynamic, {dynamic f2})
+''');
+  }
+
+  test_hasContext_mixed_positionalWhereNamedExpected() async {
+    await assertNoErrorsInCode(r'''
+f(Object o) {
+  if (o is ({int f1})) {
+    o = (g(),);
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(g(),');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: g
+        staticElement: self::@function::g
+        staticType: T Function<T>()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: dynamic Function()
+      staticType: dynamic
+      typeArgumentTypes
+        dynamic
+  rightParenthesis: )
+  staticType: (dynamic,)
+''');
+  }
+
   test_hasContext_named() async {
     await assertNoErrorsInCode(r'''
 final ({int f1, String f2}) x = (f1: g(), f2: g());
@@ -290,7 +462,7 @@ final ({int f1, String f2}) x = (f1: g(), f2: g());
 T g<T>() => throw 0;
 ''');
 
-    final node = findNode.recordLiteral('(f1:');
+    var node = findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -345,7 +517,7 @@ final ({int f1, String f2}) x = (f2: g(), f1: g());
 T g<T>() => throw 0;
 ''');
 
-    final node = findNode.recordLiteral('(f2:');
+    var node = findNode.recordLiteral('(f2:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -393,6 +565,152 @@ RecordLiteral
 ''');
   }
 
+  test_hasContext_named_extraInContext() async {
+    await assertNoErrorsInCode('''
+f(Object o) {
+  if (o is ({int f1, String f2})) {
+    o = (f1: g());
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(f1:');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f1
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: MethodInvocation
+        methodName: SimpleIdentifier
+          token: g
+          staticElement: self::@function::g
+          staticType: T Function<T>()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: dynamic Function()
+        staticType: dynamic
+        typeArgumentTypes
+          dynamic
+  rightParenthesis: )
+  staticType: ({dynamic f1})
+''');
+  }
+
+  test_hasContext_named_extraInLiteral() async {
+    await assertNoErrorsInCode('''
+f(Object o) {
+  if (o is ({int f1})) {
+    o = (f1: g(), f2: g());
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(f1:');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f1
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: MethodInvocation
+        methodName: SimpleIdentifier
+          token: g
+          staticElement: self::@function::g
+          staticType: T Function<T>()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: dynamic Function()
+        staticType: dynamic
+        typeArgumentTypes
+          dynamic
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f2
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: MethodInvocation
+        methodName: SimpleIdentifier
+          token: g
+          staticElement: self::@function::g
+          staticType: T Function<T>()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: dynamic Function()
+        staticType: dynamic
+        typeArgumentTypes
+          dynamic
+  rightParenthesis: )
+  staticType: ({dynamic f1, dynamic f2})
+''');
+  }
+
+  test_hasContext_noImplicitCast_fromDynamicToTop_named() async {
+    await assertNoErrorsInCode(r'''
+final dynamic a = 0;
+final ({Object? f1}) x = (f1: a);
+''');
+
+    var node = findNode.recordLiteral('(f1');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    NamedExpression
+      name: Label
+        label: SimpleIdentifier
+          token: f1
+          staticElement: <null>
+          staticType: null
+        colon: :
+      expression: SimpleIdentifier
+        token: a
+        staticElement: self::@getter::a
+        staticType: dynamic
+  rightParenthesis: )
+  staticType: ({dynamic f1})
+''');
+  }
+
+  test_hasContext_noImplicitCast_fromDynamicToTop_positional() async {
+    await assertNoErrorsInCode(r'''
+final dynamic a = 0;
+final (Object?, ) x = (a, );
+''');
+
+    var node = findNode.recordLiteral('(a');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    SimpleIdentifier
+      token: a
+      staticElement: self::@getter::a
+      staticType: dynamic
+  rightParenthesis: )
+  staticType: (dynamic,)
+''');
+  }
+
   test_hasContext_notRecordType() async {
     await assertNoErrorsInCode(r'''
 final Object x = (g(), g());
@@ -400,7 +718,7 @@ final Object x = (g(), g());
 T g<T>() => throw 0;
 ''');
 
-    final node = findNode.recordLiteral('(g(),');
+    var node = findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -441,7 +759,7 @@ final (int, String) x = (g(), g());
 T g<T>() => throw 0;
 ''');
 
-    final node = findNode.recordLiteral('(g(),');
+    var node = findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -475,13 +793,116 @@ RecordLiteral
 ''');
   }
 
+  test_hasContext_positional_extraInContext() async {
+    await assertNoErrorsInCode('''
+f(Object o) {
+  if (o is (int, String)) {
+    o = (g(),);
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(g(),');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: g
+        staticElement: self::@function::g
+        staticType: T Function<T>()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: dynamic Function()
+      staticType: dynamic
+      typeArgumentTypes
+        dynamic
+  rightParenthesis: )
+  staticType: (dynamic,)
+''');
+  }
+
+  test_hasContext_positional_extraInLiteral() async {
+    await assertNoErrorsInCode('''
+f(Object o) {
+  if (o is (int,)) {
+    o = (g(), g());
+  }
+}
+
+T g<T>() => throw 0;
+''');
+
+    var node = findNode.recordLiteral('(g(),');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: g
+        staticElement: self::@function::g
+        staticType: T Function<T>()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: dynamic Function()
+      staticType: dynamic
+      typeArgumentTypes
+        dynamic
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: g
+        staticElement: self::@function::g
+        staticType: T Function<T>()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: dynamic Function()
+      staticType: dynamic
+      typeArgumentTypes
+        dynamic
+  rightParenthesis: )
+  staticType: (dynamic, dynamic)
+''');
+  }
+
+  test_hasContext_unknownFieldType_noDowncast() async {
+    await assertNoErrorsInCode(r'''
+void f<T>((T, T) x) {}
+
+test(dynamic d) => f((d, d));
+''');
+
+    var node = findNode.recordLiteral('(d,');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    SimpleIdentifier
+      token: d
+      staticElement: self::@function::test::@parameter::d
+      staticType: dynamic
+    SimpleIdentifier
+      token: d
+      staticElement: self::@function::test::@parameter::d
+      staticType: dynamic
+  rightParenthesis: )
+  staticType: (dynamic, dynamic)
+''');
+  }
+
   test_language219_singleField_noComma() async {
     await assertNoErrorsInCode(r'''
 // @dart = 2.19
 final x = (0);
 ''');
 
-    final node = findNode.singleVariableDeclaration;
+    var node = findNode.singleVariableDeclaration;
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -507,7 +928,7 @@ final x = const (0);
           1),
     ]);
 
-    final node = findNode.singleVariableDeclaration;
+    var node = findNode.singleVariableDeclaration;
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -531,7 +952,7 @@ final x = (0,);
       error(ParserErrorCode.EXPERIMENT_NOT_ENABLED, 26, 1),
     ]);
 
-    final node = findNode.singleVariableDeclaration;
+    var node = findNode.singleVariableDeclaration;
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -555,7 +976,7 @@ final x = (0, 1);
       error(ParserErrorCode.EXPERIMENT_NOT_ENABLED, 26, 1),
     ]);
 
-    final node = findNode.singleVariableDeclaration;
+    var node = findNode.singleVariableDeclaration;
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -579,7 +1000,7 @@ final x = ();
       error(ParserErrorCode.EXPERIMENT_NOT_ENABLED, 26, 1),
     ]);
 
-    final node = findNode.singleVariableDeclaration;
+    var node = findNode.singleVariableDeclaration;
     assertResolvedNodeText(node, r'''
 VariableDeclaration
   name: x
@@ -601,7 +1022,7 @@ VariableDeclaration
 final x = ();
 ''');
 
-    final node = findNode.recordLiteral('()');
+    var node = findNode.recordLiteral('()');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -615,7 +1036,7 @@ RecordLiteral
 final x = (0, f1: 1, 2, f2: 3, 4);
 ''');
 
-    final node = findNode.recordLiteral('(0,');
+    var node = findNode.recordLiteral('(0,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -659,7 +1080,7 @@ RecordLiteral
 final x = (f1: 0, f2: true);
 ''');
 
-    final node = findNode.recordLiteral('(f1:');
+    var node = findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -694,7 +1115,7 @@ RecordLiteral
 final x = (0, true);
 ''');
 
-    final node = findNode.recordLiteral('(0,');
+    var node = findNode.recordLiteral('(0,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -707,6 +1128,35 @@ RecordLiteral
       staticType: bool
   rightParenthesis: )
   staticType: (int, bool)
+''');
+  }
+
+  test_void_field() async {
+    await assertErrorsInCode(r'''
+void f() {}
+
+g() => (f(),);
+''', [
+      error(CompileTimeErrorCode.USE_OF_VOID_RESULT, 21, 3),
+    ]);
+
+    var node = findNode.recordLiteral('(f(),');
+    assertResolvedNodeText(node, r'''
+RecordLiteral
+  leftParenthesis: (
+  fields
+    MethodInvocation
+      methodName: SimpleIdentifier
+        token: f
+        staticElement: self::@function::f
+        staticType: void Function()
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticInvokeType: void Function()
+      staticType: void
+  rightParenthesis: )
+  staticType: (void,)
 ''');
   }
 }

@@ -163,7 +163,7 @@ class DynamicSelector extends Selector {
   @override
   final Name name;
 
-  static final kCall = new DynamicSelector(CallKind.Method, new Name('call'));
+  static final kCall = DynamicSelector(CallKind.Method, Name.callName);
 
   DynamicSelector(CallKind callKind, this.name) : super(callKind);
 
@@ -180,6 +180,32 @@ class DynamicSelector extends Selector {
 
   @override
   String toString() => 'dynamic ${_callKindPrefix}[${nodeToText(name)}]';
+}
+
+/// Function call with known function type.
+class FunctionSelector extends Selector {
+  final Type staticResultType;
+
+  @override
+  Name get name => Name.callName;
+
+  FunctionSelector(this.staticResultType) : super(CallKind.Method);
+
+  @override
+  Member? get member => null;
+
+  @override
+  int get hashCode => combineHashes(super.hashCode, staticResultType.hashCode);
+
+  @override
+  bool operator ==(other) =>
+      identical(this, other) ||
+      other is FunctionSelector &&
+          super == (other) &&
+          other.staticResultType == staticResultType;
+
+  @override
+  String toString() => 'function [=> ${staticResultType}]';
 }
 
 /// Arguments passed to a call, including implicit receiver argument.
@@ -208,11 +234,11 @@ class Args<T extends TypeExpr> {
 
   int _computeHashCode() {
     int hash = 1231;
-    for (var v in values) {
-      hash = combineHashes(hash, v.hashCode);
+    for (var i = 0; i < values.length; i++) {
+      hash = combineHashes(hash, values[i].hashCode);
     }
-    for (var n in names) {
-      hash = combineHashes(hash, n.hashCode);
+    for (var i = 0; i < names.length; i++) {
+      hash = combineHashes(hash, names[i].hashCode);
     }
     return hash;
   }

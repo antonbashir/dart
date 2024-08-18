@@ -216,6 +216,18 @@ extension E on A? {
     ]);
   }
 
+  test_methodInvocation_nuverNullable_extensionMethod() async {
+    await assertNoErrorsInCode(r'''
+extension<X> on X {
+  X m() => this;
+}
+
+Future<void> f(Never? x) async {
+  (await x).m();
+}
+''');
+  }
+
   test_prefixExpression_minus_nonNullable() async {
     await assertNoErrorsInCode(r'''
 class A {
@@ -427,8 +439,7 @@ m(B b) {
           104, 1),
     ]);
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('x = 1'), r'''
+    assertResolvedNodeText(findNode.assignment('x = 1'), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
@@ -461,12 +472,8 @@ AssignmentExpression
   staticElement: <null>
   staticType: int?
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('x = 1'), r'''''');
-    }
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('x = 2'), r'''
+    assertResolvedNodeText(findNode.assignment('x = 2'), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
@@ -499,9 +506,6 @@ AssignmentExpression
   staticElement: <null>
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('x = 2'), r'''''');
-    }
   }
 
   test_assignment_eq_simpleIdentifier() async {
@@ -512,8 +516,7 @@ m(int x, int? y) {
 }
 ''');
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('x ='), r'''
+    assertResolvedNodeText(findNode.assignment('x ='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: x
@@ -531,12 +534,8 @@ AssignmentExpression
   staticElement: <null>
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('x ='), r'''''');
-    }
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('y ='), r'''
+    assertResolvedNodeText(findNode.assignment('y ='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: y
@@ -554,9 +553,6 @@ AssignmentExpression
   staticElement: <null>
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('y ='), r'''''');
-    }
   }
 
   test_assignment_plusEq_propertyAccess3() async {
@@ -581,8 +577,7 @@ m(B b) {
           115, 2),
     ]);
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('x +='), r'''
+    assertResolvedNodeText(findNode.assignment('x +='), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
@@ -615,12 +610,8 @@ AssignmentExpression
   staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('x +='), r'''''');
-    }
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('y +='), r'''
+    assertResolvedNodeText(findNode.assignment('y +='), r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: PrefixedIdentifier
@@ -653,9 +644,6 @@ AssignmentExpression
   staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('y +='), r'''''');
-    }
   }
 
   test_assignment_plusEq_propertyAccess3_short1() async {
@@ -759,8 +747,7 @@ m(int x, int? y) {
           33, 2),
     ]);
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('x +='), r'''
+    assertResolvedNodeText(findNode.assignment('x +='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: x
@@ -778,12 +765,8 @@ AssignmentExpression
   staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('x +='), r'''''');
-    }
 
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(findNode.assignment('y +='), r'''
+    assertResolvedNodeText(findNode.assignment('y +='), r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: y
@@ -801,9 +784,6 @@ AssignmentExpression
   staticElement: dart:core::@class::num::@method::+
   staticType: int
 ''');
-    } else {
-      assertResolvedNodeText(findNode.assignment('y +='), r'''''');
-    }
   }
 
   test_await_nonNullable() async {
@@ -923,6 +903,19 @@ m() {
       error(HintCode.UNUSED_LOCAL_VARIABLE, 28, 1),
       error(CompileTimeErrorCode.UNCHECKED_USE_OF_NULLABLE_VALUE_AS_ITERATOR,
           33, 1),
+    ]);
+  }
+
+  test_forLoop_pattern_nullable() async {
+    await assertErrorsInCode(r'''
+m() {
+  List? x;
+  for (var (y) in x) {}
+}
+''', [
+      error(HintCode.UNUSED_LOCAL_VARIABLE, 29, 1),
+      error(CompileTimeErrorCode.UNCHECKED_USE_OF_NULLABLE_VALUE_AS_ITERATOR,
+          35, 1),
     ]);
   }
 
@@ -1090,7 +1083,7 @@ m() {
           20, 6),
     ]);
 
-    final node = findNode.simple('isEven');
+    var node = findNode.simple('isEven');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: isEven

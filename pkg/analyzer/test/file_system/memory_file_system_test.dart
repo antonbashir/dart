@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/memory_file_system.dart';
+import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/generated/engine.dart' show TimestampedData;
 import 'package:analyzer/src/generated/utilities_dart.dart';
@@ -23,6 +24,7 @@ main() {
     defineReflectiveTests(MemoryFileSourceNotExistingTest);
     defineReflectiveTests(MemoryFileTest);
     defineReflectiveTests(MemoryFolderTest);
+    defineReflectiveTests(MemoryLinkTest);
     defineReflectiveTests(MemoryResourceProviderTest);
   });
 }
@@ -57,11 +59,6 @@ abstract class BaseTest extends FileSystemTestSupport {
   @override
   MemoryResourceProvider get provider => _provider ??= createProvider();
 
-  @override
-  void createLink({required String path, required String target}) {
-    provider.newLink(path, target);
-  }
-
   /// Create the resource provider to be used by the tests. Subclasses can
   /// override this method to change the class of resource provider that is
   /// used.
@@ -93,6 +90,17 @@ abstract class BaseTest extends FileSystemTestSupport {
     return provider.getFolder(folderPath);
   }
 
+  @override
+  Link getLink({required String linkPath, String? target}) {
+    linkPath = provider.convertPath(linkPath);
+    if (target != null) {
+      target = provider.convertPath(target);
+
+      provider.newLink(linkPath, target);
+    }
+    return provider.getLink(linkPath);
+  }
+
   setUp() {
     tempPath = provider.convertPath('/temp');
     defaultFolderPath = join(tempPath, 'bar');
@@ -121,7 +129,7 @@ class MemoryFileSourceExistingTest extends BaseTest {
     super.setUp();
     File file = getFile(exists: true);
     sourcePath = file.path;
-    source = file.createSource();
+    source = FileSource(file);
   }
 
   test_contents() {
@@ -132,8 +140,8 @@ class MemoryFileSourceExistingTest extends BaseTest {
   test_equals_false_differentFile() {
     File fileA = getFile(exists: false, filePath: join(tempPath, 'a.dart'));
     File fileB = getFile(exists: false, filePath: join(tempPath, 'b.dart'));
-    Source sourceA = fileA.createSource();
-    Source sourceB = fileB.createSource();
+    Source sourceA = FileSource(fileA);
+    Source sourceB = FileSource(fileB);
 
     expect(sourceA == sourceB, isFalse);
   }
@@ -143,8 +151,10 @@ class MemoryFileSourceExistingTest extends BaseTest {
   }
 
   test_equals_true_sameFile() {
-    Source sourceA = getFile(exists: false).createSource();
-    Source sourceB = getFile(exists: false).createSource();
+    var fileA = getFile(exists: false);
+    var fileB = getFile(exists: false);
+    Source sourceA = FileSource(fileA);
+    Source sourceB = FileSource(fileB);
 
     expect(sourceA == sourceB, isTrue);
   }
@@ -180,7 +190,7 @@ class MemoryFileSourceExistingTest extends BaseTest {
     File file = getFile(
         exists: false,
         filePath: provider.convertPath('/sdk/lib/core/core.dart'));
-    Source source = file.createSource(Uri.parse('dart:core'));
+    Source source = FileSource(file, Uri.parse('dart:core'));
 
     Uri resolved = resolveRelativeUri(source.uri, Uri.parse('int.dart'));
     expect(resolved.toString(), 'dart:core/int.dart');
@@ -201,7 +211,7 @@ class MemoryFileSourceNotExistingTest extends BaseTest {
     super.setUp();
     File file = getFile(exists: false);
     sourcePath = file.path;
-    source = file.createSource();
+    source = FileSource(file);
   }
 
   test_contents() {
@@ -291,6 +301,9 @@ class MemoryFolderTest extends BaseTest with FolderTestMixin {
     expect(provider.getFolder(path).isRoot, isTrue);
   }
 }
+
+@reflectiveTest
+class MemoryLinkTest extends BaseTest with LinkTestMixin {}
 
 @reflectiveTest
 class MemoryResourceProviderTest extends BaseTest

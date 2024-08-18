@@ -4,6 +4,7 @@
 
 import 'package:analysis_server/protocol/protocol.dart';
 import 'package:analysis_server/protocol/protocol_generated.dart';
+import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/services/linter/lint_names.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
@@ -363,6 +364,20 @@ A f() => new A();
 ''');
     await assertNoEdits();
   }
+
+  Future<void> test_unnecessaryNew_macroGenerated() async {
+    newAnalysisOptionsYamlFile(testPackageRootPath, '''
+linter:
+  rules:
+    - unnecessary_new
+''');
+    var macroFilePath = join(testPackageLibPath, 'test.macro.dart');
+    newFile(macroFilePath, '''
+class A {}
+A f() => new A();
+''');
+    await assertNoEdits();
+  }
 }
 
 abstract class BulkFixesTest extends PubPackageAnalysisServerTest {
@@ -407,6 +422,7 @@ abstract class BulkFixesTest extends PubPackageAnalysisServerTest {
   Future<void> setUp() async {
     super.setUp();
     registerLintRules();
+    registerBuiltInProducers();
     await setRoots(included: [workspaceRootPath], excluded: []);
   }
 
@@ -423,9 +439,11 @@ abstract class BulkFixesTest extends PubPackageAnalysisServerTest {
   Future<EditBulkFixesResult> _getBulkFixes() async {
     var request = _getRequest();
     var response = await handleSuccessfulRequest(request);
-    return EditBulkFixesResult.fromResponse(response);
+    return EditBulkFixesResult.fromResponse(response,
+        clientUriConverter: server.uriConverter);
   }
 
   Request _getRequest() =>
-      EditBulkFixesParams([workspaceRoot.path], codes: codes).toRequest('0');
+      EditBulkFixesParams([workspaceRoot.path], codes: codes)
+          .toRequest('0', clientUriConverter: server.uriConverter);
 }

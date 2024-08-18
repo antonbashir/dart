@@ -21,12 +21,12 @@ class MoveFileTest extends RefactoringTest {
   late MoveFileRefactoring refactoring;
 
   Future<void> test_file_containing_imports_exports_parts() async {
-    final root = '/home/test/000/1111';
+    var root = '/home/test/000/1111';
     testFilePath = convertPath('$root/test.dart');
     newFile('/absolute/uri.dart', '');
-    final fileA = newFile('$root/a.dart', 'part of lib;');
-    final fileB = newFile('$root/b.dart', "import 'test.dart';");
-    final fileC = newFile('$root/22/c.dart', '');
+    var fileA = newFile('$root/a.dart', 'part of lib;');
+    var fileB = newFile('$root/b.dart', "import 'test.dart';");
+    var fileC = newFile('$root/22/c.dart', '');
     verifyNoTestUnitErrors = false;
     await resolveTestCode('''
 library lib;
@@ -249,6 +249,31 @@ import 'new_name.dart';
     assertNoFileChange(testFile.path);
   }
 
+  Future<void> test_file_importedByMacro() async {
+    addMacros([declareInLibraryMacro()]);
+
+    var oldFile = newFile('$testPackageLibPath/old_name.dart', '''
+int x = 0;
+''');
+
+    await indexTestUnit(r'''
+import 'package:test/old_name.dart';
+import 'macros.dart';
+
+@DeclareInLibrary('final y = x;')
+class A { }
+''');
+
+    _createRefactoring('$testPackageLibPath/new_name.dart',
+        oldFile: oldFile.path);
+    await assertRefactoringConditionsOK();
+    var refactoringChange = await refactoring.createChange();
+
+    // Verify that `test.macro.dart` is unmodified.
+    expect(refactoringChange.edits.map((e) => e.file),
+        unorderedEquals([testFile.path]));
+  }
+
   Future<void> test_file_moveOutOfLib() async {
     var binMainPath = convertPath('/home/test/bin/main.dart');
     newFile(binMainPath, '''
@@ -414,10 +439,10 @@ part '22/new_name.dart';
   }
 
   Future<void> test_folder_inside_project() async {
-    final pathA = convertPath('/home/test/lib/old/a.dart');
-    final pathB = convertPath('/home/test/lib/old/b.dart');
-    final pathC = convertPath('/home/test/lib/old/nested/c.dart');
-    final pathD = convertPath('/home/test/lib/old/nested/d.dart');
+    var pathA = convertPath('/home/test/lib/old/a.dart');
+    var pathB = convertPath('/home/test/lib/old/b.dart');
+    var pathC = convertPath('/home/test/lib/old/nested/c.dart');
+    var pathD = convertPath('/home/test/lib/old/nested/d.dart');
     testFilePath = convertPath('/home/test/lib/test.dart');
     newFile(pathA, '');
     newFile(pathB, '');
@@ -455,7 +480,7 @@ import 'package:test/new/nested/d.dart';
 
   Future<void> test_folder_siblingFiles() async {
     testFilePath = convertPath('/home/test/lib/old/a.dart');
-    final pathB = convertPath('/home/test/lib/old/b.dart');
+    var pathB = convertPath('/home/test/lib/old/b.dart');
     newFile(pathB, '');
     await resolveTestCode('''
 import 'b.dart';

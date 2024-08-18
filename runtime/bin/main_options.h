@@ -49,8 +49,11 @@ namespace bin {
   V(bypass_trusting_system_roots, bypass_trusting_system_roots)                \
   V(delayed_filewatch_callback, delayed_filewatch_callback)                    \
   V(mark_main_isolate_as_system_isolate, mark_main_isolate_as_system_isolate)  \
+  V(no_serve_devtools, disable_devtools)                                       \
+  V(serve_devtools, enable_devtools)                                           \
   V(no_serve_observatory, disable_observatory)                                 \
-  V(serve_observatory, enable_observatory)
+  V(serve_observatory, enable_observatory)                                     \
+  V(print_dtd, print_dtd)
 
 // Boolean flags that have a short form.
 #define SHORT_BOOL_OPTIONS_LIST(V)                                             \
@@ -101,6 +104,7 @@ class Options {
   static bool ParseArguments(int argc,
                              char** argv,
                              bool vm_run_app_snapshot,
+                             bool parsing_dart_vm_options,
                              CommandLineOptions* vm_options,
                              char** script_name,
                              CommandLineOptions* dart_options,
@@ -144,6 +148,14 @@ class Options {
   static const char* vm_service_server_ip() { return vm_service_server_ip_; }
   static int vm_service_server_port() { return vm_service_server_port_; }
 
+  // TODO(bkonyi): remove once DartDev moves to AOT and this flag can be
+  // provided directly to the process spawned by `dart run` and `dart test`.
+  //
+  // See https://github.com/dart-lang/sdk/issues/53576
+  static void set_mark_main_isolate_as_system_isolate(bool state) {
+    mark_main_isolate_as_system_isolate_ = state;
+  }
+
   static Dart_KernelCompilationVerbosityLevel verbosity_level() {
     return VerbosityLevelToDartAPI(verbosity_);
   }
@@ -155,9 +167,19 @@ class Options {
   static void PrintUsage();
   static void PrintVersion();
 
-  static void DestroyEnvironment();
+  static void Cleanup();
+
+#if defined(DART_PRECOMPILED_RUNTIME)
+  // Get the list of options in DART_VM_OPTIONS.
+  static char** GetEnvArguments(int* argc);
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
 
  private:
+  static void DestroyEnvironment();
+#if defined(DART_PRECOMPILED_RUNTIME)
+  static void DestroyEnvArgv();
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
+
 #define STRING_OPTION_DECL(flag, variable) static const char* variable##_;
   STRING_OPTIONS_LIST(STRING_OPTION_DECL)
 #undef STRING_OPTION_DECL
@@ -179,6 +201,11 @@ class Options {
 #undef ENUM_OPTION_DECL
 
   static dart::SimpleHashMap* environment_;
+
+#if defined(DART_PRECOMPILED_RUNTIME)
+  static char** env_argv_;
+  static int env_argc_;
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
 
 // Frontend argument processing.
 #if !defined(DART_PRECOMPILED_RUNTIME)

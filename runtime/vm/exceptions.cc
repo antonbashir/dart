@@ -355,7 +355,7 @@ class ExceptionHandlerFinder : public StackResource {
   Thread* thread_;
   Code* code_;
   bool handler_pc_set_;
-  intptr_t pc_;             // Current pc in the handler frame.
+  intptr_t pc_;  // Current pc in the handler frame.
 
   const CatchEntryMoves* catch_entry_moves_ = nullptr;
   CatchEntryMovesCache* catch_entry_moves_cache_ = nullptr;
@@ -378,71 +378,80 @@ void CatchEntryMove::WriteTo(BaseWriteStream* stream) {
 #endif
 
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_DISASSEMBLER)
+static intptr_t SlotIndexToFrameIndex(intptr_t slot) {
+  return runtime_frame_layout.FrameSlotForVariableIndex(-slot);
+}
+
+static intptr_t SlotIndexToFpRelativeOffset(intptr_t slot) {
+  return SlotIndexToFrameIndex(slot) * compiler::target::kWordSize;
+}
+
 const char* CatchEntryMove::ToCString() const {
   char from[256];
 
   switch (source_kind()) {
     case SourceKind::kConstant:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "pp[%" Pd "]", src_slot());
+      Utils::SNPrint(from, ARRAY_SIZE(from), "pp[%" Pd "]",
+                     SlotIndexToFrameIndex(src_slot()));
       break;
 
     case SourceKind::kTaggedSlot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "fp[%" Pd "]", src_slot());
+      Utils::SNPrint(from, ARRAY_SIZE(from), "fp[%" Pd "]",
+                     SlotIndexToFrameIndex(src_slot()));
       break;
 
     case SourceKind::kFloatSlot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "f32 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "f32 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kDoubleSlot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "f64 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "f64 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kFloat32x4Slot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "f32x4 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "f32x4 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kFloat64x2Slot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "f64x2 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "f64x2 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kInt32x4Slot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "i32x4 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "i32x4 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kInt64PairSlot:
-      Utils::SNPrint(from, ARRAY_SIZE(from),
-                     "i64 ([fp + %" Pd "], [fp + %" Pd "])",
-                     src_lo_slot() * compiler::target::kWordSize,
-                     src_hi_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "i64 ([fp%+" Pd "], [fp%+" Pd "])",
+                     SlotIndexToFpRelativeOffset(src_lo_slot()),
+                     SlotIndexToFpRelativeOffset(src_hi_slot()));
       break;
 
     case SourceKind::kInt64Slot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "i64 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "i64 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kInt32Slot:
-      Utils::SNPrint(from, ARRAY_SIZE(from), "i32 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+      Utils::SNPrint(from, ARRAY_SIZE(from), "i32 [fp%+" Pd "]",
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     case SourceKind::kUint32Slot:
       Utils::SNPrint(from, ARRAY_SIZE(from), "u32 [fp + %" Pd "]",
-                     src_slot() * compiler::target::kWordSize);
+                     SlotIndexToFpRelativeOffset(src_slot()));
       break;
 
     default:
       UNREACHABLE();
   }
 
-  return Thread::Current()->zone()->PrintToString("fp[%" Pd "] <- %s",
-                                                  dest_slot(), from);
+  return Thread::Current()->zone()->PrintToString(
+      "fp[%+" Pd "] <- %s", SlotIndexToFrameIndex(dest_slot()), from);
 }
 
 void CatchEntryMovesMapReader::PrintEntries() {
@@ -618,11 +627,12 @@ static void JumpToExceptionHandler(Thread* thread,
 }
 
 NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
-void Exceptions::JumpToFrame(Thread* thread,
-                             uword program_counter,
-                             uword stack_pointer,
-                             uword frame_pointer,
-                             bool clear_deopt_at_target) {
+    void
+    Exceptions::JumpToFrame(Thread* thread,
+                            uword program_counter,
+                            uword stack_pointer,
+                            uword frame_pointer,
+                            bool clear_deopt_at_target) {
   ASSERT(thread->execution_state() == Thread::kThreadInVM);
   const uword fp_for_clearing =
       (clear_deopt_at_target ? frame_pointer + 1 : frame_pointer);
@@ -721,7 +731,8 @@ DART_NORETURN
 static void ThrowExceptionHelper(Thread* thread,
                                  const Instance& incoming_exception,
                                  const Instance& existing_stacktrace,
-                                 const bool is_rethrow) {
+                                 const bool is_rethrow,
+                                 const bool bypass_debugger) {
   // SuspendLongJumpScope during Dart entry ensures that if a longjmp base is
   // available, it is the innermost error handler. If one is available, so
   // should jump there instead.
@@ -730,12 +741,14 @@ static void ThrowExceptionHelper(Thread* thread,
   auto object_store = thread->isolate_group()->object_store();
   Isolate* isolate = thread->isolate();
 #if !defined(PRODUCT)
-  // Do not notify debugger on stack overflow and out of memory exceptions.
-  // The VM would crash when the debugger calls back into the VM to
-  // get values of variables.
-  if (incoming_exception.ptr() != object_store->out_of_memory() &&
-      incoming_exception.ptr() != object_store->stack_overflow()) {
-    isolate->debugger()->PauseException(incoming_exception);
+  if (!bypass_debugger) {
+    // Do not notify debugger on stack overflow and out of memory exceptions.
+    // The VM would crash when the debugger calls back into the VM to
+    // get values of variables.
+    if (incoming_exception.ptr() != object_store->out_of_memory() &&
+        incoming_exception.ptr() != object_store->stack_overflow()) {
+      isolate->debugger()->PauseException(incoming_exception);
+    }
   }
 #endif
   bool use_preallocated_stacktrace = false;
@@ -966,21 +979,25 @@ void Exceptions::CreateAndThrowTypeError(TokenPosition location,
 void Exceptions::Throw(Thread* thread, const Instance& exception) {
   // Null object is a valid exception object.
   ThrowExceptionHelper(thread, exception, StackTrace::Handle(thread->zone()),
-                       false);
+                       /*is_rethrow=*/false,
+                       /*bypass_debugger=*/false);
 }
 
 void Exceptions::ReThrow(Thread* thread,
                          const Instance& exception,
-                         const Instance& stacktrace) {
+                         const Instance& stacktrace,
+                         bool bypass_debugger /* = false */) {
   // Null object is a valid exception object.
-  ThrowExceptionHelper(thread, exception, stacktrace, true);
+  ThrowExceptionHelper(thread, exception, stacktrace, /*is_rethrow=*/true,
+                       bypass_debugger);
 }
 
 void Exceptions::ThrowWithStackTrace(Thread* thread,
                                      const Instance& exception,
                                      const Instance& stacktrace) {
   // Null object is a valid exception object.
-  ThrowExceptionHelper(thread, exception, stacktrace, false);
+  ThrowExceptionHelper(thread, exception, stacktrace, /*is_rethrow=*/false,
+                       /*bypass_debugger=*/false);
 }
 
 void Exceptions::PropagateError(const Error& error) {
@@ -1185,10 +1202,6 @@ ObjectPtr Exceptions::Create(ExceptionType type, const Array& arguments) {
       constructor_name = &Symbols::DotCreate();
       break;
 #endif
-    case kCyclicInitializationError:
-      library = Library::CoreLibrary();
-      class_name = &Symbols::_CyclicInitializationError();
-      break;
     case kCompileTimeError:
       library = Library::CoreLibrary();
       class_name = &Symbols::_CompileTimeError();

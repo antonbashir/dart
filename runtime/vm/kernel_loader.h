@@ -212,6 +212,17 @@ class KernelLoader : public ValueObject {
   void ReadObfuscationProhibitions();
   void ReadLoadingUnits();
 
+  // Get closure Function from cache or create it if it is not created yet.
+  // [func_decl_offset] is an offset FunctionExpression or FunctionDeclaration.
+  static FunctionPtr GetClosureFunction(Thread* thread,
+                                        intptr_t func_decl_offset,
+                                        const Function& member_function,
+                                        const Function& parent_function,
+                                        const Object& closure_owner);
+
+  static void index_programs(kernel::Reader* reader,
+                             GrowableArray<intptr_t>* subprogram_file_starts);
+
  private:
   // Pragma bits
   using HasPragma = BitField<uint32_t, bool, 0, 1>;
@@ -220,8 +231,15 @@ class KernelLoader : public ValueObject {
       BitField<uint32_t, bool, ExternalNamePragma::kNextBit, 1>;
   using IsolateUnsendablePragma =
       BitField<uint32_t, bool, InvisibleFunctionPragma::kNextBit, 1>;
-  using FfiNativePragma =
+  using DeeplyImmutablePragma =
       BitField<uint32_t, bool, IsolateUnsendablePragma::kNextBit, 1>;
+  using FfiNativePragma =
+      BitField<uint32_t, bool, DeeplyImmutablePragma::kNextBit, 1>;
+  using SharedPragma = BitField<uint32_t, bool, FfiNativePragma::kNextBit, 1>;
+  using DynModuleExtendablePragma =
+      BitField<uint32_t, bool, SharedPragma::kNextBit, 1>;
+  using DynModuleCanBeOverriddenPragma =
+      BitField<uint32_t, bool, DynModuleExtendablePragma::kNextBit, 1>;
 
   void FinishTopLevelClassLoading(const Class& toplevel_class,
                                   const Library& library,
@@ -229,8 +247,7 @@ class KernelLoader : public ValueObject {
 
   bool IsClassName(NameIndex name, const String& library, const String& klass);
 
-  void ReadVMAnnotations(const Library& library,
-                         intptr_t annotation_count,
+  void ReadVMAnnotations(intptr_t annotation_count,
                          uint32_t* pragma_bits,
                          String* native_name = nullptr);
 
@@ -270,8 +287,6 @@ class KernelLoader : public ValueObject {
 
   uint8_t CharacterAt(StringIndex string_index, intptr_t index);
 
-  static void index_programs(kernel::Reader* reader,
-                             GrowableArray<intptr_t>* subprogram_file_starts);
   void walk_incremental_kernel(BitVector* modified_libs,
                                bool* is_empty_program,
                                intptr_t* p_num_classes,
@@ -333,6 +348,12 @@ class KernelLoader : public ValueObject {
   ClassPtr LookupClass(const Library& library, NameIndex klass);
 
   UntaggedFunction::Kind GetFunctionType(ProcedureHelper::Kind procedure_kind);
+
+  // Read local function (either FunctionExpression or FunctionDeclaration)
+  // and create corresponding Function object.
+  // If [closure_owner] is not null, it overrides closure function owner.
+  FunctionPtr LoadClosureFunction(const Function& parent_function,
+                                  const Object& closure_owner);
 
   Program* program_;
 

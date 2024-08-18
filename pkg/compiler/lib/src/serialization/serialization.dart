@@ -17,13 +17,13 @@ import '../elements/types.dart';
 import '../inferrer/abstract_value_domain.dart';
 import '../io/source_information.dart';
 import '../ir/constants.dart';
-import '../ir/static_type_base.dart';
 import '../js/js.dart' as js;
 import '../js_model/closure.dart';
 import '../js_model/elements.dart';
 import '../js_model/locals.dart';
 import '../js_model/type_recipe.dart' show TypeRecipe;
 import '../universe/record_shape.dart' show RecordShape;
+import '../universe/selector.dart';
 
 import '../options.dart';
 import 'deferrable.dart';

@@ -62,7 +62,7 @@ foo(param1, param2, param3) {
 """;
 
 const String PARAMETER_INIT = r"""
-int foo(var start, var test) {
+void foo(var start, var test) {
   var result = start;
   if (test) {
     foo(1, 2);
@@ -87,16 +87,16 @@ main() {
     });
     await compile(MULTIPLE_PHIS_ONE_LOCAL, entry: 'foo',
         check: (String generated) {
-      Expect.isTrue(generated.contains("var a;"));
+      Expect.isTrue(generated.contains(RegExp(r'var a(;| = 2;)')));
       // Check that there is only one var declaration.
-      checkNumberOfMatches(new RegExp("var").allMatches(generated).iterator, 1);
+      checkNumberOfMatches(RegExp("var").allMatches(generated).iterator, 1);
     });
     await compile(NO_LOCAL, entry: 'foo', check: (String generated) {
       Expect.isFalse(generated.contains('var'));
     });
     await compile(PARAMETER_INIT, entry: 'foo', check: (String generated) {
       // Check that there is only one var declaration.
-      checkNumberOfMatches(new RegExp("var").allMatches(generated).iterator, 1);
+      checkNumberOfMatches(RegExp("var").allMatches(generated).iterator, 1);
     });
   }
 

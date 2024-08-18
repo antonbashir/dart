@@ -50,7 +50,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RedefinitionAfterStrictCompareWithNull) {
 
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    v0 = builder.AddParameter(0, kTagged);
     builder.AddBranch(
         new StrictCompareInstr(
             InstructionSource(), Token::kEQ_STRICT, new Value(v0),
@@ -79,13 +79,13 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RedefinitionAfterStrictCompareWithNull) {
 
   // In B2 v0 should not have any additional type information so reaching
   // type should be still nullable int.
-  auto b2_value = b2->last_instruction()->AsReturn()->value();
+  auto b2_value = b2->last_instruction()->AsDartReturn()->value();
   EXPECT(b2_value->Type()->IsNullableInt());
 
   // In B3 v0 is constrained by comparison with null - it should be non-nullable
   // integer. There should be a Redefinition inserted to prevent LICM past
   // the branch.
-  auto b3_value = b3->last_instruction()->AsReturn()->value();
+  auto b3_value = b3->last_instruction()->AsDartReturn()->value();
   EXPECT(b3_value->Type()->IsInt());
   EXPECT(b3_value->definition()->IsRedefinition());
   EXPECT(b3_value->definition()->GetBlock() == b3);
@@ -117,7 +117,7 @@ ISOLATE_UNIT_TEST_CASE(
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    v0 = builder.AddParameter(0, kTagged);
     auto load_cid = builder.AddDefinition(new LoadClassIdInstr(new Value(v0)));
     builder.AddBranch(
         new StrictCompareInstr(
@@ -144,13 +144,13 @@ ISOLATE_UNIT_TEST_CASE(
   // There should be no information available about the incoming type of
   // the parameter either on entry or in B3.
   EXPECT_PROPERTY(v0->Type()->ToAbstractType(), it.IsDynamicType());
-  auto b3_value = b3->last_instruction()->AsReturn()->value();
+  auto b3_value = b3->last_instruction()->AsDartReturn()->value();
   EXPECT(b3_value->Type() == v0->Type());
 
   // In B3 v0 is constrained by comparison of its cid with kDoubleCid - it
   // should be non-nullable double. There should be a Redefinition inserted to
   // prevent LICM past the branch.
-  auto b2_value = b2->last_instruction()->AsReturn()->value();
+  auto b2_value = b2->last_instruction()->AsDartReturn()->value();
   EXPECT_PROPERTY(b2_value->Type(), it.IsDouble());
   EXPECT_PROPERTY(b2_value->definition(), it.IsRedefinition());
   EXPECT_PROPERTY(b2_value->definition()->GetBlock(), &it == b2);
@@ -216,7 +216,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_Refinement) {
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    v0 = builder.AddParameter(0, kTagged);
     builder.AddBranch(new StrictCompareInstr(
                           InstructionSource(), Token::kEQ_STRICT, new Value(v0),
                           new Value(H.IntConstant(1)),
@@ -307,7 +307,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_Regress36156) {
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    v0 = builder.AddParameter(0, kTagged);
     builder.AddBranch(new StrictCompareInstr(
                           InstructionSource(), Token::kEQ_STRICT, new Value(v0),
                           new Value(H.IntConstant(1)),
@@ -350,8 +350,8 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_Regress36156) {
     BlockBuilder builder(H.flow_graph(), b7);
     v5 = H.Phi(b7, {{b5, v3}, {b6, H.DoubleConstant(1.0)}});
     builder.AddPhi(v5);
-    builder.AddInstruction(new ReturnInstr(InstructionSource(), new Value(v5),
-                                           S.GetNextDeoptId()));
+    builder.AddInstruction(new DartReturnInstr(
+        InstructionSource(), new Value(v5), S.GetNextDeoptId()));
   }
 
   H.FinishGraph();
@@ -400,9 +400,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_Regress36156) {
 ISOLATE_UNIT_TEST_CASE(CompileType_CanBeSmi) {
   CompilerState S(thread, /*is_aot=*/false, /*is_optimizing=*/true);
 
-  const char* late_tag = TestCase::LateTag();
-  auto script_chars = Utils::CStringUniquePtr(
-      OS::SCreate(nullptr, R"(
+  const char* script_chars = R"(
 import 'dart:async';
 
 class G<T> {}
@@ -412,50 +410,44 @@ class C<NoBound,
         ComparableBound extends Comparable,
         StringBound extends String> {
   // Simple instantiated types.
-  @pragma('vm-test:can-be-smi') %s int t1;
-  @pragma('vm-test:can-be-smi') %s num t2;
-  @pragma('vm-test:can-be-smi') %s Object t3;
-  %s String t4;
+  @pragma('vm-test:can-be-smi') late int t1;
+  @pragma('vm-test:can-be-smi') late num t2;
+  @pragma('vm-test:can-be-smi') late Object t3;
+  late String t4;
 
   // Type parameters.
-  @pragma('vm-test:can-be-smi') %s NoBound tp1;
-  @pragma('vm-test:can-be-smi') %s NumBound tp2;
-  @pragma('vm-test:can-be-smi') %s ComparableBound tp3;
-  %s StringBound tp4;
+  @pragma('vm-test:can-be-smi') late NoBound tp1;
+  @pragma('vm-test:can-be-smi') late NumBound tp2;
+  @pragma('vm-test:can-be-smi') late ComparableBound tp3;
+  late StringBound tp4;
 
   // Comparable<T> instantiations.
-  @pragma('vm-test:can-be-smi') %s Comparable c1;
-  %s Comparable<String> c2;
-  @pragma('vm-test:can-be-smi') %s Comparable<num> c3;
-  %s Comparable<int> c4;  // int is not a subtype of Comparable<int>.
-  @pragma('vm-test:can-be-smi') %s Comparable<NoBound> c5;
-  @pragma('vm-test:can-be-smi') %s Comparable<NumBound> c6;
-  @pragma('vm-test:can-be-smi') %s Comparable<ComparableBound> c7;
-  %s Comparable<StringBound> c8;
+  @pragma('vm-test:can-be-smi') late Comparable c1;
+  late Comparable<String> c2;
+  @pragma('vm-test:can-be-smi') late Comparable<num> c3;
+  late Comparable<int> c4;  // int is not a subtype of Comparable<int>.
+  @pragma('vm-test:can-be-smi') late Comparable<NoBound> c5;
+  @pragma('vm-test:can-be-smi') late Comparable<NumBound> c6;
+  @pragma('vm-test:can-be-smi') late Comparable<ComparableBound> c7;
+  late Comparable<StringBound> c8;
 
   // FutureOr<T> instantiations.
-  @pragma('vm-test:can-be-smi') %s FutureOr fo1;
-  %s FutureOr<String> fo2;
-  @pragma('vm-test:can-be-smi') %s FutureOr<num> fo3;
-  @pragma('vm-test:can-be-smi') %s FutureOr<int> fo4;
-  @pragma('vm-test:can-be-smi') %s FutureOr<NoBound> fo5;
-  @pragma('vm-test:can-be-smi') %s FutureOr<NumBound> fo6;
-  @pragma('vm-test:can-be-smi') %s FutureOr<ComparableBound> fo7;
-  %s FutureOr<StringBound> fo8;
+  @pragma('vm-test:can-be-smi') late FutureOr fo1;
+  late FutureOr<String> fo2;
+  @pragma('vm-test:can-be-smi') late FutureOr<num> fo3;
+  @pragma('vm-test:can-be-smi') late FutureOr<int> fo4;
+  @pragma('vm-test:can-be-smi') late FutureOr<NoBound> fo5;
+  @pragma('vm-test:can-be-smi') late FutureOr<NumBound> fo6;
+  @pragma('vm-test:can-be-smi') late FutureOr<ComparableBound> fo7;
+  late FutureOr<StringBound> fo8;
 
   // Other generic classes.
-  %s G<int> g1;
-  %s G<NoBound> g2;
+  late G<int> g1;
+  late G<NoBound> g2;
 }
-)",
-                  late_tag, late_tag, late_tag, late_tag, late_tag, late_tag,
-                  late_tag, late_tag, late_tag, late_tag, late_tag, late_tag,
-                  late_tag, late_tag, late_tag, late_tag, late_tag, late_tag,
-                  late_tag, late_tag, late_tag, late_tag, late_tag, late_tag,
-                  late_tag, late_tag),
-      std::free);
+)";
 
-  const auto& lib = Library::Handle(LoadTestScript(script_chars.get()));
+  const auto& lib = Library::Handle(LoadTestScript(script_chars));
 
   const auto& pragma_can_be_smi =
       String::Handle(Symbols::New(thread, "vm-test:can-be-smi"));
@@ -509,7 +501,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RegressFlutter76919) {
 
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    Definition* v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    Definition* v0 = builder.AddParameter(0, kTagged);
     auto null_value = builder.AddNullDefinition();
     builder.AddDefinition(new AssertAssignableInstr(
         InstructionSource(), new Value(v0),
@@ -534,11 +526,6 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RegressFlutter76919) {
 // is non-nullable with sound null safety.
 // Regression test for https://github.com/dart-lang/sdk/issues/47119.
 ISOLATE_UNIT_TEST_CASE(TypePropagator_NonNullableLoadStaticField) {
-  if (!IsolateGroup::Current()->null_safety()) {
-    // This test requires sound null safety.
-    return;
-  }
-
   const char* kScript = R"(
     const y = 0xDEADBEEF;
     final int x = int.parse('0xFEEDFEED');
@@ -571,7 +558,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_NonNullableLoadStaticField) {
       kMatchAndMoveBoxInt64,
       kMatchAndMoveMoveArgument,
       kMatchAndMoveStaticCall,
-      kMatchReturn,
+      kMatchDartReturn,
   }));
 
   EXPECT_PROPERTY(load->AsLoadStaticField()->Type(), !it.is_nullable());
@@ -639,11 +626,10 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RedefineCanBeSentinelWithCannotBe) {
   {
     BlockBuilder builder(H.flow_graph(), b3);
     v7 = builder.AddDefinition(new RedefinitionInstr(new Value(v3)));
-    CompileType int_type = CompileType::FromAbstractType(
-        Type::Handle(Type::IntType()),
-        /*can_be_null=*/
-        !IsolateGroup::Current()->use_strict_null_safety_checks(),
-        /*can_be_sentinel=*/false);
+    CompileType int_type =
+        CompileType::FromAbstractType(Type::Handle(Type::IntType()),
+                                      /*can_be_null=*/true,
+                                      /*can_be_sentinel=*/false);
     v7->AsRedefinition()->set_constrained_type(new CompileType(int_type));
     builder.AddInstruction(new GotoInstr(b4, S.GetNextDeoptId()));
   }
@@ -741,7 +727,7 @@ ISOLATE_UNIT_TEST_CASE(TypePropagator_RecordFieldAccess) {
       {kMatchAndMoveLoadField, &load2},
       kMatchAndMoveMoveArgument,
       kMatchAndMoveStaticCall,
-      kMatchReturn,
+      kMatchDartReturn,
   }));
 
   EXPECT_PROPERTY(load1->Type()->ToAbstractType(), it.IsIntType());

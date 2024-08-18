@@ -7,14 +7,19 @@ import 'dart:async';
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
+import 'package:analysis_server/src/lsp/error_or.dart';
+import 'package:analysis_server/src/lsp/handlers/custom/handler_augmentation.dart';
+import 'package:analysis_server/src/lsp/handlers/custom/handler_augmented.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_diagnostic_server.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_reanalyze.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_super.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_call_hierarchy.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_change_workspace_folders.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_code_actions.dart';
+import 'package:analysis_server/src/lsp/handlers/handler_code_lens.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_completion.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_completion_resolve.dart';
+import 'package:analysis_server/src/lsp/handlers/handler_dart_text_document_content_provider.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_definition.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_document_color.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_document_color_presentation.dart';
@@ -58,10 +63,8 @@ class FailureStateMessageHandler extends ServerStateMessageHandler {
 
   @override
   FutureOr<ErrorOr<Object?>> handleUnknownMessage(IncomingMessage message) {
-    return error(
-        ErrorCodes.InternalError,
-        'An unrecoverable error occurred and the server cannot process messages',
-        null);
+    return error(ErrorCodes.InternalError,
+        'An unrecoverable error occurred and the server cannot process messages');
   }
 }
 
@@ -78,7 +81,6 @@ class InitializedLspStateMessageHandler extends InitializedStateMessageHandler {
     CompletionResolveHandler.new,
     DefinitionHandler.new,
     DocumentLinkHandler.new,
-    SuperHandler.new,
     ReferencesHandler.new,
     CodeActionHandler.new,
     ExecuteCommandHandler.new,
@@ -98,7 +100,7 @@ class InitializedLspStateMessageHandler extends InitializedStateMessageHandler {
   InitializedLspStateMessageHandler(
     LspAnalysisServer server,
   ) : super(server) {
-    for (final generator in lspHandlerGenerators) {
+    for (var generator in lspHandlerGenerators) {
       registerHandler(generator(server));
     }
   }
@@ -113,6 +115,10 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
   /// Generators for handlers that work with any [AnalysisServer].
   static const sharedHandlerGenerators =
       <_RequestHandlerGenerator<AnalysisServer>>[
+    AugmentationHandler.new,
+    AugmentedHandler.new,
+    CodeLensHandler.new,
+    DartTextDocumentContentProviderHandler.new,
     DocumentColorHandler.new,
     DocumentColorPresentationHandler.new,
     DocumentHighlightsHandler.new,
@@ -127,6 +133,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
     PrepareCallHierarchyHandler.new,
     PrepareTypeHierarchyHandler.new,
     SignatureHelpHandler.new,
+    SuperHandler.new,
     TypeDefinitionHandler.new,
     TypeHierarchySubtypesHandler.new,
     TypeHierarchySupertypesHandler.new,
@@ -142,7 +149,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
     reject(Method.initialized, ServerErrorCodes.ServerAlreadyInitialized,
         'Server already initialized');
 
-    for (final generator in sharedHandlerGenerators) {
+    for (var generator in sharedHandlerGenerators) {
       registerHandler(generator(server));
     }
   }

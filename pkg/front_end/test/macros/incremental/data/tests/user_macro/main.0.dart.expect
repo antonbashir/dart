@@ -25,10 +25,10 @@ static method existingMethodDependency() → void {}
 library;
 import self as mac;
 import "dart:core" as core;
-import "package:_fe_analyzer_shared/src/macros/api.dart" as api;
+import "package:_macros/src/api.dart" as api;
 
 import "dart:async";
-import "package:_fe_analyzer_shared/src/macros/api.dart";
+import "package:macros/macros.dart";
 import "org-dartlang-test:///a/b/c/user_macro/macro_dependency.dart";
 
 macro class MethodMacro extends core::Object implements api::ClassDeclarationsMacro /*hasConstConstructor*/  {
@@ -36,7 +36,7 @@ macro class MethodMacro extends core::Object implements api::ClassDeclarationsMa
     : super core::Object::•()
     ;
   @#C2
-  method buildDeclarationsForClass(api::ClassDeclaration clazz, api::MemberDeclarationBuilder builder) → FutureOr<void> async /* futureValueType= void */ {}
+  method buildDeclarationsForClass(api::ClassDeclaration clazz, api::MemberDeclarationBuilder builder) → FutureOr<void> async /* emittedValueType= void */ {}
 }
 
 library;

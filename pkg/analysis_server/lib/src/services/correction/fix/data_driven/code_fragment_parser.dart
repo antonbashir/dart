@@ -8,6 +8,7 @@ import 'package:analysis_server/src/services/correction/fix/data_driven/transfor
 import 'package:analysis_server/src/services/correction/fix/data_driven/variable_scope.dart';
 import 'package:analysis_server/src/services/refactoring/framework/formal_parameter.dart';
 import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/src/utilities/extensions/string.dart';
 
 // Several "report" functions intentionally return a `Null`-typed value.
 // ignore_for_file: prefer_void_to_null
@@ -80,8 +81,12 @@ class CodeFragmentParser {
         }
         accessors.add(accessor);
       } else {
-        errorReporter.reportErrorForOffset(TransformSetErrorCode.wrongToken,
-            token.offset + delta, token.length, ['.', token.kind.displayName]);
+        errorReporter.atOffset(
+          offset: token.offset + delta,
+          length: token.length,
+          errorCode: TransformSetErrorCode.wrongToken,
+          arguments: ['.', token.kind.displayName],
+        );
         return null;
       }
     }
@@ -106,8 +111,12 @@ class CodeFragmentParser {
     var expression = _parseLogicalAndExpression();
     if (currentIndex < _tokens.length) {
       var token = _tokens[currentIndex];
-      errorReporter.reportErrorForOffset(TransformSetErrorCode.unexpectedToken,
-          token.offset + delta, token.length, [token.kind.displayName]);
+      errorReporter.atOffset(
+        offset: token.offset + delta,
+        length: token.length,
+        errorCode: TransformSetErrorCode.unexpectedToken,
+        arguments: [token.kind.displayName],
+      );
       return null;
     }
     return expression;
@@ -140,16 +149,21 @@ class CodeFragmentParser {
         offset = last.offset;
         length = last.length;
       }
-      errorReporter.reportErrorForOffset(TransformSetErrorCode.missingToken,
-          offset + delta, length, [validKindsDisplayString()]);
+      errorReporter.atOffset(
+        offset: offset + delta,
+        length: length,
+        errorCode: TransformSetErrorCode.missingToken,
+        arguments: [validKindsDisplayString()],
+      );
       return null;
     }
     if (!validKinds.contains(token.kind)) {
-      errorReporter.reportErrorForOffset(
-          TransformSetErrorCode.wrongToken,
-          token.offset + delta,
-          token.length,
-          [validKindsDisplayString(), token.kind.displayName]);
+      errorReporter.atOffset(
+        offset: token.offset + delta,
+        length: token.length,
+        errorCode: TransformSetErrorCode.wrongToken,
+        arguments: [validKindsDisplayString(), token.kind.displayName],
+      );
       return null;
     }
     return token;
@@ -217,8 +231,12 @@ class CodeFragmentParser {
       advance();
       return TypeArgumentAccessor(argumentIndex);
     } else {
-      errorReporter.reportErrorForOffset(TransformSetErrorCode.unknownAccessor,
-          token.offset + delta, token.length, [identifier]);
+      errorReporter.atOffset(
+        offset: token.offset + delta,
+        length: token.length,
+        errorCode: TransformSetErrorCode.unknownAccessor,
+        arguments: [identifier],
+      );
       return null;
     }
   }
@@ -293,11 +311,12 @@ class CodeFragmentParser {
         var variableName = token.lexeme;
         var generator = variableScope.lookup(variableName);
         if (generator == null) {
-          errorReporter.reportErrorForOffset(
-              TransformSetErrorCode.undefinedVariable,
-              token.offset + delta,
-              token.length,
-              [variableName]);
+          errorReporter.atOffset(
+            offset: token.offset + delta,
+            length: token.length,
+            errorCode: TransformSetErrorCode.undefinedVariable,
+            arguments: [variableName],
+          );
           return null;
         }
         return VariableReference(generator);
@@ -323,21 +342,17 @@ class CodeFragmentParser {
       offset = token.offset + delta;
       length = token.length;
     }
-    errorReporter.reportErrorForOffset(
-        TransformSetErrorCode.expectedPrimary, offset, length);
+    errorReporter.atOffset(
+      offset: offset,
+      length: length,
+      errorCode: TransformSetErrorCode.expectedPrimary,
+    );
     return null;
   }
 }
 
 /// A scanner for the textual representation of a code fragment.
 class _CodeFragmentScanner {
-  static final int $0 = '0'.codeUnitAt(0);
-  static final int $9 = '9'.codeUnitAt(0);
-  static final int $a = 'a'.codeUnitAt(0);
-  static final int $z = 'z'.codeUnitAt(0);
-  static final int $A = 'A'.codeUnitAt(0);
-  static final int $Z = 'Z'.codeUnitAt(0);
-
   static final int ampersand = '&'.codeUnitAt(0);
   static final int bang = '!'.codeUnitAt(0);
   static final int closeSquareBracket = ']'.codeUnitAt(0);
@@ -417,18 +432,18 @@ class _CodeFragmentScanner {
         offset++;
         tokens.add(
             _Token(start, _TokenKind.string, content.substring(start, offset)));
-      } else if (_isLetter(char)) {
+      } else if (char.isLetter) {
         var start = offset;
         offset++;
-        while (offset < length && _isLetter(content.codeUnitAt(offset))) {
+        while (offset < length && content.codeUnitAt(offset).isLetter) {
           offset++;
         }
         tokens.add(_Token(
             start, _TokenKind.identifier, content.substring(start, offset)));
-      } else if (_isDigit(char)) {
+      } else if (char.isDigit) {
         var start = offset;
         offset++;
-        while (offset < length && _isDigit(content.codeUnitAt(offset))) {
+        while (offset < length && content.codeUnitAt(offset).isDigit) {
           offset++;
         }
         tokens.add(_Token(
@@ -441,21 +456,18 @@ class _CodeFragmentScanner {
     return tokens;
   }
 
-  /// Return `true` if the [char] is a digit.
-  bool _isDigit(int char) => char >= $0 && char <= $9;
-
-  /// Return `true` if the [char] is a letter.
-  bool _isLetter(int char) =>
-      (char >= $a && char <= $z) || (char >= $A && char <= $Z);
-
   /// Return `true` if the [char] is a whitespace character.
   bool _isWhitespace(int char) =>
       char == space || char == newline || char == carriageReturn;
 
   /// Report the presence of an invalid character at the given [offset].
   Null _reportInvalidCharacter(int offset) {
-    errorReporter.reportErrorForOffset(TransformSetErrorCode.invalidCharacter,
-        offset + delta, 1, [content.substring(offset, offset + 1)]);
+    errorReporter.atOffset(
+      offset: offset + delta,
+      length: 1,
+      errorCode: TransformSetErrorCode.invalidCharacter,
+      arguments: [content.substring(offset, offset + 1)],
+    );
     return null;
   }
 

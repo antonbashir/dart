@@ -15,16 +15,10 @@ void main() {
 @reflectiveTest
 class ObjectPatternTest extends AbstractCompletionDriverTest
     with ObjectPatternTestCases {
-  @FailingTest(reason: 'Suggest invalid static field / getter')
   @override
-  Future<void> test_pattern_first() {
-    return super.test_pattern_first();
-  }
-
-  @FailingTest(reason: 'Suggest invalid static field / getter')
-  @override
-  Future<void> test_pattern_second() {
-    return super.test_pattern_second();
+  Future<void> setUp() async {
+    await super.setUp();
+    printerConfiguration.withLocationName = true;
   }
 }
 
@@ -57,6 +51,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 suggestions
   f01
     kind: field
@@ -101,6 +97,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 replacement
   left: 1
 suggestions
@@ -139,6 +137,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 suggestions
   f01
     kind: field
@@ -183,6 +183,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 replacement
   left: 1
 suggestions
@@ -220,6 +222,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 suggestions
   f01
     kind: field
@@ -259,6 +263,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 replacement
   left: 1
 suggestions
@@ -266,6 +272,159 @@ suggestions
     kind: getter
   g11
     kind: getter
+''');
+  }
+
+  Future<void> test_ifCase_logicalAnd_objectPattern_type_partial() async {
+    await computeSuggestions('''
+class A01 {}
+
+void f(Object? x) {
+  if (x case true && A0^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void>
+      test_ifCase_logicalAnd_objectPattern_type_partial_notImported() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A01 {}
+''');
+
+    await computeSuggestions('''
+void f(Object? x) {
+  if (x case true && A0^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_logicalAnd_recordPattern() async {
+    await computeSuggestions('''
+class A01 {}
+
+void f(Object? x) {
+  if (x case true && ^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_logicalAnd_recordPattern_notImported() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A01 {}
+''');
+
+    await computeSuggestions('''
+void f(Object? x) {
+  if (x case true && ^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_objectPattern_type_partial() async {
+    await computeSuggestions('''
+class A01 {}
+
+void f(Object? x) {
+  if (x case A0^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_objectPattern_type_partial_notImported() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A01 {}
+''');
+
+    await computeSuggestions('''
+void f(Object? x) {
+  if (x case A0^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_recordPattern() async {
+    await computeSuggestions('''
+class A01 {}
+
+void f(Object? x) {
+  if (x case ^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void> test_ifCase_recordPattern_notImported() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A01 {}
+''');
+
+    await computeSuggestions('''
+void f(Object? x) {
+  if (x case ^()) {}
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+suggestions
+  A01
+    kind: class
 ''');
   }
 
@@ -283,9 +442,15 @@ class A1 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 suggestions
+  f01
+    kind: field
   final
     kind: keyword
+  g01
+    kind: getter
   var
     kind: keyword
 ''');
@@ -321,6 +486,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: PatternField_pattern
+locationOpType: PatternField_pattern
 suggestions
   f01
     kind: field
@@ -333,6 +500,7 @@ suggestions
 ''');
   }
 
+  @FailingTest(reason: 'Suggest invalid static field / getter')
   Future<void> test_pattern_first() async {
     await computeSuggestions('''
 void f1(Object x0) {
@@ -388,6 +556,7 @@ suggestions
 ''');
   }
 
+  @FailingTest(reason: 'Suggest invalid static field / getter')
   Future<void> test_pattern_second() async {
     await computeSuggestions('''
 void f1(Object x0) {
@@ -472,6 +641,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 suggestions
   f01
     kind: field
@@ -513,6 +684,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 replacement
   left: 1
 suggestions
@@ -553,6 +726,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 replacement
   left: 1
 suggestions
@@ -593,6 +768,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 replacement
   right: 1
 suggestions
@@ -636,6 +813,8 @@ class A1 extends A0 {
 }
 ''');
     assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
 suggestions
   f11
     kind: field
@@ -643,6 +822,77 @@ suggestions
     kind: getter
   g11
     kind: getter
+''');
+  }
+
+  Future<void> test_property_second_implicitFirst() async {
+    await computeSuggestions('''
+void f1(Object x0) {
+  switch (x0) {
+    case A1(:var f01, ^)
+  }
+}
+class A0 {
+  int f01 = 0;
+  int f02 = 0;
+}
+class A1 extends A0 {
+  int f11 = 0;
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_fieldName
+locationOpType: ObjectPattern_fieldName
+suggestions
+  f02
+    kind: field
+  f11
+    kind: field
+''');
+  }
+
+  Future<void> test_switchPatternCase_objectPattern_type_partial() async {
+    await computeSuggestions('''
+class A01 {}
+
+void f(Object? x) {
+  switch (x) {
+    case A0^():
+  }
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
+''');
+  }
+
+  Future<void>
+      test_switchPatternCase_objectPattern_type_partial_notImported() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+class A01 {}
+''');
+
+    await computeSuggestions('''
+void f(Object? x) {
+  switch (x) {
+    case A0^():
+  }
+}
+''');
+    assertResponse(r'''
+location: ObjectPattern_type
+locationOpType: ObjectPattern_type
+replacement
+  left: 2
+suggestions
+  A01
+    kind: class
 ''');
   }
 }

@@ -12,7 +12,6 @@ import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/error/syntactic_errors.dart';
 import 'package:analyzer/src/dart/resolver/assignment_expression_resolver.dart';
-import 'package:analyzer/src/dart/resolver/invocation_inference_helper.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inferrer.dart';
 import 'package:analyzer/src/dart/resolver/type_property_resolver.dart';
 import 'package:analyzer/src/error/codes.dart';
@@ -22,25 +21,21 @@ import 'package:analyzer/src/generated/resolver.dart';
 class PostfixExpressionResolver {
   final ResolverVisitor _resolver;
   final TypePropertyResolver _typePropertyResolver;
-  final InvocationInferenceHelper _inferenceHelper;
   final AssignmentExpressionShared _assignmentShared;
 
   PostfixExpressionResolver({
     required ResolverVisitor resolver,
   })  : _resolver = resolver,
         _typePropertyResolver = resolver.typePropertyResolver,
-        _inferenceHelper = resolver.inferenceHelper,
         _assignmentShared = AssignmentExpressionShared(
           resolver: resolver,
         );
 
   ErrorReporter get _errorReporter => _resolver.errorReporter;
 
-  bool get _isNonNullableByDefault => _typeSystem.isNonNullableByDefault;
-
   TypeSystemImpl get _typeSystem => _resolver.typeSystem;
 
-  void resolve(PostfixExpressionImpl node, {required DartType? contextType}) {
+  void resolve(PostfixExpressionImpl node, {required DartType contextType}) {
     if (node.operator.type == TokenType.BANG) {
       _resolveNullCheck(node, contextType: contextType);
       return;
@@ -71,7 +66,7 @@ class PostfixExpressionResolver {
 
     var receiverType = node.readType!;
     _resolve1(node, receiverType);
-    _resolve2(node, receiverType, contextType: contextType);
+    _resolve2(node, receiverType);
   }
 
   /// Check that the result [type] of a prefix or postfix `++` or `--`
@@ -83,10 +78,10 @@ class PostfixExpressionResolver {
     var operandWriteType = node.writeType!;
     if (!_typeSystem.isAssignableTo(type, operandWriteType,
         strictCasts: _resolver.analysisOptions.strictCasts)) {
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.INVALID_ASSIGNMENT,
+      _resolver.errorReporter.atNode(
         node,
-        [type, operandWriteType],
+        CompileTimeErrorCode.INVALID_ASSIGNMENT,
+        arguments: [type, operandWriteType],
       );
     }
   }
@@ -129,9 +124,9 @@ class PostfixExpressionResolver {
     Expression operand = node.operand;
 
     if (identical(receiverType, NeverTypeImpl.instance)) {
-      _resolver.errorReporter.reportErrorForNode(
-        WarningCode.RECEIVER_OF_TYPE_NEVER,
+      _resolver.errorReporter.atNode(
         operand,
+        WarningCode.RECEIVER_OF_TYPE_NEVER,
       );
       return;
     }
@@ -147,28 +142,26 @@ class PostfixExpressionResolver {
     node.staticElement = result.getter as MethodElement?;
     if (result.needsGetterError) {
       if (operand is SuperExpression) {
-        _errorReporter.reportErrorForToken(
-          CompileTimeErrorCode.UNDEFINED_SUPER_OPERATOR,
+        _errorReporter.atToken(
           node.operator,
-          [methodName, receiverType],
+          CompileTimeErrorCode.UNDEFINED_SUPER_OPERATOR,
+          arguments: [methodName, receiverType],
         );
       } else {
-        _errorReporter.reportErrorForToken(
-          CompileTimeErrorCode.UNDEFINED_OPERATOR,
+        _errorReporter.atToken(
           node.operator,
-          [methodName, receiverType],
+          CompileTimeErrorCode.UNDEFINED_OPERATOR,
+          arguments: [methodName, receiverType],
         );
       }
     }
   }
 
-  void _resolve2(PostfixExpressionImpl node, DartType receiverType,
-      {required DartType? contextType}) {
+  void _resolve2(PostfixExpressionImpl node, DartType receiverType) {
     Expression operand = node.operand;
 
     if (identical(receiverType, NeverTypeImpl.instance)) {
-      _inferenceHelper.recordStaticType(node, NeverTypeImpl.instance,
-          contextType: contextType);
+      node.recordStaticType(NeverTypeImpl.instance, resolver: _resolver);
     } else {
       DartType operatorReturnType;
       if (receiverType.isDartCoreInt) {
@@ -186,40 +179,33 @@ class PostfixExpressionResolver {
               ?.write(node, element, operatorReturnType, null);
         }
       }
+      node.recordStaticType(receiverType, resolver: _resolver);
     }
 
-    _inferenceHelper.recordStaticType(node, receiverType,
-        contextType: contextType);
     _resolver.nullShortingTermination(node);
   }
 
   void _resolveNullCheck(PostfixExpressionImpl node,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var operand = node.operand;
 
     if (operand is SuperExpression) {
-      _resolver.errorReporter.reportErrorForNode(
-        ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR,
+      _resolver.errorReporter.atNode(
         node,
+        ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR,
       );
-      _inferenceHelper.recordStaticType(operand, DynamicTypeImpl.instance,
-          contextType: contextType);
-      _inferenceHelper.recordStaticType(node, DynamicTypeImpl.instance,
-          contextType: contextType);
+      operand.setPseudoExpressionStaticType(DynamicTypeImpl.instance);
+      node.recordStaticType(DynamicTypeImpl.instance, resolver: _resolver);
       return;
     }
 
-    if (contextType != null && _isNonNullableByDefault) {
-      contextType = _typeSystem.makeNullable(contextType);
-    }
-
-    _resolver.analyzeExpression(operand, contextType);
+    _resolver.analyzeExpression(operand, _typeSystem.makeNullable(contextType));
     operand = _resolver.popRewrite()!;
 
     var operandType = operand.typeOrThrow;
 
     var type = _typeSystem.promoteToNonNull(operandType);
-    _inferenceHelper.recordStaticType(node, type, contextType: contextType);
+    node.recordStaticType(type, resolver: _resolver);
 
     _resolver.nullShortingTermination(node);
     _resolver.flowAnalysis.flow?.nonNullAssert_end(operand);

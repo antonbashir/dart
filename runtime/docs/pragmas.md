@@ -15,9 +15,12 @@ These pragmas are part of the VM's API and are safe for use in external code.
 | `vm:invisible` | Allows to mark a function as invisible so it will not appear on stack traces. |
 | `vm:always-consider-inlining` | Marks a function which particularly benefits from inlining and specialization in context of the caller (for example, when concrete types of arguments are known). Inliner will not give up after one failed inlining attempt and will continue trying to inline this function. |
 | `vm:platform-const` | Marks a static getter or a static field with an initializer where the getter body or field initializer evaluates to a constant value if the target operating system is known. |
+| `vm:platform-const-if` | Like `vm:platform-const`, but takes a boolean argument and constant evaluation of the annotated member is only performed if the argument const evaluates to true. |
 | `weak-tearoff-reference` | [Declaring a static weak reference intrinsic method.](compiler/pragmas_recognized_by_compiler.md#declaring-a-static-weak-reference-intrinsic-method) |
 | `vm:isolate-unsendable` | Marks a class, instances of which won't be allowed to be passed through ports or sent between isolates. |
 | `vm:awaiter-link` | [Specifying variable to follow for awaiter stack unwinding](awaiter_stack_traces.md) |
+| `vm:deeply-immutable` | [Specifying a class and all its subtypes are deeply immutable](deeply_immutable.md) |
+| `vm:align-loops` | Tells compiler to align all loop headers inside the function to an architecture specific boundary: currently 32 bytes on X64 and ARM64 (except Apple Silicon, which explicitly discourages aligning branch targets) |
 
 ## Unsafe pragmas for general use
 
@@ -28,6 +31,8 @@ understands potential repercussions.
 | Pragma | Meaning |
 | --- | --- |
 | `vm:unsafe:no-interrupts` | Removes all `CheckStackOverflow` instructions from the optimized version of the marked function, which disables stack overflow checking and interruption within that function. This pragma exists mainly for performance evaluation and should not be used in a general-purpose code, because VM relies on these checks for OOB message delivery and GC scheduling. |
+| `vm:unsafe:no-bounds-checks` | Removes all array bounds checks from the optimized version of the marked function in AOT mode. This pragma exists for optimizing throughput of extremely tight loops. |
+| `vm:shared` | Makes content of the static field visible to all isolates in one isolate group. Unsafe and experimental at this point as it requires developer to take care of access synchronization to ensure race-free read/write access. |
 
 ## Pragmas for internal use
 

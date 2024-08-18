@@ -314,6 +314,7 @@ void main() async {
   await visitLibraryAtUri(session, 'dart:cli');
   await visitLibraryAtUri(session, 'dart:collection');
   await visitLibraryAtUri(session, 'dart:convert');
+  await visitLibraryAtUri(session, 'dart:fiber');
   await visitLibraryAtUri(session, 'dart:core');
   await visitLibraryAtUri(session, 'dart:io');
   await visitLibraryAtUri(session, 'dart:isolate');
@@ -415,7 +416,7 @@ void visitClass(ClassElement classElement) {
   }
   for (var accessor in classElement.accessors) {
     if (accessor.isPublic && accessor.isGetter) {
-      var variable = accessor.variable;
+      var variable = accessor.variable2!;
       if (accessor.isStatic) {
         addToTable(
             typeString(variable.type),

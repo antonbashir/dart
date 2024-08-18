@@ -137,7 +137,6 @@ final class DocCommentBuilder {
     }
     return CommentImpl(
       tokens: tokens,
-      type: CommentType.DOCUMENTATION,
       references: _references,
       codeBlocks: _codeBlocks,
       docImports: _docImports,
@@ -185,11 +184,11 @@ final class DocCommentBuilder {
           // `null`.
           var openingTag = builder.openingTag;
           if (openingTag != null) {
-            _errorReporter?.reportErrorForOffset(
-              WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG,
-              openingTag.offset,
-              openingTag.end - openingTag.offset,
-              [openingTag.type.opposingName!],
+            _errorReporter?.atOffset(
+              offset: openingTag.offset,
+              length: openingTag.end - openingTag.offset,
+              errorCode: WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG,
+              arguments: [openingTag.type.opposingName!],
             );
           }
           higherDirective.push(builder.build());
@@ -202,11 +201,11 @@ final class DocCommentBuilder {
     }
 
     // No matching opening tag was found.
-    _errorReporter?.reportErrorForOffset(
-      WarningCode.DOC_DIRECTIVE_MISSING_OPENING_TAG,
-      closingTag.offset,
-      closingTag.end - closingTag.offset,
-      [closingTag.type.name],
+    _errorReporter?.atOffset(
+      offset: closingTag.offset,
+      length: closingTag.end - closingTag.offset,
+      errorCode: WarningCode.DOC_DIRECTIVE_MISSING_OPENING_TAG,
+      arguments: [closingTag.type.name],
     );
     _pushDocDirective(SimpleDocDirective(closingTag));
   }
@@ -282,11 +281,11 @@ final class DocCommentBuilder {
       // `null`.
       var openingTag = builder.openingTag;
       if (openingTag != null) {
-        _errorReporter?.reportErrorForOffset(
-          WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG,
-          openingTag.offset,
-          openingTag.end - openingTag.offset,
-          [openingTag.type.opposingName!],
+        _errorReporter?.atOffset(
+          offset: openingTag.offset,
+          length: openingTag.end - openingTag.offset,
+          errorCode: WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_TAG,
+          arguments: [openingTag.type.opposingName!],
         );
       }
       _pushBlockDocDirectiveAndInnerDirectives(builder);
@@ -303,9 +302,9 @@ final class DocCommentBuilder {
   /// Parses the comment references in [content] which starts at [offset].
   void _parseDocCommentLine(int offset, String content) {
     var index = 0;
-    final end = content.length;
+    var end = content.length;
     while (index < end) {
-      final ch = content.codeUnitAt(index);
+      var ch = content.codeUnitAt(index);
       if (ch == 0x5B /* `[` */) {
         ++index;
         if (index < end && content.codeUnitAt(index) == 0x3A /* `:` */) {
@@ -326,7 +325,7 @@ final class DocCommentBuilder {
               // TODO(brianwilkerson): Handle the case where there's a library
               // URI in the link text.
             } else {
-              final reference = _parseOneCommentReference(
+              var reference = _parseOneCommentReference(
                 content.substring(referenceStart, index),
                 offset + referenceStart,
               );
@@ -338,7 +337,7 @@ final class DocCommentBuilder {
         }
       } else if (ch == 0x60 /* '`' */) {
         // Skip inline code block if there is both starting '`' and ending '`'.
-        final endCodeBlock = content.indexOf('`', index + 1);
+        var endCodeBlock = content.indexOf('`', index + 1);
         if (endCodeBlock != -1 && endCodeBlock < end) {
           index = endCodeBlock;
         }
@@ -401,10 +400,12 @@ final class DocCommentBuilder {
         _endBlockDocDirectiveTag(parser, DocDirectiveType.endTemplate);
         return true;
       case 'example':
+        // ignore: deprecated_member_use_from_same_package
         _pushDocDirective(parser.simpleDirective(DocDirectiveType.example));
         return true;
       case 'hideConstantImplementations':
         _pushDocDirective(parser
+            // ignore: deprecated_member_use_from_same_package
             .simpleDirective(DocDirectiveType.hideConstantImplementations));
         return true;
       case 'inject-html':
@@ -426,11 +427,11 @@ final class DocCommentBuilder {
         _pushDocDirective(parser.simpleDirective(DocDirectiveType.youtube));
         return true;
     }
-    _errorReporter?.reportErrorForOffset(
-      WarningCode.DOC_DIRECTIVE_UNKNOWN,
-      _characterSequence._offset + nameIndex,
-      nameEnd - nameIndex,
-      [name],
+    _errorReporter?.atOffset(
+      offset: _characterSequence._offset + nameIndex,
+      length: nameEnd - nameIndex,
+      errorCode: WarningCode.DOC_DIRECTIVE_UNKNOWN,
+      arguments: [name],
     );
     return false;
   }
@@ -546,7 +547,11 @@ final class DocCommentBuilder {
     }
 
     _codeBlocks.add(
-      MdCodeBlock(infoString: infoString, lines: fencedCodeBlockLines),
+      MdCodeBlock(
+        infoString: infoString,
+        lines: fencedCodeBlockLines,
+        type: CodeBlockType.fenced,
+      ),
     );
     return true;
   }
@@ -570,7 +575,11 @@ final class DocCommentBuilder {
       } else {
         // End the code block.
         _codeBlocks.add(
-          MdCodeBlock(infoString: null, lines: codeBlockLines),
+          MdCodeBlock(
+            infoString: null,
+            lines: codeBlockLines,
+            type: CodeBlockType.indented,
+          ),
         );
         return lineInfo;
       }
@@ -580,7 +589,11 @@ final class DocCommentBuilder {
 
     // The indented code block ends the comment.
     _codeBlocks.add(
-      MdCodeBlock(infoString: null, lines: codeBlockLines),
+      MdCodeBlock(
+        infoString: null,
+        lines: codeBlockLines,
+        type: CodeBlockType.indented,
+      ),
     );
     return lineInfo;
   }
@@ -866,7 +879,7 @@ final class _BlockDocDirectiveBuilder {
       _BlockDocDirectiveBuilder(null);
 
   BlockDocDirective build() {
-    final openingTag = this.openingTag;
+    var openingTag = this.openingTag;
     if (openingTag == null) {
       throw StateError(
           'Attempting to build a block doc directive with no opening tag.');
@@ -876,7 +889,7 @@ final class _BlockDocDirectiveBuilder {
 
   /// Whether this doc directive's opening tag is the opposing tag for [tag].
   bool matches(DocDirectiveTag tag) {
-    final openingTag = this.openingTag;
+    var openingTag = this.openingTag;
     return openingTag == null
         ? false
         : openingTag.type.opposingName == tag.type.name;
@@ -890,7 +903,7 @@ final class _BlockDocDirectiveBuilder {
 /// (which consists of a single [Token]).
 abstract class _CharacterSequence {
   factory _CharacterSequence(Token token) {
-    final isFromSingleLineComment = token.lexeme.startsWith('///');
+    var isFromSingleLineComment = token.lexeme.startsWith('///');
     return isFromSingleLineComment
         ? _CharacterSequenceFromSingleLineComment(token)
         : _CharacterSequenceFromMultiLineComment(token);
@@ -921,8 +934,8 @@ class _CharacterSequenceFromMultiLineComment implements _CharacterSequence {
 
   @override
   ({int offset, String content})? next() {
-    final lexeme = _token.lexeme;
-    final tokenOffset = _token.charOffset;
+    var lexeme = _token.lexeme;
+    var tokenOffset = _token.charOffset;
 
     if (_offset == -1) {
       _offset = tokenOffset;
@@ -931,7 +944,7 @@ class _CharacterSequenceFromMultiLineComment implements _CharacterSequence {
         endIndex = lexeme.length;
       }
       _end = tokenOffset + endIndex;
-      final indexInLexeme = _offset - tokenOffset;
+      var indexInLexeme = _offset - tokenOffset;
       return (
         offset: _offset,
         content: lexeme.substring(indexInLexeme, endIndex),
@@ -987,7 +1000,7 @@ class _CharacterSequenceFromSingleLineComment implements _CharacterSequence {
       assert(_token.lexeme.startsWith('///'));
     } else {
       do {
-        final nextToken = _token.next;
+        var nextToken = _token.next;
         if (nextToken == null) return null;
         _token = nextToken;
         _offset = nextToken.offset;
@@ -1160,10 +1173,10 @@ final class _DirectiveParser {
 
     // We've hit EOL without closing brace.
     _end = _offset + index;
-    _errorReporter?.reportErrorForOffset(
-      WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE,
-      _offset + index - 1,
-      1,
+    _errorReporter?.atOffset(
+      offset: _offset + index - 1,
+      length: 1,
+      errorCode: WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE,
     );
     return (positionalArguments, namedArguments);
   }
@@ -1195,20 +1208,20 @@ final class _DirectiveParser {
       index++;
       if (index == _length) {
         // Found extra arguments and no closing brace.
-        _errorReporter?.reportErrorForOffset(
-          WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE,
-          _offset + index - 1,
-          1,
+        _errorReporter?.atOffset(
+          offset: _offset + index - 1,
+          length: 1,
+          errorCode: WarningCode.DOC_DIRECTIVE_MISSING_CLOSING_BRACE,
         );
         break;
       }
     }
 
     var errorLength = _offset + index - extraArgumentsOffset;
-    _errorReporter?.reportErrorForOffset(
-      WarningCode.DOC_DIRECTIVE_HAS_EXTRA_ARGUMENTS,
-      extraArgumentsOffset,
-      errorLength,
+    _errorReporter?.atOffset(
+      offset: extraArgumentsOffset,
+      length: errorLength,
+      errorCode: WarningCode.DOC_DIRECTIVE_HAS_EXTRA_ARGUMENTS,
     );
     _end = _offset + index;
   }

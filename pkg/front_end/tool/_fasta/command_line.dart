@@ -8,48 +8,35 @@ import 'dart:io' show exit;
 
 import 'package:_fe_analyzer_shared/src/messages/severity.dart' show Severity;
 import 'package:_fe_analyzer_shared/src/util/options.dart';
-
+import 'package:_fe_analyzer_shared/src/util/resolve_input_uri.dart'
+    show resolveInputUri;
 import 'package:build_integration/file_system/single_root.dart'
     show SingleRootFileSystem;
-
 import 'package:front_end/src/api_prototype/compiler_options.dart';
-
 import 'package:front_end/src/api_prototype/experimental_flags.dart'
     show ExperimentalFlag, isExperimentEnabled;
-
 import 'package:front_end/src/api_prototype/file_system.dart' show FileSystem;
-
 import 'package:front_end/src/api_prototype/standard_file_system.dart'
     show StandardFileSystem;
 import 'package:front_end/src/api_prototype/terminal_color_support.dart';
+import 'package:front_end/src/base/command_line_options.dart';
+import 'package:front_end/src/base/compiler_context.dart' show CompilerContext;
 import 'package:front_end/src/base/nnbd_mode.dart';
-
+import 'package:front_end/src/base/problems.dart' show DebugAbort;
 import 'package:front_end/src/base/processed_options.dart'
     show ProcessedOptions;
-
-import 'package:front_end/src/compute_platform_binaries_location.dart'
-    show computePlatformBinariesLocation, computePlatformDillName;
-
-import 'package:front_end/src/fasta/compiler_context.dart' show CompilerContext;
-
-import 'package:front_end/src/base/command_line_options.dart';
-
-import 'package:front_end/src/fasta/fasta_codes.dart'
+import 'package:front_end/src/codes/cfe_codes.dart'
     show
         Message,
         PlainAndColorizedString,
         messageFastaUsageLong,
         messageFastaUsageShort,
         templateUnspecified;
-
-import 'package:front_end/src/fasta/problems.dart' show DebugAbort;
-
-import 'package:_fe_analyzer_shared/src/util/resolve_input_uri.dart'
-    show resolveInputUri;
-
+import 'package:front_end/src/compute_platform_binaries_location.dart'
+    show computePlatformBinariesLocation, computePlatformDillName;
+import 'package:front_end/src/kernel/macro/offset_checker.dart';
 import 'package:front_end/src/scheme_based_file_system.dart'
     show SchemeBasedFileSystem;
-
 import 'package:kernel/target/targets.dart'
     show Target, TargetFlags, TestTargetFlags, getTarget, targets;
 
@@ -78,17 +65,17 @@ const List<Option> optionSpecification = [
   Options.packages,
   Options.platform,
   Options.sdk,
+  Options.showGeneratedMacroSources,
+  Options.checkMacroOffsets,
   Options.singleRootBase,
   Options.singleRootScheme,
   Options.nnbdWeakMode,
   Options.nnbdStrongMode,
-  Options.nnbdAgnosticMode,
   Options.target,
   Options.verbose,
   Options.verbosity,
   Options.verify,
   Options.skipPlatformVerification,
-  Options.warnOnReachabilityCheck,
   Options.linkDependencies,
   Options.noDeps,
   Options.invocationModes,
@@ -186,17 +173,10 @@ ProcessedOptions analyzeCommandLine(String programName,
 
   final bool nnbdWeakMode = Options.nnbdWeakMode.read(parsedOptions);
 
-  final bool nnbdAgnosticMode = Options.nnbdAgnosticMode.read(parsedOptions);
-
-  final NnbdMode nnbdMode = nnbdAgnosticMode
-      ? NnbdMode.Agnostic
-      : (nnbdStrongMode ? NnbdMode.Strong : NnbdMode.Weak);
+  final NnbdMode nnbdMode = nnbdWeakMode ? NnbdMode.Weak : NnbdMode.Strong;
 
   final bool enableUnscheduledExperiments =
       Options.enableUnscheduledExperiments.read(parsedOptions);
-
-  final bool warnOnReachabilityCheck =
-      Options.warnOnReachabilityCheck.read(parsedOptions);
 
   final List<Uri> linkDependencies =
       Options.linkDependencies.read(parsedOptions) ?? [];
@@ -206,22 +186,15 @@ ProcessedOptions analyzeCommandLine(String programName,
 
   final String verbosity = Options.verbosity.read(parsedOptions);
 
+  final bool showGeneratedMacroSources =
+      Options.showGeneratedMacroSources.read(parsedOptions);
+
+  final bool checkMacroOffsets = Options.checkMacroOffsets.read(parsedOptions);
+
   if (nnbdStrongMode && nnbdWeakMode) {
     return throw new CommandLineProblem.deprecated(
         "Can't specify both '${Flags.nnbdStrongMode}' and "
         "'${Flags.nnbdWeakMode}'.");
-  }
-
-  if (nnbdStrongMode && nnbdAgnosticMode) {
-    return throw new CommandLineProblem.deprecated(
-        "Can't specify both '${Flags.nnbdStrongMode}' and "
-        "'${Flags.nnbdAgnosticMode}'.");
-  }
-
-  if (nnbdWeakMode && nnbdAgnosticMode) {
-    return throw new CommandLineProblem.deprecated(
-        "Can't specify both '${Flags.nnbdWeakMode}' and "
-        "'${Flags.nnbdAgnosticMode}'.");
   }
 
   FileSystem fileSystem = StandardFileSystem.instance;
@@ -270,9 +243,13 @@ ProcessedOptions analyzeCommandLine(String programName,
     ..enableUnscheduledExperiments = enableUnscheduledExperiments
     ..additionalDills = linkDependencies
     ..emitDeps = !noDeps
-    ..warnOnReachabilityCheck = warnOnReachabilityCheck
     ..invocationModes = InvocationMode.parseArguments(invocationModes)
-    ..verbosity = Verbosity.parseArgument(verbosity);
+    ..verbosity = Verbosity.parseArgument(verbosity)
+    ..showGeneratedMacroSourcesForTesting = showGeneratedMacroSources;
+
+  if (checkMacroOffsets) {
+    compilerOptions.hooksForTesting = new MacroOffsetChecker();
+  }
 
   if (programName == "compile_platform") {
     if (arguments.length != 5) {

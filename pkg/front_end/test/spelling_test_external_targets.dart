@@ -2,15 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:io' show Directory, File, FileSystemEntity;
-
-import 'package:testing/testing.dart'
-    show Chain, FileBasedTestDescription, TestDescription, runMe;
-
-import 'spelling_test_base.dart' show SpellContext;
+import 'package:testing/testing.dart' show Chain, runMe;
 
 import 'spell_checking_utils.dart' as spell;
-
+import 'spelling_test_base.dart' show SpellContext;
 import 'testing_utils.dart' show checkEnvironment;
 
 void main([List<String> arguments = const []]) =>
@@ -40,25 +35,4 @@ class SpellContextExternal extends SpellContext {
   @override
   String get repoRelativeSuitePath =>
       "pkg/front_end/test/spelling_test_external_targets.dart";
-
-  @override
-  Stream<TestDescription> list(Chain suite) async* {
-    for (String subdir in const ["pkg/", "sdk/"]) {
-      Directory testRoot = new Directory.fromUri(suite.uri.resolve(subdir));
-      if (await testRoot.exists()) {
-        Stream<FileSystemEntity> files =
-            testRoot.list(recursive: true, followLinks: false);
-        await for (FileSystemEntity entity in files) {
-          if (entity is! File) continue;
-          String path = entity.uri.path;
-          if (suite.exclude.any((RegExp r) => path.contains(r))) continue;
-          if (suite.pattern.any((RegExp r) => path.contains(r))) {
-            yield new FileBasedTestDescription(suite.uri, entity);
-          }
-        }
-      } else {
-        throw "${suite.uri} isn't a directory";
-      }
-    }
-  }
 }

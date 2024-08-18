@@ -70,7 +70,7 @@ class CommentReferences extends LintRule {
             name: 'comment_references',
             description: _desc,
             details: _details,
-            group: Group.errors);
+            categories: {Category.errors});
 
   @override
   LintCode get lintCode => code;
@@ -108,8 +108,7 @@ class _Visitor extends SimpleAstVisitor<void> {
             var reference = comment.substring(leftIndex + 1, rightIndex);
             if (_isParserSpecialCase(reference)) {
               var nameOffset = token.offset + leftIndex + 1;
-              rule.reporter.reportErrorForOffset(
-                  rule.lintCode, nameOffset, reference.length);
+              rule.reportLintForOffset(nameOffset, reference.length);
             }
             if (rightIndex + 1 < comment.length &&
                 comment[rightIndex + 1] == ':') {

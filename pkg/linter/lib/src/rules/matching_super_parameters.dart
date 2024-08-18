@@ -5,7 +5,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:collection/collection.dart';
 
 import '../analyzer.dart';
 
@@ -72,7 +71,7 @@ class MatchingSuperParameters extends LintRule {
             name: 'matching_super_parameters',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   LintCode get lintCode => code;

@@ -134,24 +134,42 @@ void f() {
     expect(x.isStatic, isFalse);
   }
 
-  test_nonNullifyType() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 2.7
-var a = 0;
+  test_localVariable_wildcardVariable_field() async {
+    await assertNoErrorsInCode('''
+class C {
+  var _ = 1;
+  void m() {
+    var _ = 0;
+    _;
+  }
+}
 ''');
 
-    await assertErrorsInCode('''
-import 'a.dart';
+    var node = findNode.simple('_;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: _
+  staticElement: self::@class::C::@getter::_
+  staticType: int
+''');
+  }
+
+  test_localVariable_wildcardVariable_topLevel() async {
+    await assertNoErrorsInCode('''
+var _ = 1;
 
 void f() {
-  var x = a;
-  x;
+  var _ = 0;
+  _;
 }
-''', [
-      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
-    ]);
+''');
 
-    var x = findElement.localVar('x');
-    assertType(x.type, 'int');
+    var node = findNode.simple('_;');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: _
+  staticElement: self::@getter::_
+  staticType: int
+''');
   }
 }

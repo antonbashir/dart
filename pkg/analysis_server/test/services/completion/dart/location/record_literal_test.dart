@@ -21,7 +21,7 @@ class RecordLiteralFieldsTest extends AbstractCompletionDriverTest {
 
     printerConfiguration = printer.Configuration(
       filter: (suggestion) {
-        final completion = suggestion.completion;
+        var completion = suggestion.completion;
         return ['foo0', 'bar0'].any(completion.startsWith);
       },
     );
@@ -102,12 +102,12 @@ final bar01 = 0;
 
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
   |foo02: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -136,12 +136,12 @@ final bar01 = 0;
 
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
   |foo02: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -153,12 +153,12 @@ final bar01 = 0;
 
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
   |foo02: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -170,12 +170,12 @@ final bar01 = 0;
 
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
   |foo02: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -221,12 +221,12 @@ final bar01 = 0;
     // We don't suggest already specified `foo02`.
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
   |foo03: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -316,10 +316,10 @@ final bar01 = 0;
     // We suggest a positional value anyway.
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 
@@ -332,10 +332,10 @@ final bar01 = 0;
     // We suggest a positional value anyway.
     assertResponse(r'''
 suggestions
-  bar01
-    kind: topLevelVariable
   |foo01: |
     kind: namedArgument
+  bar01
+    kind: topLevelVariable
 ''');
   }
 

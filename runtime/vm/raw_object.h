@@ -10,6 +10,7 @@
 #endif
 
 #include "platform/assert.h"
+#include "platform/thread_sanitizer.h"
 #include "vm/class_id.h"
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
@@ -162,10 +163,10 @@ class UntaggedObject {
   enum TagBits {
     kCardRememberedBit = 0,
     kCanonicalBit = 1,
-    kNotMarkedBit = 2,            // Incremental barrier target.
-    kNewBit = 3,                  // Generational barrier target.
-    kAlwaysSetBit = 4,            // Incremental barrier source.
-    kOldAndNotRememberedBit = 5,  // Generational barrier source.
+    kNotMarkedBit = 2,                 // Incremental barrier target.
+    kNewOrEvacuationCandidateBit = 3,  // Generational barrier target.
+    kAlwaysSetBit = 4,                 // Incremental barrier source.
+    kOldAndNotRememberedBit = 5,       // Generational barrier source.
     kImmutableBit = 6,
     kReservedBit = 7,
 
@@ -177,11 +178,13 @@ class UntaggedObject {
     kHashTagSize = 32,
   };
 
-  static constexpr intptr_t kGenerationalBarrierMask = 1 << kNewBit;
+  static constexpr intptr_t kGenerationalBarrierMask =
+      1 << kNewOrEvacuationCandidateBit;
   static constexpr intptr_t kIncrementalBarrierMask = 1 << kNotMarkedBit;
   static constexpr intptr_t kBarrierOverlapShift = 2;
   COMPILE_ASSERT(kNotMarkedBit + kBarrierOverlapShift == kAlwaysSetBit);
-  COMPILE_ASSERT(kNewBit + kBarrierOverlapShift == kOldAndNotRememberedBit);
+  COMPILE_ASSERT(kNewOrEvacuationCandidateBit + kBarrierOverlapShift ==
+                 kOldAndNotRememberedBit);
 
   // The bit in the Smi tag position must be something that can be set to 0
   // for a dead filler object of either generation.
@@ -246,7 +249,8 @@ class UntaggedObject {
 
   class NotMarkedBit : public BitField<uword, bool, kNotMarkedBit, 1> {};
 
-  class NewBit : public BitField<uword, bool, kNewBit, 1> {};
+  class NewOrEvacuationCandidateBit
+      : public BitField<uword, bool, kNewOrEvacuationCandidateBit, 1> {};
 
   class CanonicalBit : public BitField<uword, bool, kCanonicalBit, 1> {};
 
@@ -255,9 +259,27 @@ class UntaggedObject {
   class OldAndNotRememberedBit
       : public BitField<uword, bool, kOldAndNotRememberedBit, 1> {};
 
-  // Will be set to 1 iff
-  //   - is unmodifiable typed data view (backing store may be mutable)
-  //   - is transitively immutable
+  // Will be set to 1 for the following instances:
+  //
+  // 1. Deeply immutable instances.
+  //    `Class::is_deeply_immutable`.
+  //    a. Statically guaranteed deeply immutable instances.
+  //       `@pragma('vm:deeply-immutable')`.
+  //    b. VM recognized deeply immutable instances.
+  //       `IsDeeplyImmutableCid(intptr_t predefined_cid)`.
+  // 2. Shallowly unmodifiable instances.
+  //    `IsShallowlyImmutableCid(intptr_t predefined_cid)`
+  //    a. Unmodifiable typed data view (backing store may be mutable).
+  //    b. Closures (the context may be modifiable).
+  //
+  // The bit is used in `CanShareObject` in object_graph_copy, where special
+  // care is taken to look at the shallow immutable instances. Shallow immutable
+  // instances always need special care in the VM because the VM needs to know
+  // what their fields are.
+  //
+  // The bit is also used to make typed data stores efficient. 2.a.
+  //
+  // See also Class::kIsDeeplyImmutableBit.
   class ImmutableBit : public BitField<uword, bool, kImmutableBit, 1> {};
 
   class ReservedBit : public BitField<uword, intptr_t, kReservedBit, 1> {};
@@ -274,14 +296,12 @@ class UntaggedObject {
   }
 
   uword tags() const { return tags_; }
+  uword tags_ignore_race() const { return tags_.load_ignore_race(); }
 
   // Support for GC marking bit. Marked objects are either grey (not yet
   // visited) or black (already visited).
   static bool IsMarked(uword tags) { return !NotMarkedBit::decode(tags); }
   bool IsMarked() const { return !tags_.Read<NotMarkedBit>(); }
-  bool IsMarkedIgnoreRace() const {
-    return !tags_.ReadIgnoreRace<NotMarkedBit>();
-  }
   void SetMarkBit() {
     ASSERT(!IsMarked());
     tags_.UpdateBool<NotMarkedBit>(false);
@@ -305,6 +325,25 @@ class UntaggedObject {
   // Returns false if the bit was already set.
   DART_WARN_UNUSED_RESULT
   bool TryAcquireMarkBit() { return tags_.TryClear<NotMarkedBit>(); }
+
+  static bool IsEvacuationCandidate(uword tags) {
+    return NewOrEvacuationCandidateBit::decode(tags);
+  }
+  bool IsEvacuationCandidate() {
+    return tags_.Read<NewOrEvacuationCandidateBit>();
+  }
+  void SetIsEvacuationCandidate() {
+    ASSERT(IsOldObject());
+    tags_.UpdateBool<NewOrEvacuationCandidateBit>(true);
+  }
+  void SetIsEvacuationCandidateUnsynchronized() {
+    ASSERT(IsOldObject());
+    tags_.UpdateUnsynchronized<NewOrEvacuationCandidateBit>(true);
+  }
+  void ClearIsEvacuationCandidateUnsynchronized() {
+    ASSERT(IsOldObject());
+    tags_.UpdateUnsynchronized<NewOrEvacuationCandidateBit>(false);
+  }
 
   // Canonical objects have the property that two canonical objects are
   // logically equal iff they are the same object (pointer equal).
@@ -921,8 +960,12 @@ inline intptr_t ObjectPtr::GetClassId() const {
   }                                                                            \
                                                                                \
  protected:                                                                    \
-  type* array_name() { OPEN_ARRAY_START(type, type); }                         \
-  type const* array_name() const { OPEN_ARRAY_START(type, type); }             \
+  type* array_name() {                                                         \
+    OPEN_ARRAY_START(type, type);                                              \
+  }                                                                            \
+  type const* array_name() const {                                             \
+    OPEN_ARRAY_START(type, type);                                              \
+  }                                                                            \
   VISIT_TO_PAYLOAD_END(type)
 
 #define COMPRESSED_VARIABLE_POINTER_FIELDS(type, accessor_name, array_name)    \
@@ -1421,6 +1464,19 @@ class UntaggedFunction : public UntaggedObject {
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 };
 
+enum class InstantiationMode : uint8_t {
+  // Must instantiate the type arguments normally.
+  kNeedsInstantiation,
+  // The type arguments are already instantiated.
+  kIsInstantiated,
+  // Use the instantiator type arguments that would be used to instantiate
+  // the default type arguments, as instantiating produces the same result.
+  kSharesInstantiatorTypeArguments,
+  // Use the function type arguments that would be used to instantiate
+  // the default type arguments, as instantiating produces the same result.
+  kSharesFunctionTypeArguments,
+};
+
 class UntaggedClosureData : public UntaggedObject {
  private:
   RAW_HEAP_OBJECT_IMPLEMENTATION(ClosureData);
@@ -1433,37 +1489,21 @@ class UntaggedClosureData : public UntaggedObject {
   COMPRESSED_POINTER_FIELD(ClosurePtr, closure)
   VISIT_TO(closure)
 
-  enum class DefaultTypeArgumentsKind : uint8_t {
-    // Only here to make sure it's explicitly set appropriately.
-    kInvalid = 0,
-    // Must instantiate the default type arguments before use.
-    kNeedsInstantiation,
-    // The default type arguments are already instantiated.
-    kIsInstantiated,
-    // Use the instantiator type arguments that would be used to instantiate
-    // the default type arguments, as instantiating produces the same result.
-    kSharesInstantiatorTypeArguments,
-    // Use the function type arguments that would be used to instantiate
-    // the default type arguments, as instantiating produces the same result.
-    kSharesFunctionTypeArguments,
-  };
-
   // kernel_to_il.cc assumes we can load the untagged value and box it in a Smi.
-  static_assert(sizeof(DefaultTypeArgumentsKind) * kBitsPerByte <=
+  static_assert(sizeof(InstantiationMode) * kBitsPerByte <=
                     compiler::target::kSmiBits,
-                "Default type arguments kind must fit in a Smi");
+                "Instantiation mode must fit in a Smi");
 
   static constexpr uint8_t kNoAwaiterLinkDepth = 0xFF;
 
   AtomicBitFieldContainer<uint32_t> packed_fields_;
 
-  using PackedDefaultTypeArgumentsKind =
-      BitField<decltype(packed_fields_), DefaultTypeArgumentsKind, 0, 8>;
-  using PackedAwaiterLinkDepth =
-      BitField<decltype(packed_fields_),
-               uint8_t,
-               PackedDefaultTypeArgumentsKind::kNextBit,
-               8>;
+  using PackedInstantiationMode =
+      BitField<decltype(packed_fields_), InstantiationMode, 0, 8>;
+  using PackedAwaiterLinkDepth = BitField<decltype(packed_fields_),
+                                          uint8_t,
+                                          PackedInstantiationMode::kNextBit,
+                                          8>;
   using PackedAwaiterLinkIndex = BitField<decltype(packed_fields_),
                                           uint8_t,
                                           PackedAwaiterLinkDepth::kNextBit,
@@ -1564,9 +1604,9 @@ class UntaggedField : public UntaggedObject {
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
   friend class CidRewriteVisitor;
-  friend class GuardFieldClassInstr;     // For sizeof(guarded_cid_/...)
-  friend class LoadFieldInstr;           // For sizeof(guarded_cid_/...)
-  friend class StoreFieldInstr;          // For sizeof(guarded_cid_/...)
+  friend class GuardFieldClassInstr;  // For sizeof(guarded_cid_/...)
+  friend class LoadFieldInstr;        // For sizeof(guarded_cid_/...)
+  friend class StoreFieldInstr;       // For sizeof(guarded_cid_/...)
 };
 
 class alignas(8) UntaggedScript : public UntaggedObject {
@@ -1640,23 +1680,15 @@ class UntaggedLibrary : public UntaggedObject {
 
   enum LibraryFlags {
     kDartSchemeBit = 0,
-    kDebuggableBit,        // True if debugger can stop in library.
-    kInFullSnapshotBit,    // True if library is in a full snapshot.
-    kNnbdBit,              // True if library is non nullable by default.
-    kNnbdCompiledModePos,  // Encodes nnbd compiled mode of constants in lib.
-    kNnbdCompiledModeSize = 2,
-    kNumFlagBits = kNnbdCompiledModePos + kNnbdCompiledModeSize,
+    kDebuggableBit,      // True if debugger can stop in library.
+    kInFullSnapshotBit,  // True if library is in a full snapshot.
+    kNumFlagBits,
   };
   COMPILE_ASSERT(kNumFlagBits <= (sizeof(uint8_t) * kBitsPerByte));
   class DartSchemeBit : public BitField<uint8_t, bool, kDartSchemeBit, 1> {};
   class DebuggableBit : public BitField<uint8_t, bool, kDebuggableBit, 1> {};
   class InFullSnapshotBit
       : public BitField<uint8_t, bool, kInFullSnapshotBit, 1> {};
-  class NnbdBit : public BitField<uint8_t, bool, kNnbdBit, 1> {};
-  class NnbdCompiledModeBits : public BitField<uint8_t,
-                                               uint8_t,
-                                               kNnbdCompiledModePos,
-                                               kNnbdCompiledModeSize> {};
 
   RAW_HEAP_OBJECT_IMPLEMENTATION(Library);
 
@@ -1962,7 +1994,6 @@ class UntaggedInstructions : public UntaggedObject {
   VISIT_NOTHING();
 
   // Instructions size in bytes and flags.
-  // Currently, only flag indicates 1 or 2 entry points.
   uint32_t size_and_flags_;
 
   // Variable length data follows here.
@@ -2588,9 +2619,18 @@ class UntaggedLoadingUnit : public UntaggedObject {
   VISIT_FROM(parent)
   COMPRESSED_POINTER_FIELD(ArrayPtr, base_objects)
   VISIT_TO(base_objects)
-  int32_t id_;
-  bool load_outstanding_;
-  bool loaded_;
+  const uint8_t* instructions_image_;
+  AtomicBitFieldContainer<intptr_t> packed_fields_;
+
+  enum LoadState : int8_t {
+    kNotLoaded = 0,  // Ensure this is the default state when zero-initialized.
+    kLoadOutstanding,
+    kLoaded,
+  };
+
+  using LoadStateBits = BitField<decltype(packed_fields_), LoadState, 0, 2>;
+  using IdBits =
+      BitField<decltype(packed_fields_), intptr_t, LoadStateBits::kNextBit>;
 };
 
 class UntaggedError : public UntaggedObject {
@@ -2743,10 +2783,10 @@ class UntaggedAbstractType : public UntaggedInstance {
     kFinalizedUninstantiated,  // Uninstantiated type ready for use.
   };
 
-  using NullabilityBits = BitField<uint32_t, uint8_t, 0, 2>;
-  static constexpr intptr_t kNullabilityMask = NullabilityBits::mask();
+  using NullabilityBit = BitField<uint32_t, uint8_t, 0, 1>;
+  static constexpr intptr_t kNullabilityMask = NullabilityBit::mask();
 
-  static constexpr intptr_t kTypeStateShift = NullabilityBits::kNextBit;
+  static constexpr intptr_t kTypeStateShift = NullabilityBit::kNextBit;
   static constexpr intptr_t kTypeStateBits = 2;
   using TypeStateBits =
       BitField<uint32_t, uint8_t, kTypeStateShift, kTypeStateBits>;
@@ -2873,17 +2913,40 @@ class UntaggedClosure : public UntaggedInstance {
  private:
   RAW_HEAP_OBJECT_IMPLEMENTATION(Closure);
 
-  // No instance fields should be declared before the following fields whose
-  // offsets must be identical in Dart and C++.
-
   // The following fields are also declared in the Dart source of class
-  // _Closure.
+  // _Closure, and so must be the first fields in the object and must appear
+  // in the same order, so the offsets are identical in Dart and C++.
+  //
+  // Note that the type of a closure is defined by instantiating the
+  // signature of the closure function with the instantiator, function, and
+  // delayed (if non-empty) type arguments stored in the closure value.
+
+  // Stores the instantiator type arguments provided when the closure was
+  // created.
   COMPRESSED_POINTER_FIELD(TypeArgumentsPtr, instantiator_type_arguments)
   VISIT_FROM(instantiator_type_arguments)
+  // Stores the function type arguments provided for any generic parent
+  // functions when the closure was created.
   COMPRESSED_POINTER_FIELD(TypeArgumentsPtr, function_type_arguments)
+  // If this field contains the empty type argument vector, then the closure
+  // value is generic.
+  //
+  // To create a new closure that is a specific type instantiation of a generic
+  // closure, a copy of the closure is created where the empty type argument
+  // vector in this field is replaced with the vector of local type arguments.
+  // The resulting closure value is not generic, and so an attempt to provide
+  // type arguments when invoking the new closure value is treated the same as
+  // calling any other non-generic function with unneeded type arguments.
+  //
+  // If the signature for the closure function has no local type parameters,
+  // the only guarantee about this field is that it never contains the empty
+  // type arguments vector. Thus, only this field need be inspected to
+  // determine whether a given closure value is generic.
   COMPRESSED_POINTER_FIELD(TypeArgumentsPtr, delayed_type_arguments)
   COMPRESSED_POINTER_FIELD(FunctionPtr, function)
-  COMPRESSED_POINTER_FIELD(ContextPtr, context)
+  // For tear-offs - captured receiver.
+  // For ordinary closures - Context object with captured variables.
+  COMPRESSED_POINTER_FIELD(ObjectPtr, context)
   COMPRESSED_POINTER_FIELD(SmiPtr, hash)
   VISIT_TO(hash)
 
@@ -2894,29 +2957,6 @@ class UntaggedClosure : public UntaggedInstance {
   ONLY_IN_PRECOMPILED(uword entry_point_);
 
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-
-  // Note that instantiator_type_arguments_, function_type_arguments_ and
-  // delayed_type_arguments_ are used to instantiate the signature of function_
-  // when this closure is involved in a type test. In other words, these fields
-  // define the function type of this closure instance.
-  //
-  // function_type_arguments_ and delayed_type_arguments_ may also be used when
-  // invoking the closure. Whereas the source frontend will save a copy of the
-  // function's type arguments in the closure's context and only use the
-  // function_type_arguments_ field for type tests, the kernel frontend will use
-  // the function_type_arguments_ vector here directly.
-  //
-  // If this closure is generic, it can be invoked with function type arguments
-  // that will be processed in the prolog of the closure function_. For example,
-  // if the generic closure function_ has a generic parent function, the
-  // passed-in function type arguments get concatenated to the function type
-  // arguments of the parent that are found in the context_.
-  //
-  // delayed_type_arguments_ is used to support the partial instantiation
-  // feature. When this field is set to any value other than
-  // Object::empty_type_arguments(), the types in this vector will be passed as
-  // type arguments to the closure when invoked. In this case there may not be
-  // any type arguments passed directly (or NSM will be invoked instead).
 
   friend class UnitDeserializationRoots;
 };
@@ -3166,24 +3206,6 @@ class UntaggedTypedDataView : public UntaggedTypedDataBase {
   friend class ScavengerVisitorBase;
 };
 
-class UntaggedExternalOneByteString : public UntaggedString {
-  RAW_HEAP_OBJECT_IMPLEMENTATION(ExternalOneByteString);
-
-  const uint8_t* external_data_;
-  void* peer_;
-  friend class Api;
-  friend class String;
-};
-
-class UntaggedExternalTwoByteString : public UntaggedString {
-  RAW_HEAP_OBJECT_IMPLEMENTATION(ExternalTwoByteString);
-
-  const uint16_t* external_data_;
-  void* peer_;
-  friend class Api;
-  friend class String;
-};
-
 class UntaggedBool : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Bool);
   VISIT_NOTHING();
@@ -3222,6 +3244,8 @@ class UntaggedArray : public UntaggedInstance {
   template <typename Table, bool kAllCanonicalObjectsAreIncludedIntoSet>
   friend class CanonicalSetDeserializationCluster;
   friend class Page;
+  template <bool>
+  friend class MarkingVisitorBase;
   friend class FastObjectCopy;  // For initializing fields.
   friend void UpdateLengthField(intptr_t, ObjectPtr, ObjectPtr);  // length_
 };
@@ -3303,8 +3327,10 @@ class UntaggedInt32x4 : public UntaggedInstance {
 
   ALIGN8 int32_t value_[4];
 
-  friend class Simd128MessageSerializationCluster;
+  friend class Simd128DeserializationCluster;
   friend class Simd128MessageDeserializationCluster;
+  friend class Simd128MessageSerializationCluster;
+  friend class Simd128SerializationCluster;
 
  public:
   int32_t x() const { return value_[0]; }
@@ -3501,13 +3527,9 @@ class UntaggedRegExp : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(StringPtr, pattern)
   COMPRESSED_POINTER_FIELD(ObjectPtr, one_byte)  // FunctionPtr or TypedDataPtr
   COMPRESSED_POINTER_FIELD(ObjectPtr, two_byte)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, external_one_byte)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, external_two_byte)
   COMPRESSED_POINTER_FIELD(ObjectPtr, one_byte_sticky)
   COMPRESSED_POINTER_FIELD(ObjectPtr, two_byte_sticky)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, external_one_byte_sticky)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, external_two_byte_sticky)
-  VISIT_TO(external_two_byte_sticky)
+  VISIT_TO(two_byte_sticky)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
 
   std::atomic<intptr_t> num_bracket_expressions_;

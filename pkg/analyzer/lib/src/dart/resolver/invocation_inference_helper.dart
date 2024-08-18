@@ -10,6 +10,7 @@ import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/type.dart';
+import 'package:analyzer/src/dart/element/type_constraint_gatherer.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inferrer.dart';
 import 'package:analyzer/src/generated/resolver.dart';
@@ -42,7 +43,6 @@ class ConstructorElementToInfer {
   /// For example given the type `class C<T> { C(T arg); }`, the generic
   /// function type is `<T>(T) -> C<T>`.
   FunctionType get asType {
-    var typeParameters = this.typeParameters;
     return typeParameters.isEmpty
         ? element.type
         : FunctionTypeImpl(
@@ -59,11 +59,13 @@ class InvocationInferenceHelper {
   final ErrorReporter _errorReporter;
   final TypeSystemImpl _typeSystem;
   final bool _genericMetadataIsEnabled;
+  final TypeConstraintGenerationDataForTesting? dataForTesting;
 
   InvocationInferenceHelper({
     required ResolverVisitor resolver,
     required ErrorReporter errorReporter,
     required TypeSystemImpl typeSystem,
+    required this.dataForTesting,
   })  : _resolver = resolver,
         _errorReporter = errorReporter,
         _typeSystem = typeSystem,
@@ -83,13 +85,14 @@ class InvocationInferenceHelper {
     var typeName = constructorName.type;
     var typeElement = typeName.element;
     if (typeElement is InterfaceElement) {
+      var augmented = typeElement.augmented;
       typeParameters = typeElement.typeParameters;
       var constructorIdentifier = constructorName.name;
       if (constructorIdentifier == null) {
-        rawElement = typeElement.unnamedConstructor;
+        rawElement = augmented.unnamedConstructor;
       } else {
         var name = constructorIdentifier.name;
-        rawElement = typeElement.getNamedConstructor(name);
+        rawElement = augmented.getNamedConstructor(name);
         if (rawElement != null && !rawElement.isAccessibleIn(definingLibrary)) {
           rawElement = null;
         }
@@ -111,7 +114,6 @@ class InvocationInferenceHelper {
     if (rawElement == null) {
       return null;
     }
-    rawElement = _resolver.toLegacyElement(rawElement);
     return ConstructorElementToInfer(typeParameters, rawElement);
   }
 
@@ -120,7 +122,7 @@ class InvocationInferenceHelper {
   /// generic function type from the surrounding context.
   DartType inferTearOff(Expression expression, SimpleIdentifierImpl identifier,
       DartType tearOffType,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     if (contextType is FunctionType && tearOffType is FunctionType) {
       var typeArguments = _typeSystem.inferFunctionTypeInstantiation(
         contextType,
@@ -129,6 +131,10 @@ class InvocationInferenceHelper {
         errorNode: expression,
         genericMetadataIsEnabled: _genericMetadataIsEnabled,
         strictInference: _resolver.analysisOptions.strictInference,
+        strictCasts: _resolver.analysisOptions.strictCasts,
+        typeSystemOperations: _resolver.flowAnalysis.typeOperations,
+        dataForTesting: dataForTesting,
+        nodeForTesting: expression,
       );
       identifier.tearOffTypeArgumentTypes = typeArguments;
       if (typeArguments.isNotEmpty) {
@@ -136,18 +142,6 @@ class InvocationInferenceHelper {
       }
     }
     return tearOffType;
-  }
-
-  /// Record that the static type of the given node is the given type.
-  ///
-  /// @param expression the node whose type is to be recorded
-  /// @param type the static type of the node
-  void recordStaticType(ExpressionImpl expression, DartType type,
-      {required DartType? contextType}) {
-    expression.staticType = type;
-    if (_typeSystem.isBottom(type)) {
-      _resolver.flowAnalysis.flow?.handleExit();
-    }
   }
 
   /// Finish resolution of the [MethodInvocation].
@@ -159,7 +153,7 @@ class InvocationInferenceHelper {
     required MethodInvocationImpl node,
     required FunctionType rawType,
     required List<WhyNotPromotedGetter> whyNotPromotedList,
-    required DartType? contextType,
+    required DartType contextType,
   }) {
     var returnType = MethodInvocationInferrer(
       resolver: _resolver,
@@ -169,6 +163,6 @@ class InvocationInferenceHelper {
       whyNotPromotedList: whyNotPromotedList,
     ).resolveInvocation(rawType: rawType);
 
-    recordStaticType(node, returnType, contextType: contextType);
+    node.recordStaticType(returnType, resolver: _resolver);
   }
 }

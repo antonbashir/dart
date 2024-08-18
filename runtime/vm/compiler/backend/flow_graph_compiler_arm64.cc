@@ -62,10 +62,6 @@ FlowGraphCompiler::~FlowGraphCompiler() {
   }
 }
 
-bool FlowGraphCompiler::SupportsUnboxedDoubles() {
-  return true;
-}
-
 bool FlowGraphCompiler::SupportsUnboxedSimd128() {
   return FLAG_enable_simd_inline;
 }
@@ -220,50 +216,6 @@ void FlowGraphCompiler::GenerateBoolToJump(Register bool_register,
       EmitBoolTest(bool_register, labels, /*invert=*/false);
   ASSERT(true_condition == kInvalidCondition);
   __ Bind(&fall_through);
-}
-
-void FlowGraphCompiler::GenerateMethodExtractorIntrinsic(
-    const Function& extracted_method,
-    intptr_t type_arguments_field_offset) {
-  // No frame has been setup here.
-  ASSERT(!__ constant_pool_allowed());
-  DEBUG_ASSERT(extracted_method.IsNotTemporaryScopedHandle());
-
-  const Code& build_method_extractor =
-      Code::ZoneHandle(extracted_method.IsGeneric()
-                           ? isolate_group()
-                                 ->object_store()
-                                 ->build_generic_method_extractor_code()
-                           : isolate_group()
-                                 ->object_store()
-                                 ->build_nongeneric_method_extractor_code());
-
-  const intptr_t stub_index =
-      __ object_pool_builder().FindObject(build_method_extractor);
-  const intptr_t function_index =
-      __ object_pool_builder().FindObject(extracted_method);
-
-  // We use a custom pool register to preserve caller PP.
-  Register kPoolReg = R0;
-
-  // R1 = extracted function
-  // R4 = offset of type argument vector (or 0 if class is not generic)
-  intptr_t pp_offset = 0;
-  if (FLAG_precompiled_mode) {
-    // PP is not tagged on arm64.
-    kPoolReg = PP;
-    pp_offset = kHeapObjectTag;
-  } else {
-    __ LoadFieldFromOffset(kPoolReg, CODE_REG, Code::object_pool_offset());
-  }
-  __ LoadImmediate(R4, type_arguments_field_offset);
-  __ LoadFieldFromOffset(
-      R1, kPoolReg, ObjectPool::element_offset(function_index) + pp_offset);
-  __ LoadFieldFromOffset(CODE_REG, kPoolReg,
-                         ObjectPool::element_offset(stub_index) + pp_offset);
-  __ LoadFieldFromOffset(R0, CODE_REG,
-                         Code::entry_point_offset(Code::EntryKind::kUnchecked));
-  __ br(R0);
 }
 
 void FlowGraphCompiler::EmitFrameEntry() {
@@ -601,21 +553,9 @@ void FlowGraphCompiler::EmitInstanceCallAOT(const ICData& ic_data,
       initial_stub, ObjectPool::Patchability::kPatchable, snapshot_behavior);
   ASSERT((data_index + 1) == initial_stub_index);
 
-  if (FLAG_precompiled_mode) {
-    // The AOT runtime will replace the slot in the object pool with the
-    // entrypoint address - see app_snapshot.cc.
-    CLOBBERS_LR(__ LoadDoubleWordFromPoolIndex(R5, LR, data_index));
-  } else {
-    __ LoadDoubleWordFromPoolIndex(R5, CODE_REG, data_index);
-    const intptr_t entry_point_offset =
-        entry_kind == Code::EntryKind::kNormal
-            ? compiler::target::Code::entry_point_offset(
-                  Code::EntryKind::kMonomorphic)
-            : compiler::target::Code::entry_point_offset(
-                  Code::EntryKind::kMonomorphicUnchecked);
-    CLOBBERS_LR(
-        __ ldr(LR, compiler::FieldAddress(CODE_REG, entry_point_offset)));
-  }
+  // The AOT runtime will replace the slot in the object pool with the
+  // entrypoint address - see app_snapshot.cc.
+  CLOBBERS_LR(__ LoadDoubleWordFromPoolIndex(R5, LR, data_index));
   CLOBBERS_LR(__ blr(LR));
 
   EmitCallsiteMetadata(source, DeoptId::kNone, UntaggedPcDescriptors::kOther,

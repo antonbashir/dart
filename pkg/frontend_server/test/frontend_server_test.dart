@@ -15,7 +15,7 @@ import 'package:args/args.dart';
 import 'package:front_end/src/api_unstable/vm.dart';
 import 'package:frontend_server/frontend_server.dart';
 import 'package:frontend_server/starter.dart';
-import 'package:kernel/ast.dart' show Component;
+import 'package:kernel/ast.dart' show Component, Library;
 import 'package:kernel/binary/ast_to_binary.dart';
 import 'package:kernel/kernel.dart' show loadComponentFromBinary;
 import 'package:kernel/target/targets.dart';
@@ -25,6 +25,9 @@ import 'package:test/test.dart';
 import 'package:vm/incremental_compiler.dart';
 import 'package:vm/kernel_front_end.dart';
 
+bool useJsonForCommunication = false;
+bool useJsonLineBreaks = false;
+
 class _MockedBinaryPrinter implements BinaryPrinter {
   @override
   dynamic noSuchMethod(Invocation invocation) {}
@@ -33,7 +36,7 @@ class _MockedBinaryPrinter implements BinaryPrinter {
 class _MockedBinaryPrinterFactory implements BinaryPrinterFactory {
   @override
   BinaryPrinter newBinaryPrinter(Sink<List<int>> targetSink) {
-    return _MockedBinaryPrinter();
+    return new _MockedBinaryPrinter();
   }
 
   @override
@@ -45,10 +48,10 @@ typedef VerifyInvalidate = void Function(Uri uri);
 typedef VerifyRecompileDelta = void Function(String? entryPoint);
 typedef Verify = void Function();
 
-nopVerifyCompile(String entryPoint, ArgResults opts) {}
-nopVerifyInvalidate(Uri uri) {}
-nopVerifyRecompileDelta(String? entryPoint) {}
-nopVerify() {}
+void nopVerifyCompile(String entryPoint, ArgResults opts) {}
+void nopVerifyInvalidate(Uri uri) {}
+void nopVerifyRecompileDelta(String? entryPoint) {}
+void nopVerify() {}
 
 class _MockedCompiler implements CompilerInterface {
   _MockedCompiler(
@@ -100,24 +103,24 @@ class _MockedCompiler implements CompilerInterface {
 
 class _MockedIncrementalCompiler implements IncrementalCompiler {
   @override
-  accept() {}
+  void accept() {}
 
   @override
   bool get initialized => false;
 
   @override
   Future<IncrementalCompilerResult> compile({List<Uri>? entryPoints}) async {
-    return Future<IncrementalCompilerResult>.value(
-        IncrementalCompilerResult(Component()));
+    return new Future<IncrementalCompilerResult>.value(
+        new IncrementalCompilerResult(new Component()));
   }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {}
 }
 
-void main() async {
+Future<void> main() async {
   group('basic', () {
-    final compiler = _MockedCompiler();
+    final _MockedCompiler compiler = new _MockedCompiler();
 
     test('train with mocked compiler completes', () async {
       await starter(<String>['--train', 'foo.dart'], compiler: compiler);
@@ -126,12 +129,13 @@ void main() async {
 
   group('batch compile with mocked compiler', () {
     test('compile from command line', () async {
-      verify(String entryPoint, ArgResults opts) {
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final List<String> args = <String>[
         'server.dart',
         '--sdk-root',
@@ -141,13 +145,14 @@ void main() async {
     });
 
     test('compile from command line with link platform', () async {
-      verify(String entryPoint, ArgResults opts) {
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
         expect(opts['link-platform'], equals(true));
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final List<String> args = <String>[
         'server.dart',
         '--sdk-root',
@@ -165,16 +170,17 @@ void main() async {
     ];
 
     test('compile one file', () async {
-      final compileCalled = ReceivePort();
-      verify(String entryPoint, ArgResults opts) {
+      final ReceivePort compileCalled = new ReceivePort();
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
         compileCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       Future<int> result = starter(
         args,
         compiler: compiler,
@@ -188,16 +194,17 @@ void main() async {
     });
 
     test('compile one file to JavaScript', () async {
-      final compileCalled = ReceivePort();
-      verify(String entryPoint, ArgResults opts) {
+      final ReceivePort compileCalled = new ReceivePort();
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
         compileCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
 
       Future<int> result = starter(
         ['--target=dartdevc', ...args],
@@ -219,16 +226,17 @@ void main() async {
     ];
 
     test('compile one file', () async {
-      final compileCalled = ReceivePort();
-      verify(String entryPoint, ArgResults opts) {
+      final ReceivePort compileCalled = new ReceivePort();
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
         compileCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       Future<int> result = starter(
         args,
         compiler: compiler,
@@ -242,17 +250,18 @@ void main() async {
     });
 
     test('compile few files', () async {
-      final compileCalled = ReceivePort();
+      final ReceivePort compileCalled = new ReceivePort();
       int counter = 1;
-      verify(String entryPoint, ArgResults opts) {
+      void verify(String entryPoint, ArgResults opts) {
         expect(entryPoint, equals('server${counter++}.dart'));
         expect(opts['sdk-root'], equals('sdkroot'));
         compileCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       Future<int> result = starter(
         args,
         compiler: compiler,
@@ -275,24 +284,24 @@ void main() async {
     ];
 
     test('recompile few files', () async {
-      final recompileDeltaCalled = ReceivePort();
+      final ReceivePort recompileDeltaCalled = new ReceivePort();
       int invalidated = 0;
       int counter = 1;
-      verifyI(Uri uri) {
+      void verifyI(Uri uri) {
         expect(uri.path, contains('file${counter++}.dart'));
         invalidated += 1;
       }
 
-      verifyR(String? entryPoint) {
+      void verifyR(String? entryPoint) {
         expect(invalidated, equals(2));
         expect(entryPoint, equals(null));
         recompileDeltaCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(
+      final _MockedCompiler compiler = new _MockedCompiler(
           verifyInvalidate: verifyI, verifyRecompileDelta: verifyR);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
 
       Future<int> result = starter(
         args,
@@ -310,23 +319,23 @@ void main() async {
 
     test('recompile few files with new entrypoint', () async {
       int invalidated = 0;
-      final recompileDeltaCalled = ReceivePort();
+      final ReceivePort recompileDeltaCalled = new ReceivePort();
       int counter = 1;
-      verifyI(Uri uri) {
+      void verifyI(Uri uri) {
         expect(uri.path, contains('file${counter++}.dart'));
         invalidated += 1;
       }
 
-      verifyR(String? entryPoint) {
+      void verifyR(String? entryPoint) {
         expect(invalidated, equals(2));
         expect(entryPoint, equals('file2.dart'));
         recompileDeltaCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(
+      final _MockedCompiler compiler = new _MockedCompiler(
           verifyRecompileDelta: verifyR, verifyInvalidate: verifyI);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
 
       Future<int> result = starter(
         args,
@@ -342,14 +351,15 @@ void main() async {
     });
 
     test('accept', () async {
-      final acceptCalled = ReceivePort();
-      verify() {
+      final ReceivePort acceptCalled = new ReceivePort();
+      void verify() {
         acceptCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyAcceptLastDelta: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyAcceptLastDelta: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       Future<int> result = starter(
         args,
         compiler: compiler,
@@ -363,14 +373,15 @@ void main() async {
     });
 
     test('reset', () async {
-      final resetCalled = ReceivePort();
-      verify() {
+      final ReceivePort resetCalled = new ReceivePort();
+      void verify() {
         resetCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(verifyResetIncrementalCompiler: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyResetIncrementalCompiler: verify);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       Future<int> result = starter(
         args,
         compiler: compiler,
@@ -384,29 +395,29 @@ void main() async {
     });
 
     test('compile then recompile', () async {
-      final recompileDeltaCalled = ReceivePort();
+      final ReceivePort recompileDeltaCalled = new ReceivePort();
       bool compile = false;
       int invalidate = 0;
       bool acceptDelta = false;
-      verifyC(String entryPoint, ArgResults opts) {
+      void verifyC(String entryPoint, ArgResults opts) {
         compile = true;
         expect(entryPoint, equals('file1.dart'));
       }
 
-      verifyA() {
+      void verifyA() {
         expect(compile, equals(true));
         acceptDelta = true;
       }
 
       int counter = 2;
-      verifyI(Uri uri) {
+      void verifyI(Uri uri) {
         expect(compile, equals(true));
         expect(acceptDelta, equals(true));
         expect(uri.path, contains('file${counter++}.dart'));
         invalidate += 1;
       }
 
-      verifyR(String? entryPoint) {
+      void verifyR(String? entryPoint) {
         expect(compile, equals(true));
         expect(invalidate, equals(2));
         expect(acceptDelta, equals(true));
@@ -414,13 +425,13 @@ void main() async {
         recompileDeltaCalled.sendPort.send(true);
       }
 
-      final compiler = _MockedCompiler(
+      final _MockedCompiler compiler = new _MockedCompiler(
           verifyCompile: verifyC,
           verifyRecompileDelta: verifyR,
           verifyInvalidate: verifyI,
           verifyAcceptLastDelta: verifyA);
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
 
       Future<int> result = starter(
         args,
@@ -455,11 +466,11 @@ void main() async {
 
     test('compile then accept', () async {
       final StreamController<List<int>> inputStreamController =
-          StreamController<List<int>>();
+          new StreamController<List<int>>();
       final StreamController<List<int>> stdoutStreamController =
-          StreamController<List<int>>();
-      final IOSink ioSink = IOSink(stdoutStreamController.sink);
-      ReceivePort receivedResult = ReceivePort();
+          new StreamController<List<int>>();
+      final IOSink ioSink = new IOSink(stdoutStreamController.sink);
+      ReceivePort receivedResult = new ReceivePort();
 
       String? boundaryKey;
       stdoutStreamController.stream
@@ -479,9 +490,10 @@ void main() async {
         }
       });
 
-      final _MockedIncrementalCompiler generator = _MockedIncrementalCompiler();
+      final _MockedIncrementalCompiler generator =
+          new _MockedIncrementalCompiler();
       final _MockedBinaryPrinterFactory printerFactory =
-          _MockedBinaryPrinterFactory();
+          new _MockedBinaryPrinterFactory();
       Future<int> result = starter(
         args,
         compiler: null,
@@ -491,11 +503,11 @@ void main() async {
         binaryPrinterFactory: printerFactory,
       );
 
-      final source = File('${tempDir.path}/file1.dart');
+      final File source = new File('${tempDir.path}/file1.dart');
       inputStreamController.add('compile ${source.path}\n'.codeUnits);
       await receivedResult.first;
       inputStreamController.add('accept\n'.codeUnits);
-      receivedResult = ReceivePort();
+      receivedResult = new ReceivePort();
       inputStreamController
           .add('recompile def\n${source.path}\ndef\n'.codeUnits);
       await receivedResult.first;
@@ -506,11 +518,12 @@ void main() async {
     });
 
     group('compile with output path', () {
-      verify(String entryPoint, ArgResults opts) {
+      void verify(String entryPoint, ArgResults opts) {
         expect(opts['sdk-root'], equals('sdkroot'));
       }
 
-      final compiler = _MockedCompiler(verifyCompile: verify);
+      final _MockedCompiler compiler =
+          new _MockedCompiler(verifyCompile: verify);
       test('compile from command line', () async {
         final List<String> args = <String>[
           'server.dart',
@@ -527,19 +540,19 @@ void main() async {
   });
 
   group('full compiler tests', () {
-    final platformKernel =
+    final Uri platformKernel =
         computePlatformBinariesLocation().resolve('vm_platform_strong.dill');
-    final ddcPlatformKernel =
+    final Uri ddcPlatformKernel =
         computePlatformBinariesLocation().resolve('ddc_outline.dill');
-    final ddcPlatformKernelWeak =
+    final Uri ddcPlatformKernelWeak =
         computePlatformBinariesLocation().resolve('ddc_outline_unsound.dill');
-    final sdkRoot = computePlatformBinariesLocation();
+    final Uri sdkRoot = computePlatformBinariesLocation();
 
     late Directory tempDir;
     setUp(() {
-      var systemTempDir = Directory.systemTemp;
+      Directory systemTempDir = Directory.systemTemp;
       tempDir = systemTempDir.createTempSync('frontendServerTest');
-      Directory('${tempDir.path}/.dart_tool').createSync();
+      new Directory('${tempDir.path}/.dart_tool').createSync();
     });
 
     tearDown(() {
@@ -547,13 +560,14 @@ void main() async {
     });
 
     test('compile expression', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
 
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -575,13 +589,13 @@ void main() async {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // First request is to 'compile', which results in full kernel file.
           expect(result.errorsCount, equals(0));
@@ -601,7 +615,7 @@ void main() async {
           expect(result.errorsCount, equals(0));
           // Second request is to 'compile-expression', which results in
           // kernel file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -621,10 +635,214 @@ void main() async {
       frontendServer.close();
     });
 
+    test('compile expression extension types', skip: !useJsonForCommunication,
+        () async {
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
+      String data = r"""
+//@dart=3.3
+void main() {
+  Foo f = new Foo(42);
+  print(f);
+  print(f.value);
+  f.printValue();
+  f.printThis();
+}
+extension type Foo(int value) {
+  void printValue() {
+    print("This foos value is '$value'");
+  }
+  void printThis() {
+    print("This foos this value is '$this'");
+  }
+}""";
+      file.writeAsStringSync(data);
+      File dillFile = new File('${tempDir.path}/app.dill');
+
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
+  {
+    "configVersion": 2,
+    "packages": [
+      {
+        "name": "hello",
+        "rootUri": "../",
+        "packageUri": "./"
+      }
+    ]
+  }
+  ''');
+      Uri fileImportUri = Uri.parse("package:hello/foo.dart");
+
+      expect(dillFile.existsSync(), equals(false));
+      final List<String> args = <String>[
+        '--sdk-root=${sdkRoot.toFilePath()}',
+        '--incremental',
+        '--platform=${platformKernel.path}',
+        '--output-dill=${dillFile.path}',
+        '--packages=${packageConfig.path}',
+      ];
+
+      final FrontendServer frontendServer = new FrontendServer();
+      Future<int> result = frontendServer.open(args);
+      frontendServer.compile(file.path);
+      int count = 0;
+      frontendServer.listen((Result compiledResult) {
+        CompilationResult result =
+            new CompilationResult.parse(compiledResult.status);
+        if (count == 0) {
+          // First request is to 'compile', which results in full kernel file.
+          expect(result.errorsCount, equals(0));
+          expect(dillFile.existsSync(), equals(true));
+          expect(result.filename, dillFile.path);
+          frontendServer.accept();
+
+          frontendServer.compileExpression('f.value', fileImportUri,
+              // actually file.uri but check we accept this too.
+              scriptUri: fileImportUri,
+              definitions: ["f"],
+              // int.
+              definitionTypes: ["dart:core", "int", "1", "0"],
+              methodName: "main",
+              offset: 63,
+              isStatic: true);
+          count += 1;
+        } else if (count == 1) {
+          expect(result.errorsCount, equals(0));
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+
+          frontendServer.compileExpression('this.value', fileImportUri,
+              scriptUri: file.uri,
+              definitions: ["#this"],
+              // int.
+              definitionTypes: ["dart:core", "int", "1", "0"],
+              methodName: "Foo.printValue",
+              offset: 174,
+              isStatic: true);
+          count += 1;
+        } else if (count == 2) {
+          expect(result.errorsCount, equals(0));
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+
+          frontendServer.quit();
+        }
+      });
+
+      expect(await result, 0);
+      expect(count, 2);
+      frontendServer.close();
+    });
+
+    // TODO(jensj): This is the javascript version of the above.
+    // It should share code.
+    test('compile expression extension types to JavaScript',
+        skip: !useJsonForCommunication, () async {
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
+      String data = r"""
+//@dart=3.3
+void main() {
+  Foo f = new Foo(42);
+  print(f);
+  print(f.value);
+  f.printValue();
+  f.printThis();
+}
+extension type Foo(int value) {
+  void printValue() {
+    print("This foos value is '$value'");
+  }
+  void printThis() {
+    print("This foos this value is '$this'");
+  }
+}""";
+      file.writeAsStringSync(data);
+
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
+  {
+    "configVersion": 2,
+    "packages": [
+      {
+        "name": "hello",
+        "rootUri": "../",
+        "packageUri": "./"
+      }
+    ]
+  }
+  ''');
+      String library = 'package:hello/foo.dart';
+      String module = 'packages/hello/foo.dart';
+
+      File dillFile = new File('${tempDir.path}/foo.dart.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
+
+      expect(dillFile.existsSync(), equals(false));
+      final List<String> args = <String>[
+        '--sdk-root=${sdkRoot.toFilePath()}',
+        '--incremental',
+        '--platform=${ddcPlatformKernel.path}',
+        '--output-dill=${dillFile.path}',
+        '--target=dartdevc',
+        '--packages=${packageConfig.path}',
+      ];
+
+      final FrontendServer frontendServer = new FrontendServer();
+      Future<int> result = frontendServer.open(args);
+      frontendServer.compile(file.path);
+      int count = 0;
+      frontendServer.listen((Result compiledResult) {
+        CompilationResult result =
+            new CompilationResult.parse(compiledResult.status);
+        if (count == 0) {
+          // First request is to 'compile', which results in full JavaScript
+          expect(result.errorsCount, equals(0));
+          expect(sourceFile.existsSync(), equals(true));
+          expect(manifestFile.existsSync(), equals(true));
+          expect(sourceMapsFile.existsSync(), equals(true));
+          expect(result.filename, dillFile.path);
+          frontendServer.accept();
+
+          frontendServer.compileExpressionToJs('f.value', library, 5, 3, module,
+              scriptUri: file.uri, jsFrameValues: {"f": "42"});
+          count += 1;
+        } else if (count == 1) {
+          expect(result.errorsCount, equals(0));
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+
+          frontendServer.compileExpressionToJs(
+              'this.value', library, 11, 5, module,
+              scriptUri: file.uri, jsFrameValues: {r"$this": "42"});
+          count += 1;
+        } else if (count == 2) {
+          expect(result.errorsCount, equals(0));
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+
+          frontendServer.quit();
+        }
+      });
+
+      expect(await result, 0);
+      expect(count, 2);
+      frontendServer.close();
+    });
+
     test('mixed compile expression commands with non-web target', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {}\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -633,16 +851,16 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      var library = 'package:hello/foo.dart';
-      var module = 'packages/hello/foo.dart';
+      String library = 'package:hello/foo.dart';
+      String module = 'packages/hello/foo.dart';
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // First request is to 'compile', which results in full kernel file.
           expect(result.errorsCount, equals(0));
@@ -656,7 +874,7 @@ void main() async {
           expect(result.errorsCount, equals(0));
           // Second request is to 'compile-expression', which results in
           // kernel file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -674,7 +892,7 @@ void main() async {
           expect(result.errorsCount, equals(0));
           // Fourth request is to 'compile-expression', which results in
           // kernel file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -688,13 +906,13 @@ void main() async {
     });
 
     test('compiler reports correct sources added', () async {
-      var libFile = File('${tempDir.path}/lib.dart')
+      File libFile = new File('${tempDir.path}/lib.dart')
         ..createSync(recursive: true)
         ..writeAsStringSync("var foo = 42;");
-      var mainFile = File('${tempDir.path}/main.dart')
+      File mainFile = new File('${tempDir.path}/main.dart')
         ..createSync(recursive: true)
         ..writeAsStringSync("main() => print('foo');\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -703,7 +921,7 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       final Future<int> result = frontendServer.open(args);
       frontendServer.compile(mainFile.path);
       int count = 0;
@@ -728,16 +946,16 @@ void main() async {
 
       expect(await result, 0);
       frontendServer.close();
-    }, timeout: Timeout.factor(100));
+    }, timeout: new Timeout.factor(100));
 
     test('compiler reports correct sources removed', () async {
-      var libFile = File('${tempDir.path}/lib.dart')
+      File libFile = new File('${tempDir.path}/lib.dart')
         ..createSync(recursive: true)
         ..writeAsStringSync("var foo = 42;");
-      var mainFile = File('${tempDir.path}/main.dart')
+      File mainFile = new File('${tempDir.path}/main.dart')
         ..createSync(recursive: true)
         ..writeAsStringSync("import 'lib.dart'; main() => print(foo);\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -746,7 +964,7 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       final Future<int> result = frontendServer.open(args);
       frontendServer.compile(mainFile.path);
       int count = 0;
@@ -771,14 +989,14 @@ void main() async {
 
       expect(await result, 0);
       frontendServer.close();
-    }, timeout: Timeout.factor(100));
+    }, timeout: new Timeout.factor(100));
 
     test('compile expression when delta is rejected', () async {
-      var fileLib = File('${tempDir.path}/lib.dart')..createSync();
+      File fileLib = new File('${tempDir.path}/lib.dart')..createSync();
       fileLib.writeAsStringSync("foo() => 42;\n");
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("import 'lib.dart'; main1() => print(foo);\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -787,13 +1005,13 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       final Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // First request was to 'compile', which resulted in full kernel file.
           expect(result.errorsCount, 0);
@@ -807,7 +1025,7 @@ void main() async {
           // Second request was to 'compile-expression', which resulted in
           // kernel file with a function that wraps compiled expression.
           expect(result.errorsCount, 0);
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -816,7 +1034,8 @@ void main() async {
 
           count += 1;
         } else if (count == 2) {
-          // Third request was to recompile the script after renaming a function.
+          // Third request was to recompile the script after renaming a
+          // function.
           expect(result.errorsCount, 0);
           frontendServer.reject();
           count += 1;
@@ -835,12 +1054,13 @@ void main() async {
 
       expect(await result, 0);
       frontendServer.close();
-    }, timeout: Timeout.factor(100));
+    }, timeout: new Timeout.factor(100));
 
-    test('recompile request keeps incremental output dill filename', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
-      file.writeAsStringSync("main() {}\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+    test('reject - recreate issue 55357', () async {
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
+      file.writeAsStringSync(
+          "extension on String { int get fooValue => 42; }\n");
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -849,7 +1069,61 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
+      final Future<int> result = frontendServer.open(args);
+      frontendServer.compile(file.path);
+      int count = 0;
+      frontendServer.listen((Result compiledResult) {
+        CompilationResult result =
+            new CompilationResult.parse(compiledResult.status);
+        if (count == 0) {
+          // First request was to 'compile', which resulted in full kernel file.
+          expect(result.errorsCount, 0);
+          expect(dillFile.existsSync(), equals(true));
+          expect(result.filename, dillFile.path);
+          frontendServer.accept();
+          frontendServer.recompile(file.uri, entryPoint: file.path);
+          count += 1;
+        } else if (count == 1) {
+          // Second request was to recompile after an accept.
+          expect(result.errorsCount, 0);
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+          frontendServer.reject();
+          count += 1;
+        } else if (count == 2) {
+          // Third request was to reject. Now ask to compile again.
+          frontendServer.recompile(file.uri, entryPoint: file.path);
+          count += 1;
+        } else if (count == 3) {
+          // Fourth request was to recompile the script after a reject.
+          expect(result.errorsCount, 0);
+          expect(result.errorsCount, 0);
+          File outputFile = new File(result.filename);
+          expect(outputFile.existsSync(), equals(true));
+          expect(outputFile.lengthSync(), isPositive);
+          frontendServer.quit();
+        }
+      });
+
+      expect(await result, 0);
+      frontendServer.close();
+    }, timeout: new Timeout.factor(100));
+
+    test('recompile request keeps incremental output dill filename', () async {
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
+      file.writeAsStringSync("main() {}\n");
+      File dillFile = new File('${tempDir.path}/app.dill');
+      expect(dillFile.existsSync(), equals(false));
+      final List<String> args = <String>[
+        '--sdk-root=${sdkRoot.toFilePath()}',
+        '--incremental',
+        '--platform=${platformKernel.path}',
+        '--output-dill=${dillFile.path}'
+      ];
+
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
@@ -860,14 +1134,14 @@ void main() async {
           compiledResult.expectNoErrors(filename: dillFile.path);
           count += 1;
           frontendServer.accept();
-          var file2 = File('${tempDir.path}/bar.dart')..createSync();
+          File file2 = new File('${tempDir.path}/bar.dart')..createSync();
           file2.writeAsStringSync("main() {}\n");
           frontendServer.recompile(file2.uri, entryPoint: file2.path);
         } else {
           expect(count, 1);
           // Second request is to 'recompile', which results in incremental
           // kernel file.
-          var dillIncFile = File('${dillFile.path}.incremental.dill');
+          File dillIncFile = new File('${dillFile.path}.incremental.dill');
           compiledResult.expectNoErrors(filename: dillIncFile.path);
           expect(dillIncFile.existsSync(), equals(true));
           frontendServer.accept();
@@ -880,19 +1154,21 @@ void main() async {
 
     test('unsafe-package-serialization', () async {
       // Package A.
-      var file = File('${tempDir.path}/pkgA/a.dart')
+      File file = new File('${tempDir.path}/pkgA/a.dart')
         ..createSync(recursive: true);
       file.writeAsStringSync("pkgA() {}");
 
       // Package B.
-      file = File('${tempDir.path}/pkgB/a.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/pkgB/a.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("pkgB_a() {}");
-      file = File('${tempDir.path}/pkgB/b.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/pkgB/b.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("import 'package:pkgA/a.dart';"
           "pkgB_b() { pkgA(); }");
 
       // Application.
-      File('${tempDir.path}/app/.dart_tool/package_config.json')
+      new File('${tempDir.path}/app/.dart_tool/package_config.json')
         ..createSync(recursive: true)
         ..writeAsStringSync('''
   {
@@ -912,19 +1188,20 @@ void main() async {
   }
 ''');
       // Entry point A uses both package A and B.
-      file = File('${tempDir.path}/app/a.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/app/a.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("import 'package:pkgB/b.dart';"
           "import 'package:pkgB/a.dart';"
           "appA() { pkgB_a(); pkgB_b(); }");
 
       // Entry point B uses only package B.
-      var fileB = File('${tempDir.path}/app/B.dart')
+      File fileB = new File('${tempDir.path}/app/B.dart')
         ..createSync(recursive: true);
       fileB.writeAsStringSync("import 'package:pkgB/a.dart';"
           "appB() { pkgB_a(); }");
 
       // Other setup.
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
 
       // First compile app entry point A.
@@ -939,13 +1216,13 @@ void main() async {
         '--no-incremental-serialization',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         switch (count) {
           case 0:
             expect(dillFile.existsSync(), equals(true));
@@ -988,19 +1265,21 @@ void main() async {
 
     test('incremental-serialization', () async {
       // Package A.
-      var file = File('${tempDir.path}/pkgA/a.dart')
+      File file = new File('${tempDir.path}/pkgA/a.dart')
         ..createSync(recursive: true);
       file.writeAsStringSync("pkgA() {}");
 
       // Package B.
-      file = File('${tempDir.path}/pkgB/a.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/pkgB/a.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("pkgB_a() {}");
-      file = File('${tempDir.path}/pkgB/b.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/pkgB/b.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("import 'package:pkgA/a.dart';"
           "pkgB_b() { pkgA(); }");
 
       // Application.
-      File('${tempDir.path}/app/.dart_tool/package_config.json')
+      new File('${tempDir.path}/app/.dart_tool/package_config.json')
         ..createSync(recursive: true)
         ..writeAsStringSync('''
   {
@@ -1019,7 +1298,7 @@ void main() async {
     ]
   }
 ''');
-      file = File('${tempDir.path}/app/.dart_tool/package_config.json')
+      file = new File('${tempDir.path}/app/.dart_tool/package_config.json')
         ..createSync(recursive: true);
       file.writeAsStringSync(jsonEncode({
         "configVersion": 2,
@@ -1036,19 +1315,20 @@ void main() async {
       }));
 
       // Entry point A uses both package A and B.
-      file = File('${tempDir.path}/app/a.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/app/a.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("import 'package:pkgB/b.dart';"
           "import 'package:pkgB/a.dart';"
           "appA() { pkgB_a(); pkgB_b(); }");
 
       // Entry point B uses only package B.
-      var fileB = File('${tempDir.path}/app/B.dart')
+      File fileB = new File('${tempDir.path}/app/B.dart')
         ..createSync(recursive: true);
       fileB.writeAsStringSync("import 'package:pkgB/a.dart';"
           "appB() { pkgB_a(); }");
 
       // Other setup.
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
 
       // First compile app entry point A.
@@ -1062,13 +1342,13 @@ void main() async {
         '--incremental-serialization',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         switch (count) {
           case 0:
             expect(dillFile.existsSync(), equals(true));
@@ -1112,8 +1392,9 @@ void main() async {
     test('incremental-serialization with reject', () async {
       // Basically a reproduction of
       // https://github.com/flutter/flutter/issues/44384.
-      var file = File('${tempDir.path}/pkgA/.dart_tool/package_config.json')
-        ..createSync(recursive: true);
+      File file =
+          new File('${tempDir.path}/pkgA/.dart_tool/package_config.json')
+            ..createSync(recursive: true);
       file.writeAsStringSync(jsonEncode({
         "configVersion": 2,
         "packages": [
@@ -1123,10 +1404,11 @@ void main() async {
           },
         ],
       }));
-      file = File('${tempDir.path}/pkgA/a.dart')..createSync(recursive: true);
+      file = new File('${tempDir.path}/pkgA/a.dart')
+        ..createSync(recursive: true);
       file.writeAsStringSync("pkgA() {}");
 
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
 
       final List<String> args = <String>[
@@ -1137,13 +1419,13 @@ void main() async {
         '--incremental-serialization',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.path);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         switch (count) {
           case 0:
             expect(dillFile.existsSync(), equals(true));
@@ -1154,7 +1436,7 @@ void main() async {
             Component component = loadComponentFromBinary(dillFile.path);
 
             // Contain the file we want.
-            var libs = component.libraries
+            Iterable<Library> libs = component.libraries
                 .where((l) => l.importUri.toString() == "package:pkgA/a.dart");
             expect(libs.length, 1);
 
@@ -1180,7 +1462,7 @@ void main() async {
             Component component = loadComponentFromBinary(dillFile.path);
 
             // Contain the file we want.
-            var libs = component.libraries
+            Iterable<Library> libs = component.libraries
                 .where((l) => l.importUri.toString() == "package:pkgA/a.dart");
             expect(libs.length, 1);
 
@@ -1204,7 +1486,7 @@ void main() async {
             Component component = loadComponentFromBinary(dillFile.path);
 
             // Contain the file we want.
-            var libs = component.libraries
+            Iterable<Library> libs = component.libraries
                 .where((l) => l.importUri.toString() == "package:pkgA/a.dart");
             expect(libs.length, 1);
 
@@ -1217,9 +1499,9 @@ void main() async {
     });
 
     test('compile and recompile report non-zero error count', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() { foo(); bar(); }\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -1228,13 +1510,13 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(file.uri.toString());
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         switch (count) {
           case 0:
             expect(dillFile.existsSync(), equals(true));
@@ -1242,24 +1524,24 @@ void main() async {
             expect(result.errorsCount, 2);
             count += 1;
             frontendServer.accept();
-            var file2 = File('${tempDir.path}/bar.dart')..createSync();
+            File file2 = new File('${tempDir.path}/bar.dart')..createSync();
             file2.writeAsStringSync("main() { baz(); }\n");
             frontendServer.recompile(file2.uri,
                 entryPoint: file2.uri.toString());
             break;
           case 1:
-            var dillIncFile = File('${dillFile.path}.incremental.dill');
+            File dillIncFile = new File('${dillFile.path}.incremental.dill');
             expect(result.filename, dillIncFile.path);
             expect(result.errorsCount, 1);
             count += 1;
             frontendServer.accept();
-            var file2 = File('${tempDir.path}/bar.dart')..createSync();
+            File file2 = new File('${tempDir.path}/bar.dart')..createSync();
             file2.writeAsStringSync("main() { }\n");
             frontendServer.recompile(file2.uri,
                 entryPoint: file2.uri.toString());
             break;
           case 2:
-            var dillIncFile = File('${dillFile.path}.incremental.dill');
+            File dillIncFile = new File('${dillFile.path}.incremental.dill');
             expect(result.filename, dillIncFile.path);
             expect(result.errorsCount, 0);
             expect(dillIncFile.existsSync(), equals(true));
@@ -1271,12 +1553,12 @@ void main() async {
     });
 
     test('compile and recompile with MultiRootFileSystem', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {}\n");
-      File('${tempDir.path}/.dart_tool/package_config.json')
+      new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync()
         ..writeAsStringSync('{"configVersion": 2, "packages": []}');
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -1292,20 +1574,20 @@ void main() async {
     });
 
     test('compile multiple sources', () async {
-      final src1 = File('${tempDir.path}/src1.dart')
+      final File src1 = new File('${tempDir.path}/src1.dart')
         ..createSync()
         ..writeAsStringSync("main() {}\n");
-      final src2 = File('${tempDir.path}/src2.dart')
+      final File src2 = new File('${tempDir.path}/src2.dart')
         ..createSync()
         ..writeAsStringSync("entryPoint2() {}\n");
-      final src3 = File('${tempDir.path}/src3.dart')
+      final File src3 = new File('${tempDir.path}/src3.dart')
         ..createSync()
         ..writeAsStringSync("entryPoint3() {}\n");
-      final packagesFile =
-          File('${tempDir.path}/.dart_tool/package_config.json')
+      final File packagesFile =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
             ..createSync()
             ..writeAsStringSync('{"configVersion": 2, "packages": []}');
-      final dillFile = File('${tempDir.path}/app.dill');
+      final File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -1317,19 +1599,19 @@ void main() async {
         '--output-dill=${dillFile.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(src1.uri.toString());
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         expect(dillFile.existsSync(), equals(true));
         expect(result.filename, dillFile.path);
         expect(result.errorsCount, 0);
 
-        final component = loadComponentFromBinary(dillFile.path);
+        final Component component = loadComponentFromBinary(dillFile.path);
         // Contains (at least) the 3 files we want.
-        final srcUris = {src1.uri, src2.uri, src3.uri};
+        final Set<Uri> srcUris = {src1.uri, src2.uri, src3.uri};
         expect(
             component.libraries
                 .where((lib) => srcUris.contains(lib.fileUri))
@@ -1342,19 +1624,19 @@ void main() async {
     });
 
     group('http uris', () {
-      var host = 'localhost';
+      String host = 'localhost';
       late File dillFile;
       late int port;
       late HttpServer server;
 
       setUp(() async {
-        dillFile = File('${tempDir.path}/app.dill');
+        dillFile = new File('${tempDir.path}/app.dill');
         server = await HttpServer.bind(host, 0);
         port = server.port;
         server.listen((request) {
-          var path = request.uri.path;
-          var file = File('${tempDir.path}$path');
-          var response = request.response;
+          String path = request.uri.path;
+          File file = new File('${tempDir.path}$path');
+          HttpResponse response = request.response;
           if (!file.existsSync()) {
             response.statusCode = 404;
           } else {
@@ -1363,10 +1645,10 @@ void main() async {
           }
           response.close();
         });
-        var main = File('${tempDir.path}/foo.dart')..createSync();
+        File main = new File('${tempDir.path}/foo.dart')..createSync();
         main.writeAsStringSync(
             "import 'package:foo/foo.dart'; main() {print(foo);}\n");
-        File('${tempDir.path}/.dart_tool/package_config.json')
+        new File('${tempDir.path}/.dart_tool/package_config.json')
           ..createSync(recursive: true)
           ..writeAsStringSync('''
   {
@@ -1380,7 +1662,7 @@ void main() async {
     ]
   }
 ''');
-        File('${tempDir.path}/packages/foo/foo.dart')
+        new File('${tempDir.path}/packages/foo/foo.dart')
           ..createSync(recursive: true)
           ..writeAsStringSync("var foo = 'hello';");
       });
@@ -1424,7 +1706,7 @@ void main() async {
     });
 
     group('binary protocol', () {
-      var fileContentMap = <Uri, String>{};
+      Map<Uri, String> fileContentMap = <Uri, String>{};
 
       setUp(() {
         fileContentMap = {};
@@ -1432,16 +1714,16 @@ void main() async {
 
       void addFileCallbacks(RequestChannel requestChannel) {
         requestChannel.add('file.exists', (uriStr) async {
-          final uri = Uri.parse(uriStr as String);
+          final Uri uri = Uri.parse(uriStr as String);
           return fileContentMap.containsKey(uri);
         });
         requestChannel.add('file.readAsBytes', (uriStr) async {
-          final uri = Uri.parse(uriStr as String);
-          final content = fileContentMap[uri];
-          return content != null ? utf8.encode(content) : Uint8List(0);
+          final Uri uri = Uri.parse(uriStr as String);
+          final String? content = fileContentMap[uri];
+          return content != null ? utf8.encode(content) : new Uint8List(0);
         });
         requestChannel.add('file.readAsStringSync', (uriStr) async {
-          final uri = Uri.parse(uriStr as String);
+          final Uri uri = Uri.parse(uriStr as String);
           return fileContentMap[uri] ?? '';
         });
       }
@@ -1455,18 +1737,18 @@ void main() async {
       }
 
       Uri registerKernelBlob(Uint8List bytes) {
-        bytes = Uint8List.fromList(bytes);
+        bytes = new Uint8List.fromList(bytes);
         return (Isolate.current as dynamic).createUriForKernelBlob(bytes);
       }
 
       Future<void> runWithServer(
         Future<void> Function(RequestChannel) f,
       ) async {
-        final testFinished = Completer<void>();
-        final serverSocket = await loopbackServerSocket();
+        final Completer<void> testFinished = new Completer<void>();
+        final ServerSocket serverSocket = await loopbackServerSocket();
 
         serverSocket.listen((socket) async {
-          final requestChannel = RequestChannel(socket);
+          final RequestChannel requestChannel = new RequestChannel(socket);
 
           try {
             await f(requestChannel);
@@ -1478,8 +1760,8 @@ void main() async {
           }
         });
 
-        final host = serverSocket.address.address;
-        final addressStr = '$host:${serverSocket.port}';
+        final String host = serverSocket.address.address;
+        final String addressStr = '$host:${serverSocket.port}';
         expect(await starter(['--binary-protocol-address=$addressStr']), 0);
 
         await testFinished.future;
@@ -1490,8 +1772,8 @@ void main() async {
           await runWithServer((requestChannel) async {
             try {
               await requestChannel.sendRequest<Uint8List>('dill.put', 42);
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1499,8 +1781,8 @@ void main() async {
           await runWithServer((requestChannel) async {
             try {
               await requestChannel.sendRequest<Uint8List>('dill.put', {});
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1510,8 +1792,8 @@ void main() async {
               await requestChannel.sendRequest<Uint8List>('dill.put', {
                 'uri': 'vm:dill',
               });
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1519,7 +1801,7 @@ void main() async {
           await runWithServer((requestChannel) async {
             await requestChannel.sendRequest<Uint8List?>('dill.put', {
               'uri': 'vm:dill',
-              'bytes': Uint8List(256),
+              'bytes': new Uint8List(256),
             });
           });
         });
@@ -1530,8 +1812,8 @@ void main() async {
           await runWithServer((requestChannel) async {
             try {
               await requestChannel.sendRequest<Uint8List>('dill.remove', 42);
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1539,8 +1821,8 @@ void main() async {
           await runWithServer((requestChannel) async {
             try {
               await requestChannel.sendRequest<Uint8List>('dill.remove', {});
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1561,8 +1843,8 @@ void main() async {
                 'kernelForProgram',
                 42,
               );
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1573,8 +1855,8 @@ void main() async {
                 'kernelForProgram',
                 {},
               );
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1584,8 +1866,8 @@ void main() async {
               await requestChannel.sendRequest<Uint8List>('kernelForProgram', {
                 'sdkSummary': 'dill:vm',
               });
-              fail('Expected RemoteException');
-            } on RemoteException {}
+              fail('Expected RequestChannelException');
+            } on RequestChannelException {}
           });
         });
 
@@ -1595,7 +1877,7 @@ void main() async {
 
             await requestChannel.sendRequest<void>('dill.put', {
               'uri': 'dill:vm',
-              'bytes': File(
+              'bytes': new File(
                 path.join(
                   path.dirname(path.dirname(Platform.resolvedExecutable)),
                   'lib',
@@ -1612,7 +1894,8 @@ void main(List<String> arguments, SendPort sendPort) {
 }
 ''';
 
-            final kernelBytes = await requestChannel.sendRequest<Uint8List>(
+            final Uint8List kernelBytes =
+                await requestChannel.sendRequest<Uint8List>(
               'kernelForProgram',
               {
                 'sdkSummary': 'dill:vm',
@@ -1621,9 +1904,9 @@ void main(List<String> arguments, SendPort sendPort) {
             );
 
             expect(kernelBytes, hasLength(greaterThan(200)));
-            final kernelUri = registerKernelBlob(kernelBytes);
+            final Uri kernelUri = registerKernelBlob(kernelBytes);
 
-            final receivePort = ReceivePort();
+            final ReceivePort receivePort = new ReceivePort();
             await Isolate.spawnUri(kernelUri, [], receivePort.sendPort);
             expect(await receivePort.first, 42);
           });
@@ -1632,11 +1915,12 @@ void main(List<String> arguments, SendPort sendPort) {
     });
 
     test('compile to JavaScript', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -1648,7 +1932,7 @@ void main(List<String> arguments, SendPort sendPort) {
     ]
   }
   ''');
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
 
       expect(dillFile.existsSync(), false);
 
@@ -1668,11 +1952,12 @@ void main(List<String> arguments, SendPort sendPort) {
     });
 
     test('compile to JavaScript with canary features enabled', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -1684,8 +1969,8 @@ void main(List<String> arguments, SendPort sendPort) {
     ]
   }
   ''');
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourcesFile = File('${tempDir.path}/app.dill.sources');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourcesFile = new File('${tempDir.path}/app.dill.sources');
 
       expect(dillFile.existsSync(), false);
       expect(sourcesFile.existsSync(), false);
@@ -1705,7 +1990,7 @@ void main(List<String> arguments, SendPort sendPort) {
 
       expect(dillFile.existsSync(), true);
       expect(sourcesFile.existsSync(), true);
-      var ddcFlags = utf8
+      String ddcFlags = utf8
           .decode(sourcesFile.readAsBytesSync())
           .split('\n')
           .singleWhere((l) => l.startsWith('// Flags: '));
@@ -1713,9 +1998,9 @@ void main(List<String> arguments, SendPort sendPort) {
     });
 
     test('compile to JavaScript with package scheme', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packages = File('${tempDir.path}/.dart_tool/package_config.json')
+      File packages = new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync()
         ..writeAsStringSync(jsonEncode({
           "configVersion": 2,
@@ -1726,7 +2011,7 @@ void main(List<String> arguments, SendPort sendPort) {
             },
           ],
         }));
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
 
       expect(dillFile.existsSync(), false);
 
@@ -1744,9 +2029,9 @@ void main(List<String> arguments, SendPort sendPort) {
     }, skip: 'https://github.com/dart-lang/sdk/issues/43959');
 
     test('compile to JavaScript weak null safety', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packages = File('${tempDir.path}/.dart_tool/package_config.json')
+      File packages = new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync()
         ..writeAsStringSync(jsonEncode({
           "configVersion": 2,
@@ -1757,7 +2042,7 @@ void main(List<String> arguments, SendPort sendPort) {
             },
           ],
         }));
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
 
       expect(dillFile.existsSync(), false);
 
@@ -1776,9 +2061,9 @@ void main(List<String> arguments, SendPort sendPort) {
 
     test('compile to JavaScript weak null safety then nonexistent file',
         () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packages = File('${tempDir.path}/.dart_tool/package_config.json')
+      File packages = new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync()
         ..writeAsStringSync(jsonEncode({
           "configVersion": 2,
@@ -1789,11 +2074,11 @@ void main(List<String> arguments, SendPort sendPort) {
             },
           ],
         }));
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
 
       expect(dillFile.existsSync(), false);
 
-      var library = 'package:hello/foo.dart';
+      String library = 'package:hello/foo.dart';
 
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -1804,13 +2089,13 @@ void main(List<String> arguments, SendPort sendPort) {
         '--packages=${packages.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
-      var count = 0;
+      int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         count++;
         if (count == 1) {
           // First request is to 'compile', which results in full JavaScript
@@ -1832,12 +2117,13 @@ void main(List<String> arguments, SendPort sendPort) {
     }, skip: 'https://github.com/dart-lang/sdk/issues/43959');
 
     test('compile to JavaScript with no metadata', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n\n}\n");
 
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -1850,13 +2136,13 @@ void main(List<String> arguments, SendPort sendPort) {
   }
   ''');
 
-      var library = 'package:hello/foo.dart';
+      String library = 'package:hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
-      var metadataFile = File('${dillFile.path}.metadata');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
+      File metadataFile = new File('${dillFile.path}.metadata');
 
       expect(dillFile.existsSync(), false);
       expect(sourceFile.existsSync(), false);
@@ -1873,13 +2159,13 @@ void main(List<String> arguments, SendPort sendPort) {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
-      var count = 0;
+      int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         count++;
         // Request to 'compile', which results in full JavaScript and no
         // metadata.
@@ -1899,11 +2185,12 @@ void main(List<String> arguments, SendPort sendPort) {
     });
 
     test('compile to JavaScript with metadata', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n\n}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -1916,14 +2203,14 @@ void main(List<String> arguments, SendPort sendPort) {
   }
   ''');
 
-      var library = 'package:hello/foo.dart';
+      String library = 'package:hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
-      var metadataFile = File('${dillFile.path}.metadata');
-      var symbolsFile = File('${dillFile.path}.symbols');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
+      File metadataFile = new File('${dillFile.path}.metadata');
+      File symbolsFile = new File('${dillFile.path}.symbols');
 
       expect(dillFile.existsSync(), false);
       expect(sourceFile.existsSync(), false);
@@ -1943,13 +2230,13 @@ void main(List<String> arguments, SendPort sendPort) {
         '--emit-debug-symbols',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         count++;
         // Request to 'compile', which results in full JavaScript and metadata.
         expect(result.errorsCount, equals(0));
@@ -1975,7 +2262,7 @@ void main(List<String> arguments, SendPort sendPort) {
       //    (a <-> b) -> (c <-> d <-> e)
       // In body changes are performed on d and e. With advanced invalidation,
       // not currently enabled, only the module {c, d, e} will be recompiled.
-      File('${tempDir.path}/a.dart')
+      new File('${tempDir.path}/a.dart')
         ..createSync()
         ..writeAsStringSync("""
 import 'b.dart';
@@ -1984,7 +2271,7 @@ main() {
 }
 a() => "<<a>>";
 """);
-      File('${tempDir.path}/b.dart')
+      new File('${tempDir.path}/b.dart')
         ..createSync()
         ..writeAsStringSync("""
 import 'a.dart';
@@ -1995,7 +2282,7 @@ b() {
   c();
 }
 """);
-      File('${tempDir.path}/c.dart')
+      new File('${tempDir.path}/c.dart')
         ..createSync()
         ..writeAsStringSync("""
 import 'd.dart';
@@ -2004,7 +2291,7 @@ c() {
   d();
 }
 """);
-      var fileD = File('${tempDir.path}/d.dart')
+      File fileD = new File('${tempDir.path}/d.dart')
         ..createSync()
         ..writeAsStringSync("""
 import 'e.dart';
@@ -2013,7 +2300,7 @@ d() {
   e();
 }
 """);
-      var fileE = File('${tempDir.path}/e.dart')
+      File fileE = new File('${tempDir.path}/e.dart')
         ..createSync()
         ..writeAsStringSync("""
 import 'c.dart';
@@ -2022,9 +2309,10 @@ e() {
   "<<e>>";
 }
 """);
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -2037,14 +2325,14 @@ e() {
   }
   ''');
 
-      var entryPoint = 'package:a/a.dart';
+      String entryPoint = 'package:a/a.dart';
 
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
-      var metadataFile = File('${dillFile.path}.metadata');
-      var symbolsFile = File('${dillFile.path}.symbols');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
+      File metadataFile = new File('${dillFile.path}.metadata');
+      File symbolsFile = new File('${dillFile.path}.symbols');
 
       expect(dillFile.existsSync(), false);
       expect(sourceFile.existsSync(), false);
@@ -2063,7 +2351,7 @@ e() {
         '--emit-debug-symbols',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(entryPoint);
       int count = 0;
@@ -2071,14 +2359,15 @@ e() {
         switch (count) {
           case 0:
             CompilationResult result =
-                CompilationResult.parse(compiledResult.status);
+                new CompilationResult.parse(compiledResult.status);
             expect(result.errorsCount, equals(0));
             expect(result.filename, dillFile.path);
             expect(sourceFile.existsSync(), equals(true));
 
-            var source = sourceFile.readAsStringSync();
+            String source = sourceFile.readAsStringSync();
             // Split on the comment at the end of each module.
-            var jsModules = source.split(RegExp("//# sourceMappingURL=.*.map"));
+            List<String> jsModules =
+                source.split(new RegExp("//# sourceMappingURL=.*.map"));
 
             expect(jsModules[0], contains('<<a>>'));
             expect(jsModules[0], contains('<<b>>'));
@@ -2108,16 +2397,17 @@ d() {
             break;
           case 1:
             CompilationResult result =
-                CompilationResult.parse(compiledResult.status);
+                new CompilationResult.parse(compiledResult.status);
             expect(result.errorsCount, equals(0));
             expect(result.filename, '${dillFile.path}.incremental.dill');
             File incrementalSourceFile =
-                File('${dillFile.path}.incremental.dill.sources');
+                new File('${dillFile.path}.incremental.dill.sources');
             expect(incrementalSourceFile.existsSync(), equals(true));
 
-            var source = incrementalSourceFile.readAsStringSync();
+            String source = incrementalSourceFile.readAsStringSync();
             // Split on the comment at the end of each module.
-            var jsModules = source.split(RegExp("//# sourceMappingURL=.*.map"));
+            List<String> jsModules =
+                source.split(new RegExp("//# sourceMappingURL=.*.map"));
 
             expect(jsModules[0], not(contains('<<a>>')));
             expect(jsModules[0], not(contains('<<b>>')));
@@ -2143,16 +2433,17 @@ e() {
             break;
           case 2:
             CompilationResult result =
-                CompilationResult.parse(compiledResult.status);
+                new CompilationResult.parse(compiledResult.status);
             expect(result.errorsCount, equals(0));
             expect(result.filename, '${dillFile.path}.incremental.dill');
             File incrementalSourceFile =
-                File('${dillFile.path}.incremental.dill.sources');
+                new File('${dillFile.path}.incremental.dill.sources');
             expect(incrementalSourceFile.existsSync(), equals(true));
 
-            var source = incrementalSourceFile.readAsStringSync();
+            String source = incrementalSourceFile.readAsStringSync();
             // Split on the comment at the end of each module.
-            var jsModules = source.split(RegExp("//# sourceMappingURL=.*.map"));
+            List<String> jsModules =
+                source.split(new RegExp("//# sourceMappingURL=.*.map"));
 
             expect(jsModules[0], not(contains('<<a>>')));
             expect(jsModules[0], not(contains('<<b>>')));
@@ -2180,19 +2471,20 @@ e() {
 
     test('compile to JavaScript all modules with unsound null safety',
         () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("import 'bar.dart'; "
           "typedef myType = void Function(int); main() { fn is myType; }\n");
-      file = File('${tempDir.path}/bar.dart')..createSync();
+      file = new File('${tempDir.path}/bar.dart')..createSync();
       file.writeAsStringSync("void Function(int) fn = (int i) => null;\n");
-      var library = 'package:hello/foo.dart';
+      String library = 'package:hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourceFile = File('${dillFile.path}.sources');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
 
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
     {
       "configVersion": 2,
       "packages": [
@@ -2217,14 +2509,14 @@ e() {
         '--packages=${packageConfig.path}'
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
-      var count = 0;
-      var expectationCompleter = Completer<bool>();
+      int count = 0;
+      Completer<bool> expectationCompleter = new Completer<bool>();
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         count++;
         // Request to 'compile', which results in full JavaScript and no
         // metadata.
@@ -2232,9 +2524,10 @@ e() {
         expect(sourceFile.existsSync(), equals(true));
         expect(result.filename, dillFile.path);
 
-        var source = sourceFile.readAsStringSync();
+        String source = sourceFile.readAsStringSync();
         // Split on the comment at the end of each module.
-        var jsModules = source.split(RegExp("//# sourceMappingURL=.*.map"));
+        List<String> jsModules =
+            source.split(new RegExp("//# sourceMappingURL=.*.map"));
 
         // Both modules should include the unsound null safety check.
         expect(
@@ -2255,16 +2548,17 @@ e() {
         skip: 'https://github.com/dart-lang/sdk/issues/52775');
 
     test('compile to JavaScript, all modules with sound null safety', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync(
           "import 'bar.dart'; typedef myType = void Function(int); "
           "main() { fn is myType; }\n");
-      file = File('${tempDir.path}/bar.dart')..createSync();
+      file = new File('${tempDir.path}/bar.dart')..createSync();
       file.writeAsStringSync("void Function(int) fn = (int i) => null;\n");
 
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
     {
       "configVersion": 2,
       "packages": [
@@ -2277,10 +2571,10 @@ e() {
     }
     ''');
 
-      var library = 'package:hello/foo.dart';
+      String library = 'package:hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/app.dill');
-      var sourceFile = File('${dillFile.path}.sources');
+      File dillFile = new File('${tempDir.path}/app.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
 
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -2291,14 +2585,14 @@ e() {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
-      var count = 0;
-      var expectationCompleter = Completer<bool>();
+      int count = 0;
+      Completer<bool> expectationCompleter = new Completer<bool>();
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         count++;
         // Request to 'compile', which results in full JavaScript and no
         // metadata.
@@ -2306,9 +2600,10 @@ e() {
         expect(sourceFile.existsSync(), equals(true));
         expect(result.filename, dillFile.path);
 
-        var source = sourceFile.readAsStringSync();
+        String source = sourceFile.readAsStringSync();
         // Split on the comment at the end of each module.
-        var jsModules = source.split(RegExp("//# sourceMappingURL=.*.map"));
+        List<String> jsModules =
+            source.split(new RegExp("//# sourceMappingURL=.*.map"));
 
         // Both modules should include the sound null safety validation.
         expect(
@@ -2327,11 +2622,12 @@ e() {
     });
 
     test('compile expression to JavaScript', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -2344,13 +2640,13 @@ e() {
   }
   ''');
 
-      var library = 'package:hello/foo.dart';
-      var module = 'packages/hello/foo.dart';
+      String library = 'package:hello/foo.dart';
+      String module = 'packages/hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/foo.dart.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
+      File dillFile = new File('${tempDir.path}/foo.dart.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
 
       expect(dillFile.existsSync(), false);
 
@@ -2363,13 +2659,13 @@ e() {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // First request is to 'compile', which results in full JavaScript
           expect(result.errorsCount, equals(0));
@@ -2395,7 +2691,7 @@ e() {
           expect(result.errorsCount, equals(0));
           // Third request is to 'compile-expression-to-js', which results in
           // js file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -2416,12 +2712,13 @@ e() {
 
     test('compiled JavaScript includes web library environment defines',
         () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync(
           "main() {print(const bool.fromEnvironment('dart.library.html'));}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -2434,13 +2731,13 @@ e() {
   }
   ''');
 
-      var library = 'package:hello/foo.dart';
-      var module = 'packages/hello/foo.dart';
+      String library = 'package:hello/foo.dart';
+      String module = 'packages/hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/foo.dart.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
+      File dillFile = new File('${tempDir.path}/foo.dart.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
 
       expect(dillFile.existsSync(), false);
 
@@ -2453,13 +2750,13 @@ e() {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // Request to 'compile', which results in full JavaScript.
           expect(result.errorsCount, equals(0));
@@ -2468,7 +2765,7 @@ e() {
           expect(sourceMapsFile.existsSync(), equals(true));
           expect(result.filename, dillFile.path);
 
-          var compiledOutput = sourceFile.readAsStringSync();
+          String compiledOutput = sourceFile.readAsStringSync();
           // The constant environment variable should be inlined as a boolean
           // literal.
           expect(compiledOutput, contains('print(true);'));
@@ -2487,7 +2784,7 @@ e() {
           // Second request is to 'compile-expression-to-js' that should
           // result in a literal `true` .
           expect(result.errorsCount, 0);
-          var resultFile = File(result.filename);
+          File resultFile = new File(result.filename);
           // The constant environment variable should be inlined as a boolean
           // literal.
           expect(resultFile.readAsStringSync(), contains('return true;'));
@@ -2501,11 +2798,12 @@ e() {
     });
 
     test('mixed compile expression commands with web target', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {\n\n}\n");
-      var packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
-        ..createSync(recursive: true)
-        ..writeAsStringSync('''
+      File packageConfig =
+          new File('${tempDir.path}/.dart_tool/package_config.json')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('''
   {
     "configVersion": 2,
     "packages": [
@@ -2517,13 +2815,13 @@ e() {
     ]
   }
   ''');
-      var library = 'package:hello/foo.dart';
-      var module = 'packages/hello/foo.dart';
+      String library = 'package:hello/foo.dart';
+      String module = 'packages/hello/foo.dart';
 
-      var dillFile = File('${tempDir.path}/foo.dart.dill');
-      var sourceFile = File('${dillFile.path}.sources');
-      var manifestFile = File('${dillFile.path}.json');
-      var sourceMapsFile = File('${dillFile.path}.map');
+      File dillFile = new File('${tempDir.path}/foo.dart.dill');
+      File sourceFile = new File('${dillFile.path}.sources');
+      File manifestFile = new File('${dillFile.path}.json');
+      File sourceMapsFile = new File('${dillFile.path}.map');
 
       expect(dillFile.existsSync(), false);
 
@@ -2536,13 +2834,13 @@ e() {
         '--packages=${packageConfig.path}',
       ];
 
-      final frontendServer = FrontendServer();
+      FrontendServer frontendServer = new FrontendServer();
       Future<int> result = frontendServer.open(args);
       frontendServer.compile(library);
       int count = 0;
       frontendServer.listen((Result compiledResult) {
         CompilationResult result =
-            CompilationResult.parse(compiledResult.status);
+            new CompilationResult.parse(compiledResult.status);
         if (count == 0) {
           // First request is to 'compile', which results in full JavaScript
           expect(result.errorsCount, equals(0));
@@ -2558,7 +2856,7 @@ e() {
           expect(result.errorsCount, equals(0));
           // Second request is to 'compile-expression-to-js', which results in
           // js file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -2568,7 +2866,7 @@ e() {
           expect(result.errorsCount, equals(0));
           // Third request is to 'compile-expression', which results in
           // kernel file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -2578,7 +2876,7 @@ e() {
           expect(result.errorsCount, equals(0));
           // Fourth request is to 'compile-expression-to-js', which results in
           // js file with a function that wraps compiled expression.
-          File outputFile = File(result.filename);
+          File outputFile = new File(result.filename);
           expect(outputFile.existsSync(), equals(true));
           expect(outputFile.lengthSync(), isPositive);
 
@@ -2592,11 +2890,11 @@ e() {
     });
 
     test('compile "package:"-file', () async {
-      Directory lib = Directory('${tempDir.path}/lib')..createSync();
-      File('${lib.path}/foo.dart')
+      Directory lib = new Directory('${tempDir.path}/lib')..createSync();
+      new File('${lib.path}/foo.dart')
         ..createSync()
         ..writeAsStringSync("main() {}\n");
-      File packages = File('${tempDir.path}/.dart_tool/package_config.json')
+      File packages = new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync()
         ..writeAsStringSync(jsonEncode({
           "configVersion": 2,
@@ -2607,9 +2905,9 @@ e() {
             },
           ],
         }));
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
-      var depFile = File('${tempDir.path}/the depfile');
+      File depFile = new File('${tempDir.path}/the depfile');
       expect(depFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -2622,18 +2920,18 @@ e() {
       ];
       expect(await starter(args), 0);
       expect(depFile.existsSync(), true);
-      var depContents = depFile.readAsStringSync();
-      var depContentsParsed = depContents.split(': ');
+      String depContents = depFile.readAsStringSync();
+      List<String> depContentsParsed = depContents.split(': ');
       expect(path.basename(depContentsParsed[0]), path.basename(dillFile.path));
       expect(depContentsParsed[1], isNotEmpty);
     });
 
     test('compile and produce deps file', () async {
-      var file = File('${tempDir.path}/foo.dart')..createSync();
+      File file = new File('${tempDir.path}/foo.dart')..createSync();
       file.writeAsStringSync("main() {}\n");
-      var dillFile = File('${tempDir.path}/app.dill');
+      File dillFile = new File('${tempDir.path}/app.dill');
       expect(dillFile.existsSync(), equals(false));
-      var depFile = File('${tempDir.path}/the depfile');
+      File depFile = new File('${tempDir.path}/the depfile');
       expect(depFile.existsSync(), equals(false));
       final List<String> args = <String>[
         '--sdk-root=${sdkRoot.toFilePath()}',
@@ -2645,8 +2943,8 @@ e() {
       ];
       expect(await starter(args), 0);
       expect(depFile.existsSync(), true);
-      var depContents = depFile.readAsStringSync();
-      var depContentsParsed = depContents.split(': ');
+      String depContents = depFile.readAsStringSync();
+      List<String> depContentsParsed = depContents.split(': ');
       expect(path.basename(depContentsParsed[0]), path.basename(dillFile.path));
       expect(depContentsParsed[1], isNotEmpty);
     });
@@ -2666,8 +2964,8 @@ e() {
 
     test('mimic flutter benchmark', () async {
       // This is based on what flutters "hot_mode_dev_cycle__benchmark" does.
-      var dillFile = File('${tempDir.path}/full.dill');
-      var incrementalDillFile = File('${tempDir.path}/incremental.dill');
+      File dillFile = new File('${tempDir.path}/full.dill');
+      File incrementalDillFile = new File('${tempDir.path}/incremental.dill');
       expect(dillFile.existsSync(), equals(false));
       final String targetName = 'vm';
       final Target target = createFrontEndTarget(targetName)!;
@@ -2678,10 +2976,10 @@ e() {
         '--output-dill=${dillFile.path}',
         '--output-incremental-dill=${incrementalDillFile.path}'
       ];
-      File dart2js = File.fromUri(Platform.script
+      File dart2js = new File.fromUri(Platform.script
           .resolve("../../../pkg/compiler/lib/src/dart2js.dart"));
       expect(dart2js.existsSync(), equals(true));
-      File dart2jsOtherFile = File.fromUri(Platform.script
+      File dart2jsOtherFile = new File.fromUri(Platform.script
           .resolve("../../../pkg/compiler/lib/src/compiler.dart"));
       expect(dart2jsOtherFile.existsSync(), equals(true));
 
@@ -2691,13 +2989,13 @@ e() {
       List<List<int>> compiledKernels = <List<int>>[];
       for (int serverCloses = 0; serverCloses < 2; ++serverCloses) {
         print("Restart #$serverCloses");
-        final frontendServer = FrontendServer();
+        FrontendServer frontendServer = new FrontendServer();
         Future<int> result = frontendServer.open(args);
         frontendServer.compile(dart2js.path);
         int count = 0;
         frontendServer.listen((Result compiledResult) {
           CompilationResult result =
-              CompilationResult.parse(compiledResult.status);
+              new CompilationResult.parse(compiledResult.status);
           String outputFilename = result.filename;
           print("$outputFilename -- count $count");
 
@@ -2705,10 +3003,10 @@ e() {
           // from compiled kernel files matches kernel file produced when
           // compiler was initialized from sources on the first run.
           if (serverCloses == 0) {
-            compiledKernels.add(File(dillFile.path).readAsBytesSync());
+            compiledKernels.add(new File(dillFile.path).readAsBytesSync());
           } else {
-            checkIsEqual(
-                compiledKernels[count], File(dillFile.path).readAsBytesSync());
+            checkIsEqual(compiledKernels[count],
+                new File(dillFile.path).readAsBytesSync());
           }
           if (count == 0) {
             // First request is to 'compile', which results in full kernel file.
@@ -2808,17 +3106,21 @@ e() {
         expect(await result, 0);
         frontendServer.close();
       }
-    }, timeout: Timeout.factor(8));
+    }, timeout: new Timeout.factor(8));
 
     test('compile with(out) warning', () async {
       Future runTest({bool hideWarnings = true}) async {
-        var file = File('${tempDir.path}/foo.dart')..createSync();
+        File file = new File('${tempDir.path}/foo.dart')..createSync();
         file.writeAsStringSync("""
+import 'dart:js_interop';
 main() {}
-method(int i) => i?.isEven;
+@JSExport('Foo')
+class Class {
+  void method() {}
+}
 """);
-        var packageConfig =
-            File('${tempDir.path}/.dart_tool/package_config.json')
+        File packageConfig =
+            new File('${tempDir.path}/.dart_tool/package_config.json')
               ..createSync(recursive: true)
               ..writeAsStringSync('''
   {
@@ -2832,7 +3134,7 @@ method(int i) => i?.isEven;
     ]
   }
   ''');
-        var dillFile = File('${tempDir.path}/app.dill');
+        File dillFile = new File('${tempDir.path}/app.dill');
 
         expect(dillFile.existsSync(), false);
 
@@ -2846,12 +3148,13 @@ method(int i) => i?.isEven;
           if (hideWarnings) '--verbosity=error',
           file.path,
         ];
-        StringBuffer output = StringBuffer();
-        expect(await starter(args, output: output), 0);
+        StringBuffer output = new StringBuffer();
+        int exitCode = await starter(args, output: output);
         String result = output.toString();
+        expect(exitCode, 0);
         Matcher matcher =
-            contains("Warning: Operand of null-aware operation '?.' "
-                "has type 'int' which excludes null.");
+            contains("Warning: The value in the `@JSExport` annotation on the "
+                "class or mixin 'Class' will be ignored.");
         if (hideWarnings) {
           matcher = isNot(matcher);
         }
@@ -2872,8 +3175,9 @@ method(int i) => i?.isEven;
 /// libraries.
 Uri computePlatformBinariesLocation() {
   // The directory of the Dart VM executable.
-  Uri vmDirectory =
-      Uri.base.resolveUri(Uri.file(Platform.resolvedExecutable)).resolve(".");
+  Uri vmDirectory = Uri.base
+      .resolveUri(new Uri.file(Platform.resolvedExecutable))
+      .resolve(".");
   if (vmDirectory.path.endsWith("/bin/")) {
     // Looks like the VM is in a `/bin/` directory, so this is running from a
     // built SDK.
@@ -2921,7 +3225,7 @@ class OutputParser {
       return;
     }
 
-    var bKey = _boundaryKey!;
+    String bKey = _boundaryKey!;
     if (s.startsWith(bKey)) {
       // First boundaryKey separates compiler output from list of sources
       // (if we expect list of sources, which is indicated by receivedSources
@@ -2932,7 +3236,7 @@ class OutputParser {
       }
       // Second boundaryKey indicates end of frontend server response
       expectSources = true;
-      _receivedResults.add(Result(
+      _receivedResults.add(new Result(
           s.length > bKey.length ? s.substring(bKey.length + 1) : null,
           _receivedSources!));
       _boundaryKey = null;
@@ -2940,6 +3244,8 @@ class OutputParser {
       if (_readingSources) {
         _receivedSources ??= <String>[];
         _receivedSources!.add(s);
+      } else {
+        print("> $s");
       }
     }
   }
@@ -2952,7 +3258,7 @@ class Result {
   Result(this.status, this.sources);
 
   void expectNoErrors({String? filename}) {
-    var result = CompilationResult.parse(status);
+    CompilationResult result = new CompilationResult.parse(status);
     expect(result.errorsCount, equals(0));
     if (filename != null) {
       expect(result.filename, equals(filename));
@@ -2961,7 +3267,7 @@ class Result {
 }
 
 /// Creates a matcher for the negation of [matcher].
-Matcher not(Matcher matcher) => NotMatcher(matcher);
+Matcher not(Matcher matcher) => new NotMatcher(matcher);
 
 class NotMatcher extends Matcher {
   final Matcher matcher;
@@ -2988,17 +3294,17 @@ class FrontendServer {
 
   factory FrontendServer() {
     final StreamController<List<int>> inputStreamController =
-        StreamController<List<int>>();
+        new StreamController<List<int>>();
     final StreamController<List<int>> stdoutStreamController =
-        StreamController<List<int>>();
-    final IOSink ioSink = IOSink(stdoutStreamController.sink);
-    StreamController<Result> receivedResults = StreamController<Result>();
-    final outputParser = OutputParser(receivedResults);
+        new StreamController<List<int>>();
+    final IOSink ioSink = new IOSink(stdoutStreamController.sink);
+    StreamController<Result> receivedResults = new StreamController<Result>();
+    final OutputParser outputParser = new OutputParser(receivedResults);
     stdoutStreamController.stream
         .transform(utf8.decoder)
         .transform(const LineSplitter())
         .listen(outputParser.listener);
-    return FrontendServer._internal(inputStreamController,
+    return new FrontendServer._internal(inputStreamController,
         stdoutStreamController, ioSink, receivedResults, outputParser);
   }
 
@@ -3077,13 +3383,25 @@ class FrontendServer {
         .codeUnits);
   }
 
+  /// Compiles the native assets in isolation.
+  void compileNativeAssetsOnly() {
+    outputParser.expectSources = true;
+    inputStreamController.add('native-assets-only\n'.codeUnits);
+  }
+
   /// Sets the native assets yaml [uri].
   void setNativeAssets({required Uri uri}) {
     outputParser.expectSources = true;
     inputStreamController.add('native-assets $uri\n'.codeUnits);
   }
 
-  /// Compiles the [expression] as if it occurs in [library].
+  /// Compiles the [expression] as if it occurs in [library] in "script"
+  /// [scriptUri] at offset [offset].
+  /// If no [scriptUri] is provided it defaults to the same as [library].
+  /// If no [offset] is provided it defaults to -1 (i.e. "no offset").
+  /// [scriptUri] (if different, e.g. if in a part) and [offset] is needed for
+  /// finding static types which is needed for expression evaluation on
+  /// extension types.
   ///
   /// If [className] is provided, [expression] is compiled as if it occurs in
   /// the class of that name.
@@ -3095,41 +3413,72 @@ class FrontendServer {
   /// frontend server.
   // TODO(johnniwinther): Use (required) named arguments.
   void compileExpression(String expression, Uri library,
-      {String boundaryKey = 'abc', String className = '', bool? isStatic}) {
-    // 'compile-expression <boundarykey>
-    // expression
-    // definitions (one per line)
-    // ...
-    // <boundarykey>
-    // definitionTypes (one per line)
-    // ...
-    // <boundarykey>
-    // type-definitions (one per line)
-    // ...
-    // <boundarykey>
-    // type-bounds (one per line)
-    // ...
-    // <boundarykey>
-    // type-defaults (one per line)
-    // ...
-    // <boundarykey>
-    // <libraryUri: String>
-    // <klass: String>
-    // <method: String>
-    // <isStatic: true|false>
-    outputParser.expectSources = false;
-    inputStreamController.add('compile-expression $boundaryKey\n'
-            '$expression\n'
-            '$boundaryKey\n'
-            '$boundaryKey\n'
-            '$boundaryKey\n'
-            '$boundaryKey\n'
-            '$boundaryKey\n'
-            '$library\n'
-            '$className\n'
-            '\n'
-            '${isStatic != null ? '$isStatic' : ''}\n'
-        .codeUnits);
+      {String boundaryKey = 'abc',
+      List<String> definitions = const [],
+      List<String> definitionTypes = const [],
+      String? className,
+      String? methodName,
+      bool? isStatic,
+      Uri? scriptUri,
+      int? offset}) {
+    if (useJsonForCommunication) {
+      outputParser.expectSources = false;
+      inputStreamController.add('JSON_INPUT\n'.codeUnits);
+      String jsonData = json.encode({
+        "type": "COMPILE_EXPRESSION",
+        "data": {
+          "expression": expression,
+          "libraryUri": library.toString(),
+          "definitions": definitions,
+          "definitionTypes": definitionTypes,
+          if (className != null) "class": className,
+          if (methodName != null) "method": methodName,
+          if (scriptUri != null) "scriptUri": scriptUri.toString(),
+          if (offset != null) "offset": offset,
+          if (isStatic != null) "static": isStatic,
+        }
+      });
+      if (useJsonLineBreaks) {
+        jsonData = jsonData.replaceAll(",", ",\n");
+      }
+      inputStreamController.add(jsonData.codeUnits);
+      inputStreamController.add('\n'.codeUnits);
+    } else {
+      // 'compile-expression <boundarykey>
+      // expression
+      // definitions (one per line)
+      // ...
+      // <boundarykey>
+      // definitionTypes (one per line)
+      // ...
+      // <boundarykey>
+      // type-definitions (one per line)
+      // ...
+      // <boundarykey>
+      // type-bounds (one per line)
+      // ...
+      // <boundarykey>
+      // type-defaults (one per line)
+      // ...
+      // <boundarykey>
+      // <libraryUri: String>
+      // <klass: String>
+      // <method: String>
+      // <isStatic: true|false>
+      outputParser.expectSources = false;
+      inputStreamController.add('compile-expression $boundaryKey\n'
+              '$expression\n'
+              '$boundaryKey\n'
+              '$boundaryKey\n'
+              '$boundaryKey\n'
+              '$boundaryKey\n'
+              '$boundaryKey\n'
+              '$library\n'
+              '${className ?? ''}\n'
+              '\n'
+              '${isStatic != null ? '$isStatic' : ''}\n'
+          .codeUnits);
+    }
   }
 
   /// Compiles the [expression] to JavaScript as if it occurs in [line] and
@@ -3140,28 +3489,52 @@ class FrontendServer {
   // TODO(johnniwinther): Use (required) named arguments.
   void compileExpressionToJs(String expression, String libraryUri, int line,
       int column, String moduleName,
-      {String boundaryKey = 'abc'}) {
-    // 'compile-expression-to-js <boundarykey>
-    // libraryUri
-    // line
-    // column
-    // jsModules (one k-v pair per line)
-    // ...
-    // <boundarykey>
-    // jsFrameValues (one k-v pair per line)
-    // ...
-    // <boundarykey>
-    // moduleName
-    // expression
-    outputParser.expectSources = false;
-    inputStreamController.add('compile-expression-to-js $boundaryKey\n'
-            '$libraryUri\n'
-            '$line\n'
-            '$column\n'
-            '$boundaryKey\n'
-            '$boundaryKey\n'
-            '$moduleName\n'
-            '$expression\n'
-        .codeUnits);
+      {Uri? scriptUri,
+      Map<String, String>? jsFrameValues,
+      String boundaryKey = 'abc'}) {
+    if (useJsonForCommunication) {
+      outputParser.expectSources = false;
+      inputStreamController.add('JSON_INPUT\n'.codeUnits);
+      String jsonData = json.encode({
+        "type": "COMPILE_EXPRESSION_JS",
+        "data": {
+          "expression": expression,
+          "libraryUri": libraryUri,
+          if (scriptUri != null) "scriptUri": scriptUri.toString(),
+          if (jsFrameValues != null) "jsFrameValues": jsFrameValues,
+          "line": line,
+          "column": column,
+          "moduleName": moduleName,
+        }
+      });
+      if (useJsonLineBreaks) {
+        jsonData = jsonData.replaceAll(",", ",\n");
+      }
+      inputStreamController.add(jsonData.codeUnits);
+      inputStreamController.add('\n'.codeUnits);
+    } else {
+      // 'compile-expression-to-js <boundarykey>
+      // libraryUri
+      // line
+      // column
+      // jsModules (one k-v pair per line)
+      // ...
+      // <boundarykey>
+      // jsFrameValues (one k-v pair per line)
+      // ...
+      // <boundarykey>
+      // moduleName
+      // expression
+      outputParser.expectSources = false;
+      inputStreamController.add('compile-expression-to-js $boundaryKey\n'
+              '$libraryUri\n'
+              '$line\n'
+              '$column\n'
+              '$boundaryKey\n'
+              '$boundaryKey\n'
+              '$moduleName\n'
+              '$expression\n'
+          .codeUnits);
+    }
   }
 }

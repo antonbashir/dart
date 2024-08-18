@@ -325,11 +325,13 @@ void MutatorThreadPool::NotifyIdle() {
 IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
                            void* embedder_data,
                            ObjectStore* object_store,
-                           Dart_IsolateFlags api_flags)
+                           Dart_IsolateFlags api_flags,
+                           bool is_vm_isolate)
     : class_table_(nullptr),
       cached_class_table_table_(nullptr),
       object_store_(object_store),
       class_table_allocator_(),
+      is_vm_isolate_(is_vm_isolate),
       embedder_data_(embedder_data),
       thread_pool_(),
       isolates_lock_(new SafepointRwLock()),
@@ -349,6 +351,9 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
       heap_(nullptr),
       saved_unlinked_calls_(Array::null()),
       initial_field_table_(new FieldTable(/*isolate=*/nullptr)),
+      shared_initial_field_table_(new FieldTable(/*isolate=*/nullptr,
+                                                 /*isolate_group=*/nullptr)),
+      shared_field_table_(new FieldTable(/*isolate=*/nullptr, this)),
 #if !defined(DART_PRECOMPILED_RUNTIME)
       background_compiler_(new BackgroundCompiler(this)),
 #endif
@@ -384,7 +389,6 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
 #endif
 {
   FlagsCopyFrom(api_flags);
-  const bool is_vm_isolate = Dart::VmIsolateNameEquals(source_->name);
   if (!is_vm_isolate) {
     thread_pool_.reset(
         new MutatorThreadPool(this, FLAG_disable_thread_pool_limit
@@ -402,12 +406,18 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
   heap_walk_class_table_ = class_table_ =
       new ClassTable(&class_table_allocator_);
   cached_class_table_table_.store(class_table_->table());
+  memset(&native_assets_api_, 0, sizeof(NativeAssetsApi));
 }
 
 IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
                            void* embedder_data,
-                           Dart_IsolateFlags api_flags)
-    : IsolateGroup(source, embedder_data, new ObjectStore(), api_flags) {
+                           Dart_IsolateFlags api_flags,
+                           bool is_vm_isolate)
+    : IsolateGroup(source,
+                   embedder_data,
+                   new ObjectStore(),
+                   api_flags,
+                   is_vm_isolate) {
   if (object_store() != nullptr) {
     object_store()->InitStubs();
   }
@@ -416,7 +426,9 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
 IsolateGroup::~IsolateGroup() {
   // Ensure we destroy the heap before the other members.
   heap_ = nullptr;
-  ASSERT(marking_stack_ == nullptr);
+  ASSERT(old_marking_stack_ == nullptr);
+  ASSERT(new_marking_stack_ == nullptr);
+  ASSERT(deferred_marking_stack_ == nullptr);
 
   if (obfuscation_map_ != nullptr) {
     for (intptr_t i = 0; obfuscation_map_[i] != nullptr; i++) {
@@ -477,8 +489,6 @@ void IsolateGroup::CreateHeap(bool is_vm_isolate,
                                            : FLAG_old_gen_heap_size) *
                  MBInWords);
 
-  is_vm_isolate_heap_ = is_vm_isolate;
-
 #define ISOLATE_GROUP_METRIC_CONSTRUCTORS(type, variable, name, unit)          \
   metric_##variable##_.InitInstance(this, name, nullptr, Metric::unit);
   ISOLATE_GROUP_METRIC_LIST(ISOLATE_GROUP_METRIC_CONSTRUCTORS)
@@ -503,12 +513,16 @@ void IsolateGroup::Shutdown() {
   // pool can trigger idle notification, which can start new GC tasks).
   //
   // (The vm-isolate doesn't have a thread pool.)
-  const bool is_vm_isolate = Dart::VmIsolateNameEquals(source()->name);
-  if (!is_vm_isolate) {
+  if (!is_vm_isolate_) {
     ASSERT(thread_pool_ != nullptr);
     thread_pool_->Shutdown();
     thread_pool_.reset();
   }
+
+  // Needs to happen before starting to destroy the heap so helper tasks like
+  // the SampleBlockProcessor don't try to enter the group during this
+  // tear-down.
+  UnregisterIsolateGroup(this);
 
   // Wait for any pending GC tasks.
   if (heap_ != nullptr) {
@@ -524,12 +538,10 @@ void IsolateGroup::Shutdown() {
     old_space->AbandonMarkingForShutdown();
   }
 
-  UnregisterIsolateGroup(this);
-
   // If the creation of the isolate group (or the first isolate within the
   // isolate group) failed, we do not invoke the cleanup callback (the
   // embedder is responsible for handling the creation error).
-  if (initial_spawn_successful_ && !is_vm_isolate) {
+  if (initial_spawn_successful_ && !is_vm_isolate_) {
     auto group_shutdown_callback = Isolate::GroupCleanupCallback();
     if (group_shutdown_callback != nullptr) {
       group_shutdown_callback(embedder_data());
@@ -712,7 +724,7 @@ bool IsolateGroup::HasApplicationIsolateGroups() {
 bool IsolateGroup::HasOnlyVMIsolateGroup() {
   ReadRwLocker wl(ThreadState::Current(), isolate_groups_rwlock_);
   for (auto group : *isolate_groups_) {
-    if (!Dart::VmIsolateNameEquals(group->source()->name)) {
+    if (!group->is_vm_isolate()) {
       return false;
     }
   }
@@ -774,11 +786,37 @@ void IsolateGroup::ValidateClassTable() {
 }
 #endif  // DEBUG
 
+void IsolateGroup::RegisterSharedStaticField(const Field& field,
+                                             const Object& initial_value) {
+  const bool need_to_grow_backing_store =
+      shared_initial_field_table()->Register(field);
+  const intptr_t field_id = field.field_id();
+  shared_initial_field_table()->SetAt(field_id, initial_value.ptr());
+
+  if (need_to_grow_backing_store) {
+    // We have to stop other isolates from accessing shared isolate group
+    // field state, since we'll have to grow the backing store.
+    GcSafepointOperationScope scope(Thread::Current());
+    const bool need_to_grow_other_backing_store =
+        shared_field_table()->Register(field, field_id);
+    ASSERT(need_to_grow_other_backing_store);
+  } else {
+    const bool need_to_grow_other_backing_store =
+        shared_field_table()->Register(field, field_id);
+    ASSERT(!need_to_grow_other_backing_store);
+  }
+  shared_field_table()->SetAt(field_id, initial_value.ptr());
+}
+
 void IsolateGroup::RegisterStaticField(const Field& field,
                                        const Object& initial_value) {
   ASSERT(program_lock()->IsCurrentThreadWriter());
 
   ASSERT(field.is_static());
+  if (field.is_shared()) {
+    RegisterSharedStaticField(field, initial_value);
+    return;
+  }
   const bool need_to_grow_backing_store =
       initial_field_table()->Register(field);
   const intptr_t field_id = field.field_id();
@@ -814,16 +852,20 @@ void IsolateGroup::FreeStaticField(const Field& field) {
 #endif
 
   const intptr_t field_id = field.field_id();
-  initial_field_table()->Free(field_id);
-  ForEachIsolate([&](Isolate* isolate) {
-    auto field_table = isolate->field_table();
-    // The isolate might've just been created and is now participating in
-    // the reload request inside `IsolateGroup::RegisterIsolate()`.
-    // At that point it doesn't have the field table setup yet.
-    if (field_table->IsReadyToUse()) {
-      field_table->Free(field_id);
-    }
-  });
+  if (field.is_shared()) {
+    shared_field_table()->Free(field_id);
+  } else {
+    initial_field_table()->Free(field_id);
+    ForEachIsolate([&](Isolate* isolate) {
+      auto field_table = isolate->field_table();
+      // The isolate might've just been created and is now participating in
+      // the reload request inside `IsolateGroup::RegisterIsolate()`.
+      // At that point it doesn't have the field table setup yet.
+      if (field_table->IsReadyToUse()) {
+        field_table->Free(field_id);
+      }
+    });
+  }
 }
 
 Isolate* IsolateGroup::EnterTemporaryIsolate() {
@@ -892,6 +934,25 @@ void IsolateGroup::RehashConstants(Become* become) {
   Instance& old_value = Instance::Handle(zone);
   Instance& new_value = Instance::Handle(zone);
   Instance& deleted = Instance::Handle(zone);
+
+  if (become != nullptr) {
+    for (intptr_t cid = kInstanceCid; cid < num_cids; cid++) {
+      Array* old_constants = old_constant_tables[cid];
+      if (old_constants == nullptr) continue;
+
+      cls = class_table()->At(cid);
+      CanonicalInstancesSet set(zone, old_constants->ptr());
+      CanonicalInstancesSet::Iterator it(&set);
+      while (it.MoveNext()) {
+        constant ^= set.GetKey(it.Current());
+        ASSERT(!constant.IsNull());
+        ASSERT(!constant.InVMIsolateHeap());
+        constant.ClearCanonical();
+      }
+      set.Release();
+    }
+  }
+
   for (intptr_t cid = kInstanceCid; cid < num_cids; cid++) {
     Array* old_constants = old_constant_tables[cid];
     if (old_constants == nullptr) continue;
@@ -948,12 +1009,18 @@ void IsolateGroup::RehashConstants(Become* become) {
       }
     } else {
       while (it.MoveNext()) {
-        constant ^= set.GetKey(it.Current());
-        ASSERT(!constant.IsNull());
-        // Shape changes lose the canonical bit because they may result/ in
-        // merging constants. E.g., [x1, y1], [x1, y2] -> [x1].
-        DEBUG_ASSERT(constant.IsCanonical() || HasAttemptedReload());
-        cls.InsertCanonicalConstant(zone, constant);
+        old_value ^= set.GetKey(it.Current());
+        ASSERT(!old_value.IsNull());
+
+        if (become == nullptr) {
+          ASSERT(old_value.IsCanonical());
+          cls.InsertCanonicalConstant(zone, old_value);
+        } else {
+          new_value = old_value.Canonicalize(thread);
+          if (old_value.ptr() != new_value.ptr()) {
+            become->Add(old_value, new_value);
+          }
+        }
       }
     }
     set.Release();
@@ -1536,7 +1603,9 @@ void IsolateGroup::FlagsInitialize(Dart_IsolateFlags* api_flags) {
   api_flags->isolate_flag = flag;
   BOOL_ISOLATE_GROUP_FLAG_LIST(INIT_FROM_FLAG)
 #undef INIT_FROM_FLAG
-  api_flags->copy_parent_code = false;
+  api_flags->is_service_isolate = false;
+  api_flags->is_kernel_isolate = false;
+  api_flags->null_safety = true;
 }
 
 void IsolateGroup::FlagsCopyTo(Dart_IsolateFlags* api_flags) {
@@ -1545,7 +1614,9 @@ void IsolateGroup::FlagsCopyTo(Dart_IsolateFlags* api_flags) {
   api_flags->isolate_flag = name();
   BOOL_ISOLATE_GROUP_FLAG_LIST(INIT_FROM_FIELD)
 #undef INIT_FROM_FIELD
-  api_flags->copy_parent_code = false;
+  api_flags->is_service_isolate = false;
+  api_flags->is_kernel_isolate = false;
+  api_flags->null_safety = true;
 }
 
 void IsolateGroup::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
@@ -1568,9 +1639,6 @@ void IsolateGroup::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
                       api_flags.isolate_flag, isolate_group_flags_));
 
   BOOL_ISOLATE_GROUP_FLAG_LIST(SET_FROM_FLAG)
-  // Needs to be called manually, otherwise we don't set the null_safety_set
-  // bit.
-  set_null_safety(api_flags.null_safety);
 #undef FLAG_FOR_NONPRODUCT
 #undef FLAG_FOR_PRECOMPILER
 #undef FLAG_FOR_PRODUCT
@@ -1585,7 +1653,9 @@ void Isolate::FlagsInitialize(Dart_IsolateFlags* api_flags) {
   api_flags->isolate_flag = flag;
   BOOL_ISOLATE_FLAG_LIST(INIT_FROM_FLAG)
 #undef INIT_FROM_FLAG
-  api_flags->copy_parent_code = false;
+  api_flags->is_service_isolate = false;
+  api_flags->is_kernel_isolate = false;
+  api_flags->null_safety = true;
 }
 
 void Isolate::FlagsCopyTo(Dart_IsolateFlags* api_flags) const {
@@ -1596,11 +1666,12 @@ void Isolate::FlagsCopyTo(Dart_IsolateFlags* api_flags) const {
   api_flags->isolate_flag = name();
   BOOL_ISOLATE_FLAG_LIST(INIT_FROM_FIELD)
 #undef INIT_FROM_FIELD
-  api_flags->copy_parent_code = false;
+  api_flags->is_service_isolate = false;
+  api_flags->is_kernel_isolate = false;
+  api_flags->null_safety = true;
 }
 
 void Isolate::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
-  const bool copy_parent_code_ = copy_parent_code();
 #if defined(DART_PRECOMPILER)
 #define FLAG_FOR_PRECOMPILER(action) action
 #else
@@ -1620,7 +1691,6 @@ void Isolate::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
                       api_flags.isolate_flag, isolate_flags_));
 
   BOOL_ISOLATE_FLAG_LIST(SET_FROM_FLAG)
-  isolate_flags_ = CopyParentCodeBit::update(copy_parent_code_, isolate_flags_);
 #undef FLAG_FOR_NONPRODUCT
 #undef FLAG_FOR_PRECOMPILER
 #undef FLAG_FOR_PRODUCT
@@ -1760,6 +1830,7 @@ Isolate* Isolate::InitIsolate(const char* name_prefix,
                               const Dart_IsolateFlags& api_flags,
                               bool is_vm_isolate) {
   Isolate* result = new Isolate(isolate_group, api_flags);
+  result->set_is_vm_isolate(is_vm_isolate);
   result->BuildName(name_prefix);
   if (!is_vm_isolate) {
     // vm isolate object store is initialized later, after null instance
@@ -1817,11 +1888,11 @@ Isolate* Isolate::InitIsolate(const char* name_prefix,
   // to vm-isolate objects, e.g. null)
   isolate_group->RegisterIsolate(result);
 
-  if (ServiceIsolate::NameEquals(name_prefix)) {
+  if (api_flags.is_service_isolate) {
     ASSERT(!ServiceIsolate::Exists());
     ServiceIsolate::SetServiceIsolate(result);
 #if !defined(DART_PRECOMPILED_RUNTIME)
-  } else if (KernelIsolate::NameEquals(name_prefix)) {
+  } else if (api_flags.is_kernel_isolate) {
     ASSERT(!KernelIsolate::Exists());
     KernelIsolate::SetKernelIsolate(result);
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
@@ -2537,11 +2608,11 @@ void Isolate::Shutdown() {
 
 void Isolate::LowLevelCleanup(Isolate* isolate) {
 #if !defined(DART_PRECOMPILED_RUNTIME)
-  if (KernelIsolate::IsKernelIsolate(isolate)) {
+  if (isolate->is_kernel_isolate()) {
     KernelIsolate::SetKernelIsolate(nullptr);
   }
 #endif
-  if (ServiceIsolate::IsServiceIsolate(isolate)) {
+  if (isolate->is_service_isolate()) {
     ServiceIsolate::SetServiceIsolate(nullptr);
   }
 
@@ -2674,7 +2745,7 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   if (debugger() != nullptr) {
     debugger()->VisitObjectPointers(visitor);
   }
-  if (ServiceIsolate::IsServiceIsolate(this)) {
+  if (is_service_isolate()) {
     ServiceIsolate::VisitObjectPointers(visitor);
   }
 #endif  // !defined(PRODUCT)
@@ -2744,10 +2815,14 @@ void Isolate::SetPrefixIsLoaded(const LibraryPrefix& prefix) {
 }
 
 void IsolateGroup::EnableIncrementalBarrier(
-    MarkingStack* marking_stack,
+    MarkingStack* old_marking_stack,
+    MarkingStack* new_marking_stack,
     MarkingStack* deferred_marking_stack) {
-  ASSERT(marking_stack_ == nullptr);
-  marking_stack_ = marking_stack;
+  ASSERT(old_marking_stack_ == nullptr);
+  old_marking_stack_ = old_marking_stack;
+  ASSERT(new_marking_stack_ == nullptr);
+  new_marking_stack_ = new_marking_stack;
+  ASSERT(deferred_marking_stack_ == nullptr);
   deferred_marking_stack_ = deferred_marking_stack;
   thread_registry()->AcquireMarkingStacks();
   ASSERT(Thread::Current()->is_marking());
@@ -2755,8 +2830,11 @@ void IsolateGroup::EnableIncrementalBarrier(
 
 void IsolateGroup::DisableIncrementalBarrier() {
   thread_registry()->ReleaseMarkingStacks();
-  ASSERT(marking_stack_ != nullptr);
-  marking_stack_ = nullptr;
+  ASSERT(old_marking_stack_ != nullptr);
+  old_marking_stack_ = nullptr;
+  ASSERT(new_marking_stack_ != nullptr);
+  new_marking_stack_ = nullptr;
+  ASSERT(deferred_marking_stack_ != nullptr);
   deferred_marking_stack_ = nullptr;
 }
 
@@ -2769,7 +2847,8 @@ void IsolateGroup::ForEachIsolate(
            (thread->task_kind() == Thread::kMutatorTask) ||
            (thread->task_kind() == Thread::kMarkerTask) ||
            (thread->task_kind() == Thread::kCompactorTask) ||
-           (thread->task_kind() == Thread::kScavengerTask));
+           (thread->task_kind() == Thread::kScavengerTask) ||
+           (thread->task_kind() == Thread::kIncrementalCompactorTask));
     for (Isolate* isolate : isolates_) {
       function(isolate);
     }
@@ -2852,6 +2931,8 @@ void IsolateGroup::VisitSharedPointers(ObjectPointerVisitor* visitor) {
   }
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_unlinked_calls_));
   initial_field_table()->VisitObjectPointers(visitor);
+  shared_initial_field_table()->VisitObjectPointers(visitor);
+  shared_field_table()->VisitObjectPointers(visitor);
 
   // Visit the boxed_field_list_.
   // 'boxed_field_list_' access via mutator and background compilation threads
@@ -3527,7 +3608,7 @@ bool IsolateGroup::IsSystemIsolateGroup(const IsolateGroup* group) {
 
 bool Isolate::IsVMInternalIsolate(const Isolate* isolate) {
   return isolate->is_kernel_isolate() || isolate->is_service_isolate() ||
-         (Dart::vm_isolate() == isolate);
+         isolate->is_vm_isolate();
 }
 
 void Isolate::KillLocked(LibMsgId msg_id) {
@@ -3571,11 +3652,14 @@ void Isolate::KillLocked(LibMsgId msg_id) {
 
 class IsolateKillerVisitor : public IsolateVisitor {
  public:
-  explicit IsolateKillerVisitor(Isolate::LibMsgId msg_id)
-      : target_(nullptr), msg_id_(msg_id) {}
+  IsolateKillerVisitor(Isolate::LibMsgId msg_id,
+                       bool kill_system_isolates = false)
+      : target_(nullptr),
+        msg_id_(msg_id),
+        kill_system_isolates_(kill_system_isolates) {}
 
   IsolateKillerVisitor(Isolate* isolate, Isolate::LibMsgId msg_id)
-      : target_(isolate), msg_id_(msg_id) {
+      : target_(isolate), msg_id_(msg_id), kill_system_isolates_(false) {
     ASSERT(isolate != Dart::vm_isolate());
   }
 
@@ -3593,6 +3677,11 @@ class IsolateKillerVisitor : public IsolateVisitor {
 
  private:
   bool ShouldKill(Isolate* isolate) {
+    if (kill_system_isolates_) {
+      ASSERT(target_ == nullptr);
+      // Don't kill the service isolate or vm isolate.
+      return IsSystemIsolate(isolate) && !Isolate::IsVMInternalIsolate(isolate);
+    }
     // If a target_ is specified, then only kill the target_.
     // Otherwise, don't kill the service isolate or vm isolate.
     return (((target_ != nullptr) && (isolate == target_)) ||
@@ -3601,10 +3690,16 @@ class IsolateKillerVisitor : public IsolateVisitor {
 
   Isolate* target_;
   Isolate::LibMsgId msg_id_;
+  bool kill_system_isolates_;
 };
 
 void Isolate::KillAllIsolates(LibMsgId msg_id) {
   IsolateKillerVisitor visitor(msg_id);
+  VisitIsolates(&visitor);
+}
+
+void Isolate::KillAllSystemIsolates(LibMsgId msg_id) {
+  IsolateKillerVisitor visitor(msg_id, /*kill_system_isolates=*/true);
   VisitIsolates(&visitor);
 }
 

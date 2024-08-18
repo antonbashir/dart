@@ -10,6 +10,7 @@ import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/test_utilities/find_element.dart';
 import 'package:analyzer/src/test_utilities/find_node.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
+import 'package:analyzer/src/util/file_paths.dart';
 import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -60,7 +61,7 @@ class SearchEngineImplTest extends PubPackageResolutionTest {
   }
 
   Future<void> test_membersOfSubtypes_classByClass_hasMembers() async {
-    final a = newFile('$testPackageLibPath/a.dart', '''
+    var a = newFile('$testPackageLibPath/a.dart', '''
 class A {
   void a() {}
   void b() {}
@@ -124,7 +125,7 @@ enum E with M {
   }
 
   Future<void> test_membersOfSubtypes_noMembers() async {
-    final a = newFile('$testPackageLibPath/a.dart', '''
+    var a = newFile('$testPackageLibPath/a.dart', '''
 class A {
   void a() {}
   void b() {}
@@ -145,7 +146,7 @@ class B extends A {}
   }
 
   Future<void> test_membersOfSubtypes_noSubtypes() async {
-    final a = newFile('$testPackageLibPath/a.dart', '''
+    var a = newFile('$testPackageLibPath/a.dart', '''
 class A {
   void a() {}
   void b() {}
@@ -168,7 +169,7 @@ class B {
   }
 
   Future<void> test_membersOfSubtypes_private() async {
-    final a = newFile('$testPackageLibPath/a.dart', '''
+    var a = newFile('$testPackageLibPath/a.dart', '''
 class A {
   void a() {}
   void _b() {}
@@ -219,7 +220,7 @@ class C implements B {}
   Future<void> test_searchAllSubtypes_acrossDrivers() async {
     var aaaRootPath = _configureForPackage_aaa();
 
-    final a = newFile('$aaaRootPath/lib/a.dart', '''
+    var a = newFile('$aaaRootPath/lib/a.dart', '''
 class T {}
 class A extends T {}
 ''');
@@ -257,6 +258,24 @@ extension type C(int it) implements A {}
     expect(subtypes, hasLength(2));
     _assertContainsClass(subtypes, 'B');
     _assertContainsClass(subtypes, 'C');
+  }
+
+  Future<void> test_searchAllSubtypes_inMacroGeneratedCode() async {
+    addMacros([declareTypesPhaseMacro()]);
+
+    await resolveTestCode('''
+import 'macros.dart';
+
+@DeclareTypesPhase('B', 'class B extends A {}')
+class A {}
+''');
+
+    var element = findElement.class_('A');
+    var subtypes = <InterfaceElement>{};
+    await searchEngine.appendAllSubtypes(
+        element, subtypes, OperationPerformanceImpl('<root>'));
+    expect(subtypes, hasLength(1));
+    _assertContainsClass(subtypes, 'B');
   }
 
   Future<void> test_searchAllSubtypes_mixin() async {
@@ -317,6 +336,26 @@ int test;
 
     assertHasElement('test', codeA.indexOf('test; // 1'));
     assertHasElement('test', codeB.indexOf('test() {} // 2'));
+  }
+
+  Future<void> test_searchMemberDeclarations_inMacroGeneratedCode() async {
+    addMacros([declareInTypeMacro()]);
+
+    await resolveTestCode('''
+import 'macros.dart';
+
+@DeclareInType('  void m() {}')
+class A {}
+''');
+
+    var matches = await searchEngine.searchMemberDeclarations('m');
+    expect(matches, hasLength(1));
+    expect(
+        matches,
+        contains(predicate((SearchMatch m) =>
+            m.element.name == 'm' &&
+            m.kind == MatchKind.DECLARATION &&
+            isMacroGenerated(m.file))));
   }
 
   Future<void> test_searchMemberReferences() async {
@@ -462,15 +501,15 @@ enum E {
   }
 
   Future<void> test_searchReferences_extensionType() async {
-    final code = '''
+    var code = '''
 extension type A(int it) {}
 
 void f(A a) {}
 ''';
     await resolveTestCode(code);
 
-    final element = findElement.extensionType('A');
-    final matches = await searchEngine.searchReferences(element);
+    var element = findElement.extensionType('A');
+    var matches = await searchEngine.searchReferences(element);
     expect(
       matches,
       unorderedEquals([
@@ -482,6 +521,30 @@ void f(A a) {}
         }),
       ]),
     );
+  }
+
+  Future<void> test_searchReferences_getter_inMacroGeneratedCode() async {
+    addMacros([declareInTypeMacro()]);
+
+    await resolveTestCode('''
+import 'macros.dart';
+
+@DeclareInType('  dynamic m() => x;')
+class A {
+  int get x => 0;
+}
+''');
+
+    var element = findElement.getter('x');
+
+    var matches = await searchEngine.searchReferences(element);
+    expect(matches, hasLength(1));
+    expect(
+        matches,
+        contains(predicate((SearchMatch m) =>
+            m.element.name == 'm' &&
+            m.kind == MatchKind.REFERENCE &&
+            isMacroGenerated(m.file))));
   }
 
   Future<void>
@@ -602,13 +665,29 @@ class B extends A {}
     assertHasOneElement('B');
   }
 
+  Future<void> test_searchTopLevelDeclarations_inMacroGeneratedCode() async {
+    addMacros([declareInLibraryMacro()]);
+
+    await resolveTestCode('''
+import 'macros.dart';
+
+@DeclareInLibrary('final x = 0;')
+class A {}
+''');
+
+    var matches = await searchEngine.searchTopLevelDeclarations('.*');
+    expect(
+        matches,
+        contains(predicate((SearchMatch m) =>
+            m.element.name == 'x' &&
+            m.kind == MatchKind.DECLARATION &&
+            isMacroGenerated(m.file))));
+  }
+
   String _configureForPackage_aaa() {
     var aaaRootPath = '$workspaceRootPath/aaa';
 
-    writePackageConfig(
-      '$aaaRootPath/.dart_tool/package_config.json',
-      PackageConfigFileBuilder()..add(name: 'aaa', rootPath: aaaRootPath),
-    );
+    writePackageConfig(aaaRootPath, config: PackageConfigFileBuilder());
 
     writeTestPackageConfig(
       config: PackageConfigFileBuilder()

@@ -7,6 +7,7 @@
 #include "platform/assert.h"
 #include "platform/globals.h"
 #include "vm/class_id.h"
+#include "vm/compiler/compiler_state.h"
 #include "vm/compiler/ffi/frame_rebase.h"
 #include "vm/compiler/ffi/native_calling_convention.h"
 #include "vm/compiler/ffi/native_location.h"
@@ -18,6 +19,7 @@
 #include "vm/raw_object.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 
 namespace dart {
 
@@ -156,12 +158,34 @@ AbstractTypePtr BaseMarshaller::DartType(intptr_t arg_index) const {
   return dart_signature_.ParameterTypeAt(real_arg_index);
 }
 
-bool BaseMarshaller::IsTypedData(intptr_t arg_index) const {
-  if (IsHandle(arg_index)) {
+bool BaseMarshaller::IsPointerCType(intptr_t arg_index) const {
+  return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
+         kPointerCid;
+}
+
+bool BaseMarshaller::IsPointerDartType(intptr_t arg_index) const {
+  return AbstractType::Handle(zone_, DartType(arg_index)).type_class_id() ==
+         kPointerCid;
+}
+
+bool BaseMarshaller::IsPointerPointer(intptr_t arg_index) const {
+  if (dart_signature_.parameter_types() == Array::null()) {
+    // TODO(https://dartbug.com/54173): BuildGraphOfSyncFfiCallback provides a
+    // function object with its type arguments not initialized.
+    return IsPointerCType(arg_index);
+  }
+  return IsPointerDartType(arg_index) && IsPointerCType(arg_index);
+}
+
+bool BaseMarshaller::IsTypedDataPointer(intptr_t arg_index) const {
+  if (!IsPointerCType(arg_index)) {
+    return false;
+  }
+  if (IsHandleCType(arg_index)) {
     return false;
   }
 
-  if (Array::Handle(zone_, dart_signature_.parameter_types()).IsNull()) {
+  if (dart_signature_.parameter_types() == Array::null()) {
     // TODO(https://dartbug.com/54173): BuildGraphOfSyncFfiCallback provides a
     // function object with its type arguments not initialized. Change this
     // to an assert when addressing that issue.
@@ -169,61 +193,60 @@ bool BaseMarshaller::IsTypedData(intptr_t arg_index) const {
   }
 
   const auto& type = AbstractType::Handle(zone_, DartType(arg_index));
-  // The classes here are not the recognized classes, but the interface types.
-  // Consequently, the class ids are not predefined.
-  const auto& klass = Class::Handle(zone_, type.type_class());
-  if (klass.library() != Library::TypedDataLibrary()) {
-    return false;
+  return type.type_class() ==
+         Thread::Current()->compiler_state().TypedDataClass().ptr();
+}
+
+static bool IsCompound(Zone* zone, const AbstractType& type) {
+  auto& compiler_state = Thread::Current()->compiler_state();
+  auto& cls = Class::Handle(zone, type.type_class());
+  if (cls.id() == compiler_state.CompoundClass().id() ||
+      cls.id() == compiler_state.ArrayClass().id()) {
+    return true;
   }
-#define CHECK_SYMBOL(symbol)                                                   \
-  if (klass.UserVisibleName() == Symbols::symbol().ptr()) {                    \
-    return true;                                                               \
+  cls ^= cls.SuperClass();
+  if (cls.id() == compiler_state.StructClass().id() ||
+      cls.id() == compiler_state.UnionClass().id()) {
+    return true;
   }
-  CHECK_SYMBOL(Int8List)
-  CHECK_SYMBOL(Int16List)
-  CHECK_SYMBOL(Int32List)
-  CHECK_SYMBOL(Int64List)
-  CHECK_SYMBOL(Uint8List)
-  CHECK_SYMBOL(Uint16List)
-  CHECK_SYMBOL(Uint32List)
-  CHECK_SYMBOL(Uint64List)
-  CHECK_SYMBOL(Float32List)
-  CHECK_SYMBOL(Float64List)
-#undef CHECK_SYMBOL
   return false;
 }
 
+bool BaseMarshaller::IsCompoundPointer(intptr_t arg_index) const {
+  if (!IsPointerCType(arg_index)) {
+    return false;
+  }
+  if (dart_signature_.parameter_types() == Array::null()) {
+    // TODO(https://dartbug.com/54173): BuildGraphOfSyncFfiCallback provides a
+    // function object with its type arguments not initialized.
+    return false;
+  }
+
+  const auto& dart_type = AbstractType::Handle(zone_, DartType(arg_index));
+  return IsCompound(this->zone_, dart_type);
+}
+
+bool BaseMarshaller::IsHandleCType(intptr_t arg_index) const {
+  return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
+         kFfiHandleCid;
+}
+
+bool BaseMarshaller::IsBool(intptr_t arg_index) const {
+  return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
+         kFfiBoolCid;
+}
+
 // Keep consistent with Function::FfiCSignatureReturnsStruct.
-bool BaseMarshaller::IsCompound(intptr_t arg_index) const {
-  const auto& type = AbstractType::Handle(zone_, CType(arg_index));
-  if (IsFfiTypeClassId(type.type_class_id())) {
-    return false;
-  }
-  const auto& cls = Class::Handle(this->zone_, type.type_class());
-  const auto& superClass = Class::Handle(this->zone_, cls.SuperClass());
-  const bool is_abi_specific_int =
-      String::Handle(this->zone_, superClass.UserVisibleName())
-          .Equals(Symbols::AbiSpecificInteger());
-  if (is_abi_specific_int) {
-    return false;
-  }
-#ifdef DEBUG
-  const bool is_struct =
-      String::Handle(this->zone_, superClass.UserVisibleName())
-          .Equals(Symbols::Struct());
-  const bool is_union =
-      String::Handle(this->zone_, superClass.UserVisibleName())
-          .Equals(Symbols::Union());
-  ASSERT(is_struct || is_union);
-#endif
-  return true;
+bool BaseMarshaller::IsCompoundCType(intptr_t arg_index) const {
+  const auto& c_type = AbstractType::Handle(zone_, CType(arg_index));
+  return IsCompound(this->zone_, c_type);
 }
 
 bool BaseMarshaller::ContainsHandles() const {
   return c_signature_.ContainsHandles();
 }
 
-intptr_t BaseMarshaller::NumDefinitions() const {
+intptr_t BaseMarshaller::NumArgumentDefinitions() const {
   intptr_t total = 0;
   for (intptr_t i = 0; i < num_args(); i++) {
     total += NumDefinitions(i);
@@ -239,6 +262,10 @@ intptr_t BaseMarshaller::NumDefinitions(intptr_t arg_index) const {
   const auto& loc = Location(arg_index);
   const auto& type = loc.payload_type();
 
+  if (IsCompoundPointer(arg_index)) {
+    // typed data base and offset.
+    return 2;
+  }
   if (type.IsPrimitive()) {
     // All non-struct arguments are 1 definition in IL. Even 64 bit values
     // on 32 bit architectures.
@@ -246,18 +273,11 @@ intptr_t BaseMarshaller::NumDefinitions(intptr_t arg_index) const {
   }
 
   ASSERT(type.IsCompound());
+  ASSERT(!loc.IsPointerToMemory());  // Handled in overrides.
   if (loc.IsMultiple()) {
     // One IL definition for every nested location.
     const auto& multiple = loc.AsMultiple();
     return multiple.locations().length();
-  }
-
-  if (loc.IsPointerToMemory()) {
-    // For FFI calls, pass in TypedDataBase (1 IL definition) in IL, and copy
-    // contents to stack and pass pointer in right location in MC.
-    // For FFI callbacks, get the pointer in a NativeParameter and construct
-    // the TypedDataBase in IL.
-    return 1;
   }
 
   ASSERT(loc.IsStack());
@@ -270,15 +290,67 @@ intptr_t BaseMarshaller::NumDefinitions(intptr_t arg_index) const {
   return num_defs;
 }
 
-intptr_t BaseMarshaller::NumReturnDefinitions() const {
-  // For FFI calls we always have 1 definition, because the IL instruction can
-  // only be 1 definition. We pass in a TypedDataBase in IL and fill it in
-  // machine code.
+intptr_t CallMarshaller::NumDefinitions(intptr_t arg_index) const {
+  if (!ArgumentIndexIsReturn(arg_index)) {
+    const auto& loc = Location(arg_index);
+    const auto& type = loc.payload_type();
+    if (type.IsCompound() && loc.IsPointerToMemory()) {
+      // For FFI calls, pass in TypedDataBase and offsetInBytes in IL, and copy
+      // contents to stack and pass pointer in right location in MC.
+      return 2;
+    }
+  }
+  return BaseMarshaller::NumDefinitions(arg_index);
+}
+
+intptr_t CallbackMarshaller::NumDefinitions(intptr_t arg_index) const {
+  if (!ArgumentIndexIsReturn(arg_index)) {
+    const auto& loc = Location(arg_index);
+    const auto& type = loc.payload_type();
+    if (type.IsCompound() && loc.IsPointerToMemory()) {
+      // For FFI callbacks, get the pointer in a NativeParameter and construct
+      // the TypedDataBase in IL (always offset in bytes 0).
+      return 1;
+    }
+  }
+  return BaseMarshaller::NumDefinitions(arg_index);
+}
+
+intptr_t CallMarshaller::NumReturnDefinitions() const {
+  // An FFICall is a Definition, and Definitions currently only have one
+  // return value.
   //
-  // For FFI callbacks we always have 1 definition. If it's a struct and the
-  // native ABI is passing a pointer, we copy to it in IL. If it's a multiple
-  // locations return value we copy the value in machine code because some
-  // native locations cannot be expressed in IL in Location.
+  // For compound returns, the IL generated by the flow graph builder allocates
+  // a TypedDataBase object that is passed into the FfiCall. The generated
+  // machine code for the FfiCall instruction then fills in the contents.
+  // After the call, the generated IL wraps the TypedDataBase object in a
+  // Compound object with an offset in bytes of 0.
+  return 1;
+}
+
+intptr_t CallbackMarshaller::NumReturnDefinitions() const {
+  const auto& loc = Location(kResultIndex);
+
+  if (loc.IsMultiple()) {
+    const auto& type = loc.payload_type();
+    ASSERT(type.IsCompound());
+    // For multiple locations, some native locations cannot be expressed as
+    // Locations, which means the flow graph builder cannot generate appropriate
+    // IL for those cases.
+    //
+    // Instead, the flow graph builder generates IL to extract the
+    // _typedDataBase and _offsetInBytes fields of the Dart value and passes
+    // those into the NativeReturn instruction as separate arguments. The
+    // generated machine code for the NativeReturn instruction then
+    // appropriately copies the contents to a non-GC-managed block of memory. A
+    // pointer to that block of memory is returned to the C code.
+    return 2;
+  }
+
+  // If it's a compound and the native ABI is passing a pointer, copy to it in
+  // IL. If non-compound, also 1 definition. If it's a primitive, the flow graph
+  // builder generates IL to create an appropriate Dart value from the single
+  // value returned from C.
   return 1;
 }
 
@@ -298,7 +370,7 @@ intptr_t BaseMarshaller::ArgumentIndex(intptr_t def_index_global) const {
     ASSERT(def < NumReturnDefinitions());
     return kResultIndex;
   }
-  ASSERT(def_index_global < NumDefinitions());
+  ASSERT(def_index_global < NumArgumentDefinitions());
   intptr_t defs = 0;
   intptr_t arg_index = 0;
   for (; arg_index < num_args(); arg_index++) {
@@ -332,7 +404,7 @@ intptr_t BaseMarshaller::DefinitionInArgument(intptr_t def_index_global,
   } else {
     // Counting up for arguments in consecutive order.
     const intptr_t def = def_index_global - FirstDefinitionIndex(arg_index);
-    ASSERT(def < NumDefinitions());
+    ASSERT(def < NumArgumentDefinitions());
     return def;
   }
 }
@@ -359,12 +431,28 @@ static Representation SelectRepresentationInIL(Zone* zone,
   return location.payload_type().AsRepresentationOverApprox(zone);
 }
 
+Representation BaseMarshaller::RepInDart(intptr_t arg_index) const {
+  // This should never be called on Pointers or Handles, which are specially
+  // handled during marshalling/unmarshalling.
+  ASSERT(!IsHandleCType(arg_index));
+  ASSERT(!IsPointerPointer(arg_index));
+  return Location(arg_index).payload_type().AsRepresentationOverApprox(zone_);
+}
+
 // Implemented partially in BaseMarshaller because most Representations are
 // the same in Calls and Callbacks.
 Representation BaseMarshaller::RepInFfiCall(intptr_t def_index_global) const {
   intptr_t arg_index = ArgumentIndex(def_index_global);
-  const auto& location = Location(arg_index);
 
+  // Handled appropriately in the subclasses.
+  ASSERT(!IsHandleCType(arg_index));
+
+  // The IL extracts the address stored in the Pointer object as an untagged
+  // pointer before passing it to C, and creates a new Pointer object to store
+  // the received untagged pointer when receiving a pointer from C.
+  if (IsPointerPointer(arg_index)) return kUntagged;
+
+  const auto& location = Location(arg_index);
   if (location.container_type().IsPrimitive()) {
     return SelectRepresentationInIL(zone_, location);
   }
@@ -383,28 +471,50 @@ Representation BaseMarshaller::RepInFfiCall(intptr_t def_index_global) const {
     return SelectRepresentationInIL(zone_, def_loc);
   }
 
-  ASSERT(location.IsPointerToMemory());
   UNREACHABLE();  // Implemented in subclasses.
 }
 
+static const intptr_t kTypedDataBaseIndex = 0;
+static const intptr_t kOffsetInBytesIndex = 1;
+
 Representation CallMarshaller::RepInFfiCall(intptr_t def_index_global) const {
   intptr_t arg_index = ArgumentIndex(def_index_global);
-  if (IsTypedData(arg_index)) {
+  if (IsHandleCType(arg_index)) {
+    // For FfiCall arguments, the FfiCall instruction takes a tagged pointer
+    // from the IL. (It then creates a handle on the stack and passes a
+    // pointer to the newly allocated handle to C.)
+    //
+    // For FfiCall returns, FfiCall returns the untagged pointer to the handle
+    // to the IL, which then extracts the ptr field of the handle to retrieve
+    // the tagged pointer.
+    return ArgumentIndexIsReturn(arg_index) ? kUntagged : kTagged;
+  }
+  if (ArgumentIndexIsReturn(arg_index) && ReturnsCompound()) {
+    // The IL creates a TypedData object which is stored on the stack, and the
+    // FfiCall copies the compound value, however it is returned into that
+    // TypedData object. In order to make the return value of the definition
+    // defined, the same TypedData object is returned from the FfiCall.
     return kTagged;
   }
   const auto& location = Location(arg_index);
-  if (location.IsPointerToMemory()) {
-    if (ArgumentIndexIsReturn(arg_index)) {
-      // The IL type is the unboxed pointer.
-      const auto& pointer_location = location.AsPointerToMemory();
-      const auto& rep = pointer_location.pointer_location().payload_type();
-      ASSERT(rep.Equals(
-          pointer_location.pointer_return_location().payload_type()));
-      return rep.AsRepresentation();
-    } else {
-      // We're passing Pointer/TypedData object, the GC might move TypedData so
-      // we can't load the address from it eagerly.
+  if (location.IsPointerToMemory() || IsCompoundPointer(arg_index) ||
+      IsTypedDataPointer(arg_index)) {
+    // For arguments, the compound data being passed as a pointer is first
+    // collected into a TypedData object by the IL, and that object is what is
+    // passed to the FfiCall instruction. (The machine code generated by
+    // FfiCall handles copying the data into non-GC-moveable memory and
+    // passing a pointer to that memory to the C code.)
+    const intptr_t def_index_in_arg =
+        def_index_global - FirstDefinitionIndex(arg_index);
+    if (def_index_in_arg == kTypedDataBaseIndex) {
+      // The TypedDataBase object is managed by the GC, so the payload address
+      // cannot be eagerly extracted in the IL, as that would create an
+      // unsafe untagged address as an input to a GC-triggering instruction.
       return kTagged;
+    } else {
+      ASSERT_EQUAL(def_index_in_arg, kOffsetInBytesIndex);
+      ASSERT(!IsTypedDataPointer(arg_index));
+      return kUnboxedUword;
     }
   }
   return BaseMarshaller::RepInFfiCall(def_index_global);
@@ -413,19 +523,27 @@ Representation CallMarshaller::RepInFfiCall(intptr_t def_index_global) const {
 Representation CallbackMarshaller::RepInFfiCall(
     intptr_t def_index_global) const {
   intptr_t arg_index = ArgumentIndex(def_index_global);
+  if (IsHandleCType(arg_index)) {
+    // Dart objects are passed to C as untagged pointers to newly created
+    // handles in the IL, and the ptr field of untagged pointers to handles are
+    // extracted when the IL receives handles from C code.
+    return kUntagged;
+  }
   const auto& location = Location(arg_index);
   if (location.IsPointerToMemory()) {
-    // The IL type is the unboxed pointer, and FFI callback return. In the
-    // latter we've already copied the data into the result location in IL.
-    const auto& pointer_location = location.AsPointerToMemory();
-    const auto& rep = pointer_location.pointer_location().payload_type();
-    ASSERT(
-        rep.Equals(pointer_location.pointer_return_location().payload_type()));
-    return rep.AsRepresentation();
+    // The IL gets an untagged pointer to memory both for arguments and for
+    // returns. If this is an argument, then the IL creates a Dart
+    // representation of the compound object from the pointed at memory.
+    // For returns, the IL copies the data from the compound object into
+    // the memory being pointed at before returning to C.
+    return kUntagged;
   }
   if (ArgumentIndexIsReturn(arg_index) && location.IsMultiple()) {
-    // We're passing a TypedData.
-    return Representation::kTagged;
+    // To return a compound object broken up over multiple native locations,
+    // the IL loads the compound object into a single TypedData object and
+    // passes that TypedData object to NativeReturn, which handles extracting
+    // the data to the appropriate native locations.
+    return kTagged;
   }
   return BaseMarshaller::RepInFfiCall(def_index_global);
 }
@@ -484,23 +602,17 @@ Location CallMarshaller::LocInFfiCall(intptr_t def_index_global) const {
   const NativeLocation& loc = this->Location(arg_index);
 
   if (ArgumentIndexIsReturn(arg_index)) {
-    const intptr_t def = kResultIndex - def_index_global;
-    if (loc.IsMultiple()) {
-      ASSERT(loc.AsMultiple().locations()[def]->IsExpressibleAsLocation());
-      return loc.AsMultiple().locations()[def]->AsLocation();
+    if (loc.IsRegisters() || loc.IsFpuRegisters()) {
+      return loc.AsLocation();
     }
-
-    if (loc.IsPointerToMemory()) {
-      // No location at all, because we store into TypedData passed to the
-      // FfiCall instruction. But we have to supply a location.
-      return Location::RegisterLocation(CallingConventions::kReturnReg);
-    }
-
-    return loc.AsLocation();
+    ASSERT(ReturnsCompound());
+    // No location at all, because we store into TypedData passed to the
+    // FfiCall instruction. But we have to supply a location.
+    return Location::RegisterLocation(CallingConventions::kReturnReg);
   }
 
   // Force all handles to be Stack locations.
-  if (IsHandle(arg_index)) {
+  if (IsHandleCType(arg_index)) {
     return Location::RequiresStack();
   }
 
@@ -522,13 +634,30 @@ Location CallMarshaller::LocInFfiCall(intptr_t def_index_global) const {
   }
 
   if (loc.IsPointerToMemory()) {
-    const auto& pointer_location = loc.AsPointerToMemory().pointer_location();
-    if (pointer_location.IsStack()) {
-      // Don't pin stack locations, they need to be moved anyway.
-      return ConvertToAnyLocation(pointer_location.AsStack(),
-                                  RepInFfiCall(def_index_global));
+    const intptr_t def_index_in_arg =
+        def_index_global - FirstDefinitionIndex(arg_index);
+    if (def_index_in_arg == kTypedDataBaseIndex) {
+      const auto& pointer_location = loc.AsPointerToMemory().pointer_location();
+      if (pointer_location.IsStack()) {
+        // Don't pin stack locations, they need to be moved anyway.
+        return ConvertToAnyLocation(pointer_location.AsStack(),
+                                    RepInFfiCall(def_index_global));
+      }
+      return pointer_location.AsLocation();
+    } else {
+      ASSERT_EQUAL(def_index_in_arg, kOffsetInBytesIndex);
+      return Location::Any();
     }
-    return pointer_location.AsLocation();
+  }
+
+  if (IsCompoundPointer(arg_index)) {
+    const intptr_t def_index_in_arg =
+        def_index_global - FirstDefinitionIndex(arg_index);
+    if (def_index_in_arg == kOffsetInBytesIndex) {
+      // The typed data is passed in the location from the calling convention.
+      // The offset in bytes can be passed in any location.
+      return Location::Any();
+    }
   }
 
   if (loc.IsStack()) {
@@ -549,7 +678,7 @@ Location CallMarshaller::LocInFfiCall(intptr_t def_index_global) const {
 }
 
 bool CallMarshaller::ReturnsCompound() const {
-  return IsCompound(compiler::ffi::kResultIndex);
+  return IsCompoundCType(compiler::ffi::kResultIndex);
 }
 
 intptr_t CallMarshaller::CompoundReturnSizeInBytes() const {

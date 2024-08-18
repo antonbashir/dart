@@ -42,10 +42,30 @@ void _onExtraNullSafetyError(TypeError error, StackTrace trace) {
     // If [onExtraNullSafetyError] itself produces an extra null safety error,
     // this avoids blowing the stack.
     _reportingExtraNullSafetyError = true;
-    if (onExtraNullSafetyError != null) {
-      (onExtraNullSafetyError as OnExtraNullSafetyError)(error, trace);
+    try {
+      if (onExtraNullSafetyError != null) {
+        (onExtraNullSafetyError as OnExtraNullSafetyError)(error, trace);
+      }
+    } finally {
+      _reportingExtraNullSafetyError = false;
     }
-    _reportingExtraNullSafetyError = false;
+  }
+}
+
+class _InteropNullAssertionError extends _Error implements TypeError {
+  _InteropNullAssertionError()
+      : super('Non-nullable interop API returned null value.');
+}
+
+/// Called from generated code.
+Object? _interopNullAssertion(Object? value) {
+  if (JS_GET_FLAG('EXTRA_NULL_SAFETY_CHECKS')) {
+    if (value == null) {
+      _onExtraNullSafetyError(_InteropNullAssertionError(), StackTrace.current);
+    }
+    return value;
+  } else {
+    return value!;
   }
 }
 
@@ -660,6 +680,13 @@ Rti _substitute(Object? universe, Rti rti, Object? typeArguments, int depth) {
           _Utils.isIdentical(substitutedArguments, arguments)) return rti;
       return _Universe._lookupBindingRti(
           universe, substitutedBase, substitutedArguments);
+    case Rti.kindRecord:
+      String tag = Rti._getRecordPartialShapeTag(rti);
+      var fields = Rti._getRecordFields(rti);
+      var substitutedFields =
+          _substituteArray(universe, fields, typeArguments, depth);
+      if (_Utils.isIdentical(substitutedFields, fields)) return rti;
+      return _Universe._lookupRecordRti(universe, tag, substitutedFields);
     case Rti.kindFunction:
       Rti returnType = Rti._getReturnType(rti);
       Rti substitutedReturnType =
@@ -1981,6 +2008,12 @@ String _rtiToDebugString(Rti rti) {
     return 'binding(${_rtiToDebugString(base)}, ${_rtiArrayToDebugString(arguments)})';
   }
 
+  if (kind == Rti.kindRecord) {
+    String tag = Rti._getRecordPartialShapeTag(rti);
+    var fields = Rti._getRecordFields(rti);
+    return 'record([$tag], ${_rtiArrayToDebugString(fields)})';
+  }
+
   if (kind == Rti.kindFunction) {
     Rti returnType = Rti._getReturnType(rti);
     _FunctionParameters parameters = Rti._getFunctionParameters(rti);
@@ -3227,7 +3260,8 @@ class TypeRule {
       JS('', '#.#', rule, supertype);
 }
 
-// This needs to be kept in sync with `Variance` in `entities.dart`.
+// This needs to be kept in sync with `Variance` in
+// `pkg/js_shared/lib/variance.dart`.
 class Variance {
   // TODO(fishythefish): Try bitmask representation.
   static const int legacyCovariant = 0;

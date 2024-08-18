@@ -70,19 +70,8 @@ int64_t OS::GetCurrentTimeMicros() {
   return (static_cast<int64_t>(tv.tv_sec) * 1000000) + tv.tv_usec;
 }
 
-static mach_timebase_info_data_t timebase_info;
-
 int64_t OS::GetCurrentMonotonicTicks() {
-  if (timebase_info.denom == 0) {
-    kern_return_t kr = mach_timebase_info(&timebase_info);
-    ASSERT(KERN_SUCCESS == kr);
-  }
-  ASSERT(timebase_info.denom != 0);
-  // timebase_info converts absolute time tick units into nanoseconds.
-  int64_t result = mach_absolute_time();
-  result *= timebase_info.numer;
-  result /= timebase_info.denom;
-  return result;
+  return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
 }
 
 int64_t OS::GetCurrentMonotonicFrequency() {
@@ -95,25 +84,8 @@ int64_t OS::GetCurrentMonotonicMicros() {
 }
 
 int64_t OS::GetCurrentThreadCPUMicros() {
-  if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
-    // This is more efficient when available.
-    return clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) /
-           kNanosecondsPerMicrosecond;
-  }
-
-  mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
-  thread_basic_info_data_t info_data;
-  thread_basic_info_t info = &info_data;
-  mach_port_t thread_port = pthread_mach_thread_np(pthread_self());
-  kern_return_t r =
-      thread_info(thread_port, THREAD_BASIC_INFO, (thread_info_t)info, &count);
-  ASSERT(r == KERN_SUCCESS);
-  int64_t thread_cpu_micros =
-      (info->system_time.seconds + info->user_time.seconds);
-  thread_cpu_micros *= kMicrosecondsPerSecond;
-  thread_cpu_micros += info->user_time.microseconds;
-  thread_cpu_micros += info->system_time.microseconds;
-  return thread_cpu_micros;
+  return clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) /
+         kNanosecondsPerMicrosecond;
 }
 
 int64_t OS::GetCurrentMonotonicMicrosForTimeline() {
@@ -317,12 +289,7 @@ OS::BuildId OS::GetAppBuildId(const uint8_t* snapshot_instructions) {
   if (auto* const image_build_id = instructions_image.build_id()) {
     return {instructions_image.build_id_length(), image_build_id};
   }
-  Dl_info snapshot_info;
-  if (dladdr(snapshot_instructions, &snapshot_info) == 0) {
-    return {0, nullptr};
-  }
-  const uint8_t* dso_base =
-      static_cast<const uint8_t*>(snapshot_info.dli_fbase);
+  const uint8_t* dso_base = GetAppDSOBase(snapshot_instructions);
   const auto& macho_header =
       *reinterpret_cast<const struct mach_header*>(dso_base);
   // We assume host endianness in the Mach-O file.

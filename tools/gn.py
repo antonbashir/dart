@@ -7,6 +7,7 @@ import argparse
 import os
 import platform
 import subprocess
+import socket
 import sys
 import time
 import utils
@@ -188,7 +189,8 @@ def UseSysroot(args, gn_args):
     return True
 
 
-def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash):
+def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash,
+             git_version):
     gn_args = {}
 
     host_os = HostOsForGn(HOST_OS)
@@ -233,7 +235,7 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash):
             gn_args['arm_float_abi'] = floatabi
             gn_args['arm_use_neon'] = True
     if gn_args['target_os'] == 'fuchsia':
-        gn_args['fuchsia_target_api_level'] = 15
+        gn_args['fuchsia_target_api_level'] = 19
 
     gn_args['is_debug'] = mode == 'debug'
     gn_args['is_release'] = mode == 'release'
@@ -290,37 +292,11 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash):
                 if prefix != None:
                     gn_args[arch + '_toolchain_prefix'] = prefix
 
-    goma_dir = os.environ.get('GOMA_DIR')
-    # Search for goma in depot_tools in path
-    goma_depot_tools_dir = None
-    for path in os.environ.get('PATH', '').split(os.pathsep):
-        if os.path.basename(path) == 'depot_tools':
-            cipd_bin = os.path.join(path, '.cipd_bin')
-            if os.path.isfile(os.path.join(cipd_bin, ExecutableName('gomacc'))):
-                goma_depot_tools_dir = cipd_bin
-                break
-    # Otherwise use goma from home directory.
-    # TODO(whesse): Remove support for goma installed in home directory.
-    # Goma will only be distributed through depot_tools.
-    goma_home_dir = os.path.join(os.getenv('HOME', ''), 'goma')
-    if args.goma and goma_dir:
-        gn_args['use_goma'] = True
-        gn_args['goma_dir'] = goma_dir
-    elif args.goma and goma_depot_tools_dir:
-        gn_args['use_goma'] = True
-        gn_args['goma_dir'] = goma_depot_tools_dir
-    elif args.goma and os.path.exists(goma_home_dir):
-        gn_args['use_goma'] = True
-        gn_args['goma_dir'] = goma_home_dir
-    else:
-        gn_args['use_goma'] = False
-        gn_args['goma_dir'] = None
-
-    if gn_args['target_os'] == 'mac' and gn_args['use_goma']:
-        gn_args['mac_use_goma_rbe'] = True
-
     gn_args['use_rbe'] = args.rbe
 
+    if args.rbe_expensive_exec_strategy:
+        gn_args[
+            'rbe_expensive_exec_strategy'] = args.rbe_expensive_exec_strategy
 
     # Code coverage requires -O0 to be set.
     if enable_code_coverage:
@@ -331,6 +307,7 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash):
         gn_args['debug_optimization_level'] = args.debug_opt_level
 
     gn_args['verify_sdk_hash'] = verify_sdk_hash
+    gn_args['dart_version_git_info'] = git_version
 
     if args.codesigning_identity != '':
         gn_args['codesigning_identity'] = args.codesigning_identity
@@ -345,6 +322,10 @@ def ProcessOsOption(os_name):
 
 
 def ProcessOptions(args):
+    if args.verify_sdk_hash == None:
+        args.verify_sdk_hash = not args.rbe
+    if args.git_version == None:
+        args.git_version = not args.rbe
     if args.arch == 'all':
         if platform.system() == 'Darwin':
             # Targeting 32 bits not supported on MacOS.
@@ -412,6 +393,17 @@ def ProcessOptions(args):
     if HOST_OS != 'win' and args.use_crashpad:
         print("Crashpad is only supported on Windows")
         return False
+    if not args.rbe and \
+       (socket.getfqdn().endswith('.corp.google.com') or
+        socket.getfqdn().endswith('.c.googlers.com')):
+        print('You can speed up your build by following: go/dart-rbe')
+    old_rbe_cfg = 'win-intel.cfg' if HOST_OS == 'win32' else 'linux-intel.cfg'
+    new_rbe_cfg = 'windows.cfg' if HOST_OS == 'win32' else 'unix.cfg'
+    if os.environ.get('RBE_cfg') == os.path.join(os.getcwd(), 'build', 'rbe',
+                                                 old_rbe_cfg):
+        print(f'warning: {old_rbe_cfg} is deprecated, please update your '
+              f'RBE_cfg variable to {new_rbe_cfg} use RBE=1 instead per '
+              'go/dart-rbe')
     return True
 
 
@@ -431,22 +423,23 @@ def ide_switch(host_os):
 def AddCommonGnOptionArgs(parser):
     """Adds arguments that will change the default GN arguments."""
 
-    parser.add_argument('--goma', help='Use goma', action='store_true')
-    parser.add_argument('--no-goma',
-                        help='Disable goma',
-                        dest='goma',
-                        action='store_false')
-    parser.set_defaults(goma=os.environ.get('RBE_cfg') == None)
-
     parser.add_argument('--rbe', help='Use rbe', action='store_true')
     parser.add_argument('--no-rbe',
                         help='Disable rbe',
                         dest='rbe',
                         action='store_false')
-    parser.set_defaults(rbe=os.environ.get('RBE_cfg') != None)
+    parser.set_defaults(rbe=os.environ.get('RBE') == '1' or \
+                            os.environ.get('DART_RBE') == '1' or \
+                            os.environ.get('RBE_cfg') != None)
+    parser.add_argument('--rbe-expensive-exec-strategy',
+                        default=os.environ.get('RBE_exec_strategy'),
+                        help='Strategy for expensive RBE compilations',
+                        type=str)
 
+    # Disable git hashes when remote compiling to ensure cache hits of the final
+    # output artifacts when nothing has changed.
     parser.add_argument('--verify-sdk-hash',
-                        help='Enable SDK hash checks (default)',
+                        help='Enable SDK hash checks',
                         dest='verify_sdk_hash',
                         action='store_true')
     parser.add_argument('-nvh',
@@ -454,7 +447,18 @@ def AddCommonGnOptionArgs(parser):
                         help='Disable SDK hash checks',
                         dest='verify_sdk_hash',
                         action='store_false')
-    parser.set_defaults(verify_sdk_hash=True)
+    parser.set_defaults(verify_sdk_hash=None)
+
+    parser.add_argument('--git-version',
+                        help='Enable git commit in version',
+                        dest='git_version',
+                        action='store_true')
+    parser.add_argument('-ngv',
+                        '--no-git-version',
+                        help='Disable git commit in version',
+                        dest='git_version',
+                        action='store_false')
+    parser.set_defaults(git_version=None)
 
     parser.add_argument('--clang', help='Use Clang', action='store_true')
     parser.add_argument('--no-clang',
@@ -590,6 +594,26 @@ def parse_args(args):
     return options
 
 
+def InitializeRBE(out_dir, env):
+    RBE_cfg = 'RBE_CFG' if HOST_OS == 'win32' else 'RBE_cfg'
+    RBE_server_address = ('RBE_SERVER_ADDRESS'
+                          if HOST_OS == 'win32' else 'RBE_server_address')
+    # Default RBE_cfg to the appropriate configuration file.
+    if not RBE_cfg in env:
+        env[RBE_cfg] = os.path.join(
+            os.getcwd(), 'build', 'rbe',
+            'windows.cfg' if HOST_OS == 'win32' else 'unix.cfg')
+    # Default RBE_server_address to inside the build directory.
+    if not RBE_server_address in env:
+        with open(env[RBE_cfg], 'r') as f:
+            if not any([l.startswith('server_address') for l in f.readlines()]):
+                schema = 'pipe' if HOST_OS == 'win32' else 'unix'
+                socket = os.path.join(os.getcwd(), out_dir, 'reproxy.sock')
+                if HOST_OS == 'win32':
+                    socket = socket.replace('\\', '_').replace(':', '_')
+                env[RBE_server_address] = f'{schema}://{socket}'
+
+
 def ExecutableName(basename):
     if utils.IsWindows():
         return f'{basename}.exe'
@@ -609,7 +633,8 @@ def BuildGnCommand(args, mode, arch, target_os, sanitizer, out_dir):
     # See dartbug.com/32364
     command = [gn, 'gen', out_dir]
     gn_args = ToCommandLine(
-        ToGnArgs(args, mode, arch, target_os, sanitizer, args.verify_sdk_hash))
+        ToGnArgs(args, mode, arch, target_os, sanitizer, args.verify_sdk_hash,
+                 args.git_version))
     gn_args += GetGNArgs(args)
     if args.ide:
         command.append(ide_switch(HOST_OS))
@@ -620,13 +645,17 @@ def BuildGnCommand(args, mode, arch, target_os, sanitizer, out_dir):
     return command
 
 
-def RunGnOnConfiguredConfigurations(args):
+def RunGnOnConfiguredConfigurations(args, env={}):
+    initialized_rbe = False
     commands = []
     for target_os in args.os:
         for mode in args.mode:
             for arch in args.arch:
                 for sanitizer in args.sanitizer:
                     out_dir = GetOutDir(mode, arch, target_os, sanitizer)
+                    if args.rbe and not initialized_rbe:
+                        InitializeRBE(out_dir, env)
+                        initialized_rbe = True
                     commands.append(
                         BuildGnCommand(args, mode, arch, target_os, sanitizer,
                                        out_dir))
@@ -642,7 +671,7 @@ def RunGnOnConfiguredConfigurations(args):
 
     for command in commands:
         try:
-            process = subprocess.Popen(command, cwd=DART_ROOT)
+            process = subprocess.Popen(command, cwd=DART_ROOT, env=env)
             active_commands.append([command, process])
         except Exception as e:
             print('Error: %s' % e)

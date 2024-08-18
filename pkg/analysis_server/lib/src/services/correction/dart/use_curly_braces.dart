@@ -3,8 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/source/source_range.dart';
@@ -16,9 +16,10 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class UseCurlyBraces extends ParsedCorrectionProducer {
   @override
-  bool canBeAppliedInBulk;
+  final CorrectionApplicability applicability;
 
-  UseCurlyBraces() : canBeAppliedInBulk = true;
+  UseCurlyBraces({required super.context})
+      : applicability = CorrectionApplicability.acrossFiles;
 
   /// Create an instance that is prevented from being applied automatically in
   /// bulk.
@@ -26,13 +27,11 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
   /// This is used in places where "Use Curly Braces" is a valid manual fix, but
   /// not clearly the only/correct fix to apply automatically, such as the
   /// `always_put_control_body_on_new_line` lint.
-  UseCurlyBraces.nonBulk() : canBeAppliedInBulk = false;
+  UseCurlyBraces.nonBulk({required super.context})
+      : applicability = CorrectionApplicability.acrossSingleFile;
 
   @override
   AssistKind get assistKind => DartAssistKind.USE_CURLY_BRACES;
-
-  @override
-  bool get canBeAppliedToFile => true;
 
   @override
   FixKind get fixKind => DartFixKind.ADD_CURLY_BRACES;
@@ -77,7 +76,7 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
     if (body is Block) return;
 
     var prefix = utils.getLinePrefix(node.offset);
-    var indent = prefix + utils.getIndent(1);
+    var indent = prefix + utils.oneIndent;
 
     await builder.addDartFileEdit(file, (builder) {
       _replaceRange(
@@ -100,7 +99,7 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
     if (body is Block) return;
 
     var prefix = utils.getLinePrefix(node.offset);
-    var indent = prefix + utils.getIndent(1);
+    var indent = prefix + utils.oneIndent;
 
     await builder.addDartFileEdit(file, (builder) {
       _replace(builder, node.rightParenthesis, body, indent, prefix);
@@ -109,13 +108,13 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
 
   Future<void> _ifStatement(
       ChangeBuilder builder, IfStatement node, Statement? thenOrElse) async {
-    final parent = node.parent;
+    var parent = node.parent;
     if (parent is IfStatement && parent.elseStatement == node) {
       return;
     }
 
     var prefix = utils.getLinePrefix(node.offset);
-    var indent = prefix + utils.getIndent(1);
+    var indent = prefix + utils.oneIndent;
 
     await builder.addDartFileEdit(file, (builder) {
       var thenStatement = node.thenStatement;
@@ -155,7 +154,7 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
 
   void _replaceLeftParenthesis(DartFileEditBuilder builder,
       SyntacticEntity left, SyntacticEntity right, String indent) {
-    // Keep any comments preceeding right.
+    // Keep any comments preceding right.
     if (right is AstNode) {
       right = right.beginToken.precedingComments ?? right;
     }
@@ -182,7 +181,7 @@ class UseCurlyBraces extends ParsedCorrectionProducer {
     if (body is Block) return;
 
     var prefix = utils.getLinePrefix(node.offset);
-    var indent = prefix + utils.getIndent(1);
+    var indent = prefix + utils.oneIndent;
 
     await builder.addDartFileEdit(file, (builder) {
       _replace(builder, node.rightParenthesis, body, indent, prefix);

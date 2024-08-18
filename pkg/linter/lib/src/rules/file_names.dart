@@ -43,17 +43,19 @@ library.
 ''';
 
 class FileNames extends LintRule {
-  static const LintCode code = LintCode(
-      'file_names', "The file name '{0}' isn't a snake_case identifier.",
+  static const LintCode code = LintCode('file_names',
+      "The file name '{0}' isn't a lower_case_with_underscores identifier.",
       correctionMessage:
-          'Try changing the name to follow the snake_case style.');
+          'Try changing the name to follow the lower_case_with_underscores '
+          'style.',
+      hasPublishedDocs: true);
 
   FileNames()
       : super(
             name: 'file_names',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   LintCode get lintCode => code;

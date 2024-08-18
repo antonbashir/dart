@@ -4,21 +4,10 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 #
-# When in a Flutter Engine checkout, this script checks what version of the Dart
-# SDK the engine is pinned to, and patches the engine if there is a known patch
-# that needs to be applied on the next Dart SDK roll in the engine.
-#
-# This script is meant to be used by 3xHEAD CI infrastructure, allowing
-# incompatible changes to be made to the Dart SDK requiring a matching change
-# to the Flutter Engine, without breaking the CI. The patch is associated with
-# the Dart SDK version the engine is pinned so. When the engine rolls its SDK,
-# then it stops applying patches atomically as there isn't a patch available yet
-# for the new roll.
-#
-# Additionally, this script updates the flutter engine DEPS file with the
+# This script updates the flutter engine DEPS file with the
 # Dart SDK dependencies.
 #
-# Usage: src/third_party/dart/tools/patches/flutter-engine/apply.sh
+# Usage: src/flutter/third_party/dart/tools/patches/flutter-engine/apply.sh
 # (run inside the root of a flutter engine checkout)
 
 set -e
@@ -30,17 +19,6 @@ ensure_in_checkout_root
 
 pinned_dart_sdk=$(get_pinned_dart_version)
 need_runhooks=false
-patch=src/third_party/dart/tools/patches/flutter-engine/${pinned_dart_sdk}.flutter.patch
-if [ -e "$patch" ]; then
-  (cd flutter && git apply ../$patch)
-  need_runhooks=true
-fi
-
-patch=src/third_party/dart/tools/patches/flutter-engine/${pinned_dart_sdk}.patch
-if [ -e "$patch" ]; then
-  (cd src/flutter && git apply ../../$patch)
-  need_runhooks=true
-fi
 
 # Update the flutter DEPS with the revisions in the Dart SDK DEPS.
 src/tools/dart/create_updated_flutter_deps.py
@@ -57,12 +35,24 @@ if [ $need_runhooks = true ]; then
   # referencing.
   # Normally gclient sync would update the cache - but we are bypassing
   # it here.
-  git_cache=$(python3 -c 'import imp; config = imp.load_source("config", ".gclient"); print(getattr(config, "cache_dir", ""))')
+  git_cache=$(python3 -c '\
+import importlib.util
+import importlib.machinery
+
+def load_source(modname, filename):
+    loader = importlib.machinery.SourceFileLoader(modname, filename)
+    spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+config = load_source("config", ".gclient");
+print(getattr(config, "cache_dir", ""))')
 
   # DEPS file might have been patched with new version of packages that
   # Dart SDK depends on. Get information about dependencies from the
   # DEPS file and forcefully update checkouts of those dependencies.
-  gclient revinfo --ignore-dep-type=cipd | grep 'src/third_party/dart/third_party' | while read -r line; do
+  gclient revinfo --ignore-dep-type=cipd | grep 'src/flutter/third_party/dart/third_party' | while read -r line; do
     # revinfo would produce lines in the following format:
     #     path: git-url@tag-or-hash
     # Where no spaces occur inside path, git-url or tag-or-hash.

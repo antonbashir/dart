@@ -2,16 +2,24 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:collection';
+
 import 'package:collection/collection.dart';
 
 extension IterableExtension<E> on Iterable<E> {
+  /// Note, elements must be unique.
+  Map<E, int> get asElementToIndexMap {
+    return {
+      for (var (index, element) in indexed) element: index,
+    };
+  }
+
   /// Returns the fixed-length [List] with elements of `this`.
   List<E> toFixedList() {
-    var result = toList(growable: false);
-    if (result.isEmpty) {
+    if (isEmpty) {
       return const <Never>[];
     }
-    return result;
+    return toList(growable: false);
   }
 
   Iterable<E> whereNotType<U>() {
@@ -25,7 +33,7 @@ extension IterableMapEntryExtension<K, V> on Iterable<MapEntry<K, V>> {
 
 extension ListExtension<E> on List<E> {
   Iterable<E> get withoutLast {
-    final length = this.length;
+    var length = this.length;
     return length > 0 ? take(length - 1) : Iterable.empty();
   }
 
@@ -62,12 +70,19 @@ extension ListExtension<E> on List<E> {
   }
 
   E? nextOrNull(E element) {
-    final index = indexOf(element);
+    var index = indexOf(element);
     if (index >= 0 && index < length - 1) {
       return this[index + 1];
     } else {
       return null;
     }
+  }
+
+  E? removeLastOrNull() {
+    if (isNotEmpty) {
+      return removeLast();
+    }
+    return null;
   }
 
   /// Returns a new list with all elements of the target, arranged such that
@@ -79,6 +94,29 @@ extension ListExtension<E> on List<E> {
       ...where(predicate),
       ...whereNot(predicate),
     ];
+  }
+}
+
+extension ListQueueExtension<T> on ListQueue<T> {
+  T? removeFirstOrNull() {
+    return isNotEmpty ? removeFirst() : null;
+  }
+}
+
+extension MapExtension<K, V> on Map<K, V> {
+  K? get firstKey {
+    return keys.firstOrNull;
+  }
+}
+
+extension MapOfListExtension<K, V> on Map<K, List<V>> {
+  void add(K key, V value) {
+    (this[key] ??= []).add(value);
+  }
+
+  /// Ensure that [key] is present in the target, maybe with the empty list.
+  void addKey(K key) {
+    this[key] ??= [];
   }
 }
 

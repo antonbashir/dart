@@ -11,12 +11,33 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AwaitExpressionResolutionTest);
-    defineReflectiveTests(AwaitExpressionResolutionWithoutNullSafetyTest);
   });
 }
 
 @reflectiveTest
 class AwaitExpressionResolutionTest extends PubPackageResolutionTest {
+  test_future() async {
+    await assertNoErrorsInCode(r'''
+f(Future<int> a) async {
+  await a;
+}
+''');
+
+    assertType(findNode.awaitExpression('await a'), 'int');
+  }
+
+  test_futureOr() async {
+    await assertNoErrorsInCode(r'''
+import 'dart:async';
+
+f(FutureOr<int> a) async {
+  await a;
+}
+''');
+
+    assertType(findNode.awaitExpression('await a'), 'int');
+  }
+
   test_futureOrQ() async {
     await assertNoErrorsInCode(r'''
 import 'dart:async';
@@ -50,7 +71,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 39, 5),
     ]);
 
-    final node = findNode.singleAwaitExpression;
+    var node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -70,7 +91,7 @@ class A {
 }
 ''');
 
-    final node = findNode.singleAwaitExpression;
+    var node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -97,7 +118,7 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 25, 10),
     ]);
 
-    final node = findNode.singleAwaitExpression;
+    var node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -120,7 +141,7 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_PREFIXED_NAME, 63, 10),
     ]);
 
-    final node = findNode.singleAwaitExpression;
+    var node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -149,7 +170,7 @@ void f() async {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 34, 10),
     ]);
 
-    final node = findNode.singleAwaitExpression;
+    var node = findNode.singleAwaitExpression;
     assertResolvedNodeText(node, r'''
 AwaitExpression
   awaitKeyword: await
@@ -172,31 +193,5 @@ AwaitExpression
     staticType: InvalidType
   staticType: InvalidType
 ''');
-  }
-}
-
-@reflectiveTest
-class AwaitExpressionResolutionWithoutNullSafetyTest
-    extends PubPackageResolutionTest with WithoutNullSafetyMixin {
-  test_future() async {
-    await assertNoErrorsInCode(r'''
-f(Future<int> a) async {
-  await a;
-}
-''');
-
-    assertType(findNode.awaitExpression('await a'), 'int');
-  }
-
-  test_futureOr() async {
-    await assertNoErrorsInCode(r'''
-import 'dart:async';
-
-f(FutureOr<int> a) async {
-  await a;
-}
-''');
-
-    assertType(findNode.awaitExpression('await a'), 'int');
   }
 }

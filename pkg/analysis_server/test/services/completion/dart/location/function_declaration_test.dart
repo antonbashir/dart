@@ -24,9 +24,9 @@ mixin FunctionDeclarationTestCases on AbstractCompletionDriverTest {
 ''');
     assertResponse(r'''
 suggestions
-  dynamic
-    kind: keyword
   void
+    kind: keyword
+  dynamic
     kind: keyword
 ''');
   }
@@ -89,8 +89,6 @@ suggestions
   async
     kind: keyword
   async*
-    kind: keyword
-  sync*
     kind: keyword
 ''');
   }

@@ -26,7 +26,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 28, 5),
     ]);
 
-    final node = findNode.singleFieldDeclaration;
+    var node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -55,7 +55,7 @@ class A {
 }
 ''');
 
-    final node = findNode.singleFieldDeclaration;
+    var node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -87,7 +87,7 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 45, 1),
     ]);
 
-    final node = findNode.fieldDeclaration('b =');
+    var node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -120,7 +120,7 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 44, 1),
     ]);
 
-    final node = findNode.fieldDeclaration('b =');
+    var node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -153,7 +153,7 @@ class A {
       error(CompileTimeErrorCode.IMPLICIT_THIS_REFERENCE_IN_INITIALIZER, 42, 1),
     ]);
 
-    final node = findNode.fieldDeclaration('b =');
+    var node = findNode.fieldDeclaration('b =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -191,7 +191,7 @@ class A {
       error(CompileTimeErrorCode.INVALID_REFERENCE_TO_THIS, 22, 4),
     ]);
 
-    final node = findNode.singleFieldDeclaration;
+    var node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -237,13 +237,7 @@ class A {
   var f = throw 42;
 }
 ''');
-    assertType(
-      findElement.field('f').type,
-      typeStringByNullability(
-        nullable: 'Never',
-        legacy: 'dynamic',
-      ),
-    );
+    assertType(findElement.field('f').type, 'Never');
   }
 
   test_type_inferred_noInitializer() async {
@@ -253,25 +247,6 @@ class A {
 }
 ''');
     assertType(findElement.field('f').type, 'dynamic');
-  }
-
-  test_type_inferred_nonNullify() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 2.7
-var a = 0;
-''');
-
-    await assertErrorsInCode('''
-import 'a.dart';
-
-class A {
-  var f = a;
-}
-''', [
-      error(HintCode.IMPORT_OF_LEGACY_LIBRARY_INTO_NULL_SAFE, 7, 8),
-    ]);
-
-    assertType(findElement.field('f').type, 'int');
   }
 
   test_type_inferred_null() async {
@@ -290,7 +265,7 @@ class A<T> {
 }
 ''');
 
-    final node = findNode.singleFieldDeclaration;
+    var node = findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList

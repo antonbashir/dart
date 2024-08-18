@@ -6,7 +6,6 @@ import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/src/generated/engine.dart'; //ignore: implementation_imports
 import 'package:analyzer/src/utilities/extensions/string.dart'; // ignore: implementation_imports
 
 import '../analyzer.dart';
@@ -53,10 +52,12 @@ Set<ParameterElement> _referencedParameters(
 }
 
 class UseSuperParameters extends LintRule {
-  static const LintCode singleParam =
-      LintCode('use_super_parameters', "Convert '{0}' to a super parameter.");
-  static const LintCode multipleParams =
-      LintCode('use_super_parameters', 'Convert {0} to super parameters.');
+  static const LintCode singleParam = LintCode(
+      'use_super_parameters', "Convert '{0}' to a super parameter.",
+      hasPublishedDocs: true);
+  static const LintCode multipleParams = LintCode(
+      'use_super_parameters', 'Convert {0} to super parameters.',
+      hasPublishedDocs: true);
 
   UseSuperParameters()
       : super(
@@ -64,12 +65,15 @@ class UseSuperParameters extends LintRule {
             description: _desc,
             details: _details,
             state: State.experimental(),
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   void registerNodeProcessors(
       NodeLintRegistry registry, LinterContext context) {
-    if (!context.isEnabled(Feature.super_parameters)) return;
+    if (!context.libraryElement!.featureSet
+        .isEnabled(Feature.super_parameters)) {
+      return;
+    }
 
     var visitor = _Visitor(this, context);
     registry.addConstructorDeclaration(this, visitor);
@@ -91,14 +95,8 @@ class _ReferencedParameterCollector extends RecursiveAstVisitor<void> {
 class _Visitor extends SimpleAstVisitor {
   final LinterContext context;
   final LintRule rule;
-  final bool strictCasts;
 
-  _Visitor(this.rule, this.context)
-      :
-        // TODO(pq): update when there's a better API to access strictCasts.
-        strictCasts =
-            // ignore: deprecated_member_use
-            (context.analysisOptions as AnalysisOptionsImpl).strictCasts;
+  _Visitor(this.rule, this.context);
 
   void check(
       ConstructorDeclaration node,
@@ -248,8 +246,7 @@ class _Visitor extends SimpleAstVisitor {
     // Compare the types.
     var superType = superParameter.type;
     var thisType = parameterElement.type;
-    if (!context.typeSystem
-        .isAssignableTo(superType, thisType, strictCasts: strictCasts)) {
+    if (!context.typeSystem.isAssignableTo(superType, thisType)) {
       // If the type of the parameter can't be assigned to the super parameter,
       // then don't lint.
       return false;

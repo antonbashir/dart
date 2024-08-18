@@ -2,12 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:front_end/src/fasta/type_inference/type_constraint_gatherer.dart';
-import 'package:front_end/src/fasta/type_inference/type_schema.dart';
-import 'package:front_end/src/fasta/type_inference/type_schema_environment.dart';
+import 'package:front_end/src/source/source_library_builder.dart';
+import 'package:front_end/src/type_inference/type_constraint_gatherer.dart';
+import 'package:front_end/src/type_inference/type_inference_engine.dart';
+import 'package:front_end/src/type_inference/type_schema.dart';
+import 'package:front_end/src/type_inference/type_schema_environment.dart';
 import 'package:kernel/ast.dart';
-import 'package:kernel/core_types.dart';
 import 'package:kernel/class_hierarchy.dart';
+import 'package:kernel/core_types.dart';
 import 'package:kernel/testing/type_parser_environment.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -41,7 +43,7 @@ class TypeConstraintGathererTest {
   Library get testLibrary => _testLibrary;
 
   void parseTestLibrary(String testLibraryText) {
-    env = new Env(testLibraryText, isNonNullableByDefault: true);
+    env = new Env(testLibraryText);
     assert(
         env.component.libraries.length == 2,
         "The tests are supposed to have exactly two libraries: "
@@ -339,7 +341,8 @@ class TypeConstraintGathererTest {
         bound,
         clientLibrary,
         expectedConstraints,
-        (gatherer, type, bound) => gatherer.tryConstrainLower(type, bound),
+        (gatherer, type, bound) =>
+            gatherer.tryConstrainLower(type, bound, treeNodeForTesting: null),
         typeParameterNodesToConstrain);
   }
 
@@ -377,7 +380,8 @@ class TypeConstraintGathererTest {
         bound,
         clientLibrary,
         expectedConstraints,
-        (gatherer, type, bound) => gatherer.tryConstrainUpper(type, bound),
+        (gatherer, type, bound) =>
+            gatherer.tryConstrainUpper(type, bound, treeNodeForTesting: null),
         typeParameterNodesToConstrain);
   }
 
@@ -392,10 +396,15 @@ class TypeConstraintGathererTest {
         coreTypes, new ClassHierarchy(component, coreTypes));
     var typeConstraintGatherer = new TypeConstraintGatherer(
         typeSchemaEnvironment, typeParameterNodesToConstrain,
-        isNonNullableByDefault: testLibrary.isNonNullableByDefault);
+        typeOperations: new OperationsCfe(typeSchemaEnvironment,
+            fieldNonPromotabilityInfo: new FieldNonPromotabilityInfo(
+                fieldNameInfo: {}, individualPropertyReasons: {}),
+            typeCacheNonNullable: {},
+            typeCacheNullable: {},
+            typeCacheLegacy: {}),
+        inferenceResultForTesting: null);
     var constraints = tryConstrain(typeConstraintGatherer, a, b)
-        ? typeConstraintGatherer.computeConstraints(
-            isNonNullableByDefault: clientLibrary.isNonNullableByDefault)
+        ? typeConstraintGatherer.computeConstraints()
         : null;
     if (expectedConstraints == null) {
       expect(constraints, isNull);

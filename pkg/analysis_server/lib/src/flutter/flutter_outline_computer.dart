@@ -4,7 +4,7 @@
 
 import 'package:analysis_server/src/computer/computer_outline.dart';
 import 'package:analysis_server/src/protocol_server.dart' as protocol;
-import 'package:analysis_server/src/utilities/flutter.dart';
+import 'package:analysis_server/src/utilities/extensions/flutter.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
@@ -22,7 +22,6 @@ class FlutterOutlineComputer {
   protocol.FlutterOutline compute() {
     var dartOutline = DartUnitOutlineComputer(
       resolvedUnit,
-      withBasicFlutter: false,
     ).compute();
 
     // Convert Dart outlines into Flutter outlines.
@@ -130,7 +129,7 @@ class FlutterOutlineComputer {
   /// a widget reference outline item.
   protocol.FlutterOutline? _createOutline(Expression node, bool withGeneric) {
     var type = node.staticType;
-    if (type is! InterfaceType || !Flutter.isWidgetType(type)) {
+    if (type is! InterfaceType || !type.isWidgetType) {
       return null;
     }
     var className = type.element.displayName;
@@ -139,11 +138,6 @@ class FlutterOutlineComputer {
       var attributes = <protocol.FlutterOutlineAttribute>[];
       var children = <protocol.FlutterOutline>[];
       for (var argument in node.argumentList.arguments) {
-        var argumentType = argument.staticType;
-        var isWidgetArgument = Flutter.isWidgetType(argumentType);
-        var isWidgetListArgument =
-            argumentType != null && Flutter.isListOfWidgetsType(argumentType);
-
         String? parentAssociationLabel;
         Expression childrenExpression;
 
@@ -174,6 +168,11 @@ class FlutterOutlineComputer {
             // unlikely enough that we're not handling it at the moment.
           }
         }
+
+        var argumentType = argument.staticType;
+        var isWidgetArgument = argumentType.isWidgetType;
+        var isWidgetListArgument =
+            argumentType != null && argumentType.isListOfWidgetsType;
 
         if (isWidgetArgument && childrenExpression is ConditionalExpression) {
           addChildrenFrom(childrenExpression.thenExpression);

@@ -30,7 +30,9 @@
    public:                                                                     \
     CompilerPass_##Name() : CompilerPass(k##Name, #Name) {}                    \
                                                                                \
-    static bool Register() { return true; }                                    \
+    static bool Register() {                                                   \
+      return true;                                                             \
+    }                                                                          \
                                                                                \
    protected:                                                                  \
     virtual bool DoBody(CompilerPassState* state) const {                      \
@@ -60,7 +62,6 @@ CompilerPassState::CompilerPassState(
       sinking(nullptr),
       call_specializer(nullptr),
       speculative_policy(speculative_policy),
-      reorder_blocks(false),
       sticky_flags(0),
       flow_graph_(flow_graph) {
   // Top scope function is at inlining id 0.
@@ -298,47 +299,12 @@ void CompilerPass::RunInliningPipeline(PipelineMode mode,
   INVOKE_PASS(TryOptimizePatterns);
 }
 
-void CompilerPass::RunForceOptimizedInliningPipeline(
-    CompilerPassState* pass_state) {
-  INVOKE_PASS(TypePropagation);
-  INVOKE_PASS(Canonicalize);
-  INVOKE_PASS(ConstantPropagation);
-}
-
-// Keep in sync with TestPipeline::RunForcedOptimizedAfterSSAPasses.
-FlowGraph* CompilerPass::RunForceOptimizedPipeline(
-    PipelineMode mode,
-    CompilerPassState* pass_state) {
-  INVOKE_PASS(ComputeSSA);
-  INVOKE_PASS(SetOuterInliningId);
-  INVOKE_PASS(TypePropagation);
-  INVOKE_PASS(Canonicalize);
-  INVOKE_PASS(BranchSimplify);
-  INVOKE_PASS(IfConvert);
-  INVOKE_PASS(ConstantPropagation);
-  INVOKE_PASS(TypePropagation);
-  INVOKE_PASS(WidenSmiToInt32);
-  INVOKE_PASS(SelectRepresentations_Final);
-  INVOKE_PASS(CSE);
-  INVOKE_PASS(TypePropagation);
-  INVOKE_PASS(TryCatchOptimization);
-  INVOKE_PASS(EliminateEnvironments);
-  INVOKE_PASS(EliminateDeadPhis);
-  // Currently DCE assumes that EliminateEnvironments has already been run,
-  // so it should not be lifted earlier than that pass.
-  INVOKE_PASS(DCE);
-  INVOKE_PASS(Canonicalize);
-  INVOKE_PASS_AOT(DelayAllocations);
-  INVOKE_PASS(EliminateWriteBarriers);
-  INVOKE_PASS(FinalizeGraph);
-  INVOKE_PASS(AllocateRegisters);
-  INVOKE_PASS(ReorderBlocks);
-  return pass_state->flow_graph();
-}
-
 FlowGraph* CompilerPass::RunPipeline(PipelineMode mode,
-                                     CompilerPassState* pass_state) {
-  INVOKE_PASS(ComputeSSA);
+                                     CompilerPassState* pass_state,
+                                     bool compute_ssa) {
+  if (compute_ssa) {
+    INVOKE_PASS(ComputeSSA);
+  }
   INVOKE_PASS_AOT(ApplyClassIds);
   INVOKE_PASS_AOT(TypePropagation);
   INVOKE_PASS(ApplyICData);
@@ -364,7 +330,6 @@ FlowGraph* CompilerPass::RunPipeline(PipelineMode mode,
   // unreachable code.
   INVOKE_PASS_AOT(ApplyICData);
   INVOKE_PASS_AOT(OptimizeTypedDataAccesses);
-  INVOKE_PASS(WidenSmiToInt32);
   INVOKE_PASS(SelectRepresentations);
   INVOKE_PASS(CSE);
   INVOKE_PASS(Canonicalize);
@@ -397,10 +362,13 @@ FlowGraph* CompilerPass::RunPipeline(PipelineMode mode,
   INVOKE_PASS(Canonicalize);
   INVOKE_PASS(AllocationSinking_DetachMaterializations);
   INVOKE_PASS(EliminateWriteBarriers);
+  // This must be done after all other possible intra-block code motion.
+  INVOKE_PASS(LoweringAfterCodeMotionDisabled);
   INVOKE_PASS(FinalizeGraph);
   INVOKE_PASS(Canonicalize);
-  INVOKE_PASS(AllocateRegisters);
   INVOKE_PASS(ReorderBlocks);
+  INVOKE_PASS(AllocateRegisters);
+  INVOKE_PASS(TestILSerialization);  // Must be last.
   return pass_state->flow_graph();
 }
 
@@ -464,12 +432,6 @@ COMPILER_PASS_REPEAT(ConstantPropagation, {
 COMPILER_PASS(OptimisticallySpecializeSmiPhis, {
   LICM licm(flow_graph);
   licm.OptimisticallySpecializeSmiPhis();
-});
-
-COMPILER_PASS(WidenSmiToInt32, {
-  // Where beneficial convert Smi operations into Int32 operations.
-  // Only meaningful for 32bit platforms right now.
-  flow_graph->WidenSmiToInt32();
 });
 
 COMPILER_PASS(SelectRepresentations, {
@@ -570,27 +532,7 @@ COMPILER_PASS(AllocateRegistersForGraphIntrinsic, {
   allocator.AllocateRegisters();
 });
 
-COMPILER_PASS(ReorderBlocks, {
-  if (state->reorder_blocks) {
-    BlockScheduler::ReorderBlocks(flow_graph);
-  }
-
-  // This is the last compiler pass.
-  // Test that round-trip IL serialization works before generating code.
-  if (FLAG_test_il_serialization && CompilerState::Current().is_aot()) {
-    Zone* zone = flow_graph->zone();
-    auto* detached_defs = new (zone) ZoneGrowableArray<Definition*>(zone, 0);
-    flow_graph->CompactSSA(detached_defs);
-
-    ZoneWriteStream write_stream(flow_graph->zone(), 1024);
-    FlowGraphSerializer serializer(&write_stream);
-    serializer.WriteFlowGraph(*flow_graph, *detached_defs);
-    ReadStream read_stream(write_stream.buffer(), write_stream.bytes_written());
-    FlowGraphDeserializer deserializer(flow_graph->parsed_function(),
-                                       &read_stream);
-    state->set_flow_graph(deserializer.ReadFlowGraph());
-  }
-});
+COMPILER_PASS(ReorderBlocks, { BlockScheduler::ReorderBlocks(flow_graph); });
 
 COMPILER_PASS(EliminateWriteBarriers, { EliminateWriteBarriers(flow_graph); });
 
@@ -608,6 +550,27 @@ COMPILER_PASS(FinalizeGraph, {
   // Remove redefinitions for the rest of the pipeline.
   flow_graph->RemoveRedefinitions();
 });
+
+COMPILER_PASS(TestILSerialization, {
+  // This is the last compiler pass.
+  // Test that round-trip IL serialization works before generating code.
+  if (FLAG_test_il_serialization && CompilerState::Current().is_aot()) {
+    Zone* zone = flow_graph->zone();
+    auto* detached_defs = new (zone) ZoneGrowableArray<Definition*>(zone, 0);
+    flow_graph->CompactSSA(detached_defs);
+
+    ZoneWriteStream write_stream(flow_graph->zone(), 1024);
+    FlowGraphSerializer serializer(&write_stream);
+    serializer.WriteFlowGraph(*flow_graph, *detached_defs);
+    ReadStream read_stream(write_stream.buffer(), write_stream.bytes_written());
+    FlowGraphDeserializer deserializer(flow_graph->parsed_function(),
+                                       &read_stream);
+    state->set_flow_graph(deserializer.ReadFlowGraph());
+  }
+});
+
+COMPILER_PASS(LoweringAfterCodeMotionDisabled,
+              { flow_graph->ExtractNonInternalTypedDataPayloads(); });
 
 COMPILER_PASS(GenerateCode, { state->graph_compiler->CompileGraph(); });
 

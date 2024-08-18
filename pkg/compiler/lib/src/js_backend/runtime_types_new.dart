@@ -5,6 +5,7 @@
 library js_backend.runtime_types_new;
 
 import 'package:js_shared/synced/recipe_syntax.dart';
+import 'package:js_shared/variance.dart';
 
 import '../common/elements.dart' show CommonElements, JCommonElements;
 import '../elements/entities.dart';
@@ -135,7 +136,8 @@ class _RecipeGenerator implements DartTypeVisitor<void, void> {
     }
   }
 
-  void _startFullTypeEnvironmentRecipe(FullTypeEnvironmentRecipe recipe, _) {
+  void _startFullTypeEnvironmentRecipe(
+      FullTypeEnvironmentRecipe recipe, void _) {
     if (recipe.classType == null) {
       _emitCode(Recipe.pushDynamic);
       assert(recipe.types.isNotEmpty);

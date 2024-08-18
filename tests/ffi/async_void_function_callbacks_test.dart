@@ -4,22 +4,18 @@
 
 // Dart test program for testing dart:ffi async callbacks.
 //
-// VMOptions=--stacktrace-every=100
-// VMOptions=--write-protect-code --no-dual-map-code
-// VMOptions=--write-protect-code --no-dual-map-code --stacktrace-every=100
+// VMOptions=
 // VMOptions=--use-slow-path
 // VMOptions=--use-slow-path --stacktrace-every=100
-// VMOptions=--use-slow-path --write-protect-code --no-dual-map-code
-// VMOptions=--use-slow-path --write-protect-code --no-dual-map-code --stacktrace-every=100
 // VMOptions=--dwarf_stack_traces --no-retain_function_objects --no-retain_code_objects
 // VMOptions=--test_il_serialization
-// VMOptions=--profiler
+// VMOptions=--profiler --profile_vm=true
+// VMOptions=--profiler --profile_vm=false
 // SharedObjects=ffi_test_functions
 
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:isolate';
-import 'dart:math';
 
 import 'dart:io';
 
@@ -193,11 +189,10 @@ testNativeCallableKeepAliveGetter() {
 Future<void> testNativeCallableClosure() async {
   final lib = NativeLibrary();
   int c = 70000;
-  void foo(int a, int b) {
-    simpleFunctionResult.complete(a + b + c);
-  }
 
-  final callback = NativeCallable<CallbackNativeType>.listener(foo);
+  final callback = NativeCallable<CallbackNativeType>.listener((int a, int b) {
+    simpleFunctionResult.complete(a + b + c);
+  });
 
   simpleFunctionResult = Completer<int>();
   lib.callFunctionOnSameThread(1000, callback.nativeFunction);

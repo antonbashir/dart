@@ -5,6 +5,7 @@
 import 'package:_fe_analyzer_shared/src/base/errors.dart';
 import 'package:_fe_analyzer_shared/src/deferred_function_literal_heuristic.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis.dart';
+import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
@@ -13,8 +14,10 @@ import 'package:analyzer/src/dart/element/generic_inferrer.dart';
 import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
+import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/generated/inference_log.dart';
 import 'package:analyzer/src/generated/resolver.dart';
 
 Set<Object> _computeExplicitlyTypedParameterSet(
@@ -98,6 +101,34 @@ class AnnotationInferrer extends FullInvocationInferrer<AnnotationImpl> {
 }
 
 /// Specialization of [InvocationInferrer] for performing type inference on AST
+/// nodes of type [AugmentedInvocation].
+class AugmentedInvocationInferrer
+    extends FullInvocationInferrer<AugmentedInvocationImpl> {
+  AugmentedInvocationInferrer({
+    required super.resolver,
+    required super.node,
+    required super.argumentList,
+    required super.contextType,
+    required super.whyNotPromotedList,
+  }) : super._();
+
+  @override
+  SyntacticEntity get _errorEntity {
+    return node.augmentedKeyword;
+  }
+
+  @override
+  bool get _needsTypeArgumentBoundsCheck => true;
+
+  @override
+  TypeArgumentListImpl? get _typeArguments => node.typeArguments;
+
+  @override
+  ErrorCode get _wrongNumberOfTypeArgumentsErrorCode =>
+      CompileTimeErrorCode.WRONG_NUMBER_OF_TYPE_ARGUMENTS;
+}
+
+/// Specialization of [InvocationInferrer] for performing type inference on AST
 /// nodes that require full downward and upward inference.
 abstract class FullInvocationInferrer<Node extends AstNodeImpl>
     extends InvocationInferrer<Node> {
@@ -108,7 +139,7 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
       required super.contextType,
       required super.whyNotPromotedList});
 
-  AstNode get _errorNode => node;
+  SyntacticEntity get _errorEntity => node;
 
   bool get _isConst => false;
 
@@ -124,6 +155,7 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
   @override
   DartType resolveInvocation({required FunctionType? rawType}) {
     var typeArgumentList = _typeArguments;
+    var originalType = rawType;
 
     List<DartType>? typeArgumentTypes;
     GenericInferrer? inferrer;
@@ -163,14 +195,13 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
             var typeParameter = typeParameters[i];
             var bound = typeParameter.bound;
             if (bound != null) {
-              bound = resolver.definingLibrary.toLegacyTypeIfOptOut(bound);
               bound = substitution.substituteType(bound);
               var typeArgument = typeArgumentTypes[i];
               if (!resolver.typeSystem.isSubtypeOf(typeArgument, bound)) {
-                resolver.errorReporter.reportErrorForNode(
-                  CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
+                resolver.errorReporter.atNode(
                   typeArgumentList.arguments[i],
-                  [typeArgument, typeParameter.name, bound],
+                  CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS,
+                  arguments: [typeArgument, typeParameter.name, bound],
                 );
               }
             }
@@ -187,6 +218,7 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
     } else {
       rawType = getFreshTypeParameters(rawType.typeFormals)
           .applyToFunctionType(rawType);
+      inferenceLogWriter?.enterGenericInference(rawType.typeFormals, rawType);
 
       inferrer = resolver.typeSystem.setupGenericTypeInference(
         typeParameters: rawType.typeFormals,
@@ -194,9 +226,13 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
         contextReturnType: contextType,
         isConst: _isConst,
         errorReporter: resolver.errorReporter,
-        errorNode: _errorNode,
+        errorEntity: _errorEntity,
         genericMetadataIsEnabled: resolver.genericMetadataIsEnabled,
         strictInference: resolver.analysisOptions.strictInference,
+        strictCasts: resolver.analysisOptions.strictCasts,
+        typeSystemOperations: resolver.flowAnalysis.typeOperations,
+        dataForTesting: resolver.inferenceHelper.dataForTesting,
+        nodeForTesting: node,
       );
 
       substitution = Substitution.fromPairs(
@@ -236,8 +272,8 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
       typeArgumentTypes = inferrer.chooseFinalTypes();
     }
     FunctionType? invokeType = typeArgumentTypes != null
-        ? rawType?.instantiate(typeArgumentTypes)
-        : rawType;
+        ? originalType?.instantiate(typeArgumentTypes)
+        : originalType;
 
     var parameters = _storeResult(typeArgumentTypes, invokeType);
     if (parameters != null) {
@@ -276,10 +312,10 @@ abstract class FullInvocationInferrer<Node extends AstNodeImpl>
 
   void _reportWrongNumberOfTypeArguments(TypeArgumentList typeArgumentList,
       FunctionType rawType, List<TypeParameterElement> typeParameters) {
-    resolver.errorReporter.reportErrorForNode(
-      _wrongNumberOfTypeArgumentsErrorCode,
+    resolver.errorReporter.atNode(
       typeArgumentList,
-      [
+      _wrongNumberOfTypeArgumentsErrorCode,
+      arguments: [
         rawType,
         typeParameters.length,
         typeArgumentList.arguments.length,
@@ -306,7 +342,7 @@ class FunctionExpressionInvocationInferrer
       : super._();
 
   @override
-  ExpressionImpl get _errorNode => node.function;
+  ExpressionImpl get _errorEntity => node.function;
 }
 
 /// Specialization of [InvocationInferrer] for performing type inference on AST
@@ -322,7 +358,7 @@ class InstanceCreationInferrer
       : super._();
 
   @override
-  ConstructorNameImpl get _errorNode => node.constructorName;
+  ConstructorNameImpl get _errorEntity => node.constructorName;
 
   @override
   bool get _isConst => node.isConst;
@@ -374,7 +410,7 @@ abstract class InvocationExpressionInferrer<
       : super._();
 
   @override
-  Expression get _errorNode => node.function;
+  Expression get _errorEntity => node.function;
 
   @override
   TypeArgumentListImpl? get _typeArguments => node.typeArguments;
@@ -397,7 +433,7 @@ class InvocationInferrer<Node extends AstNodeImpl> {
   final ResolverVisitor resolver;
   final Node node;
   final ArgumentListImpl argumentList;
-  final DartType? contextType;
+  final DartType contextType;
   final List<WhyNotPromotedGetter> whyNotPromotedList;
 
   /// Prepares to perform type inference on an invocation expression of type
@@ -429,7 +465,7 @@ class InvocationInferrer<Node extends AstNodeImpl> {
   /// argument of the invocation.  Usually this is just the type of the
   /// corresponding parameter, but it can be different for certain primitive
   /// numeric operations.
-  DartType? _computeContextForArgument(DartType parameterType) => parameterType;
+  DartType _computeContextForArgument(DartType parameterType) => parameterType;
 
   /// If the invocation being processed is a call to `identical`, informs flow
   /// analysis about it, so that it can do appropriate promotions.
@@ -451,13 +487,15 @@ class InvocationInferrer<Node extends AstNodeImpl> {
     var arguments = argumentList.arguments;
     for (var deferredArgument in deferredFunctionLiterals) {
       var parameter = deferredArgument.parameter;
-      DartType? parameterContextType;
+      DartType parameterContextType;
       if (parameter != null) {
         var parameterType = parameter.type;
         if (substitution != null) {
           parameterType = substitution.substituteType(parameterType);
         }
         parameterContextType = _computeContextForArgument(parameterType);
+      } else {
+        parameterContextType = UnknownInferredType.instance;
       }
       var argument = arguments[deferredArgument.index];
       resolver.analyzeExpression(argument, parameterContextType);
@@ -468,7 +506,8 @@ class InvocationInferrer<Node extends AstNodeImpl> {
       }
       if (parameter != null) {
         inferrer?.constrainArgument(
-            argument.typeOrThrow, parameter.type, parameter.name);
+            argument.typeOrThrow, parameter.type, parameter.name,
+            nodeForTesting: node);
       }
     }
   }
@@ -511,13 +550,15 @@ class InvocationInferrer<Node extends AstNodeImpl> {
         // sense.  So we store an innocuous value in the list.
         whyNotPromotedList.add(() => const {});
       } else {
-        DartType? parameterContextType;
+        DartType parameterContextType;
         if (parameter != null) {
           var parameterType = parameter.type;
           if (substitution != null) {
             parameterType = substitution.substituteType(parameterType);
           }
           parameterContextType = _computeContextForArgument(parameterType);
+        } else {
+          parameterContextType = UnknownInferredType.instance;
         }
         resolver.analyzeExpression(argument, parameterContextType);
         argument = resolver.popRewrite()!;
@@ -528,7 +569,8 @@ class InvocationInferrer<Node extends AstNodeImpl> {
         }
         if (parameter != null) {
           inferrer?.constrainArgument(
-              argument.typeOrThrow, parameter.type, parameter.name);
+              argument.typeOrThrow, parameter.type, parameter.name,
+              nodeForTesting: node);
         }
       }
     }
@@ -567,7 +609,7 @@ class MethodInvocationInferrer
   }
 
   @override
-  DartType? _computeContextForArgument(DartType parameterType) {
+  DartType _computeContextForArgument(DartType parameterType) {
     var argumentContextType = super._computeContextForArgument(parameterType);
     var targetType = node.realTarget?.staticType;
     if (targetType != null) {

@@ -10,13 +10,180 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(PropertyAccessResolutionTest);
-    defineReflectiveTests(PropertyAccessResolutionTest_WithoutNullSafety);
   });
 }
 
 @reflectiveTest
-class PropertyAccessResolutionTest extends PubPackageResolutionTest
-    with PropertyAccessResolutionTestCases {
+class PropertyAccessResolutionTest extends PubPackageResolutionTest {
+  test_extensionOverride_read() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  int get foo => 0;
+}
+
+void f(A a) {
+  E(a).foo;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ExtensionOverride
+    name: E
+    argumentList: ArgumentList
+      leftParenthesis: (
+      arguments
+        SimpleIdentifier
+          token: a
+          parameter: <null>
+          staticElement: self::@function::f::@parameter::a
+          staticType: A
+      rightParenthesis: )
+    element: self::@extension::E
+    extendedType: A
+    staticType: null
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@getter::foo
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_extensionOverride_readWrite_assignment() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  int get foo => 0;
+  set foo(num _) {}
+}
+
+void f(A a) {
+  E(a).foo += 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo += 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: ExtensionOverride
+      name: E
+      argumentList: ArgumentList
+        leftParenthesis: (
+        arguments
+          SimpleIdentifier
+            token: a
+            parameter: <null>
+            staticElement: self::@function::f::@parameter::a
+            staticType: A
+        rightParenthesis: )
+      element: self::@extension::E
+      extendedType: A
+      staticType: null
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  readElement: self::@extension::E::@getter::foo
+  readType: int
+  writeElement: self::@extension::E::@setter::foo
+  writeType: num
+  staticElement: dart:core::@class::num::@method::+
+  staticType: int
+''');
+  }
+
+  test_extensionOverride_write() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  set foo(int _) {}
+}
+
+void f(A a) {
+  E(a).foo = 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo = 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: ExtensionOverride
+      name: E
+      argumentList: ArgumentList
+        leftParenthesis: (
+        arguments
+          SimpleIdentifier
+            token: a
+            parameter: <null>
+            staticElement: self::@function::f::@parameter::a
+            staticType: A
+        rightParenthesis: )
+      element: self::@extension::E
+      extendedType: A
+      staticType: null
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_functionType_call_read() async {
+    await assertNoErrorsInCode('''
+void f(int Function(String) a) {
+  (a).call;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: int Function(String)
+    rightParenthesis: )
+    staticType: int Function(String)
+  operator: .
+  propertyName: SimpleIdentifier
+    token: call
+    staticElement: <null>
+    staticType: int Function(String)
+  staticType: int Function(String)
+''');
+  }
+
   test_implicitCall_tearOff_nullable() async {
     await assertErrorsInCode('''
 class A {
@@ -41,7 +208,7 @@ int Function() foo() {
 
   test_inClass_explicitThis_inDeclaration_augmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   augment int get foo => 0;
@@ -59,7 +226,7 @@ class A {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -76,7 +243,7 @@ PropertyAccess
 
   test_inClass_explicitThis_inDeclaration_augmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   int get foo => 0;
@@ -94,7 +261,7 @@ class A {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -111,7 +278,7 @@ PropertyAccess
 
   test_inClass_explicitThis_inDeclaration_augmentationDeclares_method() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   void foo() {}
@@ -129,7 +296,7 @@ class A {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -141,6 +308,34 @@ PropertyAccess
     staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@method::foo
     staticType: void Function()
   staticType: void Function()
+''');
+  }
+
+  test_inClass_superExpression_identifier_setter() async {
+    await assertErrorsInCode('''
+class A {
+  set foo(int _) {}
+
+  void f() {
+    super.foo;
+  }
+}
+''', [
+      error(CompileTimeErrorCode.UNDEFINED_SUPER_GETTER, 54, 3),
+    ]);
+
+    var node = findNode.propertyAccess('foo;');
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: SuperExpression
+    superKeyword: super
+    staticType: A
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: InvalidType
+  staticType: InvalidType
 ''');
   }
 
@@ -159,7 +354,7 @@ class B extends A {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -189,7 +384,7 @@ class B extends A {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -221,7 +416,7 @@ class B extends A {
       error(CompileTimeErrorCode.UNDEFINED_SUPER_GETTER, 97, 3),
     ]);
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SuperExpression
@@ -247,7 +442,7 @@ class A {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -273,7 +468,7 @@ class A {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -288,34 +483,6 @@ PropertyAccess
 ''');
   }
 
-  test_inClass_thisExpression_identifier_setter() async {
-    await assertErrorsInCode('''
-class A {
-  set foo(int _) {}
-
-  void f() {
-    super.foo;
-  }
-}
-''', [
-      error(CompileTimeErrorCode.UNDEFINED_SUPER_GETTER, 54, 3),
-    ]);
-
-    final node = findNode.propertyAccess('foo;');
-    assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SuperExpression
-    superKeyword: super
-    staticType: A
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-  }
-
   test_inExtensionType_explicitThis_declared() async {
     await assertNoErrorsInCode(r'''
 extension type A(int it) {
@@ -327,7 +494,7 @@ extension type A(int it) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -357,7 +524,7 @@ extension type X(B it) implements A {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ThisExpression
@@ -369,6 +536,206 @@ PropertyAccess
     staticElement: self::@class::A::@getter::foo
     staticType: int
   staticType: int
+''');
+  }
+
+  test_instanceCreation_read() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+void f() {
+  A().foo;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: InstanceCreationExpression
+    constructorName: ConstructorName
+      type: NamedType
+        name: A
+        element: self::@class::A
+        type: A
+      staticElement: self::@class::A::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: A
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@class::A::@getter::foo
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_instanceCreation_readWrite_assignment() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+void f() {
+  A().foo += 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo += 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: InstanceCreationExpression
+      constructorName: ConstructorName
+        type: NamedType
+          name: A
+          element: self::@class::A
+          type: A
+        staticElement: self::@class::A::@constructor::new
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  readElement: self::@class::A::@getter::foo
+  readType: int
+  writeElement: self::@class::A::@setter::foo
+  writeType: int
+  staticElement: dart:core::@class::num::@method::+
+  staticType: int
+''');
+  }
+
+  test_instanceCreation_write() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+void f() {
+  A().foo = 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo = 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: InstanceCreationExpression
+      constructorName: ConstructorName
+        type: NamedType
+          name: A
+          element: self::@class::A
+          type: A
+        staticElement: self::@class::A::@constructor::new
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@class::A::@setter::foo::@parameter::_foo
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@class::A::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_invalid_inDefaultValue_nullAware() async {
+    await assertInvalidTestCode('''
+void f({a = b?.foo}) {}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: SimpleIdentifier
+    token: b
+    staticElement: <null>
+    staticType: InvalidType
+  operator: ?.
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
+  test_invalid_inDefaultValue_nullAware2() async {
+    await assertInvalidTestCode('''
+typedef void F({a = b?.foo});
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: SimpleIdentifier
+    token: b
+    staticElement: <null>
+    staticType: InvalidType
+  operator: ?.
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
+  test_invalid_inDefaultValue_nullAware_cascade() async {
+    await assertInvalidTestCode('''
+void f({a = b?..foo}) {}
+''');
+
+    var node = findNode.defaultParameter('a =');
+    assertResolvedNodeText(node, r'''
+DefaultFormalParameter
+  parameter: SimpleFormalParameter
+    name: a
+    declaredElement: self::@function::f::@parameter::a
+      type: dynamic
+  separator: =
+  defaultValue: CascadeExpression
+    target: SimpleIdentifier
+      token: b
+      staticElement: <null>
+      staticType: InvalidType
+    cascadeSections
+      PropertyAccess
+        operator: ?..
+        propertyName: SimpleIdentifier
+          token: foo
+          staticElement: <null>
+          staticType: InvalidType
+        staticType: InvalidType
+    staticType: InvalidType
+  declaredElement: self::@function::f::@parameter::a
+    type: dynamic
 ''');
   }
 
@@ -384,7 +751,7 @@ void f(A? a) {
 }
 ''');
 
-    final node = findNode.singleCascadeExpression;
+    var node = findNode.singleCascadeExpression;
     assertResolvedNodeText(node, r'''
 CascadeExpression
   target: SimpleIdentifier
@@ -422,7 +789,7 @@ main() {
 }
 ''');
 
-    final node = findNode.singleCascadeExpression;
+    var node = findNode.singleCascadeExpression;
     assertResolvedNodeText(node, r'''
 CascadeExpression
   target: InstanceCreationExpression
@@ -469,7 +836,7 @@ main() {
 }
 ''');
 
-    final node = findNode.singleCascadeExpression;
+    var node = findNode.singleCascadeExpression;
     assertResolvedNodeText(node, r'''
 CascadeExpression
   target: InstanceCreationExpression
@@ -524,7 +891,7 @@ main() {
 }
 ''');
 
-    final node = findNode.singleCascadeExpression;
+    var node = findNode.singleCascadeExpression;
     assertResolvedNodeText(node, r'''
 CascadeExpression
   target: PropertyAccess
@@ -559,7 +926,7 @@ CascadeExpression
 
   test_ofClass_augmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   augment int get foo => 0;
@@ -577,7 +944,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -599,7 +966,7 @@ PropertyAccess
 
   test_ofClass_augmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   int get foo => 0;
@@ -615,7 +982,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -635,6 +1002,114 @@ PropertyAccess
 ''');
   }
 
+  test_ofDynamic_read_hash() async {
+    await assertNoErrorsInCode('''
+void f(dynamic a) {
+  (a).hash;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  operator: .
+  propertyName: SimpleIdentifier
+    token: hash
+    staticElement: <null>
+    staticType: dynamic
+  staticType: dynamic
+''');
+  }
+
+  test_ofDynamic_read_hashCode() async {
+    await assertNoErrorsInCode('''
+void f(dynamic a) {
+  (a).hashCode;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  operator: .
+  propertyName: SimpleIdentifier
+    token: hashCode
+    staticElement: dart:core::@class::Object::@getter::hashCode
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_ofDynamic_read_runtimeType() async {
+    await assertNoErrorsInCode('''
+void f(dynamic a) {
+  (a).runtimeType;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  operator: .
+  propertyName: SimpleIdentifier
+    token: runtimeType
+    staticElement: dart:core::@class::Object::@getter::runtimeType
+    staticType: Type
+  staticType: Type
+''');
+  }
+
+  test_ofDynamic_read_toString() async {
+    await assertNoErrorsInCode('''
+void f(dynamic a) {
+  (a).toString;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: dynamic
+    rightParenthesis: )
+    staticType: dynamic
+  operator: .
+  propertyName: SimpleIdentifier
+    token: toString
+    staticElement: dart:core::@class::Object::@method::toString
+    staticType: String Function()
+  staticType: String Function()
+''');
+  }
+
   test_ofEnum_read() async {
     await assertNoErrorsInCode('''
 enum E {
@@ -647,7 +1122,7 @@ void f(E e) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -682,7 +1157,7 @@ void f(E e) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -746,6 +1221,144 @@ AssignmentExpression
 ''');
   }
 
+  test_ofExtension_augmentation_read() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment extension E {
+  int get foo => 0;
+}
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+class A {}
+
+extension E on A {}
+
+void f(A a) {
+  (a).foo;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: A
+    rightParenthesis: )
+    staticType: A
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@augmentation::package:test/a.dart::@extensionAugmentation::E::@getter::foo
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_ofExtension_augmentation_write() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment extension E {
+  set foo(int _) {}
+}
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+class A {}
+
+extension E on A {}
+
+void f(A a) {
+  (a).foo = 0;
+}
+''');
+
+    var node = findNode.singleAssignmentExpression;
+    assertResolvedNodeText(node, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: ParenthesizedExpression
+      leftParenthesis: (
+      expression: SimpleIdentifier
+        token: a
+        staticElement: self::@function::f::@parameter::a
+        staticType: A
+      rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    parameter: self::@augmentation::package:test/a.dart::@extensionAugmentation::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@augmentation::package:test/a.dart::@extensionAugmentation::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_ofExtension_augmentationGeneric_read() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart';
+
+augment extension E<U2> {
+  U2 get foo => throw 0;
+}
+''');
+
+    await assertNoErrorsInCode('''
+import augment 'a.dart';
+
+class A<T> {}
+
+extension E<U1> on A<U1> {}
+
+void f(A<int> a) {
+  (a).foo;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: a
+      staticElement: self::@function::f::@parameter::a
+      staticType: A<int>
+    rightParenthesis: )
+    staticType: A<int>
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: PropertyAccessorMember
+      base: self::@augmentation::package:test/a.dart::@extensionAugmentation::E::@getter::foo
+      augmentationSubstitution: {U2: U1}
+      substitution: {U1: int}
+    staticType: int
+  staticType: int
+''');
+  }
+
   test_ofExtension_onRecordType() async {
     await assertNoErrorsInCode('''
 extension IntStringRecordExtension on (int, String) {
@@ -757,7 +1370,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -784,7 +1397,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -802,6 +1415,139 @@ PropertyAccess
 ''');
   }
 
+  test_ofExtension_read() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  int get foo => 0;
+}
+
+void f(A a) {
+  A().foo;
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: InstanceCreationExpression
+    constructorName: ConstructorName
+      type: NamedType
+        name: A
+        element: self::@class::A
+        type: A
+      staticElement: self::@class::A::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: A
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@extension::E::@getter::foo
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_ofExtension_readWrite_assignment() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  int get foo => 0;
+  set foo(num _) {}
+}
+
+void f() {
+  A().foo += 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo += 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: InstanceCreationExpression
+      constructorName: ConstructorName
+        type: NamedType
+          name: A
+          element: self::@class::A
+          type: A
+        staticElement: self::@class::A::@constructor::new
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  readElement: self::@extension::E::@getter::foo
+  readType: int
+  writeElement: self::@extension::E::@setter::foo
+  writeType: num
+  staticElement: dart:core::@class::num::@method::+
+  staticType: int
+''');
+  }
+
+  test_ofExtension_write() async {
+    await assertNoErrorsInCode('''
+class A {}
+
+extension E on A {
+  set foo(int _) {}
+}
+
+void f() {
+  A().foo = 1;
+}
+''');
+
+    var assignment = findNode.assignment('foo = 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: InstanceCreationExpression
+      constructorName: ConstructorName
+        type: NamedType
+          name: A
+          element: self::@class::A
+          type: A
+        staticElement: self::@class::A::@constructor::new
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@extension::E::@setter::foo::@parameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@extension::E::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
   test_ofExtensionType_read() async {
     await assertNoErrorsInCode(r'''
 extension type A(int it) {
@@ -813,7 +1559,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -842,7 +1588,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -871,7 +1617,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -902,7 +1648,7 @@ void f(A a) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 49, 3),
     ]);
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -933,7 +1679,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -967,7 +1713,7 @@ AssignmentExpression
 
   test_ofMixin_augmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment mixin A {
   augment int get foo => 0;
@@ -985,7 +1731,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -1007,7 +1753,7 @@ PropertyAccess
 
   test_ofMixin_augmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment mixin A {
   int get foo => 0;
@@ -1023,7 +1769,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -1050,7 +1796,7 @@ void f(({int foo}) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1077,7 +1823,7 @@ void f(({int foo}) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1106,7 +1852,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1129,7 +1875,7 @@ void f(({int foo})? r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1152,7 +1898,7 @@ void f<T extends ({int foo})>(T r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'foo;');
+    var node = findNode.propertyAccess(r'foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1175,7 +1921,7 @@ void f(({int foo}) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess('hashCode;');
+    var node = findNode.propertyAccess('hashCode;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1198,7 +1944,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$1;');
+    var node = findNode.propertyAccess(r'$1;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1225,7 +1971,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$1;');
+    var node = findNode.propertyAccess(r'$1;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1248,7 +1994,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$2;');
+    var node = findNode.propertyAccess(r'$2;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1275,7 +2021,7 @@ void f((int, String) r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$3;');
+    var node = findNode.propertyAccess(r'$3;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1300,7 +2046,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 30, 2),
     ]);
 
-    final node = findNode.propertyAccess(r'$3;');
+    var node = findNode.propertyAccess(r'$3;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1325,7 +2071,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 30, 3),
     ]);
 
-    final node = findNode.propertyAccess(r'$0a;');
+    var node = findNode.propertyAccess(r'$0a;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1350,7 +2096,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 30, 5),
     ]);
 
-    final node = findNode.propertyAccess(r'$zero;');
+    var node = findNode.propertyAccess(r'$zero;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1379,7 +2125,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$1;');
+    var node = findNode.propertyAccess(r'$1;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1404,7 +2150,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 30, 3),
     ]);
 
-    final node = findNode.propertyAccess(r'a$0;');
+    var node = findNode.propertyAccess(r'a$0;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1427,7 +2173,7 @@ void f<T extends (int, String)>(T r) {
 }
 ''');
 
-    final node = findNode.propertyAccess(r'$1;');
+    var node = findNode.propertyAccess(r'$1;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1452,7 +2198,7 @@ void f(({int foo}) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 28, 3),
     ]);
 
-    final node = findNode.propertyAccess('bar;');
+    var node = findNode.propertyAccess('bar;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1479,7 +2225,7 @@ void f((int foo, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 34, 3),
     ]);
 
-    final node = findNode.propertyAccess('foo;');
+    var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: SimpleIdentifier
@@ -1537,6 +2283,191 @@ PropertyAccess
 ''');
   }
 
+  test_super_read() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+class B extends A {
+  void f() {
+    super.foo;
+  }
+}
+''');
+
+    var node = findNode.propertyAccess('super.foo');
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: SuperExpression
+    superKeyword: super
+    staticType: B
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: self::@class::A::@getter::foo
+    staticType: int
+  staticType: int
+''');
+  }
+
+  test_super_readWrite_assignment() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+class B extends A {
+  void f() {
+    super.foo += 1;
+  }
+}
+''');
+
+    var assignment = findNode.assignment('foo += 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: SuperExpression
+      superKeyword: super
+      staticType: B
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  readElement: self::@class::A::@getter::foo
+  readType: int
+  writeElement: self::@class::A::@setter::foo
+  writeType: int
+  staticElement: dart:core::@class::num::@method::+
+  staticType: int
+''');
+  }
+
+  test_super_write() async {
+    await assertNoErrorsInCode('''
+class A {
+  int foo = 0;
+}
+
+class B extends A {
+  void f() {
+    super.foo = 1;
+  }
+}
+''');
+
+    var assignment = findNode.assignment('foo = 1');
+    assertResolvedNodeText(assignment, r'''
+AssignmentExpression
+  leftHandSide: PropertyAccess
+    target: SuperExpression
+      superKeyword: super
+      staticType: B
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      staticElement: <null>
+      staticType: null
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 1
+    parameter: self::@class::A::@setter::foo::@parameter::_foo
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: self::@class::A::@setter::foo
+  writeType: int
+  staticElement: <null>
+  staticType: int
+''');
+  }
+
+  test_targetTypeParameter_dynamicBounded() async {
+    await assertNoErrorsInCode('''
+class A<T extends dynamic> {
+  void f(T t) {
+    (t).foo;
+  }
+}
+''');
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: t
+      staticElement: self::@class::A::@method::f::@parameter::t
+      staticType: T
+    rightParenthesis: )
+    staticType: T
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: dynamic
+  staticType: dynamic
+''');
+  }
+
+  test_targetTypeParameter_noBound() async {
+    await assertErrorsInCode('''
+class C<T> {
+  void f(T t) {
+    (t).foo;
+  }
+}
+''', [
+      error(CompileTimeErrorCode.UNCHECKED_PROPERTY_ACCESS_OF_NULLABLE_VALUE,
+          37, 3),
+    ]);
+
+    var node = findNode.singlePropertyAccess;
+    assertResolvedNodeText(node, r'''
+PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: t
+      staticElement: self::@class::C::@method::f::@parameter::t
+      staticType: T
+    rightParenthesis: )
+    staticType: T
+  operator: .
+  propertyName: SimpleIdentifier
+    token: foo
+    staticElement: <null>
+    staticType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
+  test_tearOff_method() async {
+    await assertNoErrorsInCode('''
+class A {
+  void foo(int a) {}
+}
+
+bar() {
+  A().foo;
+}
+''');
+
+    var identifier = findNode.simple('foo;');
+    assertElement(identifier, findElement.method('foo'));
+    assertType(identifier, 'void Function(int)');
+  }
+
   test_unresolved_identifier() async {
     await assertErrorsInCode('''
 void f() {
@@ -1546,7 +2477,7 @@ void f() {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 14, 1),
     ]);
 
-    final node = findNode.singlePropertyAccess;
+    var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
   target: ParenthesizedExpression
@@ -1564,1395 +2495,5 @@ PropertyAccess
     staticType: InvalidType
   staticType: InvalidType
 ''');
-  }
-}
-
-@reflectiveTest
-class PropertyAccessResolutionTest_WithoutNullSafety
-    extends PubPackageResolutionTest
-    with PropertyAccessResolutionTestCases, WithoutNullSafetyMixin {}
-
-mixin PropertyAccessResolutionTestCases on PubPackageResolutionTest {
-  test_extensionOverride_read() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  E(a).foo;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ExtensionOverride
-    name: E
-    argumentList: ArgumentList
-      leftParenthesis: (
-      arguments
-        SimpleIdentifier
-          token: a
-          parameter: <null>
-          staticElement: self::@function::f::@parameter::a
-          staticType: A
-      rightParenthesis: )
-    element: self::@extension::E
-    extendedType: A
-    staticType: null
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@extension::E::@getter::foo
-    staticType: int
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ExtensionOverride
-    name: E
-    argumentList: ArgumentList
-      leftParenthesis: (
-      arguments
-        SimpleIdentifier
-          token: a
-          parameter: <null>
-          staticElement: self::@function::f::@parameter::a
-          staticType: A*
-      rightParenthesis: )
-    element: self::@extension::E
-    extendedType: A*
-    staticType: null
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@extension::E::@getter::foo
-    staticType: int*
-  staticType: int*
-''');
-    }
-  }
-
-  test_extensionOverride_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  int get foo => 0;
-  set foo(num _) {}
-}
-
-void f(A a) {
-  E(a).foo += 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo += 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
-      name: E
-      argumentList: ArgumentList
-        leftParenthesis: (
-        arguments
-          SimpleIdentifier
-            token: a
-            parameter: <null>
-            staticElement: self::@function::f::@parameter::a
-            staticType: A
-        rightParenthesis: )
-      element: self::@extension::E
-      extendedType: A
-      staticType: null
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: dart:core::@class::num::@method::+::@parameter::other
-    staticType: int
-  readElement: self::@extension::E::@getter::foo
-  readType: int
-  writeElement: self::@extension::E::@setter::foo
-  writeType: num
-  staticElement: dart:core::@class::num::@method::+
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
-      name: E
-      argumentList: ArgumentList
-        leftParenthesis: (
-        arguments
-          SimpleIdentifier
-            token: a
-            parameter: <null>
-            staticElement: self::@function::f::@parameter::a
-            staticType: A*
-        rightParenthesis: )
-      element: self::@extension::E
-      extendedType: A*
-      staticType: null
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: ParameterMember
-      base: dart:core::@class::num::@method::+::@parameter::other
-      isLegacy: true
-    staticType: int*
-  readElement: self::@extension::E::@getter::foo
-  readType: int*
-  writeElement: self::@extension::E::@setter::foo
-  writeType: num*
-  staticElement: MethodMember
-    base: dart:core::@class::num::@method::+
-    isLegacy: true
-  staticType: int*
-''');
-    }
-  }
-
-  test_extensionOverride_write() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  set foo(int _) {}
-}
-
-void f(A a) {
-  E(a).foo = 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo = 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
-      name: E
-      argumentList: ArgumentList
-        leftParenthesis: (
-        arguments
-          SimpleIdentifier
-            token: a
-            parameter: <null>
-            staticElement: self::@function::f::@parameter::a
-            staticType: A
-        rightParenthesis: )
-      element: self::@extension::E
-      extendedType: A
-      staticType: null
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@extension::E::@setter::foo::@parameter::_
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: self::@extension::E::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
-      name: E
-      argumentList: ArgumentList
-        leftParenthesis: (
-        arguments
-          SimpleIdentifier
-            token: a
-            parameter: <null>
-            staticElement: self::@function::f::@parameter::a
-            staticType: A*
-        rightParenthesis: )
-      element: self::@extension::E
-      extendedType: A*
-      staticType: null
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@extension::E::@setter::foo::@parameter::_
-    staticType: int*
-  readElement: <null>
-  readType: null
-  writeElement: self::@extension::E::@setter::foo
-  writeType: int*
-  staticElement: <null>
-  staticType: int*
-''');
-    }
-  }
-
-  test_functionType_call_read() async {
-    await assertNoErrorsInCode('''
-void f(int Function(String) a) {
-  (a).call;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: int Function(String)
-    rightParenthesis: )
-    staticType: int Function(String)
-  operator: .
-  propertyName: SimpleIdentifier
-    token: call
-    staticElement: <null>
-    staticType: int Function(String)
-  staticType: int Function(String)
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: int* Function(String*)*
-    rightParenthesis: )
-    staticType: int* Function(String*)*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: call
-    staticElement: <null>
-    staticType: int* Function(String*)*
-  staticType: int* Function(String*)*
-''');
-    }
-  }
-
-  test_instanceCreation_read() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-void f() {
-  A().foo;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: InstanceCreationExpression
-    constructorName: ConstructorName
-      type: NamedType
-        name: A
-        element: self::@class::A
-        type: A
-      staticElement: self::@class::A::@constructor::new
-    argumentList: ArgumentList
-      leftParenthesis: (
-      rightParenthesis: )
-    staticType: A
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@class::A::@getter::foo
-    staticType: int
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: InstanceCreationExpression
-    constructorName: ConstructorName
-      type: NamedType
-        name: A
-        element: self::@class::A
-        type: A*
-      staticElement: self::@class::A::@constructor::new
-    argumentList: ArgumentList
-      leftParenthesis: (
-      rightParenthesis: )
-    staticType: A*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@class::A::@getter::foo
-    staticType: int*
-  staticType: int*
-''');
-    }
-  }
-
-  test_instanceCreation_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-void f() {
-  A().foo += 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo += 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: dart:core::@class::num::@method::+::@parameter::other
-    staticType: int
-  readElement: self::@class::A::@getter::foo
-  readType: int
-  writeElement: self::@class::A::@setter::foo
-  writeType: int
-  staticElement: dart:core::@class::num::@method::+
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A*
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: ParameterMember
-      base: dart:core::@class::num::@method::+::@parameter::other
-      isLegacy: true
-    staticType: int*
-  readElement: self::@class::A::@getter::foo
-  readType: int*
-  writeElement: self::@class::A::@setter::foo
-  writeType: int*
-  staticElement: MethodMember
-    base: dart:core::@class::num::@method::+
-    isLegacy: true
-  staticType: int*
-''');
-    }
-  }
-
-  test_instanceCreation_write() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-void f() {
-  A().foo = 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo = 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@class::A::@setter::foo::@parameter::_foo
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: self::@class::A::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A*
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@class::A::@setter::foo::@parameter::_foo
-    staticType: int*
-  readElement: <null>
-  readType: null
-  writeElement: self::@class::A::@setter::foo
-  writeType: int*
-  staticElement: <null>
-  staticType: int*
-''');
-    }
-  }
-
-  test_invalid_inDefaultValue_nullAware() async {
-    await assertInvalidTestCode('''
-void f({a = b?.foo}) {}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SimpleIdentifier
-    token: b
-    staticElement: <null>
-    staticType: InvalidType
-  operator: ?.
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SimpleIdentifier
-    token: b
-    staticElement: <null>
-    staticType: InvalidType
-  operator: ?.
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    }
-  }
-
-  test_invalid_inDefaultValue_nullAware2() async {
-    await assertInvalidTestCode('''
-typedef void F({a = b?.foo});
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SimpleIdentifier
-    token: b
-    staticElement: <null>
-    staticType: InvalidType
-  operator: ?.
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SimpleIdentifier
-    token: b
-    staticElement: <null>
-    staticType: InvalidType
-  operator: ?.
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    }
-  }
-
-  test_invalid_inDefaultValue_nullAware_cascade() async {
-    await assertInvalidTestCode('''
-void f({a = b?..foo}) {}
-''');
-
-    final node = findNode.defaultParameter('a =');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-DefaultFormalParameter
-  parameter: SimpleFormalParameter
-    name: a
-    declaredElement: self::@function::f::@parameter::a
-      type: dynamic
-  separator: =
-  defaultValue: CascadeExpression
-    target: SimpleIdentifier
-      token: b
-      staticElement: <null>
-      staticType: InvalidType
-    cascadeSections
-      PropertyAccess
-        operator: ?..
-        propertyName: SimpleIdentifier
-          token: foo
-          staticElement: <null>
-          staticType: InvalidType
-        staticType: InvalidType
-    staticType: InvalidType
-  declaredElement: self::@function::f::@parameter::a
-    type: dynamic
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-DefaultFormalParameter
-  parameter: SimpleFormalParameter
-    name: a
-    declaredElement: self::@function::f::@parameter::a
-      type: dynamic
-  separator: =
-  defaultValue: PropertyAccess
-    target: PropertyAccess
-      target: SimpleIdentifier
-        token: b
-        staticElement: <null>
-        staticType: InvalidType
-      operator: ?.
-      propertyName: SimpleIdentifier
-        token: <empty> <synthetic>
-        staticElement: <null>
-        staticType: InvalidType
-      staticType: InvalidType
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: InvalidType
-    staticType: InvalidType
-  declaredElement: self::@function::f::@parameter::a
-    type: dynamic
-''');
-    }
-  }
-
-  test_ofDynamic_read_hash() async {
-    await assertNoErrorsInCode('''
-void f(dynamic a) {
-  (a).hash;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: hash
-    staticElement: <null>
-    staticType: dynamic
-  staticType: dynamic
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: hash
-    staticElement: <null>
-    staticType: dynamic
-  staticType: dynamic
-''');
-    }
-  }
-
-  test_ofDynamic_read_hashCode() async {
-    await assertNoErrorsInCode('''
-void f(dynamic a) {
-  (a).hashCode;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: hashCode
-    staticElement: dart:core::@class::Object::@getter::hashCode
-    staticType: int
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: hashCode
-    staticElement: PropertyAccessorMember
-      base: dart:core::@class::Object::@getter::hashCode
-      isLegacy: true
-    staticType: int*
-  staticType: int*
-''');
-    }
-  }
-
-  test_ofDynamic_read_runtimeType() async {
-    await assertNoErrorsInCode('''
-void f(dynamic a) {
-  (a).runtimeType;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: runtimeType
-    staticElement: dart:core::@class::Object::@getter::runtimeType
-    staticType: Type
-  staticType: Type
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: runtimeType
-    staticElement: PropertyAccessorMember
-      base: dart:core::@class::Object::@getter::runtimeType
-      isLegacy: true
-    staticType: Type*
-  staticType: Type*
-''');
-    }
-  }
-
-  test_ofDynamic_read_toString() async {
-    await assertNoErrorsInCode('''
-void f(dynamic a) {
-  (a).toString;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: toString
-    staticElement: dart:core::@class::Object::@method::toString
-    staticType: String Function()
-  staticType: String Function()
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: a
-      staticElement: self::@function::f::@parameter::a
-      staticType: dynamic
-    rightParenthesis: )
-    staticType: dynamic
-  operator: .
-  propertyName: SimpleIdentifier
-    token: toString
-    staticElement: MethodMember
-      base: dart:core::@class::Object::@method::toString
-      isLegacy: true
-    staticType: String* Function()*
-  staticType: String* Function()*
-''');
-    }
-  }
-
-  test_ofExtension_read() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  A().foo;
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: InstanceCreationExpression
-    constructorName: ConstructorName
-      type: NamedType
-        name: A
-        element: self::@class::A
-        type: A
-      staticElement: self::@class::A::@constructor::new
-    argumentList: ArgumentList
-      leftParenthesis: (
-      rightParenthesis: )
-    staticType: A
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@extension::E::@getter::foo
-    staticType: int
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: InstanceCreationExpression
-    constructorName: ConstructorName
-      type: NamedType
-        name: A
-        element: self::@class::A
-        type: A*
-      staticElement: self::@class::A::@constructor::new
-    argumentList: ArgumentList
-      leftParenthesis: (
-      rightParenthesis: )
-    staticType: A*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@extension::E::@getter::foo
-    staticType: int*
-  staticType: int*
-''');
-    }
-  }
-
-  test_ofExtension_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  int get foo => 0;
-  set foo(num _) {}
-}
-
-void f() {
-  A().foo += 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo += 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: dart:core::@class::num::@method::+::@parameter::other
-    staticType: int
-  readElement: self::@extension::E::@getter::foo
-  readType: int
-  writeElement: self::@extension::E::@setter::foo
-  writeType: num
-  staticElement: dart:core::@class::num::@method::+
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A*
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: ParameterMember
-      base: dart:core::@class::num::@method::+::@parameter::other
-      isLegacy: true
-    staticType: int*
-  readElement: self::@extension::E::@getter::foo
-  readType: int*
-  writeElement: self::@extension::E::@setter::foo
-  writeType: num*
-  staticElement: MethodMember
-    base: dart:core::@class::num::@method::+
-    isLegacy: true
-  staticType: int*
-''');
-    }
-  }
-
-  test_ofExtension_write() async {
-    await assertNoErrorsInCode('''
-class A {}
-
-extension E on A {
-  set foo(int _) {}
-}
-
-void f() {
-  A().foo = 1;
-}
-''');
-
-    var assignment = findNode.assignment('foo = 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@extension::E::@setter::foo::@parameter::_
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: self::@extension::E::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: InstanceCreationExpression
-      constructorName: ConstructorName
-        type: NamedType
-          name: A
-          element: self::@class::A
-          type: A*
-        staticElement: self::@class::A::@constructor::new
-      argumentList: ArgumentList
-        leftParenthesis: (
-        rightParenthesis: )
-      staticType: A*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@extension::E::@setter::foo::@parameter::_
-    staticType: int*
-  readElement: <null>
-  readType: null
-  writeElement: self::@extension::E::@setter::foo
-  writeType: int*
-  staticElement: <null>
-  staticType: int*
-''');
-    }
-  }
-
-  test_super_read() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-class B extends A {
-  void f() {
-    super.foo;
-  }
-}
-''');
-
-    final node = findNode.propertyAccess('super.foo');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SuperExpression
-    superKeyword: super
-    staticType: B
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@class::A::@getter::foo
-    staticType: int
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: SuperExpression
-    superKeyword: super
-    staticType: B*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: self::@class::A::@getter::foo
-    staticType: int*
-  staticType: int*
-''');
-    }
-  }
-
-  test_super_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-class B extends A {
-  void f() {
-    super.foo += 1;
-  }
-}
-''');
-
-    var assignment = findNode.assignment('foo += 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SuperExpression
-      superKeyword: super
-      staticType: B
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: dart:core::@class::num::@method::+::@parameter::other
-    staticType: int
-  readElement: self::@class::A::@getter::foo
-  readType: int
-  writeElement: self::@class::A::@setter::foo
-  writeType: int
-  staticElement: dart:core::@class::num::@method::+
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SuperExpression
-      superKeyword: super
-      staticType: B*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: +=
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: ParameterMember
-      base: dart:core::@class::num::@method::+::@parameter::other
-      isLegacy: true
-    staticType: int*
-  readElement: self::@class::A::@getter::foo
-  readType: int*
-  writeElement: self::@class::A::@setter::foo
-  writeType: int*
-  staticElement: MethodMember
-    base: dart:core::@class::num::@method::+
-    isLegacy: true
-  staticType: int*
-''');
-    }
-  }
-
-  test_super_write() async {
-    await assertNoErrorsInCode('''
-class A {
-  int foo = 0;
-}
-
-class B extends A {
-  void f() {
-    super.foo = 1;
-  }
-}
-''');
-
-    var assignment = findNode.assignment('foo = 1');
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SuperExpression
-      superKeyword: super
-      staticType: B
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@class::A::@setter::foo::@parameter::_foo
-    staticType: int
-  readElement: <null>
-  readType: null
-  writeElement: self::@class::A::@setter::foo
-  writeType: int
-  staticElement: <null>
-  staticType: int
-''');
-    } else {
-      assertResolvedNodeText(assignment, r'''
-AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SuperExpression
-      superKeyword: super
-      staticType: B*
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <null>
-      staticType: null
-    staticType: null
-  operator: =
-  rightHandSide: IntegerLiteral
-    literal: 1
-    parameter: self::@class::A::@setter::foo::@parameter::_foo
-    staticType: int*
-  readElement: <null>
-  readType: null
-  writeElement: self::@class::A::@setter::foo
-  writeType: int*
-  staticElement: <null>
-  staticType: int*
-''');
-    }
-  }
-
-  test_targetTypeParameter_dynamicBounded() async {
-    await assertNoErrorsInCode('''
-class A<T extends dynamic> {
-  void f(T t) {
-    (t).foo;
-  }
-}
-''');
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: t
-      staticElement: self::@class::A::@method::f::@parameter::t
-      staticType: T
-    rightParenthesis: )
-    staticType: T
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: dynamic
-  staticType: dynamic
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: t
-      staticElement: self::@class::A::@method::f::@parameter::t
-      staticType: T*
-    rightParenthesis: )
-    staticType: T*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: dynamic
-  staticType: dynamic
-''');
-    }
-  }
-
-  test_targetTypeParameter_noBound() async {
-    await resolveTestCode('''
-class C<T> {
-  void f(T t) {
-    (t).foo;
-  }
-}
-''');
-    assertErrorsInResult(expectedErrorsByNullability(
-      nullable: [
-        error(CompileTimeErrorCode.UNCHECKED_PROPERTY_ACCESS_OF_NULLABLE_VALUE,
-            37, 3),
-      ],
-      legacy: [
-        error(CompileTimeErrorCode.UNDEFINED_GETTER, 37, 3),
-      ],
-    ));
-
-    final node = findNode.singlePropertyAccess;
-    if (isNullSafetyEnabled) {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: t
-      staticElement: self::@class::C::@method::f::@parameter::t
-      staticType: T
-    rightParenthesis: )
-    staticType: T
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    } else {
-      assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: t
-      staticElement: self::@class::C::@method::f::@parameter::t
-      staticType: T*
-    rightParenthesis: )
-    staticType: T*
-  operator: .
-  propertyName: SimpleIdentifier
-    token: foo
-    staticElement: <null>
-    staticType: InvalidType
-  staticType: InvalidType
-''');
-    }
-  }
-
-  test_tearOff_method() async {
-    await assertNoErrorsInCode('''
-class A {
-  void foo(int a) {}
-}
-
-bar() {
-  A().foo;
-}
-''');
-
-    var identifier = findNode.simple('foo;');
-    assertElement(identifier, findElement.method('foo'));
-    assertType(identifier, 'void Function(int)');
   }
 }

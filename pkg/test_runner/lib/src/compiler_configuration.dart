@@ -65,7 +65,7 @@ abstract class CompilerConfiguration {
 
   bool get _isDebug => _configuration.mode.isDebug;
 
-  bool get _isHostChecked => _configuration.isHostChecked;
+  bool get _enableHostAsserts => _configuration.enableHostAsserts;
 
   bool get _useSdk => _configuration.useSdk;
 
@@ -391,12 +391,12 @@ class Dart2jsCompilerConfiguration extends CompilerConfiguration {
 
   @override
   String computeCompilerPath() {
-    if (_isHostChecked && _useSdk) {
+    if (_enableHostAsserts && _useSdk) {
       // When [_useSdk] is true, dart2js is compiled into a snapshot that was
-      // built without checked mode. The VM cannot make such snapshot run in
-      // checked mode later. These two flags could be used together if we also
-      // build an sdk with checked snapshots.
-      throw "--host-checked and --use-sdk cannot be used together";
+      // built without assertions enabled. The VM cannot make such snapshot run
+      // with assertions later. These two flags could be used together if we
+      // also build sdk snapshots with assertions enabled.
+      throw "--host-asserts and --use-sdk cannot be used together";
     }
 
     if (_useSdk) {
@@ -408,7 +408,7 @@ class Dart2jsCompilerConfiguration extends CompilerConfiguration {
       // mode or not.
       return '$dartSdk/bin/dart$executableExtension';
     } else {
-      var scriptName = _isHostChecked ? 'dart2js_developer' : 'dart2js';
+      var scriptName = _enableHostAsserts ? 'dart2js_developer' : 'dart2js';
       return 'sdk/bin/$scriptName$shellScriptExtension';
     }
   }
@@ -526,26 +526,21 @@ class Dart2WasmCompilerConfiguration extends CompilerConfiguration {
 
   @override
   String computeCompilerPath() {
-    var prefix = 'sdk/bin';
-    if (_isHostChecked) {
-      if (_useSdk) {
-        throw "--host-checked and --use-sdk cannot be used together";
-      }
-      // The script dart2wasm_developer is not included in the
-      // shipped SDK, that is the script is not installed in
-      // "$buildDir/dart-sdk/bin/"
-      return '$prefix/dart2wasm_developer$shellScriptExtension';
-    }
     if (_useSdk) {
-      prefix = '${_configuration.buildDirectory}/dart-sdk/bin';
+      if (_enableHostAsserts) {
+        throw "--host-asserts and --use-sdk cannot be used together";
+      }
+      return '${_configuration.buildDirectory}/dart-sdk/bin/dart';
     }
-    return '$prefix/dart2wasm$shellScriptExtension';
+    return 'pkg/dart2wasm/tool/compile_benchmark';
   }
 
   @override
   List<String> computeCompilerArguments(
       TestFile testFile, List<String> vmOptions, List<String> args) {
     return [
+      if (!_useSdk && _enableHostAsserts) '--compiler-asserts',
+      if (_enableAsserts) '--enable-asserts',
       ...testFile.sharedOptions,
       ..._configuration.sharedOptions,
       ..._experimentsArgument(_configuration, testFile),
@@ -557,8 +552,15 @@ class Dart2WasmCompilerConfiguration extends CompilerConfiguration {
 
   Command computeCompilationCommand(String outputFileName,
       List<String> arguments, Map<String, String> environmentOverrides) {
-    arguments = arguments.toList();
-    arguments.add(outputFileName);
+    arguments = [
+      if (_useSdk) ...[
+        'compile',
+        'wasm',
+      ],
+      ...arguments,
+      if (_useSdk) '-o',
+      outputFileName,
+    ];
 
     var command = CompilationCommand(
         'dart2wasm',
@@ -578,8 +580,8 @@ class Dart2WasmCompilerConfiguration extends CompilerConfiguration {
   CommandArtifact computeCompilationArtifact(String tempDir,
       List<String> arguments, Map<String, String> environmentOverrides) {
     var compilerArguments = [
-      ...arguments,
       ..._configuration.dart2wasmOptions,
+      ...arguments,
     ];
 
     var inputFile = arguments.last;
@@ -599,19 +601,17 @@ class Dart2WasmCompilerConfiguration extends CompilerConfiguration {
       List<String> vmOptions,
       List<String> originalArguments,
       CommandArtifact? artifact) {
-    final filename = artifact!.filename;
+    final wasmFilename = artifact!.filename;
     final args = testFile.dartOptions;
     final isD8 = runtimeConfiguration is D8RuntimeConfiguration;
     return [
-      if (isD8) '--turboshaft-wasm',
-      if (isD8) '--experimental-wasm-imported-strings',
-      'pkg/dart2wasm/bin/run_wasm.js',
-      if (isD8) '--',
-      '${filename.substring(0, filename.lastIndexOf('.'))}.mjs',
-      filename,
+      if (isD8) ...[
+        '--shell-option=--turboshaft-wasm',
+        '--shell-option=--experimental-wasm-imported-strings',
+      ],
+      wasmFilename,
       ...testFile.sharedObjects
           .map((obj) => '${_configuration.buildDirectory}/wasm/$obj.wasm'),
-      if (args.isNotEmpty) '--',
       ...args,
     ];
   }
@@ -623,12 +623,19 @@ class DevCompilerConfiguration extends CompilerConfiguration {
 
   /// The output directory under `_configuration.buildDirectory` where DDC build
   /// targets are output.
-  final String genDir;
+  static final String ddcGenDir = 'gen/utils/ddc/';
+
+  /// The subdirectory under [ddcGenDir] where build specific targets are
+  /// output.
+  ///
+  /// To keep outputs separate from each other this directory changes based on
+  /// the canary and null safety modes.
+  final String buildOptionsDir;
 
   DevCompilerConfiguration(super.configuration)
       : _soundNullSafety = configuration.nnbdMode == NnbdMode.strong,
-        genDir = [
-          'gen/utils/ddc/',
+        buildOptionsDir = [
+          ddcGenDir,
           if (configuration.ddcOptions.contains('--canary'))
             'canary'
           else
@@ -639,6 +646,13 @@ class DevCompilerConfiguration extends CompilerConfiguration {
 
   @override
   String computeCompilerPath() {
+    if (_enableHostAsserts && _useSdk) {
+      // When [_useSdk] is true, ddc is compiled into a snapshot that was
+      // built without assertions enabled. The VM cannot make such snapshot run
+      // with assertions later. These two flags could be used together if we
+      // also build sdk snapshots with assertions enabled.
+      throw "--host-asserts and --use-sdk cannot be used together";
+    }
     // DDC is a Dart program and not an executable itself, so the command to
     // spawn as a subprocess is a Dart VM.
     // Internally the [DevCompilerCompilationCommand] will prepend the snapshot
@@ -667,10 +681,13 @@ class DevCompilerConfiguration extends CompilerConfiguration {
       List<String> sharedOptions, Map<String, String> environment) {
     var args = <String>[];
     // Remove option for generating non-null assertions for non-nullable
-    // method parameters in weak mode. DDC treats this as a runtime flag for
-    // the bootstrapping code, instead of a compiler option.
+    // method parameters in weak mode, native APIs and JavaScript interop APIs.
+    // DDC treats all of these as runtime flags for the bootstrapping code,
+    // instead of a compiler option.
     var options = sharedOptions.toList();
     options.remove('--null-assertions');
+    options.remove('--native-null-assertions');
+    options.remove('--interop-null-assertions');
     if (!_useSdk || !_soundNullSafety) {
       // If we're testing a built SDK, DDC will find its own summary.
       //
@@ -695,36 +712,40 @@ class DevCompilerConfiguration extends CompilerConfiguration {
     args.addAll([
       "--ignore-unrecognized-flags",
       "--no-summarize",
-      if (d8Runtime) "--modules=legacy",
+      if (d8Runtime) "--modules=ddc",
       "-o",
       outputFile,
       inputFile,
     ]);
 
-    if (!d8Runtime) {
-      // TODO(sigmund): allow caching of shared packages in legacy mode too.
-      // Link to the summaries for the available packages, so that they don't
-      // get recompiled into the test's own module.
-      for (var package in testPackages) {
-        args.add("-s");
+    for (var package in testPackages) {
+      // The common packages imported from test files are precompiled to
+      // summary .dill and JavaScript files during the SDK build.
+      // The summaries are provided here during the compilation of the test and
+      // the JavaScript will be loaded separately when the test is run.
+      args.add("-s");
+      var outlineFilename = [
+        package,
+        '_outline',
+        if (!_soundNullSafety) '_unsound',
+        '.dill'
+      ].join();
 
-        // Since the summaries for the packages are not near the tests, we give
-        // dartdevc explicit module paths for each one. When the test is run, we
-        // will tell require.js where to find each package's compiled JS.
-        var summary = Path(_configuration.buildDirectory)
-            .append('$genDir/pkg/$package.dill')
-            .absolute
-            .toNativePath();
-        args.add("$summary=$package");
-      }
+      var summary = Path(_configuration.buildDirectory)
+          .append('$ddcGenDir/$outlineFilename')
+          .absolute
+          .toNativePath();
+      args.add("$summary=$package");
     }
 
-    var compilerPath = _useSdk
+    var compilerPath = _useSdk && !_enableHostAsserts
         ? '${_configuration.buildDirectory}/dart-sdk/bin/snapshots/dartdevc.dart.snapshot'
         : Repository.uri.resolve('pkg/dev_compiler/bin/dartdevc.dart').path;
     var command = DevCompilerCompilationCommand(outputFile,
         bootstrapDependencies(), computeCompilerPath(), args, environment,
-        compilerPath: compilerPath, alwaysCompile: false);
+        compilerPath: compilerPath,
+        alwaysCompile: false,
+        enableHostAsserts: _enableHostAsserts);
     if (_configuration.rr) {
       return RRCommand(command);
     }
@@ -755,22 +776,37 @@ class DevCompilerConfiguration extends CompilerConfiguration {
       runFile = "$tempDir/$moduleName.d8.js";
       var nonNullAsserts = arguments.contains('--null-assertions');
       var nativeNonNullAsserts = arguments.contains('--native-null-assertions');
+      var jsInteropNonNullAsserts =
+          arguments.contains('--interop-null-assertions');
       var weakNullSafetyErrors =
           arguments.contains('--weak-null-safety-errors');
       var weakNullSafetyWarnings = !(weakNullSafetyErrors || _soundNullSafety);
       var repositoryUri = Uri.directory(Repository.dir.toNativePath());
       var dartLibraryPath = repositoryUri
-          .resolve('pkg/dev_compiler/lib/js/legacy/dart_library.js')
+          .resolve('pkg/dev_compiler/lib/js/ddc/ddc_module_loader.js')
           .path;
-      var sdkJsDir =
-          Uri.directory(_configuration.buildDirectory).resolve('$genDir/sdk');
+      var sdkJsDir = Uri.directory(_configuration.buildDirectory)
+          .resolve('$buildOptionsDir/sdk/ddc');
+      var pkgJsDir = Uri.directory(_configuration.buildDirectory)
+          .resolve('$buildOptionsDir/pkg/ddc');
       var sdkJsPath = 'dart_sdk.js';
+      // Approximate the renaming done to identifiers in `pathToJSIdentifier()`
+      // from pkg/dev_compiler/lib/src/compiler/js_names.dart to handle the
+      // invalid library names from test files encountered so far.
       var libraryName = inputUri.path
           .substring(repositoryUri.path.length)
-          .replaceAll("/", "__")
-          .replaceAll("-", "_")
-          .replaceAll(".dart", "");
-
+          .replaceAll('/', '__')
+          .replaceAll('-', '_')
+          .replaceAll('.dart', '')
+          .replaceAllMapped(RegExp(r'[^A-Za-z_$0-9]'),
+              (Match m) => '\$${m[0]!.codeUnits.join('')}');
+      var testPackageLoadStatements = [
+        for (var package in testPackages) 'load("$pkgJsDir/$package.js");'
+      ].join('\n');
+      // Used in the DDC module system for multi-app workflows, and are simply
+      // placeholder values here.
+      var uuid = "00000000-0000-0000-0000-000000000000";
+      var appName = 'test_app';
       // Note: this assumes that d8 is invoked with the dart2js d8.js preamble.
       // TODO(sigmund): to support other runtimes like js-shell, we may want to
       // remove the `load` statements here and instead provide those files
@@ -778,18 +814,20 @@ class DevCompilerConfiguration extends CompilerConfiguration {
       File(runFile).writeAsStringSync('''
         load("$dartLibraryPath");
         load("$sdkJsDir/$sdkJsPath");
+        $testPackageLoadStatements
         load("$outputFile");
 
-        let sdk = dart_library.import("dart_sdk");
+        let sdk = dart_library.import("dart_sdk", "$appName");
         sdk.dart.weakNullSafetyWarnings($weakNullSafetyWarnings);
         sdk.dart.weakNullSafetyErrors($weakNullSafetyErrors);
         sdk.dart.nonNullAsserts($nonNullAsserts);
         sdk.dart.nativeNonNullAsserts($nativeNonNullAsserts);
+        sdk.dart.jsInteropNonNullAsserts($jsInteropNonNullAsserts);
 
         // Invoke main through the d8 preamble to ensure the code is running
         // within the fake event loop.
         self.dartMainRunner(function () {
-          dart_library.start("$moduleName", "$libraryName");
+          dart_library.start("$appName", "$uuid", "$moduleName", "$libraryName", false);
         });
       '''
           .replaceAll("\n        ", "\n"));
@@ -1293,8 +1331,8 @@ class AnalyzerCompilerConfiguration extends CompilerConfiguration {
   @override
   String computeCompilerPath() {
     var prefix = 'sdk/bin';
-    if (_isHostChecked) {
-      throw "--host-checked cannot be used for dartanalyzer";
+    if (_enableHostAsserts) {
+      throw "--host-asserts cannot be used for dartanalyzer";
     }
     if (_useSdk) {
       prefix = '${_configuration.buildDirectory}/dart-sdk/bin';
@@ -1512,8 +1550,8 @@ class FastaCompilerConfiguration extends CompilerConfiguration {
       ...options,
       ..._configuration.sharedOptions,
       ..._experimentsArgument(_configuration, testFile),
-      if (_configuration.configuration.nnbdMode == NnbdMode.strong) ...[
-        "--nnbd-strong"
+      if (_configuration.configuration.nnbdMode == NnbdMode.weak) ...[
+        "--nnbd-weak"
       ]
     ];
     for (var argument in args) {

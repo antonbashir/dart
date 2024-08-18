@@ -2,41 +2,83 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ReplaceWithIsEmpty extends ResolvedCorrectionProducer {
   @override
-  FixKind fixKind = DartFixKind.REPLACE_WITH_IS_EMPTY;
+  final FixKind fixKind;
 
   @override
-  FixKind multiFixKind = DartFixKind.REPLACE_WITH_IS_EMPTY_MULTI;
+  final FixKind multiFixKind;
+
+  final BinaryExpression? _binary;
+
+  final _Replacement? _replacement;
+
+  factory ReplaceWithIsEmpty({required CorrectionProducerContext context}) {
+    if (context is StubCorrectionProducerContext) {
+      return ReplaceWithIsEmpty._(
+        context: context,
+        fixKind: DartFixKind.REPLACE_WITH_IS_EMPTY,
+        multiFixKind: DartFixKind.REPLACE_WITH_IS_EMPTY_MULTI,
+        binary: null,
+        replacement: null,
+      );
+    }
+    var binary = context.node.thisOrAncestorOfType<BinaryExpression>();
+    var replacement = _analyzeBinaryExpression(binary);
+    FixKind fixKind;
+    FixKind multiFixKind;
+    if (replacement == null) {
+      fixKind = DartFixKind.REPLACE_WITH_IS_EMPTY;
+      multiFixKind = DartFixKind.REPLACE_WITH_IS_EMPTY_MULTI;
+    } else {
+      fixKind = replacement.fixKind;
+      multiFixKind = replacement.multiFixKind;
+    }
+
+    return ReplaceWithIsEmpty._(
+      context: context,
+      fixKind: fixKind,
+      multiFixKind: multiFixKind,
+      binary: binary,
+      replacement: replacement,
+    );
+  }
+
+  ReplaceWithIsEmpty._({
+    required super.context,
+    required this.fixKind,
+    required this.multiFixKind,
+    required BinaryExpression? binary,
+    required _Replacement? replacement,
+  })  : _binary = binary,
+        _replacement = replacement;
 
   @override
-  bool get canBeAppliedInBulk => true;
-
-  @override
-  bool get canBeAppliedToFile => true;
+  CorrectionApplicability get applicability =>
+      CorrectionApplicability.automatically;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    var binary = node.thisOrAncestorOfType<BinaryExpression>();
-    if (binary == null) {
+    var binary = _binary;
+    var replacement = _replacement;
+    if (binary == null || replacement == null) {
       return;
     }
 
-    var replacement = _analyzeBinaryExpression(binary);
-    if (replacement == null) {
+    // Skip nullable targets.
+    if (replacement.lengthTarget.staticType?.nullabilitySuffix ==
+        NullabilitySuffix.question) {
       return;
     }
-
-    fixKind = replacement.fixKind;
-    multiFixKind = replacement.multiFixKind;
 
     var target = utils.getNodeText(replacement.lengthTarget);
     var getter = replacement.getter;
@@ -45,7 +87,9 @@ class ReplaceWithIsEmpty extends ResolvedCorrectionProducer {
     });
   }
 
-  static _Replacement? _analyzeBinaryExpression(BinaryExpression binary) {
+  static _Replacement? _analyzeBinaryExpression(BinaryExpression? binary) {
+    if (binary == null) return null;
+
     var operator = binary.operator.type;
     var rightValue = _getIntValue(binary.rightOperand);
     if (rightValue != null) {

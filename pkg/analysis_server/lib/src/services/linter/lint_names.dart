@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /// An enumeration of lint names.
-class LintNames {
+abstract final class LintNames {
   static const String always_declare_return_types =
       'always_declare_return_types';
   static const String always_put_control_body_on_new_line =
@@ -157,6 +157,8 @@ class LintNames {
   static const String type_literal_in_constant_pattern =
       'type_literal_in_constant_pattern';
   static const String unawaited_futures = 'unawaited_futures';
+  static const String unnecessary_await_in_return =
+      'unnecessary_await_in_return';
   static const String unnecessary_brace_in_string_interps =
       'unnecessary_brace_in_string_interps';
   static const String unnecessary_breaks = 'unnecessary_breaks';
@@ -170,6 +172,7 @@ class LintNames {
   static const String unnecessary_late = 'unnecessary_late';
   static const String unnecessary_library_directive =
       'unnecessary_library_directive';
+  static const String unnecessary_library_name = 'unnecessary_library_name';
   static const String unnecessary_new = 'unnecessary_new';
   static const String unnecessary_null_aware_assignments =
       'unnecessary_null_aware_assignments';
@@ -196,6 +199,7 @@ class LintNames {
       'use_function_type_syntax_for_parameters';
   static const String use_key_in_widget_constructors =
       'use_key_in_widget_constructors';
+  static const String use_named_constants = 'use_named_constants';
   static const String use_raw_strings = 'use_raw_strings';
   static const String use_rethrow_when_possible = 'use_rethrow_when_possible';
   static const String use_string_in_part_of_directives =

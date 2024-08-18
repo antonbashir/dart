@@ -4,24 +4,19 @@
 
 // Dart test program for testing dart:ffi async callbacks.
 //
+// VMOptions=
 // VMOptions=--stacktrace-every=100
-// VMOptions=--write-protect-code --no-dual-map-code
-// VMOptions=--write-protect-code --no-dual-map-code --stacktrace-every=100
 // VMOptions=--use-slow-path
 // VMOptions=--use-slow-path --stacktrace-every=100
-// VMOptions=--use-slow-path --write-protect-code --no-dual-map-code
-// VMOptions=--use-slow-path --write-protect-code --no-dual-map-code --stacktrace-every=100
 // VMOptions=--dwarf_stack_traces --no-retain_function_objects --no-retain_code_objects
 // VMOptions=--test_il_serialization
-// VMOptions=--profiler
+// VMOptions=--profiler --profile_vm=true
+// VMOptions=--profiler --profile_vm=false
 // SharedObjects=ffi_test_functions
 
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:isolate';
-import 'dart:math';
-
-import 'dart:io';
 
 import "package:expect/expect.dart";
 
@@ -64,11 +59,9 @@ testNativeCallableStatic() {
 
 testNativeCallableClosure() {
   int c = 70000;
-  int closure(int a, int b) {
-    return a + b + c;
-  }
 
-  final callback = NativeCallable<CallbackNativeType>.isolateLocal(closure,
+  final callback = NativeCallable<CallbackNativeType>.isolateLocal(
+      (int a, int b) => a + b + c,
       exceptionalReturn: 0);
 
   Expect.equals(71234, callTwoIntFunction(callback.nativeFunction, 1000, 234));
@@ -118,13 +111,10 @@ testNativeCallableNestedCloseCallStatic() {
 testNativeCallableNestedCloseCallClosure() {
   late NativeCallable callback;
 
-  int selfClosing(int a, int b) {
+  callback = NativeCallable<CallbackNativeType>.isolateLocal((int a, int b) {
     callback.close();
     return a + b;
-  }
-
-  callback = NativeCallable<CallbackNativeType>.isolateLocal(selfClosing,
-      exceptionalReturn: 0);
+  }, exceptionalReturn: 0);
 
   Expect.equals(1234, callTwoIntFunction(callback.nativeFunction, 1000, 234));
 
@@ -153,15 +143,13 @@ testNativeCallableExceptionalReturnStatic() {
 }
 
 testNativeCallableExceptionalReturnClosure() {
-  int thrower(int a, int b) {
+  final callback =
+      NativeCallable<CallbackNativeType>.isolateLocal((int a, int b) {
     if (a != 1000) {
       throw "Oh no!";
     }
     return a + b;
-  }
-
-  final callback = NativeCallable<CallbackNativeType>.isolateLocal(thrower,
-      exceptionalReturn: 5678);
+  }, exceptionalReturn: 5678);
 
   Expect.equals(1234, callTwoIntFunction(callback.nativeFunction, 1000, 234));
   Expect.equals(5678, callTwoIntFunction(callback.nativeFunction, 0, 0));
@@ -185,13 +173,11 @@ Future<void> testNativeCallableDontKeepAliveStatic() async {
 
 Future<void> testNativeCallableDontKeepAliveClosure() async {
   int c = 70000;
-  int closure(int a, int b) {
-    return a + b + c;
-  }
 
   final exitPort = ReceivePort();
   await Isolate.spawn((_) async {
-    final callback = NativeCallable<CallbackNativeType>.isolateLocal(closure,
+    final callback = NativeCallable<CallbackNativeType>.isolateLocal(
+        (int a, int b) => a + b + c,
         exceptionalReturn: 0);
 
     Expect.equals(

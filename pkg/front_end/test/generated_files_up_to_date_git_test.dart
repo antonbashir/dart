@@ -4,21 +4,22 @@
 
 import "dart:io" show File, exitCode;
 
-import "../tool/_fasta/generate_messages.dart" as generateMessages;
 import "../tool/_fasta/generate_experimental_flags.dart"
     as generateExperimentalFlags;
+import "../tool/_fasta/generate_messages.dart" as generateMessages;
 import "../tool/_fasta/parser_ast_helper_creator.dart"
     as generateParserAstHelper;
+import '../tool/ast_model.dart';
+import '../tool/generate_ast_coverage.dart' as generateAstCoverage;
+import '../tool/generate_ast_equivalence.dart' as generateAstEquivalence;
 import "parser_test_listener_creator.dart" as generateParserTestListener;
 import "parser_test_parser_creator.dart" as generateParserTestParser;
-import '../tool/ast_model.dart';
-import '../tool/generate_ast_equivalence.dart' as generateAstEquivalence;
-import '../tool/generate_ast_coverage.dart' as generateAstCoverage;
 import 'utils/io_utils.dart' show computeRepoDirUri;
 
 final Uri repoDir = computeRepoDirUri();
 
-Future<void> main() async {
+/// Returns true on no errors and false if errors was found.
+Future<bool> main() async {
   messages();
   experimentalFlags();
   directParserAstHelper();
@@ -27,6 +28,7 @@ Future<void> main() async {
   AstModel astModel = await deriveAstModel(repoDir);
   await astEquivalence(astModel);
   await astCoverage(astModel);
+  return _checkFoundErrors == false;
 }
 
 void parserTestParser() {
@@ -105,6 +107,8 @@ void messages() {
       "dart pkg/front_end/tool/fasta.dart generate-messages");
 }
 
+bool _checkFoundErrors = false;
+
 void check(String generated, Uri generatedFile, String run) {
   String actual = new File.fromUri(generatedFile)
       .readAsStringSync()
@@ -122,5 +126,6 @@ is out of date. To regenerate the file, run
 ------------------------
 """);
     exitCode = 1;
+    _checkFoundErrors = true;
   }
 }

@@ -13,7 +13,6 @@ import 'package:analyzer/src/analysis_options/apply_options.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/lint/io.dart';
 import 'package:analyzer/src/lint/registry.dart';
-import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
 import 'package:linter/src/rules.dart';
@@ -54,18 +53,6 @@ void defineRuleTests() {
           var analysisOptions = analysisOptionsFile.readAsStringSync();
           testRules(ruleTestDataDir, analysisOptions: analysisOptions);
         });
-      }
-    });
-    group('pub', () {
-      for (var entry in Directory(p.join(ruleTestDataDir, 'pub')).listSync()) {
-        if (entry is Directory) {
-          for (var child in entry.listSync()) {
-            if (child is File && isPubspecFile(child)) {
-              var ruleName = p.basename(entry.path);
-              testRule(ruleName, child);
-            }
-          }
-        }
       }
     });
   });
@@ -184,17 +171,9 @@ void testRule(String ruleName, File file,
       throw Exception('No rule found defined at: ${file.path}');
     }
 
-    // Disable this check until migration is complete internally.
-    noSoundNullSafety = false;
-
-    try {
-      var errorInfos = await _getErrorInfos(ruleName, file,
-          useMockSdk: useMockSdk, analysisOptions: analysisOptions);
-      _validateExpectedLints(file, errorInfos,
-          analysisOptions: analysisOptions);
-    } finally {
-      noSoundNullSafety = true;
-    }
+    var errorInfos = await _getErrorInfos(ruleName, file,
+        useMockSdk: useMockSdk, analysisOptions: analysisOptions);
+    _validateExpectedLints(file, errorInfos, analysisOptions: analysisOptions);
   });
 }
 

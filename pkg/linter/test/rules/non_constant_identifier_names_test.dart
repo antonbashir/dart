@@ -222,6 +222,176 @@ class NonConstantIdentifierNamesTest extends LintRuleTest {
   @override
   String get lintRule => 'non_constant_identifier_names';
 
+  test_augmentedConstructor() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  A.Aa();
+}
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment A.Aa();
+}
+''');
+  }
+
+  test_augmentedField() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  int Xx = 1;
+}
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment int Xx = 2;
+}
+''');
+  }
+
+  test_augmentedFunction() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+void Ff() { }
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment void Ff() { }
+''');
+  }
+
+  test_augmentedFunction_namedParam() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+void f({String? Ss}) { }
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment void f({String? Ss}) { }
+''');
+  }
+
+  test_augmentedFunction_positionalParam() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+void f(String? Ss, [int? Xx]) { }
+''');
+
+    await assertDiagnostics(r'''
+augment library 'a.dart';
+
+augment void f(String? Ss, [int? Xx]) { }
+''', [
+      lint(50, 2),
+      lint(60, 2),
+    ]);
+  }
+
+  test_augmentedGetter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  int get Gg => 1;
+}
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment int get Gg => 2;
+}
+''');
+  }
+
+  test_augmentedMethod() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  void Mm() { }
+}
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment void Mm() { }
+}
+''');
+  }
+
+  test_augmentedMethod_namedParam() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  void m({String? Ss}) { }
+}
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment void m({String? Ss}) { }
+}
+''');
+  }
+
+  test_augmentedMethod_positionalParam() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  void m(String? Ss, [int? Xx]) { }
+}
+''');
+
+    await assertDiagnostics(r'''
+augment library 'a.dart';
+
+augment class A {
+  augment void m(String? Ss, [int? Xx]) { }
+}
+''', [
+      lint(70, 2),
+      lint(80, 2),
+    ]);
+  }
+
+  test_augmentedTopLevelVariable() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+int Xx = 1;
+''');
+
+    await assertNoDiagnostics(r'''
+augment library 'a.dart';
+
+augment int Xx = 2;
+''');
+  }
+
   ///https://github.com/dart-lang/linter/issues/193
   test_ignoreSyntheticNodes() async {
     await assertDiagnostics(r'''

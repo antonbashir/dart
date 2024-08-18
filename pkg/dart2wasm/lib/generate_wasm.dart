@@ -1,25 +1,34 @@
 import 'dart:io';
-import 'package:dart2wasm/compiler_options.dart';
-import 'package:dart2wasm/compile.dart';
+
 import 'package:front_end/src/api_unstable/vm.dart' show printDiagnosticMessage;
+import 'package:path/path.dart' as path;
+
+import 'compile.dart';
+import 'compiler_options.dart';
+
 export 'package:dart2wasm/compiler_options.dart';
 
 typedef PrintError = void Function(String error);
 
 Future<int> generateWasm(WasmCompilerOptions options,
-    {bool verbose = false, PrintError errorPrinter = print}) async {
-  if (verbose) {
+    {PrintError errorPrinter = print}) async {
+  if (options.translatorOptions.verbose) {
     print('Running dart compile wasm...');
     print('  - input file name   = ${options.mainUri}');
     print('  - output file name  = ${options.outputFile}');
-    print('  - sdkPath           = ${options.sdkPath}');
     print('  - librariesSpecPath = ${options.librariesSpecPath}');
     print('  - packagesPath file = ${options.packagesPath}');
     print('  - platformPath file = ${options.platformPath}');
+    print(
+        '  - generate source maps = ${options.translatorOptions.generateSourceMaps}');
   }
 
-  CompilerOutput? output = await compileToModule(
-      options, (message) => printDiagnosticMessage(message, errorPrinter));
+  final relativeSourceMapUrl = options.translatorOptions.generateSourceMaps
+      ? Uri.file('${path.basename(options.outputFile)}.map')
+      : null;
+
+  CompilerOutput? output = await compileToModule(options, relativeSourceMapUrl,
+      (message) => printDiagnosticMessage(message, errorPrinter));
 
   if (output == null) {
     return 1;
@@ -30,8 +39,13 @@ Future<int> generateWasm(WasmCompilerOptions options,
   await outFile.writeAsBytes(output.wasmModule);
 
   final jsFile = options.outputJSRuntimeFile ??
-      '${options.outputFile.substring(0, options.outputFile.lastIndexOf('.'))}.mjs';
+      path.setExtension(options.outputFile, '.mjs');
   await File(jsFile).writeAsString(output.jsRuntime);
+
+  final sourceMap = output.sourceMap;
+  if (sourceMap != null) {
+    await File('${options.outputFile}.map').writeAsString(sourceMap);
+  }
 
   return 0;
 }

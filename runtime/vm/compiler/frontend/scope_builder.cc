@@ -5,6 +5,7 @@
 #include "vm/compiler/frontend/scope_builder.h"
 
 #include "vm/compiler/backend/il.h"  // For CompileType.
+#include "vm/compiler/frontend/kernel_to_il.h"
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 
 namespace dart {
@@ -167,6 +168,11 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
           --depth_.catch_;
         }
       }
+      if (FlowGraphBuilder::IsRecognizedMethodForFlowGraph(function) &&
+          FlowGraphBuilder::IsExpressionTempVarUsedInRecognizedMethodFlowGraph(
+              function)) {
+        needs_expr_temp_ = true;
+      }
       intptr_t pos = 0;
       if (function.IsClosureFunction()) {
         LocalVariable* closure_parameter = MakeVariable(
@@ -243,6 +249,11 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
         // async/async*/sync* function. It may reference receiver or type
         // arguments of the enclosing function which need to be captured.
         VisitDartType();
+
+        // Visit optional future value type.
+        if (helper_.ReadTag() == kSomething) {
+          VisitDartType();
+        }
       }
 
       // We generate a synthetic body for implicit closure functions - which
@@ -289,7 +300,7 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       if (is_setter) {
         if (CompilerState::Current().is_aot()) {
           const intptr_t kernel_offset = field.kernel_offset();
-          const InferredTypeMetadata parameter_type =
+          const InferredTypeMetadata inferred_field_type =
               inferred_type_metadata_helper_.GetInferredType(kernel_offset);
           result_->setter_value = MakeVariable(
               TokenPosition::kNoSource, TokenPosition::kNoSource,
@@ -297,7 +308,9 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
               AbstractType::ZoneHandle(Z, function.ParameterTypeAt(pos)),
               LocalVariable::kNoKernelOffset, /*is_late=*/false,
               /*inferred_type=*/nullptr,
-              /*inferred_arg_type=*/&parameter_type);
+              /*inferred_arg_type=*/field.is_covariant()
+                  ? nullptr
+                  : &inferred_field_type);
         } else {
           result_->setter_value = MakeVariable(
               TokenPosition::kNoSource, TokenPosition::kNoSource,
@@ -350,6 +363,12 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       const auto& target = Function::ZoneHandle(Z, function.ForwardingTarget());
       ASSERT(!target.IsNull());
 
+      if (FlowGraphBuilder::IsRecognizedMethodForFlowGraph(function) &&
+          FlowGraphBuilder::IsExpressionTempVarUsedInRecognizedMethodFlowGraph(
+              function)) {
+        needs_expr_temp_ = true;
+      }
+
       if (helper_.PeekTag() == kField) {
         // Create [this] variable.
         const Class& klass = Class::Handle(Z, function.Owner());
@@ -392,9 +411,8 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
       break;
     }
     case UntaggedFunction::kMethodExtractor: {
-      // Add a receiver parameter.  Though it is captured, we emit code to
-      // explicitly copy it to a fixed offset in a freshly-allocated context
-      // instead of using the generic code for regular functions.
+      // Add a receiver parameter. Though it is captured, we emit code to
+      // explicitly copy it to a freshly-allocated closure.
       // Therefore, it isn't necessary to mark it as captured here.
       Class& klass = Class::Handle(Z, function.Owner());
       Type& klass_type = H.GetDeclarationType(klass);
@@ -756,6 +774,7 @@ void ScopeBuilder::VisitExpression() {
       return;
     case kDynamicInvocation:
       helper_.ReadByte();      // read kind.
+      helper_.ReadByte();      // read flags.
       helper_.ReadPosition();  // read position.
       VisitExpression();       // read receiver.
       helper_.SkipName();      // read name.
@@ -845,7 +864,6 @@ void ScopeBuilder::VisitExpression() {
     case kIsExpression:
       needs_expr_temp_ = true;
       helper_.ReadPosition();  // read position.
-      helper_.ReadFlags();     // read flags.
       VisitExpression();       // read operand.
       VisitDartType();         // read type.
       return;
@@ -868,6 +886,7 @@ void ScopeBuilder::VisitExpression() {
       return;
     case kThrow:
       helper_.ReadPosition();  // read position.
+      helper_.ReadFlags();     // read flags.
       VisitExpression();       // read expression.
       return;
     case kListLiteral: {

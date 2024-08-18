@@ -35,18 +35,16 @@ suggestions
     kind: topLevelVariable
   c11
     kind: localVariable
-  const
-    kind: keyword
   false
-    kind: keyword
-  final
     kind: keyword
   null
     kind: keyword
   true
     kind: keyword
-  v01
-    kind: topLevelVariable
+  const
+    kind: keyword
+  final
+    kind: keyword
   var
     kind: keyword
 ''');
@@ -70,18 +68,16 @@ suggestions
     kind: topLevelVariable
   c11
     kind: localVariable
-  const
-    kind: keyword
   false
-    kind: keyword
-  final
     kind: keyword
   null
     kind: keyword
   true
     kind: keyword
-  v01
-    kind: topLevelVariable
+  const
+    kind: keyword
+  final
+    kind: keyword
   var
     kind: keyword
 ''');
@@ -105,18 +101,16 @@ suggestions
     kind: topLevelVariable
   c11
     kind: localVariable
-  const
-    kind: keyword
   false
-    kind: keyword
-  final
     kind: keyword
   null
     kind: keyword
   true
     kind: keyword
-  v01
-    kind: topLevelVariable
+  const
+    kind: keyword
+  final
+    kind: keyword
   var
     kind: keyword
 ''');
@@ -140,18 +134,16 @@ suggestions
     kind: topLevelVariable
   c11
     kind: localVariable
-  const
-    kind: keyword
   false
-    kind: keyword
-  final
     kind: keyword
   null
     kind: keyword
   true
     kind: keyword
-  v01
-    kind: topLevelVariable
+  const
+    kind: keyword
+  final
+    kind: keyword
   var
     kind: keyword
 ''');

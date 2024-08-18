@@ -270,7 +270,6 @@ class LoadedElf {
   }
 
 bool LoadedElf::Load() {
-  UnwindingRecordsPlatform::Init();
   VirtualMemory::Init();
 
   if (error_ != nullptr) {
@@ -290,6 +289,8 @@ bool LoadedElf::Load() {
   CHECK(ReadSectionStringTable());
   CHECK(ReadSections());
 
+  mappable_.reset();
+
   return true;
 }
 
@@ -300,7 +301,6 @@ LoadedElf::~LoadedElf() {
     UnwindingRecordsPlatform::UnregisterDynamicTable(
         dynamic_runtime_function_tables_[i]);
   }
-  UnwindingRecordsPlatform::Cleanup();
 #endif
 
   // Unmap the image.
@@ -471,8 +471,8 @@ bool LoadedElf::LoadSegments() {
     // present on the page.
     if (map_type == File::kReadExecute) {
       void* ptable = nullptr;
-      UnwindingRecordsPlatform::RegisterExecutableMemory(
-          memory->address(), memory->size(), &ptable);
+      UnwindingRecordsPlatform::RegisterExecutableMemory(memory->address(),
+                                                         length, &ptable);
       dynamic_runtime_function_tables_.Add(ptable);
     }
 #endif

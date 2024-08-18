@@ -73,7 +73,7 @@ class _Unalias extends ReplacementVisitor {
   const _Unalias({required this.legacyEraseAliases});
 
   @override
-  DartType visitTypedefType(TypedefType node, int variance) {
+  DartType visitTypedefType(TypedefType node, Variance variance) {
     DartType result;
     if (node.typeArguments.isNotEmpty) {
       List<DartType>? newTypeArguments = null;
@@ -98,10 +98,10 @@ class _Unalias extends ReplacementVisitor {
         node.typedefNode.type!.nullability == Nullability.legacy) {
       // The typedef is defined or used in an opt-out library so the nullability
       // is based on the use site alone.
-      result = result.withDeclaredNullability(node.nullability);
+      result = result.withDeclaredNullability(node.declaredNullability);
     } else {
-      result = result.withDeclaredNullability(
-          uniteNullabilities(node.nullability, result.nullability));
+      result = result.withDeclaredNullability(uniteNullabilities(
+          node.declaredNullability, result.declaredNullability));
     }
     if (legacyEraseAliases) {
       result = legacyErasure(result);

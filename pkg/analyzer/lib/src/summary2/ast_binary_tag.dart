@@ -23,6 +23,22 @@ enum ImportElementPrefixKind {
   isNull,
 }
 
+enum MacroDiagnosticKind {
+  argument,
+  exception,
+  introspectionCycle,
+  invalidTarget,
+  macro,
+  notAllowedDeclaration,
+}
+
+enum MacroDiagnosticTargetKind {
+  application,
+  element,
+  elementAnnotation,
+  type,
+}
+
 class Tag {
   static const int Nothing = 0;
   static const int Something = 1;
@@ -33,6 +49,8 @@ class Tag {
   static const int AsExpression = 84;
   static const int AssertInitializer = 82;
   static const int AssignmentExpression = 96;
+  static const int AugmentedExpression = 111;
+  static const int AugmentedInvocation = 112;
   static const int AwaitExpression = 100;
   static const int BinaryExpression = 52;
   static const int BooleanLiteral = 4;
@@ -111,8 +129,6 @@ class Tag {
   static const int VariableDeclarationList = 43;
 
   static const int RawElement = 0;
-  static const int MemberLegacyWithoutTypeArguments = 1;
-  static const int MemberLegacyWithTypeArguments = 2;
   static const int MemberWithTypeArguments = 3;
   static const int ImportPrefixElement = 4;
 
@@ -129,10 +145,9 @@ class Tag {
   static const int InterfaceType = 7;
   static const int InterfaceType_noTypeArguments_none = 8;
   static const int InterfaceType_noTypeArguments_question = 9;
-  static const int InterfaceType_noTypeArguments_star = 10;
-  static const int RecordType = 11;
-  static const int TypeParameterType = 12;
-  static const int VoidType = 13;
+  static const int RecordType = 10;
+  static const int TypeParameterType = 11;
+  static const int VoidType = 12;
 }
 
 enum TypeParameterVarianceTag {

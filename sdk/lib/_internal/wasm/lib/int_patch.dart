@@ -3,8 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "dart:_internal" show has63BitSmis, patch, unsafeCast;
-import "dart:_string" show StringBase;
-
+import "dart:_string" show StringUncheckedOperations;
 import "dart:typed_data" show Int64List;
 
 @patch
@@ -13,7 +12,7 @@ class int {
     assert(first <= last);
     var ix = first;
     var sign = 1;
-    var c = str.codeUnitAt(ix);
+    var c = str.codeUnitAtUnchecked(ix);
     // Check for leading '+' or '-'.
     if ((c == 0x2b) || (c == 0x2d)) {
       ix++;
@@ -28,7 +27,7 @@ class int {
     }
     var result = 0;
     for (int i = ix; i <= last; i++) {
-      var c = 0x30 ^ str.codeUnitAt(i);
+      var c = 0x30 ^ str.codeUnitAtUnchecked(i);
       if (9 < c) {
         return null;
       }
@@ -51,18 +50,18 @@ class int {
       throw RangeError("Radix $radix not in range 2..36");
     }
     // Split here so improve odds of parse being inlined and the checks omitted.
-    return _parse(unsafeCast<StringBase>(source), radix, onError) as int;
+    return _parse(source, radix, onError) as int;
   }
 
   static int? _parse(
-      StringBase source, int? radix, int? Function(String)? onError) {
+      String source, int? radix, int? Function(String)? onError) {
     int end = source.lastNonWhitespace() + 1;
     if (end == 0) {
       return _handleFormatError(onError, source, source.length, radix, null);
     }
     int start = source.firstNonWhitespace();
 
-    int first = source.codeUnitAt(start);
+    int first = source.codeUnitAtUnchecked(start);
     int sign = 1;
     if (first == 0x2b /* + */ || first == 0x2d /* - */) {
       sign = 0x2c - first; // -1 if '-', +1 if '+'.
@@ -70,7 +69,7 @@ class int {
       if (start == end) {
         return _handleFormatError(onError, source, end, radix, null);
       }
-      first = source.codeUnitAt(start);
+      first = source.codeUnitAtUnchecked(start);
     }
     if (radix == null) {
       // check for 0x prefix.
@@ -78,7 +77,7 @@ class int {
       if (first == 0x30 /* 0 */) {
         index++;
         if (index == end) return 0;
-        first = source.codeUnitAt(index);
+        first = source.codeUnitAtUnchecked(index);
         if ((first | 0x20) == 0x78 /* x */) {
           index++;
           if (index == end) {
@@ -94,7 +93,6 @@ class int {
 
   @patch
   static int? tryParse(String source, {int? radix}) {
-    if (source == null) throw ArgumentError("The source must not be null");
     if (source.isEmpty) return null;
     if (radix == null || radix == 10) {
       // Try parsing immediately, without trimming whitespace.
@@ -103,7 +101,7 @@ class int {
     } else if (radix < 2 || radix > 36) {
       throw RangeError("Radix $radix not in range 2..36");
     }
-    return _parse(unsafeCast<StringBase>(source), radix, _kNull);
+    return _parse(source, radix, _kNull);
   }
 
   static Null _kNull(_) => null;
@@ -199,13 +197,13 @@ class int {
     _Smi result = unsafeCast<_Smi>(0);
     if (radix <= 10) {
       for (int i = start; i < end; i++) {
-        int digit = source.codeUnitAt(i) ^ 0x30;
+        int digit = source.codeUnitAtUnchecked(i) ^ 0x30;
         if (digit >= radix) return null;
         result = (radix * result + digit) as _Smi;
       }
     } else {
       for (int i = start; i < end; i++) {
-        int char = source.codeUnitAt(i);
+        int char = source.codeUnitAtUnchecked(i);
         int digit = char ^ 0x30;
         if (digit > 9) {
           digit = (char | 0x20) - (0x61 - 10);

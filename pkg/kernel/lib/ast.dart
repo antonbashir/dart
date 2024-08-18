@@ -67,6 +67,18 @@ library kernel.ast;
 import 'dart:collection' show ListBase;
 import 'dart:convert' show utf8;
 
+import 'package:_fe_analyzer_shared/src/type_inference/nullability_suffix.dart';
+import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
+    show Variance;
+import 'package:_fe_analyzer_shared/src/types/shared_type.dart'
+    show
+        SharedDynamicType,
+        SharedInvalidType,
+        SharedNamedType,
+        SharedRecordType,
+        SharedType,
+        SharedVoidType;
+
 import 'src/extension_type_erasure.dart';
 import 'visitor.dart';
 export 'visitor.dart';
@@ -86,6 +98,9 @@ import 'src/assumptions.dart';
 import 'src/non_null.dart';
 import 'src/printer.dart';
 import 'src/text_util.dart';
+
+export 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
+    show Variance;
 
 part 'src/ast/patterns.dart';
 
@@ -147,13 +162,16 @@ abstract class TreeNode extends Node {
 
   TreeNode? parent;
 
-  /// Offset in the source file it comes from.
+  /// Offset in the source file the node comes from.
   ///
   /// Valid values are from 0 and up, or -1 ([noOffset]) if the file offset is
   /// not available (this is the default if none is specifically set).
+  ///
+  /// This is an index into [Source.text].
   int fileOffset = noOffset;
 
-  /// Returns List<int> if this node has more offsets than [fileOffset].
+  /// When the node has more offsets that just [fileOffset], the list of all
+  /// offsets.
   List<int>? get fileOffsetsIfMultiple => null;
 
   @override
@@ -237,6 +255,8 @@ abstract class NamedNode extends TreeNode {
 abstract class FileUriNode extends TreeNode {
   /// The URI of the source file this node was loaded from.
   Uri get fileUri;
+
+  void set fileUri(Uri value);
 }
 
 abstract class Annotatable extends TreeNode {
@@ -248,7 +268,7 @@ abstract class Annotatable extends TreeNode {
 //                      LIBRARIES and CLASSES
 // ------------------------------------------------------------------------
 
-enum NonNullableByDefaultCompiledMode { Weak, Strong, Agnostic, Invalid }
+enum NonNullableByDefaultCompiledMode { Strong, Weak, Invalid }
 
 class Library extends NamedNode
     implements Annotatable, Comparable<Library>, FileUriNode {
@@ -271,10 +291,10 @@ class Library extends NamedNode
   }
 
   static const int SyntheticFlag = 1 << 0;
-  static const int NonNullableByDefaultFlag = 1 << 1;
-  static const int NonNullableByDefaultModeBit1 = 1 << 2;
-  static const int NonNullableByDefaultModeBit2 = 1 << 3;
-  static const int IsUnsupportedFlag = 1 << 4;
+
+  static const int NonNullableByDefaultModeBit1 = 1 << 1;
+  static const int NonNullableByDefaultModeBit2 = 1 << 2;
+  static const int IsUnsupportedFlag = 1 << 3;
 
   int flags = 0;
 
@@ -285,19 +305,11 @@ class Library extends NamedNode
     flags = value ? (flags | SyntheticFlag) : (flags & ~SyntheticFlag);
   }
 
-  bool get isNonNullableByDefault => (flags & NonNullableByDefaultFlag) != 0;
-  void set isNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | NonNullableByDefaultFlag)
-        : (flags & ~NonNullableByDefaultFlag);
-  }
-
   NonNullableByDefaultCompiledMode get nonNullableByDefaultCompiledMode {
     bool bit1 = (flags & NonNullableByDefaultModeBit1) != 0;
     bool bit2 = (flags & NonNullableByDefaultModeBit2) != 0;
-    if (!bit1 && !bit2) return NonNullableByDefaultCompiledMode.Weak;
-    if (bit1 && !bit2) return NonNullableByDefaultCompiledMode.Strong;
-    if (bit1 && bit2) return NonNullableByDefaultCompiledMode.Agnostic;
+    if (!bit1 && !bit2) return NonNullableByDefaultCompiledMode.Strong;
+    if (bit1 && !bit2) return NonNullableByDefaultCompiledMode.Weak;
     if (!bit1 && bit2) return NonNullableByDefaultCompiledMode.Invalid;
     throw new StateError("Unused bit-pattern for compilation mode");
   }
@@ -305,17 +317,13 @@ class Library extends NamedNode
   void set nonNullableByDefaultCompiledMode(
       NonNullableByDefaultCompiledMode mode) {
     switch (mode) {
-      case NonNullableByDefaultCompiledMode.Weak:
+      case NonNullableByDefaultCompiledMode.Strong:
         flags = (flags & ~NonNullableByDefaultModeBit1) &
             ~NonNullableByDefaultModeBit2;
         break;
-      case NonNullableByDefaultCompiledMode.Strong:
+      case NonNullableByDefaultCompiledMode.Weak:
         flags = (flags | NonNullableByDefaultModeBit1) &
             ~NonNullableByDefaultModeBit2;
-        break;
-      case NonNullableByDefaultCompiledMode.Agnostic:
-        flags = (flags | NonNullableByDefaultModeBit1) |
-            NonNullableByDefaultModeBit2;
         break;
       case NonNullableByDefaultCompiledMode.Invalid:
         flags = (flags & ~NonNullableByDefaultModeBit1) |
@@ -448,22 +456,9 @@ class Library extends NamedNode
     _fields = fields;
   }
 
-  Nullability get nullable {
-    return isNonNullableByDefault ? Nullability.nullable : Nullability.legacy;
-  }
+  Nullability get nullable => Nullability.nullable;
 
-  Nullability get nonNullable {
-    return isNonNullableByDefault
-        ? Nullability.nonNullable
-        : Nullability.legacy;
-  }
-
-  Nullability nullableIfTrue(bool isNullable) {
-    if (isNonNullableByDefault) {
-      return isNullable ? Nullability.nullable : Nullability.nonNullable;
-    }
-    return Nullability.legacy;
-  }
+  Nullability get nonNullable => Nullability.nonNullable;
 
   /// Returns the top-level fields and procedures defined in this library.
   ///
@@ -471,6 +466,11 @@ class Library extends NamedNode
   /// iterating the members to speed up code in production.
   Iterable<Member> get members =>
       <Iterable<Member>>[fields, procedures].expand((x) => x);
+
+  void forEachMember(void action(Member element)) {
+    fields.forEach(action);
+    procedures.forEach(action);
+  }
 
   @override
   void addAnnotation(Expression node) {
@@ -569,7 +569,7 @@ class Library extends NamedNode
     for (int i = 0; i < extensionTypeDeclarations.length; ++i) {
       ExtensionTypeDeclaration extensionTypeDeclaration =
           extensionTypeDeclarations[i];
-      extensionTypeDeclaration._relinkNode();
+      extensionTypeDeclaration.relink();
     }
   }
 
@@ -645,7 +645,8 @@ class Library extends NamedNode
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Library");
   }
 
   @override
@@ -677,11 +678,6 @@ class LibraryDependency extends TreeNode implements Annotatable {
   String? name;
 
   final List<Combinator> combinators;
-
-  LibraryDependency(int flags, List<Expression> annotations,
-      Library importedLibrary, String name, List<Combinator> combinators)
-      : this.byReference(
-            flags, annotations, importedLibrary.reference, name, combinators);
 
   LibraryDependency.deferredImport(Library importedLibrary, String name,
       {List<Combinator>? combinators, List<Expression>? annotations})
@@ -753,7 +749,16 @@ class LibraryDependency extends TreeNode implements Annotatable {
 
   @override
   void toTextInternal(AstPrinter printer) {
-    // TODO(johnniwinther): Implement this.
+    if (isExport) {
+      printer.write('export ');
+    } else {
+      printer.write('import ');
+    }
+    if (isDeferred) {
+      printer.write('deferred ');
+    }
+    printer.writeLibraryReference(importedLibraryReference);
+    printer.write(';');
   }
 }
 
@@ -814,8 +819,6 @@ class Combinator extends TreeNode {
   bool isShow;
 
   final List<String> names;
-
-  LibraryDependency get dependency => parent as LibraryDependency;
 
   Combinator(this.isShow, this.names);
   Combinator.show(this.names) : isShow = true;
@@ -933,7 +936,8 @@ class Typedef extends NamedNode
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Typedef '$name'");
   }
 
   @override
@@ -1408,6 +1412,12 @@ class Class extends NamedNode implements TypeDeclaration {
         procedures,
       ].expand((x) => x);
 
+  void forEachMember(void action(Member element)) {
+    fields.forEach(action);
+    constructors.forEach(action);
+    procedures.forEach(action);
+  }
+
   /// The immediately extended, mixed-in, and implemented types.
   ///
   /// This getter is for convenience, not efficiency.  Consider manually
@@ -1544,7 +1554,8 @@ class Class extends NamedNode implements TypeDeclaration {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Class '$name'");
   }
 }
 
@@ -1656,8 +1667,6 @@ class Extension extends NamedNode
   @override
   R accept1<R, A>(TreeVisitor1<R, A> v, A arg) => v.visitExtension(this, arg);
 
-  R acceptReference<R>(Visitor<R> v) => v.visitExtensionReference(this);
-
   @override
   void visitChildren(Visitor v) {
     visitList(annotations, v);
@@ -1681,7 +1690,8 @@ class Extension extends NamedNode
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Extension '$name'");
   }
 
   @override
@@ -1889,6 +1899,21 @@ class ExtensionTypeDeclaration extends NamedNode implements TypeDeclaration {
     _procedures = procedures;
   }
 
+  /// This is an advanced feature. Use of this method should be coordinated
+  /// with the kernel team.
+  ///
+  /// See [Component.relink] for a comprehensive description.
+  ///
+  /// Makes sure all references in named nodes in this extension type
+  /// declaration points to said named node.
+  void relink() {
+    this.reference.node = this;
+    for (int i = 0; i < procedures.length; ++i) {
+      Procedure member = procedures[i];
+      member._relinkNode();
+    }
+  }
+
   @override
   R accept<R>(TreeVisitor<R> v) => v.visitExtensionTypeDeclaration(this);
 
@@ -1926,7 +1951,8 @@ class ExtensionTypeDeclaration extends NamedNode implements TypeDeclaration {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Extension type '$name'");
   }
 
   @override
@@ -2130,7 +2156,6 @@ sealed class Member extends NamedNode implements Annotatable, FileUriNode {
   /// Members can have this modifier independently of whether the enclosing
   /// library is external.
   bool get isExternal;
-  void set isExternal(bool value);
 
   /// If `true` this member is compiled from a member declared in an extension
   /// declaration.
@@ -2157,11 +2182,6 @@ sealed class Member extends NamedNode implements Annotatable, FileUriNode {
   ///     }
   ///
   bool get isExtensionTypeMember;
-
-  /// If `true` this member is defined in a library for which non-nullable by
-  /// default is enabled.
-  bool get isNonNullableByDefault;
-  void set isNonNullableByDefault(bool value);
 
   /// If `true` this procedure is not part of the interface but only part of the
   /// class members.
@@ -2386,10 +2406,9 @@ class Field extends Member {
   static const int FlagCovariantByClass = 1 << 4;
   static const int FlagLate = 1 << 5;
   static const int FlagExtensionMember = 1 << 6;
-  static const int FlagNonNullableByDefault = 1 << 7;
-  static const int FlagInternalImplementation = 1 << 8;
-  static const int FlagEnumElement = 1 << 9;
-  static const int FlagExtensionTypeMember = 1 << 10;
+  static const int FlagInternalImplementation = 1 << 7;
+  static const int FlagEnumElement = 1 << 8;
+  static const int FlagExtensionTypeMember = 1 << 9;
 
   /// Whether the field is declared with the `covariant` keyword.
   bool get isCovariantByDeclaration => flags & FlagCovariant != 0;
@@ -2496,21 +2515,6 @@ class Field extends Member {
   bool get isExternal => false;
 
   @override
-  void set isExternal(bool value) {
-    if (value) throw 'Fields cannot be external';
-  }
-
-  @override
-  bool get isNonNullableByDefault => flags & FlagNonNullableByDefault != 0;
-
-  @override
-  void set isNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | FlagNonNullableByDefault)
-        : (flags & ~FlagNonNullableByDefault);
-  }
-
-  @override
   R accept<R>(MemberVisitor<R> v) => v.visitField(this);
 
   @override
@@ -2556,7 +2560,8 @@ class Field extends Member {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Field '$name'");
   }
 
   @override
@@ -2624,7 +2629,6 @@ class Constructor extends Member {
   static const int FlagConst = 1 << 0; // Must match serialized bit positions.
   static const int FlagExternal = 1 << 1;
   static const int FlagSynthetic = 1 << 2;
-  static const int FlagNonNullableByDefault = 1 << 3;
 
   @override
   bool get isConst => flags & FlagConst != 0;
@@ -2640,7 +2644,6 @@ class Constructor extends Member {
     flags = value ? (flags | FlagConst) : (flags & ~FlagConst);
   }
 
-  @override
   void set isExternal(bool value) {
     flags = value ? (flags | FlagExternal) : (flags & ~FlagExternal);
   }
@@ -2663,16 +2666,6 @@ class Constructor extends Member {
 
   @override
   bool get isExtensionTypeMember => false;
-
-  @override
-  bool get isNonNullableByDefault => flags & FlagNonNullableByDefault != 0;
-
-  @override
-  void set isNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | FlagNonNullableByDefault)
-        : (flags & ~FlagNonNullableByDefault);
-  }
 
   @override
   R accept<R>(MemberVisitor<R> v) => v.visitConstructor(this);
@@ -2718,7 +2711,8 @@ class Constructor extends Member {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Constructor '$name'");
   }
 }
 
@@ -2971,8 +2965,11 @@ class Procedure extends Member implements GenericFunction {
   /// Since `Super.method` allows `num` as argument, the inserted covariant
   /// check must be against `num` and not `int`, and the parameter type of the
   /// forwarding semi stub must be changed to `num`. Still, the interface of
-  /// `Class` requires that `Class.method` is `void Function(int)`, so for this,
-  /// it is stored explicitly as the [signatureType] on the procedure.
+  /// `Class` requires that `Class.method` is `void Function(int)`, so for
+  /// this, it is stored explicitly as the [signatureType] on the procedure.
+  ///
+  /// When [signatureType] is null, you can compute the function type with
+  /// `function.computeFunctionType(Nullability.nonNullable)`.
   FunctionType? signatureType;
 
   Procedure(Name name, ProcedureKind kind, FunctionNode function,
@@ -3073,11 +3070,10 @@ class Procedure extends Member implements GenericFunction {
   static const int FlagExternal = 1 << 2;
   static const int FlagConst = 1 << 3; // Only for external const factories.
   static const int FlagExtensionMember = 1 << 4;
-  static const int FlagNonNullableByDefault = 1 << 5;
-  static const int FlagSynthetic = 1 << 6;
-  static const int FlagInternalImplementation = 1 << 7;
-  static const int FlagExtensionTypeMember = 1 << 8;
-  static const int FlagHasWeakTearoffReferencePragma = 1 << 9;
+  static const int FlagSynthetic = 1 << 5;
+  static const int FlagInternalImplementation = 1 << 6;
+  static const int FlagExtensionTypeMember = 1 << 7;
+  static const int FlagHasWeakTearoffReferencePragma = 1 << 8;
 
   bool get isStatic => flags & FlagStatic != 0;
 
@@ -3159,7 +3155,6 @@ class Procedure extends Member implements GenericFunction {
     flags = value ? (flags | FlagAbstract) : (flags & ~FlagAbstract);
   }
 
-  @override
   void set isExternal(bool value) {
     flags = value ? (flags | FlagExternal) : (flags & ~FlagExternal);
   }
@@ -3197,16 +3192,6 @@ class Procedure extends Member implements GenericFunction {
   bool get hasSetter => kind == ProcedureKind.Setter;
 
   bool get isFactory => kind == ProcedureKind.Factory;
-
-  @override
-  bool get isNonNullableByDefault => flags & FlagNonNullableByDefault != 0;
-
-  @override
-  void set isNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | FlagNonNullableByDefault)
-        : (flags & ~FlagNonNullableByDefault);
-  }
 
   Member? get concreteForwardingStubTarget =>
       stubKind == ProcedureStubKind.ConcreteForwardingStub
@@ -3314,7 +3299,8 @@ class Procedure extends Member implements GenericFunction {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "Procedure '$name'");
   }
 }
 
@@ -3716,10 +3702,10 @@ class FunctionNode extends TreeNode {
   DartType returnType; // Not null.
   Statement? _body;
 
-  /// The future value type of this is an async function, otherwise `null`.
+  /// The emitted value of non-sync functions
   ///
-  /// The future value type is the element type returned by an async function.
-  /// For instance
+  /// For `async` functions [emittedValueType] is the future value type, that
+  /// is, the returned element type. For instance
   ///
   ///     Future<Foo> method1() async => new Foo();
   ///     FutureOr<Foo> method2() async => new Foo();
@@ -3731,7 +3717,16 @@ class FunctionNode extends TreeNode {
   /// For pre-nnbd libraries, this is set to `flatten(T)` of the return type
   /// `T`, which can be seen as the pre-nnbd equivalent of the future value
   /// type.
-  DartType? futureValueType;
+  ///
+  /// For `sync*` functions [emittedValueType] is the type of the element of the
+  /// iterable returned by the function.
+  ///
+  /// For `async*` functions [emittedValueType] is the type of the element of
+  /// the stream return ed by the function.
+  ///
+  /// For sync functions (those not marked with one of `async`, `sync*`, or
+  /// `async*`) the value of [emittedValueType] is null.
+  DartType? emittedValueType;
 
   /// If the function is a redirecting factory constructor, this holds
   /// the target and type arguments of the redirection.
@@ -3765,7 +3760,7 @@ class FunctionNode extends TreeNode {
       this.returnType = const DynamicType(),
       this.asyncMarker = AsyncMarker.Sync,
       AsyncMarker? dartAsyncMarker,
-      this.futureValueType})
+      this.emittedValueType})
       : this.positionalParameters =
             positionalParameters ?? <VariableDeclaration>[],
         this.requiredParameterCount =
@@ -3886,7 +3881,7 @@ class FunctionNode extends TreeNode {
     visitList(positionalParameters, v);
     visitList(namedParameters, v);
     returnType.accept(v);
-    futureValueType?.accept(v);
+    emittedValueType?.accept(v);
     redirectingFactoryTarget?.target?.acceptReference(v);
     if (redirectingFactoryTarget?.typeArguments != null) {
       visitList(redirectingFactoryTarget!.typeArguments!, v);
@@ -3900,8 +3895,8 @@ class FunctionNode extends TreeNode {
     v.transformList(positionalParameters, this);
     v.transformList(namedParameters, this);
     returnType = v.visitDartType(returnType);
-    if (futureValueType != null) {
-      futureValueType = v.visitDartType(futureValueType!);
+    if (emittedValueType != null) {
+      emittedValueType = v.visitDartType(emittedValueType!);
     }
     if (redirectingFactoryTarget?.typeArguments != null) {
       v.transformDartTypeList(redirectingFactoryTarget!.typeArguments!);
@@ -3918,8 +3913,9 @@ class FunctionNode extends TreeNode {
     v.transformVariableDeclarationList(positionalParameters, this);
     v.transformVariableDeclarationList(namedParameters, this);
     returnType = v.visitDartType(returnType, cannotRemoveSentinel);
-    if (futureValueType != null) {
-      futureValueType = v.visitDartType(futureValueType!, cannotRemoveSentinel);
+    if (emittedValueType != null) {
+      emittedValueType =
+          v.visitDartType(emittedValueType!, cannotRemoveSentinel);
     }
     if (redirectingFactoryTarget?.typeArguments != null) {
       v.transformDartTypeList(redirectingFactoryTarget!.typeArguments!);
@@ -5517,7 +5513,6 @@ class NamedExpression extends TreeNode {
 /// [SuperMethodInvocation], [StaticInvocation], and [ConstructorInvocation].
 abstract class InvocationExpression extends Expression {
   Arguments get arguments;
-  void set arguments(Arguments value);
 
   /// Name of the invoked method.
   Name get name;
@@ -5528,6 +5523,9 @@ abstract class InstanceInvocationExpression extends InvocationExpression {
 }
 
 class DynamicInvocation extends InstanceInvocationExpression {
+  // Must match serialized bit positions.
+  static const int FlagImplicitCall = 1 << 0;
+
   final DynamicAccessKind kind;
 
   @override
@@ -5539,9 +5537,23 @@ class DynamicInvocation extends InstanceInvocationExpression {
   @override
   Arguments arguments;
 
+  int flags = 0;
+
   DynamicInvocation(this.kind, this.receiver, this.name, this.arguments) {
     receiver.parent = this;
     arguments.parent = this;
+  }
+
+  /// If `true` this is an implicit call to 'call'. For instance
+  ///
+  ///    method(dynamic d) {
+  ///      d(); // Implicit call.
+  ///      d.call(); // Explicit call.
+  ///
+  bool get isImplicitCall => flags & FlagImplicitCall != 0;
+
+  void set isImplicitCall(bool value) {
+    flags = value ? (flags | FlagImplicitCall) : (flags & ~FlagImplicitCall);
   }
 
   @override
@@ -5596,8 +5608,10 @@ class DynamicInvocation extends InstanceInvocationExpression {
   void toTextInternal(AstPrinter printer) {
     printer.writeExpression(receiver,
         minimumPrecedence: astToText.Precedence.PRIMARY);
-    printer.write('.');
-    printer.writeName(name);
+    if (!isImplicitCall) {
+      printer.write('.');
+      printer.writeName(name);
+    }
     printer.writeArguments(arguments);
   }
 }
@@ -5663,6 +5677,7 @@ class InstanceInvocation extends InstanceInvocationExpression {
   static const int FlagBoundsSafe = 1 << 1;
 
   final InstanceAccessKind kind;
+
   @override
   Expression receiver;
 
@@ -5816,6 +5831,7 @@ class InstanceGetterInvocation extends InstanceInvocationExpression {
   static const int FlagBoundsSafe = 1 << 1;
 
   final InstanceAccessKind kind;
+
   @override
   Expression receiver;
 
@@ -7429,7 +7445,8 @@ class FileUriExpression extends Expression implements FileUriNode {
 
   @override
   Location? _getLocationInEnclosingFile(int offset) {
-    return _getLocationInComponent(enclosingComponent, fileUri, offset);
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "File uri expression");
   }
 
   @override
@@ -7450,28 +7467,11 @@ class FileUriExpression extends Expression implements FileUriNode {
 
 /// Expression of form `x is T`.
 class IsExpression extends Expression {
-  int flags = 0;
   Expression operand;
   DartType type;
 
   IsExpression(this.operand, this.type) {
     operand.parent = this;
-  }
-
-  // Must match serialized bit positions.
-  static const int FlagForNonNullableByDefault = 1 << 0;
-
-  /// If `true`, this test take the nullability of [type] into account.
-  ///
-  /// This is the case for is-tests written in libraries that are opted in to
-  /// the non nullable by default feature.
-  bool get isForNonNullableByDefault =>
-      flags & FlagForNonNullableByDefault != 0;
-
-  void set isForNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | FlagForNonNullableByDefault)
-        : (flags & ~FlagForNonNullableByDefault);
   }
 
   @override
@@ -7518,11 +7518,7 @@ class IsExpression extends Expression {
   void toTextInternal(AstPrinter printer) {
     printer.writeExpression(operand,
         minimumPrecedence: astToText.Precedence.BITWISE_OR);
-    printer.write(' is');
-    if (printer.includeAuxiliaryProperties && isForNonNullableByDefault) {
-      printer.write('{ForNonNullableByDefault}');
-    }
-    printer.write(' ');
+    printer.write(' is ');
     printer.writeType(type);
   }
 }
@@ -7541,8 +7537,7 @@ class AsExpression extends Expression {
   static const int FlagTypeError = 1 << 0;
   static const int FlagCovarianceCheck = 1 << 1;
   static const int FlagForDynamic = 1 << 2;
-  static const int FlagForNonNullableByDefault = 1 << 3;
-  static const int FlagUnchecked = 1 << 4;
+  static const int FlagUnchecked = 1 << 3;
 
   /// If `true`, this test is an implicit down cast.
   ///
@@ -7585,19 +7580,6 @@ class AsExpression extends Expression {
 
   void set isForDynamic(bool value) {
     flags = value ? (flags | FlagForDynamic) : (flags & ~FlagForDynamic);
-  }
-
-  /// If `true`, this test take the nullability of [type] into account.
-  ///
-  /// This is the case for is-tests written in libraries that are opted in to
-  /// the non nullable by default feature.
-  bool get isForNonNullableByDefault =>
-      flags & FlagForNonNullableByDefault != 0;
-
-  void set isForNonNullableByDefault(bool value) {
-    flags = value
-        ? (flags | FlagForNonNullableByDefault)
-        : (flags & ~FlagForNonNullableByDefault);
   }
 
   /// If `true`, this test is added to show the known static type of the
@@ -7668,9 +7650,6 @@ class AsExpression extends Expression {
       }
       if (isForDynamic) {
         flags.add('ForDynamic');
-      }
-      if (isForNonNullableByDefault) {
-        flags.add('ForNonNullableByDefault');
       }
       if (flags.isNotEmpty) {
         printer.write('{${flags.join(',')}}');
@@ -8044,9 +8023,7 @@ class Rethrow extends Expression {
 
   @override
   DartType getStaticTypeInternal(StaticTypeContext context) =>
-      context.isNonNullableByDefault
-          ? const NeverType.nonNullable()
-          : const NeverType.legacy();
+      const NeverType.nonNullable();
 
   @override
   R accept<R>(ExpressionVisitor<R> v) => v.visitRethrow(this);
@@ -8077,9 +8054,26 @@ class Rethrow extends Expression {
 
 class Throw extends Expression {
   Expression expression;
+  int flags = 0;
 
   Throw(this.expression) {
     expression.parent = this;
+  }
+
+  // Must match serialized bit positions.
+  static const int FlagForErrorHandling = 1 << 0;
+
+  /// If `true`, this `throw` is *not* present in the source code but added
+  /// to ensure correctness and/or soundness of the generated code.
+  ///
+  /// This is used for instance in the lowering for handling duplicate writes
+  /// to a late final field or for pattern assignments that don't match.
+  bool get forErrorHandling => flags & FlagForErrorHandling != 0;
+
+  void set forErrorHandling(bool value) {
+    flags = value
+        ? (flags | FlagForErrorHandling)
+        : (flags & ~FlagForErrorHandling);
   }
 
   @override
@@ -8088,9 +8082,7 @@ class Throw extends Expression {
 
   @override
   DartType getStaticTypeInternal(StaticTypeContext context) =>
-      context.isNonNullableByDefault
-          ? const NeverType.nonNullable()
-          : const NeverType.legacy();
+      const NeverType.nonNullable();
 
   @override
   R accept<R>(ExpressionVisitor<R> v) => v.visitThrow(this);
@@ -8684,6 +8676,12 @@ class FileUriConstantExpression extends ConstantExpression
   FileUriConstantExpression(Constant constant,
       {DartType type = const DynamicType(), required this.fileUri})
       : super(constant, type);
+
+  @override
+  Location? _getLocationInEnclosingFile(int offset) {
+    return _getLocationInComponent(enclosingComponent, fileUri, offset,
+        viaForErrorMessage: "File uri constant expression");
+  }
 }
 
 /// Synthetic expression of form `let v = x in y`
@@ -9017,19 +9015,19 @@ class RedirectingFactoryTearOff extends Expression {
 }
 
 class TypedefTearOff extends Expression {
-  final List<TypeParameter> typeParameters;
+  final List<StructuralParameter> structuralParameters;
   Expression expression;
   final List<DartType> typeArguments;
 
-  TypedefTearOff(this.typeParameters, this.expression, this.typeArguments) {
+  TypedefTearOff(
+      this.structuralParameters, this.expression, this.typeArguments) {
     expression.parent = this;
-    setParents(typeParameters, this);
   }
 
   @override
   DartType getStaticTypeInternal(StaticTypeContext context) {
-    FreshStructuralParametersFromTypeParameters freshTypeParameters =
-        getFreshStructuralParametersFromTypeParameters(typeParameters);
+    FreshStructuralParameters freshTypeParameters =
+        getFreshStructuralParameters(structuralParameters);
     FunctionType type = expression.getStaticType(context) as FunctionType;
     type = freshTypeParameters.substitute(
             FunctionTypeInstantiator.instantiate(type, typeArguments))
@@ -9051,7 +9049,7 @@ class TypedefTearOff extends Expression {
   @override
   void visitChildren(Visitor v) {
     expression.accept(v);
-    visitList(typeParameters, v);
+    visitList(structuralParameters, v);
     visitList(typeArguments, v);
   }
 
@@ -9059,7 +9057,6 @@ class TypedefTearOff extends Expression {
   void transformChildren(Transformer v) {
     expression = v.transform(expression);
     expression.parent = this;
-    v.transformList(typeParameters, this);
     v.transformDartTypeList(typeArguments);
   }
 
@@ -9067,7 +9064,6 @@ class TypedefTearOff extends Expression {
   void transformOrRemoveChildren(RemovingTransformer v) {
     expression = v.transform(expression);
     expression.parent = this;
-    v.transformList(typeParameters, this, dummyTypeParameter);
     v.transformDartTypeList(typeArguments);
   }
 
@@ -9078,7 +9074,7 @@ class TypedefTearOff extends Expression {
 
   @override
   void toTextInternal(AstPrinter printer) {
-    printer.writeTypeParameters(typeParameters);
+    printer.writeStructuralParameters(structuralParameters);
     printer.write(".(");
     printer.writeExpression(expression);
     printer.writeTypeArguments(typeArguments);
@@ -9254,11 +9250,6 @@ class AssertBlock extends Statement {
     visitList(statements, v);
   }
 
-  void addStatement(Statement node) {
-    statements.add(node);
-    node.parent = this;
-  }
-
   @override
   String toString() {
     return "AssertBlock(${toStringInternal()})";
@@ -9305,12 +9296,12 @@ class AssertStatement extends Statement {
 
   /// Character offset in the source where the assertion condition begins.
   ///
-  /// Note: This is not the offset into the UTF8 encoded `List<int>` source.
+  /// This is an index into [Source.text].
   int conditionStartOffset;
 
   /// Character offset in the source where the assertion condition ends.
   ///
-  /// Note: This is not the offset into the UTF8 encoded `List<int>` source.
+  /// This is an index into [Source.text].
   int conditionEndOffset;
 
   @override
@@ -10522,7 +10513,8 @@ class VariableDeclaration extends Statement implements Annotatable {
       bool isLowered = false,
       bool isSynthesized = false,
       bool isHoisted = false,
-      bool hasDeclaredInitializer = false}) {
+      bool hasDeclaredInitializer = false,
+      bool isWildcard = false}) {
     initializer?.parent = this;
     if (flags != -1) {
       this.flags = flags;
@@ -10537,6 +10529,7 @@ class VariableDeclaration extends Statement implements Annotatable {
       this.hasDeclaredInitializer = hasDeclaredInitializer;
       this.isSynthesized = isSynthesized;
       this.isHoisted = isHoisted;
+      this.isWildcard = isWildcard;
     }
     assert(_name != null || this.isSynthesized,
         "Only synthesized variables can have no name.");
@@ -10585,6 +10578,7 @@ class VariableDeclaration extends Statement implements Annotatable {
   static const int FlagLowered = 1 << 8;
   static const int FlagSynthesized = 1 << 9;
   static const int FlagHoisted = 1 << 10;
+  static const int FlagWildcard = 1 << 11;
 
   bool get isFinal => flags & FlagFinal != 0;
   bool get isConst => flags & FlagConst != 0;
@@ -10649,6 +10643,11 @@ class VariableDeclaration extends Statement implements Annotatable {
   /// For instance, for duplicate variable names, an invalid expression is set
   /// as the initializer of the second variable.
   bool get hasDeclaredInitializer => flags & FlagHasDeclaredInitializer != 0;
+
+  /// Whether this variable is a wildcard variable.
+  ///
+  /// Wildcard variables have the name `_`.
+  bool get isWildcard => flags & FlagWildcard != 0;
 
   /// Whether the variable is assignable.
   ///
@@ -10716,6 +10715,12 @@ class VariableDeclaration extends Statement implements Annotatable {
     flags = value
         ? (flags | FlagHasDeclaredInitializer)
         : (flags & ~FlagHasDeclaredInitializer);
+  }
+
+  void set isWildcard(bool value) {
+    // TODO(kallentu): Change the name to be unique with other wildcard
+    // variables.
+    flags = value ? (flags | FlagWildcard) : (flags & ~FlagWildcard);
   }
 
   void clearAnnotations() {
@@ -11013,7 +11018,7 @@ enum Nullability {
 ///
 /// The `==` operator on [DartType]s compare based on type equality, not
 /// object identity.
-sealed class DartType extends Node {
+sealed class DartType extends Node implements SharedType {
   const DartType();
 
   @override
@@ -11045,15 +11050,23 @@ sealed class DartType extends Node {
   /// is [Nullability.nonNullable].
   Nullability get nullability;
 
+  @override
+  NullabilitySuffix get nullabilitySuffix {
+    if (isTypeWithoutNullabilityMarker(this)) {
+      return NullabilitySuffix.none;
+    } else if (isNullableTypeConstructorApplication(this)) {
+      return NullabilitySuffix.question;
+    } else {
+      assert(isLegacyTypeConstructorApplication(this));
+      return NullabilitySuffix.star;
+    }
+  }
+
   /// If this is a typedef type, repeatedly unfolds its type definition until
   /// the root term is not a typedef type, otherwise returns the type itself.
   ///
   /// Will never return a typedef type.
   DartType get unalias => this;
-
-  /// If this is a typedef type, unfolds its type definition once, otherwise
-  /// returns the type itself.
-  DartType get unaliasOnce => this;
 
   /// Creates a copy of the type with the given [declaredNullability].
   ///
@@ -11120,6 +11133,15 @@ sealed class DartType extends Node {
   /// of type parameters on function types coinductively.
   bool equals(Object other, Assumptions? assumptions);
 
+  @override
+  String getDisplayString() => toText(const AstTextStrategy());
+
+  @override
+  bool isStructurallyEqualTo(SharedType other) {
+    // TODO(cstefantsova): Use the actual algorithm for structural equality.
+    return this == other;
+  }
+
   /// Returns a textual representation of the this type.
   ///
   /// If [verbose] is `true`, qualified names will include the library name/uri.
@@ -11163,7 +11185,7 @@ abstract class AuxiliaryType extends DartType {
 ///
 /// Can usually be treated as 'dynamic', but should occasionally be handled
 /// differently, e.g. `x is ERROR` should evaluate to false.
-class InvalidType extends DartType {
+class InvalidType extends DartType implements SharedInvalidType {
   @override
   final int hashCode = 12345;
 
@@ -11192,14 +11214,14 @@ class InvalidType extends DartType {
   Nullability get declaredNullability {
     // TODO(johnniwinther,cstefantsova): Consider implementing
     // invalidNullability.
-    return Nullability.legacy;
+    return Nullability.nullable;
   }
 
   @override
   Nullability get nullability {
     // TODO(johnniwinther,cstefantsova): Consider implementing
     // invalidNullability.
-    return Nullability.legacy;
+    return Nullability.nullable;
   }
 
   @override
@@ -11216,7 +11238,7 @@ class InvalidType extends DartType {
   }
 }
 
-class DynamicType extends DartType {
+class DynamicType extends DartType implements SharedDynamicType {
   @override
   final int hashCode = 54321;
 
@@ -11261,7 +11283,7 @@ class DynamicType extends DartType {
   }
 }
 
-class VoidType extends DartType {
+class VoidType extends DartType implements SharedVoidType {
   @override
   final int hashCode = 123121;
 
@@ -11316,9 +11338,8 @@ class NeverType extends DartType {
 
   const NeverType.legacy() : this.internal(Nullability.legacy);
 
-  const NeverType.undetermined() : this.internal(Nullability.undetermined);
-
-  const NeverType.internal(this.declaredNullability);
+  const NeverType.internal(this.declaredNullability)
+      : assert(declaredNullability != Nullability.undetermined);
 
   static NeverType fromNullability(Nullability nullability) {
     switch (nullability) {
@@ -11329,7 +11350,8 @@ class NeverType extends DartType {
       case Nullability.legacy:
         return const NeverType.legacy();
       case Nullability.undetermined:
-        return const NeverType.undetermined();
+        throw new StateError("Unsupported nullability for 'NeverType': "
+            "'${nullability}'");
     }
   }
 
@@ -11795,12 +11817,11 @@ class TypedefType extends DartType {
     v.visitTypedefReference(typedefNode);
   }
 
-  @override
   DartType get unaliasOnce {
     DartType result =
         Substitution.fromTypedefType(this).substituteType(typedefNode.type!);
-    return result.withDeclaredNullability(
-        combineNullabilitiesForSubstitution(result.nullability, nullability));
+    return result.withDeclaredNullability(combineNullabilitiesForSubstitution(
+        result.declaredNullability, nullability));
   }
 
   @override
@@ -12081,7 +12102,9 @@ class ExtensionType extends TypeDeclarationType {
     if (other is ExtensionType) {
       if (nullability != other.nullability) return false;
       if (extensionTypeDeclarationReference !=
-          other.extensionTypeDeclarationReference) return false;
+          other.extensionTypeDeclarationReference) {
+        return false;
+      }
       if (typeArguments.length != other.typeArguments.length) return false;
       for (int i = 0; i < typeArguments.length; ++i) {
         if (!typeArguments[i].equals(other.typeArguments[i], assumptions)) {
@@ -12128,11 +12151,14 @@ class ExtensionType extends TypeDeclarationType {
 }
 
 /// A named parameter in [FunctionType].
-class NamedType extends Node implements Comparable<NamedType> {
+class NamedType extends Node
+    implements Comparable<NamedType>, SharedNamedType<DartType> {
   // Flag used for serialization if [isRequired].
   static const int FlagRequiredNamedType = 1 << 0;
 
+  @override
   final String name;
+  @override
   final DartType type;
   final bool isRequired;
 
@@ -12279,7 +12305,8 @@ class IntersectionType extends DartType {
     DartType resolvedTypeParameterType = right.nonTypeVariableBound;
     return resolvedTypeParameterType.withDeclaredNullability(
         combineNullabilitiesForSubstitution(
-            resolvedTypeParameterType.nullability, declaredNullability));
+            resolvedTypeParameterType.declaredNullability,
+            declaredNullability));
   }
 
   @override
@@ -12562,16 +12589,15 @@ class TypeParameterType extends DartType {
   /// the bound of [parameter].
   TypeParameterType.withDefaultNullabilityForLibrary(
       this.parameter, Library library)
-      : declaredNullability = library.isNonNullableByDefault
-            ? computeNullabilityFromBound(parameter)
-            : Nullability.legacy;
+      : declaredNullability = computeNullabilityFromBound(parameter);
 
   @override
   DartType get nonTypeVariableBound {
     DartType resolvedTypeParameterType = bound.nonTypeVariableBound;
     return resolvedTypeParameterType.withDeclaredNullability(
         combineNullabilitiesForSubstitution(
-            resolvedTypeParameterType.nullability, declaredNullability));
+            resolvedTypeParameterType.declaredNullability,
+            declaredNullability));
   }
 
   @override
@@ -12723,19 +12749,6 @@ class StructuralParameterType extends DartType {
       TypeParameter from, StructuralParameter to)
       : this(to, TypeParameterType.computeNullabilityFromBound(from));
 
-  /// Creates a type-parameter type with default nullability for the library.
-  ///
-  /// The nullability is computed as if the programmer omitted the modifier. It
-  /// means that in the opt-out libraries `Nullability.legacy` will be used, and
-  /// in opt-in libraries either `Nullability.nonNullable` or
-  /// `Nullability.undetermined` will be used, depending on the nullability of
-  /// the bound of [parameter].
-  StructuralParameterType.withDefaultNullabilityForLibrary(
-      this.parameter, Library library)
-      : declaredNullability = library.isNonNullableByDefault
-            ? computeNullabilityFromBound(parameter)
-            : Nullability.legacy;
-
   @override
   DartType get nonTypeVariableBound {
     DartType resolvedTypeParameterType = bound.nonTypeVariableBound;
@@ -12865,7 +12878,7 @@ class StructuralParameterType extends DartType {
   }
 }
 
-class RecordType extends DartType {
+class RecordType extends DartType implements SharedRecordType<DartType> {
   final List<DartType> positional;
   final List<NamedType> named;
 
@@ -12890,6 +12903,9 @@ class RecordType extends DartType {
             "in a RecordType: ${named}");
 
   @override
+  List<SharedNamedType<DartType>> get namedTypes => named;
+
+  @override
   Nullability get nullability => declaredNullability;
 
   @override
@@ -12902,6 +12918,9 @@ class RecordType extends DartType {
         Nullability.nonNullable => true,
         Nullability.legacy => true,
       };
+
+  @override
+  List<DartType> get positionalTypes => positional;
 
   @override
   R accept<R>(DartTypeVisitor<R> v) {
@@ -12991,112 +13010,6 @@ class RecordType extends DartType {
   }
 }
 
-/// Value set for variance of a type parameter X in a type term T.
-class Variance {
-  /// Used when X does not occur free in T.
-  static const int unrelated = 0;
-
-  /// Used when X occurs free in T, and U <: V implies [U/X]T <: [V/X]T.
-  static const int covariant = 1;
-
-  /// Used when X occurs free in T, and U <: V implies [V/X]T <: [U/X]T.
-  static const int contravariant = 2;
-
-  /// Used when there exists a pair U and V such that U <: V, but [U/X]T and
-  /// [V/X]T are incomparable.
-  static const int invariant = 3;
-
-  /// Variance values form a lattice where [unrelated] is the top, [invariant]
-  /// is the bottom, and [covariant] and [contravariant] are incomparable.
-  /// [meet] calculates the meet of two elements of such lattice.  It can be
-  /// used, for example, to calculate the variance of a typedef type parameter
-  /// if it's encountered on the r.h.s. of the typedef multiple times.
-  static int meet(int a, int b) => a | b;
-
-  /// Combines variances of X in T and Y in S into variance of X in [Y/T]S.
-  ///
-  /// Consider the following examples:
-  ///
-  /// * variance of X in Function(X) is [contravariant], variance of Y in
-  /// List<Y> is [covariant], so variance of X in List<Function(X)> is
-  /// [contravariant];
-  ///
-  /// * variance of X in List<X> is [covariant], variance of Y in Function(Y) is
-  /// [contravariant], so variance of X in Function(List<X>) is [contravariant];
-  ///
-  /// * variance of X in Function(X) is [contravariant], variance of Y in
-  /// Function(Y) is [contravariant], so variance of X in Function(Function(X))
-  /// is [covariant];
-  ///
-  /// * let the following be declared:
-  ///
-  ///     typedef F<Z> = Function();
-  ///
-  /// then variance of X in F<X> is [unrelated], variance of Y in List<Y> is
-  /// [covariant], so variance of X in List<F<X>> is [unrelated];
-  ///
-  /// * let the following be declared:
-  ///
-  ///     typedef G<Z> = Z Function(Z);
-  ///
-  /// then variance of X in List<X> is [covariant], variance of Y in G<Y> is
-  /// [invariant], so variance of `X` in `G<List<X>>` is [invariant].
-  static int combine(int a, int b) {
-    if (a == unrelated || b == unrelated) return unrelated;
-    if (a == invariant || b == invariant) return invariant;
-    return a == b ? covariant : contravariant;
-  }
-
-  /// Returns true if [a] is greater than (above) [b] in the partial order
-  /// induced by the variance lattice.
-  static bool greaterThan(int a, int b) {
-    return greaterThanOrEqual(a, b) && a != b;
-  }
-
-  /// Returns true if [a] is greater than (above) or equal to [b] in the
-  /// partial order induced by the variance lattice.
-  static bool greaterThanOrEqual(int a, int b) {
-    return meet(a, b) == b;
-  }
-
-  /// Returns true if [a] is less than (below) [b] in the partial order
-  /// induced by the variance lattice.
-  static bool lessThan(int a, int b) {
-    return lessThanOrEqual(a, b) && a != b;
-  }
-
-  /// Returns true if [a] is less than (below) or equal to [b] in the
-  /// partial order induced by the variance lattice.
-  static bool lessThanOrEqual(int a, int b) {
-    return meet(a, b) == a;
-  }
-
-  static int fromString(String variance) {
-    if (variance == "in") {
-      return contravariant;
-    } else if (variance == "inout") {
-      return invariant;
-    } else if (variance == "out") {
-      return covariant;
-    } else {
-      return unrelated;
-    }
-  }
-
-  // Returns the keyword lexeme associated with the variance given.
-  static String keywordString(int variance) {
-    switch (variance) {
-      case Variance.contravariant:
-        return 'in';
-      case Variance.invariant:
-        return 'inout';
-      case Variance.covariant:
-      default:
-        return 'out';
-    }
-  }
-}
-
 /// Declaration of a type variable.
 ///
 /// Type parameters declared in a [Class] or [FunctionNode] are part of the AST,
@@ -13149,11 +13062,11 @@ class TypeParameter extends TreeNode implements Annotatable {
   /// on the lattice is equivalent to [Variance.covariant]. For typedefs, it's
   /// the variance of the type parameters in the type term on the r.h.s. of the
   /// typedef.
-  int? _variance;
+  Variance? _variance;
 
-  int get variance => _variance ?? Variance.covariant;
+  Variance get variance => _variance ?? Variance.covariant;
 
-  void set variance(int? newVariance) => _variance = newVariance;
+  void set variance(Variance? newVariance) => _variance = newVariance;
 
   bool get isLegacyCovariant => _variance == null;
 
@@ -13319,11 +13232,11 @@ class StructuralParameter extends Node {
   DartType defaultType;
 
   /// Variance of type parameter w.r.t. declaration on which it is defined.
-  int? _variance;
+  Variance? _variance;
 
-  int get variance => _variance ?? Variance.covariant;
+  Variance get variance => _variance ?? Variance.covariant;
 
-  void set variance(int? newVariance) => _variance = newVariance;
+  void set variance(Variance? newVariance) => _variance = newVariance;
 
   bool get isLegacyCovariant => _variance == null;
 
@@ -13956,7 +13869,24 @@ class RecordConstant extends Constant {
   /// Named field values, sorted by name.
   final Map<String, Constant> named;
 
-  /// The static type of the constant.
+  /// The runtime type of the constant.
+  ///
+  /// [recordType] is computed from the individual types of the record fields
+  /// and reflects runtime type of the record constant, as opposed to the
+  /// static type of the expression that defined the constant.
+  ///
+  /// The following program shows the distinction between the static and the
+  /// runtime types of the constant. The static type of the first record in the
+  /// invocation of `identical` is `(E, String)`, the static type of the second
+  /// — `(int, String)`. The runtime type of both constants is `(int, String)`,
+  /// and the assertion condition should be satisfied.
+  ///
+  ///   extension type const E(Object? it) {}
+  ///
+  ///   main() {
+  ///     const bool check = identical(const (E(1), "foo"), const (1, "foo"));
+  ///     assert(check);
+  ///   }
   final RecordType recordType;
 
   RecordConstant(this.positional, this.named, this.recordType)
@@ -13979,6 +13909,16 @@ class RecordConstant extends Constant {
         }(),
             "Named fields of a RecordConstant aren't sorted lexicographically: "
             "${named.keys.join(", ")}");
+
+  RecordConstant.fromTypeContext(
+      this.positional, this.named, StaticTypeContext staticTypeContext)
+      : recordType = new RecordType([
+          for (Constant constant in positional)
+            constant.getType(staticTypeContext)
+        ], [
+          for (var MapEntry(key: name, value: constant) in named.entries)
+            new NamedType(name, constant.getType(staticTypeContext))
+        ], staticTypeContext.nonNullable);
 
   @override
   void visitChildren(Visitor v) {
@@ -14035,14 +13975,13 @@ class RecordConstant extends Constant {
   String toString() => "RecordConstant(${toStringInternal()})";
 
   @override
-  late final int hashCode = _Hash.combineFinish(recordType.hashCode,
-      _Hash.combineMapHashUnordered(named, _Hash.combineListHash(positional)));
+  late final int hashCode =
+      _Hash.combineMapHashUnordered(named, _Hash.combineListHash(positional));
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RecordConstant &&
-          other.recordType == recordType &&
           listEquals(other.positional, positional) &&
           mapEquals(other.named, named));
 
@@ -14369,8 +14308,7 @@ class RedirectingFactoryTearOffConstant extends Constant
 }
 
 class TypedefTearOffConstant extends Constant {
-  // TODO(johnniwinther): Change this to use [StructuralParameter].
-  final List<TypeParameter> parameters;
+  final List<StructuralParameter> parameters;
   final TearOffConstant tearOffConstant;
   final List<DartType> types;
 
@@ -14403,7 +14341,7 @@ class TypedefTearOffConstant extends Constant {
 
   @override
   void toTextInternal(AstPrinter printer) {
-    printer.writeTypeParameters(parameters);
+    printer.writeStructuralParameters(parameters);
     printer.writeConstant(tearOffConstant);
     printer.writeTypeArguments(types);
   }
@@ -14419,7 +14357,8 @@ class TypedefTearOffConstant extends Constant {
     if (parameters.isNotEmpty) {
       Assumptions assumptions = new Assumptions();
       for (int index = 0; index < parameters.length; index++) {
-        assumptions.assume(parameters[index], other.parameters[index]);
+        assumptions.assumeStructuralParameter(
+            parameters[index], other.parameters[index]);
       }
       for (int index = 0; index < parameters.length; index++) {
         if (!parameters[index]
@@ -14440,7 +14379,7 @@ class TypedefTearOffConstant extends Constant {
   int _computeHashCode() {
     int hash = 1237;
     for (int i = 0; i < parameters.length; ++i) {
-      TypeParameter parameter = parameters[i];
+      StructuralParameter parameter = parameters[i];
       hash = 0x3fffffff & (hash * 31 + parameter.bound.hashCode);
     }
     for (int i = 0; i < types.length; ++i) {
@@ -14453,8 +14392,8 @@ class TypedefTearOffConstant extends Constant {
   @override
   DartType getType(StaticTypeContext context) {
     FunctionType type = tearOffConstant.getType(context) as FunctionType;
-    FreshStructuralParametersFromTypeParameters freshStructuralParameters =
-        getFreshStructuralParametersFromTypeParameters(parameters);
+    FreshStructuralParameters freshStructuralParameters =
+        getFreshStructuralParameters(parameters);
     type = freshStructuralParameters.substitute(
         FunctionTypeInstantiator.instantiate(type, types)) as FunctionType;
     return new FunctionType(
@@ -14594,7 +14533,7 @@ class Component extends TreeNode {
   Reference? get mainMethodName => _mainMethodName;
   NonNullableByDefaultCompiledMode? _mode;
   NonNullableByDefaultCompiledMode get mode {
-    return _mode ?? NonNullableByDefaultCompiledMode.Weak;
+    return _mode ?? NonNullableByDefaultCompiledMode.Strong;
   }
 
   NonNullableByDefaultCompiledMode? get modeRaw => _mode;
@@ -14714,8 +14653,9 @@ class Component extends TreeNode {
   Component get enclosingComponent => this;
 
   /// Translates an offset to line and column numbers in the given file.
-  Location? getLocation(Uri file, int offset) {
-    return uriToSource[file]?.getLocation(file, offset);
+  Location? getLocation(Uri file, int offset, {String? viaForErrorMessage}) {
+    return uriToSource[file]
+        ?.getLocation(file, offset, viaForErrorMessage: viaForErrorMessage);
   }
 
   /// Translates line and column numbers to an offset in the given file.
@@ -14802,10 +14742,7 @@ abstract class MetadataRepository<T> {
 }
 
 abstract class BinarySink {
-  int getBufferOffset();
-
   void writeByte(int byte);
-  void writeBytes(List<int> bytes);
   void writeUInt32(int value);
   void writeUInt30(int value);
 
@@ -14814,36 +14751,12 @@ abstract class BinarySink {
 
   void writeNullAllowedCanonicalNameReference(Reference? reference);
   void writeStringReference(String str);
-  void writeName(Name node);
   void writeDartType(DartType type);
   void writeConstantReference(Constant constant);
-  void writeNode(Node node);
-
-  void enterScope(
-      {List<TypeParameter> typeParameters,
-      bool memberScope = false,
-      bool variableScope = false});
-  void leaveScope(
-      {List<TypeParameter> typeParameters,
-      bool memberScope = false,
-      bool variableScope = false});
-
-  void enterFunctionTypeScope(
-      {List<StructuralParameter> typeParameters,
-      bool memberScope = false,
-      bool variableScope = false});
-  void leaveFunctionTypeScope(
-      {List<StructuralParameter> typeParameters,
-      bool memberScope = false,
-      bool variableScope = false});
 }
 
 abstract class BinarySource {
-  int get currentOffset;
-  List<int> get bytes;
-
   int readByte();
-  List<int> readBytes(int length);
   int readUInt30();
   int readUint32();
 
@@ -14852,13 +14765,8 @@ abstract class BinarySource {
 
   CanonicalName? readNullableCanonicalNameReference();
   String readStringReference();
-  Name readName();
   DartType readDartType();
   Constant readConstantReference();
-  FunctionNode readFunctionNode();
-
-  void enterScope({List<TypeParameter> typeParameters});
-  void leaveScope({List<TypeParameter> typeParameters});
 }
 
 // ------------------------------------------------------------------------
@@ -14924,8 +14832,7 @@ class Source {
     }
     RangeError.checkValueInInterval(line, 1, lineStarts.length, 'line');
 
-    String cachedText =
-        this.cachedText ??= utf8.decode(source, allowMalformed: true);
+    String cachedText = text;
     // -1 as line numbers start at 1.
     int index = line - 1;
     if (index + 1 == lineStarts.length) {
@@ -14945,13 +14852,26 @@ class Source {
     throw "Internal error";
   }
 
+  String get text => cachedText ??= utf8.decode(source, allowMalformed: true);
+
   /// Translates an offset to 1-based line and column numbers in the given file.
-  Location getLocation(Uri file, int offset) {
+  Location getLocation(Uri file, int offset, {String? viaForErrorMessage}) {
     List<int>? lineStarts = this.lineStarts;
     if (lineStarts == null || lineStarts.isEmpty) {
       return new Location(file, TreeNode.noOffset, TreeNode.noOffset);
     }
-    RangeError.checkValueInInterval(offset, 0, lineStarts.last, 'offset');
+    if (viaForErrorMessage != null) {
+      RangeError.checkValueInInterval(
+          offset,
+          0,
+          lineStarts.last,
+          'offset',
+          'Asked for out-of-bounds offset for uri "$file" '
+              'via $viaForErrorMessage');
+    } else {
+      RangeError.checkValueInInterval(offset, 0, lineStarts.last, 'offset',
+          'Asked for out-of-bounds offset for uri "$file"');
+    }
     int low = 0, high = lineStarts.length - 1;
     while (low < high) {
       int mid = high - ((high - low) >> 1); // Get middle, rounding up.
@@ -15012,14 +14932,6 @@ Reference? getMemberReferenceGetter(Member? member) {
 Reference getNonNullableMemberReferenceGetter(Member member) {
   if (member is Field) return member.getterReference;
   return member.reference;
-}
-
-/// Returns the setter [Reference] object for the given member.
-///
-/// Returns `null` if the member is `null`.
-Reference? getMemberReferenceSetter(Member? member) {
-  if (member == null) return null;
-  return getNonNullableMemberReferenceSetter(member);
 }
 
 Reference getNonNullableMemberReferenceSetter(Member member) {
@@ -15124,24 +15036,6 @@ int listHashCode(List<Object> list) {
   return _Hash.finish(_Hash.combineListHash(list));
 }
 
-int mapHashCode(Map map) {
-  return mapHashCodeUnordered(map);
-}
-
-int mapHashCodeOrdered(Map map, [int hash = 2]) {
-  for (final Object x in map.keys) {
-    hash = _Hash.combine(x.hashCode, hash);
-  }
-  for (final Object x in map.values) {
-    hash = _Hash.combine(x.hashCode, hash);
-  }
-  return _Hash.finish(hash);
-}
-
-int mapHashCodeUnordered(Map map) {
-  return _Hash.finish(_Hash.combineMapHashUnordered(map));
-}
-
 bool listEquals(List a, List b) {
   if (a.length != b.length) return false;
   for (int i = 0; i < a.length; i++) {
@@ -15163,10 +15057,11 @@ bool mapEquals(Map a, Map b) {
 /// static analysis and runtime behavior of the library are unaffected.
 const Null informative = null;
 
-Location? _getLocationInComponent(
-    Component? component, Uri fileUri, int offset) {
+Location? _getLocationInComponent(Component? component, Uri fileUri, int offset,
+    {required String viaForErrorMessage}) {
   if (component != null) {
-    return component.getLocation(fileUri, offset);
+    return component.getLocation(fileUri, offset,
+        viaForErrorMessage: viaForErrorMessage);
   } else {
     return new Location(fileUri, TreeNode.noOffset, TreeNode.noOffset);
   }
@@ -15299,11 +15194,6 @@ final List<Expression> emptyListOfExpression =
 final List<AssertStatement> emptyListOfAssertStatement =
     List.filled(0, dummyAssertStatement, growable: false);
 
-/// Almost const <Statement>[], but not const in an attempt to avoid
-/// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
-final List<Statement> emptyListOfStatement =
-    List.filled(0, dummyStatement, growable: false);
-
 /// Almost const <SwitchCase>[], but not const in an attempt to avoid
 /// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
 final List<SwitchCase> emptyListOfSwitchCase =
@@ -15357,11 +15247,6 @@ final List<Constant> emptyListOfConstant =
 /// Almost const <String>[], but not const in an attempt to avoid
 /// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
 final List<String> emptyListOfString = List.filled(0, '', growable: false);
-
-/// Almost const <Reference>[], but not const in an attempt to avoid
-/// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
-final List<Reference> emptyListOfReference =
-    List.filled(0, Reference(), growable: false);
 
 /// Almost const <Typedef>[], but not const in an attempt to avoid
 /// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
@@ -15419,11 +15304,6 @@ final List<ExtensionMemberDescriptor> emptyListOfExtensionMemberDescriptor =
 final List<ExtensionTypeMemberDescriptor>
     emptyListOfExtensionTypeMemberDescriptor =
     List.filled(0, dummyExtensionTypeMemberDescriptor, growable: false);
-
-/// Almost const <ExtensionType>[], but not const in an attempt to avoid
-/// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.
-final List<ExtensionType> emptyListOfExtensionType =
-    List.filled(0, dummyExtensionType, growable: false);
 
 /// Almost const <TypeDeclarationType>[], but not const in an attempt to avoid
 /// polymorphism. See https://dart-review.googlesource.com/c/sdk/+/185828.

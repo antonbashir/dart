@@ -5,13 +5,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:_fe_analyzer_shared/src/util/relativize.dart'
+    show relativizeUri;
 import 'package:collection/collection.dart';
-import 'package:kernel/kernel.dart';
-import 'package:path/path.dart' as path;
-
-import 'package:vm/metadata/loading_units.dart';
-import 'package:front_end/src/fasta/kernel/resource_identifier.dart'
+import 'package:front_end/src/kernel/resource_identifier.dart'
     as ResourceIdentifiers;
+import 'package:kernel/ast.dart';
+import 'package:kernel/kernel.dart';
+import 'package:vm/metadata/loading_units.dart';
 
 /// Collect calls to methods annotated with `@ResourceIdentifier`.
 ///
@@ -42,7 +43,7 @@ Component transformComponent(Component component, Uri resourcesFile) {
 
 String _toJson(List<Identifier> identifiers) {
   return JsonEncoder.withIndent('  ').convert({
-    '_comment': 'Resources referenced by annotated resource identifers',
+    '_comment': 'Resources referenced by annotated resource identifiers',
     'AppTag': 'TBD',
     'environment': {
       'dart.tool.dart2js': false,
@@ -51,7 +52,7 @@ String _toJson(List<Identifier> identifiers) {
   });
 }
 
-class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
+class _ResourceIdentifierVisitor extends RecursiveVisitor {
   final List<Identifier> identifiers = [];
   final List<LoadingUnit> _loadingUnits;
 
@@ -73,7 +74,21 @@ class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
   String _firstResourceId(InstanceConstant instance) {
     final fields = instance.fieldValues;
     final firstField = fields.entries.first;
-    return (firstField.value as StringConstant).value;
+    final fieldValue = firstField.value;
+    return _evaluateConstant(fieldValue);
+  }
+
+  String _evaluateConstant(Constant fieldValue) {
+    if (fieldValue case NullConstant()) {
+      return '';
+    } else if (fieldValue case PrimitiveConstant()) {
+      return fieldValue.value.toString();
+    } else {
+      // TODO(https://dartbug.com/55407): Support Map and List.
+      return throw UnsupportedError(
+          'The type ${fieldValue.runtimeType} is not a '
+          'supported metadata type for `@ResourceIdentifier` annotations');
+    }
   }
 
   /// Collects all the information needed to transform [node].
@@ -93,8 +108,8 @@ class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
   }
 
   Identifier _identifierOf(StaticInvocation node, String resourceId) {
-    final identifierUri =
-        path.relative(node.target.enclosingLibrary.fileUri.toFilePath());
+    final identifierUri = relativizeUri(
+        Uri.base, node.target.enclosingLibrary.fileUri, Platform.isWindows);
 
     return identifiers
             .where((id) => id.name == node.name.text && id.uri == identifierUri)
@@ -108,8 +123,18 @@ class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
         );
   }
 
+  static Library? _enclosingLibrary(TreeNode node) {
+    while (node is! Library) {
+      final parent = node.parent;
+      if (parent == null) return null;
+      node = parent;
+    }
+    return node;
+  }
+
   ResourceFile _resourceFile(StaticInvocation node, Identifier identifier) {
-    final importUri = node.target.enclosingLibrary.importUri.toString();
+    final enclosingLibrary = _enclosingLibrary(node)!;
+    final importUri = enclosingLibrary.importUri.toString();
     final id = _loadingUnits
             .firstWhereOrNull(
                 (element) => element.libraryUris.contains(importUri))
@@ -139,10 +164,11 @@ class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
           argument.name: value,
     };
 
+    final location = node.location!;
     return ResourceReference(
-      uri: path.relative(node.location!.file.toFilePath()),
-      line: node.location!.line,
-      column: node.location!.column,
+      uri: relativizeUri(Uri.base, location.file, Platform.isWindows),
+      line: location.line,
+      column: location.column,
       arguments: arguments,
     );
   }
@@ -151,13 +177,31 @@ class _ResourceIdentifierVisitor extends RecursiveVisitor<void> {
       expression is BasicLiteral ? expression.value : null;
 }
 
-//TODO(mosum): Expose these classes externally, as they will have to be used
-//when parsing the generated JSON file.
+// TODO(mosum): Expose these classes externally, as they will have to be used
+// when parsing the generated JSON file.
+/// A method with a `@ResourceIdentifier` annotation.
+///
+/// Each identifier has a list of [ResourceReference]s (method invocations).
+/// These references are organized per [ResourceFile].
 class Identifier {
-  final String name;
-  final String id;
+  /// The uri of the library which contains [name].
   final String uri;
+
+  // TODO(https://dartbug.com/55494): Add the surrounding class/extension.
+  // TODO(https://dartbug.com/55494): Support extension getters/setters.
+  // Or make fully qualitified, non-conflicting canonical names in another way.
+  /// The name of the method that has a `@ResourceIdentifier` annotation.
+  final String name;
+
+  // TODO(https://dartbug.com/55494): Rename to metadata?
+  /// The metadata field of the first `@ResourceIdentifier` annotation on this
+  /// method.
+  final String id;
+
+  // TODO(dacoharkes): Replace with `isConstant` or `isConst`.
+  /// Whether the method is not `const`.
   final bool nonConstant;
+
   final List<ResourceFile> files;
 
   Identifier({
@@ -184,8 +228,25 @@ class Identifier {
   }
 }
 
+// TODO(https://dartbug.com/55494): Rename to loading unit. This 'File' refers
+// to an output file, not a source file.
+/// A loading unit.
+///
+/// With deferred loading, Dart is compiled into separate loading units.
+///
+/// [ResourceReference]s are in a loading unit. Knowing from which loading
+/// unit a resource is used means that loading such resource can be deferred
+/// to when that loading unit is loaded.
 class ResourceFile {
+  /// Unique identifier for the loading unit.
+  ///
+  /// Loading units are constructed by the Dart compiler based on the `deferred`
+  /// keyword. As such these parts are not stable.
+  ///
+  /// By convention, these unique identifiers are integers in the VM backend.
   final int part;
+
+  /// The invocations of a method with a `@ResourceIdentifier` annotation.
   final List<ResourceReference> references;
 
   ResourceFile({required this.part, required this.references});
@@ -201,10 +262,31 @@ class ResourceFile {
   String toString() => 'ResourceFile(part: $part, references: $references)';
 }
 
+/// An invocation of a method with a `@ResourceIdentifier` annotation.
 class ResourceReference {
+  // TODO(https://dartbug.com/55494): Make source locations optional.
+  /// Library uri of the invocation.
   final String uri;
+
+  // TODO(https://dartbug.com/55494): Make source locations optional.
+  /// Line number of the invocation.
   final int line;
+
+  // TODO(https://dartbug.com/55494): Make source locations optional.
+  /// Column of the invocation.
   final int column;
+
+  // TODO(https://dartbug.com/55494): Should positional arguments be 0 indexed?
+  /// The mapping from parameters to constant argument value.
+  ///
+  /// The map only contains entries for the arguments which are constant. (Note
+  /// that `null` is a valid constant argument.)
+  ///
+  /// For arguments to positional parameters, the keys in this map are
+  /// [int.toString] of the position, 1 indexed.
+  ///
+  /// For arguments to named parameters, the keys in this map are the name of
+  /// the parameter.
   final Map<String, Object?> arguments;
 
   ResourceReference({

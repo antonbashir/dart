@@ -4,13 +4,20 @@
 
 import 'package:_fe_analyzer_shared/src/scanner/token.dart';
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ReplaceConditionalWithIfElse extends ResolvedCorrectionProducer {
+  ReplaceConditionalWithIfElse({required super.context});
+
+  @override
+  CorrectionApplicability get applicability =>
+      // TODO(applicability): comment on why.
+      CorrectionApplicability.singleLocation;
+
   @override
   AssistKind get assistKind => DartAssistKind.REPLACE_CONDITIONAL_WITH_IF_ELSE;
 
@@ -49,7 +56,7 @@ class ReplaceConditionalWithIfElse extends ResolvedCorrectionProducer {
     var conditional = assignment.rightHandSide;
     if (assignment.operator.type == TokenType.EQ &&
         conditional is ConditionalExpression) {
-      var indent = utils.getIndent(1);
+      var indent = utils.oneIndent;
       var prefix = utils.getNodePrefix(statement);
 
       await builder.addDartFileEdit(file, (builder) {
@@ -75,7 +82,7 @@ class ReplaceConditionalWithIfElse extends ResolvedCorrectionProducer {
   ) async {
     var conditional = statement.expression;
     if (conditional is ConditionalExpression) {
-      var indent = utils.getIndent(1);
+      var indent = utils.oneIndent;
       var prefix = utils.getNodePrefix(statement);
 
       await builder.addDartFileEdit(file, (builder) {
@@ -100,7 +107,7 @@ class ReplaceConditionalWithIfElse extends ResolvedCorrectionProducer {
     for (var variable in statement.variables.variables) {
       var conditional = variable.initializer;
       if (conditional is ConditionalExpression) {
-        var indent = utils.getIndent(1);
+        var indent = utils.oneIndent;
         var prefix = utils.getNodePrefix(statement);
 
         await builder.addDartFileEdit(file, (builder) {

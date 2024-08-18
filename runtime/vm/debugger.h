@@ -98,10 +98,12 @@ class Breakpoint {
 // BreakpointLocation represents a collection of breakpoint conditions at the
 // same token position in Dart source. There may be more than one CodeBreakpoint
 // object per BreakpointLocation.
-// An unresolved breakpoint is one where the underlying code has not
-// been compiled yet. Since the code has not been compiled, we don't know
-// the definitive source location yet. The requested source location may
-// change when the underlying code gets compiled.
+//
+// An unresolved breakpoint, also known as a pending breakpoint, is one where
+// the underlying code has not been compiled yet. Since the code has not been
+// compiled, we can't determine the definitive token position to associate with
+// the breakpoint yet.
+//
 // A latent breakpoint represents a breakpoint location in Dart source
 // that is not loaded in the VM when the breakpoint is requested.
 // When a script with matching url is loaded, a latent breakpoint
@@ -313,9 +315,7 @@ class ActivationFrame : public ZoneAllocated {
   // when the frame below (callee) completes.
   const Closure& closure() const { return closure_; }
 
-  const Function& function() const {
-    return function_;
-  }
+  const Function& function() const { return function_; }
   const Code& code() const {
     ASSERT(!code_.IsNull());
     return code_;
@@ -385,9 +385,6 @@ class ActivationFrame : public ZoneAllocated {
 
   bool HandlesException(const Instance& exc_obj);
 
-  bool has_catch_error() const { return has_catch_error_; }
-  void set_has_catch_error(bool value) { has_catch_error_ = value; }
-
  private:
   void PrintToJSONObjectRegular(JSONObject* jsobj);
   void PrintToJSONObjectAsyncAwaiter(JSONObject* jsobj);
@@ -454,8 +451,6 @@ class ActivationFrame : public ZoneAllocated {
   ZoneGrowableArray<intptr_t> desc_indices_;
   PcDescriptors& pc_desc_ = PcDescriptors::ZoneHandle();
 
-  bool has_catch_error_ = false;
-
   friend class Debugger;
   friend class DebuggerStackTrace;
   DISALLOW_COPY_AND_ASSIGN(ActivationFrame);
@@ -481,9 +476,14 @@ class DebuggerStackTrace : public ZoneAllocated {
   // to query local variables in the returned stack.
   static DebuggerStackTrace* From(const class StackTrace& ex_trace);
 
+  bool has_async_catch_error() const { return has_async_catch_error_; }
+  void set_has_async_catch_error(bool has_async_catch_error) {
+    has_async_catch_error_ = has_async_catch_error;
+  }
+
  private:
   void AddActivation(ActivationFrame* frame);
-  void AddAsyncSuspension(bool has_catch_error);
+  void AddAsyncSuspension();
   void AddAsyncAwaiterFrame(uword pc, const Code& code, const Closure& closure);
 
   void AppendCodeFrames(StackFrame* frame, const Code& code);
@@ -493,6 +493,7 @@ class DebuggerStackTrace : public ZoneAllocated {
   Code& inlined_code_ = Code::Handle();
   Array& deopt_frame_ = Array::Handle();
   ZoneGrowableArray<ActivationFrame*> trace_;
+  bool has_async_catch_error_ = false;
 
   friend class Debugger;
 
@@ -574,6 +575,8 @@ class GroupDebugger {
   explicit GroupDebugger(IsolateGroup* isolate_group);
   ~GroupDebugger();
 
+  void MakeCodeBreakpointAtUnsafe(const Function& func,
+                                  BreakpointLocation* bpt);
   void MakeCodeBreakpointAt(const Function& func, BreakpointLocation* bpt);
 
   // Returns [nullptr] if no breakpoint exists for the given address.
@@ -592,6 +595,7 @@ class GroupDebugger {
   // Returns true if the call at address pc is patched to point to
   // a debugger stub.
   bool HasActiveBreakpoint(uword pc);
+  bool HasCodeBreakpointInFunctionUnsafe(const Function& func);
   bool HasCodeBreakpointInFunction(const Function& func);
   bool HasCodeBreakpointInCode(const Code& code);
 
@@ -609,9 +613,11 @@ class GroupDebugger {
 
   void VisitObjectPointers(ObjectPointerVisitor* visitor);
 
-  RwLock* code_breakpoints_lock() { return code_breakpoints_lock_.get(); }
+  SafepointRwLock* code_breakpoints_lock() {
+    return code_breakpoints_lock_.get();
+  }
 
-  RwLock* breakpoint_locations_lock() {
+  SafepointRwLock* breakpoint_locations_lock() {
     return breakpoint_locations_lock_.get();
   }
 
@@ -623,19 +629,22 @@ class GroupDebugger {
 
   // Returns [true] if there is at least one breakpoint set in function or code.
   // Checks for both user-defined and internal temporary breakpoints.
+  bool HasBreakpointUnsafe(Thread* thread, const Function& function);
   bool HasBreakpoint(Thread* thread, const Function& function);
   bool IsDebugging(Thread* thread, const Function& function);
+
+  IsolateGroup* isolate_group() { return isolate_group_; }
 
  private:
   IsolateGroup* isolate_group_;
 
-  std::unique_ptr<RwLock> code_breakpoints_lock_;
+  std::unique_ptr<SafepointRwLock> code_breakpoints_lock_;
   CodeBreakpoint* code_breakpoints_;
 
   // Secondary list of all breakpoint_locations_(primary is in Debugger class).
   // This list is kept in sync with all the lists in Isolate Debuggers and is
   // used to quickly scan BreakpointLocations when new Function is compiled.
-  std::unique_ptr<RwLock> breakpoint_locations_lock_;
+  std::unique_ptr<SafepointRwLock> breakpoint_locations_lock_;
   MallocGrowableArray<BreakpointLocation*> breakpoint_locations_;
 
   std::unique_ptr<RwLock> single_stepping_set_lock_;
@@ -668,23 +677,61 @@ class Debugger {
 
   void NotifyDoneLoading();
 
-  // Set breakpoint at closest location to function entry.
-  Breakpoint* SetBreakpointAtEntry(const Function& target_function,
-                                   bool single_shot);
-  Breakpoint* SetBreakpointAtActivation(const Instance& closure,
-                                        bool single_shot);
+  // Tries to set a breakpoint at the first debuggable token position within
+  // |target_function|.
+  //
+  // If |Error::null()| is returned, it means that a breakpoint was set
+  // successfully, and that a (non-null) pointer to a |Breakpoint| object was
+  // stored into |*result_breakpoint|. If any other |ErrorPtr| is returned, it
+  // means that a breakpoint was not set successfully, and the return value will
+  // point to an |Error| describing why the breakpoint could not be set.
+  ErrorPtr SetBreakpointAtEntry(const Function& target_function,
+                                bool single_shot,
+                                Breakpoint** result_breakpoint);
+  // Tries to set a breakpoint at the first debuggable token position within
+  // |closure|.
+  //
+  // If |Error::null()| is returned, it means that a breakpoint was set
+  // successfully, and that a (non-null) pointer to a |Breakpoint| object was
+  // stored into |*result_breakpoint|. If any other |ErrorPtr| is returned, it
+  // means that a breakpoint was not set successfully, and the return value will
+  // point to an |Error| describing why the breakpoint could not be set.
+  ErrorPtr SetBreakpointAtActivation(const Instance& closure,
+                                     bool single_shot,
+                                     Breakpoint** result_breakpoint);
+  // If a breakpoint has already been set at the activation of |closure|,
+  // returns a pointer to it. Otherwise, returns |nullptr|.
   Breakpoint* BreakpointAtActivation(const Instance& closure);
 
-  // TODO(turnidge): script_url may no longer be specific enough.
-  Breakpoint* SetBreakpointAtLine(const String& script_url,
-                                  intptr_t line_number);
-  Breakpoint* SetBreakpointAtLineCol(const String& script_url,
-                                     intptr_t line_number,
-                                     intptr_t column_number);
+  // Tries to set a breakpoint at the first debuggable token position within the
+  // token range specified by |script_url|, |line_number|, and |column_number|.
+  //
+  // If |Error::null()| is returned, it means that a breakpoint was set
+  // successfully, and that a (non-null) pointer to a |Breakpoint| object was
+  // stored into |*result_breakpoint|. If any other |ErrorPtr| is returned, it
+  // means that a breakpoint was not set successfully, and the return value will
+  // point to an |Error| describing why the breakpoint could not be set.
+  ErrorPtr SetBreakpointAtLineCol(const String& script_url,
+                                  intptr_t line_number,
+                                  intptr_t column_number,
+                                  Breakpoint** result_breakpoint);
 
-  BreakpointLocation* BreakpointLocationAtLineCol(const String& script_url,
-                                                  intptr_t line_number,
-                                                  intptr_t column_number);
+  // Tries to set |CodeBreakpoint|s at all code mapped to the first debuggable
+  // token position within the range specified by |script_url|, |line_number|,
+  // and |column_number| and then prepare a |BreakpointLocation| containing
+  // those |CodeBreakpoint|s.
+  //
+  // If |Error::null()| is returned, it means that a |BreakpointLocation| was
+  // prepared successfully, and that a (non-null) pointer to a
+  // |BreakpointLocation| object was stored into |*result_breakpoint_location|.
+  // If any other |ErrorPtr| is returned, it means that a |BreakpointLocation|
+  // was not prepared successfully, and the return value will point to an
+  // |Error| describing why the |BreakpointLocation| could not be prepared.
+  ErrorPtr BreakpointLocationAtLineCol(
+      const String& script_url,
+      intptr_t line_number,
+      intptr_t column_number,
+      BreakpointLocation** result_breakpoint_location);
 
   // Returns true if the breakpoint's state changed.
   bool SetBreakpointState(Breakpoint* bpt, bool enable);
@@ -783,17 +830,22 @@ class Debugger {
 
   void SendBreakpointEvent(ServiceEvent::EventKind kind, Breakpoint* bpt);
 
-  void FindCompiledFunctions(
+  // Finds all |Function|s that span the token range [start_pos, end_pos] in any
+  // of the scripts in |scripts|, compiles these functions, and then adds them
+  // to |code_function_list|. If an error occurs during compilation, the error
+  // is returned. Otherwise, |Error::null()| is returned.
+  ErrorPtr FindAndCompileMatchingFunctions(
       const GrowableHandlePtrArray<const Script>& scripts,
       TokenPosition start_pos,
       TokenPosition end_pos,
-      GrowableObjectArray* code_function_list);
+      GrowableObjectArray& code_function_list) const;
   bool FindBestFit(const Script& script,
                    TokenPosition token_pos,
                    TokenPosition last_token_pos,
                    Function* best_fit);
   void DeoptimizeWorld();
-  void NotifySingleStepping(bool value) const;
+  void RunWithStoppedDeoptimizedWorld(std::function<void()> fun);
+  void NotifySingleStepping(bool value);
   BreakpointLocation* SetCodeBreakpoints(
       const GrowableHandlePtrArray<const Script>& scripts,
       TokenPosition token_pos,
@@ -802,24 +854,51 @@ class Debugger {
       intptr_t requested_column,
       TokenPosition exact_token_pos,
       const GrowableObjectArray& functions);
-  BreakpointLocation* SetBreakpoint(const Script& script,
-                                    TokenPosition token_pos,
-                                    TokenPosition last_token_pos,
-                                    intptr_t requested_line,
-                                    intptr_t requested_column,
-                                    const Function& function);
-  BreakpointLocation* SetBreakpoint(
-      const GrowableHandlePtrArray<const Script>& scripts,
-      TokenPosition token_pos,
-      TokenPosition last_token_pos,
-      intptr_t requested_line,
-      intptr_t requested_column,
-      const Function& function);
+  // Tries to set |CodeBreakpoint|s at all code mapped to the first debuggable
+  // token position within the range specified by |script|, |line_number|, and
+  // |column_number| and then prepare a |BreakpointLocation| containing those
+  // |CodeBreakpoint|s.
+  //
+  // If |Error::null()| is returned, it means that a |BreakpointLocation| was
+  // prepared successfully, and that a (non-null) pointer to a
+  // |BreakpointLocation| object was stored into |*result_breakpoint_location|.
+  // If any other |ErrorPtr| is returned, it means that a |BreakpointLocation|
+  // was not prepared successfully, and the return value will point to an
+  // |Error| describing why the |BreakpointLocation| could not be prepared.
+  ErrorPtr SetBreakpoint(const Script& script,
+                         TokenPosition token_pos,
+                         TokenPosition last_token_pos,
+                         intptr_t requested_line,
+                         intptr_t requested_column,
+                         const Function& function,
+                         BreakpointLocation** result_breakpoint_location);
+  // Tries to set |CodeBreakpoint|s at all code mapped to the first debuggable
+  // token position within the range specified by |scripts|, |line_number|, and
+  // |column_number| and then prepare a |BreakpointLocation| containing those
+  // |CodeBreakpoint|s. All of the scripts in |scripts| must have identical
+  // tokens in all positions.
+  //
+  // If |Error::null()| is returned, it means that a |BreakpointLocation| was
+  // prepared successfully, and that a (non-null) pointer to a
+  // |BreakpointLocation| object was stored into |*result_breakpoint_location|.
+  // If any other |ErrorPtr| is returned, it means that a |BreakpointLocation|
+  // was not prepared successfully, and the return value will point to an
+  // |Error| describing why the |BreakpointLocation| could not be prepared.
+  // TODO(derekxu16): Continue looking at all usages of functions that return
+  // |ErrorPtr|s and account for Object::no_debuggable_code_error().
+  ErrorPtr SetBreakpoint(const GrowableHandlePtrArray<const Script>& scripts,
+                         TokenPosition token_pos,
+                         TokenPosition last_token_pos,
+                         intptr_t requested_line,
+                         intptr_t requested_column,
+                         const Function& function,
+                         BreakpointLocation** result_breakpoint_location);
   bool RemoveBreakpointFromTheList(intptr_t bp_id, BreakpointLocation** list);
   Breakpoint* GetBreakpointByIdInTheList(intptr_t id, BreakpointLocation* list);
   BreakpointLocation* GetLatentBreakpoint(const String& url,
                                           intptr_t line,
                                           intptr_t column);
+  void RegisterBreakpointLocationUnsafe(BreakpointLocation* loc);
   void RegisterBreakpointLocation(BreakpointLocation* bpt);
   BreakpointLocation* GetResolvedBreakpointLocation(
       const String& script_url,

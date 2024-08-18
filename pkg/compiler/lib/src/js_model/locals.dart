@@ -16,7 +16,7 @@ import '../serialization/deferrable.dart';
 import '../serialization/serialization.dart';
 
 import 'element_map.dart';
-import 'elements.dart' show JGeneratorBody;
+import 'elements.dart' show JGeneratorBody, JParameterStub;
 
 class GlobalLocalsMap {
   /// Tag used for identifying serialized [GlobalLocalsMap] objects in a
@@ -89,8 +89,11 @@ class GlobalLocalsMap {
     // have the concept of an initializer list, so the constructor (initializer
     // list) and the constructor body are implemented as two separate
     // constructor steps.
-    MemberEntity entity = key;
-    if (entity is ConstructorBodyEntity) key = entity.constructor;
+    if (key is ConstructorBodyEntity) {
+      key = key.constructor;
+    } else if (key is JParameterStub) {
+      key = key.target;
+    }
     return _localsMaps.putIfAbsent(key, () => KernelToLocalsMapImpl(key));
   }
 }
@@ -308,7 +311,7 @@ class JumpVisitor extends ir.VisitorDefault<void> with ir.VisitorVoidMixin {
   }
 
   @override
-  defaultNode(ir.Node node) => node.visitChildren(this);
+  void defaultNode(ir.Node node) => node.visitChildren(this);
 
   static bool canBeBreakTarget(ir.TreeNode node) {
     return node is ir.ForStatement ||
@@ -347,7 +350,7 @@ class JumpVisitor extends ir.VisitorDefault<void> with ir.VisitorVoidMixin {
   }
 
   @override
-  visitBreakStatement(ir.BreakStatement node) {
+  void visitBreakStatement(ir.BreakStatement node) {
     JJumpTarget target;
     ir.TreeNode body = node.target.body;
     ir.TreeNode parent = node.target.parent!;
@@ -439,7 +442,7 @@ class JumpVisitor extends ir.VisitorDefault<void> with ir.VisitorVoidMixin {
   }
 
   @override
-  visitContinueSwitchStatement(ir.ContinueSwitchStatement node) {
+  void visitContinueSwitchStatement(ir.ContinueSwitchStatement node) {
     JJumpTarget target = _getJumpTarget(node.target);
     target.isContinueTarget = true;
     jumpTargetMap[node] = target;
@@ -449,7 +452,7 @@ class JumpVisitor extends ir.VisitorDefault<void> with ir.VisitorVoidMixin {
   }
 
   @override
-  visitSwitchStatement(ir.SwitchStatement node) {
+  void visitSwitchStatement(ir.SwitchStatement node) {
     node.expression.accept(this);
     if (node.cases.isNotEmpty) {
       // Ensure that [node] has a corresponding target. We generate a break if:

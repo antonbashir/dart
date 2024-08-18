@@ -18,12 +18,14 @@ class ObjectPointerVisitor;
 #define PREDEFINED_SYMBOLS_LIST(V)                                             \
   V(AbiSpecificInteger, "AbiSpecificInteger")                                  \
   V(AbstractClassInstantiationError, "AbstractClassInstantiationError")        \
+  V(_AddStreamState, "_AddStreamState")                                        \
   V(AllocateInvocationMirror, "_allocateInvocationMirror")                     \
   V(AllocateInvocationMirrorForClosure, "_allocateInvocationMirrorForClosure") \
   V(AnonymousClosure, "<anonymous closure>")                                   \
   V(ApiError, "ApiError")                                                      \
   V(ArgDescVar, ":arg_desc")                                                   \
   V(ArgumentError, "ArgumentError")                                            \
+  V(Array, "Array")                                                            \
   V(StateError, "StateError")                                                  \
   V(AssertionError, "_AssertionError")                                         \
   V(AssignIndexToken, "[]=")                                                   \
@@ -53,6 +55,7 @@ class ObjectPointerVisitor;
   V(DartCollection, "dart:collection")                                         \
   V(DartCore, "dart:core")                                                     \
   V(DartDeveloper, "dart:developer")                                           \
+  V(DartFiber, "dart:fiber")                                                   \
   V(DartDeveloperTimeline, "dart.developer.timeline")                          \
   V(DartFfi, "dart:ffi")                                                       \
   V(DartInternal, "dart:_internal")                                            \
@@ -97,8 +100,6 @@ class ObjectPointerVisitor;
   V(ExceptionVar, ":exception_var")                                            \
   V(Expando, "Expando")                                                        \
   V(ExprTemp, ":expr_temp")                                                    \
-  V(ExternalOneByteString, "_ExternalOneByteString")                           \
-  V(ExternalTwoByteString, "_ExternalTwoByteString")                           \
   V(FfiAbiSpecificMapping, "_FfiAbiSpecificMapping")                           \
   V(FfiAsyncCallback, "_FfiAsyncCallback")                                     \
   V(FfiBool, "Bool")                                                           \
@@ -244,8 +245,8 @@ class ObjectPointerVisitor;
   V(SwitchExpr, ":switch_expr")                                                \
   V(Symbol, "Symbol")                                                          \
   V(ThrowNew, "_throwNew")                                                     \
+  V(ThrowNewSource, "_throwNewSource")                                         \
   V(ThrowNewInvocation, "_throwNewInvocation")                                 \
-  V(ThrowNewNullAssertion, "_throwNewNullAssertion")                           \
   V(TopLevel, "::")                                                            \
   V(TransferableTypedData, "TransferableTypedData")                            \
   V(TruncDivOperator, "~/")                                                    \
@@ -255,6 +256,7 @@ class ObjectPointerVisitor;
   V(Type, "Type")                                                              \
   V(TypeArguments, "TypeArguments")                                            \
   V(TypeArgumentsParameter, ":type_arguments")                                 \
+  V(TypedData, "TypedData")                                                    \
   V(TypeError, "_TypeError")                                                   \
   V(TypeParameters, "TypeParameters")                                          \
   V(TypeQuote, "type '")                                                       \
@@ -290,7 +292,6 @@ class ObjectPointerVisitor;
   V(_ConstMap, "_ConstMap")                                                    \
   V(_ConstSet, "_ConstSet")                                                    \
   V(_ControllerSubscription, "_ControllerSubscription")                        \
-  V(_CyclicInitializationError, "_CyclicInitializationError")                  \
   V(_DeletedEnumPrefix, "Deleted enum value from ")                            \
   V(_DeletedEnumSentinel, "_deleted_enum_sentinel")                            \
   V(_Double, "_Double")                                                        \
@@ -377,6 +378,7 @@ class ObjectPointerVisitor;
   V(_SpecialTypeMirror, "_SpecialTypeMirror")                                  \
   V(_StackTrace, "_StackTrace")                                                \
   V(_StreamController, "_StreamController")                                    \
+  V(_StreamControllerAddStreamState, "_StreamControllerAddStreamState")        \
   V(_StreamIterator, "_StreamIterator")                                        \
   V(_String, "String")                                                         \
   V(_SuspendState, "_SuspendState")                                            \
@@ -386,6 +388,7 @@ class ObjectPointerVisitor;
   V(_Type, "_Type")                                                            \
   V(_TypeParameter, "_TypeParameter")                                          \
   V(_TypeVariableMirror, "_TypeVariableMirror")                                \
+  V(_TypedList, "_TypedList")                                                  \
   V(_TypedListBase, "_TypedListBase")                                          \
   V(_Uint16ArrayFactory, "Uint16List.")                                        \
   V(_Uint16ArrayView, "_Uint16ArrayView")                                      \
@@ -451,12 +454,26 @@ class ObjectPointerVisitor;
   V(_mapGet, "_mapGet")                                                        \
   V(_mapKeys, "_mapKeys")                                                      \
   V(_name, "_name")                                                            \
+  V(_nextListener, "_nextListener")                                            \
+  V(_nativeGetFloat32, "_nativeGetFloat32")                                    \
+  V(_nativeSetFloat32, "_nativeSetFloat32")                                    \
+  V(_nativeGetFloat64, "_nativeGetFloat64")                                    \
+  V(_nativeSetFloat64, "_nativeSetFloat64")                                    \
+  V(_nativeGetFloat32x4, "_nativeGetFloat32x4")                                \
+  V(_nativeSetFloat32x4, "_nativeSetFloat32x4")                                \
+  V(_nativeGetInt32x4, "_nativeGetInt32x4")                                    \
+  V(_nativeSetInt32x4, "_nativeSetInt32x4")                                    \
+  V(_nativeGetFloat64x2, "_nativeGetFloat64x2")                                \
+  V(_nativeSetFloat64x2, "_nativeSetFloat64x2")                                \
   V(_nativeSetRange, "_nativeSetRange")                                        \
   V(_objectEquals, "_objectEquals")                                            \
   V(_objectHashCode, "_objectHashCode")                                        \
   V(_objectNoSuchMethod, "_objectNoSuchMethod")                                \
   V(_objectToString, "_objectToString")                                        \
+  V(_offsetInBytes, "_offsetInBytes")                                          \
   V(_onData, "_onData")                                                        \
+  V(_onDone, "_onDone")                                                        \
+  V(_onError, "_onError")                                                      \
   V(_rehashObjects, "_rehashObjects")                                          \
   V(_resultOrListeners, "_resultOrListeners")                                  \
   V(_returnAsync, "_returnAsync")                                              \
@@ -482,6 +499,7 @@ class ObjectPointerVisitor;
   V(absolute, "absolute")                                                      \
   V(add, "add")                                                                \
   V(addStream, "addStream")                                                    \
+  V(addStreamFuture, "addStreamFuture")                                        \
   V(asyncStarBody, "asyncStarBody")                                            \
   V(byteOffset, "byteOffset")                                                  \
   V(c_result, ":result")                                                       \
@@ -496,6 +514,8 @@ class ObjectPointerVisitor;
   V(current_position, ":current_position")                                     \
   V(dynamic_assert_assignable_stc_check,                                       \
     ":dynamic_assert_assignable_stc_check")                                    \
+  V(dyn_module_callable, "dyn-module:callable")                                \
+  V(dyn_module_extendable, "dyn-module:extendable")                            \
   V(end, "end")                                                                \
   V(executable, "executable")                                                  \
   V(from, "from")                                                              \
@@ -540,13 +560,14 @@ class ObjectPointerVisitor;
   V(vm_isolate_unsendable, "vm:isolate-unsendable")                            \
   V(vm_cachable_idempotent, "vm:cachable-idempotent")                          \
   V(vm_never_inline, "vm:never-inline")                                        \
-  V(vm_non_nullable_result_type, "vm:non-nullable-result-type")                \
   V(vm_notify_debugger_on_exception, "vm:notify-debugger-on-exception")        \
   V(vm_prefer_inline, "vm:prefer-inline")                                      \
   V(vm_recognized, "vm:recognized")                                            \
   V(vm_testing_print_flow_graph, "vm:testing:print-flow-graph")                \
   V(vm_trace_entrypoints, "vm:testing.unsafe.trace-entrypoints-fn")            \
-  V(vm_unsafe_no_interrupts, "vm:unsafe:no-interrupts")
+  V(vm_unsafe_no_interrupts, "vm:unsafe:no-interrupts")                        \
+  V(vm_align_loops, "vm:align-loops")                                          \
+  V(vm_unsafe_no_bounds_checks, "vm:unsafe:no-bounds-checks")
 
 // Contains a list of frequently used strings in a canonicalized form. This
 // list is kept in the vm_isolate in order to share the copy across isolates

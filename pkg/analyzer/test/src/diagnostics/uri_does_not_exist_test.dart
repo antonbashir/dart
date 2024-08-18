@@ -69,7 +69,7 @@ import 'unknown.dart';
     ]);
   }
 
-  test_libraryImport_appears_after_deleting_target() async {
+  test_libraryImport_appearsAfterDeletingTarget() async {
     String filePath = newFile('$testPackageLibPath/target.dart', '').path;
 
     await assertErrorsInCode('''

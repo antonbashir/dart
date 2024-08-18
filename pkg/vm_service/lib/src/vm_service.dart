@@ -12,7 +12,8 @@ library;
 // ignore_for_file: overridden_fields
 
 import 'dart:async';
-import 'dart:convert' show base64, jsonDecode, jsonEncode, utf8;
+import 'dart:convert'
+    show base64, jsonDecode, JsonDecoder, jsonEncode, utf8, Utf8Decoder;
 import 'dart:typed_data';
 
 export 'snapshot_graph.dart'
@@ -26,7 +27,7 @@ export 'snapshot_graph.dart'
         HeapSnapshotObjectNoData,
         HeapSnapshotObjectNullData;
 
-const String vmServiceVersion = '4.13.0';
+const String vmServiceVersion = '4.15.0';
 
 /// @optional
 const String optional = 'optional';
@@ -300,6 +301,8 @@ class VmService {
   Future<void> get onDone => _onDoneCompleter.future;
   final _onDoneCompleter = Completer<void>();
 
+  bool _disposed = false;
+
   final _eventControllers = <String, StreamController<Event>>{};
 
   StreamController<Event> _getEventController(String eventName) {
@@ -321,16 +324,14 @@ class VmService {
     Future? streamClosed,
     this.wsUri,
   }) {
-    _streamSub = inStream.listen(_processMessage,
-        onDone: () => _onDoneCompleter.complete());
+    _streamSub = inStream.listen(
+      _processMessage,
+      onDone: () async => await dispose(),
+    );
     _writeMessage = writeMessage;
     _log = log ?? _NullLog();
     _disposeHandler = disposeHandler;
-    streamClosed?.then((_) {
-      if (!_onDoneCompleter.isCompleted) {
-        _onDoneCompleter.complete();
-      }
-    });
+    streamClosed?.then((_) async => await dispose());
   }
 
   static VmService defaultFactory({
@@ -1735,6 +1736,10 @@ class VmService {
   }
 
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await _streamSub.cancel();
     _outstandingRequests.forEach((id, request) {
       request._completer.completeError(RPCError(
@@ -1744,12 +1749,12 @@ class VmService {
       ));
     });
     _outstandingRequests.clear();
-    if (_disposeHandler != null) {
-      await _disposeHandler!();
+    final handler = _disposeHandler;
+    if (handler != null) {
+      await handler();
     }
-    if (!_onDoneCompleter.isCompleted) {
-      _onDoneCompleter.complete();
-    }
+    assert(!_onDoneCompleter.isCompleted);
+    _onDoneCompleter.complete();
   }
 
   /// When overridden, this method wraps [future] with logic.
@@ -1765,6 +1770,13 @@ class VmService {
   }
 
   Future<T> _call<T>(String method, [Map args = const {}]) {
+    if (_disposed) {
+      throw RPCError(
+        method,
+        RPCErrorKind.kServerError.code,
+        'Service connection disposed',
+      );
+    }
     return wrapFuture<T>(
       method,
       () {
@@ -1814,11 +1826,11 @@ class VmService {
     final int dataOffset = bytes.getUint32(0, Endian.little);
     final metaLength = dataOffset - metaOffset;
     final dataLength = bytes.lengthInBytes - dataOffset;
-    final meta = utf8.decode(Uint8List.view(
-        bytes.buffer, bytes.offsetInBytes + metaOffset, metaLength));
+    final decoder = (const Utf8Decoder()).fuse(const JsonDecoder());
+    final map = decoder.convert(Uint8List.view(
+        bytes.buffer, bytes.offsetInBytes + metaOffset, metaLength)) as dynamic;
     final data = ByteData.view(
         bytes.buffer, bytes.offsetInBytes + dataOffset, dataLength);
-    final map = jsonDecode(meta)!;
     if (map['method'] == 'streamNotify') {
       final streamId = map['params']['streamId'];
       final event = map['params']['event'];
@@ -2351,6 +2363,15 @@ abstract class InstanceKind {
 
   /// An instance of the Dart class UserTag.
   static const String kUserTag = 'UserTag';
+
+  /// An instance of the Dart class Finalizer.
+  static const String kFinalizer = 'Finalizer';
+
+  /// An instance of the Dart class NativeFinalizer.
+  static const String kNativeFinalizer = 'NativeFinalizer';
+
+  /// An instance of the Dart class FinalizerEntry.
+  static const String kFinalizerEntry = 'FinalizerEntry';
 }
 
 /// A `SentinelKind` is used to distinguish different kinds of `Sentinel`
@@ -2368,7 +2389,7 @@ abstract class SentinelKind {
   /// Indicates that a variable or field has not been initialized.
   static const String kNotInitialized = 'NotInitialized';
 
-  /// Indicates that a variable or field is in the process of being initialized.
+  /// Deprecated, no longer used.
   static const String kBeingInitialized = 'BeingInitialized';
 
   /// Indicates that a variable has been eliminated by the optimizing compiler.
@@ -2492,8 +2513,6 @@ class AllocationProfile extends Response {
 /// If the field is uninitialized, the `value` will be the `NotInitialized`
 /// [Sentinel].
 ///
-/// If the field is being initialized, the `value` will be the
-/// `BeingInitialized` [Sentinel].
 class BoundField {
   static BoundField? parse(Map<String, dynamic>? json) =>
       json == null ? null : BoundField._fromJson(json);
@@ -2545,9 +2564,6 @@ class BoundField {
 ///
 /// If the variable is uninitialized, the `value` will be the `NotInitialized`
 /// [Sentinel].
-///
-/// If the variable is being initialized, the `value` will be the
-/// `BeingInitialized` [Sentinel].
 ///
 /// If the variable has been optimized out by the compiler, the `value` will be
 /// the `OptimizedOut` [Sentinel].
@@ -4716,6 +4732,13 @@ class InstanceRef extends ObjRef {
   @optional
   ContextRef? closureContext;
 
+  /// The receiver captured by tear-off Closure instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - Closure
+  @optional
+  InstanceRef? closureReceiver;
+
   /// The port ID for a ReceivePort.
   ///
   /// Provided for instance kinds:
@@ -4761,6 +4784,7 @@ class InstanceRef extends ObjRef {
     this.pattern,
     this.closureFunction,
     this.closureContext,
+    this.closureReceiver,
     this.portId,
     this.allocationLocation,
     this.debugName,
@@ -4803,6 +4827,9 @@ class InstanceRef extends ObjRef {
     closureContext =
         createServiceObject(json['closureContext'], const ['ContextRef'])
             as ContextRef?;
+    closureReceiver =
+        createServiceObject(json['closureReceiver'], const ['InstanceRef'])
+            as InstanceRef?;
     portId = json['portId'];
     allocationLocation =
         createServiceObject(json['allocationLocation'], const ['InstanceRef'])
@@ -4837,6 +4864,7 @@ class InstanceRef extends ObjRef {
     _setIfNotNull(json, 'pattern', pattern?.toJson());
     _setIfNotNull(json, 'closureFunction', closureFunction?.toJson());
     _setIfNotNull(json, 'closureContext', closureContext?.toJson());
+    _setIfNotNull(json, 'closureReceiver', closureReceiver?.toJson());
     _setIfNotNull(json, 'portId', portId);
     _setIfNotNull(json, 'allocationLocation', allocationLocation?.toJson());
     _setIfNotNull(json, 'debugName', debugName);
@@ -5099,6 +5127,14 @@ class Instance extends Obj implements InstanceRef {
   @override
   ContextRef? closureContext;
 
+  /// The receiver captured by tear-off Closure instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - Closure
+  @optional
+  @override
+  InstanceRef? closureReceiver;
+
   /// Whether this regular expression is case sensitive.
   ///
   /// Provided for instance kinds:
@@ -5201,6 +5237,51 @@ class Instance extends Obj implements InstanceRef {
   @override
   String? label;
 
+  /// The callback for a Finalizer instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - Finalizer
+  @optional
+  InstanceRef? callback;
+
+  /// The callback for a NativeFinalizer instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - NativeFinalizer
+  @optional
+  InstanceRef? callbackAddress;
+
+  /// The entries for a (Native)Finalizer instance.
+  ///
+  /// A set.
+  ///
+  /// Provided for instance kinds:
+  ///  - Finalizer
+  ///  - NativeFinalizer
+  @optional
+  InstanceRef? allEntries;
+
+  /// The value being watched for finalization for a FinalizerEntry instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - FinalizerEntry
+  @optional
+  InstanceRef? value;
+
+  /// The token passed to the finalizer callback for a FinalizerEntry instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - FinalizerEntry
+  @optional
+  InstanceRef? token;
+
+  /// The detach key for a FinalizerEntry instance.
+  ///
+  /// Provided for instance kinds:
+  ///  - FinalizerEntry
+  @optional
+  InstanceRef? detach;
+
   Instance({
     this.kind,
     this.identityHashCode,
@@ -5225,6 +5306,7 @@ class Instance extends Obj implements InstanceRef {
     this.pattern,
     this.closureFunction,
     this.closureContext,
+    this.closureReceiver,
     this.isCaseSensitive,
     this.isMultiLine,
     this.propertyKey,
@@ -5238,6 +5320,12 @@ class Instance extends Obj implements InstanceRef {
     this.allocationLocation,
     this.debugName,
     this.label,
+    this.callback,
+    this.callbackAddress,
+    this.allEntries,
+    this.value,
+    this.token,
+    this.detach,
   }) : super(
           id: id,
           classRef: classRef,
@@ -5295,6 +5383,9 @@ class Instance extends Obj implements InstanceRef {
     closureContext =
         createServiceObject(json['closureContext'], const ['ContextRef'])
             as ContextRef?;
+    closureReceiver =
+        createServiceObject(json['closureReceiver'], const ['InstanceRef'])
+            as InstanceRef?;
     isCaseSensitive = json['isCaseSensitive'];
     isMultiLine = json['isMultiLine'];
     propertyKey =
@@ -5316,6 +5407,19 @@ class Instance extends Obj implements InstanceRef {
             as InstanceRef?;
     debugName = json['debugName'];
     label = json['label'];
+    callback = createServiceObject(json['callback'], const ['InstanceRef'])
+        as InstanceRef?;
+    callbackAddress =
+        createServiceObject(json['callbackAddress'], const ['InstanceRef'])
+            as InstanceRef?;
+    allEntries = createServiceObject(json['allEntries'], const ['InstanceRef'])
+        as InstanceRef?;
+    value = createServiceObject(json['value'], const ['InstanceRef'])
+        as InstanceRef?;
+    token = createServiceObject(json['token'], const ['InstanceRef'])
+        as InstanceRef?;
+    detach = createServiceObject(json['detach'], const ['InstanceRef'])
+        as InstanceRef?;
   }
 
   @override
@@ -5352,6 +5456,7 @@ class Instance extends Obj implements InstanceRef {
     _setIfNotNull(json, 'pattern', pattern?.toJson());
     _setIfNotNull(json, 'closureFunction', closureFunction?.toJson());
     _setIfNotNull(json, 'closureContext', closureContext?.toJson());
+    _setIfNotNull(json, 'closureReceiver', closureReceiver?.toJson());
     _setIfNotNull(json, 'isCaseSensitive', isCaseSensitive);
     _setIfNotNull(json, 'isMultiLine', isMultiLine);
     _setIfNotNull(json, 'propertyKey', propertyKey?.toJson());
@@ -5365,6 +5470,12 @@ class Instance extends Obj implements InstanceRef {
     _setIfNotNull(json, 'allocationLocation', allocationLocation?.toJson());
     _setIfNotNull(json, 'debugName', debugName);
     _setIfNotNull(json, 'label', label);
+    _setIfNotNull(json, 'callback', callback?.toJson());
+    _setIfNotNull(json, 'callbackAddress', callbackAddress?.toJson());
+    _setIfNotNull(json, 'allEntries', allEntries?.toJson());
+    _setIfNotNull(json, 'value', value?.toJson());
+    _setIfNotNull(json, 'token', token?.toJson());
+    _setIfNotNull(json, 'detach', detach?.toJson());
     return json;
   }
 

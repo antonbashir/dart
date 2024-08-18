@@ -2,15 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/src/dart/error/syntactic_errors.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AssignmentExpressionResolutionTest);
+    defineReflectiveTests(InferenceUpdate3Test);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -24,7 +28,7 @@ g(int a) {
 }
 ''');
 
-    final node = findNode.assignment('+= f()');
+    var node = findNode.assignment('+= f()');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -62,7 +66,7 @@ g(List<int> a) {
 }
 ''');
 
-    final node = findNode.assignment('+= f()');
+    var node = findNode.assignment('+= f()');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
@@ -117,7 +121,7 @@ g(num a) {
 }
 ''');
 
-    final node = findNode.assignment('+= f()');
+    var node = findNode.assignment('+= f()');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -158,7 +162,7 @@ g(num a, bool b) {
 }
 ''');
 
-    final node = findNode.assignment('+=');
+    var node = findNode.assignment('+=');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -213,7 +217,7 @@ void f(dynamic a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -241,7 +245,7 @@ void f(dynamic a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -277,7 +281,7 @@ void f(dynamic a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -313,6 +317,37 @@ AssignmentExpression
 ''');
   }
 
+  test_ifNull_lubUsedEvenIfItDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+// @dart=3.3
+f(Object? o1, Object? o2, List<num> listNum) {
+  if (o1 is Iterable<int>? && o2 is Iterable<num>) {
+    o2 = (o1 ??= listNum);
+  }
+}
+''');
+
+    assertResolvedNodeText(findNode.assignment('o1 ??= listNum'), r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: o1
+    staticElement: self::@function::f::@parameter::o1
+    staticType: null
+  operator: ??=
+  rightHandSide: SimpleIdentifier
+    token: listNum
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::listNum
+    staticType: List<num>
+  readElement: self::@function::f::@parameter::o1
+  readType: Iterable<int>?
+  writeElement: self::@function::f::@parameter::o1
+  writeType: Object?
+  staticElement: <null>
+  staticType: Object
+''');
+  }
+
   test_importPrefix_deferred_topLevelVariable_simple() async {
     newFile('$testPackageLibPath/a.dart', '''
 var v = 0;
@@ -326,7 +361,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -402,7 +437,7 @@ void f(dynamic a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
@@ -830,7 +865,7 @@ void f() {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 13, 1),
     ]);
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: IndexExpression
@@ -872,7 +907,7 @@ class A {
       error(ParserErrorCode.ILLEGAL_ASSIGNMENT_TO_NON_ASSIGNABLE, 27, 5),
     ]);
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SuperExpression
@@ -1382,7 +1417,7 @@ g(int? a) {
 }
 ''');
 
-    final node = findNode.assignment('??= f()');
+    var node = findNode.assignment('??= f()');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -1582,7 +1617,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClass_getterAugmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   int get foo => 0;
@@ -1601,7 +1636,7 @@ void f(A a) {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 56, 3),
     ]);
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -1632,7 +1667,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClass_setterAugmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   augment set foo(int _) {}
@@ -1650,7 +1685,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -1681,7 +1716,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClass_setterAugmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   set foo(int _) {}
@@ -1697,7 +1732,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -1728,7 +1763,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClassName_getterAugmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   static int get foo => 0;
@@ -1747,7 +1782,7 @@ void f() {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 53, 3),
     ]);
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -1778,7 +1813,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClassName_setterAugmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   augment static set foo(int _) {}
@@ -1796,7 +1831,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -1827,7 +1862,7 @@ AssignmentExpression
 
   test_prefixedIdentifier_ofClassName_setterAugmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   static set foo(int _) {}
@@ -1843,7 +1878,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PrefixedIdentifier
@@ -2401,7 +2436,7 @@ AssignmentExpression
 
   test_propertyAccess_ofClass_setterAugmentationAugments() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   augment set foo(int _) {}
@@ -2419,7 +2454,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2453,7 +2488,7 @@ AssignmentExpression
 
   test_propertyAccess_ofClass_setterAugmentationDeclares() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'test.dart'
+augment library 'test.dart'
 
 augment class A {
   set foo(int _) {}
@@ -2469,7 +2504,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2515,7 +2550,7 @@ void f(({int bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 28, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2556,7 +2591,7 @@ void f(({int bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 28, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2601,7 +2636,7 @@ void f(({int bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_GETTER, 80, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2644,7 +2679,7 @@ void f(({int bar}) r) {
 }
 ''');
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2689,7 +2724,7 @@ void f(({int bar}) r) {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 80, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2734,7 +2769,7 @@ void f(({int bar}) r) {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 80, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2778,7 +2813,7 @@ void f(({int bar}) r) {
 }
 ''');
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2822,7 +2857,7 @@ void f(({int bar}) r) {
 }
 ''');
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2863,7 +2898,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 40, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2904,7 +2939,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 40, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2949,7 +2984,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 104, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -2994,7 +3029,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 104, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3039,7 +3074,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 104, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3084,7 +3119,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 104, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3130,7 +3165,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 124, 3),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3176,7 +3211,7 @@ void f(({int foo, String bar}) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 124, 3),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3218,7 +3253,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 30, 2),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3259,7 +3294,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 30, 2),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3304,7 +3339,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 83, 2),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3349,7 +3384,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.ASSIGNMENT_TO_FINAL_NO_SETTER, 83, 2),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3390,7 +3425,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 30, 2),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3431,7 +3466,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 30, 2),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3476,7 +3511,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 83, 2),
     ]);
 
-    final node = findNode.assignment('+= 0');
+    var node = findNode.assignment('+= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3521,7 +3556,7 @@ void f((int, String) r) {
       error(CompileTimeErrorCode.UNDEFINED_SETTER, 83, 2),
     ]);
 
-    final node = findNode.assignment('= 0');
+    var node = findNode.assignment('= 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
@@ -3731,7 +3766,7 @@ class A {
       error(ParserErrorCode.MISSING_ASSIGNABLE_SELECTOR, 39, 5),
     ]);
 
-    final node = findNode.singleAssignmentExpression;
+    var node = findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
@@ -5047,6 +5082,123 @@ AssignmentExpression
   writeType: InvalidType
   staticElement: <null>
   staticType: int
+''');
+  }
+}
+
+@reflectiveTest
+class InferenceUpdate3Test extends PubPackageResolutionTest {
+  @override
+  List<String> get experiments {
+    return [
+      ...super.experiments,
+      Feature.inference_update_3.enableString,
+    ];
+  }
+
+  test_ifNull_contextIsConvertedToATypeUsingGreatestClosure() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1<T> extends A {}
+class B2<T> extends A {}
+class C1<T> implements B1<T>, B2<T> {}
+class C2<T> implements B1<T>, B2<T> {}
+void contextB1<T>(B1<T> b1) {}
+f(Object? o, C2<double> c2) {
+  if (o is C1<int>?) {
+    contextB1(o ??= c2);
+  }
+}
+''');
+
+    assertResolvedNodeText(
+        findNode.assignment('o ??= c2'), r'''AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: o
+    staticElement: self::@function::f::@parameter::o
+    staticType: null
+  operator: ??=
+  rightHandSide: SimpleIdentifier
+    token: c2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c2
+    staticType: C2<double>
+  parameter: ParameterMember
+    base: self::@function::contextB1::@parameter::b1
+    substitution: {T: Object?}
+  readElement: self::@function::f::@parameter::o
+  readType: C1<int>?
+  writeElement: self::@function::f::@parameter::o
+  writeType: Object?
+  staticElement: <null>
+  staticType: B1<Object?>
+''');
+  }
+
+  test_ifNull_contextNotUsedIfLhsDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+f(Object? o1, Object? o2, int? i) {
+  if (o1 is int? && o2 is double?) {
+    o1 = (o2 ??= i);
+  }
+}
+''');
+
+    assertResolvedNodeText(
+        findNode.assignment('o2 ??= i'), r'''AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: o2
+    staticElement: self::@function::f::@parameter::o2
+    staticType: null
+  operator: ??=
+  rightHandSide: SimpleIdentifier
+    token: i
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::i
+    staticType: int?
+  readElement: self::@function::f::@parameter::o2
+  readType: double?
+  writeElement: self::@function::f::@parameter::o2
+  writeType: Object?
+  staticElement: <null>
+  staticType: num?
+''');
+  }
+
+  test_ifNull_contextUsedInsteadOfLubIfLubDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1 extends A {}
+class B2 extends A {}
+class C1 implements B1, B2 {}
+class C2 implements B1, B2 {}
+void contextB1(B1 b1) {}
+f(Object? o, C2 c2) {
+  if (o is C1?) {
+    contextB1(o ??= c2);
+  }
+}
+''');
+
+    assertResolvedNodeText(findNode.assignment('o ??= c2'), r'''
+AssignmentExpression
+  leftHandSide: SimpleIdentifier
+    token: o
+    staticElement: self::@function::f::@parameter::o
+    staticType: null
+  operator: ??=
+  rightHandSide: SimpleIdentifier
+    token: c2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c2
+    staticType: C2
+  parameter: self::@function::contextB1::@parameter::b1
+  readElement: self::@function::f::@parameter::o
+  readType: C1?
+  writeElement: self::@function::f::@parameter::o
+  writeType: Object?
+  staticElement: <null>
+  staticType: B1
 ''');
   }
 }

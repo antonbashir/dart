@@ -2,12 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// @dart = 2.7
-
 import 'package:compiler/src/util/testing.dart';
 
-/*spec.class: Class:explicit=[Class.T*],implicit=[Class.T],needsArgs,test*/
-/*prod.class: Class:needsArgs*/
+/*spec.class: Class:explicit=[Class.T],implicit=[Class.T],needsArgs,test*/
+/*prod.class: Class:implicit=[Class.T],needsArgs,test*/
 class Class<T> {
   method() {
     var list = <T>[];

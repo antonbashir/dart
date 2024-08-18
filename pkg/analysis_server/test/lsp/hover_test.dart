@@ -5,7 +5,7 @@
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/legacy_analysis_server.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
-import 'package:analyzer/src/dart/analysis/experiments.dart';
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -25,8 +25,7 @@ class HoverTest extends AbstractLspAnalysisServerTest {
   @override
   AnalysisServerOptions get serverOptions => AnalysisServerOptions()
     ..enabledExperiments = [
-      EnableString.inline_class,
-      EnableString.macros,
+      Feature.macros.enableString,
     ];
 
   /// Checks whether the correct types of documentation are returned in a Hover
@@ -36,7 +35,7 @@ class HoverTest extends AbstractLspAnalysisServerTest {
     required bool includesSummary,
     required bool includesFull,
   }) async {
-    final code = TestCode.parse('''
+    var code = TestCode.parse('''
     /// Summary.
     ///
     /// Full.
@@ -51,8 +50,8 @@ class HoverTest extends AbstractLspAnalysisServerTest {
     );
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    final hover = await getHover(mainFileUri, code.position.position);
-    final hoverContents = _getStringContents(hover!);
+    var hover = await getHover(mainFileUri, code.position.position);
+    var hoverContents = _getStringContents(hover!);
 
     if (includesSummary) {
       expect(hoverContents, contains('Summary.'));
@@ -70,32 +69,32 @@ class HoverTest extends AbstractLspAnalysisServerTest {
   Future<void> assertMarkdownContents(String content, Matcher matcher) async {
     setHoverContentFormat([MarkupKind.Markdown]);
 
-    final code = TestCode.parse(content);
+    var code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    final hover = await getHover(mainFileUri, code.position.position);
+    var hover = await getHover(mainFileUri, code.position.position);
     expect(hover, isNotNull);
     expect(hover!.range, equals(code.range.range));
     expect(hover.contents, isNotNull);
-    final markup = _getMarkupContents(hover);
+    var markup = _getMarkupContents(hover);
     expect(markup.kind, equals(MarkupKind.Markdown));
     expect(markup.value, matcher);
   }
 
   Future<void> assertPlainTextContents(String content, Matcher matcher) async {
     setHoverContentFormat([MarkupKind.PlainText]);
-    final code = TestCode.parse(content);
+    var code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
     await initialAnalysis;
-    final hover = await getHover(mainFileUri, code.position.position);
+    var hover = await getHover(mainFileUri, code.position.position);
     expect(hover, isNotNull);
     expect(hover!.range, equals(code.range.range));
     expect(hover.contents, isNotNull);
-    final markup = _getMarkupContents(hover);
+    var markup = _getMarkupContents(hover);
     expect(markup.kind, equals(MarkupKind.PlainText));
     expect(markup.value, matcher);
   }
@@ -106,9 +105,9 @@ class HoverTest extends AbstractLspAnalysisServerTest {
     bool waitForAnalysis = false,
     bool withOpenFile = true,
   }) async {
-    final code = TestCode.parse(content);
+    var code = TestCode.parse(content);
 
-    final initialAnalysis = waitForAnalysis ? waitForAnalysisComplete() : null;
+    var initialAnalysis = waitForAnalysis ? waitForAnalysisComplete() : null;
     await initialize();
     if (withOpenFile) {
       await openFile(mainFileUri, code.code);
@@ -116,11 +115,11 @@ class HoverTest extends AbstractLspAnalysisServerTest {
       newFile(mainFilePath, code.code);
     }
     await initialAnalysis;
-    final hover = await getHover(mainFileUri, code.position.position);
+    var hover = await getHover(mainFileUri, code.position.position);
     expect(hover, isNotNull);
     expect(hover!.range, equals(code.range.range));
     expect(hover.contents, isNotNull);
-    final contents = _getStringContents(hover);
+    var contents = _getStringContents(hover);
     expect(contents, matcher);
   }
 
@@ -130,10 +129,10 @@ class HoverTest extends AbstractLspAnalysisServerTest {
     /// {@template template_name}
     /// This is shared content.
     /// {@endtemplate}
-    const String foo = null;
+    const String? foo = null;
 
     /// {@macro template_name}
-    const String [!f^oo2!] = null;
+    const String? [!f^oo2!] = null;
     ''',
         endsWith('This is shared content.'),
       );
@@ -152,13 +151,49 @@ class HoverTest extends AbstractLspAnalysisServerTest {
   Future<void> test_dartDocPreference_unset() =>
       assertDocumentation(null, includesSummary: true, includesFull: true);
 
+  Future<void> test_enum_member() async {
+    var content = '''
+enum MyEnum { one }
+
+void f() {
+  MyEnum.[!o^ne!];
+}
+''';
+    var expected = '''
+```dart
+MyEnum one
+```
+Type: `MyEnum`
+
+*package:test/main.dart*''';
+    await assertStringContents(content, equals(expected));
+  }
+
+  Future<void> test_enum_values() async {
+    var content = '''
+enum MyEnum { one }
+
+void f() {
+  MyEnum.[!va^lues!];
+}
+''';
+    var expected = '''
+```dart
+List<MyEnum> get values
+```
+Type: `List<MyEnum>`
+
+*package:test/main.dart*''';
+    await assertStringContents(content, equals(expected));
+  }
+
   Future<void> test_forLoop_declaredVariable() async {
-    final content = '''
+    var content = '''
 void f() {
   for (var [!ii^i!] in <String>[]) {}
 }
 ''';
-    final expected = '''
+    var expected = '''
 ```dart
 String iii
 ```
@@ -167,14 +202,14 @@ Type: `String`''';
   }
 
   Future<void> test_forLoop_variableReference() async {
-    final content = '''
+    var content = '''
 void f() {
   for (var iii in <String>[]) {
     print([!ii^i!]);
   }
 }
 ''';
-    final expected = '''
+    var expected = '''
 ```dart
 String iii
 ```
@@ -185,7 +220,7 @@ Type: `String`''';
   Future<void> test_function_startOfParameterList() => assertStringContents(
         '''
     /// This is a function.
-    String [!abc!]^() {}
+    void [!abc!]^() {}
     ''',
         contains('This is a function.'),
       );
@@ -193,7 +228,7 @@ Type: `String`''';
   Future<void> test_function_startOfTypeParameterList() => assertStringContents(
         '''
     /// This is a function.
-    String [!abc!]^<T>(T a) {}
+    void [!abc!]^<T>(T a) {}
     ''',
         contains('This is a function.'),
       );
@@ -208,25 +243,25 @@ Type: `String`''';
   }
 
   Future<void> test_markdown_isFormattedForDisplay() async {
-    final content = '''
+    var content = '''
     /// This is a string.
     ///
     /// {@template foo}
     /// With some [refs] and some
     /// [links](https://www.dartlang.org/)
-    /// {@endTemplate foo}
+    /// {@endtemplate foo}
     ///
     /// ```dart sample
     /// print();
     /// ```
-    String [!a^bc!];
+    String? [!a^bc!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
-String abc
+String? abc
 ```
-Type: `String`
+Type: `String?`
 
 *package:test/main.dart*
 
@@ -248,7 +283,7 @@ print();
   Future<void> test_markdown_simple() => assertMarkdownContents(
         '''
     /// This is a string.
-    String [!a^bc!];
+    String [!a^bc!] = '';
     ''',
         contains('This is a string.'),
       );
@@ -257,7 +292,7 @@ print();
         '''
     class A {
       /// This is a method.
-      String [!abc!]^() {}
+      void [!abc!]^() {}
     }
     ''',
         contains('This is a method.'),
@@ -267,40 +302,40 @@ print();
         '''
     class A {
       /// This is a method.
-      String [!abc!]^<T>(T a) {}
+      String [!abc!]^<T>(T a) => '';
     }
     ''',
         contains('This is a method.'),
       );
 
   Future<void> test_noElement() async {
-    final code = TestCode.parse('''
-    String abc;
+    var code = TestCode.parse('''
+    String? abc;
 
     ^
 
-    int a;
+    int? a;
     ''');
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    final hover = await getHover(mainFileUri, code.position.position);
+    var hover = await getHover(mainFileUri, code.position.position);
     expect(hover, isNull);
   }
 
   Future<void> test_nonDartFile() async {
     await initialize();
     await openFile(pubspecFileUri, simplePubspecContent);
-    final hover = await getHover(pubspecFileUri, startOfDocPos);
+    var hover = await getHover(pubspecFileUri, startOfDocPos);
     expect(hover, isNull);
   }
 
   Future<void> test_nullableTypes() async {
-    final content = '''
+    var content = '''
     String? [!a^bc!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 String? abc
 ```
@@ -400,7 +435,7 @@ double calculateArea(Shape shape) =>
     Square([!leng^th!]: var l) => l * l,
   };
 
-class Shape { }
+sealed class Shape { }
 class Square extends Shape {
   /// The length.
   double get length => 0;
@@ -419,7 +454,7 @@ double calculateArea(Shape shape) =>
     [!Squ^are!](length: var l) => l * l,
   };
 
-class Shape { }
+sealed class Shape { }
 /// A square.
 class Square extends Shape {
   double get length => 0;
@@ -460,7 +495,8 @@ void f(({int foo}) x, num a) {
 String f(int char) {
   const zero = 0;
   return switch (char) {
-    == [!ze^ro!] => 'zero'
+    == [!ze^ro!] => 'zero',
+    _ => '',
   };
 }
     ''',
@@ -491,13 +527,13 @@ void f() {
   Future<void> test_plainText_simple() => assertPlainTextContents(
         '''
     /// This is a string.
-    String [!a^bc!];
+    String? [!a^bc!];
     ''',
         contains('This is a string.'),
       );
 
   Future<void> test_promotedTypes() async {
-    final content = '''
+    var content = '''
 void f(aaa) {
   if (aaa is String) {
     print([!aa^a!]);
@@ -505,7 +541,7 @@ void f(aaa) {
 }
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 dynamic aaa
 ```
@@ -546,7 +582,7 @@ void f((int, int) r) {
 
   Future<void> test_recordType_parameter() => assertStringContents(
         '''
-void f(([!dou^ble!], double) param) {
+Object f(([!dou^ble!], double) param) {
   return (1.0, 1.0);
 }
     ''',
@@ -565,11 +601,11 @@ void f(([!dou^ble!], double) param) {
   Future<void> test_signatureFormatting_multiLine() => assertStringContents(
         '''
     class Foo {
-      Foo(String arg1, String arg2, [String arg3]);
+      Foo(String arg1, String arg2, [String? arg3]);
     }
 
     void f() {
-      var a = [!Fo^o!]();
+      var a = [!Fo^o!]('', '');
     }
     ''',
         startsWith('''
@@ -577,7 +613,7 @@ void f(([!dou^ble!], double) param) {
 (new) Foo Foo(
   String arg1,
   String arg2, [
-  String arg3,
+  String? arg3,
 ])
 ```'''),
       );
@@ -589,7 +625,7 @@ void f(([!dou^ble!], double) param) {
     }
 
     void f() {
-      var a = [!Fo^o!]();
+      var a = [!Fo^o!]('', '');
     }
     ''',
         startsWith('''
@@ -599,7 +635,7 @@ void f(([!dou^ble!], double) param) {
       );
 
   Future<void> test_staticType_field() async {
-    final content = '''
+    var content = '''
 class A<T> {
   late final T? myField;
 }
@@ -607,7 +643,7 @@ class A<T> {
 final data = A<String?>().[!myF^ield!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 T? myField
 ```
@@ -621,7 +657,7 @@ Type: `String?`
   }
 
   Future<void> test_staticType_getter() async {
-    final content = '''
+    var content = '''
 class A {
   String get myGetter => '';
 }
@@ -629,7 +665,7 @@ class A {
 final data = A().[!myG^etter!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 String get myGetter
 ```
@@ -643,7 +679,7 @@ Type: `String`
   }
 
   Future<void> test_staticType_getter_generic() async {
-    final content = '''
+    var content = '''
 class A<T> {
   late final T? myField;
   T? get myGetter => myField;
@@ -652,7 +688,7 @@ class A<T> {
 final data = A<String?>().[!myG^etter!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 T? get myGetter
 ```
@@ -666,7 +702,7 @@ Type: `String?`
   }
 
   Future<void> test_staticType_setter() async {
-    final content = '''
+    var content = '''
 class A {
   set mySetter(String value) {}
 }
@@ -676,7 +712,7 @@ void f() {
 }
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 set mySetter(String value)
 ```
@@ -690,7 +726,7 @@ Type: `String`
   }
 
   Future<void> test_staticType_setter_generic() async {
-    final content = '''
+    var content = '''
 class A<T> {
   set mySetter(T value) {}
 }
@@ -700,7 +736,7 @@ void f() {
 }
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
 set mySetter(T value)
 ```
@@ -714,15 +750,15 @@ Type: `String`
   }
 
   Future<void> test_string_noDocComment() async {
-    final content = '''
-    String [!a^bc!];
+    var content = '''
+    String? [!a^bc!];
     ''';
 
-    final expectedHoverContent = '''
+    var expectedHoverContent = '''
 ```dart
-String abc
+String? abc
 ```
-Type: `String`
+Type: `String?`
 
 *package:test/main.dart*
     '''
@@ -732,13 +768,13 @@ Type: `String`
   }
 
   Future<void> test_string_reflectsLatestEdits() async {
-    final original = TestCode.parse('''
+    var original = TestCode.parse('''
     /// Original string.
-    String [!a^bc!];
+    String? [!a^bc!];
     ''');
-    final updated = TestCode.parse('''
+    var updated = TestCode.parse('''
     /// Updated string.
-    String [!a^bc!];
+    String? [!a^bc!];
     ''');
 
     await initialize();
@@ -756,15 +792,15 @@ Type: `String`
   }
 
   Future<void> test_string_simple() async {
-    final content = '''
+    var content = '''
 /// This is a string.
-String [!a^bc!];
+String? [!a^bc!];
 ''';
-    final expected = '''
+    var expected = '''
 ```dart
-String abc
+String? abc
 ```
-Type: `String`
+Type: `String?`
 
 *package:test/main.dart*
 
@@ -774,15 +810,15 @@ This is a string.''';
   }
 
   Future<void> test_unopenFile() async {
-    final content = '''
+    var content = '''
 /// This is a string.
-String [!a^bc!];
+String? [!a^bc!];
 ''';
-    final expected = '''
+    var expected = '''
 ```dart
-String abc
+String? abc
 ```
-Type: `String`
+Type: `String?`
 
 *package:test/main.dart*
 

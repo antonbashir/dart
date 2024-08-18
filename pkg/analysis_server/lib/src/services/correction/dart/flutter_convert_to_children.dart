@@ -3,14 +3,21 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
-import 'package:analysis_server/src/utilities/flutter.dart';
+import 'package:analysis_server/src/utilities/extensions/flutter.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class FlutterConvertToChildren extends ResolvedCorrectionProducer {
+  FlutterConvertToChildren({required super.context});
+
+  @override
+  CorrectionApplicability get applicability =>
+      // TODO(applicability): comment on why.
+      CorrectionApplicability.singleLocation;
+
   @override
   AssistKind get assistKind => DartAssistKind.FLUTTER_CONVERT_TO_CHILDREN;
 
@@ -19,7 +26,7 @@ class FlutterConvertToChildren extends ResolvedCorrectionProducer {
     // Find "child: widget" under selection.
     NamedExpression namedExp;
     {
-      final node = this.node;
+      var node = this.node;
       var parent = node.parent;
       var parent2 = parent?.parent;
       if (node is SimpleIdentifier &&
@@ -27,7 +34,7 @@ class FlutterConvertToChildren extends ResolvedCorrectionProducer {
           parent2 is NamedExpression &&
           node.name == 'child' &&
           node.staticElement != null &&
-          Flutter.isWidgetExpression(parent2.expression)) {
+          parent2.expression.isWidgetExpression) {
         namedExp = parent2;
       } else {
         return;
@@ -36,7 +43,7 @@ class FlutterConvertToChildren extends ResolvedCorrectionProducer {
 
     await builder.addDartFileEdit(file, (builder) {
       _convertFlutterChildToChildren(namedExp, eol, utils.getNodeText,
-          utils.getLinePrefix, utils.getIndent, utils.getText, builder);
+          utils.getLinePrefix, utils.getText, builder);
     });
   }
 
@@ -45,7 +52,6 @@ class FlutterConvertToChildren extends ResolvedCorrectionProducer {
       String eol,
       String Function(Expression) getNodeText,
       String Function(int) getLinePrefix,
-      String Function(int) getIndent,
       String Function(int, int) getText,
       FileEditBuilder builder) {
     var childArg = namedExp.expression;
@@ -62,7 +68,7 @@ class FlutterConvertToChildren extends ResolvedCorrectionProducer {
         newlineLoc -= 1;
       }
       var indentOld = getLinePrefix(childArg.offset + eol.length + newlineLoc);
-      var indentNew = '$indentOld${getIndent(1)}';
+      var indentNew = '$indentOld${utils.oneIndent}';
       // The separator includes 'child:' but that has no newlines.
       var separator =
           getText(namedExp.offset, childArg.offset - namedExp.offset);

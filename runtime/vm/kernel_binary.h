@@ -18,7 +18,7 @@ namespace kernel {
 // package:kernel/binary.md.
 
 static const uint32_t kMagicProgramFile = 0x90ABCDEFu;
-static const uint32_t kSupportedKernelFormatVersion = 114;
+static const uint32_t kSupportedKernelFormatVersion = 119;
 
 // Keep in sync with package:kernel/lib/binary/tag.dart
 #define KERNEL_TAG_LIST(V)                                                     \
@@ -233,19 +233,23 @@ enum AsExpressionFlags {
   kAsExpressionFlagTypeError = 1 << 0,
   kAsExpressionFlagCovarianceCheck = 1 << 1,
   kAsExpressionFlagForDynamic = 1 << 2,
-  kAsExpressionFlagForNonNullableByDefault = 1 << 3,
-  kAsExpressionFlagUnchecked = 1 << 4,
-};
-
-// Keep in sync with package:kernel/lib/ast.dart
-enum IsExpressionFlags {
-  kIsExpressionFlagForNonNullableByDefault = 1 << 0,
+  kAsExpressionFlagUnchecked = 1 << 3,
 };
 
 // Keep in sync with package:kernel/lib/ast.dart
 enum InstanceInvocationFlags {
   kInstanceInvocationFlagInvariant = 1 << 0,
   kInstanceInvocationFlagBoundsSafe = 1 << 1,
+};
+
+// Keep in sync with package:kernel/lib/ast.dart
+enum DynamicInvocationFlags {
+  kDynamicInvocationFlagImplicitCall = 1 << 0,
+};
+
+// Keep in sync with package:kernel/lib/ast.dart
+enum ThrowFlags {
+  kThrowForErrorHandling = 1 << 0,
 };
 
 // Keep in sync with package:kernel/lib/ast.dart
@@ -424,11 +428,11 @@ class Reader : public ValueObject {
     switch (kernel_nullability) {
       case KernelNullability::kNullable:
         return Nullability::kNullable;
-      case KernelNullability::kLegacy:
-        return Nullability::kLegacy;
       case KernelNullability::kNonNullable:
       case KernelNullability::kUndetermined:
         return Nullability::kNonNullable;
+      case KernelNullability::kLegacy:
+        FATAL("Legacy nullability is not supported.");
     }
     UNREACHABLE();
   }
@@ -491,9 +495,7 @@ class Reader : public ValueObject {
   friend class AlternativeReadingScope;
 
   Reader(const uint8_t* buffer, intptr_t size)
-      : thread_(nullptr),
-        raw_buffer_(buffer),
-        size_(size) {}
+      : thread_(nullptr), raw_buffer_(buffer), size_(size) {}
 
   void Init() {
     ASSERT(typed_data_->IsExternalOrExternalView());

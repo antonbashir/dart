@@ -89,7 +89,7 @@ class ImportOrganizer {
           var offset = directive.offset;
           var end = directive.end;
 
-          final isPseudoLibraryDirective =
+          var isPseudoLibraryDirective =
               !hasLibraryDirective && directive == unit.directives.first;
           Annotation? lastLibraryAnnotation;
           if (isPseudoLibraryDirective) {
@@ -115,7 +115,7 @@ class ImportOrganizer {
               // be included in the top of the following directive and may
               // result in an extra blank line in the annotation block if it
               // is moved.
-              final nextLineOffset = lineInfo
+              var nextLineOffset = lineInfo
                   .getOffsetOfLineAfter(libraryDocsAndAnnotationsEndOffset);
               if (code
                   .substring(libraryDocsAndAnnotationsEndOffset, nextLineOffset)
@@ -129,13 +129,13 @@ class ImportOrganizer {
           // Usually we look for leading comments on the directive. However if
           // some library annotations were trimmed off, those comments are part
           // of that and should not also be included here.
-          final leadingToken =
+          var leadingToken =
               lastLibraryAnnotation == null ? directive.beginToken : null;
-          final leadingComment = leadingToken != null
+          var leadingComment = leadingToken != null
               ? getLeadingComment(unit, leadingToken, lineInfo,
                   isPseudoLibraryDirective: isPseudoLibraryDirective)
               : null;
-          final trailingComment = getTrailingComment(unit, directive, lineInfo);
+          var trailingComment = getTrailingComment(unit, directive, lineInfo);
 
           if (leadingComment != null && leadingToken != null) {
             offset = libraryDocsAndAnnotationsEndOffset != null
@@ -147,8 +147,8 @@ class ImportOrganizer {
             end = trailingComment.end;
           }
           offset = libraryDocsAndAnnotationsEndOffset ?? offset;
-          final text = code.substring(offset, end);
-          final uriContent = directive.uri.stringValue ?? '';
+          var text = code.substring(offset, end);
+          var uriContent = directive.uri.stringValue ?? '';
           directives.add(
             _DirectiveInfo(directive, priority, uriContent, offset, end, text),
           );
@@ -227,7 +227,7 @@ class ImportOrganizer {
     var comment = firstComment;
     var nextComment = comment?.next;
     // Don't connect comments that have a blank line between them if this is
-    // a psuedo-library directive.
+    // a pseudo-library directive.
     while (isPseudoLibraryDirective && comment != null && nextComment != null) {
       var currentLine = lineInfo.getLocation(comment.offset).lineNumber;
       var nextLine = lineInfo.getLocation(nextComment.offset).lineNumber;
@@ -371,7 +371,9 @@ class _DirectiveInfo implements Comparable<_DirectiveInfo> {
   /// Consider finding a way to share this code!
   static int _compareUri(String a, String b) {
     if (!a.startsWith('package:') || !b.startsWith('package:')) {
-      return a.compareTo(b);
+      if (!a.startsWith('/') && !b.startsWith('/')) {
+        return a.compareTo(b);
+      }
     }
     var indexA = a.indexOf('/');
     var indexB = b.indexOf('/');

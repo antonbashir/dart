@@ -18,12 +18,12 @@ void main() {
 @reflectiveTest
 class SnippetBuilderTest {
   Future<void> test_appendChoice() async {
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendChoice({r'a'})
       ..appendChoice({r'a', r'b'})
       ..appendChoice({}, placeholderNumber: 6)
       ..appendChoice({r'aaa', r'bbb'}, placeholderNumber: 12)
-      ..appendChoice({r'aaa', r'bbb $ bbb | bbb } bbb'});
+      ..appendChoice({r'aaa', r'bbb \ bbb $ bbb | bbb , bbb } bbb'});
 
     expect(
       builder.value,
@@ -31,12 +31,15 @@ class SnippetBuilderTest {
       r'${2|a,b|}'
       r'$6'
       r'${12|aaa,bbb|}'
-      r'${13|aaa,bbb \$ bbb \| bbb \} bbb|}',
+      // Only pipes (delimiter), comma (separator) and backslashes (the escape
+      // character) are escaped in choices. Not dollars or braces.
+      // https://github.com/microsoft/vscode/issues/201059
+      r'${13|aaa,bbb \\ bbb $ bbb \| bbb \, bbb } bbb|}',
     );
   }
 
   Future<void> test_appendPlaceholder() async {
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendPlaceholder(r'placeholder $ 1')
       ..appendPlaceholder(r'')
       ..appendPlaceholder(r'placeholder } 3', placeholderNumber: 6);
@@ -50,7 +53,7 @@ class SnippetBuilderTest {
   }
 
   Future<void> test_appendTabStop() async {
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendTabStop()
       ..appendTabStop(placeholderNumber: 10)
       ..appendTabStop();
@@ -64,7 +67,7 @@ class SnippetBuilderTest {
   }
 
   Future<void> test_appendText() async {
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendText(r'text 1')
       ..appendText(r'text ${that needs} escaping $0')
       ..appendText(r'text 2');
@@ -78,7 +81,7 @@ class SnippetBuilderTest {
   }
 
   Future<void> test_extension_appendPlaceholders() async {
-    final code = r'''
+    var code = r'''
 012345678
 012345678
 012345678
@@ -86,7 +89,7 @@ class SnippetBuilderTest {
 012345678
 ''';
 
-    final placeholders = [
+    var placeholders = [
       lsp.SnippetPlaceholder(2, 2),
       lsp.SnippetPlaceholder(32, 2, linkedGroupId: 123),
       lsp.SnippetPlaceholder(12, 2, isFinal: true),
@@ -94,7 +97,7 @@ class SnippetBuilderTest {
       lsp.SnippetPlaceholder(22, 2, suggestions: ['aaa', 'bbb']),
     ];
 
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendPlaceholders(code, placeholders, isPreSorted: false);
 
     expect(builder.value, r'''
@@ -107,7 +110,7 @@ class SnippetBuilderTest {
   }
 
   Future<void> test_mixed() async {
-    final builder = SnippetBuilder()
+    var builder = SnippetBuilder()
       ..appendText('text1')
       ..appendPlaceholder('placeholder')
       ..appendText('text2')
@@ -157,7 +160,7 @@ var a = 1;
     );
     // Choices are never 0th placeholders, so this is `$1`.
     expect(result, equals(r'''
-var ${1|a,aaa,bbb\${\}\,\|,ccc|} = 1;
+var ${1|a,aaa,bbb${}\,\|,ccc|} = 1;
 '''));
   }
 

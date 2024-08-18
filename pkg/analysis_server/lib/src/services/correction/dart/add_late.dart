@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -14,15 +14,19 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 
 class AddLate extends ResolvedCorrectionProducer {
+  AddLate({required super.context});
+
+  @override
+  CorrectionApplicability get applicability =>
+      // TODO(applicability): comment on why.
+      CorrectionApplicability.singleLocation;
+
   @override
   FixKind get fixKind => DartFixKind.ADD_LATE;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    if (!libraryElement.isNonNullableByDefault) {
-      return;
-    }
-    final node = this.node;
+    var node = this.node;
     if (node is VariableDeclaration) {
       var variableList = node.parent;
       if (variableList is VariableDeclarationList) {
@@ -33,7 +37,7 @@ class AddLate extends ResolvedCorrectionProducer {
               await _insertAt(builder, variableList.variables[0].offset);
               // TODO(brianwilkerson): Consider converting this into an assist and
               //  expand it to support converting `var` to `late` as well as
-              //  working anywhere a non-late local variable or field is selected.
+              //  working anywhere a non-late local variableElement or field is selected.
 //          } else if (keyword.type == Keyword.VAR) {
 //            builder.addFileEdit(file, (builder) {
 //              builder.addSimpleReplacement(range.token(keyword), 'late');
@@ -59,25 +63,29 @@ class AddLate extends ResolvedCorrectionProducer {
       if (getter is PropertyAccessorElement &&
           getter.isGetter &&
           getter.isSynthetic &&
-          !getter.variable.isSynthetic &&
-          getter.variable.setter == null &&
           getter.enclosingElement is InterfaceElement) {
-        var declarationResult =
-            await sessionHelper.getElementDeclaration(getter.variable);
-        if (declarationResult == null) {
-          return;
-        }
-        var variable = declarationResult.node;
-        var variableList = variable.parent;
-        if (variable is VariableDeclaration &&
-            variableList is VariableDeclarationList &&
-            variableList.parent is FieldDeclaration) {
-          var keywordToken = variableList.keyword;
-          if (variableList.variables.length == 1 &&
-              keywordToken != null &&
-              keywordToken.keyword == Keyword.FINAL) {
-            await _insertAt(builder, keywordToken.offset,
-                source: declarationResult.element.source);
+        var variableElement = getter.variable2;
+        if (variableElement != null &&
+            !variableElement.isSynthetic &&
+            !variableElement.isLate &&
+            variableElement.setter == null) {
+          var declarationResult =
+              await sessionHelper.getElementDeclaration(variableElement);
+          if (declarationResult == null) {
+            return;
+          }
+          var variableNode = declarationResult.node;
+          var variableList = variableNode.parent;
+          if (variableNode is VariableDeclaration &&
+              variableList is VariableDeclarationList &&
+              variableList.parent is FieldDeclaration) {
+            var keywordToken = variableList.keyword;
+            if (variableList.variables.length == 1 &&
+                keywordToken != null &&
+                keywordToken.keyword == Keyword.FINAL) {
+              await _insertAt(builder, keywordToken.offset,
+                  source: declarationResult.element.source);
+            }
           }
         }
       }

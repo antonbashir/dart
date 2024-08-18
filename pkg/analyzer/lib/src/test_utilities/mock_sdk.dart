@@ -5,7 +5,6 @@
 import 'dart:convert';
 
 import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
 import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:meta/meta.dart';
@@ -27,6 +26,10 @@ abstract class Future<T> {
   }
 
   factory Future.delayed(Duration duration, [FutureOr<T> computation()?]) {
+    throw 0;
+  }
+
+  factory Future.error(Object error, [StackTrace? stackTrace]) {
     throw 0;
   }
 
@@ -377,6 +380,12 @@ abstract final class double extends num {
 }
 
 class Duration implements Comparable<Duration> {
+  const Duration({int days = 0,
+      int hours = 0,
+      int minutes = 0,
+      int seconds = 0,
+      int milliseconds = 0,
+      int microseconds = 0});
   int compareTo(Duration other) => 0;
 }
 
@@ -689,6 +698,20 @@ class UnsupportedError {
 }
 
 class Uri {
+  factory Uri({
+    String? scheme,
+    String? userInfo,
+    String? host,
+    int? port,
+    String? path,
+    Iterable<String>? pathSegments,
+    String? query,
+    Map<String, dynamic /*String?|Iterable<String>*/ >? queryParameters,
+    String? fragment,
+  }) {
+    throw 0;
+  }
+
   static List<int> parseIPv6Address(String host, [int start = 0, int? end]) {
     throw 0;
   }
@@ -714,63 +737,88 @@ final MockSdkLibrary _LIB_FFI = MockSdkLibrary('ffi', [
 @Since('2.6')
 library dart.ffi;
 
-final class NativeType {
-  const NativeType();
-}
+abstract final class NativeType {}
+
+@Since('3.4')
+abstract final class SizedNativeType implements NativeType {}
 
 @Since('2.9')
-abstract final class Handle extends NativeType {}
+abstract final class Handle implements NativeType {}
 
 @Since('2.12')
-abstract base class Opaque extends NativeType {}
+abstract base class Opaque implements NativeType {}
 
-final class Void extends NativeType {}
+final class Void implements NativeType {}
 
-final class Int8 extends NativeType {
+final class Int8 implements SizedNativeType {
   const Int8();
 }
 
-final class Uint8 extends NativeType {
+final class Uint8 implements SizedNativeType {
   const Uint8();
 }
 
-final class Int16 extends NativeType {
+final class Int16 implements SizedNativeType {
   const Int16();
 }
 
-final class Uint16 extends NativeType {
+final class Uint16 implements SizedNativeType {
   const Uint16();
 }
 
-final class Int32 extends NativeType {
+final class Int32 implements SizedNativeType {
   const Int32();
 }
 
-final class Uint32 extends NativeType {
+final class Uint32 implements SizedNativeType {
   const Uint32();
 }
 
-final class Int64 extends NativeType {
+final class Int64 implements SizedNativeType {
   const Int64();
 }
 
-final class Uint64 extends NativeType {
+final class Uint64 implements SizedNativeType {
   const Uint64();
 }
 
-final class Float extends NativeType {
+final class Float implements SizedNativeType {
   const Float();
 }
 
-final class Double extends NativeType {
+final class Double implements SizedNativeType {
   const Double();
 }
 
-final class IntPtr extends NativeType {
+@AbiSpecificIntegerMapping({
+  Abi.androidArm: Int32(),
+  Abi.androidArm64: Int64(),
+  Abi.androidIA32: Int32(),
+  Abi.androidX64: Int64(),
+  Abi.androidRiscv64: Int64(),
+  Abi.fuchsiaArm64: Int64(),
+  Abi.fuchsiaX64: Int64(),
+  Abi.fuchsiaRiscv64: Int64(),
+  Abi.iosArm: Int32(),
+  Abi.iosArm64: Int64(),
+  Abi.iosX64: Int64(),
+  Abi.linuxArm: Int32(),
+  Abi.linuxArm64: Int64(),
+  Abi.linuxIA32: Int32(),
+  Abi.linuxX64: Int64(),
+  Abi.linuxRiscv32: Int32(),
+  Abi.linuxRiscv64: Int64(),
+  Abi.macosArm64: Int64(),
+  Abi.macosX64: Int64(),
+  Abi.windowsArm64: Int64(),
+  Abi.windowsIA32: Int32(),
+  Abi.windowsX64: Int64(),
+})
+final class IntPtr extends AbiSpecificInteger {
   const IntPtr();
 }
 
-final class Pointer<T extends NativeType> extends NativeType {
+final class Pointer<T extends NativeType> implements SizedNativeType {
   external factory Pointer.fromAddress(int ptr);
 
   static Pointer<NativeFunction<T>> fromFunction<T extends Function>(
@@ -797,13 +845,13 @@ extension NativeFunctionPointer<NF extends Function>
   external DF asFunction<DF extends Function>({bool isLeaf = false});
 }
 
-final class _Compound extends NativeType {}
+abstract final class _Compound implements NativeType {}
 
 @Since('2.12')
-base class Struct extends _Compound {}
+abstract base class Struct extends _Compound implements SizedNativeType {}
 
 @Since('2.14')
-base class Union extends _Compound {}
+abstract base class Union extends _Compound implements SizedNativeType {}
 
 @Since('2.13')
 final class Packed {
@@ -823,14 +871,14 @@ extension DynamicLibraryExtension on DynamicLibrary {
       String symbolName, {bool isLeaf:false});
 }
 
-abstract final class NativeFunction<T extends Function> extends NativeType {}
+abstract final class NativeFunction<T extends Function> implements NativeType {}
 
 final class DartRepresentationOf {
   const DartRepresentationOf(String nativeType);
 }
 
 @Since('2.13')
-final class Array<T extends NativeType> extends NativeType {
+final class Array<T extends NativeType> extends _Compound {
   const factory Array(int dimension1,
       [int dimension2,
       int dimension3,
@@ -930,7 +978,7 @@ enum _OS {
 }
 
 @Since('2.16')
-base class AbiSpecificInteger extends NativeType {
+base class AbiSpecificInteger implements SizedNativeType {
   const AbiSpecificInteger();
 }
 
@@ -941,13 +989,18 @@ final class AbiSpecificIntegerMapping {
   const AbiSpecificIntegerMapping(this.mapping);
 }
 
+@AbiSpecificIntegerMapping({})
+final class Int extends AbiSpecificInteger {
+  const Int();
+}
+
 @Since('2.17')
 abstract interface class Finalizable {
   factory Finalizable._() => throw UnsupportedError("");
 }
 
 @Since('3.0')
-abstract final class VarArgs<T extends Record> extends NativeType {}
+abstract final class VarArgs<T extends Record> implements NativeType {}
 ''',
   )
 ]);
@@ -1262,6 +1315,7 @@ abstract class FileSystemEntity {
 
 class IOSink implements Sink<List<int>> {
   Future<dynamic> close() {}
+  void write(Object? object) {}
 }
 
 class Platform {
@@ -1337,6 +1391,86 @@ class Isolate {
 ''',
   )
 ]);
+
+final MockSdkLibrary _LIB_JS = MockSdkLibrary('js', [
+  MockSdkLibraryUnit(
+    'js/js.dart',
+    '''
+library dart.js;
+
+class JsObject {}
+''',
+  )
+]);
+
+final MockSdkLibrary _LIB_JS_ANNOTATIONS = MockSdkLibrary('_js_annotations', [
+  MockSdkLibraryUnit(
+    'js/_js_annotations.dart',
+    '''
+library _js_annotations;
+
+class JS {
+  final String? name;
+  const JS([this.name]);
+}
+
+class _StaticInterop {
+  const _StaticInterop();
+}
+
+const _StaticInterop staticInterop = _StaticInterop();
+''',
+  )
+]);
+
+final MockSdkLibrary _LIB_JS_INTEROP = MockSdkLibrary(
+  'js_interop',
+  [
+    MockSdkLibraryUnit(
+      'js/js_interop.dart',
+      '''
+library;
+
+import 'dart:typed_data';
+
+export 'dart:_js_annotations' show staticInterop;
+
+class JS {
+  final String? name;
+  const JS([this.name]);
+}
+
+extension type JSAny._(Object _) implements Object {}
+
+extension type JSBoolean._(bool _) implements JSAny {}
+
+extension type JSString._(String _) implements JSAny {}
+
+extension type JSNumber._(num _) implements JSAny {}
+
+extension type JSObject._(Object _) implements JSAny {}
+
+extension type JSArray<T extends JSAny?>._(List _) implements JSObject {}
+
+extension type JSTypedArray._(TypedData _) implements JSObject {}
+
+extension type JSUint8List._(Uint8List _) implements JSTypedArray {}
+''',
+    )
+  ],
+);
+
+final MockSdkLibrary _LIB_MACROS = MockSdkLibrary(
+  '_macros',
+  [
+    MockSdkLibraryUnit(
+      '_macros/_macros.dart',
+      '''
+library dart._macros;
+''',
+    )
+  ],
+);
 
 final MockSdkLibrary _LIB_MATH = MockSdkLibrary(
   'math',
@@ -1414,6 +1548,10 @@ final List<MockSdkLibrary> _LIBRARIES = [
   _LIB_INTERNAL,
   _LIB_IO,
   _LIB_ISOLATE,
+  _LIB_JS,
+  _LIB_JS_ANNOTATIONS,
+  _LIB_JS_INTEROP,
+  _LIB_MACROS,
   _LIB_MATH,
   _LIB_TYPED_DATA,
   _LIB_WASM,
@@ -1424,7 +1562,7 @@ final List<MockSdkLibrary> _LIBRARIES = [
 /// It has enough libraries to run analyzer and analysis server tests,
 /// but some libraries, classes, and methods are missing.
 void createMockSdk({
-  required MemoryResourceProvider resourceProvider,
+  required ResourceProvider resourceProvider,
   required Folder root,
   @internal List<MockSdkLibrary> additionalLibraries = const [],
 }) {

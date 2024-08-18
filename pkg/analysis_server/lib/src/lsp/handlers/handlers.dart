@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:analysis_server/lsp_protocol/protocol.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
+import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_cancel_request.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_reject.dart';
 import 'package:analysis_server/src/lsp/lsp_analysis_server.dart';
@@ -18,6 +19,7 @@ import 'package:analyzer/src/util/performance/operation_performance.dart';
 import 'package:analyzer/src/utilities/cancellation.dart';
 import 'package:analyzer_plugin/protocol/protocol.dart';
 import 'package:analyzer_plugin/src/protocol/protocol_internal.dart';
+import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
 import 'package:language_server_protocol/json_parsing.dart';
 import 'package:path/path.dart' as path;
 
@@ -63,7 +65,7 @@ mixin Handler<T> {
   // TODO(dantup): Merge this into HandlerHelperMixin by converting to methods
   //  so T can be inferred.
   final fileModifiedError = error<T>(ErrorCodes.ContentModified,
-      'Document was modified before operation completed', null);
+      'Document was modified before operation completed');
 
   final serverNotInitializedError = error<T>(ErrorCodes.ServerNotInitialized,
       'Request not valid before server is initialized');
@@ -76,19 +78,37 @@ mixin HandlerHelperMixin<S extends AnalysisServer> {
 
   S get server;
 
+  ClientUriConverter get uriConverter => server.uriConverter;
+
+  /// A [Future] that completes when both the client has finished initializing
+  /// and any in-progress context rebuilds are complete.
+  Future<void> get _initializedWithContexts =>
+      server.lspClientInitialized.then((_) => server.analysisContextsRebuilt);
+
   ErrorOr<T> analysisFailedError<T>(String path) => error<T>(
       ServerErrorCodes.FileAnalysisFailed, 'Analysis failed for file', path);
 
   ErrorOr<T> fileNotAnalyzedError<T>(String path) => error<T>(
       ServerErrorCodes.FileNotAnalyzed, 'File is not being analyzed', path);
 
-  /// Returns the file system path for a TextDocumentIdentifier.
+  /// Returns whether [doc] is a user-editable document or not.
+  ///
+  /// Only editable documents have overlays and can be modified by the client.
+  bool isEditableDocument(Uri uri) {
+    // Currently, only file:// URIs are editable documents.
+    return uri.isScheme('file');
+  }
+
+  /// Returns the file system path (or internal analyzer file reference) for a
+  /// TextDocumentIdentifier.
   ErrorOr<String> pathOfDoc(TextDocumentIdentifier doc) => pathOfUri(doc.uri);
 
-  /// Returns the file system path for a TextDocumentItem.
+  /// Returns the file system path (or internal analyzer file reference) for a
+  /// TextDocumentItem.
   ErrorOr<String> pathOfDocItem(TextDocumentItem doc) => pathOfUri(doc.uri);
 
-  /// Returns the file system path for a file URI.
+  /// Returns the file system path (or internal analyzer file reference) for a
+  /// file URI.
   ErrorOr<String> pathOfUri(Uri? uri) {
     if (uri == null) {
       return ErrorOr<String>.error(ResponseError(
@@ -96,40 +116,61 @@ mixin HandlerHelperMixin<S extends AnalysisServer> {
         message: 'Document URI was not supplied',
       ));
     }
-    final isValidFileUri = uri.isScheme('file');
-    if (!isValidFileUri) {
+
+    // For URIs with no scheme, assume it was a relative path and provide a
+    // better message than "scheme '' is not supported".
+    if (uri.scheme.isEmpty) {
       return ErrorOr<String>.error(ResponseError(
         code: ServerErrorCodes.InvalidFilePath,
-        message: 'URI was not a valid file:// URI',
+        message: 'URI is not a valid file:// URI',
+        data: uri.toString(),
+      ));
+    }
+
+    var supportedSchemes = server.uriConverter.supportedSchemes;
+    var isValidScheme = supportedSchemes.contains(uri.scheme);
+    if (!isValidScheme) {
+      var supportedSchemesString = supportedSchemes.isEmpty
+          ? '(none)'
+          : supportedSchemes.map((scheme) => "'$scheme'").join(', ');
+      return ErrorOr<String>.error(ResponseError(
+        code: ServerErrorCodes.InvalidFilePath,
+        message: "URI scheme '${uri.scheme}' is not supported. "
+            'Allowed schemes are $supportedSchemesString.',
         data: uri.toString(),
       ));
     }
     try {
-      final context = server.resourceProvider.pathContext;
-      final isWindows = context.style == path.Style.windows;
+      var context = server.resourceProvider.pathContext;
+      var isWindows = context.style == path.Style.windows;
 
       // Use toFilePath() here and not context.fromUri() because they're not
       // quite the same. `toFilePath()` will throw for some kinds of invalid
       // file URIs (such as those with fragments) that context.fromUri() does
-      // not. We want the stricter handling here.
-      final filePath = uri.toFilePath(windows: isWindows);
+      // not. We want to validate using the stricter handling.
+      var filePath = uri
+          .replace(scheme: 'file') // We can only use toFilePath() with file://
+          .toFilePath(windows: isWindows);
+
       // On Windows, paths that start with \ and not a drive letter are not
       // supported but will return `true` from `path.isAbsolute` so check for them
       // specifically.
       if (isWindows && filePath.startsWith(r'\')) {
         return ErrorOr<String>.error(ResponseError(
           code: ServerErrorCodes.InvalidFilePath,
-          message: 'URI was not an absolute file path (missing drive letter)',
+          message: 'URI does not contain an absolute file path '
+              '(missing drive letter)',
           data: uri.toString(),
         ));
       }
-      return ErrorOr<String>.success(filePath);
+      // Use the proper converter for the return value.
+      return ErrorOr<String>.success(uriConverter.fromClientUri(uri));
     } catch (e) {
       // Even if tryParse() works and file == scheme, fromUri() can throw on
       // Windows if there are invalid characters.
       return ErrorOr<String>.error(ResponseError(
           code: ServerErrorCodes.InvalidFilePath,
-          message: 'File URI did not contain a valid file path',
+          message: 'URI does not contain a valid file path',
           data: uri.toString()));
     }
   }
@@ -144,11 +185,11 @@ mixin HandlerHelperMixin<S extends AnalysisServer> {
     String path, {
     bool waitForInProgressContextRebuilds = true,
   }) async {
-    final result = await server.getResolvedLibrary(path);
+    var result = await server.getResolvedLibrary(path);
     if (result == null) {
       // Handle retry if allowed.
       if (waitForInProgressContextRebuilds) {
-        await server.analysisContextsRebuilt;
+        await _initializedWithContexts;
         return requireResolvedLibrary(path,
             waitForInProgressContextRebuilds: false);
       }
@@ -172,11 +213,11 @@ mixin HandlerHelperMixin<S extends AnalysisServer> {
     String path, {
     bool waitForInProgressContextRebuilds = true,
   }) async {
-    final result = await server.getResolvedUnit(path);
+    var result = await server.getResolvedUnit(path);
     if (result == null) {
       // Handle retry if allowed.
       if (waitForInProgressContextRebuilds) {
-        await server.analysisContextsRebuilt;
+        await _initializedWithContexts;
         return requireResolvedUnit(path,
             waitForInProgressContextRebuilds: false);
       }
@@ -198,11 +239,11 @@ mixin HandlerHelperMixin<S extends AnalysisServer> {
     String path, {
     bool waitForInProgressContextRebuilds = true,
   }) async {
-    final result = await server.getParsedUnit(path);
+    var result = await server.getParsedUnit(path);
     if (result == null) {
       // Handle retry if allowed.
       if (waitForInProgressContextRebuilds) {
-        await server.analysisContextsRebuilt;
+        await _initializedWithContexts;
         return requireUnresolvedUnit(path,
             waitForInProgressContextRebuilds: false);
       }
@@ -224,12 +265,12 @@ mixin LspHandlerHelperMixin {
   LspAnalysisServer get server;
 
   bool fileHasBeenModified(String path, int? clientVersion) {
-    final serverDocumentVersion = server.getDocumentVersion(path);
+    var serverDocumentVersion = server.getDocumentVersion(path);
     return clientVersion != null && clientVersion != serverDocumentVersion;
   }
 
   ErrorOr<LineInfo> getLineInfo(String path) {
-    final lineInfo = server.getLineInfo(path);
+    var lineInfo = server.getLineInfo(path);
 
     if (lineInfo == null) {
       return error(ServerErrorCodes.InvalidFilePath,
@@ -247,8 +288,8 @@ mixin LspPluginRequestHandlerMixin<T extends AnalysisServer>
     RequestParams params, {
     Duration timeout = const Duration(milliseconds: 500),
   }) {
-    final driver = server.getAnalysisDriver(path);
-    final pluginFutures = server.broadcastRequestToPlugins(params, driver);
+    var driver = server.getAnalysisDriver(path);
+    var pluginFutures = server.broadcastRequestToPlugins(params, driver);
     return waitForResponses(pluginFutures,
         requestParameters: params, timeout: timeout);
   }
@@ -278,19 +319,18 @@ abstract class MessageHandler<P, R, S extends AnalysisServer>
   /// [NotificationMessage]s are not expected to return results.
   FutureOr<ErrorOr<R>> handleMessage(IncomingMessage message,
       MessageInfo messageInfo, CancellationToken token) {
-    final reporter = LspJsonReporter('params');
-    final paramsJson = message.params as Map<String, Object?>?;
+    var reporter = LspJsonReporter('params');
+    var paramsJson = message.params as Map<String, Object?>?;
     if (!jsonHandler.validateParams(paramsJson, reporter)) {
       return error(
         ErrorCodes.InvalidParams,
         'Invalid params for ${message.method}:\n'
                 '${reporter.errors.isNotEmpty ? reporter.errors.first : ''}'
             .trim(),
-        null,
       );
     }
 
-    final params =
+    var params =
         paramsJson != null ? jsonHandler.convertParams(paramsJson) : null as P;
     return handle(params, messageInfo, token);
   }
@@ -338,7 +378,7 @@ abstract class ServerStateMessageHandler {
     MessageInfo messageInfo, {
     CancellationToken? cancellationToken,
   }) async {
-    final handler = _messageHandlers[message.method];
+    var handler = _messageHandlers[message.method];
     if (handler == null) {
       return handleUnknownMessage(message);
     }
@@ -353,7 +393,7 @@ abstract class ServerStateMessageHandler {
     // will need to specifically check the token after `await`s.
     cancellationToken ??= _cancelHandler.createToken(message);
     try {
-      final result =
+      var result =
           await handler.handleMessage(message, messageInfo, cancellationToken);
       // Do a final check before returning the result, because if the request was
       // cancelled we can save the overhead of serializing everything to JSON
@@ -392,7 +432,7 @@ abstract class ServerStateMessageHandler {
     }
 
     // Messages that start with $/ are optional.
-    final stringValue = message.method.toJson();
+    var stringValue = message.method.toJson();
     return stringValue is String && stringValue.startsWith(r'$/');
   }
 }

@@ -42,7 +42,7 @@ String _symbolToString(Symbol symbol) =>
 
 Map<String, dynamic>? _symbolMapToStringMap(Map<Symbol, dynamic>? map) {
   if (map == null) return null;
-  var result = new Map<String, dynamic>();
+  var result = Map<String, dynamic>();
   map.forEach((Symbol key, value) {
     result[_symbolToString(key)] = value;
   });
@@ -66,7 +66,7 @@ class Object {
 
   @patch
   dynamic noSuchMethod(Invocation invocation) {
-    throw new NoSuchMethodError.withInvocation(this, invocation);
+    throw NoSuchMethodError.withInvocation(this, invocation);
   }
 
   @patch
@@ -231,7 +231,7 @@ class int {
     int? value = tryParse(source, radix: radix);
     if (value != null) return value;
     if (onError != null) return onError(source);
-    throw new FormatException(source);
+    throw FormatException(source);
   }
 
   @patch
@@ -248,7 +248,7 @@ class double {
     double? value = tryParse(source);
     if (value != null) return value;
     if (onError != null) return onError(source);
-    throw new FormatException('Invalid double', source);
+    throw FormatException('Invalid double', source);
   }
 
   @patch
@@ -279,154 +279,6 @@ class Error {
     JS('', 'throw #', error);
     throw "unreachable";
   }
-}
-
-// Patch for DateTime implementation.
-@patch
-class DateTime {
-  @patch
-  DateTime.fromMillisecondsSinceEpoch(int millisecondsSinceEpoch,
-      {bool isUtc = false})
-      // `0 + millisecondsSinceEpoch` forces the inferred result to be non-null.
-      : this._withValue(0 + millisecondsSinceEpoch, isUtc: isUtc);
-
-  @patch
-  DateTime.fromMicrosecondsSinceEpoch(int microsecondsSinceEpoch,
-      {bool isUtc = false})
-      : this._withValue(
-            _microsecondInRoundedMilliseconds(microsecondsSinceEpoch),
-            isUtc: isUtc);
-
-  @patch
-  DateTime._internal(int year, int month, int day, int hour, int minute,
-      int second, int millisecond, int microsecond, bool isUtc)
-      // checkBool is manually inlined here because dart2js doesn't inline it
-      // and [isUtc] is usually a constant.
-      : this.isUtc = isUtc is bool
-            ? isUtc
-            : throw new ArgumentError.value(isUtc, 'isUtc'),
-        _value = checkInt(Primitives.valueFromDecomposedDate(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            millisecond + _microsecondInRoundedMilliseconds(microsecond),
-            isUtc));
-
-  @patch
-  DateTime._now()
-      : isUtc = false,
-        _value = Primitives.dateNow();
-
-  @patch
-  DateTime._nowUtc()
-      : isUtc = true,
-        _value = Primitives.dateNow();
-
-  /// Rounds the given [microsecond] to the nearest milliseconds value.
-  ///
-  /// For example, invoked with argument `2600` returns `3`.
-  static int _microsecondInRoundedMilliseconds(int microsecond) {
-    return (microsecond / 1000).round();
-  }
-
-  @patch
-  static int? _brokenDownDateToValue(int year, int month, int day, int hour,
-      int minute, int second, int millisecond, int microsecond, bool isUtc) {
-    return Primitives.valueFromDecomposedDate(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        millisecond + _microsecondInRoundedMilliseconds(microsecond),
-        isUtc);
-  }
-
-  @patch
-  String get timeZoneName {
-    if (isUtc) return "UTC";
-    return Primitives.getTimeZoneName(this);
-  }
-
-  @patch
-  Duration get timeZoneOffset {
-    if (isUtc) return new Duration();
-    return new Duration(minutes: Primitives.getTimeZoneOffsetInMinutes(this));
-  }
-
-  @patch
-  DateTime add(Duration duration) {
-    return new DateTime._withValue(_value + duration.inMilliseconds,
-        isUtc: isUtc);
-  }
-
-  @patch
-  DateTime subtract(Duration duration) {
-    return new DateTime._withValue(_value - duration.inMilliseconds,
-        isUtc: isUtc);
-  }
-
-  @patch
-  Duration difference(DateTime other) {
-    return new Duration(milliseconds: _value - other.millisecondsSinceEpoch);
-  }
-
-  @patch
-  int get millisecondsSinceEpoch => _value;
-
-  @patch
-  int get microsecondsSinceEpoch => 1000 * _value;
-
-  @patch
-  int get year => Primitives.getYear(this);
-
-  @patch
-  int get month => Primitives.getMonth(this);
-
-  @patch
-  int get day => Primitives.getDay(this);
-
-  @patch
-  int get hour => Primitives.getHours(this);
-
-  @patch
-  int get minute => Primitives.getMinutes(this);
-
-  @patch
-  int get second => Primitives.getSeconds(this);
-
-  @patch
-  int get millisecond => Primitives.getMilliseconds(this);
-
-  @patch
-  int get microsecond => 0;
-
-  @patch
-  int get weekday => Primitives.getWeekday(this);
-
-  @patch
-  bool operator ==(Object other) =>
-      other is DateTime &&
-      _value == other.millisecondsSinceEpoch &&
-      isUtc == other.isUtc;
-
-  @patch
-  bool isBefore(DateTime other) => _value < other.millisecondsSinceEpoch;
-
-  @patch
-  bool isAfter(DateTime other) => _value > other.millisecondsSinceEpoch;
-
-  @patch
-  bool isAtSameMomentAs(DateTime other) =>
-      _value == other.millisecondsSinceEpoch;
-
-  @patch
-  int compareTo(DateTime other) =>
-      _value.compareTo(other.millisecondsSinceEpoch);
 }
 
 // Patch for Stopwatch implementation.
@@ -463,9 +315,8 @@ class Stopwatch {
 class List<E> {
   @patch
   factory List.filled(int length, E fill, {bool growable = false}) {
-    var result = growable
-        ? new JSArray<E>.growable(length)
-        : new JSArray<E>.fixed(length);
+    var result =
+        growable ? JSArray<E>.growable(length) : JSArray<E>.fixed(length);
     if (length != 0 && fill != null) {
       // TODO(sra): Consider using `Array.fill`.
       for (int i = 0; i < result.length; i++) {
@@ -479,7 +330,7 @@ class List<E> {
 
   @patch
   factory List.empty({bool growable = false}) {
-    return growable ? new JSArray<E>.growable(0) : new JSArray<E>.fixed(0);
+    return growable ? JSArray<E>.growable(0) : JSArray<E>.fixed(0);
   }
 
   @patch
@@ -526,9 +377,8 @@ class List<E> {
   @patch
   factory List.generate(int length, E generator(int index),
       {bool growable = true}) {
-    final result = growable
-        ? new JSArray<E>.growable(length)
-        : new JSArray<E>.fixed(length);
+    final result =
+        growable ? JSArray<E>.growable(length) : JSArray<E>.fixed(length);
     for (int i = 0; i < length; i++) {
       result[i] = generator(i);
     }
@@ -639,7 +489,7 @@ class RegExp {
           bool caseSensitive = true,
           bool unicode = false,
           bool dotAll = false}) =>
-      new JSSyntaxRegExp(source,
+      JSSyntaxRegExp(source,
           multiLine: multiLine,
           caseSensitive: caseSensitive,
           unicode: unicode,
@@ -674,7 +524,7 @@ class StringBuffer {
 
   @patch
   void writeCharCode(int charCode) {
-    _writeString(new String.fromCharCode(charCode));
+    _writeString(String.fromCharCode(charCode));
   }
 
   @patch
@@ -822,16 +672,21 @@ class _Uri {
   @patch
   static bool get _isWindows => _isWindowsCached;
 
-  static final bool _isWindowsCached = JS(
-      'bool',
-      'typeof process != "undefined" && '
-          'Object.prototype.toString.call(process) == "[object process]" && '
-          'process.platform == "win32"');
+  // Consider the possibility of using Windows behavior if app is
+  // compiled with `--server-mode` and running on Node or a similar platform.
+  static final bool _isWindowsCached =
+      !const bool.fromEnvironment('dart.library.html') &&
+          JS<bool>(
+            'bool',
+            'typeof process != "undefined" && '
+                'Object.prototype.toString.call(process) == "[object process]" && '
+                'process.platform == "win32"',
+          );
 
   // Matches a String that _uriEncodes to itself regardless of the kind of
   // component.  This corresponds to [_unreservedTable], i.e. characters that
   // are not encoded by any encoding table.
-  static final RegExp _needsNoEncoding = new RegExp(r'^[\-\.0-9A-Z_a-z~]*$');
+  static final RegExp _needsNoEncoding = RegExp(r'^[\-\.0-9A-Z_a-z~]*$');
 
   /// This is the internal implementation of JavaScript's encodeURI function.
   /// It encodes all characters in the string [text] except for those
@@ -845,7 +700,7 @@ class _Uri {
 
     // Encode the string into bytes then generate an ASCII only string
     // by percent encoding selected bytes.
-    StringBuffer result = new StringBuffer('');
+    StringBuffer result = StringBuffer('');
     var bytes = encoding.encode(text);
     for (int i = 0; i < bytes.length; i++) {
       int byte = bytes[i];

@@ -29,14 +29,18 @@ doesn't conform to the language specification or
 that might work in unexpected ways.
 
 [bottom type]: https://dart.dev/null-safety/understanding-null-safety#top-and-bottom
-[ffi]: https://dart.dev/guides/libraries/c-interop
+[debugPrint]: https://api.flutter.dev/flutter/foundation/debugPrint.html
+[ffi]: https://dart.dev/interop/c-interop
 [IEEE 754]: https://en.wikipedia.org/wiki/IEEE_754
 [irrefutable pattern]: https://dart.dev/resources/glossary#irrefutable-pattern
+[kDebugMode]: https://api.flutter.dev/flutter/foundation/kDebugMode-constant.html
 [meta-doNotStore]: https://pub.dev/documentation/meta/latest/meta/doNotStore-constant.html
+[meta-doNotSubmit]: https://pub.dev/documentation/meta/latest/meta/doNotSubmit-constant.html
 [meta-factory]: https://pub.dev/documentation/meta/latest/meta/factory-constant.html
 [meta-immutable]: https://pub.dev/documentation/meta/latest/meta/immutable-constant.html
 [meta-internal]: https://pub.dev/documentation/meta/latest/meta/internal-constant.html
 [meta-literal]: https://pub.dev/documentation/meta/latest/meta/literal-constant.html
+[meta-mustBeConst]: https://pub.dev/documentation/meta/latest/meta/mustBeConst-constant.html
 [meta-mustCallSuper]: https://pub.dev/documentation/meta/latest/meta/mustCallSuper-constant.html
 [meta-optionalTypeArgs]: https://pub.dev/documentation/meta/latest/meta/optionalTypeArgs-constant.html
 [meta-sealed]: https://pub.dev/documentation/meta/latest/meta/sealed-constant.html
@@ -44,6 +48,7 @@ that might work in unexpected ways.
 [meta-UseResult]: https://pub.dev/documentation/meta/latest/meta/UseResult-class.html
 [meta-visibleForOverriding]: https://pub.dev/documentation/meta/latest/meta/visibleForOverriding-constant.html
 [meta-visibleForTesting]: https://pub.dev/documentation/meta/latest/meta/visibleForTesting-constant.html
+[package-logging]: https://pub.dev/packages/logging
 [refutable pattern]: https://dart.dev/resources/glossary#refutable-pattern
 
 ### abi_specific_integer_invalid
@@ -65,30 +70,30 @@ The analyzer produces this diagnostic when a class that extends
 The following code produces this diagnostic because the class `C` doesn't
 define a const constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class [!C!] extends AbiSpecificInteger {
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constructor isn't
 a `const` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class [!C!] extends AbiSpecificInteger {
   C();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `C` defines
 multiple constructors:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
@@ -96,12 +101,12 @@ final class [!C!] extends AbiSpecificInteger {
   const C.zero();
   const C.one();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `C` defines
 a field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
@@ -110,33 +115,33 @@ final class [!C!] extends AbiSpecificInteger {
 
   const C(this.i);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `C` has a
 type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class [!C!]<T> extends AbiSpecificInteger { // type parameters
   const C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the class so that it meets the requirements of having no type
 parameters and a single member that is a `const` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 ### abi_specific_integer_mapping_extra
 
@@ -154,7 +159,7 @@ annotation.
 The following code produces this diagnostic because there are two
 `AbiSpecificIntegerMapping` annotations on the class `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
@@ -162,21 +167,21 @@ import 'dart:ffi';
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the annotations, merging the arguments as
 appropriate:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8(), Abi.linuxX64 : Uint16()})
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 ### abi_specific_integer_mapping_missing
 
@@ -194,26 +199,26 @@ annotation.
 The following code produces this diagnostic because there's no
 `AbiSpecificIntegerMapping` annotation on the class `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class [!C!] extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an `AbiSpecificIntegerMapping` annotation to the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 ### abi_specific_integer_mapping_unsupported
 
@@ -239,27 +244,27 @@ the following integer types:
 The following code produces this diagnostic because the value of the map
 entry is `Array<Uint8>`, which isn't a valid integer type:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : [!Array<Uint8>(4)!]})
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use one of the valid types as a value in the map:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @AbiSpecificIntegerMapping({Abi.macosX64 : Int8()})
 final class C extends AbiSpecificInteger {
   const C();
 }
-{% endprettify %}
+```
 
 ### abstract_field_initializer
 
@@ -275,40 +280,40 @@ modifier also has an initializer.
 The following code produces this diagnostic because `f` is marked as
 `abstract` and has an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   abstract int [!f!] = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `f` is marked as
 `abstract` and there's an initializer in the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   abstract int f;
 
   C() : [!f!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field must be abstract, then remove the initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   abstract int f;
 }
-{% endprettify %}
+```
 
 If the field isn't required to be abstract, then remove the keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   int f = 0;
 }
-{% endprettify %}
+```
 
 ### abstract_sealed_class
 
@@ -326,25 +331,25 @@ implicitly abstract, so explicitly using both modifiers is not allowed.
 The following code produces this diagnostic because the class `C` is
 declared using both `abstract` and `sealed`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract [!sealed!] class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class should be abstract but not sealed, then remove the `sealed`
 modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {}
-{% endprettify %}
+```
 
 If the class should be both abstract and sealed, then remove the
 `abstract` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 sealed class C {}
-{% endprettify %}
+```
 
 ### abstract_super_member_reference
 
@@ -361,14 +366,14 @@ member in the superclass chain. Abstract members can't be invoked.
 The following code produces this diagnostic because `B` doesn't inherit a
 concrete implementation of `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   int get a;
 }
 class B extends A {
   int get a => super.[!a!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -388,40 +393,40 @@ cause the same name to be exported from multiple libraries.
 
 Given a file `a.dart` containing
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 And a file `b.dart` containing
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the name `C` is being
 exported from both `a.dart` and `b.dart`:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'a.dart';
 export [!'b.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If none of the names in one of the libraries needs to be exported, then
 remove the unnecessary export directives:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'a.dart';
-{% endprettify %}
+```
 
 If all of the export directives are needed, then hide the name in all
 except one of the directives:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'a.dart';
 export 'b.dart' hide C;
-{% endprettify %}
+```
 
 ### ambiguous_extension_member_access
 
@@ -447,7 +452,7 @@ other extensions, making the reference to the member ambiguous.
 The following code produces this diagnostic because there's no way to
 choose between the member in `E1` and the member in `E2`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E1 on String {
   int get charCount => 1;
 }
@@ -459,7 +464,7 @@ extension E2 on String {
 void f(String s) {
   print(s.[!charCount!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -468,7 +473,7 @@ If you don't need both extensions, then you can delete or hide one of them.
 If you need both, then explicitly select the one you want to use by using
 an extension override:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E1 on String {
   int get charCount => length;
 }
@@ -480,7 +485,7 @@ extension E2 on String {
 void f(String s) {
   print(E2(s).charCount);
 }
-{% endprettify %}
+```
 
 ### ambiguous_import
 
@@ -495,58 +500,58 @@ declared in two or more imported libraries.
 
 Given a library (`a.dart`) that defines a class (`C` in this example):
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class C {}
-{% endprettify %}
+```
 
 And a library (`b.dart`) that defines a different class with the same name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class B {}
 class C {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 import 'b.dart';
 
 void f([!C!] c1, [!C!] c2) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If any of the libraries aren't needed, then remove the import directives
 for them:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 void f(C c1, C c2) {}
-{% endprettify %}
+```
 
 If the name is still defined by more than one library, then add a `hide`
 clause to the import directives for all except one library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' hide C;
 import 'b.dart';
 
 void f(C c1, C c2) {}
-{% endprettify %}
+```
 
 If you must be able to reference more than one of these types, then add a
 prefix to each of the import directives, and qualify the references with
 the appropriate prefix:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 import 'b.dart' as b;
 
 void f(a.C c1, b.C c2) {}
-{% endprettify %}
+```
 
 ### ambiguous_set_or_map_literal_both
 
@@ -573,10 +578,10 @@ determine whether you are writing a map literal or a set literal.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(Map<String, String> a, List<String> b, Map<String, String> c) =>
     [!{...a, ...b, ...c}!];
-{% endprettify %}
+```
 
 The list `b` can only be spread into a set, and the maps `a` and `c` can
 only be spread into a map, and the literal can't be both.
@@ -588,19 +593,19 @@ of the spread elements of one kind or another, so that the elements are
 consistent. In this case, that likely means removing the list and deciding
 what to do about the now unused parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(Map<String, String> a, List<String> b, Map<String, String> c) =>
     {...a, ...c};
-{% endprettify %}
+```
 
 The second fix is to change the elements of one kind into elements that are
 consistent with the other elements. For example, you can add the elements
 of the list as keys that map to themselves:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(Map<String, String> a, List<String> b, Map<String, String> c) =>
     {...a, for (String s in b) s: s, ...c};
-{% endprettify %}
+```
 
 ### ambiguous_set_or_map_literal_either
 
@@ -625,9 +630,9 @@ literal or a set literal.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(a, b) => [!{...a, ...b}!];
-{% endprettify %}
+```
 
 The problem occurs because there are no type arguments, and there is no
 information about the type of either `a` or `b`.
@@ -638,43 +643,43 @@ There are three common ways to fix this problem. The first is to add type
 arguments to the literal. For example, if the literal is intended to be a
 map literal, you might write something like this:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(a, b) => <String, String>{...a, ...b};
-{% endprettify %}
+```
 
 The second fix is to add type information so that the expressions have
 either the type `Iterable` or the type `Map`. You can add an explicit cast
 or, in this case, add types to the declarations of the two parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(List<int> a, List<int> b) => {...a, ...b};
-{% endprettify %}
+```
 
 The third fix is to add context information. In this case, that means
 adding a return type to the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 Set<String> union(a, b) => {...a, ...b};
-{% endprettify %}
+```
 
 In other cases, you might add a type somewhere else. For example, say the
 original code looks like this:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(a, b) {
   var x = [!{...a, ...b}!];
   return x;
 }
-{% endprettify %}
+```
 
 You might add a type annotation on `x`, like this:
 
-{% prettify dart tag=pre+code %}
+```dart
 union(a, b) {
   Map<String, String> x = {...a, ...b};
   return x;
 }
-{% endprettify %}
+```
 
 ### annotation_on_pointer_field
 
@@ -695,26 +700,26 @@ The following code produces this diagnostic because the field `p`, which
 has the type `Pointer` and is declared in a subclass of `Struct`, has the
 annotation `@Double()`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   [!@Double()!]
   external Pointer<Int8> p;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the annotations from the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   external Pointer<Int8> p;
 }
-{% endprettify %}
+```
 
 ### argument_must_be_a_constant
 
@@ -737,21 +742,21 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the value of the
 `isLeaf` argument is a parameter, and hence isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int Function(int) fromPointer(
     Pointer<NativeFunction<Int8 Function(Int8)>> p, bool isLeaf) {
   return p.asFunction(isLeaf: [!isLeaf!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a suitable constant that can be used, then replace the argument
 with a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 const isLeaf = false;
@@ -759,18 +764,86 @@ const isLeaf = false;
 int Function(int) fromPointer(Pointer<NativeFunction<Int8 Function(Int8)>> p) {
   return p.asFunction(isLeaf: isLeaf);
 }
-{% endprettify %}
+```
 
 If there isn't a suitable constant, then replace the argument with a
 boolean literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int Function(int) fromPointer(Pointer<NativeFunction<Int8 Function(Int8)>> p) {
   return p.asFunction(isLeaf: true);
 }
-{% endprettify %}
+```
+
+### argument_must_be_native
+
+_Argument to 'Native.addressOf' must be annotated with @Native_
+
+#### Description
+
+The analyzer produces this diagnostic when the argument passed to
+`Native.addressOf` isn't annotated with the `Native` annotation.
+
+#### Examples
+
+The following code produces this diagnostic because the argument to
+`addressOf` is a string, not a field, and strings can't be annotated:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function()>()
+external void f();
+
+void g() {
+  print(Native.addressOf([!'f'!]));
+}
+```
+
+The following code produces this diagnostic because the function `f` is
+being passed to `addressOf` but isn't annotated as being `Native`:
+
+```dart
+import 'dart:ffi';
+
+external void f();
+
+void g() {
+  print(Native.addressOf<NativeFunction<Void Function()>>([!f!]));
+}
+```
+
+#### Common fixes
+
+If the argument isn't either a field or a function, then replace the
+argument with a field or function that's annotated with `Native`:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function()>()
+external void f();
+
+void g() {
+  print(Native.addressOf<NativeFunction<Void Function()>>(f));
+}
+```
+
+If the argument is either a field or a function, then annotate the field
+of function with `Native`:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function()>()
+external void f();
+
+void g() {
+  print(Native.addressOf<NativeFunction<Void Function()>>(f));
+}
+```
 
 ### argument_type_not_assignable
 
@@ -786,45 +859,45 @@ can't be assigned to the static type of the corresponding parameter.
 The following code produces this diagnostic because a `num` can't be
 assigned to a `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f(String x) => x;
 String g(num y) => f([!y!]);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If possible, rewrite the code so that the static type is assignable. In the
 example above you might be able to change the type of the parameter `y`:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f(String x) => x;
 String g(String y) => f(y);
-{% endprettify %}
+```
 
 If that fix isn't possible, then add code to handle the case where the
 argument value isn't the required type. One approach is to coerce other
 types to the required type:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f(String x) => x;
 String g(num y) => f(y.toString());
-{% endprettify %}
+```
 
 Another approach is to add explicit type tests and fallback code:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f(String x) => x;
-String g(num y) => f(y is String ? y : '');
-{% endprettify %}
+String g(Object y) => f(y is String ? y : '');
+```
 
 If you believe that the runtime type of the argument will always be the
 same as the static type of the parameter, and you're willing to risk having
 an exception thrown at runtime if you're wrong, then add an explicit cast:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f(String x) => x;
 String g(num y) => f(y as String);
-{% endprettify %}
+```
 
 ### argument_type_not_assignable_to_error_handler
 
@@ -847,42 +920,42 @@ The following code produces this diagnostic because the closure being
 passed to `catchError` doesn't take any parameters, but the function is
 required to take at least one parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> f) {
   f.catchError([!() => 0!]);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the closure being
 passed to `catchError` takes three parameters, but it can't have more than
 two required parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> f) {
   f.catchError([!(one, two, three) => 0!]);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because even though the closure
 being passed to `catchError` takes one parameter, the closure doesn't have
 a type that is compatible with `Object`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> f) {
   f.catchError([!(String error) => 0!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the function being passed to `catchError` so that it has either one
 or two required parameters, and the parameters have the required types:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> f) {
   f.catchError((Object error) => 0);
 }
-{% endprettify %}
+```
 
 ### assert_in_redirecting_constructor
 
@@ -900,28 +973,28 @@ The following code produces this diagnostic because the unnamed constructor
 is a redirecting constructor and also has an assert in the initializer
 list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C(int x) : [!assert(x > 0)!], this.name();
   C.name() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the assert isn't needed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C(int x) : this.name();
   C.name() {}
 }
-{% endprettify %}
+```
 
 If the assert is needed, then convert the constructor into a factory
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   factory C(int x) {
     assert(x > 0);
@@ -929,7 +1002,7 @@ class C {
   }
   C.name() {}
 }
-{% endprettify %}
+```
 
 ### asset_directory_does_not_exist
 
@@ -946,12 +1019,12 @@ Assuming that the directory `assets` doesn't exist, the following code
 produces this diagnostic because it's listed as a directory containing
 assets:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - [!assets/!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -974,12 +1047,12 @@ referencing a file that doesn't exist.
 Assuming that the file `doesNotExist.gif` doesn't exist, the following code
 produces this diagnostic because it's listed as an asset:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - [!doesNotExist.gif!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -1003,22 +1076,22 @@ isn't a list.
 The following code produces this diagnostic because the value of the
 `assets` key is a string when a list is expected:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets: [!assets/!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the value of the asset list so that it's a list:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - assets/
-{% endprettify %}
+```
 
 ### asset_missing_path
 
@@ -1034,27 +1107,27 @@ The analyzer produces this diagnostic when an asset map is missing a
 The following code produces this diagnostic because the asset map
 is missing a `path` value:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - flavors:
       - premium
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the asset map so that it contains a `path` field with a string
 value (a valid POSIX-style file path):
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - path: assets/image.gif
       flavors:
       - premium
-{% endprettify %}
+```
 
 ### asset_not_string
 
@@ -1070,24 +1143,24 @@ value that isn't a string.
 The following code produces this diagnostic because the `assets` list
 contains a map:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - [!image.gif: true!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the `assets` list so that it only contains valid POSIX-style file
 paths:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - assets/image.gif
-{% endprettify %}
+```
 
 ### asset_not_string_or_map
 
@@ -1103,36 +1176,36 @@ or a map.
 The following code produces this diagnostic because the asset value
 is a list:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - [![one, two, three]!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to specify more than just the path to the asset, then replace
 the value with a map with a `path` key (a valid POSIX-style file path):
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - path: assets/image.gif
       flavors:
       - premium
-{% endprettify %}
+```
 
 If you only need to specify the path, then replace the value with the path
 to the asset (a valid POSIX-style file path):
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - assets/image.gif
-{% endprettify %}
+```
 
 ### asset_path_not_string
 
@@ -1148,28 +1221,28 @@ The analyzer produces this diagnostic when an asset map contains a
 The following code produces this diagnostic because the asset map
 contains a `path` value which is a list:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - path: [![one, two, three]!]
       flavors:
       - premium
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the `asset` map so that it contains a `path` value which is a
 string (a valid POSIX-style file path):
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   assets:
     - path: image.gif
       flavors:
       - premium
-{% endprettify %}
+```
 
 ### assignment_of_do_not_store
 
@@ -1188,14 +1261,14 @@ or top-level variable.
 The following code produces this diagnostic because the value of the
 function `f` is being stored in the top-level variable `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @doNotStore
 int f() => 1;
 
 var x = [!f()!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -1218,39 +1291,39 @@ runtime.
 The following code produces this diagnostic because `c` is being assigned a
 value even though it has the `const` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 const c = 0;
 
 void f() {
   [!c!] = 1;
   print(c);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the variable must be assignable, then remove the `const` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 var c = 0;
 
 void f() {
   c = 1;
   print(c);
 }
-{% endprettify %}
+```
 
 If the constant shouldn't be changed, then either remove the assignment or
 use a local variable in place of references to the constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 const c = 0;
 
 void f() {
   var v = 1;
   print(v);
 }
-{% endprettify %}
+```
 
 ### assignment_to_final
 
@@ -1266,7 +1339,7 @@ declared to be `final` or `const`.
 
 The following code produces this diagnostic because `v` is final:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final v = 0;
 }
@@ -1274,14 +1347,14 @@ class C {
 f(C c) {
   c.[!v!] = 1;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to be able to set the value of the field, then remove the
 modifier `final` from the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int v = 0;
 }
@@ -1289,7 +1362,7 @@ class C {
 f(C c) {
   c.v = 1;
 }
-{% endprettify %}
+```
 
 ### assignment_to_final_local
 
@@ -1305,26 +1378,26 @@ declared to be final is assigned after it was initialized.
 The following code produces this diagnostic because `x` is final, so it
 can't have a value assigned to it after it was initialized:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   final x = 0;
   [!x!] = 3;
   print(x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the keyword `final`, and replace it with `var` if there's no type
 annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   var x = 0;
   x = 3;
   print(x);
 }
-{% endprettify %}
+```
 
 ### assignment_to_final_no_setter
 
@@ -1341,7 +1414,7 @@ defined with the same name.
 The following code produces this diagnostic because there is no setter
 named `x` in `C`, but there is a getter named `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int get x => 0;
   set y(int p) {}
@@ -1350,13 +1423,13 @@ class C {
 void f(C c) {
   c.[!x!] = 1;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want to invoke an existing setter, then correct the name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int get x => 0;
   set y(int p) {}
@@ -1365,12 +1438,12 @@ class C {
 void f(C c) {
   c.y = 1;
 }
-{% endprettify %}
+```
 
 If you want to invoke the setter but it just doesn't exist yet, then
 declare it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int get x => 0;
   set x(int p) {}
@@ -1380,7 +1453,7 @@ class C {
 void f(C c) {
   c.x = 1;
 }
-{% endprettify %}
+```
 
 ### assignment_to_function
 
@@ -1396,38 +1469,38 @@ on the left-hand side of an assignment expression.
 The following code produces this diagnostic because the assignment to the
 function `f` is invalid:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 void g() {
   [!f!] = () {};
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the right-hand side should be assigned to something else, such as a
 local variable, then change the left-hand side:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 void g() {
   var x = () {};
   print(x);
 }
-{% endprettify %}
+```
 
 If the intent is to change the implementation of the function, then define
 a function-valued variable instead of a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void Function() f = () {};
 
 void g() {
   f = () {};
 }
-{% endprettify %}
+```
 
 ### assignment_to_method
 
@@ -1443,7 +1516,7 @@ method.
 The following code produces this diagnostic because `f` can't be assigned a
 value because it's a method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void f() {}
 
@@ -1451,7 +1524,7 @@ class C {
     [!f!] = null;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -1471,27 +1544,27 @@ on the left-hand side of an assignment expression.
 The following code produces this diagnostic because the assignment to the
 class `C` is invalid:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 
 void f() {
   [!C!] = null;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the right-hand side should be assigned to something else, such as a
 local variable, then change the left-hand side:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 void g() {
   var c = null;
   print(c);
 }
-{% endprettify %}
+```
 
 ### async_for_in_wrong_context
 
@@ -1509,47 +1582,47 @@ The following code produces this diagnostic because the body of `f` isn't
 marked as being either `async` or `async*`, but `f` contains an async
 for-in loop:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(list) {
   [!await!] for (var e in list) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function should return a `Future`, then mark the body with `async`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<void> f(list) async {
   await for (var e in list) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 If the function should return a `Stream` of values, then mark the body with
 `async*`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Stream<void> f(list) async* {
   await for (var e in list) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 If the function should be synchronous, then remove the `await` before the
 loop:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(list) {
   for (var e in list) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 ### await_in_late_local_variable_initializer
 
@@ -1565,34 +1638,34 @@ The analyzer produces this diagnostic when a local variable that has the
 The following code produces this diagnostic because an `await` expression
 is used in the initializer for `v`, a local variable that is marked `late`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<int> f() async {
   late var v = [!await!] 42;
   return v;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the initializer can be rewritten to not use `await`, then rewrite it:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<int> f() async {
   late var v = 42;
   return v;
 }
-{% endprettify %}
+```
 
 If the initializer can't be rewritten, then remove the `late` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<int> f() async {
   var v = await 42;
   return v;
 }
-{% endprettify %}
+```
 
-### await_of_extension_type_not_future
+### await_of_incompatible_type
 
 _The 'await' expression can't be used for an expression with an extension type
 that is not a subtype of 'Future'._
@@ -1608,38 +1681,38 @@ subclass of `Future`.
 The following code produces this diagnostic because the extension type `E`
 isn't a subclass of `Future`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {}
 
 void f(E e) async {
   [!await!] e;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the extension type is correctly defined, then remove the `await`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {}
 
 void f(E e) {
   e;
 }
-{% endprettify %}
+```
 
 If the extension type is intended to be awaitable, then add `Future` (or a
 subtype of `Future`) to the `implements` clause (adding an `implements`
 clause if there isn't one already), and make the representation type
 match:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(Future<int> i) implements Future<int> {}
 
 void f(E e) async {
   await e;
 }
-{% endprettify %}
+```
 
 ### body_might_complete_normally
 
@@ -1658,65 +1731,65 @@ The following code produces this diagnostic because the method `m` has an
 implicit return of `null` inserted at the end of the method, but the method
 is declared to not return `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int [!m!](int t) {
     print(t);
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the method `m` has an
 implicit return of `null` inserted at the end of the method, but because
 the class `C` can be instantiated with a non-nullable type argument, the
 method is effectively declared to not return `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   T [!m!](T t) {
     print(t);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a reasonable value that can be returned, then add a `return`
 statement at the end of the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   T m(T t) {
     print(t);
     return t;
   }
 }
-{% endprettify %}
+```
 
 If the method won't reach the implicit return, then add a `throw` at the
 end of the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   T m(T t) {
     print(t);
     throw '';
   }
 }
-{% endprettify %}
+```
 
 If the method intentionally returns `null` at the end, then add an
 explicit return of `null` at the end of the method and change the
 return type so that it's valid to return `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   T? m(T t) {
     print(t);
     return null;
   }
 }
-{% endprettify %}
+```
 
 ### body_might_complete_normally_catch_error
 
@@ -1736,33 +1809,33 @@ The following code produces this diagnostic because the closure passed to
 the `catchError` method is required to return an `int` but doesn't end
 with an explicit `return`, causing it to implicitly return `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void g(Future<int> f) {
   f.catchError((e, st) [!{!]});
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the closure should sometimes return a non-`null` value, then add an
 explicit return to the closure:
 
-{% prettify dart tag=pre+code %}
+```dart
 void g(Future<int> f) {
   f.catchError((e, st) {
     return -1;
   });
 }
-{% endprettify %}
+```
 
 If the closure should always return `null`, then change the type argument
 of the `Future` to be either `void` or `Null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void g(Future<void> f) {
   f.catchError((e, st) {});
 }
-{% endprettify %}
+```
 
 ### body_might_complete_normally_nullable
 
@@ -1780,28 +1853,28 @@ code, it's better for the return of `null` to be explicit.
 The following code produces this diagnostic because the function `f`
 implicitly returns `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 String? [!f!]() {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the return of `null` is intentional, then make it explicit:
 
-{% prettify dart tag=pre+code %}
+```dart
 String? f() {
   return null;
 }
-{% endprettify %}
+```
 
 If the function should return a non-null value along that path, then add
 the missing return statement:
 
-{% prettify dart tag=pre+code %}
+```dart
 String? f() {
   return '';
 }
-{% endprettify %}
+```
 
 ### break_label_on_switch_member
 
@@ -1817,7 +1890,7 @@ a switch statement has a label that is associated with another case clause.
 The following code produces this diagnostic because the label `l` is
 associated with the case clause for `0`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i) {
   switch (i) {
     l: case 0:
@@ -1826,14 +1899,14 @@ void f(int i) {
       break [!l!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the intent is to transfer control to the statement after the switch,
 then remove the label from the break statement:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i) {
   switch (i) {
     case 0:
@@ -1842,12 +1915,12 @@ void f(int i) {
       break;
   }
 }
-{% endprettify %}
+```
 
 If the intent is to transfer control to a different case block, then use
 `continue` rather than `break`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i) {
   switch (i) {
     l: case 0:
@@ -1856,7 +1929,7 @@ void f(int i) {
       continue l;
   }
 }
-{% endprettify %}
+```
 
 ### built_in_identifier_as_type
 
@@ -1872,17 +1945,17 @@ where a type name is expected.
 The following code produces this diagnostic because `import` can't be used
 as a type because it's a built-in identifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!import!]<int> x;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the built-in identifier with the name of a valid type:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> x;
-{% endprettify %}
+```
 
 ### built_in_identifier_in_declaration
 
@@ -1910,97 +1983,13 @@ these kinds of declarations.
 The following code produces this diagnostic because `mixin` is a built-in
 identifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension [!mixin!] on int {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Choose a different name for the declaration.
-
-### callback_must_not_use_typed_data
-
-_FFI callbacks can't take typed data arguments or return value._
-
-#### Description
-
-The analyzer produces this diagnostic when an invocation of
-`Pointer.fromFunction`, one of`NativeCallable`'s constructors has a
-typed data argument or return value."
-
-Typed data unwrapping is only supported on arguments for leaf FFI calls.
-
-For more information about FFI, see [C interop using dart:ffi][ffi].
-
-#### Example
-
-The following code produces this diagnostic because the parameter type
-of `g` is a typed data.
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-import 'dart:typed_data';
-
-void f(Uint8List i) {}
-
-void g() {
-  Pointer.fromFunction<Void Function(Pointer<Uint8>)>([!f!]);
-}
-{% endprettify %}
-
-#### Common fixes
-
-Use the `Pointer` type instead:
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-
-void f(Pointer<Uint8> i) {}
-
-void g() {
-  Pointer.fromFunction<Void Function(Pointer<Uint8>)>(f);
-}
-{% endprettify %}
-
-### call_must_not_return_typed_data
-
-_FFI calls can't return typed data._
-
-#### Description
-
-The analyzer produces this diagnostic when the return type of
-`Pointer.asFunction`, `DynamicLibrary.lookupFunction`, or
-`@Native` is a typed data.
-
-Typed data unwrapping is only supported on arguments for leaf FFI calls.
-
-For more information about FFI, see [C interop using dart:ffi][ffi].
-
-#### Example
-
-The following code produces this diagnostic because the dart function
-signature contains a typed data, but the `isLeaf` argument is `false`:
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-import 'dart:typed_data';
-
-void f(Pointer<NativeFunction<Pointer<Uint8> Function()>> p) {
-  p.asFunction<[!Uint8List Function()!]>();
-}
-{% endprettify %}
-
-#### Common fixes
-
-Use the `Pointer` type instead:
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-
-void f(Pointer<NativeFunction<Pointer<Uint8> Function()>> p) {
-  p.asFunction<Pointer<Uint8> Function()>();
-}
-{% endprettify %}
 
 ### case_block_not_terminated
 
@@ -2018,7 +2007,7 @@ block isn't one of the required terminators: `break`, `continue`,
 The following code produces this diagnostic because the `case` block ends
 with an assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     [!case!] 0:
@@ -2027,13 +2016,13 @@ void f(int x) {
       x += 1;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add one of the required terminators:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case 0:
@@ -2043,7 +2032,7 @@ void f(int x) {
       x += 1;
   }
 }
-{% endprettify %}
+```
 
 ### case_expression_type_implements_equals
 
@@ -2061,7 +2050,7 @@ The following code produces this diagnostic because the expression
 following the keyword `case` (`C(0)`) has the type `C`, and the class `C`
 overrides the `==` operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int value;
 
@@ -2078,14 +2067,14 @@ void f(C c) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there isn't a strong reason not to do so, then rewrite the code to use
 an if-else structure:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int value;
 
@@ -2101,12 +2090,12 @@ void f(C c) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 If you can't rewrite the switch statement and the implementation of `==`
 isn't necessary, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int value;
 
@@ -2119,13 +2108,13 @@ void f(C c) {
       break;
   }
 }
-{% endprettify %}
+```
 
 If you can't rewrite the switch statement and you can't remove the
 definition of `==`, then find some other value that can be used to control
 the switch:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int value;
 
@@ -2142,7 +2131,7 @@ void f(C c) {
       break;
   }
 }
-{% endprettify %}
+```
 
 ### case_expression_type_is_not_switch_expression_subtype
 
@@ -2160,40 +2149,40 @@ static type of the expression following `switch`.
 The following code produces this diagnostic because `1` is an `int`, which
 isn't a subtype of `String` (the type of `s`):
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   switch (s) {
     case [!1!]:
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value of the `case` expression is wrong, then change the `case`
 expression so that it has the required type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   switch (s) {
     case '1':
       break;
   }
 }
-{% endprettify %}
+```
 
 If the value of the `case` expression is correct, then change the `switch`
 expression to have the required type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int s) {
   switch (s) {
     case 1:
       break;
   }
 }
-{% endprettify %}
+```
 
 ### cast_from_nullable_always_fails
 
@@ -2213,35 +2202,35 @@ The following code produces this diagnostic because the variable `x` is
 cast to a non-nullable type (`int`) when it's known to have the value
 `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   num? x;
   [!x!] as int;
   print(x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the variable is expected to have a value before the cast, then add an
 initializer or an assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   num? x = 3;
   x as int;
   print(x);
 }
-{% endprettify %}
+```
 
 If the variable isn't expected to be assigned, then remove the cast:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   num? x;
   print(x);
 }
-{% endprettify %}
+```
 
 ### cast_from_null_always_fails
 
@@ -2258,21 +2247,21 @@ The analyzer produces this diagnostic when an expression whose type is
 The following code produces this diagnostic because `n` is known to always
 be `null`, but it's being cast to a non-nullable type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Null n) {
   [!n as int!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary cast:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Null n) {
   n;
 }
-{% endprettify %}
+```
 
 ### cast_to_non_type
 
@@ -2288,19 +2277,19 @@ cast expression is defined to be something other than a type.
 The following code produces this diagnostic because `x` is a variable, not
 a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 num x = 0;
 int y = x as [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the name with the name of a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 num x = 0;
 int y = x as int;
-{% endprettify %}
+```
 
 ### class_used_as_mixin
 
@@ -2317,26 +2306,26 @@ The analyzer produces this diagnostic when a class that is neither a
 The following code produces this diagnostic because the class `M` is being
 used as a mixin, but it isn't defined as a `mixin class`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class M {}
 class C with [!M!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class can be a pure mixin, then change `class` to `mixin`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {}
 class C with M {}
-{% endprettify %}
+```
 
 If the class needs to be both a class and a mixin, then add `mixin`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin class M {}
 class C with M {}
-{% endprettify %}
+```
 
 ### collection_element_from_deferred_library
 
@@ -2371,45 +2360,45 @@ For more information, check out
 
 Given a file `a.dart` that defines the constant `zero`:
 
-{% prettify dart tag=pre+code %}
+```dart
 const zero = 0;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constant list
 literal contains `a.zero`, which is imported using a `deferred` import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 var l = const [a.[!zero!]];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the collection literal isn't required to be constant, then remove the
 `const` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 var l = [a.zero];
-{% endprettify %}
+```
 
 If the collection is required to be constant and the imported constant must
 be referenced, then remove the keyword `deferred` from the import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 var l = const [a.zero];
-{% endprettify %}
+```
 
 If you don't need to reference the constant, then replace it with a
 suitable value:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = const [0];
-{% endprettify %}
+```
 
 ### compound_implements_finalizable
 
@@ -2427,25 +2416,25 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `S`
 implements `Finalizable`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class [!S!] extends Struct implements Finalizable {
   external Pointer notEmpty;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Try removing the implements clause from the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class S extends Struct {
   external Pointer notEmpty;
 }
-{% endprettify %}
+```
 
 ### concrete_class_has_enum_superinterface
 
@@ -2461,42 +2450,42 @@ the class `Enum` as a superinterface.
 The following code produces this diagnostic because the concrete class `B`
 has `Enum` as a superinterface as a result of implementing `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A implements Enum {}
 
 class [!B!] implements A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the implemented class isn't the class you intend to implement, then
 change it:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A implements Enum {}
 
 class B implements C {}
 
 class C {}
-{% endprettify %}
+```
 
 If the implemented class can be changed to not implement `Enum`, then do
 so:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {}
 
 class B implements A {}
-{% endprettify %}
+```
 
 If the implemented class can't be changed to not implement `Enum`, then
 remove it from the `implements` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A implements Enum {}
 
 class B {}
-{% endprettify %}
+```
 
 ### concrete_class_with_abstract_member
 
@@ -2513,31 +2502,31 @@ allowed to contain abstract members.
 The following code produces this diagnostic because `m` is an abstract
 method but `C` isn't an abstract class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   [!void m();!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If it's valid to create instances of the class, provide an implementation
 for the member:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m() {}
 }
-{% endprettify %}
+```
 
 If it isn't valid to create instances of the class, mark the class as being
 abstract:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   void m();
 }
-{% endprettify %}
+```
 
 ### conflicting_constructor_and_static_member
 
@@ -2565,22 +2554,22 @@ ambiguous.
 The following code produces this diagnostic because the static field `foo`
 and the named constructor `foo` have the same name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.[!foo!]();
   static int foo = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the static method `foo`
 and the named constructor `foo` have the same name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.[!foo!]();
   static void foo() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -2603,12 +2592,12 @@ The following code produces this diagnostic because `C` is defined to
 implement both `I<int>` (because it extends `A`) and `I<String>` (because
 it implements`B`), but `int` and `String` aren't the same type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class I<T> {}
 class A implements I<int> {}
 class B implements I<String> {}
 class [!C!] extends A implements B {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -2616,12 +2605,12 @@ Rework the type hierarchy to avoid this situation. For example, you might
 make one or both of the inherited types generic so that `C` can specify the
 same type for both type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 class I<T> {}
 class A<S> implements I<S> {}
 class B implements I<String> {}
 class C extends A<String> implements B {}
-{% endprettify %}
+```
 
 ### conflicting_type_variable_and_container
 
@@ -2633,6 +2622,9 @@ variable is defined._
 
 _'{0}' can't be used to name both a type variable and the extension in which the
 type variable is defined._
+
+_'{0}' can't be used to name both a type variable and the extension type in
+which the type variable is defined._
 
 _'{0}' can't be used to name both a type variable and the mixin in which the
 type variable is defined._
@@ -2648,23 +2640,26 @@ mixin, or extension that declares it.
 The following code produces this diagnostic because the type parameter `C`
 has the same name as the class `C` of which it's a part:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<[!C!]> {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename either the type parameter, or the class, mixin, or extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {}
-{% endprettify %}
+```
 
 ### conflicting_type_variable_and_member
 
 _'{0}' can't be used to name both a type variable and a member in this class._
 
 _'{0}' can't be used to name both a type variable and a member in this enum._
+
+_'{0}' can't be used to name both a type variable and a member in this extension
+type._
 
 _'{0}' can't be used to name both a type variable and a member in this
 extension._
@@ -2682,21 +2677,21 @@ members of the class, mixin, or extension that declares it.
 The following code produces this diagnostic because the type parameter `T`
 has the same name as the field `T`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<[!T!]> {
   int T = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename either the type parameter or the member with which it conflicts:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   int total = 0;
 }
-{% endprettify %}
+```
 
 ### constant_pattern_never_matches_value_type
 
@@ -2715,31 +2710,31 @@ The following code produces this diagnostic because the type of the
 constant pattern `(true)` is `bool`, and the type of the value being
 matched (`x`) is `int`, and a Boolean can never match an integer:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case [!true!]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the value is correct, then rewrite the pattern to be
 compatible:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case 3) {}
 }
-{% endprettify %}
+```
 
 If the type of the constant is correct, then rewrite the value to be
 compatible:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(bool x) {
   if (x case true) {}
 }
-{% endprettify %}
+```
 
 ### constant_pattern_with_non_constant_expression
 
@@ -2755,37 +2750,37 @@ expression that isn't a valid constant.
 The following code produces this diagnostic because the constant pattern
 `i` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int e, int i) {
   switch (e) {
     case [!i!]:
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value that should be matched is known, then replace the expression
 with a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int e, int i) {
   switch (e) {
     case 0:
       break;
   }
 }
-{% endprettify %}
+```
 
 If the value that should be matched isn't known, then rewrite the code to
 not use a pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int e, int i) {
   if (e == i) {}
 }
-{% endprettify %}
+```
 
 ### const_constructor_param_type_mismatch
 
@@ -2803,7 +2798,7 @@ parameter.
 The following code produces this diagnostic because the runtime type of `i`
 is `int`, which can't be assigned to the static type of `s`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String s;
 
@@ -2815,13 +2810,13 @@ const dynamic i = 0;
 void f() {
   const C([!i!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Pass a value of the correct type to the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String s;
 
@@ -2833,7 +2828,7 @@ const dynamic i = 0;
 void f() {
   const C('$i');
 }
-{% endprettify %}
+```
 
 ### const_constructor_with_field_initialized_by_non_const
 
@@ -2850,36 +2845,36 @@ The analyzer produces this diagnostic when a constructor has the keyword
 The following code produces this diagnostic because the field `s` is
 initialized to a non-constant value:
 
-{% prettify dart tag=pre+code %}
+```dart
 String x = '3';
 class C {
   final String s = x;
   [!const!] C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field can be initialized to a constant value, then change the
 initializer to a constant expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String s = '3';
   const C();
 }
-{% endprettify %}
+```
 
 If the field can't be initialized to a constant value, then remove the
 keyword `const` from the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 String x = '3';
 class C {
   final String s = x;
   C();
 }
-{% endprettify %}
+```
 
 ### const_constructor_with_non_const_super
 
@@ -2897,7 +2892,7 @@ The following code produces this diagnostic because the `const` constructor
 in `B` invokes the constructor `nonConst` from the class `A`, and the
 superclass constructor isn't a `const` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   const A();
   A.nonConst();
@@ -2906,7 +2901,7 @@ class A {
 class B extends A {
   const B() : [!super.nonConst()!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -2914,7 +2909,7 @@ If it isn't essential to invoke the superclass constructor that is
 currently being invoked, then invoke a constant constructor from the
 superclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   const A();
   A.nonConst();
@@ -2923,12 +2918,12 @@ class A {
 class B extends A {
   const B() : super();
 }
-{% endprettify %}
+```
 
 If it's essential that the current constructor be invoked and if you can
 modify it, then add `const` to the constructor in the superclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   const A();
   const A.nonConst();
@@ -2937,12 +2932,12 @@ class A {
 class B extends A {
   const B() : super.nonConst();
 }
-{% endprettify %}
+```
 
 If it's essential that the current constructor be invoked and you can't
 modify it, then remove `const` from the constructor in the subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   const A();
   A.nonConst();
@@ -2951,7 +2946,7 @@ class A {
 class B extends A {
   B() : super.nonConst();
 }
-{% endprettify %}
+```
 
 ### const_constructor_with_non_final_field
 
@@ -2968,36 +2963,36 @@ least one non-final instance field (either directly or by inheritance).
 The following code produces this diagnostic because the field `x` isn't
 final:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
   const [!C!](this.x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If it's possible to mark all of the fields as final, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int x;
 
   const C(this.x);
 }
-{% endprettify %}
+```
 
 If it isn't possible to mark all of the fields as final, then remove the
 keyword `const` from the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 ### const_deferred_class
 
@@ -3018,31 +3013,31 @@ For more information, check out
 The following code produces this diagnostic because it attempts to create a
 `const` instance of a class from a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:convert' deferred as convert;
 
 const json2 = [!convert.JsonCodec()!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the object isn't required to be a constant, then change the code so that
 a non-constant instance is created:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:convert' deferred as convert;
 
 final json2 = convert.JsonCodec();
-{% endprettify %}
+```
 
 If the object must be a constant, then remove `deferred` from the import
 directive:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:convert' as convert;
 
 const json2 = convert.JsonCodec();
-{% endprettify %}
+```
 
 ### const_initialized_with_non_constant_value
 
@@ -3059,28 +3054,28 @@ known to be a constant is assigned to a variable that's declared to be a
 The following code produces this diagnostic because `x` isn't declared to
 be `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 0;
 const y = [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value being assigned can be declared to be `const`, then change the
 declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 const x = 0;
 const y = x;
-{% endprettify %}
+```
 
 If the value can't be declared to be `const`, then remove the `const`
 modifier from the variable, possibly using `final` in its place:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 0;
 final y = x;
-{% endprettify %}
+```
 
 ### const_initialized_with_non_constant_value_from_deferred_library
 
@@ -3103,29 +3098,29 @@ The following code produces this diagnostic because the variable `pi` is
 being initialized using the constant `math.pi` from the library
 `dart:math`, and `dart:math` is imported as a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' deferred as math;
 
 const pi = math.[!pi!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the value of the constant from the imported
 library, then remove the keyword `deferred`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 const pi = math.pi;
-{% endprettify %}
+```
 
 If you don't need to reference the imported constant, then remove the
 reference:
 
-{% prettify dart tag=pre+code %}
+```dart
 const pi = 3.14;
-{% endprettify %}
+```
 
 ### const_instance_field
 
@@ -3141,30 +3136,30 @@ being const.
 The following code produces this diagnostic because `f` is an instance
 field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   [!const!] int f = 3;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field needs to be an instance field, then remove the keyword
 `const`, or replace it with `final`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f = 3;
 }
-{% endprettify %}
+```
 
 If the field really should be a const field, then make it a static field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static const int f = 3;
 }
-{% endprettify %}
+```
 
 ### const_map_key_not_primitive_equality
 
@@ -3186,7 +3181,7 @@ The following code produces this diagnostic because the constant map
 contains a key whose type is `C`, and the class `C` overrides the
 implementation of `==`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3194,13 +3189,13 @@ class C {
 }
 
 const map = {[!C()!] : 0};
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constant map
 contains a key whose type is `C`, and the class `C` overrides the
 implementation of `hashCode`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3208,25 +3203,25 @@ class C {
 }
 
 const map = {[!C()!] : 0};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can remove the implementation of `==` and `hashCode` from the
 class, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 }
 
 const map = {C() : 0};
-{% endprettify %}
+```
 
 If you can't remove the implementation of `==` and `hashCode` from the
 class, then make the map non-constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3234,7 +3229,7 @@ class C {
 }
 
 final map = {C() : 0};
-{% endprettify %}
+```
 
 ### const_not_initialized
 
@@ -3249,17 +3244,17 @@ be a constant doesn't have an initializer.
 
 The following code produces this diagnostic because `c` isn't initialized:
 
-{% prettify dart tag=pre+code %}
+```dart
 const [!c!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 const c = 'c';
-{% endprettify %}
+```
 
 ### const_set_element_not_primitive_equality
 
@@ -3283,7 +3278,7 @@ The following code produces this diagnostic because the constant set
 contains an element whose type is `C`, and the class `C` overrides the
 implementation of `==`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3291,13 +3286,13 @@ class C {
 }
 
 const set = {[!C()!]};
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constant set
 contains an element whose type is `C`, and the class `C` overrides the
 implementation of `hashCode`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3305,25 +3300,25 @@ class C {
 }
 
 const map = {[!C()!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can remove the implementation of `==` and `hashCode` from the
 class, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 }
 
 const set = {C()};
-{% endprettify %}
+```
 
 If you can't remove the implementation of `==` and `hashCode` from the
 class, then make the set non-constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -3331,7 +3326,7 @@ class C {
 }
 
 final set = {C()};
-{% endprettify %}
+```
 
 ### const_spread_expected_list_or_set
 
@@ -3348,20 +3343,20 @@ or a set.
 The following code produces this diagnostic because the value of `list1` is
 `null`, which is neither a list nor a set:
 
-{% prettify dart tag=pre+code %}
-const List<int> list1 = null;
+```dart
+const dynamic list1 = 42;
 const List<int> list2 = [...[!list1!]];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the expression to something that evaluates to either a constant list
 or a constant set:
 
-{% prettify dart tag=pre+code %}
-const List<int> list1 = [];
+```dart
+const dynamic list1 = [42];
 const List<int> list2 = [...list1];
-{% endprettify %}
+```
 
 ### const_spread_expected_map
 
@@ -3377,19 +3372,19 @@ operator in a constant map evaluates to something other than a map.
 The following code produces this diagnostic because the value of `map1` is
 `null`, which isn't a map:
 
-{% prettify dart tag=pre+code %}
-const Map<String, int> map1 = null;
+```dart
+const dynamic map1 = 42;
 const Map<String, int> map2 = {...[!map1!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the expression to something that evaluates to a constant map:
 
-{% prettify dart tag=pre+code %}
-const Map<String, int> map1 = {};
+```dart
+const dynamic map1 = {'answer': 42};
 const Map<String, int> map2 = {...map1};
-{% endprettify %}
+```
 
 ### const_with_non_const
 
@@ -3405,13 +3400,13 @@ invoke a constructor that isn't marked with `const`.
 The following code produces this diagnostic because the constructor in `A`
 isn't a const constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
 }
 
 A f() => [!const!] A();
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -3419,23 +3414,23 @@ If it's desirable and possible to make the class a constant class (by
 making all of the fields of the class, including inherited fields, final),
 then add the keyword `const` to the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   const A();
 }
 
 A f() => const A();
-{% endprettify %}
+```
 
 Otherwise, remove the keyword `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
 }
 
 A f() => A();
-{% endprettify %}
+```
 
 ### const_with_non_constant_argument
 
@@ -3450,26 +3445,26 @@ with an argument that isn't a constant expression.
 
 The following code produces this diagnostic because `i` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int i;
   const C(this.i);
 }
 C f(int i) => const C([!i!]);
-{% endprettify %}
+```
 
 #### Common fixes
 
 Either make all of the arguments constant expressions, or remove the
 `const` keyword to use the non-constant form of the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int i;
   const C(this.i);
 }
 C f(int i) => C(i);
-{% endprettify %}
+```
 
 ### const_with_type_parameters
 
@@ -3491,37 +3486,37 @@ at runtime) can't be known at compile time.
 The following code produces this diagnostic because the type parameter `T`
 is being used as a type argument when creating a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   const C();
 }
 
 C<T> newC<T>() => const C<[!T!]>();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type that will be used for the type parameter can be known at
 compile time, then remove the use of the type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   const C();
 }
 
 C<int> newC() => const C<int>();
-{% endprettify %}
+```
 
 If the type that will be used for the type parameter can't be known until
 runtime, then remove the keyword `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   const C();
 }
 
 C<T> newC<T>() => C<T>();
-{% endprettify %}
+```
 
 ### continue_label_invalid
 
@@ -3540,14 +3535,14 @@ statement resolves to a label on a `switch` statement.
 The following code produces this diagnostic because the label `l`, used to
 label a `switch` statement, is used in the `continue` statement:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i) {
   l: switch (i) {
     case 0:
       [!continue l;!]
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -3571,7 +3566,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C` is being
 instantiated using a generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
@@ -3582,14 +3577,14 @@ final class C extends Struct {
 void f() {
   [!C!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to allocate the structure described by the class, then use the
 `ffi` package to do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 
@@ -3604,7 +3599,7 @@ void f() {
   print(c);
   calloc.free(pointer);
 }
-{% endprettify %}
+```
 
 ### creation_with_non_type
 
@@ -3620,37 +3615,37 @@ either `new` or `const` specifies a name that isn't defined as a class.
 The following code produces this diagnostic because `f` is a function
 rather than a class:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
 
 void g() {
   new [!f!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a class should be created, then replace the invalid name with the name
 of a valid class:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
 
 void g() {
   new Object();
 }
-{% endprettify %}
+```
 
 If the name is the name of a function and you want that function to be
 invoked, then remove the `new` or `const` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
 
 void g() {
   f();
 }
-{% endprettify %}
+```
 
 ### dead_code
 
@@ -3666,43 +3661,43 @@ executed because execution will never reach the code.
 The following code produces this diagnostic because the invocation of
 `print` occurs after the function has returned:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   return;
   [!print('here');!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the code isn't needed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   return;
 }
-{% endprettify %}
+```
 
 If the code needs to be executed, then either move the code to a place
 where it will be executed:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   print('here');
   return;
 }
-{% endprettify %}
+```
 
 Or, rewrite the code before it, so that it can be reached:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({bool skipPrinting = true}) {
   if (skipPrinting) {
     return;
   }
   print('here');
 }
-{% endprettify %}
+```
 
 ### dead_code_catch_following_catch
 
@@ -3721,38 +3716,38 @@ object, so no `catch` clauses that follow them will be selected.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } catch (e) {
   } [!on String {
   }!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the clause should be selectable, then move the clause before the general
 clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } on String {
   } catch (e) {
   }
 }
-{% endprettify %}
+```
 
 If the clause doesn't need to be selectable, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } catch (e) {
   }
 }
-{% endprettify %}
+```
 
 ### dead_code_on_catch_subtype
 
@@ -3772,38 +3767,38 @@ clause will never be selected.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } on num {
   } [!on int {
   }!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the clause should be selectable, then move the clause before the general
 clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } on int {
   } on num {
   }
 }
-{% endprettify %}
+```
 
 If the clause doesn't need to be selectable, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
   } on num {
   }
 }
-{% endprettify %}
+```
 
 ### dead_null_aware_expression
 
@@ -3827,15 +3822,15 @@ be `null`, the right-hand side is never evaluated.
 
 The following code produces this diagnostic because `x` can't be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(int x) {
   return x ?? [!0!];
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `f` can't be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f = -1;
 
@@ -3843,35 +3838,35 @@ class C {
     f ??= [!x!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the diagnostic is reported for an `??` operator, then remove the `??`
 operator and the right operand:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(int x) {
   return x;
 }
-{% endprettify %}
+```
 
 If the diagnostic is reported for an assignment, and the assignment isn't
 needed, then remove the assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f = -1;
 
   void m(int x) {
   }
 }
-{% endprettify %}
+```
 
 If the assignment is needed, but should be based on a different condition,
 then rewrite the code to use `=` and the different condition:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f = -1;
 
@@ -3881,7 +3876,7 @@ class C {
     }
   }
 }
-{% endprettify %}
+```
 
 ### default_list_constructor
 
@@ -3897,32 +3892,32 @@ constructor for the class `List` in code that has opted in to null safety.
 Assuming the following code is opted in to null safety, it produces this
 diagnostic because it uses the default `List` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = [!List<int>!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If no initial size is provided, then convert the code to use a list
 literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = <int>[];
-{% endprettify %}
+```
 
 If an initial size needs to be provided and there is a single reasonable
 initial value for the elements, then use `List.filled`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = List.filled(3, 0);
-{% endprettify %}
+```
 
 If an initial size needs to be provided but each element needs to be
 computed, then use `List.generate`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = List.generate(3, (i) => i);
-{% endprettify %}
+```
 
 ### default_value_in_function_type
 
@@ -3940,19 +3935,19 @@ function's type, and therefore including them doesn't provide any value.
 The following code produces this diagnostic because the parameter `p` has a
 default value even though it's part of the type of the parameter `g`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(void Function([int p [!=!] 0]) g) {
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the default value from the function-type's parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(void Function([int p]) g) {
 }
-{% endprettify %}
+```
 
 ### default_value_in_redirecting_factory_constructor
 
@@ -3970,7 +3965,7 @@ parameter.
 The following code produces this diagnostic because the factory constructor
 in `A` has a default value for the optional parameter `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A([int [!x!] = 0]) = B;
 }
@@ -3978,13 +3973,13 @@ class A {
 class B implements A {
   B([int x = 1]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the default value from the factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A([int x]) = B;
 }
@@ -3992,13 +3987,13 @@ class A {
 class B implements A {
   B([int x = 1]) {}
 }
-{% endprettify %}
+```
 
 Note that this fix might change the value used when the optional parameter
 is omitted. If that happens, and if that change is a problem, then consider
 making the optional parameter a required parameter in the factory method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
  factory A(int x) = B;
 }
@@ -4006,7 +4001,7 @@ class A {
 class B implements A {
   B([int x = 1]) {}
 }
-{% endprettify %}
+```
 
 ### default_value_on_required_parameter
 
@@ -4023,24 +4018,24 @@ default value can never be used.
 
 The following code generates this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 void log({required String [!message!] = 'no message'}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the parameter is really required, then remove the default value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void log({required String message}) {}
-{% endprettify %}
+```
 
 If the parameter isn't always required, then remove the `required`
 modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 void log({String message = 'no message'}) {}
-{% endprettify %}
+```
 
 ### deferred_import_of_extension
 
@@ -4060,24 +4055,24 @@ For more information, check out
 
 Given a file `a.dart` that defines a named extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 
 extension E on String {
   int get size => length;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the named extension is
 visible to the library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'a.dart'!] deferred as a;
 
 void f() {
   a.C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -4085,23 +4080,23 @@ If the library must be imported as `deferred`, then either add a `show`
 clause listing the names being referenced or add a `hide` clause listing
 all of the named extensions. Adding a `show` clause would look like this:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a show C;
 
 void f() {
   a.C();
 }
-{% endprettify %}
+```
 
 Adding a `hide` clause would look like this:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a hide E;
 
 void f() {
   a.C();
 }
-{% endprettify %}
+```
 
 With the first fix, the benefit is that if new extensions are added to the
 imported library, then the extensions won't cause a diagnostic to be
@@ -4111,13 +4106,13 @@ If the library doesn't need to be imported as `deferred`, or if you need to
 make use of the extension method declared in it, then remove the keyword
 `deferred`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 void f() {
   a.C();
 }
-{% endprettify %}
+```
 
 ### definitely_unassigned_late_local_variable
 
@@ -4134,24 +4129,24 @@ assigned.
 The following code produces this diagnostic because `x` wasn't assigned a
 value before being read:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(bool b) {
   late int x;
   print([!x!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Assign a value to the variable before reading from it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(bool b) {
   late int x;
   x = b ? 1 : 0;
   print(x);
 }
-{% endprettify %}
+```
 
 ### dependencies_field_not_map
 
@@ -4167,21 +4162,21 @@ The analyzer produces this diagnostic when the value of either the
 The following code produces this diagnostic because the value of the
 top-level `dependencies` key is a list:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   [!- meta!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a map as the value of the `dependencies` key:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
-{% endprettify %}
+```
 
 ### deprecated_colon_for_default_value
 
@@ -4200,17 +4195,17 @@ using an equal sign (`=`).
 The following code produces this diagnostic because a colon is being used
 before the default value of the optional parameter `i`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({int i [!:!] 0}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the colon with an equal sign.
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({int i = 0}) {}
-{% endprettify %}
+```
 
 ### deprecated_export_use
 
@@ -4227,28 +4222,28 @@ future.
 
 Given a library `a.dart` defining the class `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
-{% endprettify %}
+```
 
 And a second library `b.dart` that exports `a.dart` but has marked the
 export as being deprecated:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 @deprecated
 export 'a.dart';
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `A` won't be
 exported from `b.dart` in some future version:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'b.dart';
 
 [!A!]? a;
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -4256,11 +4251,11 @@ If the name is available from a different library that you can import,
 then replace the existing import with an import for that library (or add
 an import for the defining library if you still need the old import):
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 A? a;
-{% endprettify %}
+```
 
 If the name isn't available, then look for instructions from the library
 author or contact them directly to find out how to update your code.
@@ -4280,18 +4275,18 @@ might imply semantics that are no longer valid.
 The following code produces this diagnostic because the `author` key is no
 longer being used:
 
-{% prettify dart tag=pre+code %}
+```dart
 name: example
 author: 'Dash'
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the deprecated key:
 
-{% prettify dart tag=pre+code %}
+```dart
 name: example
-{% endprettify %}
+```
 
 ### deprecated_member_use
 
@@ -4309,11 +4304,11 @@ member is used in a different package.
 If the method `m` in the class `C` is annotated with `@deprecated`, then
 the following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   c.[!m!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -4335,11 +4330,11 @@ class member is used in the same package in which it's declared.
 
 The following code produces this diagnostic because `x` is deprecated:
 
-{% prettify dart tag=pre+code %}
+```dart
 @deprecated
 var x = 0;
 var y = [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -4362,43 +4357,43 @@ uses the keyword `new` to refer to a constructor. This form is deprecated.
 The following code produces this diagnostic because the unnamed
 constructor is being referenced using `new C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 /// See [[!new!] C].
 class C {
   C();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constructor named
 `c` is being referenced using `new C.c`:
 
-{% prettify dart tag=pre+code %}
+```dart
 /// See [[!new!] C.c].
 class C {
   C.c();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you're referencing a named constructor, then remove the keyword `new`:
 
-{% prettify dart tag=pre+code %}
+```dart
 /// See [C.c].
 class C {
   C.c();
 }
-{% endprettify %}
+```
 
 If you're referencing the unnamed constructor, then remove the keyword
 `new` and append `.new` after the class name:
 
-{% prettify dart tag=pre+code %}
+```dart
 /// See [C.new].
 class C {
   C.c();
 }
-{% endprettify %}
+```
 
 ### deprecated_subtype_of_function
 
@@ -4420,18 +4415,18 @@ effectively dead code.
 The following code produces this diagnostic because `Function` is used as
 the superclass of `F`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class F extends [!Function!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the class `Function` from whichever clause it's in, and remove the
 whole clause if `Function` is the only type in the clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class F {}
-{% endprettify %}
+```
 
 ### disallowed_type_instantiation_expression
 
@@ -4453,25 +4448,25 @@ type arguments. The allowed kinds of values are:
 The following code produces this diagnostic because `i` is a top-level
 variable, which isn't one of the allowed cases:
 
-{% prettify dart tag=pre+code %}
+```dart
 int i = 1;
 
 void f() {
   print([!i!]<int>);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the referenced value is correct, then remove the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 int i = 1;
 
 void f() {
   print(i);
 }
-{% endprettify %}
+```
 
 ### division_optimization
 
@@ -4488,17 +4483,17 @@ integer division operator that is both more efficient and more concise.
 The following code produces this diagnostic because the result of dividing
 `x` and `y` is converted to an integer using `toInt`:
 
-{% prettify dart tag=pre+code %}
-int divide(num x, num y) => [!(x / y).toInt()!];
-{% endprettify %}
+```dart
+int divide(int x, int y) => [!(x / y).toInt()!];
+```
 
 #### Common fixes
 
 Use the integer division operator (`~/`):
 
-{% prettify dart tag=pre+code %}
-int divide(num x, num y) => x ~/ y;
-{% endprettify %}
+```dart
+int divide(int x, int y) => x ~/ y;
+```
 
 ### duplicate_constructor
 
@@ -4517,66 +4512,66 @@ same name.
 The following code produces this diagnostic because there are two
 declarations for the unnamed constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
 
   [!C!]();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because there are two
 declarations for the constructor named `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.m();
 
   [!C.m!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there are multiple unnamed constructors and all of the constructors are
 needed, then give all of them, or all except one of them, a name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
 
   C.n();
 }
-{% endprettify %}
+```
 
 If there are multiple unnamed constructors and all except one of them are
 unneeded, then remove the constructors that aren't needed:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
 }
-{% endprettify %}
+```
 
 If there are multiple named constructors and all of the constructors are
 needed, then rename all except one of them:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.m();
 
   C.n();
 }
-{% endprettify %}
+```
 
 If there are multiple named constructors and all except one of them are
 unneeded, then remove the constructors that aren't needed:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.m();
 }
-{% endprettify %}
+```
 
 ### duplicate_definition
 
@@ -4592,19 +4587,19 @@ a previous declaration with the same name in the same scope.
 The following code produces this diagnostic because the name `x` is
 declared twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 int [!x!] = 1;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Choose a different name for one of the declarations.
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 int y = 1;
-{% endprettify %}
+```
 
 ### duplicate_export
 
@@ -4621,18 +4616,18 @@ doesn't add value and should be removed.
 The following code produces this diagnostic because the same library is
 being exported twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'package:meta/meta.dart';
 export [!'package:meta/meta.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary export:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'package:meta/meta.dart';
-{% endprettify %}
+```
 
 ### duplicate_field_formal_parameter
 
@@ -4651,25 +4646,25 @@ overwritten.
 The following code produces this diagnostic because `this.f` appears twice
 in the parameter list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(this.f, this.[!f!]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove one of the initializing formal parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(this.f) {}
 }
-{% endprettify %}
+```
 
 ### duplicate_field_name
 
@@ -4686,25 +4681,25 @@ previously declared field in the same literal or type.
 The following code produces this diagnostic because the record literal has
 two fields named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (a: 1, [!a!]: 2);
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record type
 annotation has two fields named `a`, one a positional field and the other
 a named field:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int a, {int [!a!]}) r) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename one or both of the fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (a: 1, b: 2);
-{% endprettify %}
+```
 
 ### duplicate_hidden_name
 
@@ -4720,31 +4715,31 @@ a `hide` clause. Repeating the name is unnecessary.
 The following code produces this diagnostic because the name `min` is
 hidden more than once:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' hide min, [!min!];
 
 var x = pi;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name was mistyped in one or more places, then correct the mistyped
 names:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' hide max, min;
 
 var x = pi;
-{% endprettify %}
+```
 
 If the name wasn't mistyped, then remove the unnecessary name from the
 list:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' hide min;
 
 var x = pi;
-{% endprettify %}
+```
 
 ### duplicate_ignore
 
@@ -4764,35 +4759,35 @@ The following code produces this diagnostic because the diagnostic named
 `unused_local_variable` is already being ignored for the whole file so it
 doesn't need to be ignored on a specific line:
 
-{% prettify dart tag=pre+code %}
+```dart
 // ignore_for_file: unused_local_variable
 void f() {
   // ignore: [!unused_local_variable!]
   var x = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the diagnostic named
 `unused_local_variable` is being ignored twice on the same line:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   // ignore: unused_local_variable, [!unused_local_variable!]
   var x = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the ignore comment, or remove the unnecessary diagnostic name if the
 ignore comment is ignoring more than one diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 // ignore_for_file: unused_local_variable
 void f() {
   var x = 0;
 }
-{% endprettify %}
+```
 
 ### duplicate_import
 
@@ -4808,22 +4803,22 @@ doesn't add value and should be removed.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 import [!'package:meta/meta.dart'!];
 
 @sealed class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @sealed class C {}
-{% endprettify %}
+```
 
 ### duplicate_named_argument
 
@@ -4839,41 +4834,41 @@ named arguments that have the same name.
 The following code produces this diagnostic because there are two arguments
 with the name `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   c.m(a: 0, [!a!]: 1);
 }
 
 class C {
-  void m({int a, int b}) {}
+  void m({int? a, int? b}) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If one of the arguments should have a different name, then change the name:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   c.m(a: 0, b: 1);
 }
 
 class C {
-  void m({int a, int b}) {}
+  void m({int? a, int? b}) {}
 }
-{% endprettify %}
+```
 
 If one of the arguments is wrong, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   c.m(a: 1);
 }
 
 class C {
-  void m({int a, int b}) {}
+  void m({int? a, int? b}) {}
 }
-{% endprettify %}
+```
 
 ### duplicate_part
 
@@ -4888,29 +4883,29 @@ multiple part directives.
 
 Given a file `part.dart` containing
 
-{% prettify dart tag=pre+code %}
+```dart
 part of lib;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the file `part.dart` is
 included multiple times:
 
-{% prettify dart tag=pre+code %}
+```dart
 library lib;
 
 part 'part.dart';
 part [!'part.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all except the first of the duplicated part directives:
 
-{% prettify dart tag=pre+code %}
+```dart
 library lib;
 
 part 'part.dart';
-{% endprettify %}
+```
 
 ### duplicate_pattern_assignment_variable
 
@@ -4926,37 +4921,37 @@ assigned a value more than once in the same pattern assignment.
 The following code produces this diagnostic because the variable `a` is
 assigned twice in the pattern `(a, a)`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f((int, int) r) {
   int a;
   (a, [!a!]) = r;
   return a;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to capture all of the values, then use a unique variable for
 each of the subpatterns being matched:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f((int, int) r) {
   int a, b;
   (a, b) = r;
   return a + b;
 }
-{% endprettify %}
+```
 
 If some of the values don't need to be captured, then use a wildcard
 pattern `_` to avoid having to bind the value to a variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f((int, int) r) {
   int a;
   (_, a) = r;
   return a;
 }
-{% endprettify %}
+```
 
 ### duplicate_pattern_field
 
@@ -4973,19 +4968,19 @@ getter more than once.
 The following code produces this diagnostic because the record field `a`
 is matched twice in the same record pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(({int a, int b}) r) {
   switch (r) {
     case (a: 1, [!a!]: 2):
       return;
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the getter `f` is
 matched twice in the same object pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object o) {
   switch (o) {
     case C(f: 1, [!f!]: 2):
@@ -4995,33 +4990,33 @@ void f(Object o) {
 class C {
   int? f;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the pattern should match for more than one value of the duplicated
 field, then use a logical-or pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(({int a, int b}) r) {
   switch (r) {
     case (a: 1, b: _) || (a: 2, b: _):
       break;
   }
 }
-{% endprettify %}
+```
 
 If the pattern should match against multiple fields, then change the name
 of one of the fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(({int a, int b}) r) {
   switch (r) {
     case (a: 1, b: 2):
       return;
   }
 }
-{% endprettify %}
+```
 
 ### duplicate_rest_element_in_pattern
 
@@ -5039,21 +5034,21 @@ unnecessary because there's nothing left to capture.
 The following code produces this diagnostic because there are two rest
 patterns in the list pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(List<int> x) {
   if (x case [0, ..., [!...!]]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the rest patterns:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(List<int> x) {
   if (x case [0, ...]) {}
 }
-{% endprettify %}
+```
 
 ### duplicate_shown_name
 
@@ -5069,31 +5064,31 @@ a `show` clause. Repeating the name is unnecessary.
 The following code produces this diagnostic because the name `min` is shown
 more than once:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min, [!min!];
 
 var x = min(2, min(0, 1));
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name was mistyped in one or more places, then correct the mistyped
 names:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show max, min;
 
 var x = max(2, min(0, 1));
-{% endprettify %}
+```
 
 If the name wasn't mistyped, then remove the unnecessary name from the
 list:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min;
 
 var x = min(2, min(0, 1));
-{% endprettify %}
+```
 
 ### duplicate_variable_pattern
 
@@ -5110,37 +5105,37 @@ of the same pattern.
 The following code produces this diagnostic because the variable `a` is
 declared in both branches of the logical-and pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (var a, 0) && (0, var [!a!])) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to capture the matched value in multiple branches, then change
 the names of the variables so that they are unique:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (var a, 0) && (0, var b)) {
     print(a + b);
   }
 }
-{% endprettify %}
+```
 
 If you only need to capture the matched value on one branch, then remove
 the variable pattern from all but one branch:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (var a, 0) && (0, _)) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 ### empty_map_pattern
 
@@ -5155,31 +5150,31 @@ The analyzer produces this diagnostic when a map pattern is empty.
 The following code produces this diagnostic because the map pattern
 is empty:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<int, String> x) {
   if (x case [!{}!]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the pattern should match any map, then replace it with an object
 pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<int, String> x) {
   if (x case Map()) {}
 }
-{% endprettify %}
+```
 
 If the pattern should only match an empty map, then check the length
 in the pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<int, String> x) {
   if (x case Map(isEmpty: true)) {}
 }
-{% endprettify %}
+```
 
 ### empty_record_literal_with_comma
 
@@ -5195,24 +5190,24 @@ fields has a trailing comma. Empty record literals can't contain a comma.
 The following code produces this diagnostic because the empty record
 literal has a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = ([!,!]);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the record is intended to be empty, then remove the comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = ();
-{% endprettify %}
+```
 
 If the record is intended to have one or more fields, then add the
 expressions used to compute the values of those fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (3, 4);
-{% endprettify %}
+```
 
 ### empty_record_type_named_fields_list
 
@@ -5228,25 +5223,25 @@ of named fields.
 The following code produces this diagnostic because the record type has an
 empty list of named fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int, {[!}!]) r) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the record is intended to have named fields, then add the types and
 names of the fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int, {int z}) r) {}
-{% endprettify %}
+```
 
 If the record isn't intended to have named fields, then remove the curly
 braces:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {}
-{% endprettify %}
+```
 
 ### empty_record_type_with_comma
 
@@ -5262,24 +5257,24 @@ fields has a trailing comma. Empty record types can't contain a comma.
 The following code produces this diagnostic because the empty record type
 has a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(([!,!]) r) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the record type is intended to be empty, then remove the comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(() r) {}
-{% endprettify %}
+```
 
 If the record type is intended to have one or more fields, then add the
 types of those fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {}
-{% endprettify %}
+```
 
 ### empty_struct
 
@@ -5298,78 +5293,78 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C`, which
 extends `Struct`, doesn't declare any fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class [!C!] extends Struct {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class is intended to be a struct, then declare one or more fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int32()
   external int x;
 }
-{% endprettify %}
+```
 
 If the class is intended to be used as a type argument to `Pointer`, then
 make it a subclass of `Opaque`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Opaque {}
-{% endprettify %}
+```
 
 If the class isn't intended to be a struct, then remove or change the
 extends clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 ### enum_constant_same_name_as_enclosing
 
-_The name of the enum constant can't be the same as the enum's name._
+_The name of the enum value can't be the same as the enum's name._
 
 #### Description
 
-The analyzer produces this diagnostic when an enum constant has the same
-name as the enum in which it's declared.
+The analyzer produces this diagnostic when an enum value has the same name
+as the enum in which it's declared.
 
 #### Example
 
-The following code produces this diagnostic because the enum constant `E`
-has the same name as the enclosing enum `E`:
+The following code produces this diagnostic because the enum value `E` has
+the same name as the enclosing enum `E`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   [!E!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name of the enum is correct, then rename the constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e
 }
-{% endprettify %}
+```
 
 If the name of the constant is correct, then rename the enum:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum F {
   E
 }
-{% endprettify %}
+```
 
 ### enum_constant_with_non_const_constructor
 
@@ -5377,28 +5372,28 @@ _The invoked constructor isn't a 'const' constructor._
 
 #### Description
 
-The analyzer produces this diagnostic when an enum constant is being
-created using either a factory constructor or a generative constructor
-that isn't marked as being `const`.
+The analyzer produces this diagnostic when an enum value is being created
+using either a factory constructor or a generative constructor that isn't
+marked as being `const`.
 
 #### Example
 
-The following code produces this diagnostic because the enum constant `e`
-is being initialized by a factory constructor:
+The following code produces this diagnostic because the enum value `e` is
+being initialized by a factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   [!e!]();
 
   factory E() => e;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a generative constructor marked as `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e._();
 
@@ -5406,7 +5401,7 @@ enum E {
 
   const E._();
 }
-{% endprettify %}
+```
 
 ### enum_mixin_with_instance_variable
 
@@ -5416,15 +5411,15 @@ _Mixins applied to enums can't have instance variables._
 
 The analyzer produces this diagnostic when a mixin that's applied to an
 enum declares one or more instance variables. This isn't allowed because
-the enum constants are constant, and there isn't any way for the
-constructor in the enum to initialize any of the mixin's fields.
+the enum values are constant, and there isn't any way for the constructor
+in the enum to initialize any of the mixin's fields.
 
 #### Example
 
 The following code produces this diagnostic because the mixin `M` defines
 the instance field `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {
   int x = 0;
 }
@@ -5432,14 +5427,14 @@ mixin M {
 enum E with [!M!] {
   a
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to apply the mixin, then change all instance fields into
 getter and setter pairs and implement them in the enum if necessary:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {
   int get x => 0;
 }
@@ -5447,15 +5442,15 @@ mixin M {
 enum E with M {
   a
 }
-{% endprettify %}
+```
 
 If you don't need to apply the mixin, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   a
 }
-{% endprettify %}
+```
 
 ### enum_with_abstract_member
 
@@ -5472,25 +5467,25 @@ contain abstract members.
 The following code produces this diagnostic because `m` is an abstract
 method and `E` is an enum:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   [!void m();!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Provide an implementation for the member:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   void m() {}
 }
-{% endprettify %}
+```
 
 ### enum_with_name_values
 
@@ -5507,11 +5502,11 @@ field named `values`, and the two would collide.
 The following code produces this diagnostic because there's an enum
 declaration that has the name `values`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum [!values!] {
   c
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -5532,17 +5527,17 @@ which means that one of the values is unnecessary.
 The following code produces this diagnostic because the string `'a'` is
 specified twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 const Set<String> set = {'a', [!'a'!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove one of the duplicate values:
 
-{% prettify dart tag=pre+code %}
+```dart
 const Set<String> set = {'a'};
-{% endprettify %}
+```
 
 Note that literal sets preserve the order of their elements, so the choice
 of which element to remove might affect the order in which elements are
@@ -5564,30 +5559,30 @@ pointless and likely signals a bug.
 The following code produces this diagnostic because the element `1` appears
 twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 const b = 1;
 var s = <int>{a, [!b!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If both elements should be included in the set, then change one of the
 elements:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 const b = 2;
 var s = <int>{a, b};
-{% endprettify %}
+```
 
 If only one of the elements is needed, then remove the one that isn't
 needed:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 var s = <int>{a};
-{% endprettify %}
+```
 
 Note that literal sets preserve the order of their elements, so the choice
 of which element to remove might affect the order in which elements are
@@ -5609,25 +5604,25 @@ pointless.
 The following code produces this diagnostic because the key `1` is used
 twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 const map = <int, String>{1: 'a', 2: 'b', [!1!]: 'c', 4: 'd'};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If both entries should be included in the map, then change one of the keys
 to be different:
 
-{% prettify dart tag=pre+code %}
+```dart
 const map = <int, String>{1: 'a', 2: 'b', 3: 'c', 4: 'd'};
-{% endprettify %}
+```
 
 If only one of the entries is needed, then remove the one that isn't
 needed:
 
-{% prettify dart tag=pre+code %}
+```dart
 const map = <int, String>{1: 'a', 2: 'b', 4: 'd'};
-{% endprettify %}
+```
 
 Note that literal maps preserve the order of their entries, so the choice
 of which entry to remove might affect the order in which keys and values
@@ -5649,29 +5644,29 @@ pointless and likely signals a bug.
 The following code produces this diagnostic because the keys `a` and `b`
 have the same value:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 const b = 1;
 var m = <int, String>{a: 'a', [!b!]: 'b'};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If both entries should be included in the map, then change one of the keys:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 const b = 2;
 var m = <int, String>{a: 'a', b: 'b'};
-{% endprettify %}
+```
 
 If only one of the entries is needed, then remove the one that isn't
 needed:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 1;
 var m = <int, String>{a: 'a'};
-{% endprettify %}
+```
 
 Note that literal maps preserve the order of their entries, so the choice
 of which entry to remove might affect the order in which the keys and
@@ -5691,31 +5686,31 @@ than one key with the same name. The same key can't be matched twice.
 The following code produces this diagnostic because the key `'a'` appears
 twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<String, int> x) {
   if (x case {'a': 1, [!'a'!]: 2}) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you are trying to match two different keys, then change one of the keys
 in the pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<String, int> x) {
   if (x case {'a': 1, 'b': 2}) {}
 }
-{% endprettify %}
+```
 
 If you are trying to match the same key, but allow any one of multiple
 patterns to match, the use a logical-or pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<String, int> x) {
   if (x case {'a': 1 || 2}) {}
 }
-{% endprettify %}
+```
 
 ### expected_one_list_pattern_type_arguments
 
@@ -5732,21 +5727,21 @@ one type argument, but can't have more than one.
 The following code produces this diagnostic because the list pattern
 (`[0]`) has two type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case [!<int, int>!][0]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case <int>[0]) {}
 }
-{% endprettify %}
+```
 
 ### expected_one_list_type_arguments
 
@@ -5762,17 +5757,17 @@ type argument.
 The following code produces this diagnostic because the list literal has
 two type arguments when it can have at most one:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = [!<int, int>!][];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all except one of the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l = <int>[];
-{% endprettify %}
+```
 
 ### expected_one_set_type_arguments
 
@@ -5788,17 +5783,17 @@ type argument.
 The following code produces this diagnostic because the set literal has
 three type arguments when it can have at most one:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = [!<int, String, int>!]{0, 'a', 1};
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all except one of the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = <int>{0, 1};
-{% endprettify %}
+```
 
 ### expected_two_map_pattern_type_arguments
 
@@ -5816,21 +5811,21 @@ number.
 The following code produces this diagnostic because the map pattern
 (`<int>{}`) has one type argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case [!<int>!]{0: _}) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add or remove type arguments until there are two, or none:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case <int, int>{0: _}) {}
 }
-{% endprettify %}
+```
 
 ### expected_two_map_type_arguments
 
@@ -5846,17 +5841,17 @@ more than two type arguments.
 The following code produces this diagnostic because the map literal has
 three type arguments when it can have either two or zero:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = [!<int, String, int>!]{};
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all except two of the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <int, String>{};
-{% endprettify %}
+```
 
 ### export_internal_library
 
@@ -5872,9 +5867,9 @@ URI references an internal library.
 The following code produces this diagnostic because `_interceptors` is an
 internal library:
 
-{% prettify dart tag=pre+code %}
+```dart
 export [!'dart:_interceptors'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -5895,34 +5890,34 @@ of null safety.
 
 Given a library that is opted out of null safety:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.8
 String s;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because it's exporting symbols
 from an opted-out library:
 
-{% prettify dart tag=pre+code %}
+```dart
 export [!'optedOut.dart'!];
 
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you're able to do so, migrate the exported library so that it doesn't
 need to opt out:
 
-{% prettify dart tag=pre+code %}
+```dart
 String? s;
-{% endprettify %}
+```
 
 If you can't migrate the library, then remove the export:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 If the exported library (the one that is opted out) itself exports an
 opted-in library, then it's valid for your library to indirectly export the
@@ -5943,18 +5938,18 @@ part rather than a library.
 
 Given a file `part.dart` containing
 
-{% prettify dart tag=pre+code %}
+```dart
 part of lib;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the file `part.dart` is
 a part, and only libraries can be exported:
 
-{% prettify dart tag=pre+code %}
+```dart
 library lib;
 
 export [!'part.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -5974,9 +5969,9 @@ expression, rather than a map entry, in what appears to be a map literal.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var map = <String, int>{'a': 0, 'b': 1, [!'c'!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -5984,9 +5979,9 @@ If the expression is intended to compute either a key or a value in an
 entry, fix the issue by replacing the expression with the key or the value.
 For example:
 
-{% prettify dart tag=pre+code %}
+```dart
 var map = <String, int>{'a': 0, 'b': 1, 'c': 2};
-{% endprettify %}
+```
 
 ### extends_non_class
 
@@ -6002,32 +5997,32 @@ name that is declared to be something other than a class.
 The following code produces this diagnostic because `f` is declared to be a
 function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 class C extends [!f!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want the class to extend a class other than `Object`, then replace
 the name in the `extends` clause with the name of that class:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 class C extends B {}
 
 class B {}
-{% endprettify %}
+```
 
 If you want the class to extend `Object`, then remove the `extends` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 class C {}
-{% endprettify %}
+```
 
 ### extension_as_expression
 
@@ -6046,26 +6041,26 @@ define a type and can't be used as a type literal.
 
 The following code produces this diagnostic because `E` is an extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   static String m() => '';
 }
 
 var x = [!E!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the name of the extension with a name that can be referenced, such
 as a static member defined on the extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   static String m() => '';
 }
 
 var x = E.m();
-{% endprettify %}
+```
 
 ### extension_conflicting_static_and_instance
 
@@ -6085,23 +6080,23 @@ of the name within the body of the extension.
 The following code produces this diagnostic because the name `a` is being
 used for two different members:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on Object {
   int get a => 0;
   static int [!a!]() => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename or remove one of the members:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on Object {
   int get a => 0;
   static int b() => 0;
 }
-{% endprettify %}
+```
 
 ### extension_declares_abstract_member
 
@@ -6117,11 +6112,11 @@ declared in an extension. Extensions can declare only concrete members.
 The following code produces this diagnostic because the method `a` doesn't
 have a body:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   int [!a!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -6143,11 +6138,11 @@ an extension.
 The following code produces this diagnostic because there is a constructor
 declaration in `E`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   [!E!]() : super();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -6168,11 +6163,11 @@ extensions can only add behavior, not state.
 The following code produces this diagnostic because `s` is an instance
 field:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String [!s!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -6196,22 +6191,22 @@ always found first.
 The following code produces this diagnostic because `toString` is defined
 by `Object`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String [!toString!]() => this;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the member or rename it so that the name doesn't conflict with the
 member in `Object`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String displayString() => this;
 }
-{% endprettify %}
+```
 
 ### extension_override_access_to_static_member
 
@@ -6229,7 +6224,7 @@ name of the extension, not an extension override.
 
 The following code produces this diagnostic because `m` is static:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   static void m() {}
 }
@@ -6237,13 +6232,13 @@ extension E on String {
 void f() {
   E('').[!m!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the extension override with the name of the extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   static void m() {}
 }
@@ -6251,7 +6246,7 @@ extension E on String {
 void f() {
   E.m();
 }
-{% endprettify %}
+```
 
 ### extension_override_argument_not_assignable
 
@@ -6267,7 +6262,7 @@ override isn't assignable to the type being extended by the extension.
 
 The following code produces this diagnostic because `3` isn't a `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   void method() {}
 }
@@ -6275,14 +6270,14 @@ extension E on String {
 void f() {
   E([!3!]).method();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you're using the correct extension, then update the argument to have the
 correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   void method() {}
 }
@@ -6290,7 +6285,7 @@ extension E on String {
 void f() {
   E(3.toString()).method();
 }
-{% endprettify %}
+```
 
 If there's a different extension that's valid for the type of the argument,
 then either replace the name of the extension or unwrap the argument so
@@ -6312,7 +6307,7 @@ controls which member is selected at compile time.
 The following code produces this diagnostic because `E(i)` isn't an
 expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   int get a => 0;
 }
@@ -6320,14 +6315,14 @@ extension E on int {
 void f(int i) {
   print([!E(i)!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want to invoke one of the members of the extension, then add the
 invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   int get a => 0;
 }
@@ -6335,11 +6330,11 @@ extension E on int {
 void f(int i) {
   print(E(i).a);
 }
-{% endprettify %}
+```
 
 If you don't want to invoke a member, then unwrap the argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   int get a => 0;
 }
@@ -6347,7 +6342,7 @@ extension E on int {
 void f(int i) {
   print(i);
 }
-{% endprettify %}
+```
 
 ### extension_override_with_cascade
 
@@ -6366,27 +6361,27 @@ expressions and don't have a value.
 The following code produces this diagnostic because `E(3)` isn't an
 expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   void m() {}
 }
 f() {
   [!E!](3)..m();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use `.` rather than `..`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on int {
   void m() {}
 }
 f() {
   E(3).m();
 }
-{% endprettify %}
+```
 
 If there are multiple cascaded accesses, you'll need to duplicate the
 extension override for each one.
@@ -6406,30 +6401,30 @@ extension types don't have a superclass.
 The following code produces this diagnostic because the named constructor
 `n` contains a super parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   E.n(this.i, [!super!].foo);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need the parameter, replace the super parameter with a normal
 parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   E.n(this.i, String foo);
 }
-{% endprettify %}
+```
 
 If you don't need the parameter, remove the super parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   E.n(this.i);
 }
-{% endprettify %}
+```
 
 ### extension_type_constructor_with_super_invocation
 
@@ -6447,21 +6442,21 @@ constructor to invoke.
 The following code produces this diagnostic because the constructor `E.n`
 invokes a super constructor in its initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   E.n() : i = 0, [!super!].n();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the invocation of the super constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   E.n() : i = 0;
 }
-{% endprettify %}
+```
 
 ### extension_type_declares_instance_field
 
@@ -6477,26 +6472,26 @@ the body of an extension type declaration.
 The following code produces this diagnostic because the extension type `E`
 declares a field named `f`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   final int [!f!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need the field, then remove it or replace it with a getter
 and/or setter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   int get f => 0;
 }
-{% endprettify %}
+```
 
 If you need the field, then convert the extension type into a class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class E {
   final int i;
 
@@ -6504,7 +6499,7 @@ class E {
 
   E(this.i);
 }
-{% endprettify %}
+```
 
 ### extension_type_declares_member_of_object
 
@@ -6522,29 +6517,29 @@ declared by `Object`.
 The following code produces this diagnostic because the class `Object`
 already defines a member named `hashCode`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   int get [!hashCode!] => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need a member with the implemented semantics, then rename the
 member:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {
   int get myHashCode => 0;
 }
-{% endprettify %}
+```
 
 If you don't need a member with the implemented semantics, then remove the
 member:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(int i) {}
-{% endprettify %}
+```
 
 ### extension_type_implements_disallowed_type
 
@@ -6560,17 +6555,17 @@ type that it isn't allowed to implement.
 The following code produces this diagnostic because extension types can't
 implement the type `dynamic`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(int i) implements [!dynamic!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the disallowed type from the implements clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(int i) {}
-{% endprettify %}
+```
 
 ### extension_type_implements_itself
 
@@ -6586,29 +6581,29 @@ itself, either directly or indirectly.
 The following code produces this diagnostic because the extension type `A`
 directly implements itself:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type [!A!](int i) implements A {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the extension type `A`
 indirectly implements itself (through `B`):
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type [!A!](int i) implements B {}
 
 extension type [!B!](int i) implements A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Break the cycle by removing a type from the implements clause of at least
 one of the types involved in the cycle:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(int i) implements B {}
 
 extension type B(int i) {}
-{% endprettify %}
+```
 
 ### extension_type_implements_not_supertype
 
@@ -6625,25 +6620,25 @@ The following code produces this diagnostic because the extension type `A`
 implements `String`, but `String` isn't a supertype of the representation
 type `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(int i) implements [!String!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the representation type is correct, then remove or replace the type in
 the implements clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(int i) {}
-{% endprettify %}
+```
 
 If the representation type isn't correct, then replace it with the correct
 type:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(String s) implements String {}
-{% endprettify %}
+```
 
 ### extension_type_implements_representation_not_supertype
 
@@ -6663,11 +6658,11 @@ The following code produces this diagnostic because the extension type `B`
 implements `A`, but the representation type of `A` (`num`) isn't a
 subtype of the representation type of `B` (`String`):
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(num i) {}
 
 extension type B(String s) implements [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -6675,19 +6670,19 @@ Either change the representation types of the two extension types so that
 the representation type of the implemented type is a supertype of the
 representation type of the implementing type:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(num i) {}
 
 extension type B(int n) implements A {}
-{% endprettify %}
+```
 
 Or remove the implemented type from the implements clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(num i) {}
 
 extension type B(String s) {}
-{% endprettify %}
+```
 
 ### extension_type_inherited_member_conflict
 
@@ -6705,7 +6700,7 @@ with the same name.
 The following code produces this diagnostic because the extension type `C`
 implements both `A` and `B`, and both declare a member named `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
@@ -6715,14 +6710,14 @@ extension type B(A a) {
 }
 
 extension type [!C!](A a) implements A, B {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the extension type doesn't need to implement all of the listed types,
 then remove all but one of the types introducing the conflicting members:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
@@ -6732,13 +6727,13 @@ extension type B(A a) {
 }
 
 extension type C(A a) implements A {}
-{% endprettify %}
+```
 
 If the extension type needs to implement all of the listed types but you
 can rename the members in those types, then give the conflicting members
 unique names:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
@@ -6748,7 +6743,7 @@ extension type B(A a) {
 }
 
 extension type C(A a) implements A, B {}
-{% endprettify %}
+```
 
 ### extension_type_representation_depends_on_itself
 
@@ -6765,34 +6760,34 @@ directly or indirectly.
 The following code produces this diagnostic because the representation
 type of the extension type `A` depends on `A` directly:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type [!A!](A a) {}
-{% endprettify %}
+```
 
 The following two code examples produce this diagnostic because the
 representation type of the extension type `A` depends on `A`
 indirectly through the extension type `B`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type [!A!](B b) {}
 
 extension type [!B!](A a) {}
-{% endprettify %}
+```
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type [!A!](List<B> b) {}
 
 extension type [!B!](List<A> a) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the dependency by choosing a different representation type for at
 least one of the types in the cycle:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(String s) {}
-{% endprettify %}
+```
 
 ### extension_type_representation_type_bottom
 
@@ -6810,17 +6805,17 @@ that can be extended.
 The following code produces this diagnostic because the representation
 type of the extension type `E` is `Never`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E([!Never!] n) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the extension type with a different type:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {}
-{% endprettify %}
+```
 
 ### extension_type_with_abstract_member
 
@@ -6838,28 +6833,28 @@ executed.
 The following code produces this diagnostic because the method `m` in the
 extension type `E` is abstract:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {
   [!void m();!]
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the member is intended to be executable, then provide an implementation
 of the member:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {
   void m() {}
 }
-{% endprettify %}
+```
 
 If the member isn't intended to be executable, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {}
-{% endprettify %}
+```
 
 ### external_with_initializer
 
@@ -6878,38 +6873,38 @@ initialized in a constructor.
 The following code produces this diagnostic because the external field `x`
 is assigned a value in an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   external int x;
   C() : [!x!] = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the external field `x`
 has an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   external final int [!x!] = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the external top level
 variable `x` has an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 external final int [!x!] = 0;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   external final int x;
 }
-{% endprettify %}
+```
 
 ### extra_annotation_on_struct_field
 
@@ -6929,7 +6924,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `x` has two
 annotations describing the native type of the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
@@ -6937,19 +6932,19 @@ final class C extends Struct {
   [!@Int16()!]
   external int x;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the annotations:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 final class C extends Struct {
   @Int32()
   external int x;
 }
-{% endprettify %}
+```
 
 ### extra_positional_arguments
 
@@ -6965,23 +6960,23 @@ has more positional arguments than the method or function allows.
 The following code produces this diagnostic because `f` defines 2
 parameters but is invoked with 3 arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int a, int b) {}
 void g() {
   f(1, 2, [!3!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the arguments that don't correspond to parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int a, int b) {}
 void g() {
   f(1, 2);
 }
-{% endprettify %}
+```
 
 ### extra_positional_arguments_could_be_named
 
@@ -6999,34 +6994,34 @@ The following code produces this diagnostic because `f` defines 2
 positional parameters but has a named parameter that could be used for the
 third argument:
 
-{% prettify dart tag=pre+code %}
-void f(int a, int b, {int c}) {}
+```dart
+void f(int a, int b, {int? c}) {}
 void g() {
   f(1, 2, [!3!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If some of the arguments should be values for named parameters, then add
 the names before the arguments:
 
-{% prettify dart tag=pre+code %}
-void f(int a, int b, {int c}) {}
+```dart
+void f(int a, int b, {int? c}) {}
 void g() {
   f(1, 2, c: 3);
 }
-{% endprettify %}
+```
 
 Otherwise, remove the arguments that don't correspond to positional
 parameters:
 
-{% prettify dart tag=pre+code %}
-void f(int a, int b, {int c}) {}
+```dart
+void f(int a, int b, {int? c}) {}
 void g() {
   f(1, 2);
 }
-{% endprettify %}
+```
 
 ### extra_size_annotation_carray
 
@@ -7045,7 +7040,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `a0` has two
 annotations that specify the size of the native array:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
@@ -7053,20 +7048,205 @@ final class C extends Struct {
   [!@Array(8)!]
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the annotations:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8)
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
+
+### ffi_native_invalid_duplicate_default_asset
+
+_There may be at most one @DefaultAsset annotation on a library._
+
+#### Description
+
+The analyzer produces this diagnostic when a library directive has more
+than one `DefaultAsset` annotation associated with it.
+
+#### Example
+
+The following code produces this diagnostic because the library directive
+has two `DefaultAsset` annotations associated with it:
+
+```dart
+@DefaultAsset('a')
+@[!DefaultAsset!]('b')
+library;
+
+import 'dart:ffi';
+```
+
+#### Common fixes
+
+Remove all but one of the `DefaultAsset` annotations:
+
+```dart
+@DefaultAsset('a')
+library;
+
+import 'dart:ffi';
+```
+
+### ffi_native_invalid_multiple_annotations
+
+_Native functions and fields must have exactly one `@Native` annotation._
+
+#### Description
+
+The analyzer produces this diagnostic when there is more than one `Native`
+annotation on a single declaration.
+
+#### Example
+
+The following code produces this diagnostic because the function `f` has
+two `Native` annotations associated with it:
+
+```dart
+import 'dart:ffi';
+
+@Native<Int32 Function(Int32)>()
+@[!Native!]<Int32 Function(Int32)>(isLeaf: true)
+external int f(int v);
+```
+
+#### Common fixes
+
+Remove all but one of the annotations:
+
+```dart
+import 'dart:ffi';
+
+@Native<Int32 Function(Int32)>(isLeaf: true)
+external int f(int v);
+```
+
+### ffi_native_must_be_external
+
+_Native functions must be declared external._
+
+#### Description
+
+The analyzer produces this diagnostic when a function annotated as being
+`@Native` isn't marked as `external`.
+
+#### Example
+
+The following code produces this diagnostic because the function `free` is
+annotated as being `@Native`, but the function isn't marked as `external`:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Pointer<Void>)>()
+void [!free!](Pointer<Void> ptr) {}
+```
+
+#### Common fixes
+
+If the function is a native function, then add the modifier `external`
+before the return type:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Pointer<Void>)>()
+external void free(Pointer<Void> ptr);
+```
+
+### ffi_native_unexpected_number_of_parameters
+
+_Unexpected number of Native annotation parameters. Expected {0} but has {1}._
+
+#### Description
+
+The analyzer produces this diagnostic when the number of parameters in the
+function type used as a type argument for the `@Native` annotation doesn't
+match the number of parameters in the function being annotated.
+
+#### Example
+
+The following code produces this diagnostic because the function type used
+as a type argument for the `@Native` annotation (`Void Function(Double)`)
+has one argument and the type of the annotated function
+(`void f(double, double)`) has two arguments:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Double)>(symbol: 'f')
+external void [!f!](double x, double y);
+```
+
+#### Common fixes
+
+If the annotated function is correct, then update the function type in the
+`@Native` annotation to match:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Double, Double)>(symbol: 'f')
+external void f(double x, double y);
+```
+
+If the function type in the `@Native` annotation is correct, then update
+the annotated function to match:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Double)>(symbol: 'f')
+external void f(double x);
+```
+
+### ffi_native_unexpected_number_of_parameters_with_receiver
+
+_Unexpected number of Native annotation parameters. Expected {0} but has {1}.
+Native instance method annotation must have receiver as first argument._
+
+#### Description
+
+The analyzer produces this diagnostic when the type argument used on the
+`@Native` annotation of a native method doesn't include a type for the
+receiver of the method.
+
+#### Example
+
+The following code produces this diagnostic because the type argument on
+the `@Native` annotation (`Void Function(Double)`) doesn't include a type
+for the receiver of the method:
+
+```dart
+import 'dart:ffi';
+
+class C {
+  @Native<Void Function(Double)>()
+  external void [!f!](double x);
+}
+```
+
+#### Common fixes
+
+Add an initial parameter whose type is the same as the class in which the
+native method is being declared:
+
+```dart
+import 'dart:ffi';
+
+class C {
+  @Native<Void Function(C, Double)>()
+  external void f(double x);
+}
+```
 
 ### field_initialized_by_multiple_initializers
 
@@ -7083,25 +7263,25 @@ both initializers because only the last value is preserved.
 The following code produces this diagnostic because the field `f` is being
 initialized twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C() : f = 0, [!f!] = 1;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove one of the initializers:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C() : f = 0;
 }
-{% endprettify %}
+```
 
 ### field_initialized_in_initializer_and_declaration
 
@@ -7119,12 +7299,12 @@ places.
 
 The following code produces this diagnostic because `f` is :
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f = 0;
   C() : [!f!] = 1;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -7132,23 +7312,23 @@ If the initialization doesn't depend on any values passed to the
 constructor, and if all of the constructors need to initialize the field to
 the same value, then remove the initializer from the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f = 0;
   C();
 }
-{% endprettify %}
+```
 
 If the initialization depends on a value passed to the constructor, or if
 different constructors need to initialize the field differently, then
 remove the initializer in the field's declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f;
   C() : f = 1;
 }
-{% endprettify %}
+```
 
 ### field_initialized_in_parameter_and_initializer
 
@@ -7165,48 +7345,48 @@ The following code produces this diagnostic because the field `f` is
 initialized both by an initializing formal parameter and in the
 initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(this.f) : [!f!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field should be initialized by the parameter, then remove the
 initialization in the initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(this.f);
 }
-{% endprettify %}
+```
 
 If the field should be initialized in the initializer list and the
 parameter isn't needed, then remove the parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C() : f = 0;
 }
-{% endprettify %}
+```
 
 If the field should be initialized in the initializer list and the
 parameter is needed, then make it a normal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(int g) : f = g * 2;
 }
-{% endprettify %}
+```
 
 ### field_initializer_factory_constructor
 
@@ -7223,25 +7403,25 @@ fields because no instance is created; hence, there is no field to assign.
 The following code produces this diagnostic because the factory constructor
 uses an initializing formal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int? f;
 
   factory C([!this.f!]) => throw 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the initializing formal parameter with a normal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int? f;
 
   factory C(int f) => throw 0;
 }
-{% endprettify %}
+```
 
 ### field_initializer_in_struct
 
@@ -7260,7 +7440,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C` has a
 constructor with an initializer for the field `f`:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.9
 import 'dart:ffi';
 
@@ -7270,13 +7450,13 @@ final class C extends Struct {
 
   C() : [!f = 0!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the field initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.9
 import 'dart:ffi';
 
@@ -7286,7 +7466,7 @@ final class C extends Struct {
 
   C();
 }
-{% endprettify %}
+```
 
 ### field_initializer_not_assignable
 
@@ -7306,37 +7486,37 @@ field.
 The following code produces this diagnostic because `0` has the type `int`,
 and an `int` can't be assigned to a field of type `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   String s;
 
   C() : s = [!0!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the field is correct, then change the value assigned to it
 so that the value has a valid type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   String s;
 
   C() : s = '0';
 }
-{% endprettify %}
+```
 
 If the type of the value is correct, then change the type of the field to
 allow the assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int s;
 
   C() : s = 0;
 }
-{% endprettify %}
+```
 
 ### field_initializer_outside_constructor
 
@@ -7355,20 +7535,20 @@ constructor.
 The following code produces this diagnostic because the initializing
 formal parameter `this.x` is being used in the method `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int x = 0;
 
   m([[!this.x!] = 0]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the initializing formal parameter with a normal parameter and
 assign the field within the body of the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int x = 0;
 
@@ -7376,7 +7556,7 @@ class A {
     this.x = x;
   }
 }
-{% endprettify %}
+```
 
 ### field_initializer_redirecting_constructor
 
@@ -7395,7 +7575,7 @@ The following code produces this diagnostic because the constructor
 `C.zero`, which redirects to the constructor `C`, has an initializing
 formal parameter that initializes the field `f`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
@@ -7403,13 +7583,13 @@ class C {
 
   C.zero([!this.f!]) : this(f);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constructor
 `C.zero`, which redirects to the constructor `C`, has an initializer that
 initializes the field `f`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
@@ -7417,14 +7597,14 @@ class C {
 
   C.zero() : [!f = 0!], this(1);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the initialization is done by an initializing formal parameter, then
 use a normal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
@@ -7432,12 +7612,12 @@ class C {
 
   C.zero(int f) : this(f);
 }
-{% endprettify %}
+```
 
 If the initialization is done in an initializer, then remove the
 initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
@@ -7445,7 +7625,7 @@ class C {
 
   C.zero() : this(0);
 }
-{% endprettify %}
+```
 
 ### field_initializing_formal_not_assignable
 
@@ -7464,13 +7644,13 @@ formal parameter has the type `String`, but the type of the field is
 `int`. The parameter must have a type that is a subtype of the field's
 type.
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C([!String this.f!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -7478,36 +7658,36 @@ If the type of the field is incorrect, then change the type of the field to
 match the type of the parameter, and consider removing the type from the
 parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   String f;
 
   C(this.f);
 }
-{% endprettify %}
+```
 
 If the type of the parameter is incorrect, then remove the type of the
 parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(this.f);
 }
-{% endprettify %}
+```
 
 If the types of both the field and the parameter are correct, then use an
 initializer rather than an initializing formal parameter to convert the
 parameter value into a value of the correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int f;
 
   C(String s) : f = int.parse(s);
 }
-{% endprettify %}
+```
 
 ### field_in_struct_with_initializer
 
@@ -7525,27 +7705,27 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `p` has an
 initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.9
 import 'dart:ffi';
 
 final class C extends Struct {
   Pointer [!p!] = nullptr;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.9
 import 'dart:ffi';
 
 final class C extends Struct {
   Pointer p;
 }
-{% endprettify %}
+```
 
 ### field_must_be_external_in_struct
 
@@ -7563,27 +7743,27 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `a` isn't
 marked as being `external`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int16()
   int [!a!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the required `external` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int16()
   external int a;
 }
-{% endprettify %}
+```
 
 ### final_initialized_in_declaration_and_constructor
 
@@ -7600,37 +7780,37 @@ twice: once where it's declared and once by a constructor's parameter.
 The following code produces this diagnostic because the field `f` is
 initialized twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f = 0;
 
   C(this.[!f!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field should have the same value for all instances, then remove the
 initialization in the parameter list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f = 0;
 
   C();
 }
-{% endprettify %}
+```
 
 If the field can have different values in different instances, then remove
 the initialization in the declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int f;
 
   C(this.f);
 }
-{% endprettify %}
+```
 
 ### final_not_initialized
 
@@ -7646,38 +7826,38 @@ initialized.
 The following code produces this diagnostic because `x` doesn't have an
 initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 final [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 For variables and static fields, you can add an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 final x = 0;
-{% endprettify %}
+```
 
 For instance fields, you can add an initializer as shown in the previous
 example, or you can initialize the field in every constructor. You can
 initialize the field by using an initializing formal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int x;
   C(this.x);
 }
-{% endprettify %}
+```
 
 You can also initialize the field by using an initializer in the
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final int x;
   C(int y) : x = y * 2;
 }
-{% endprettify %}
+```
 
 ### final_not_initialized_constructor
 
@@ -7700,56 +7880,56 @@ or by the constructor.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String value;
 
   [!C!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value should be passed in to the constructor directly, then use an
 initializing formal parameter to initialize the field `value`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String value;
 
   C(this.value);
 }
-{% endprettify %}
+```
 
 If the value should be computed indirectly from a value provided by the
 caller, then add a parameter and include an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String value;
 
   C(Object o) : value = o.toString();
 }
-{% endprettify %}
+```
 
 If the value of the field doesn't depend on values that can be passed to
 the constructor, then add an initializer for the field as part of the field
 declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String value = '';
 
   C();
 }
-{% endprettify %}
+```
 
 If the value of the field doesn't depend on values that can be passed to
 the constructor but different constructors need to initialize it to
 different values, then add an initializer for the field in the initializer
 list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String value;
 
@@ -7757,18 +7937,18 @@ class C {
 
   C.named() : value = 'c';
 }
-{% endprettify %}
+```
 
 However, if the value is the same for all instances, then consider using a
 static field instead of an instance field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static const String value = '';
 
   C();
 }
-{% endprettify %}
+```
 
 ### flutter_field_not_map
 
@@ -7784,28 +7964,28 @@ isn't a map.
 The following code produces this diagnostic because the value of the
 top-level `flutter` key is a string:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter: [!true!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to specify Flutter-specific options, then change the value to
 be a map:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 flutter:
   uses-material-design: true
-{% endprettify %}
+```
 
 If you don't need to specify Flutter-specific options, then remove the
 `flutter` key:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
-{% endprettify %}
+```
 
 ### for_in_of_invalid_element_type
 
@@ -7824,37 +8004,37 @@ The following code produces this diagnostic because `<String>[]` has an
 element type of `String`, and `String` can't be assigned to the type of `e`
 (`int`):
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (int e in [!<String>[]!]) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the loop variable is correct, then update the type of the
 iterable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (int e in <int>[]) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 If the type of the iterable is correct, then update the type of the loop
 variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (String e in <String>[]) {
     print(e);
   }
 }
-{% endprettify %}
+```
 
 ### for_in_of_invalid_type
 
@@ -7870,25 +8050,25 @@ a for-in loop has a type that isn't a subclass of `Iterable`.
 The following code produces this diagnostic because `m` is a `Map`, and
 `Map` isn't a subclass of `Iterable`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<String, String> m) {
   for (String s in [!m!]) {
     print(s);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the expression with one that produces an iterable value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<String, String> m) {
   for (String s in m.values) {
     print(s);
   }
 }
-{% endprettify %}
+```
 
 ### for_in_with_const_variable
 
@@ -7905,13 +8085,13 @@ because the value can't be computed at compile time.
 The following code produces this diagnostic because the loop variable `x`
 is declared to be a `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for ([!const!] x in [0, 1, 2]) {
     print(x);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -7921,13 +8101,13 @@ declaration.
 If there's no type, then replace the `const` modifier with `final`, `var`,
 or a type annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (final x in [0, 1, 2]) {
     print(x);
   }
 }
-{% endprettify %}
+```
 
 ### generic_method_type_instantiation_on_dynamic
 
@@ -7948,30 +8128,30 @@ arguments aren't allowed.
 The following code produces this diagnostic because the type of `p` is
 `dynamic` and the tear-off of `m` has type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(dynamic list) {
   [!list.fold!]<int>;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can use a more specific type than `dynamic`, then change the type of
 the receiver:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(List<Object> list) {
   list.fold<int>;
 }
-{% endprettify %}
+```
 
 If you can't use a more specific type, then remove the type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(dynamic list) {
   list.cast;
 }
-{% endprettify %}
+```
 
 ### generic_struct_subclass
 
@@ -7989,25 +8169,25 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `S` defines
 the type parameter `T`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class [!S!]<T> extends Struct {
   external Pointer notEmpty;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the type parameters from the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class S extends Struct {
   external Pointer notEmpty;
 }
-{% endprettify %}
+```
 
 ### getter_not_subtype_setter_types
 
@@ -8029,35 +8209,35 @@ The following code produces this diagnostic because the return type of the
 getter `x` is `num`, the parameter type of the setter `x` is `int`, and
 `num` isn't a subtype of `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   num get [!x!] => 0;
 
   set x(int y) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the getter is correct, then change the type of the setter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   num get x => 0;
 
   set x(num y) {}
 }
-{% endprettify %}
+```
 
 If the type of the setter is correct, then change the type of the getter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int get x => 0;
 
   set x(int y) {}
 }
-{% endprettify %}
+```
 
 ### illegal_async_generator_return_type
 
@@ -8076,24 +8256,24 @@ The following code produces this diagnostic because the body of the
 function `f` has the 'async*' modifier even though the return type `int`
 isn't a supertype of `Stream`:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!int!] f() async* {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function should be asynchronous, then change the return type to be
 either `Stream` or a supertype of `Stream`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Stream<int> f() async* {}
-{% endprettify %}
+```
 
 If the function should be synchronous, then remove the `async*` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
-{% endprettify %}
+```
 
 ### illegal_async_return_type
 
@@ -8112,28 +8292,28 @@ The following code produces this diagnostic because the body of the
 function `f` has the `async` modifier even though the return type isn't
 assignable to `Future`:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!int!] f() async {
   return 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function should be asynchronous, then change the return type to be
 assignable to `Future`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<int> f() async {
   return 0;
 }
-{% endprettify %}
+```
 
 If the function should be synchronous, then remove the `async` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
-{% endprettify %}
+```
 
 ### illegal_concrete_enum_member
 
@@ -8155,55 +8335,55 @@ class that implements `Enum`, or a mixin with a superclass constraint of
 The following code produces this diagnostic because the enum `E` declares
 an instance getter named `index`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   v;
 
   int get [!index!] => 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `C`, which
 implements `Enum`, declares an instance field named `hashCode`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C implements Enum {
   int [!hashCode!] = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `C`, which
 indirectly implements `Enum` through the class `A`, declares an instance
 getter named `hashCode`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A implements Enum {}
 
 abstract class C implements A {
   int get [!hashCode!] => 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the mixin `M`, which
 has `Enum` in the `on` clause, declares an explicit operator named `==`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M on Enum {
   bool operator [!==!](Object other) => false;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename the conflicting member:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   v;
 
   int get getIndex => 0;
 }
-{% endprettify %}
+```
 
 ### illegal_enum_values
 
@@ -8224,32 +8404,32 @@ member named `values`.
 The following code produces this diagnostic because the class `C`, which
 implements `Enum`, declares an instance field named `values`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C implements Enum {
   int get [!values!] => 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `B`, which
 implements `Enum`, inherits an instance method named `values` from `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   int values() => 0;
 }
 
 abstract class [!B!] extends A implements Enum {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the name of the conflicting member:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C implements Enum {
   int get value => 0;
 }
-{% endprettify %}
+```
 
 ### illegal_sync_generator_return_type
 
@@ -8268,25 +8448,25 @@ The following code produces this diagnostic because the body of the
 function `f` has the 'sync*' modifier even though the return type `int`
 isn't a supertype of `Iterable`:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!int!] f() sync* {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function should return an iterable, then change the return type to
 be either `Iterable` or a supertype of `Iterable`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> f() sync* {}
-{% endprettify %}
+```
 
 If the function should return a single value, then remove the `sync*`
 modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 0;
-{% endprettify %}
+```
 
 ### implements_non_class
 
@@ -8303,10 +8483,10 @@ than a class or mixin.
 The following code produces this diagnostic because `x` is a variable
 rather than a class or mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x;
 class C implements [!x!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -8336,19 +8516,19 @@ than once in an `implements` clause.
 The following code produces this diagnostic because `A` is in the list
 twice:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B implements A, [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all except one occurrence of the class name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B implements A {}
-{% endprettify %}
+```
 
 ### implements_super_class
 
@@ -8367,40 +8547,40 @@ The analyzer produces this diagnostic when a class is listed in the
 The following code produces this diagnostic because the class `A` is used
 in both the `extends` and `implements` clauses for the class `B`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B extends A implements [!A!] {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `A` is used
 in both the `extends` and `with` clauses for the class `B`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin class A {}
 
 class B extends A with [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want to inherit the implementation from the class, then remove the
 class from the `implements` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B extends A {}
-{% endprettify %}
+```
 
 If you don't want to inherit the implementation from the class, then remove
 the `extends` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B implements A {}
-{% endprettify %}
+```
 
 ### implicit_super_initializer_missing_arguments
 
@@ -8420,7 +8600,7 @@ constructor in the class `B` implicitly invokes the unnamed constructor in
 the class `A`, but the constructor in `A` has a required positional
 parameter named `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -8428,14 +8608,14 @@ class A {
 class B extends A {
   [!B!]();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the unnamed
 constructor in the class `B` implicitly invokes the unnamed constructor in
 the class `A`, but the constructor in `A` has a required named parameter
 named `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({required int x});
 }
@@ -8443,7 +8623,7 @@ class A {
 class B extends A {
   [!B!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -8451,7 +8631,7 @@ If you can add a parameter to the constructor in the subclass, then add a
 super parameter corresponding to the required parameter in the superclass'
 constructor. The new parameter can either be required:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({required int x});
 }
@@ -8459,11 +8639,11 @@ class A {
 class B extends A {
   B({required super.x});
 }
-{% endprettify %}
+```
 
 or it can be optional:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({required int x});
 }
@@ -8471,12 +8651,12 @@ class A {
 class B extends A {
   B({super.x = 0});
 }
-{% endprettify %}
+```
 
 If you can't add a parameter to the constructor in the subclass, then add
 an explicit super constructor invocation with the required argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -8484,7 +8664,7 @@ class A {
 class B extends A {
   B() : super(0);
 }
-{% endprettify %}
+```
 
 ### implicit_this_reference_in_initializer
 
@@ -8500,7 +8680,7 @@ instance member in a constructor's initializer list.
 The following code produces this diagnostic because `defaultX` is an
 instance member:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
@@ -8508,13 +8688,13 @@ class C {
 
   int get defaultX => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the member can be made static, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
@@ -8522,12 +8702,12 @@ class C {
 
   static int get defaultX => 0;
 }
-{% endprettify %}
+```
 
 If not, then replace the reference in the initializer with a different
 expression that doesn't use an instance member:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
@@ -8535,7 +8715,7 @@ class C {
 
   int get defaultX => 0;
 }
-{% endprettify %}
+```
 
 ### import_deferred_library_with_load_function
 
@@ -8557,57 +8737,57 @@ For more information, check out
 
 Given a file `a.dart` that defines a function named `loadLibrary`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void loadLibrary(Library library) {}
 
 class Library {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the implicit
 declaration of `a.loadLibrary` is hiding the explicit declaration of
 `loadLibrary` in `a.dart`:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!import 'a.dart' deferred as a;!]
 
 void f() {
   a.Library();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the imported library isn't required to be deferred, then remove the
 keyword `deferred`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 void f() {
   a.Library();
 }
-{% endprettify %}
+```
 
 If the imported library is required to be deferred and you need to
 reference the imported function, then rename the function in the imported
 library:
 
-{% prettify dart tag=pre+code %}
+```dart
 void populateLibrary(Library library) {}
 
 class Library {}
-{% endprettify %}
+```
 
 If the imported library is required to be deferred and you don't need to
 reference the imported function, then add a `hide` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a hide loadLibrary;
 
 void f() {
   a.Library();
 }
-{% endprettify %}
+```
 
 ### import_internal_library
 
@@ -8623,9 +8803,9 @@ URI references an internal library.
 The following code produces this diagnostic because `_interceptors` is an
 internal library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'dart:_interceptors'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -8645,20 +8825,20 @@ imports a library that isn't null safe.
 
 Given a file `a.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.9
 
 class A {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because a library that null
 safe is importing a library that isn't null safe:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'a.dart'!];
 
 A? f() => null;
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -8682,18 +8862,18 @@ into a library.
 
 Given a [part file][] named `part.dart` containing the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 part of lib;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because imported files can't
 have a part-of directive:
 
-{% prettify dart tag=pre+code %}
+```dart
 library lib;
 
 import [!'part.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -8716,37 +8896,37 @@ The following code produces this diagnostic because `C` is inheriting the
 declaration of `m` from `A`, and that implementation isn't consistent with
 the signature of `m` that's inherited from `B`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
-  void m({int a}) {}
+  void m({int? a}) {}
 }
 
 class B {
-  void m({int b}) {}
+  void m({int? b}) {}
 }
 
 class [!C!] extends A implements B {
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an implementation of the method that satisfies all the inherited
 signatures:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
-  void m({int a}) {}
+  void m({int? a}) {}
 }
 
 class B {
-  void m({int b}) {}
+  void m({int? b}) {}
 }
 
 class C extends A implements B {
-  void m({int a, int b}) {}
+  void m({int? a, int? b}) {}
 }
-{% endprettify %}
+```
 
 ### inconsistent_language_version_override
 
@@ -8762,27 +8942,27 @@ the one being used for the library to which the part belongs.
 
 Given a [part file][] named `part.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.14
 part of 'test.dart';
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the parts of a library
 must have the same language version as the defining compilation unit:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.15
 part [!'part.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the language version override from the [part file][], so that it
 implicitly uses the same version as the defining compilation unit:
 
-{% prettify dart tag=pre+code %}
+```dart
 part of 'test.dart';
-{% endprettify %}
+```
 
 If necessary, either adjust the language version override in the defining
 compilation unit to be appropriate for the code in the part, or migrate
@@ -8809,55 +8989,55 @@ variable can be known in code that's guarded by the logical-or pattern.
 The following code produces this diagnostic because the variable `a` is
 defined to be an `int` on one branch and a `double` on the other:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   if (x case (int a) || (double [!a!])) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the variable `a` is
 `final` in the first branch and isn't `final` in the second branch:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   if (x case (final int a) || (int [!a!])) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the finality of the variable is different, decide whether it should be
 `final` or not `final` and make the cases consistent:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   if (x case (int a) || (int a)) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 If the type of the variable is different and the type isn't critical to
 the condition being matched, then ensure that the variable has the same
 type on both branches:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   if (x case (num a) || (num a)) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 If the type of the variable is different and the type is critical to the
 condition being matched, then consider breaking the condition into
 multiple `if` statements or `case` clauses:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   if (x case int a) {
     print(a);
@@ -8865,7 +9045,7 @@ void f(Object? x) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 ### initializer_for_non_existent_field
 
@@ -8883,37 +9063,37 @@ are inherited from superclasses.
 The following code produces this diagnostic because the initializer is
 initializing `x`, but `x` isn't a field in the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int y;
+  int? y;
 
   C() : [!x = 0!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a different field should be initialized, then change the name to the
 name of the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int y;
+  int? y;
 
   C() : y = 0;
 }
-{% endprettify %}
+```
 
 If the field must be declared, then add a declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int x;
-  int y;
+  int? x;
+  int? y;
 
   C() : x = 0;
 }
-{% endprettify %}
+```
 
 ### initializer_for_static_field
 
@@ -8931,46 +9111,46 @@ assignment in the initializer list.
 The following code produces this diagnostic because the static field `a`
 is being initialized by the initializing formal parameter `this.a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static int? a;
   C([!this.a!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field should be an instance field, then remove the keyword `static`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int? a;
   C(this.a);
 }
-{% endprettify %}
+```
 
 If you intended to initialize an instance field and typed the wrong name,
 then correct the name of the field being initialized:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static int? a;
   int? b;
   C(this.b);
 }
-{% endprettify %}
+```
 
 If you really want to initialize the static field, then move the
 initialization into the constructor body:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static int? a;
   C(int? c) {
     a = c;
   }
 }
-{% endprettify %}
+```
 
 ### initializing_formal_for_non_existent_field
 
@@ -8988,59 +9168,59 @@ declared and fields that are inherited from superclasses.
 The following code produces this diagnostic because the field `x` isn't
 defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int y;
+  int? y;
 
   C([!this.x!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field name was wrong, then change it to the name of an existing
 field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int y;
+  int? y;
 
   C(this.y);
 }
-{% endprettify %}
+```
 
 If the field name is correct but hasn't yet been defined, then declare the
 field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int x;
-  int y;
+  int? x;
+  int? y;
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 If the parameter is needed but shouldn't initialize a field, then convert
 it to a normal parameter and use it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int y;
 
   C(int x) : y = x * 2;
 }
-{% endprettify %}
+```
 
 If the parameter isn't needed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int y;
+  int? y;
 
   C();
 }
-{% endprettify %}
+```
 
 ### instance_access_to_static_member
 
@@ -9056,7 +9236,7 @@ access a static member through an instance of the class.
 The following code produces this diagnostic because `zero` is a static
 field, but it's being accessed as if it were an instance field:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   c.[!zero!];
 }
@@ -9064,13 +9244,13 @@ void f(C c) {
 class C {
   static int zero = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use the class to access the static member:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(C c) {
   C.zero;
 }
@@ -9078,7 +9258,7 @@ void f(C c) {
 class C {
   static int zero = 0;
 }
-{% endprettify %}
+```
 
 ### instance_member_access_from_factory
 
@@ -9099,7 +9279,7 @@ so `this` can't be used to reference it.
 The following code produces this diagnostic because `x` isn't in scope in
 the factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
   factory C() {
@@ -9107,13 +9287,13 @@ class C {
   }
   C._(this.x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rewrite the code so that it doesn't reference the instance member:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
   factory C() {
@@ -9121,7 +9301,7 @@ class C {
   }
   C._(this.x);
 }
-{% endprettify %}
+```
 
 ### instance_member_access_from_static
 
@@ -9137,43 +9317,43 @@ unqualified reference to an instance member.
 The following code produces this diagnostic because the instance field `x`
 is being referenced in a static method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int x;
+  int x = 0;
 
   static int m() {
     return [!x!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the method must reference the instance member, then it can't be static,
 so remove the keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int x;
+  int x = 0;
 
   int m() {
     return x;
   }
 }
-{% endprettify %}
+```
 
 If the method can't be made an instance method, then add a parameter so
 that an instance of the class can be passed in:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  int x;
+  int x = 0;
 
   static int m(C c) {
     return c.x;
   }
 }
-{% endprettify %}
+```
 
 ### instantiate_abstract_class
 
@@ -9191,11 +9371,11 @@ can declare constructors that can be invoked by subclasses.
 The following code produces this diagnostic because `C` is an abstract
 class:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {}
 
 var c = new [!C!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -9217,24 +9397,24 @@ the instances named in the declaration of the enum can exist.
 The following code produces this diagnostic because the enum `E` is being
 instantiated:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.16
 enum E {a}
 
 var e = [!E!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intend to use an instance of the enum, then reference one of the
 constants defined in the enum:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.16
 enum E {a}
 
 var e = E.a;
-{% endprettify %}
+```
 
 If you intend to use an instance of a class, then use the name of that class in place of the name of the enum.
 
@@ -9255,20 +9435,20 @@ The following code produces this diagnostic because it creates an instance
 of `A`, even though `A` is a type alias that is defined to be equivalent to
 a type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef A<T> = T;
 
 void f() {
   const [!A!]<int>();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use either a class name or a type alias defined to be a class, rather than
 a type alias defined to be a type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef A<T> = C<T>;
 
 void f() {
@@ -9278,7 +9458,7 @@ void f() {
 class C<T> {
   const C();
 }
-{% endprettify %}
+```
 
 ### integer_literal_imprecise_as_double
 
@@ -9297,25 +9477,25 @@ implicitly converted to a double if the context requires the type `double`.
 The following code produces this diagnostic because the integer value
 `9223372036854775807` can't be represented exactly as a double:
 
-{% prettify dart tag=pre+code %}
+```dart
 double x = [!9223372036854775807!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to use the exact value, then use the class `BigInt` to
 represent the value:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = BigInt.parse('9223372036854775807');
-{% endprettify %}
+```
 
 If you need to use a double, then change the value to one that can be
 represented exactly:
 
-{% prettify dart tag=pre+code %}
+```dart
 double x = 9223372036854775808;
-{% endprettify %}
+```
 
 ### integer_literal_out_of_range
 
@@ -9332,18 +9512,18 @@ that is too large (positive) or too small (negative) to be represented in a
 The following code produces this diagnostic because the value can't be
 represented in 64 bits:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = [!9223372036854775810!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to represent the current value, then wrap it in an instance of
 the class `BigInt`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = BigInt.parse('9223372036854775810');
-{% endprettify %}
+```
 
 ### invalid_annotation
 
@@ -9363,59 +9543,59 @@ Getters can't be used as annotations.
 The following code produces this diagnostic because the variable `v` isn't
 a `const` variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 var v = 0;
 
 [!@v!]
 void f() {
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `f` isn't a variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!@f!]
 void f() {
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `f` isn't a
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!@f()!]
 void f() {
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `g` is a getter:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!@g!]
 int get g => 0;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the annotation is referencing a variable that isn't a `const`
 constructor, add the keyword `const` to the variable's declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 const v = 0;
 
 @v
 void f() {
 }
-{% endprettify %}
+```
 
 If the annotation isn't referencing a variable, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 int v = 0;
 
 void f() {
 }
-{% endprettify %}
+```
 
 ### invalid_annotation_constant_value_from_deferred_library
 
@@ -9437,7 +9617,7 @@ The following code produces this diagnostic because the constant `pi` is
 being referenced in the argument list of an annotation, even though the
 library that defines it is being imported as a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' deferred as math;
 
 class C {
@@ -9446,14 +9626,14 @@ class C {
 
 @C(math.[!pi!])
 void f () {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the imported constant, then remove the `deferred`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 class C {
@@ -9462,7 +9642,7 @@ class C {
 
 @C(math.pi)
 void f () {}
-{% endprettify %}
+```
 
 If the import is required to be deferred and there's another constant that
 is appropriate, then use that constant in place of the constant from the
@@ -9488,32 +9668,32 @@ The following code produces this diagnostic because the constant `pi` is
 being used as an annotation when the library `dart:math` is imported as
 `deferred`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' deferred as math;
 
 @[!math.pi!]
 void f() {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the constant as an annotation, then remove the
 keyword `deferred` from the import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 @math.pi
 void f() {}
-{% endprettify %}
+```
 
 If you can use a different constant as an annotation, then replace the
 annotation with a different constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 @deprecated
 void f() {}
-{% endprettify %}
+```
 
 ### invalid_annotation_target
 
@@ -9529,12 +9709,12 @@ kind of declaration that it doesn't support.
 The following code produces this diagnostic because the `optionalTypeArgs`
 annotation isn't defined to be valid for top-level variables:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @[!optionalTypeArgs!]
 int x = 0;
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -9556,10 +9736,10 @@ The following code produces this diagnostic because the type of the
 initializer (`int`) isn't assignable to the type of the variable
 (`String`):
 
-{% prettify dart tag=pre+code %}
+```dart
 int i = 0;
 String s = [!i!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -9569,18 +9749,18 @@ the static types don't reflect that, then add an explicit cast.
 Otherwise, change the value being assigned so that it has the expected
 type. In the previous example, this might look like:
 
-{% prettify dart tag=pre+code %}
+```dart
 int i = 0;
 String s = i.toString();
-{% endprettify %}
+```
 
 If you can't change the value, then change the type of the variable to be
 compatible with the type of the value being assigned:
 
-{% prettify dart tag=pre+code %}
+```dart
 int i = 0;
 int s = i;
-{% endprettify %}
+```
 
 ### invalid_dependency
 
@@ -9600,12 +9780,12 @@ check out [Package dependencies](https://dart.dev/tools/pub/dependencies).
 The following code produces this diagnostic because the dependency on
 the package `transmogrify` isn't a pub-hosted dependency.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   transmogrify:
     [!path!]: ../transmogrify
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -9616,13 +9796,13 @@ If the package isn't intended to be published on `pub.dev`, then
 add a `publish_to: none` entry to its `pubspec.yaml` file to
 mark it as not intended to be published:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 publish_to: none
 dependencies:
   transmogrify:
     path: ../transmogrify
-{% endprettify %}
+```
 
 ### invalid_exception_value
 
@@ -9644,7 +9824,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because a second argument is
 provided when the return type of `f` is `void`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = Void Function(Int8);
@@ -9654,13 +9834,13 @@ void f(int i) {}
 void g() {
   Pointer.fromFunction<T>(f, [!42!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the exception value:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = Void Function(Int8);
@@ -9670,7 +9850,7 @@ void f(int i) {}
 void g() {
   Pointer.fromFunction<T>(f);
 }
-{% endprettify %}
+```
 
 ### invalid_export_of_internal_element
 
@@ -9686,28 +9866,28 @@ annotation.
 
 Given a file `a.dart` in the `src` directory that contains:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @internal class One {}
-{% endprettify %}
+```
 
 The following code, when found in a [public library][] produces this
 diagnostic because the `export` directive is exporting a name that is only
 intended to be used internally:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!export 'src/a.dart';!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the export is needed, then add a `hide` clause to hide the internal
 names:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'src/a.dart' hide One;
-{% endprettify %}
+```
 
 If the export isn't needed, then remove it.
 
@@ -9727,22 +9907,22 @@ is marked with the [`internal`][meta-internal] annotation.
 Given a file `a.dart` in the `src` directory that contains the
 following:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @internal
 typedef IntFunction = int Function();
 
 int f(IntFunction g) => g();
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the function `f` has a
 parameter of type `IntFunction`, and `IntFunction` is only intended to be
 used internally:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!export 'src/a.dart' show f;!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -9769,7 +9949,7 @@ argument.
 
 The following code produces this diagnostic because there are no arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String join(String other) => '$this $other';
 }
@@ -9777,12 +9957,12 @@ extension E on String {
 void f() {
   E[!()!].join('b');
 }
-{% endprettify %}
+```
 
 And, the following code produces this diagnostic because there's more than
 one argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String join(String other) => '$this $other';
 }
@@ -9790,13 +9970,13 @@ extension E on String {
 void f() {
   E[!('a', 'b')!].join('c');
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Provide one argument for the extension override:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String join(String other) => '$this $other';
 }
@@ -9804,7 +9984,7 @@ extension E on String {
 void f() {
   E('a').join('b');
 }
-{% endprettify %}
+```
 
 ### invalid_factory_method_decl
 
@@ -9821,7 +10001,7 @@ The following code produces this diagnostic because the method `createC`
 is annotated with the [`factory`][meta-factory] annotation but doesn't
 return any value:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class Factory {
@@ -9830,13 +10010,13 @@ class Factory {
 }
 
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the return type to something other than `void`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class Factory {
@@ -9845,7 +10025,7 @@ class Factory {
 }
 
 class C {}
-{% endprettify %}
+```
 
 ### invalid_factory_method_impl
 
@@ -9862,7 +10042,7 @@ object.
 The following code produces this diagnostic because the method `createC`
 returns the value of a field rather than a newly created instance of `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class Factory {
@@ -9873,13 +10053,13 @@ class Factory {
 }
 
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the method to return a newly created instance of the return type:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class Factory {
@@ -9888,7 +10068,7 @@ class Factory {
 }
 
 class C {}
-{% endprettify %}
+```
 
 ### invalid_factory_name_not_a_class
 
@@ -9905,61 +10085,61 @@ constructor isn't the same as the name of the surrounding class.
 The following code produces this diagnostic because the name of the factory
 constructor (`A`) isn't the same as the surrounding class (`C`):
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class C {
   factory [!A!]() => throw 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the factory returns an instance of the surrounding class, and you
 intend it to be an unnamed factory constructor, then rename the factory:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class C {
   factory C() => throw 0;
 }
-{% endprettify %}
+```
 
 If the factory returns an instance of the surrounding class, and you
 intend it to be a named factory constructor, then prefix the name of the
 factory constructor with the name of the surrounding class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class C {
   factory C.a() => throw 0;
 }
-{% endprettify %}
+```
 
 If the factory returns an instance of a different class, then move the
 factory to that class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() => throw 0;
 }
 
 class C {}
-{% endprettify %}
+```
 
 If the factory returns an instance of a different class, but you can't
 modify that class or don't want to move the factory, then convert it to be
 a static method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class C {
   static A a() => throw 0;
 }
-{% endprettify %}
+```
 
 ### invalid_field_name
 
@@ -9985,55 +10165,55 @@ invalid if it is:
 The following code produces this diagnostic because the record literal has
 a field named `toString`, which is a method defined on `Object`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (a: 1, [!toString!]: 4);
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record type
 annotation has a field named `hashCode`, which is a getter defined on
 `Object`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(({int a, int [!hashCode!]}) r) {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record literal has
 a private field named `_a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = ([!_a!]: 1, b: 2);
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record type
 annotation has a private field named `_a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(({int [!_a!], int b}) r) {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record literal has
 a field named `$1`, which is also the name of a different positional
 parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (2, [!$1!]: 1);
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the record type
 annotation has a field named `$1`, which is also the name of a different
 positional parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, String, {int [!$1!]}) r) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = (a: 1, d: 4);
-{% endprettify %}
+```
 
 ### invalid_field_type_in_struct
 
@@ -10054,7 +10234,7 @@ The following code produces this diagnostic because the field `str` has
 the type `String`, which isn't one of the allowed types for fields in a
 subclass of `Struct`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
@@ -10063,13 +10243,13 @@ final class C extends Struct {
   @Int32()
   external int i;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use one of the allowed types for the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 
@@ -10079,7 +10259,7 @@ final class C extends Struct {
   @Int32()
   external int i;
 }
-{% endprettify %}
+```
 
 ### invalid_implementation_override
 
@@ -10106,22 +10286,22 @@ The following code produces this diagnostic because the method `A.add` has
 a parameter of type `int`, and the overriding method `B.add` has a
 corresponding parameter of type `num`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int add(int a) => a;
 }
 class [!B!] extends A {
   int add(num a);
 }
-{% endprettify %}
+```
 
 This is a problem because in an invocation of `B.add` like the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(B b) {
   b.add(3.4);
 }
-{% endprettify %}
+```
 
 `B.add` is expecting to be able to take, for example, a `double`, but when
 the method `A.add` is executed (because it's the only concrete
@@ -10134,40 +10314,40 @@ If the method in the subclass can conform to the implementation in the
 superclass, then change the declaration in the subclass (or remove it if
 it's the same):
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int add(int a) => a;
 }
 class B	extends A {
   int add(int a);
 }
-{% endprettify %}
+```
 
 If the method in the superclass can be generalized to be a valid
 implementation of the method in the subclass, then change the superclass
 method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int add(num a) => a.floor();
 }
 class B	extends A {
   int add(num a);
 }
-{% endprettify %}
+```
 
 If neither the method in the superclass nor the method in the subclass can
 be changed, then provide a concrete implementation of the method in the
 subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int add(int a) => a;
 }
 class B	extends A {
   int add(num a) => a.floor();
 }
-{% endprettify %}
+```
 
 ### invalid_inline_function_type
 
@@ -10185,17 +10365,17 @@ The following code produces this diagnostic because the parameter `f`, in
 the generic function type used to define `F`, uses the inline function
 type syntax:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = int Function(int f[!(!]String s));
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use the generic function syntax for the parameter's type:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = int Function(int Function(String));
-{% endprettify %}
+```
 
 ### invalid_internal_annotation
 
@@ -10214,35 +10394,35 @@ The following code, when in a [public library][], produces this diagnostic
 because the [`internal`][meta-internal] annotation can't be applied to
 declarations in a [public library][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@internal!]
+@[!internal!]
 class C {}
-{% endprettify %}
+```
 
 The following code, whether in a public or internal library, produces this
 diagnostic because the [`internal`][meta-internal] annotation can't be
 applied to declarations with private names:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@internal!]
+@[!internal!]
 class _C {}
 
 void f(_C c) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the declaration has a private name, then remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class _C {}
 
 void f(_C c) {}
-{% endprettify %}
+```
 
 If the declaration has a public name and is intended to be internal to the
 package, then move the annotated declaration into an internal library (in
@@ -10250,9 +10430,9 @@ other words, a library inside the `src` directory).
 
 Otherwise, remove the use of the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 ### invalid_language_version_override
 
@@ -10294,18 +10474,18 @@ The following code produces this diagnostic because the word `dart` must
 be lowercase in such a comment and because there's no equal sign between
 the word `dart` and the version number:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!// @Dart 2.13!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the comment is intended to be a language version override, then change
 the comment to follow the correct format:
 
-{% prettify dart tag=pre+code %}
+```dart
 // @dart = 2.13
-{% endprettify %}
+```
 
 ### invalid_literal_annotation
 
@@ -10321,24 +10501,24 @@ annotation is applied to anything other than a const constructor.
 The following code produces this diagnostic because the constructor isn't
 a `const` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
-  [!@literal!]
+  @[!literal!]
   C();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `x` isn't a
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@literal!]
+@[!literal!]
 var x;
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -10346,23 +10526,23 @@ If the annotation is on a constructor and the constructor should always be
 invoked with `const`, when possible, then mark the constructor with the
 `const` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
   @literal
   const C();
 }
-{% endprettify %}
+```
 
 If the constructor can't be marked as `const`, then remove the annotation.
 
 If the annotation is on anything other than a constructor, then remove the
 annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x;
-{% endprettify %}
+```
 
 ### invalid_modifier_on_constructor
 
@@ -10379,33 +10559,33 @@ Constructor bodies must be synchronous.
 The following code produces this diagnostic because the body of the
 constructor for `C` is marked as being `async`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C() [!async!] {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the constructor can be synchronous, then remove the modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
 }
-{% endprettify %}
+```
 
 If the constructor can't be synchronous, then use a static method to create
 the instance instead:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
   static Future<C> c() async {
     return C();
   }
 }
-{% endprettify %}
+```
 
 ### invalid_modifier_on_setter
 
@@ -10422,30 +10602,30 @@ bodies must be synchronous.
 The following code produces this diagnostic because the body of the setter
 `x` is marked as being `async`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   set x(int i) [!async!] {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the setter can be synchronous, then remove the modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   set x(int i) {}
 }
-{% endprettify %}
+```
 
 If the setter can't be synchronous, then use a method to set the value
 instead:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void x(int i) async {}
 }
-{% endprettify %}
+```
 
 ### invalid_non_virtual_annotation
 
@@ -10463,66 +10643,66 @@ if the member isn't a concrete instance member.
 The following code produces this diagnostic because the annotation is on a
 class declaration rather than a member inside the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@nonVirtual!]
+@[!nonVirtual!]
 class C {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the method `m` is an
 abstract method:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 abstract class C {
-  [!@nonVirtual!]
+  @[!nonVirtual!]
   void m();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the method `m` is a
 static method:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 abstract class C {
-  [!@nonVirtual!]
+  @[!nonVirtual!]
   static void m() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the declaration isn't a member of a class, mixin, or enum, then remove
 the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 If the member is intended to be a concrete instance member, then make it
 so:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 abstract class C {
   @nonVirtual
   void m() {}
 }
-{% endprettify %}
+```
 
 If the member is not intended to be a concrete instance member, then
 remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   static void m() {}
 }
-{% endprettify %}
+```
 
 ### invalid_null_aware_operator
 
@@ -10541,27 +10721,27 @@ non-nullable.
 
 The following code produces this diagnostic because `s` can't be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int? getLength(String s) {
   return s[!?.!]length;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `a` can't be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = [];
 var b = [[!...?!]a];
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `s?.length` can't
 return `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   s?.length[!?.!]isEven;
 }
-{% endprettify %}
+```
 
 The reason `s?.length` can't return `null` is because the null-aware
 operator following `s` short-circuits the evaluation of both `length` and
@@ -10574,12 +10754,12 @@ for more details.
 
 The following code produces this diagnostic because `s` can't be `null`.
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? o) {
   var s = o as String;
   s[!?.!]length;
 }
-{% endprettify %}
+```
 
 The reason `s` can't be null, despite the fact that `o` can be `null`, is
 because of the cast to `String`, which is a non-nullable type. If `o` ever
@@ -10591,11 +10771,11 @@ will not happen.
 Replace the null-aware operator with a non-null-aware equivalent; for
 example, change `?.` to  `.`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int getLength(String s) {
   return s.length;
 }
-{% endprettify %}
+```
 
 (Note that the return type was also changed to be non-nullable, which might
 not be appropriate in some cases.)
@@ -10611,12 +10791,12 @@ _The setter '{1}.{0}' ('{2}') isn't a valid override of '{3}.{0}' ('{4}')._
 The analyzer produces this diagnostic when a member of a class is found
 that overrides a member from a supertype and the override isn't valid. An
 override is valid if all of these are true:
-* It allows all of the arguments allowed by the overridden member.
-* It doesn't require any arguments that aren't required by the overridden
+- It allows all of the arguments allowed by the overridden member.
+- It doesn't require any arguments that aren't required by the overridden
   member.
-* The type of every parameter of the overridden member is assignable to the
+- The type of every parameter of the overridden member is assignable to the
   corresponding parameter of the override.
-* The return type of the override is assignable to the return type of the
+- The return type of the override is assignable to the return type of the
   overridden member.
 
 #### Example
@@ -10625,7 +10805,7 @@ The following code produces this diagnostic because the type of the
 parameter `s` (`String`) isn't assignable to the type of the parameter `i`
 (`int`):
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m(int i) {}
 }
@@ -10633,14 +10813,14 @@ class A {
 class B extends A {
   void [!m!](String s) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the invalid method is intended to override the method from the
 superclass, then change it to conform:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m(int i) {}
 }
@@ -10648,12 +10828,12 @@ class A {
 class B extends A {
   void m(int i) {}
 }
-{% endprettify %}
+```
 
 If it isn't intended to override the method from the superclass, then
 rename it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m(int i) {}
 }
@@ -10661,7 +10841,7 @@ class A {
 class B extends A {
   void m2(String s) {}
 }
-{% endprettify %}
+```
 
 ### invalid_override_of_non_virtual_member
 
@@ -10679,7 +10859,7 @@ The following code produces this diagnostic because the method `m` in `B`
 overrides the method `m` in `A`, and the method `m` in `A` is annotated
 with the `@nonVirtual` annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -10691,7 +10871,7 @@ class B extends A {
   @override
   void [!m!]() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -10699,7 +10879,7 @@ If the annotation on the method in the superclass is correct (the method
 in the superclass is not intended to be overridden), then remove or rename
 the overriding method:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -10708,12 +10888,12 @@ class A {
 }
 
 class B extends A {}
-{% endprettify %}
+```
 
 If the method in the superclass is intended to be overridden, then remove
 the `@nonVirtual` annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
@@ -10722,7 +10902,7 @@ class B extends A {
   @override
   void m() {}
 }
-{% endprettify %}
+```
 
 ### invalid_pattern_variable_in_shared_case_scope
 
@@ -10759,7 +10939,7 @@ The following code produces this diagnostic because the variable `a` is
 only declared in one of the case clauses, and won't have a value if the
 second clause is the one that matched `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -10767,13 +10947,13 @@ void f(Object? x) {
       [!a!];
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the variable `a` isn't
 declared in the `default` clause, and won't have a value if the body is
 executed because none of the other clauses matched `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -10781,13 +10961,13 @@ void f(Object? x) {
       [!a!];
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the variable `a` won't
 have a value if the body is executed because a different group of cases
 caused control to continue at the label:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     someLabel:
@@ -10797,13 +10977,13 @@ void f(Object? x) {
       continue someLabel;
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the variable `a`,
 while being assigned in all of the case clauses, doesn't have then same
 type associated with it in every clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case int a when a < 0:
@@ -10811,13 +10991,13 @@ void f(Object? x) {
       [!a!];
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the variable `a` is
 `final` in the first case clause and isn't `final` in the second case
 clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case final int a when a < 0:
@@ -10825,14 +11005,14 @@ void f(Object? x) {
       [!a!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the variable isn't declared in all of the cases, and you need to
 reference it in the statements, then declare it in the other cases:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -10840,25 +11020,25 @@ void f(Object? x) {
       a;
   }
 }
-{% endprettify %}
+```
 
 If the variable isn't declared in all of the cases, and you don't need to
 reference it in the statements, then remove the references to it and
 remove the declarations from the other cases:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case > 0:
     case 0:
   }
 }
-{% endprettify %}
+```
 
 If the type of the variable is different, decide the type the variable
 should have and make the cases consistent:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case num a when a < 0:
@@ -10866,12 +11046,12 @@ void f(Object? x) {
       a;
   }
 }
-{% endprettify %}
+```
 
 If the finality of the variable is different, decide whether it should be
 `final` or not `final` and make the cases consistent:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object? x) {
   switch (x) {
     case final int a when a < 0:
@@ -10879,7 +11059,7 @@ void f(Object? x) {
       a;
   }
 }
-{% endprettify %}
+```
 
 ### invalid_platforms_field
 
@@ -10897,33 +11077,33 @@ check out the [documentation on platform declarations](https://dart.dev/tools/pu
 The following `pubspec.yaml` produces this diagnostic because `platforms`
 should be a map.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   [!- android
   - web
   - ios!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can rely on automatic platform detection, then omit the
 top-level `platforms` field.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
-{% endprettify %}
+```
 
 If you need to manually specify the list of supported platforms, then
 write the `platforms` field as a map with platform names as keys.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   android:
   web:
   ios:
-{% endprettify %}
+```
 
 ### invalid_reference_to_generative_enum_constructor
 
@@ -10941,7 +11121,7 @@ the same enum.
 The following code produces this diagnostic because the constructor for
 `E` is being used to create an instance in the function `f`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   a(0);
 
@@ -10949,14 +11129,14 @@ enum E {
 }
 
 E f() => const [!E!](2);
-{% endprettify %}
+```
 
 #### Common fixes
 
-If there's an enum constant with the same value, or if you add such a
+If there's an enum value with the same value, or if you add such a
 constant, then reference the constant directly:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   a(0), b(2);
 
@@ -10964,12 +11144,12 @@ enum E {
 }
 
 E f() => E.b;
-{% endprettify %}
+```
 
 If you need to use a constructor invocation, then use a factory
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   a(0);
 
@@ -10979,7 +11159,7 @@ enum E {
 }
 
 E f() => E.c(2);
-{% endprettify %}
+```
 
 ### invalid_reference_to_this
 
@@ -10997,22 +11177,22 @@ constructor, or the initializer of a late instance field declaration.
 The following code produces this diagnostic because `v` is a top-level
 variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 C f() => [!this!];
 
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a variable of the appropriate type in place of `this`, declaring it if
 necessary:
 
-{% prettify dart tag=pre+code %}
+```dart
 C f(C c) => c;
 
 class C {}
-{% endprettify %}
+```
 
 ### invalid_return_type_for_catch_error
 
@@ -11036,41 +11216,41 @@ The following code produces this diagnostic because `future` is declared to
 return an `int` while `callback` is declared to return a `String`, and
 `String` isn't a subtype of `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> future, String Function(dynamic, StackTrace) callback) {
   future.catchError([!callback!]);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the closure being
 passed to `catchError` returns an `int` while `future` is declared to
 return a `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<String> future) {
   future.catchError((error, stackTrace) => [!3!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the instance of `Future` is declared correctly, then change the callback
 to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<int> future, int Function(dynamic, StackTrace) callback) {
   future.catchError(callback);
 }
-{% endprettify %}
+```
 
 If the declaration of the instance of `Future` is wrong, then change it to
 match the callback:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Future<String> future, String Function(dynamic, StackTrace) callback) {
   future.catchError(callback);
 }
-{% endprettify %}
+```
 
 ### invalid_sealed_annotation
 
@@ -11086,24 +11266,24 @@ class declaration has the `@sealed` annotation on it.
 The following code produces this diagnostic because the `@sealed`
 annotation is on a method declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
-  [!@sealed!]
+  @[!sealed!]
   void m() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
-{% endprettify %}
+```
 
 ### invalid_super_formal_parameter_location
 
@@ -11119,7 +11299,7 @@ anywhere other than a non-redirecting generative constructor.
 The following code produces this diagnostic because the super parameter
 `x` is in a redirecting generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -11128,12 +11308,12 @@ class B extends A {
   B.b([!super!].x) : this._();
   B._() : super(0);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the super parameter
 `x` isn't in a generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -11142,12 +11322,12 @@ class C extends A {
   factory C.c([!super!].x) => C._();
   C._() : super(0);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the super parameter
 `x` is in a method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -11157,14 +11337,14 @@ class D extends A {
 
   void m([!super!].x) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function containing the super parameter can be changed to be a
 non-redirecting generative constructor, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -11172,12 +11352,12 @@ class A {
 class B extends A {
   B.b(super.x);
 }
-{% endprettify %}
+```
 
 If the function containing the super parameter can't be changed to be a
 non-redirecting generative constructor, then remove the `super`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -11187,7 +11367,7 @@ class D extends A {
 
   void m(int x) {}
 }
-{% endprettify %}
+```
 
 ### invalid_type_argument_in_const_literal
 
@@ -11212,39 +11392,39 @@ that will be used at runtime) can't be known at compile time.
 The following code produces this diagnostic because the type parameter `T`
 is being used as a type argument when creating a constant list:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<T> newList<T>() => const <[!T!]>[];
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the type parameter `T`
 is being used as a type argument when creating a constant map:
 
-{% prettify dart tag=pre+code %}
+```dart
 Map<String, T> newSet<T>() => const <String, [!T!]>{};
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the type parameter `T`
 is being used as a type argument when creating a constant set:
 
-{% prettify dart tag=pre+code %}
+```dart
 Set<T> newSet<T>() => const <[!T!]>{};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type that will be used for the type parameter can be known at
 compile time, then remove the type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> newList() => const <int>[];
-{% endprettify %}
+```
 
 If the type that will be used for the type parameter can't be known until
 runtime, then remove the keyword `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<T> newList<T>() => <T>[];
-{% endprettify %}
+```
 
 ### invalid_uri
 
@@ -11260,9 +11440,9 @@ conform to the syntax of a valid URI.
 The following code produces this diagnostic because `'#'` isn't a valid
 URI:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'#'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11284,21 +11464,21 @@ no purpose.
 The following code produces this diagnostic because `i` is marked as being
 covariant:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   void a([!covariant!] int i) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the `covariant` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   void a(int i) {}
 }
-{% endprettify %}
+```
 
 ### invalid_use_of_internal_member
 
@@ -11315,21 +11495,21 @@ outside the package containing the declaration.
 Given a package `p` that defines a library containing a declaration marked
 with the [`internal`][meta-internal] annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @internal
 class C {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because it's referencing the
 class `C`, which isn't intended to be used outside the package `p`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:p/src/p.dart';
 
 void f([!C!] c) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11349,22 +11529,22 @@ always be `null` is dereferenced.
 The following code produces this diagnostic because `x` will always be
 `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(Null x) {
   return x.[!length!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value is allowed to be something other than `null`, then change the
 type of the expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(String? x) {
   return x!.length;
 }
-{% endprettify %}
+```
 
 ### invalid_use_of_type_outside_library
 
@@ -11402,19 +11582,19 @@ allowed.
 
 Given a file `a.dart` that defines a base class `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 base class A {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `B`
 implements the class `A`, but the `base` modifier prevents `A` from being
 implemented outside of the library where it's defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 final class B implements [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11422,17 +11602,17 @@ Use of this type is restricted outside of its declaring library. If a
 different, unrestricted type is available that can provide similar
 functionality, then replace the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class B implements C {}
 class C {}
-{% endprettify %}
+```
 
 If there isn't a different type that would be appropriate, then remove the
 type, and possibly the whole clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class B {}
-{% endprettify %}
+```
 
 ### invalid_use_of_visible_for_overriding_member
 
@@ -11449,20 +11629,20 @@ than to override it.
 
 Given a file `a.dart` containing the following declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
   @visibleForOverriding
   void a() {}
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the method `m` is being
 invoked even though the only reason it's public is to allow it to be
 overridden:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 class B extends A {
@@ -11470,7 +11650,7 @@ class B extends A {
     [!a!]();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11490,46 +11670,46 @@ which it is declared or in a library in the `test` directory.
 
 Given a file `c.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
   @visibleForTesting
   void m() {}
 }
-{% endprettify %}
+```
 
 The following code, when not inside the `test` directory, produces this
 diagnostic because the method `m` is marked as being visible only for
 tests:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'c.dart';
 
 void f(C c) {
   c.[!m!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the annotated member should not be referenced outside of tests, then
 remove the reference:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'c.dart';
 
 void f(C c) {}
-{% endprettify %}
+```
 
 If it's OK to reference the annotated member outside of tests, then remove
 the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m() {}
 }
-{% endprettify %}
+```
 
 ### invalid_visibility_annotation
 
@@ -11546,36 +11726,36 @@ a non-public declaration.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@visibleForTesting!]
+@[!visibleForTesting!]
 void _someFunction() {}
 
 void f() => _someFunction();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the declaration doesn't need to be used by test code, then remove the
 annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 void _someFunction() {}
 
 void f() => _someFunction();
-{% endprettify %}
+```
 
 If it does, then make it public:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @visibleForTesting
 void someFunction() {}
 
 void f() => someFunction();
-{% endprettify %}
+```
 
 ### invalid_visible_for_overriding_annotation
 
@@ -11595,20 +11775,20 @@ no value to annotating any other declarations.
 The following code produces this diagnostic because the annotation is on a
 class, and classes can't be overridden:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-[!@visibleForOverriding!]
+@[!visibleForOverriding!]
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 ### invalid_visible_outside_template_annotation
 
@@ -11628,33 +11808,33 @@ annotation, to opt those members out of the visibility restrictions that
 The following code produces this diagnostic because there is no
 `@visibleForTemplate` annotation at the class level:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:angular_meta/angular_meta.dart';
 
 class C {
-  [!@visibleOutsideTemplate!]
+  @[!visibleOutsideTemplate!]
   int m() {
     return 1;
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the annotation is on
 a class declaration, not a member of a class, enum, or mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:angular_meta/angular_meta.dart';
 
-[!@visibleOutsideTemplate!]
+@[!visibleOutsideTemplate!]
 class C {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class is only visible so that templates can reference it, then add
 the `@visibleForTemplate` annotation to the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:angular_meta/angular_meta.dart';
 
 @visibleForTemplate
@@ -11664,15 +11844,15 @@ class C {
     return 1;
   }
 }
-{% endprettify %}
+```
 
 If the `@visibleOutsideTemplate` annotation is on anything other than a
 member of a class, enum, or mixin with the `@visibleForTemplate`
 annotation, remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
-{% endprettify %}
+```
 
 ### invocation_of_extension_without_call
 
@@ -11689,19 +11869,19 @@ invoke a function but the extension doesn't declare a `call` method.
 The following code produces this diagnostic because the extension `E`
 doesn't define a `call` method:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {}
 
 void f() {
   [!E('')!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the extension is intended to define a `call` method, then declare it:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   int call() => 0;
 }
@@ -11709,7 +11889,7 @@ extension E on String {
 void f() {
   E('')();
 }
-{% endprettify %}
+```
 
 If the extended type defines a `call` method, then remove the extension
 override.
@@ -11732,13 +11912,13 @@ than a function.
 The following code produces this diagnostic because `Binary` is the name of
 a function type, not a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef Binary = int Function(int, int);
 
 int f() {
   return [!Binary!](1, 2);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11758,24 +11938,24 @@ expression computing the function doesn't compute a function.
 
 The following code produces this diagnostic because `x` isn't a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 
 int f() => x;
 
 var y = [!x!]();
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `f()` doesn't return a
 function:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 
 int f() => x;
 
 var y = [!f()!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -11783,13 +11963,13 @@ If you need to invoke a function, then replace the code before the argument
 list with the name of a function or with an expression that computes a
 function:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 
 int f() => x;
 
 var y = f();
-{% endprettify %}
+```
 
 ### label_in_outer_scope
 
@@ -11808,7 +11988,7 @@ control outside the function that contains them.
 The following code produces this diagnostic because the label `loop` is
 declared outside the local function `g`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   loop:
   while (true) {
@@ -11819,27 +11999,27 @@ void f() {
     g();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Try rewriting the code so that it isn't necessary to transfer control
 outside the local function, possibly by inlining the local function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   loop:
   while (true) {
     break loop;
   }
 }
-{% endprettify %}
+```
 
 If that isn't possible, then try rewriting the local function so that a
 value returned by the function can be used to determine whether control is
 transferred:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   loop:
   while (true) {
@@ -11852,7 +12032,7 @@ void f() {
     }
   }
 }
-{% endprettify %}
+```
 
 ### label_undefined
 
@@ -11869,7 +12049,7 @@ is referencing it.
 The following code produces this diagnostic because the label `loop` isn't
 defined anywhere:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (int i = 0; i < 10; i++) {
     for (int j = 0; j < 10; j++) {
@@ -11879,14 +12059,14 @@ void f() {
     }
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the label should be on the innermost enclosing `do`, `for`, `switch`, or
 `while` statement, then remove the label:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   for (int i = 0; i < 10; i++) {
     for (int j = 0; j < 10; j++) {
@@ -11896,11 +12076,11 @@ void f() {
     }
   }
 }
-{% endprettify %}
+```
 
 If the label should be on some other statement, then add the label:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   loop: for (int i = 0; i < 10; i++) {
     for (int j = 0; j < 10; j++) {
@@ -11910,7 +12090,7 @@ void f() {
     }
   }
 }
-{% endprettify %}
+```
 
 ### late_final_field_with_const_constructor
 
@@ -11926,37 +12106,37 @@ The analyzer produces this diagnostic when a class that has at least one
 The following code produces this diagnostic because the class `A` has a
 `const` constructor and the `final` field `f` is marked as `late`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   [!late!] final int f;
 
   const A();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field doesn't need to be marked `late`, then remove the `late`
 modifier from the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   final int f = 0;
 
   const A();
 }
-{% endprettify %}
+```
 
 If the field must be marked `late`, then remove the `const` modifier from
 the constructors:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   late final int f;
 
   A();
 }
-{% endprettify %}
+```
 
 ### late_final_local_already_assigned
 
@@ -11976,39 +12156,39 @@ are guaranteed to fail, so they're flagged.
 The following code produces this diagnostic because the `final` variable
 `v` is assigned a value in two places:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   late final int v;
   v = 0;
   [!v!] += 1;
   return v;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to be able to reassign the variable, then remove the `final`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   late int v;
   v = 0;
   v += 1;
   return v;
 }
-{% endprettify %}
+```
 
 If you don't need to reassign the variable, then remove all except the
 first of the assignments:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   late final int v;
   v = 0;
   return v;
 }
-{% endprettify %}
+```
 
 ### leaf_call_must_not_return_handle
 
@@ -12035,36 +12215,36 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the function `p`
 returns a `Handle`, but the `isLeaf` argument is `true`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Handle Function()>> p) {
-  [!p.asFunction<Object Function()>(isLeaf: true)!];
+  p.[!asFunction!]<Object Function()>(isLeaf: true);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function returns a handle, then remove the `isLeaf` argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Handle Function()>> p) {
   p.asFunction<Object Function()>();
 }
-{% endprettify %}
+```
 
 If the function returns one of the supported types, then correct the type
 information:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Int32 Function()>> p) {
   p.asFunction<int Function()>(isLeaf: true);
 }
-{% endprettify %}
+```
 
 ### leaf_call_must_not_take_handle
 
@@ -12084,37 +12264,37 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the function `p` has a
 parameter of type `Handle`, but the `isLeaf` argument is `true`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Void Function(Handle)>> p) {
-  [!p.asFunction<void Function(Object)>(isLeaf: true)!];
+  p.[!asFunction!]<void Function(Object)>(isLeaf: true);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function has at least one parameter of type `Handle`, then remove
 the `isLeaf` argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Void Function(Handle)>> p) {
   p.asFunction<void Function(Object)>();
 }
-{% endprettify %}
+```
 
 If none of the function's parameters are `Handle`s, then correct the type
 information:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(Pointer<NativeFunction<Void Function(Int8)>> p) {
   p.asFunction<void Function(int)>(isLeaf: true);
 }
-{% endprettify %}
+```
 
 ### list_element_type_not_assignable
 
@@ -12130,31 +12310,31 @@ literal isn't assignable to the element type of the list.
 The following code produces this diagnostic because `2.5` is a double, and
 the list can hold only integers:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> x = [1, [!2.5!], 3];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intended to add a different object to the list, then replace the
 element with an expression that computes the intended object:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> x = [1, 2, 3];
-{% endprettify %}
+```
 
 If the object shouldn't be in the list, then remove the element:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> x = [1, 3];
-{% endprettify %}
+```
 
 If the object being computed is correct, then widen the element type of the
 list to allow all of the different types of objects it needs to contain:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<num> x = [1, 2.5, 3];
-{% endprettify %}
+```
 
 ### main_first_positional_parameter_type
 
@@ -12171,24 +12351,24 @@ of a function named `main` isn't a supertype of `List<String>`.
 The following code produces this diagnostic because `List<int>` isn't a
 supertype of `List<String>`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main([!List<int>!] args) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function is an entry point, then change the type of the first
 positional parameter to be a supertype of `List<String>`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main(List<String> args) {}
-{% endprettify %}
+```
 
 If the function isn't an entry point, then change the name of the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(List<int> args) {}
-{% endprettify %}
+```
 
 ### main_has_required_named_parameters
 
@@ -12204,23 +12384,23 @@ or more required named parameters.
 The following code produces this diagnostic because the function named
 `main` has a required named parameter (`x`):
 
-{% prettify dart tag=pre+code %}
+```dart
 void [!main!]({required int x}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function is an entry point, then remove the `required` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main({int? x}) {}
-{% endprettify %}
+```
 
 If the function isn't an entry point, then change the name of the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({required int x}) {}
-{% endprettify %}
+```
 
 ### main_has_too_many_required_positional_parameters
 
@@ -12236,32 +12416,32 @@ than two required positional parameters.
 The following code produces this diagnostic because the function `main` has
 three required positional parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 void [!main!](List<String> args, int x, int y) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function is an entry point and the extra parameters aren't used,
 then remove them:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main(List<String> args, int x) {}
-{% endprettify %}
+```
 
 If the function is an entry point, but the extra parameters used are for
 when the function isn't being used as an entry point, then make the extra
 parameters optional:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main(List<String> args, int x, [int y = 0]) {}
-{% endprettify %}
+```
 
 If the function isn't an entry point, then change the name of the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(List<String> args, int x, int y) {}
-{% endprettify %}
+```
 
 ### main_is_not_function
 
@@ -12277,17 +12457,17 @@ of the name `main` that isn't the declaration of a top-level function.
 The following code produces this diagnostic because the name `main` is
 being used to declare a top-level variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 var [!main!] = 3;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a different name for the declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 var mainIndex = 3;
-{% endprettify %}
+```
 
 ### map_entry_not_in_map
 
@@ -12303,9 +12483,9 @@ is found in a set literal.
 The following code produces this diagnostic because the literal has a map
 entry even though it's a set literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 var collection = <String>{[!'a' : 'b'!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -12313,9 +12493,9 @@ If you intended for the collection to be a map, then change the code so
 that it is a map. In the previous example, you could do this by adding
 another type argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 var collection = <String, String>{'a' : 'b'};
-{% endprettify %}
+```
 
 In other cases, you might need to change the explicit type from `Set` to
 `Map`.
@@ -12324,9 +12504,9 @@ If you intended for the collection to be a set, then remove the map entry,
 possibly by replacing the colon with a comma if both values should be
 included in the set:
 
-{% prettify dart tag=pre+code %}
+```dart
 var collection = <String>{'a', 'b'};
-{% endprettify %}
+```
 
 ### map_key_type_not_assignable
 
@@ -12342,24 +12522,24 @@ map literal has a type that isn't assignable to the key type of the map.
 The following code produces this diagnostic because `2` is an `int`, but
 the keys of the map are required to be `String`s:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, String>{[!2!] : 'a'};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the map is correct, then change the key to have the correct
 type:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, String>{'2' : 'a'};
-{% endprettify %}
+```
 
 If the type of the key is correct, then change the key type of the map:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <int, String>{2 : 'a'};
-{% endprettify %}
+```
 
 ### map_value_type_not_assignable
 
@@ -12376,24 +12556,24 @@ map.
 The following code produces this diagnostic because `2` is an `int`, but/
 the values of the map are required to be `String`s:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, String>{'a' : [!2!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the map is correct, then change the value to have the
 correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, String>{'a' : '2'};
-{% endprettify %}
+```
 
 If the type of the value is correct, then change the value type of the map:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, int>{'a' : 2};
-{% endprettify %}
+```
 
 ### mismatched_annotation_on_struct_field
 
@@ -12411,38 +12591,38 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the annotation
 `Double` doesn't match the Dart type `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   [!@Double()!]
   external int x;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the field is correct, then change the annotation to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int32()
   external int x;
 }
-{% endprettify %}
+```
 
 If the annotation is correct, then change the type of the field to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Double()
   external double x;
 }
-{% endprettify %}
+```
 
 ### missing_annotation_on_struct_field
 
@@ -12464,26 +12644,26 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `x` doesn't
 have an annotation indicating the underlying width of the integer value:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   external [!int!] x;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an appropriate annotation to the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int64()
   external int x;
 }
-{% endprettify %}
+```
 
 ### missing_dart_library
 
@@ -12520,39 +12700,39 @@ implicit default value isn't valid.
 The following code produces this diagnostic because `x` can't be `null`,
 and no non-`null` default value is specified:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f([int [!x!]]) {}
-{% endprettify %}
+```
 
 As does this:
 
-{% prettify dart tag=pre+code %}
+```dart
 void g({int [!x!]}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want to use `null` to indicate that no value was provided, then you
 need to make the type nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f([int? x]) {}
 void g({int? x}) {}
-{% endprettify %}
+```
 
 If the parameter can't be null, then either provide a default value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f([int x = 1]) {}
 void g({int x = 2}) {}
-{% endprettify %}
+```
 
 or make the parameter a required parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {}
 void g({required int x}) {}
-{% endprettify %}
+```
 
 ### missing_dependency
 
@@ -12570,22 +12750,22 @@ The following code produces this diagnostic because the package `path` is
 not listed as a dependency, while there is an import statement
 with package `path` in the source code of package `example`:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the missing package `path` to the `dependencies` field:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
   path: any
-{% endprettify %}
+```
 
 ### missing_enum_constant_in_switch
 
@@ -12601,10 +12781,10 @@ must be handled.
 
 #### Example
 
-The following code produces this diagnostic because the enum constant `e2`
+The following code produces this diagnostic because the enum value `e2`
 isn't handled:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { e1, e2 }
 
 void f(E e) {
@@ -12613,14 +12793,14 @@ void f(E e) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's special handling for the missing values, then add a `case`
 clause for each of the missing values:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { e1, e2 }
 
 void f(E e) {
@@ -12631,12 +12811,12 @@ void f(E e) {
       break;
   }
 }
-{% endprettify %}
+```
 
 If the missing values should be handled the same way, then add a `default`
 clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { e1, e2 }
 
 void f(E e) {
@@ -12647,7 +12827,7 @@ void f(E e) {
       break;
   }
 }
-{% endprettify %}
+```
 
 ### missing_exception_value
 
@@ -12670,7 +12850,7 @@ The following code produces this diagnostic because the type returned by
 `f` is expected to be an 8-bit integer but the call to `fromFunction`
 doesn't include an exceptional return argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int f(int i) => i * 2;
@@ -12678,13 +12858,13 @@ int f(int i) => i * 2;
 void g() {
   Pointer.[!fromFunction!]<Int8 Function(Int8)>(f);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an exceptional return type:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int f(int i) => i * 2;
@@ -12692,7 +12872,7 @@ int f(int i) => i * 2;
 void g() {
   Pointer.fromFunction<Int8 Function(Int8)>(f, 0);
 }
-{% endprettify %}
+```
 
 ### missing_field_type_in_struct
 
@@ -12713,7 +12893,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `str`
 doesn't have a type annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
@@ -12722,13 +12902,13 @@ final class C extends Struct {
   @Int32()
   external int i;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Explicitly specify the type of the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 
@@ -12738,7 +12918,7 @@ final class C extends Struct {
   @Int32()
   external int i;
 }
-{% endprettify %}
+```
 
 ### missing_name
 
@@ -12754,20 +12934,20 @@ The `name` key provides the name of the package, which is required.
 The following code produces this diagnostic because the package doesn't
 have a name:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 dependencies:
   meta: ^1.0.2
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the top-level key `name` with a value that's the name of the package:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
-{% endprettify %}
+```
 
 ### missing_named_pattern_field_name
 
@@ -12789,7 +12969,7 @@ The following code produces this diagnostic because there is no getter
 name before the colon and no variable pattern after the colon in the
 object pattern (`C(:0)`):
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   int get f;
 }
@@ -12800,7 +12980,7 @@ void f(C c) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -12808,7 +12988,7 @@ If you need to use the actual value of the property within the pattern's
 scope, then add a variable pattern where the name of the variable is the
 same as the name of the property being matched:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   int get f;
 }
@@ -12819,13 +12999,13 @@ void f(C c) {
       print(f);
   }
 }
-{% endprettify %}
+```
 
 If you don't need to use the actual value of the property within the
 pattern's scope, then add the name of the property being matched before
 the colon:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   int get f;
 }
@@ -12836,7 +13016,7 @@ void f(C c) {
       break;
   }
 }
-{% endprettify %}
+```
 
 ### missing_override_of_must_be_overridden
 
@@ -12857,7 +13037,7 @@ The following code produces this diagnostic because the class `B` doesn't
 have an override of the inherited method `A.m` when `A.m` is annotated
 with `@mustBeOverridden`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -12866,14 +13046,14 @@ class A {
 }
 
 class [!B!] extends A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the annotation is appropriate for the member, then override the member
 in the subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -12885,18 +13065,18 @@ class B extends A {
   @override
   void m() {}
 }
-{% endprettify %}
+```
 
 If the annotation isn't appropriate for the member, then remove the
 annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   void m() {}
 }
 
 class B extends A {}
-{% endprettify %}
+```
 
 ### missing_required_argument
 
@@ -12912,23 +13092,23 @@ missing a required named parameter.
 The following code produces this diagnostic because the invocation of `f`
 doesn't include a value for the required named parameter `end`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int start, {required int end}) {}
 void g() {
   [!f!](3);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add a named argument corresponding to the missing required parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int start, {required int end}) {}
 void g() {
   f(3, end: 5);
 }
-{% endprettify %}
+```
 
 ### missing_required_param
 
@@ -12947,29 +13127,29 @@ providing a value for the parameter.
 The following code produces this diagnostic because the named parameter `x`
 is required:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-void f({@required int x}) {}
+void f({@required int? x}) {}
 
 void g() {
   [!f!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Provide the required value:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
-void f({@required int x}) {}
+void f({@required int? x}) {}
 
 void g() {
   f(x: 2);
 }
-{% endprettify %}
+```
 
 ### missing_return
 
@@ -12987,13 +13167,13 @@ analyzer produces this diagnostic when it finds an implicit return.
 The following code produces this diagnostic because `f` doesn't end with a
 return:
 
-{% prettify dart tag=pre+code %}
+```dart
 int [!f!](int x) {
   if (x < 0) {
     return 0;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13017,26 +13197,26 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the field `a0` doesn't
 have an `Array` annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   external [!Array<Uint8>!] a0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Ensure that there's exactly one `Array` annotation on the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8)
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
 
 ### missing_variable_pattern
 
@@ -13053,13 +13233,13 @@ the same pattern.
 The following code produces this diagnostic because the right-hand side of
 the logical-or pattern doesn't declare the variable `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (var a, 0) || [!(0, _)!]) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13067,31 +13247,31 @@ If the variable needs to be referenced in the controlled statements, then
 add a declaration of the variable to every branch of the logical-or
 pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (var a, 0) || (0, var a)) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 If the variable doesn't need to be referenced in the controlled
 statements, then remove the declaration of the variable from every branch
 of the logical-or pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   if (r case (_, 0) || (0, _)) {
     print('found a zero');
   }
 }
-{% endprettify %}
+```
 
 If the variable needs to be referenced if one branch of the pattern
 matches but not when the other matches, then break the pattern into two
 pieces:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   switch (r) {
     case (var a, 0):
@@ -13100,7 +13280,7 @@ void f((int, int) r) {
       print('found a zero');
   }
 }
-{% endprettify %}
+```
 
 ### mixin_application_concrete_super_invoked_member_type
 
@@ -13123,7 +13303,7 @@ mixin `M`, the mixin `M` invokes `foo` using `super`, and the abstract
 version of `foo` declared in `I` (the mixin's `on` type) doesn't have the
 same signature as the concrete version of `foo` declared in `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class I {
   void foo([int? p]) {}
 }
@@ -13144,14 +13324,14 @@ mixin M on I {
 }
 
 abstract class C extends B with [!M!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class doesn't need to use the mixin, then remove it from the `with`
 clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class I {
   void foo([int? p]) {}
 }
@@ -13172,13 +13352,13 @@ mixin M on I {
 }
 
 abstract class C extends B {}
-{% endprettify %}
+```
 
 If the class needs to use the mixin, then ensure that there's a concrete
 implementation of the method that conforms to the signature expected by the
 mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 class I {
   void foo([int? p]) {}
 }
@@ -13201,7 +13381,7 @@ mixin M on I {
 }
 
 abstract class C extends B with M {}
-{% endprettify %}
+```
 
 ### mixin_application_not_implemented_interface
 
@@ -13219,26 +13399,26 @@ The following code produces this diagnostic because the mixin `M` requires
 that the class to which it's applied be a subclass of `A`, but `Object`
 isn't a subclass of `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 mixin M on A {}
 
 class X = Object with [!M!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to use the mixin, then change the superclass to be either the
 same as or a subclass of the superclass constraint:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 mixin M on A {}
 
 class X = A with M;
-{% endprettify %}
+```
 
 ### mixin_application_no_concrete_super_invoked_member
 
@@ -13261,7 +13441,7 @@ the invocation `super.m()`, and the class `A`, which is the superclass of
 the [mixin application][] `A+M`, doesn't define a concrete implementation
 of `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
@@ -13273,7 +13453,7 @@ mixin M on A {
 }
 
 abstract class B extends A with [!M!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13281,7 +13461,7 @@ If you intended to apply the mixin `M` to a different class, one that has a
 concrete implementation of `m`, then change the superclass of `B` to that
 class:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
@@ -13297,12 +13477,12 @@ class C implements A {
 }
 
 abstract class B extends C with M {}
-{% endprettify %}
+```
 
 If you need to make `B` a subclass of `A`, then add a concrete
 implementation of `m` in `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m() {}
 }
@@ -13314,7 +13494,7 @@ mixin M on A {
 }
 
 abstract class B extends A with M {}
-{% endprettify %}
+```
 
 ### mixin_class_declaration_extends_not_object
 
@@ -13332,43 +13512,43 @@ can't have a superclass other than `Object`.
 The following code produces this diagnostic because the class `B`, which
 has the modifier `mixin`, extends `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 mixin class B extends [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want the class to be used as a mixin, then change the superclass to
 `Object`, either explicitly or by removing the extends clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 mixin class B {}
-{% endprettify %}
+```
 
 If the class needs to have a superclass other than `Object`, then remove
 the `mixin` modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B extends A {}
-{% endprettify %}
+```
 
 If you need both a mixin and a subclass of a class other than `Object`,
 then move the members of the subclass to a new mixin, remove the `mixin`
 modifier from the subclass, and apply the new mixin to the subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B extends A with M {}
 
 mixin M {}
-{% endprettify %}
+```
 
 Depending on the members of the subclass this might require adding an `on`
 clause to the mixin.
@@ -13387,47 +13567,47 @@ the mixed-in class defines a constructor.
 The following code produces this diagnostic because the class `A`, which
 defines a constructor, is being used as a mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 //@dart=2.19
 class A {
   A();
 }
 
 class B with [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If it's possible to convert the class to a mixin, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin A {
 }
 
 class B with A {}
-{% endprettify %}
+```
 
 If the class can't be a mixin and it's possible to remove the constructor,
 then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 //@dart=2.19
 class A {
 }
 
 class B with A {}
-{% endprettify %}
+```
 
 If the class can't be a mixin and you can't remove the constructor, then
 try extending or implementing the class rather than mixing it in:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
 }
 
 class B extends A {}
-{% endprettify %}
+```
 
 ### mixin_inherits_from_not_object
 
@@ -13444,44 +13624,44 @@ other than `Object` is used as a mixin.
 The following code produces this diagnostic because the class `B`, which
 extends `A`, is being used as a mixin by `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 //@dart=2.19
 class A {}
 
 class B extends A {}
 
 class C with [!B!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class being used as a mixin can be changed to extend `Object`, then
 change it:
 
-{% prettify dart tag=pre+code %}
+```dart
 //@dart=2.19
 class A {}
 
 class B {}
 
 class C with B {}
-{% endprettify %}
+```
 
 If the class being used as a mixin can't be changed and the class that's
 using it extends `Object`, then extend the class being used as a mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B extends A {}
 
 class C extends B {}
-{% endprettify %}
+```
 
 If the class doesn't extend `Object` or if you want to be able to mix in
 the behavior from `B` in other places, then create a real mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 mixin M on A {}
@@ -13489,7 +13669,7 @@ mixin M on A {}
 class B extends A with M {}
 
 class C extends A with M {}
-{% endprettify %}
+```
 
 ### mixin_instantiate
 
@@ -13504,11 +13684,11 @@ The analyzer produces this diagnostic when a mixin is instantiated.
 The following code produces this diagnostic because the mixin `M` is being
 instantiated:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {}
 
 var m = [!M!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13529,22 +13709,22 @@ defined to be something other than a mixin or a class.
 The following code produces this diagnostic because `F` is defined to be a
 function type:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = int Function(String);
 
 class C with [!F!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the invalid name from the list, possibly replacing it with the name
 of the intended mixin or class:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = int Function(String);
 
 class C {}
-{% endprettify %}
+```
 
 ### mixin_on_sealed_class
 
@@ -13562,21 +13742,21 @@ implemented, mixed in, or used as a superclass constraint.
 
 If the package `p` defines a sealed class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @sealed
 class C {}
-{% endprettify %}
+```
 
 Then, the following code, when in a package other than `p`, produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:p/p.dart';
 
 [!mixin M on C {}!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13598,29 +13778,29 @@ mixin is imported from a deferred library.
 The following code produces this diagnostic because the superclass
 constraint of `math.Random` is imported from a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async' deferred as async;
 
 mixin M<T> on [!async.Stream<T>!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the import doesn't need to be deferred, then remove the `deferred`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async' as async;
 
 mixin M<T> on async.Stream<T> {}
-{% endprettify %}
+```
 
 If the import does need to be deferred, then remove the superclass
 constraint:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M<T> {}
-{% endprettify %}
+```
 
 ### mixin_super_class_constraint_non_interface
 
@@ -13636,11 +13816,11 @@ keyword in a mixin declaration is neither a class nor a mixin.
 The following code produces this diagnostic because `F` is neither a class
 nor a mixin:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = void Function();
 
 mixin M on [!F!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -13663,25 +13843,25 @@ than one other constructor in the same class (using `this`).
 The following code produces this diagnostic because the unnamed
 constructor in `C` is redirecting to both `this.a` and `this.b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C() : this.a(), [!this.b()!];
   C.a();
   C.b();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the redirections:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C() : this.a();
   C.a();
   C.b();
 }
-{% endprettify %}
+```
 
 ### multiple_super_initializers
 
@@ -13700,7 +13880,7 @@ The following code produces this diagnostic because the initializer list
 for `B`'s constructor invokes both the constructor `one` and the
 constructor `two` from the superclass `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int? x;
   String? s;
@@ -13711,14 +13891,14 @@ class A {
 class B extends A {
   B() : super.one(0), [!super.two('')!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If one of the super constructors will initialize the instance fully, then
 remove the other:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int? x;
   String? s;
@@ -13729,13 +13909,13 @@ class A {
 class B extends A {
   B() : super.one(0);
 }
-{% endprettify %}
+```
 
 If the initialization achieved by one of the super constructors can be
 performed in the body of the constructor, then remove its super invocation
 and perform the initialization in the body:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int? x;
   String? s;
@@ -13748,14 +13928,14 @@ class B extends A {
     s = '';
   }
 }
-{% endprettify %}
+```
 
 If the initialization can only be performed in a constructor in the
 superclass, then either add a new constructor or modify one of the existing
 constructors so there's a constructor that allows all the required
 initialization to occur in a single call:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int? x;
   String? s;
@@ -13767,7 +13947,7 @@ class A {
 class B extends A {
   B() : super.three(0, '');
 }
-{% endprettify %}
+```
 
 ### must_be_a_native_function_type
 
@@ -13788,7 +13968,7 @@ The following code produces this diagnostic because the type `T` can be
 any subclass of `Function` but the type argument for `fromFunction` is
 required to be a native function type:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int f(int i) => i * 2;
@@ -13798,13 +13978,13 @@ class C<T extends Function> {
     Pointer.fromFunction<[!T!]>(f, 0);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a native function type as the type argument to the invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int f(int i) => i * 2;
@@ -13814,7 +13994,7 @@ class C<T extends Function> {
     Pointer.fromFunction<Int32 Function(Int32)>(f, 0);
   }
 }
-{% endprettify %}
+```
 
 ### must_be_a_subtype
 
@@ -13838,7 +14018,7 @@ The following code produces this diagnostic because the type of the
 function `f` (`String Function(int)`) isn't a subtype of the type
 argument `T` (`Int8 Function(Int8)`):
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = Int8 Function(Int8);
@@ -13848,13 +14028,13 @@ double f(double i) => i;
 void g() {
   Pointer.fromFunction<T>([!f!], 5.0);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function is correct, then change the type argument to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = Float Function(Float);
@@ -13864,11 +14044,11 @@ double f(double i) => i;
 void g() {
   Pointer.fromFunction<T>(f, 5.0);
 }
-{% endprettify %}
+```
 
 If the type argument is correct, then change the function to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = Int8 Function(Int8);
@@ -13878,7 +14058,7 @@ int f(int i) => i;
 void g() {
   Pointer.fromFunction<T>(f, 5);
 }
-{% endprettify %}
+```
 
 ### must_be_immutable
 
@@ -13897,7 +14077,7 @@ marked as being immutable using the annotation
 The following code produces this diagnostic because the field `x` isn't
 final:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @immutable
@@ -13906,14 +14086,14 @@ class [!C!] {
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If instances of the class should be immutable, then add the keyword `final`
 to all non-final field declarations:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @immutable
@@ -13922,19 +14102,19 @@ class C {
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 If the instances of the class should be mutable, then remove the
 annotation, or choose a different superclass if the annotation is
 inherited:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 ### must_call_super
 
@@ -13952,7 +14132,7 @@ the overridden method as required.
 The following code produces this diagnostic because the method `m` in `B`
 doesn't invoke the overridden method `m` in `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -13964,13 +14144,13 @@ class B extends A {
   @override
   [!m!]() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an invocation of the overridden method in the overriding method:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {
@@ -13984,7 +14164,7 @@ class B extends A {
     super.m();
   }
 }
-{% endprettify %}
+```
 
 ### must_return_void
 
@@ -14008,7 +14188,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the function
 `f` returns `int` rather than `void`.
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 int f(int i) => i * 2;
@@ -14016,13 +14196,13 @@ int f(int i) => i * 2;
 void g() {
   NativeCallable<Int32 Function(Int32)>.listener([!f!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the return type of the function to `void`.
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 void f(int i) => print(i * 2);
@@ -14030,7 +14210,7 @@ void f(int i) => print(i * 2);
 void g() {
   NativeCallable<Void Function(Int32)>.listener(f);
 }
-{% endprettify %}
+```
 
 ### name_not_string
 
@@ -14046,18 +14226,184 @@ value that isn't a string.
 The following code produces this diagnostic because the value following the
 `name` key is a list:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name:
   [!- example!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the value with a string:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
-{% endprettify %}
+```
+
+### native_field_invalid_type
+
+_'{0}' is an unsupported type for native fields. Native fields only support
+pointers, arrays or numeric and compound types._
+
+#### Description
+
+The analyzer produces this diagnostic when an `@Native`-annotated field
+has a type not supported for native fields.
+
+Native fields support pointers, arrays, numeric types and subtypes of
+`Compound` (i.e., structs or unions). Other subtypes of `NativeType`,
+such as `Handle` or `NativeFunction` are not allowed as native fields.
+
+Native functions should be used with external functions instead of
+external fields.
+
+Handles are unsupported because there is no way to transparently load and
+store Dart objects into pointers.
+
+For more information about FFI, see [C interop using dart:ffi][ffi].
+
+#### Example
+
+The following code produces this diagnostic because the field `free` uses
+an unsupported native type, `NativeFunction`:
+
+```dart
+import 'dart:ffi';
+
+@Native<NativeFunction<Void Function()>>()
+external void Function() [!free!];
+```
+
+#### Common fixes
+
+If you meant to bind to an existing native function with a
+`NativeFunction` field, use `@Native` methods instead:
+
+```dart
+import 'dart:ffi';
+
+@Native<Void Function(Pointer<Void>)>()
+external void free(Pointer<Void> ptr);
+```
+
+To bind to a field storing a function pointer in C, use a pointer type
+for the Dart field:
+
+```dart
+import 'dart:ffi';
+
+@Native()
+external Pointer<NativeFunction<Void Function(Pointer<Void>)>> free;
+```
+
+### native_field_missing_type
+
+_The native type of this field could not be inferred and must be specified in
+the annotation._
+
+#### Description
+
+The analyzer produces this diagnostic when an `@Native`-annotated field
+requires a type hint on the annotation to infer the native type.
+
+Dart types like `int` and `double` have multiple possible native
+representations. Since the native type needs to be known at compile time
+to generate the correct load and stores when accessing the field, an
+explicit type must be given.
+
+#### Example
+
+The following code produces this diagnostic because the field `f` has
+the type `int` (for which multiple native representations exist), but no
+explicit type parameter on the `Native` annotation:
+
+```dart
+import 'dart:ffi';
+
+@Native()
+external int [!f!];
+```
+
+#### Common fixes
+
+To fix this diagnostic, find out the correct native representation from
+the native declaration of the field. Then, add the corresponding type to
+the annotation. For instance, if `f` was declared as an `uint8_t` in C,
+the Dart field should be declared as:
+
+```dart
+import 'dart:ffi';
+
+@Native<Uint8>()
+external int f;
+```
+
+For more information about FFI, see [C interop using dart:ffi][ffi].
+
+### native_field_not_static
+
+_Native fields must be static._
+
+#### Description
+
+The analyzer produces this diagnostic when an instance field in a class
+has been annotated with `@Native`.
+Native fields refer to global variables in C, C++ or other native
+languages, whereas instance fields in Dart are specific to an instance of
+that class. Hence, native fields must be static.
+
+For more information about FFI, see [C interop using dart:ffi][ffi].
+
+#### Example
+
+The following code produces this diagnostic because the field `f` in the
+class `C` is `@Native`, but not `static`:
+
+```dart
+import 'dart:ffi';
+
+class C {
+  @Native<Int>()
+  external int [!f!];
+}
+```
+
+#### Common fixes
+
+Either make the field static:
+
+```dart
+import 'dart:ffi';
+
+class C {
+  @Native<Int>()
+  external static int f;
+}
+```
+
+Or move it out of a class, in which case no explicit `static` modifier is
+required:
+
+```dart
+import 'dart:ffi';
+
+class C {
+}
+
+@Native<Int>()
+external int f;
+```
+
+If you meant to annotate an instance field that should be part of a
+struct, omit the `@Native` annotation:
+
+```dart
+import 'dart:ffi';
+
+final class C extends Struct {
+  @Int()
+  external int f;
+}
+```
 
 ### new_with_undefined_constructor_default
 
@@ -14074,37 +14420,37 @@ have an unnamed constructor.
 The following code produces this diagnostic because `A` doesn't define an
 unnamed constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.a();
 }
 
 A f() => [!A!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If one of the named constructors does what you need, then use it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.a();
 }
 
 A f() => A.a();
-{% endprettify %}
+```
 
 If none of the named constructors does what you need, and you're able to
 add an unnamed constructor, then add the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
   A.a();
 }
 
 A f() => A();
-{% endprettify %}
+```
 
 ### non_abstract_class_inherits_abstract_member
 
@@ -14129,20 +14475,20 @@ at least one of those abstract members.
 The following code produces this diagnostic because the class `B` doesn't
 have a concrete implementation of `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
 
 class [!B!] extends A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the subclass can provide a concrete implementation for some or all of
 the abstract inherited members, then add the concrete implementations:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
@@ -14150,12 +14496,12 @@ abstract class A {
 class B extends A {
   void m() {}
 }
-{% endprettify %}
+```
 
 If there is a mixin that provides an implementation of the inherited
 methods, then apply the mixin to the subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
@@ -14165,18 +14511,18 @@ class B extends A with M {}
 mixin M {
   void m() {}
 }
-{% endprettify %}
+```
 
 If the subclass can't provide a concrete implementation for all of the
 abstract inherited members, then mark the subclass as being abstract:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   void m();
 }
 
 abstract class B extends A {}
-{% endprettify %}
+```
 
 ### non_bool_condition
 
@@ -14192,25 +14538,25 @@ The analyzer produces this diagnostic when a condition, such as an `if` or
 The following code produces this diagnostic because `x` has the static type
 `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if ([!x!]) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the condition so that it produces a Boolean value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x == 0) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### non_bool_expression
 
@@ -14226,21 +14572,21 @@ assert has a type other than `bool`.
 The following code produces this diagnostic because the type of `p` is
 `int`, but a `bool` is required:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int p) {
   assert([!p!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the expression so that it has the type `bool`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int p) {
   assert(p > 0);
 }
-{% endprettify %}
+```
 
 ### non_bool_negation_expression
 
@@ -14256,19 +14602,19 @@ negation operator (`!`) doesn't have the type `bool`.
 The following code produces this diagnostic because `x` is an `int` when it
 must be a `bool`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 bool y = ![!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the operand with an expression that has the type `bool`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 0;
 bool y = !(x > 0);
-{% endprettify %}
+```
 
 ### non_bool_operand
 
@@ -14284,19 +14630,19 @@ the `&&` or `||` operator doesn't have the type `bool`.
 The following code produces this diagnostic because `a` isn't a Boolean
 value:
 
-{% prettify dart tag=pre+code %}
+```dart
 int a = 3;
 bool b = [!a!] || a > 1;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the operand to a Boolean value:
 
-{% prettify dart tag=pre+code %}
+```dart
 int a = 3;
 bool b = a == 0 || a > 1;
-{% endprettify %}
+```
 
 ### non_constant_annotation_constructor
 
@@ -14313,7 +14659,7 @@ const constructor.
 The following code produces this diagnostic because the constructor for `C`
 isn't a const constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!@C()!]
 void f() {
 }
@@ -14321,14 +14667,14 @@ void f() {
 class C {
   C();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If it's valid for the class to have a const constructor, then create a
 const constructor that can be used for the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 @C()
 void f() {
 }
@@ -14336,7 +14682,7 @@ void f() {
 class C {
   const C();
 }
-{% endprettify %}
+```
 
 If it isn't valid for the class to have a const constructor, then either
 remove the annotation or use a different class for the annotation.
@@ -14354,7 +14700,7 @@ clause isn't a constant expression.
 
 The following code produces this diagnostic because `j` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i, int j) {
   switch (i) {
     case [!j!]:
@@ -14362,20 +14708,20 @@ void f(int i, int j) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Either make the expression a constant expression, or rewrite the `switch`
 statement as a sequence of `if` statements:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i, int j) {
   if (i == j) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### non_constant_case_expression_from_deferred_library
 
@@ -14396,15 +14742,15 @@ For more information, check out
 
 Given a file `a.dart` that defines the constant `zero`:
 
-{% prettify dart tag=pre+code %}
+```dart
 const zero = 0;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the library `a.dart` is
 imported using a `deferred` import, and the constant `a.zero`, declared in
 the imported library, is used in a case clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 void f(int x) {
@@ -14414,14 +14760,14 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the constant from the imported library, then
 remove the `deferred` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 void f(int x) {
@@ -14431,13 +14777,13 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 If you need to reference the constant from the imported library and also
 need the imported library to be deferred, then rewrite the switch statement
 as a sequence of `if` statements:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 void f(int x) {
@@ -14445,12 +14791,12 @@ void f(int x) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 If you don't need to reference the constant, then replace the case
 expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case 0:
@@ -14458,7 +14804,7 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 ### non_constant_default_value
 
@@ -14474,32 +14820,32 @@ constant.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var defaultValue = 3;
 
 void f([int value = [!defaultValue!]]) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the default value can be converted to be a constant, then convert it:
 
-{% prettify dart tag=pre+code %}
+```dart
 const defaultValue = 3;
 
 void f([int value = defaultValue]) {}
-{% endprettify %}
+```
 
 If the default value needs to change over time, then apply the default
 value inside the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 var defaultValue = 3;
 
-void f([int value]) {
+void f([int? value]) {
   value ??= defaultValue;
 }
-{% endprettify %}
+```
 
 ### non_constant_default_value_from_deferred_library
 
@@ -14520,36 +14866,36 @@ For more information, check out
 
 Given a file `a.dart` that defines the constant `zero`:
 
-{% prettify dart tag=pre+code %}
+```dart
 const zero = 0;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `zero` is declared in a
 library imported using a deferred import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 void f({int x = a.[!zero!]}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the constant from the imported library, then
 remove the `deferred` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 void f({int x = a.zero}) {}
-{% endprettify %}
+```
 
 If you don't need to reference the constant, then replace the default
 value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({int x = 0}) {}
-{% endprettify %}
+```
 
 ### non_constant_list_element
 
@@ -14567,10 +14913,10 @@ explicitly (because it's prefixed by the `const` keyword) or implicitly
 The following code produces this diagnostic because `x` isn't a constant,
 even though it appears in an implicitly constant list literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 2;
 var y = const <int>[0, 1, [!x!]];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -14578,20 +14924,20 @@ If the list needs to be a constant list, then convert the element to be a
 constant. In the example above, you might add the `const` keyword to the
 declaration of `x`:
 
-{% prettify dart tag=pre+code %}
+```dart
 const x = 2;
 var y = const <int>[0, 1, x];
-{% endprettify %}
+```
 
 If the expression can't be made a constant, then the list can't be a
 constant either, so you must change the code so that the list isn't a
 constant. In the example above this means removing the `const` keyword
 before the list literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 2;
 var y = <int>[0, 1, x];
-{% endprettify %}
+```
 
 ### non_constant_map_element
 
@@ -14607,18 +14953,18 @@ element in a constant map isn't a constant element.
 The following code produces this diagnostic because it's attempting to
 spread a non-constant map:
 
-{% prettify dart tag=pre+code %}
+```dart
 var notConst = <int, int>{};
 var map = const <int, int>{...[!notConst!]};
-{% endprettify %}
+```
 
 Similarly, the following code produces this diagnostic because the
 condition in the `if` element isn't a constant expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool notConst = true;
 var map = const <int, int>{if ([!notConst!]) 1 : 2};
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -14626,18 +14972,18 @@ If the map needs to be a constant map, then make the elements constants.
 In the spread example, you might do that by making the collection being
 spread a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 const notConst = <int, int>{};
 var map = const <int, int>{...notConst};
-{% endprettify %}
+```
 
 If the map doesn't need to be a constant map, then remove the `const`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool notConst = true;
 var map = <int, int>{if (notConst) 1 : 2};
-{% endprettify %}
+```
 
 ### non_constant_map_key
 
@@ -14652,27 +14998,27 @@ isn't a constant value.
 
 The following code produces this diagnostic because `a` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 'a';
 var m = const {[!a!]: 0};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the map needs to be a constant map, then make the key a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 'a';
 var m = const {a: 0};
-{% endprettify %}
+```
 
 If the map doesn't need to be a constant map, then remove the `const`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 'a';
 var m = {a: 0};
-{% endprettify %}
+```
 
 ### non_constant_map_pattern_key
 
@@ -14688,7 +15034,7 @@ constant expression.
 The following code produces this diagnostic because the key `A()` isn't a
 constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case {[!A()!]: 0}) {}
 }
@@ -14696,13 +15042,13 @@ void f(Object x) {
 class A {
   const A();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use a constant for the key:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   if (x case {const A(): 0}) {}
 }
@@ -14710,7 +15056,7 @@ void f(Object x) {
 class A {
   const A();
 }
-{% endprettify %}
+```
 
 ### non_constant_map_value
 
@@ -14725,27 +15071,27 @@ literal isn't a constant value.
 
 The following code produces this diagnostic because `a` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 'a';
 var m = const {0: [!a!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the map needs to be a constant map, then make the key a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 'a';
 var m = const {0: a};
-{% endprettify %}
+```
 
 If the map doesn't need to be a constant map, then remove the `const`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 'a';
 var m = {0: a};
-{% endprettify %}
+```
 
 ### non_constant_relational_pattern_expression
 
@@ -14761,25 +15107,25 @@ pattern expression isn't a constant expression.
 The following code produces this diagnostic because the operand of the `>`
 operator, `a`, isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 final a = 0;
 
 void f(int x) {
   if (x case > [!a!]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the value with a constant expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = 0;
 
 void f(int x) {
   if (x case > a) {}
 }
-{% endprettify %}
+```
 
 ### non_constant_set_element
 
@@ -14794,29 +15140,29 @@ an element that isn't a compile-time constant.
 
 The following code produces this diagnostic because `i` isn't a constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 var i = 0;
 
 var s = const {[!i!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the element can be changed to be a constant, then change it:
 
-{% prettify dart tag=pre+code %}
+```dart
 const i = 0;
 
 var s = const {i};
-{% endprettify %}
+```
 
 If the element can't be a constant, then remove the keyword `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var i = 0;
 
 var s = {i};
-{% endprettify %}
+```
 
 ### non_constant_type_argument
 
@@ -14838,7 +15184,7 @@ The following code produces this diagnostic because the type argument to
 `R`, which isn't known at compile time, is being used as the type
 argument:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef T = int Function(int);
@@ -14848,13 +15194,13 @@ class C<R extends T> {
     p.asFunction<[!R!]>();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove any uses of type parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 class C {
@@ -14862,7 +15208,46 @@ class C {
     p.asFunction<int Function(int)>();
   }
 }
-{% endprettify %}
+```
+
+### non_const_argument_for_const_parameter
+
+_Argument '{0}' must be a constant._
+
+#### Description
+
+The analyzer produces this diagnostic when a parameter is
+annotated with the [`mustBeConst`][meta-mustBeConst] annotation and
+the corresponding argument is not a constant expression.
+
+#### Example
+
+The following code produces this diagnostic on the invocation of
+the function `f` because the value of the argument passed to the
+function `g` isn't a constant:
+
+```dart
+import 'package:meta/meta.dart' show mustBeConst;
+
+int f(int value) => g([!value!]);
+
+int g(@mustBeConst int value) => value + 1;
+```
+
+#### Common fixes
+
+If a suitable constant is available to use, then replace the argument
+with a constant:
+
+```dart
+import 'package:meta/meta.dart' show mustBeConst;
+
+const v = 3;
+
+int f() => g(v);
+
+int g(@mustBeConst int value) => value + 1;
+```
 
 ### non_const_call_to_literal_constructor
 
@@ -14881,7 +15266,7 @@ constant value whenever possible.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -14890,13 +15275,13 @@ class C {
 }
 
 C f() => [!C()!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the keyword `const` before the constructor invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -14905,7 +15290,7 @@ class C {
 }
 
 void f() => const C();
-{% endprettify %}
+```
 
 ### non_const_generative_enum_constructor
 
@@ -14921,25 +15306,25 @@ generative constructor that isn't marked as `const`.
 The following code produces this diagnostic because the constructor in `E`
 isn't marked as being `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   [!E!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the `const` keyword before the constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   const E();
 }
-{% endprettify %}
+```
 
 ### non_covariant_type_parameter_position_in_representation_type
 
@@ -14958,17 +15343,17 @@ The following code produces this diagnostic because the type parameter `T`
 is used as a parameter type in the function type `void Function(T)`, and
 parameters are not covariant:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A<[!T!]>(void Function(T) f) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the use of the type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type A(void Function(String) f) {}
-{% endprettify %}
+```
 
 ### non_exhaustive_switch_expression
 
@@ -14986,21 +15371,21 @@ through it.
 The following code produces this diagnostic because the switch expression
 doesn't have a case for the value `E.three`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 String f(E e) => [!switch!] (e) {
     E.one => 'one',
     E.two => 'two',
   };
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the missing values are distinctly meaningful to the switch expression,
 then add a case for each of the values missing a match:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 String f(E e) => switch (e) {
@@ -15008,12 +15393,12 @@ String f(E e) => switch (e) {
     E.two => 'two',
     E.three => 'three',
   };
-{% endprettify %}
+```
 
 If the missing values don't need to be matched, then add a wildcard
 pattern that returns a simple default:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 String f(E e) => switch (e) {
@@ -15021,7 +15406,7 @@ String f(E e) => switch (e) {
     E.two => 'two',
     _ => 'unknown',
   };
-{% endprettify %}
+```
 
 Be aware that a wildcard pattern will handle any values added to the type
 in the future. You will lose the ability to have the compiler warn you if
@@ -15044,7 +15429,7 @@ The following code produces this diagnostic because the switch statement
 doesn't have a case for the value `E.three`, and `E` is an exhaustive
 type:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 void f(E e) {
@@ -15053,13 +15438,13 @@ void f(E e) {
     case E.two:
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add a case for each of the constants that aren't currently being matched:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 void f(E e) {
@@ -15070,12 +15455,12 @@ void f(E e) {
     case E.three:
   }
 }
-{% endprettify %}
+```
 
 If the missing values don't need to be matched, then add a `default`
 clause or a wildcard pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E { one, two, three }
 
 void f(E e) {
@@ -15086,7 +15471,7 @@ void f(E e) {
     default:
   }
 }
-{% endprettify %}
+```
 
 But be aware that adding a `default` clause or wildcard pattern will cause
 any future values of the exhaustive type to also be handled, so you will
@@ -15107,34 +15492,34 @@ isn't marked as `final`.
 The following code produces this diagnostic because the field `f` isn't a
 final field:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c;
 
   int [!f!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field must be defined for the enum, then mark the field as being
 `final`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c;
 
   final int f = 0;
 }
-{% endprettify %}
+```
 
 If the field can be removed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c
 }
-{% endprettify %}
+```
 
 ### non_generative_constructor
 
@@ -15152,7 +15537,7 @@ invoked in the initializer list.
 The following code produces this diagnostic because the invocation of the
 constructor `super.one()` is invoking a factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A.one() = B;
   A.two();
@@ -15161,13 +15546,13 @@ class A {
 class B extends A {
   B() : [!super.one()!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the super invocation to invoke a generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A.one() = B;
   A.two();
@@ -15176,7 +15561,7 @@ class A {
 class B extends A {
   B() : super.two();
 }
-{% endprettify %}
+```
 
 If the generative constructor is the unnamed constructor, and if there are
 no arguments being passed to it, then you can remove the super invocation.
@@ -15201,34 +15586,34 @@ constructor in `B` invokes the unnamed constructor in `A`, but the
 constructor in `A` is a factory constructor, when a generative constructor
 is required:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() => throw 0;
   A.named();
 }
 
 class [!B!] extends A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the unnamed constructor in the superclass can be a generative
 constructor, then change it to be a generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
   A.named();
 }
 
 class B extends A { }
-{% endprettify %}
+```
 
 If the unnamed constructor can't be a generative constructor and there are
 other generative constructors in the superclass, then explicitly invoke
 one of them:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() => throw 0;
   A.named();
@@ -15237,65 +15622,19 @@ class A {
 class B extends A {
   B() : super.named();
 }
-{% endprettify %}
+```
 
 If there are no generative constructors that can be used and none can be
 added, then implement the superclass rather than extending it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() => throw 0;
   A.named();
 }
 
 class B implements A {}
-{% endprettify %}
-
-### non_leaf_call_must_not_take_typed_data
-
-_FFI non-leaf calls can't take typed data arguments._
-
-#### Description
-
-The analyzer produces this diagnostic when the value of the `isLeaf`
-argument of `Pointer.asFunction`, `DynamicLibrary.lookupFunction`, or
-`@Native` is `false` and the Dart function signature contains a typed
-data parameter.
-
-Typed data unwrapping is only supported on arguments for leaf FFI calls.
-
-For more information about FFI, see [C interop using dart:ffi][ffi].
-
-#### Example
-
-The following code produces this diagnostic because the dart function
-signature contains a typed data, but the `isLeaf` argument is `false`:
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-import 'dart:typed_data';
-
-void f(Pointer<NativeFunction<Void Function(Pointer<Uint8>)>> p) {
-  p.asFunction<[!void Function(Uint8List)!]>();
-}
-{% endprettify %}
-
-#### Common fixes
-
-If the function has at least one typed data parameter, then add
-the `isLeaf` argument:
-
-{% prettify dart tag=pre+code %}
-import 'dart:ffi';
-import 'dart:typed_data';
-
-void f(Pointer<NativeFunction<Void Function(Pointer<Uint8>)>> p) {
-  p.asFunction<void Function(Uint8List)>(isLeaf: true);
-}
-{% endprettify %}
-
-If the function also uses `Handle`s, then it must be non-leaf. In That
-case use `Pointer`s instead of typed data.
+```
 
 ### non_native_function_type_argument_to_pointer
 
@@ -15316,7 +15655,7 @@ The following code produces this diagnostic because function signature
 associated with the pointer `p` (`FNative`) isn't a valid C function
 signature:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef FNative = int Function(int);
@@ -15327,13 +15666,13 @@ class C {
     p.asFunction<[!F!]>();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Make the `NativeFunction` signature a valid C signature:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 typedef FNative = Int8 Function(Int8);
@@ -15344,7 +15683,7 @@ class C {
     p.asFunction<F>();
   }
 }
-{% endprettify %}
+```
 
 ### non_positive_array_dimension
 
@@ -15362,27 +15701,27 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because an array dimension of
 `-1` was provided:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class MyStruct extends Struct {
   @Array([!-8!])
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the dimension to be a positive integer:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class MyStruct extends Struct {
   @Array(8)
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
 
 ### non_sized_type_argument
 
@@ -15403,27 +15742,27 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the type argument to
 `Array` is `Void`, and `Void` isn't one of the valid types:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8)
   external Array<[!Void!]> a0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the type argument to one of the valid types:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8)
   external Array<Uint8> a0;
 }
-{% endprettify %}
+```
 
 ### non_sync_factory
 
@@ -15441,40 +15780,40 @@ class in which they're declared, not a `Future`, `Stream`, or `Iterator`.
 The following code produces this diagnostic because the body of the factory
 constructor is marked with `async`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   factory C() [!async!] {
     return C._();
   }
   C._();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the member must be declared as a factory constructor, then remove the
 keyword appearing before the body:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   factory C() {
     return C._();
   }
   C._();
 }
-{% endprettify %}
+```
 
 If the member must return something other than an instance of the enclosing
 class, then make the member a static method:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static Future<C> m() async {
     return C._();
   }
   C._();
 }
-{% endprettify %}
+```
 
 ### non_type_as_type_argument
 
@@ -15490,19 +15829,19 @@ is used as a type argument.
 The following code produces this diagnostic because `x` is a variable, not
 a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 0;
 List<[!x!]> xList = [];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the type argument to be a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 0;
 List<int> xList = [];
-{% endprettify %}
+```
 
 ### non_type_in_catch_clause
 
@@ -15518,7 +15857,7 @@ The analyzer produces this diagnostic when the identifier following the
 The following code produces this diagnostic because `f` is a function, not
 a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
@@ -15526,13 +15865,13 @@ void f() {
     // ...
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the name to the type of object that should be caught:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
@@ -15540,7 +15879,7 @@ void f() {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### non_void_return_for_operator
 
@@ -15556,21 +15895,21 @@ The analyzer produces this diagnostic when a declaration of the operator
 The following code produces this diagnostic because the declaration of the
 operator `[]=` has a return type of `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   [!int!] operator []=(int index, int value) => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the return type to `void`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void operator []=(int index, int value) => 0;
 }
-{% endprettify %}
+```
 
 ### non_void_return_for_setter
 
@@ -15586,21 +15925,21 @@ return type other than `void`.
 The following code produces this diagnostic because the setter `p` has a
 return type of `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   [!int!] set p(int i) => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the return type to `void` or omit the return type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   set p(int i) => 0;
 }
-{% endprettify %}
+```
 
 ### not_assigned_potentially_non_nullable_local_variable
 
@@ -15621,17 +15960,17 @@ and has all these characteristics:
 The following code produces this diagnostic because `x` can't have a value
 of `null`, but is referenced before a value was assigned to it:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f() {
   int x;
   return [!x!].toString();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the assignment to `x`
 might not be executed, so it might have a value of `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int g(bool b) {
   int x;
   if (b) {
@@ -15639,13 +15978,13 @@ int g(bool b) {
   }
   return [!x!] * 2;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the analyzer can't
 prove, based on definite assignment analysis, that `x` won't be referenced
 without having a value assigned to it:
 
-{% prettify dart tag=pre+code %}
+```dart
 int h(bool b) {
   int x;
   if (b) {
@@ -15656,23 +15995,23 @@ int h(bool b) {
   }
   return 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If `null` is a valid value, then make the variable nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f() {
   int? x;
   return x!.toString();
 }
-{% endprettify %}
+```
 
 If `null` isn't a valid value, and there's a reasonable default value, then
 add an initializer:
 
-{% prettify dart tag=pre+code %}
+```dart
 int g(bool b) {
   int x = 2;
   if (b) {
@@ -15680,12 +16019,12 @@ int g(bool b) {
   }
   return x * 2;
 }
-{% endprettify %}
+```
 
 Otherwise, ensure that a value was assigned on every possible code path
 before the value is accessed:
 
-{% prettify dart tag=pre+code %}
+```dart
 int g(bool b) {
   int x;
   if (b) {
@@ -15695,7 +16034,7 @@ int g(bool b) {
   }
   return x * 2;
 }
-{% endprettify %}
+```
 
 You can also mark the variable as `late`, which removes the diagnostic, but
 if the variable isn't assigned a value before it's accessed, then it
@@ -15703,7 +16042,7 @@ results in an exception being thrown at runtime. This approach should only
 be used if you're sure that the variable will always be assigned, even
 though the analyzer can't prove it based on definite assignment analysis.
 
-{% prettify dart tag=pre+code %}
+```dart
 int h(bool b) {
   late int x;
   if (b) {
@@ -15714,7 +16053,7 @@ int h(bool b) {
   }
   return 0;
 }
-{% endprettify %}
+```
 
 ### not_a_type
 
@@ -15729,10 +16068,10 @@ declared to be something other than a type.
 
 The following code produces this diagnostic because `f` is a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 f() {}
 g([!f!] v) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -15752,17 +16091,17 @@ used as a unary operator is used as a binary operator.
 The following code produces this diagnostic because the operator `~` can
 only be used as a unary operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 5 [!~!] 3;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the operator with the correct binary operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 var a = 5 - 3;
-{% endprettify %}
+```
 
 ### not_enough_positional_arguments
 
@@ -15785,23 +16124,23 @@ parameters.
 The following code produces this diagnostic because `f` declares two
 required parameters, but only one argument is provided:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int a, int b) {}
 void g() {
   f(0[!)!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add arguments corresponding to the remaining parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int a, int b) {}
 void g() {
   f(0, 1);
 }
-{% endprettify %}
+```
 
 ### not_initialized_non_nullable_instance_field
 
@@ -15820,18 +16159,18 @@ these characteristics:
 The following code produces this diagnostic because `x` is implicitly
 initialized to `null` when it isn't allowed to be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int [!x!];
 }
-{% endprettify %}
+```
 
 Similarly, the following code produces this diagnostic because `x` is
 implicitly initialized to `null`, when it isn't allowed to be `null`, by
 one of the constructors, even though it's initialized by other
 constructors:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
@@ -15839,41 +16178,41 @@ class C {
 
   [!C!].n();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a reasonable default value for the field that's the same for all
 instances, then add an initializer expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x = 0;
 }
-{% endprettify %}
+```
 
 If the value of the field should be provided when an instance is created,
 then add a constructor that sets the value of the field or update an
 existing constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x;
 
   C(this.x);
 }
-{% endprettify %}
+```
 
 You can also mark the field as `late`, which removes the diagnostic, but if
 the field isn't assigned a value before it's accessed, then it results in
 an exception being thrown at runtime. This approach should only be used if
 you're sure that the field will always be assigned before it's referenced.
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   late int x;
 }
-{% endprettify %}
+```
 
 ### not_initialized_non_nullable_variable
 
@@ -15892,45 +16231,45 @@ it to be set to `null`, so an explicit initializer must be provided.
 The following code produces this diagnostic because the field `f` can't be
 initialized to `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static int [!f!];
 }
-{% endprettify %}
+```
 
 Similarly, the following code produces this diagnostic because the
 top-level variable `v` can't be initialized to `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int [!v!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the field or variable can't be initialized to `null`, then add an
 initializer that sets it to a non-null value:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static int f = 0;
 }
-{% endprettify %}
+```
 
 If the field or variable should be initialized to `null`, then change the
 type to be nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 int? v;
-{% endprettify %}
+```
 
 If the field or variable can't be initialized in the declaration but will
 always be initialized before it's referenced, then mark it as being `late`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static late int f;
 }
-{% endprettify %}
+```
 
 ### not_iterable_spread
 
@@ -15946,20 +16285,20 @@ set literal doesn't implement the type `Iterable`.
 
 The following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, int>{'a': 0, 'b': 1};
 var s = <String>{...[!m!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 The most common fix is to replace the expression with one that produces an
 iterable object:
 
-{% prettify dart tag=pre+code %}
+```dart
 var m = <String, int>{'a': 0, 'b': 1};
 var s = <String>{...m.keys};
-{% endprettify %}
+```
 
 ### not_map_spread
 
@@ -15975,20 +16314,20 @@ implement the type `Map`.
 
 The following code produces this diagnostic because `l` isn't a `Map`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l =  <String>['a', 'b'];
 var m = <int, String>{...[!l!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 The most common fix is to replace the expression with one that produces a
 map:
 
-{% prettify dart tag=pre+code %}
+```dart
 var l =  <String>['a', 'b'];
 var m = <int, String>{...l.asMap()};
-{% endprettify %}
+```
 
 ### no_annotation_constructor_arguments
 
@@ -16007,27 +16346,27 @@ The following code produces this diagnostic because `C` is a class, and a
 class can't be used as an annotation without invoking a `const` constructor
 from the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 }
 
 [!@C!]
 var x;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the missing argument list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 }
 
 @C()
 var x;
-{% endprettify %}
+```
 
 ### no_combined_super_signature
 
@@ -16047,7 +16386,7 @@ The following code produces this diagnostic because the method `m` declared
 in the class `C` is missing both the return type and the type of the
 parameter `a`, and neither of the missing types can be inferred for it:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   A m(String a);
 }
@@ -16059,7 +16398,7 @@ abstract class B {
 abstract class C implements A, B {
   [!m!](a);
 }
-{% endprettify %}
+```
 
 In this example, override inference can't be performed because the
 overridden methods are incompatible in these ways:
@@ -16071,7 +16410,7 @@ overridden methods are incompatible in these ways:
 If possible, add types to the method in the subclass that are consistent
 with the types from all the overridden methods:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   A m(String a);
 }
@@ -16083,7 +16422,7 @@ abstract class B {
 abstract class C implements A, B {
   C m(Object a);
 }
-{% endprettify %}
+```
 
 ### no_generative_constructors_in_superclass
 
@@ -16105,31 +16444,31 @@ The following code produces this diagnostic because the class `B` has an
 implicit generative constructor that can't invoke a generative constructor
 from `A` because `A` doesn't have any generative constructors:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A.none() => throw '';
 }
 
 class B extends [!A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the superclass should have a generative constructor, then add one:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A();
   factory A.none() => throw '';
 }
 
 class B extends A {}
-{% endprettify %}
+```
 
 If the subclass shouldn't have a generative constructor, then remove it by
 adding a factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A.none() => throw '';
 }
@@ -16137,18 +16476,18 @@ class A {
 class B extends A {
   factory B.none() => throw '';
 }
-{% endprettify %}
+```
 
 If the subclass must have a generative constructor but the superclass
 can't have one, then implement the superclass instead:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A.none() => throw '';
 }
 
 class B implements A {}
-{% endprettify %}
+```
 
 ### nullable_type_in_catch_clause
 
@@ -16167,27 +16506,27 @@ error to throw `null`).
 The following code produces this diagnostic because the exception type is
 specified to allow `null` when `null` can't be thrown:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
   } on [!FormatException?!] {
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the question mark from the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
   } on FormatException {
   }
 }
-{% endprettify %}
+```
 
 ### nullable_type_in_extends_clause
 
@@ -16211,28 +16550,29 @@ to the superclass, such as `class A extends B<C?> {}`.
 The following code produces this diagnostic because `A?` is a nullable
 type, and nullable types can't be used in an `extends` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B extends [!A?!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the question mark from the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B extends A {}
-{% endprettify %}
+```
 
 ### nullable_type_in_implements_clause
 
-_A class or mixin can't implement a nullable type._
+_A class, mixin, or extension type can't implement a nullable type._
 
 #### Description
 
-The analyzer produces this diagnostic when a class or mixin declaration has
-an `implements` clause, and an interface is followed by a `?`.
+The analyzer produces this diagnostic when a class, mixin, or
+extension type declaration has an `implements` clause, and an
+interface is followed by a `?`.
 
 It isn't valid to specify a nullable interface because doing so would have
 no meaning; it wouldn't change the interface being inherited by the class
@@ -16247,19 +16587,19 @@ to the interface, such as `class A implements B<C?> {}`.
 The following code produces this diagnostic because `A?` is a nullable
 type, and nullable types can't be used in an `implements` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B implements [!A?!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the question mark from the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 class B implements A {}
-{% endprettify %}
+```
 
 ### nullable_type_in_on_clause
 
@@ -16284,19 +16624,19 @@ to the superclass constraint, such as `mixin A on B<C?> {}`.
 The following code produces this diagnostic because `A?` is a nullable type
 and nullable types can't be used in an `on` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 mixin M on [!C?!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the question mark from the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 mixin M on C {}
-{% endprettify %}
+```
 
 ### nullable_type_in_with_clause
 
@@ -16319,19 +16659,19 @@ to the mixin, such as `class A with B<C?> {}`.
 The following code produces this diagnostic because `A?` is a nullable
 type, and nullable types can't be used in a `with` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {}
 class C with [!M?!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the question mark from the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M {}
 class C with M {}
-{% endprettify %}
+```
 
 ### null_argument_to_non_null_type
 
@@ -16352,21 +16692,21 @@ The following code produces this diagnostic because `null` is being passed
 to the constructor `Future.value` even though the type argument is the
 non-nullable type `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<String> f() {
   return Future.value([!null!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Pass in a non-null value:
 
-{% prettify dart tag=pre+code %}
+```dart
 Future<String> f() {
   return Future.value('');
 }
-{% endprettify %}
+```
 
 ### null_check_always_fails
 
@@ -16386,27 +16726,27 @@ The following code produces this diagnostic because the function `g` will
 always return `null`, which means that the null check in `f` will always
 throw:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   [!g()!!];
 }
 
 Null g() => null;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intend to always throw an exception, then replace the null check
 with an explicit `throw` expression to make the intent more clear:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   g();
   throw TypeError();
 }
 
 Null g() => null;
-{% endprettify %}
+```
 
 ### obsolete_colon_for_default_value
 
@@ -16424,17 +16764,17 @@ using an equal sign (`=`).
 The following code produces this diagnostic because a colon is being used
 before the default value of the optional parameter `i`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({int i [!:!] 0}) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the colon with an equal sign:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f({int i = 0}) {}
-{% endprettify %}
+```
 
 ### on_repeated
 
@@ -16450,36 +16790,36 @@ superclass constraints of a mixin multiple times.
 The following code produces this diagnostic because `A` is included twice
 in the superclass constraints for `M`:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M on A, [!A!] {
 }
 
 class A {}
 class B {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a different type should be included in the superclass constraints, then
 replace one of the occurrences with the other type:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M on A, B {
 }
 
 class A {}
 class B {}
-{% endprettify %}
+```
 
 If no other type was intended, then remove the repeated type name:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M on A {
 }
 
 class A {}
 class B {}
-{% endprettify %}
+```
 
 ### optional_parameter_in_operator
 
@@ -16495,21 +16835,21 @@ an operator declaration are optional.
 The following code produces this diagnostic because the parameter `other`
 is an optional parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C operator +([[!C? other!]]) => this;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Make all of the parameters be required parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C operator +(C other) => this;
 }
-{% endprettify %}
+```
 
 ### override_on_non_overriding_member
 
@@ -16532,24 +16872,24 @@ supertypes of the class.
 The following code produces this diagnostic because `m` isn't declared in
 any of the supertypes of `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   @override
   String [!m!]() => '';
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the member is intended to override a member with a different name, then
 update the member to have the same name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   @override
   String toString() => '';
 }
-{% endprettify %}
+```
 
 If the member is intended to override a member that was removed from the
 superclass, then consider removing the member from the subclass.
@@ -16572,7 +16912,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C`, which
 is a subclass of `Struct`, has two `Packed` annotations:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @Packed(1)
@@ -16580,20 +16920,20 @@ import 'dart:ffi';
 final class C extends Struct {
   external Pointer<Uint8> notEmpty;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove all but one of the annotations:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @Packed(1)
 final class C extends Struct {
   external Pointer<Uint8> notEmpty;
 }
-{% endprettify %}
+```
 
 ### packed_annotation_alignment
 
@@ -16611,27 +16951,27 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the argument to the
 `Packed` annotation (`3`) isn't one of the allowed values:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @Packed([!3!])
 final class C extends Struct {
   external Pointer<Uint8> notEmpty;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the alignment to be one of the allowed values:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 @Packed(4)
 final class C extends Struct {
   external Pointer<Uint8> notEmpty;
 }
-{% endprettify %}
+```
 
 ### part_of_different_library
 
@@ -16647,17 +16987,17 @@ library.
 
 Given a file `part.dart` containing
 
-{% prettify dart tag=pre+code %}
+```dart
 part of 'library.dart';
-{% endprettify %}
+```
 
 The following code, in any file other than `library.dart`, produces this
 diagnostic because it attempts to include `part.dart` as a part of itself
 when `part.dart` is a part of a different library:
 
-{% prettify dart tag=pre+code %}
+```dart
 part [!'package:a/part.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -16681,34 +17021,34 @@ the referenced file doesn't have a part-of directive.
 
 Given a file `a.dart` containing:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `a.dart` doesn't
 contain a part-of directive:
 
-{% prettify dart tag=pre+code %}
+```dart
 part [!'a.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the referenced file is intended to be a part of another library, then
 add a part-of directive to the file:
 
-{% prettify dart tag=pre+code %}
+```dart
 part of 'test.dart';
 
 class A {}
-{% endprettify %}
+```
 
 If the referenced file is intended to be a library, then replace the part
 directive with an import directive:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
-{% endprettify %}
+```
 
 ### part_of_unnamed_library
 
@@ -16727,26 +17067,26 @@ the library that it's a part of.
 Given a [part file][] named `part_file.dart` containing the following
 code:
 
-{% prettify dart tag=pre+code %}
+```dart
 part of lib;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the library including
 the [part file][] doesn't have a name even though the [part file][] uses a
 name to specify which library it's a part of:
 
-{% prettify dart tag=pre+code %}
+```dart
 part [!'part_file.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the `part of` directive in the [part file][] to specify its library
 by URI:
 
-{% prettify dart tag=pre+code %}
+```dart
 part of 'test.dart';
-{% endprettify %}
+```
 
 ### path_does_not_exist
 
@@ -16762,12 +17102,12 @@ referencing a directory that doesn't exist.
 Assuming that the directory `doesNotExist` doesn't exist, the following
 code produces this diagnostic because it's listed as the path of a package:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   local_package:
     path: [!doesNotExist!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -16790,12 +17130,12 @@ whose value is a string, but isn't a POSIX-style path.
 The following code produces this diagnostic because the path following the
 `path` key is a Windows path:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   local_package:
     path: [!E:\local_package!]
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -16816,21 +17156,21 @@ Assuming that the directory `local_package` doesn't contain a file
 `pubspec.yaml`, the following code produces this diagnostic because it's
 listed as the path of a package:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   local_package:
     path: [!local_package!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the path is intended to be the root of a package, then add a
 `pubspec.yaml` file in the directory:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: local_package
-{% endprettify %}
+```
 
 If the path is wrong, then replace it with the correct path.
 
@@ -16850,7 +17190,7 @@ If the code is cleaner when destructuring with a pattern, then rewrite the
 code to assign the value to a local variable in a pattern declaration,
 assigning the non-local variable separately:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   var x = 0;
 
@@ -16858,7 +17198,7 @@ class C {
     ([!x!], _) = r;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -16866,7 +17206,7 @@ If the code is cleaner when using a pattern assignment, then rewrite the
 code to assign the value to a local variable, assigning the non-local
 variable separately:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   var x = 0;
 
@@ -16875,12 +17215,12 @@ class C {
     x = a;
   }
 }
-{% endprettify %}
+```
 
 If the code is cleaner without using a pattern assignment, then rewrite
 the code to not use a pattern assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   var x = 0;
 
@@ -16888,7 +17228,7 @@ class C {
     x = r.$1;
   }
 }
-{% endprettify %}
+```
 
 ### pattern_constant_from_deferred_library
 
@@ -16908,14 +17248,14 @@ For more information, check out
 
 Given a file `a.dart` that defines the constant `zero`:
 
-{% prettify dart tag=pre+code %}
+```dart
 const zero = 0;
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constant pattern
 `a.zero` is imported using a deferred import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 void f(int x) {
@@ -16925,14 +17265,14 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the constant from the imported library, then
 remove the `deferred` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 void f(int x) {
@@ -16942,13 +17282,13 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 If you need to reference the constant from the imported library and also
 need the imported library to be deferred, then rewrite the switch
 statement as a sequence of `if` statements:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 void f(int x) {
@@ -16956,12 +17296,12 @@ void f(int x) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 If you don't need to reference the constant, then replace the case
 expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case 0:
@@ -16969,7 +17309,7 @@ void f(int x) {
       break;
   }
 }
-{% endprettify %}
+```
 
 ### pattern_type_mismatch_in_irrefutable_context
 
@@ -16986,24 +17326,24 @@ match the type required by the pattern being used to match it.
 The following code produces this diagnostic because `x` might not be a
 `String` and hence might not match the object pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object x) {
   var [!String(length: a)!] = x;
   print(a);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the code so that the type of the expression on the right-hand side
 matches the type required by the pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String x) {
   var String(length: a) = x;
   print(a);
 }
-{% endprettify %}
+```
 
 ### pattern_variable_assignment_inside_guard
 
@@ -17020,37 +17360,37 @@ a value inside a guard (`when`) clause.
 The following code produces this diagnostic because the variable `a` is
 assigned a value inside the guard clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a when ([!a!] = 1) > 0) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a value you need to capture, then assign it to a different
 variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   var b;
   if (x case var a when (b = 1) > 0) {
     print(a + b);
   }
 }
-{% endprettify %}
+```
 
 If there isn't a value you need to capture, then remove the assignment:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a when 1 > 0) {
     print(a);
   }
 }
-{% endprettify %}
+```
 
 ### platform_value_disallowed
 
@@ -17068,21 +17408,21 @@ check out the [documentation on platform declarations](https://dart.dev/tools/pu
 The following `pubspec.yaml` produces this diagnostic because the key
 `web` has a value.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   web: [!"chrome"!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 Omit the value and leave the key without a value:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   web:
-{% endprettify %}
+```
 
 Values for keys in the `platforms` field are currently reserved for
 potential future behavior.
@@ -17104,22 +17444,22 @@ The following code produces this diagnostic because the object pattern
 `String(1)` doesn't specify which getter of `String` to access and compare
 with the value `1`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object o) {
   if (o case String([!1!])) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the getter name to access the value, followed
 by a colon before the pattern to match against:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object o) {
   if (o case String(length: 1)) {}
 }
-{% endprettify %}
+```
 
 ### positional_super_formal_parameter_with_positional_argument
 
@@ -17147,7 +17487,7 @@ The following code produces this diagnostic because the constructor
 parameters to the super constructor in `A`, but is explicitly passing the
 other in the super constructor invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x, int y);
 }
@@ -17155,14 +17495,14 @@ class A {
 class B extends A {
   B(int x, super.[!y!]) : super(x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If all the positional parameters can be super parameters, then convert the
 normal positional parameters to be super parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x, int y);
 }
@@ -17170,12 +17510,12 @@ class A {
 class B extends A {
   B(super.x, super.y);
 }
-{% endprettify %}
+```
 
 If some positional parameters can't be super parameters, then convert the
 super parameters to be normal parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x, int y);
 }
@@ -17183,7 +17523,7 @@ class A {
 class B extends A {
   B(int x, int y) : super(x, y);
 }
-{% endprettify %}
+```
 
 ### prefix_collides_with_top_level_member
 
@@ -17200,31 +17540,31 @@ prefix and the name of a top-level declaration in the same library.
 The following code produces this diagnostic because `f` is used as both an
 import prefix and the name of a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as f;
 
 int [!f!]() => f.min(0, 1);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you want to use the name for the import prefix, then rename the
 top-level declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as f;
 
 int g() => f.min(0, 1);
-{% endprettify %}
+```
 
 If you want to use the name for the top-level declaration, then rename the
 import prefix:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 int f() => math.min(0, 1);
-{% endprettify %}
+```
 
 ### prefix_identifier_not_followed_by_dot
 
@@ -17242,26 +17582,26 @@ be used as a value.
 The following code produces this diagnostic because the prefix `math` is
 being used as if it were a variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 void f() {
   print([!math!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the code is incomplete, then reference something in one of the libraries
 associated with the prefix:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' as math;
 
 void f() {
   print(math.pi);
 }
-{% endprettify %}
+```
 
 If the name is wrong, then correct the name.
 
@@ -17282,38 +17622,38 @@ The following code produces this diagnostic because the prefix `a` is
 being used to access the class `Future`, but isn't visible because it's
 shadowed by the parameter `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async' as a;
 
 a.Future? f(int a) {
   [!a!].Future? x;
   return x;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename either the prefix:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async' as p;
 
 p.Future? f(int a) {
   p.Future? x;
   return x;
 }
-{% endprettify %}
+```
 
 Or rename the local variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async' as a;
 
 a.Future? f(int p) {
   a.Future? x;
   return x;
 }
-{% endprettify %}
+```
 
 ### private_collision_in_mixin_application
 
@@ -17330,7 +17670,7 @@ the one that defines the mixins.
 
 Given a file `a.dart` containing the following code:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin A {
   void _foo() {}
 }
@@ -17338,27 +17678,27 @@ mixin A {
 mixin B {
   void _foo() {}
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the mixins `A` and `B`
 both define the method `_foo`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 class C extends Object with A, [!B!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need both of the mixins, then remove one of them from the
 `with` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 class C extends Object with A, [!B!] {}
-{% endprettify %}
+```
 
 If you need both of the mixins, then rename the conflicting member in one
 of the two mixins.
@@ -17377,21 +17717,21 @@ starts with an underscore.
 The following code produces this diagnostic because the named parameter
 `_x` starts with an underscore:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m({int [!_x!] = 0}) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Rename the parameter so that it doesn't start with an underscore:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m({int x = 0}) {}
 }
-{% endprettify %}
+```
 
 ### private_setter
 
@@ -17407,32 +17747,32 @@ library where it isn't visible.
 
 Given a file `a.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   static int _f = 0;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because it references the
 private setter `_f` even though the setter isn't visible:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart';
 
 void f() {
   A.[!_f!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you're able to make the setter public, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   static int f = 0;
 }
-{% endprettify %}
+```
 
 If you aren't able to make the setter public, then find a different way to
 implement the code.
@@ -17455,18 +17795,18 @@ The following code produces this diagnostic because the final local
 variable `x` is read (on line 3) when it's possible that it hasn't yet
 been initialized:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   final int x;
   return [!x!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Ensure that the variable has been initialized before it's read:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(bool b) {
   final int x;
   if (b) {
@@ -17476,7 +17816,7 @@ int f(bool b) {
   }
   return x;
 }
-{% endprettify %}
+```
 
 ### record_literal_one_positional_no_trailing_comma
 
@@ -17496,17 +17836,17 @@ disambiguate these two valid interpretations.
 The following code produces this diagnostic because the record literal has
 one positional field but doesn't have a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = const (1[!)!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 var r = const (1,);
-{% endprettify %}
+```
 
 ### record_type_one_positional_no_trailing_comma
 
@@ -17526,17 +17866,17 @@ disambiguate these two valid interpretations.
 The following code produces this diagnostic because the record type has
 one positional field, but doesn't have a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int[!)!] r) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add a trailing comma:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int,) r) {}
-{% endprettify %}
+```
 
 ### recursive_compile_time_constant
 
@@ -17553,20 +17893,20 @@ creating an infinite loop.
 The following code produces this diagnostic twice because both of the
 constants are defined in terms of the other:
 
-{% prettify dart tag=pre+code %}
+```dart
 const [!secondsPerHour!] = minutesPerHour * 60;
 const [!minutesPerHour!] = secondsPerHour / 60;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Break the cycle by finding an alternative way of defining at least one of
 the constants:
 
-{% prettify dart tag=pre+code %}
+```dart
 const secondsPerHour = minutesPerHour * 60;
 const minutesPerHour = 60;
-{% endprettify %}
+```
 
 ### recursive_constructor_redirect
 
@@ -17582,17 +17922,17 @@ itself, either directly or indirectly, creating an infinite loop.
 The following code produces this diagnostic because the generative
 constructors `C.a` and `C.b` each redirect to the other:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : [!this.b()!];
   C.b() : [!this.a()!];
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the factory
 constructors `A` and `B` each redirect to the other:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = [!B!];
 }
@@ -17600,26 +17940,26 @@ class B implements A {
   factory B() = [!A!];
   B.named();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 In the case of generative constructors, break the cycle by finding defining
 at least one of the constructors to not redirect to another constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b();
   C.b();
 }
-{% endprettify %}
+```
 
 In the case of factory constructors, break the cycle by defining at least
 one of the factory constructors to do one of the following:
 
 - Redirect to a generative constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = B;
 }
@@ -17627,11 +17967,11 @@ class B implements A {
   factory B() = B.named;
   B.named();
 }
-{% endprettify %}
+```
 
 - Not redirect to another constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = B;
 }
@@ -17642,11 +17982,11 @@ class B implements A {
 
   B.named();
 }
-{% endprettify %}
+```
 
 - Not be a factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = B;
 }
@@ -17654,7 +17994,7 @@ class B implements A {
   B();
   B.named();
 }
-{% endprettify %}
+```
 
 ### recursive_interface_inheritance
 
@@ -17679,10 +18019,10 @@ is declared to be a subtype of itself.
 The following code produces this diagnostic because the class `A` is
 declared to be a subtype of `B`, and `B` is a subtype of `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class [!A!] extends B {}
 class B implements A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -17704,7 +18044,7 @@ The following code produces this diagnostic because the member `n`
 declared by the extension type `E` is annotated with `@redeclare`, but `C`
 doesn't have a member named `n`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -17715,13 +18055,13 @@ extension type E(C c) implements C {
   @redeclare
   void [!n!]() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the annotated member has the right name, then remove the annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m() {}
 }
@@ -17729,13 +18069,13 @@ class C {
 extension type E(C c) implements C {
   void n() {}
 }
-{% endprettify %}
+```
 
 If the annotated member is suppose to replace a member from the
 implemented interfaces, then change the name of the annotated member to
 match the member being replaced:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -17746,7 +18086,7 @@ extension type E(C c) implements C {
   @redeclare
   void m() {}
 }
-{% endprettify %}
+```
 
 ### redirect_generative_to_missing_constructor
 
@@ -17762,31 +18102,31 @@ redirects to a constructor that isn't defined.
 The following code produces this diagnostic because the constructor `C.a`
 redirects to the constructor `C.b`, but `C.b` isn't defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : [!this.b()!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the missing constructor must be called, then define it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b();
   C.b();
 }
-{% endprettify %}
+```
 
 If the missing constructor doesn't need to be called, then remove the
 redirect:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a();
 }
-{% endprettify %}
+```
 
 ### redirect_generative_to_non_generative_constructor
 
@@ -17802,34 +18142,34 @@ redirects to a factory constructor.
 The following code produces this diagnostic because the generative
 constructor `C.a` redirects to the factory constructor `C.b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : [!this.b()!];
   factory C.b() => C.a();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the generative constructor doesn't need to redirect to another
 constructor, then remove the redirect.
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a();
   factory C.b() => C.a();
 }
-{% endprettify %}
+```
 
 If the generative constructor must redirect to another constructor, then
 make the other constructor be a generative (non-factory) constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b();
   C.b();
 }
-{% endprettify %}
+```
 
 ### redirect_to_abstract_class_constructor
 
@@ -17847,26 +18187,26 @@ The following code produces this diagnostic because the factory
 constructor in `A` redirects to a constructor in `B`, but `B` is an
 abstract class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() = [!B!];
 }
 
 abstract class B implements A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the code redirects to the correct constructor, then change the class so
 that it isn't abstract:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() = B;
 }
 
 class B implements A {}
-{% endprettify %}
+```
 
 Otherwise, change the factory constructor so that it either redirects to a
 constructor in a concrete class, or has a concrete implementation.
@@ -17889,7 +18229,7 @@ the redirecting constructor.
 The following code produces this diagnostic because the constructor for `A`
 doesn't declare a parameter that the constructor for `B` requires:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = [!B!];
 }
@@ -17898,13 +18238,13 @@ class B implements A {
   B(int x);
   B.zero();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constructor for `A`
 declares a named parameter (`y`) that the constructor for `B` doesn't
 allow:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A(int x, {int y}) = [!B!];
 }
@@ -17912,14 +18252,14 @@ abstract class A {
 class B implements A {
   B(int x);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a different constructor that is compatible with the redirecting
 constructor, then redirect to that constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A() = B.zero;
 }
@@ -17928,11 +18268,11 @@ class B implements A {
   B(int x);
   B.zero();
 }
-{% endprettify %}
+```
 
 Otherwise, update the redirecting constructor to be compatible:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class A {
   factory A(int x) = B;
 }
@@ -17940,7 +18280,7 @@ abstract class A {
 class B implements A {
   B(int x);
 }
-{% endprettify %}
+```
 
 ### redirect_to_invalid_return_type
 
@@ -17958,7 +18298,7 @@ The following code produces this diagnostic because `A` isn't a subclass
 of `C`, which means that the value returned by the constructor `A()`
 couldn't be returned from the constructor `C()`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B implements C {}
@@ -17966,7 +18306,7 @@ class B implements C {}
 class C {
   factory C() = [!A!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -17974,7 +18314,7 @@ If the factory constructor is redirecting to a constructor in the wrong
 class, then update the factory constructor to redirect to the correct
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
 
 class B implements C {}
@@ -17982,12 +18322,12 @@ class B implements C {}
 class C {
   factory C() = B;
 }
-{% endprettify %}
+```
 
 If the class defining the constructor being redirected to is the class that
 should be returned, then make it a subtype of the factory's return type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A implements C {}
 
 class B implements C {}
@@ -17995,7 +18335,7 @@ class B implements C {}
 class C {
   factory C() = A;
 }
-{% endprettify %}
+```
 
 ### redirect_to_missing_constructor
 
@@ -18011,7 +18351,7 @@ constructor that doesn't exist.
 The following code produces this diagnostic because the factory
 constructor in `A` redirects to a constructor in `B` that doesn't exist:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() = [!B.name!];
 }
@@ -18019,14 +18359,14 @@ class A {
 class B implements A {
   B();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the constructor being redirected to is correct, then define the
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() = B.name;
 }
@@ -18035,11 +18375,11 @@ class B implements A {
   B();
   B.name();
 }
-{% endprettify %}
+```
 
 If a different constructor should be invoked, then update the redirect:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   factory A() = B;
 }
@@ -18047,7 +18387,7 @@ class A {
 class B implements A {
   B();
 }
-{% endprettify %}
+```
 
 ### redirect_to_non_class
 
@@ -18064,13 +18404,13 @@ constructor.
 
 The following code produces this diagnostic because `f` is a function:
 
-{% prettify dart tag=pre+code %}
+```dart
 C f() => throw 0;
 
 class C {
   factory C() = [!f!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -18083,13 +18423,13 @@ then you probably need to add an import.
 If you're trying to return the value returned by a function, then rewrite
 the constructor to return the value from the constructor's body:
 
-{% prettify dart tag=pre+code %}
+```dart
 C f() => throw 0;
 
 class C {
   factory C() => f();
 }
-{% endprettify %}
+```
 
 ### redirect_to_non_const_constructor
 
@@ -18106,34 +18446,34 @@ redirects to a constructor that isn't marked as `const`.
 The following code produces this diagnostic because the constructor `C.a`
 is marked as `const` but redirects to the constructor `C.b`, which isn't:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C.a() : this.[!b!]();
   C.b();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the non-constant constructor can be marked as `const`, then mark it as
 `const`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C.a() : this.b();
   const C.b();
 }
-{% endprettify %}
+```
 
 If the non-constant constructor can't be marked as `const`, then either
 remove the redirect or remove `const` from the redirecting constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b();
   C.b();
 }
-{% endprettify %}
+```
 
 ### redirect_to_type_alias_expands_to_type_parameter
 
@@ -18153,7 +18493,7 @@ The following code produces this diagnostic because the redirect to `B<A>`
 is to a type alias whose value is `T`, even though it looks like the value
 should be `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A implements C {}
 
 typedef B<T> = T;
@@ -18161,20 +18501,20 @@ typedef B<T> = T;
 abstract class C {
   factory C() = [!B!]<A>;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use either a class name or a type alias that is defined to be a class
 rather than a type alias defined to be a type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A implements C {}
 
 abstract class C {
   factory C() = A;
 }
-{% endprettify %}
+```
 
 ### referenced_before_declaration
 
@@ -18195,36 +18535,36 @@ declaration is located.
 The following code produces this diagnostic because `i` is used before it
 is declared:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   print([!i!]);
   int i = 5;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intended to reference the local variable, move the declaration
 before the first reference:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   int i = 5;
   print(i);
 }
-{% endprettify %}
+```
 
 If you intended to reference a name from an outer scope, such as a
 parameter, instance field or top-level variable, then rename the local
 declaration so that it doesn't hide the outer variable.
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int i) {
   print(i);
   int x = 5;
   print(x);
 }
-{% endprettify %}
+```
 
 ### refutable_pattern_in_irrefutable_context
 
@@ -18252,11 +18592,11 @@ The following code produces this diagnostic because the null-check
 pattern, which is a refutable pattern, is in a pattern-based variable
 declaration, which doesn't allow refutable patterns:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int? x) {
   var ([!_?!]) = x;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -18279,7 +18619,7 @@ The following code produces this diagnostic because the operand in the
 relational pattern (`0`) is an `int`, but the `>` operator defined in `C`
 expects an object of type `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18292,14 +18632,14 @@ void f(C c) {
       print('positive');
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the switch is using the correct value, then change the case to compare
 the value to the right type of object:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18312,12 +18652,12 @@ void f(C c) {
       print('positive');
   }
 }
-{% endprettify %}
+```
 
 If the switch is using the wrong value, then change the expression used to
 compute the value being matched:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18332,7 +18672,7 @@ void f(C c) {
       print('positive');
   }
 }
-{% endprettify %}
+```
 
 ### relational_pattern_operator_return_type_not_assignable_to_bool
 
@@ -18350,7 +18690,7 @@ The following code produces this diagnostic because the operator `>`, used
 in the relational pattern `> c2`, returns a value of type `int` rather
 than a `bool`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18364,14 +18704,14 @@ const C c2 = C();
 void f(C c1) {
   if (c1 case [!>!] c2) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If there's a different operator that should be used, then change the
 operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18385,12 +18725,12 @@ const C c2 = C();
 void f(C c1) {
   if (c1 case < c2) {}
 }
-{% endprettify %}
+```
 
 If the operator is expected to return `bool`, then update the declaration
 of the operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   const C();
 
@@ -18404,7 +18744,7 @@ const C c2 = C();
 void f(C c1) {
   if (c1 case > c2) {}
 }
-{% endprettify %}
+```
 
 ### rest_element_in_map_pattern
 
@@ -18422,21 +18762,21 @@ so a rest pattern is unnecessary.
 The following code produces this diagnostic because the map pattern contains
 a rest pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<int, String> x) {
   if (x case {0: _, [!...!]}) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the rest pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Map<int, String> x) {
   if (x case {0: _}) {}
 }
-{% endprettify %}
+```
 
 ### rethrow_outside_catch
 
@@ -18454,18 +18794,18 @@ clause.
 The following code produces this diagnostic because the`rethrow` statement
 is outside of a `catch` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   [!rethrow!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you're trying to rethrow an exception, then wrap the `rethrow` statement
 in a `catch` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
@@ -18473,16 +18813,16 @@ void f() {
     rethrow;
   }
 }
-{% endprettify %}
+```
 
 If you're trying to throw a new exception, then replace the `rethrow`
 statement with a `throw` expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   throw UnsupportedError('Not yet implemented');
 }
-{% endprettify %}
+```
 
 ### return_in_generative_constructor
 
@@ -18500,29 +18840,29 @@ therefore can't return a different object.
 The following code produces this diagnostic because the `return` statement
 has an expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C() {
     return [!this!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the constructor should create a new instance, then remove either the
 `return` statement or the expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C();
 }
-{% endprettify %}
+```
 
 If the constructor shouldn't create a new instance, then convert it to be a
 factory constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   factory C() {
     return _instance;
@@ -18532,7 +18872,7 @@ class C {
 
   C._();
 }
-{% endprettify %}
+```
 
 ### return_in_generator
 
@@ -18551,47 +18891,47 @@ statement to return a value or implicitly returns a value because of using
 The following code produces this diagnostic because the method `f` is a
 generator and is using `return` to return a value:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> f() sync* {
   [!return!] 3;
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the function `f` is a
 generator and is implicitly returning a value:
 
-{% prettify dart tag=pre+code %}
+```dart
 Stream<int> f() async* [!=>!] 3;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the function is using `=>` for the body of the function, then convert it
 to a block function body, and use `yield` to return a value:
 
-{% prettify dart tag=pre+code %}
+```dart
 Stream<int> f() async* {
   yield 3;
 }
-{% endprettify %}
+```
 
 If the method is intended to be a generator, then use `yield` to return a
 value:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> f() sync* {
   yield 3;
 }
-{% endprettify %}
+```
 
 If the method isn't intended to be a generator, then remove the modifier
 from the body (or use `async` if you're returning a future):
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   return 3;
 }
-{% endprettify %}
+```
 
 ### return_of_do_not_store
 
@@ -18610,21 +18950,21 @@ The following code produces this diagnostic because the result of invoking
 `f` shouldn't be stored, but the function `g` isn't annotated to preserve
 that semantic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @doNotStore
 int f() => 0;
 
 int g() => [!f()!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value that shouldn't be stored is the correct value to return, then
 mark the function with the [`doNotStore`][meta-doNotStore] annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @doNotStore
@@ -18632,18 +18972,18 @@ int f() => 0;
 
 @doNotStore
 int g() => f();
-{% endprettify %}
+```
 
 Otherwise, return a different value from the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @doNotStore
 int f() => 0;
 
 int g() => 0;
-{% endprettify %}
+```
 
 ### return_of_invalid_type
 
@@ -18666,28 +19006,29 @@ value whose type isn't assignable to the declared return type.
 The following code produces this diagnostic because `f` has a return type
 of `String` but is returning an `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f() => [!3!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the return type is correct, then replace the value being returned with a
 value of the correct type, possibly by converting the existing value:
 
-{% prettify dart tag=pre+code %}
+```dart
 String f() => 3.toString();
-{% endprettify %}
+```
 
 If the value is correct, then change the return type to match:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() => 3;
-{% endprettify %}
+```
 
 ### return_of_invalid_type_from_closure
 
-_The return type '{0}' isn't a '{1}', as required by the closure's context._
+_The returned type '{0}' isn't returnable from a '{1}' function, as required by
+the closure's context._
 
 #### Description
 
@@ -18701,18 +19042,18 @@ The following code produces this diagnostic because `f` is defined to be a
 function that returns a `String`, but the closure assigned to it returns an
 `int`:
 
-{% prettify dart tag=pre+code %}
+```dart
 String Function(String) f = (s) => [!3!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the return type is correct, then replace the returned value with a value
 of the correct type, possibly by converting the existing value:
 
-{% prettify dart tag=pre+code %}
+```dart
 String Function(String) f = (s) => 3.toString();
-{% endprettify %}
+```
 
 ### return_without_value
 
@@ -18728,21 +19069,21 @@ without an expression in a function that declares a return type.
 The following code produces this diagnostic because the function `f` is
 expected to return an `int`, but no value is being returned:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   [!return!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an expression that computes the value to be returned:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f() {
   return 0;
 }
-{% endprettify %}
+```
 
 ### sdk_version_async_exported_from_core
 
@@ -18762,36 +19103,36 @@ import was necessary.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.1.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.0.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f([!Future!] f) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the classes to be referenced:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then import the
 `dart:async` library.
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:async';
 
 void f(Future f) {}
-{% endprettify %}
+```
 
 ### sdk_version_as_expression_in_const_context
 
@@ -18811,37 +19152,37 @@ won't be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.3.2:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces
 this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 const num n = 3;
 const int i = [!n as int!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the expression to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.3.2 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then either rewrite the
 code to not use an `as` expression, or change the code so that the `as`
 expression isn't in a [constant context][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 num x = 3;
 int y = x as int;
-{% endprettify %}
+```
 
 ### sdk_version_bool_operator_in_const_context
 
@@ -18862,39 +19203,39 @@ SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.3.2:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 const bool a = true;
 const bool b = false;
 const bool c = a [!&!] b;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the operators to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
  sdk: '>=2.3.2 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then either rewrite the
 code to not use these operators, or change the code so that the expression
 isn't in a [constant context][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 const bool a = true;
 const bool b = false;
 bool c = a & b;
-{% endprettify %}
+```
 
 ### sdk_version_constructor_tearoffs
 
@@ -18913,34 +19254,34 @@ won't be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.15:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.9.0 <2.15.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var setConstructor = [!Set.identity!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the operator to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.15.0 <2.16.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not use constructor tear-offs:
 
-{% prettify dart tag=pre+code %}
+```dart
 var setConstructor = () => Set.identity();
-{% endprettify %}
+```
 
 ### sdk_version_eq_eq_operator_in_const_context
 
@@ -18960,41 +19301,41 @@ code won't be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.3.2:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 const C a = null;
 const C b = null;
 const bool same = a [!==!] b;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the operator to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.3.2 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then either rewrite the
 code to not use the `==` operator, or change the code so that the
 expression isn't in a [constant context][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 const C a = null;
 const C b = null;
 bool same = a == b;
-{% endprettify %}
+```
 
 ### sdk_version_extension_methods
 
@@ -19014,42 +19355,42 @@ SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.6.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
  sdk: '>=2.4.0 <2.7.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces
 this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!extension!] E on String {
   void sayHello() {
     print('Hello $this');
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the syntax to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.6.0 <2.7.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not make use of extensions. The most common way to do this is to rewrite
 the members of the extension as top-level functions (or methods) that take
 the value that would have been bound to `this` as a parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 void sayHello(String s) {
   print('Hello $s');
 }
-{% endprettify %}
+```
 
 ### sdk_version_gt_gt_gt_operator
 
@@ -19068,32 +19409,32 @@ to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.14.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
  sdk: '>=2.0.0 <2.15.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = 3 [!>>>!] 4;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the operator to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.14.0 <2.15.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not use the `>>>` operator:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = logicalShiftRight(3, 4);
 
 int logicalShiftRight(int leftOperand, int rightOperand) {
@@ -19103,7 +19444,7 @@ int logicalShiftRight(int leftOperand, int rightOperand) {
   }
   return leftOperand ~/ divisor;
 }
-{% endprettify %}
+```
 
 ### sdk_version_is_expression_in_const_context
 
@@ -19123,38 +19464,38 @@ won't be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.3.2:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces
 this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 const Object x = 4;
 const y = [!x is int!] ? 0 : 1;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the expression to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.3.2 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then either rewrite the
 code to not use the `is` operator, or, if that isn't possible, change the
 code so that the `is` expression isn't in a
 [constant context][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 const Object x = 4;
 var y = x is int ? 0 : 1;
-{% endprettify %}
+```
 
 ### sdk_version_never
 
@@ -19173,34 +19514,34 @@ be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.12.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.5.0 <2.6.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!Never!] n;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the type to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.12.0 <2.13.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not reference this class:
 
-{% prettify dart tag=pre+code %}
+```dart
 dynamic x;
-{% endprettify %}
+```
 
 ### sdk_version_set_literal
 
@@ -19219,34 +19560,34 @@ to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.2.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.1.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = [!<int>{}!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the syntax to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.2.0 <2.4.0'
-{% endprettify %}
+```
 
 If you do need to support older versions of the SDK, then replace the set
 literal with code that creates the set without the use of a literal:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = new Set<int>();
-{% endprettify %}
+```
 
 ### sdk_version_ui_as_code
 
@@ -19266,32 +19607,32 @@ SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.3.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.2.0 <2.4.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces
 this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 var digits = [[!for (int i = 0; i < 10; i++) i!]];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the syntax to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.3.0 <2.4.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not make use of those elements:
 
-{% prettify dart tag=pre+code %}
+```dart
 var digits = _initializeDigits();
 
 List<int> _initializeDigits() {
@@ -19301,7 +19642,7 @@ List<int> _initializeDigits() {
   }
   return digits;
 }
-{% endprettify %}
+```
 
 ### sdk_version_ui_as_code_in_const_context
 
@@ -19321,44 +19662,44 @@ won't be able to run against earlier versions of the SDK.
 Here's an example of a pubspec that defines an SDK constraint with a lower
 bound of less than 2.5.0:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.4.0 <2.6.0'
-{% endprettify %}
+```
 
 In the package that has that pubspec, code like the following produces
 this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = [1, 2];
 const b = [[!...a!]];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you don't need to support older versions of the SDK, then you can
 increase the SDK constraint to allow the syntax to be used:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 environment:
   sdk: '>=2.5.0 <2.6.0'
-{% endprettify %}
+```
 
 If you need to support older versions of the SDK, then rewrite the code to
 not make use of those elements:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = [1, 2];
 const b = [1, 2];
-{% endprettify %}
+```
 
 If that isn't possible, change the code so that the element isn't in a
 [constant context][]:
 
-{% prettify dart tag=pre+code %}
+```dart
 const a = [1, 2];
 var b = [...a];
-{% endprettify %}
+```
 
 ### set_element_type_not_assignable
 
@@ -19375,24 +19716,24 @@ The following code produces this diagnostic because the type of the string
 literal `'0'` is `String`, which isn't assignable to `int`, the element
 type of the set:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = <int>{[!'0'!]};
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the element type of the set literal is wrong, then change the element
 type of the set:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = <String>{'0'};
-{% endprettify %}
+```
 
 If the type of the element is wrong, then change the element:
 
-{% prettify dart tag=pre+code %}
+```dart
 var s = <int>{'0'.length};
-{% endprettify %}
+```
 
 ### shared_deferred_prefix
 
@@ -19410,32 +19751,32 @@ prefix is used to load the imported library.
 The following code produces this diagnostic because the prefix `x` is used
 as the prefix for a deferred import and is also used for one other import:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' [!deferred!] as x;
 import 'dart:convert' as x;
 
 var y = x.json.encode(x.min(0, 1));
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can use a different name for the deferred import, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' deferred as math;
 import 'dart:convert' as x;
 
 var y = x.json.encode(math.min(0, 1));
-{% endprettify %}
+```
 
 If you can use a different name for the other imports, then do so:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' deferred as x;
 import 'dart:convert' as convert;
 
 var y = convert.json.encode(x.min(0, 1));
-{% endprettify %}
+```
 
 ### size_annotation_dimensions
 
@@ -19455,39 +19796,39 @@ The following code produces this diagnostic because the field `a0` has a
 type with three nested arrays, but only two dimensions are given in the
 `Array` annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   [!@Array(8, 8)!]
   external Array<Array<Array<Uint8>>> a0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the field is correct, then fix the annotation to have the
 required number of dimensions:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8, 8, 4)
   external Array<Array<Array<Uint8>>> a0;
 }
-{% endprettify %}
+```
 
 If the type of the field is wrong, then fix the type of the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Array(8, 8)
   external Array<Array<Uint8>> a0;
 }
-{% endprettify %}
+```
 
 ### static_access_to_instance_member
 
@@ -19504,43 +19845,43 @@ on an instance of the class.
 The following code produces this diagnostic because `x` is an instance
 field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  static int a;
+  static int a = 0;
 
-  int b;
+  int b = 0;
 }
 
 int f() => C.[!b!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intend to access a static field, then change the name of the field
 to an existing static field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  static int a;
+  static int a = 0;
 
-  int b;
+  int b = 0;
 }
 
 int f() => C.a;
-{% endprettify %}
+```
 
 If you intend to access the instance field, then use an instance of the
 class to access the field:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  static int a;
+  static int a = 0;
 
-  int b;
+  int b = 0;
 }
 
 int f(C c) => c.b;
-{% endprettify %}
+```
 
 ### subtype_of_base_or_final_is_not_base_final_or_sealed
 
@@ -19566,19 +19907,19 @@ The following code produces this diagnostic because the class `B` is a
 subtype of `A`, and `A` is a `base` class, but `B` is neither `base`,
 `final` or `sealed`:
 
-{% prettify dart tag=pre+code %}
+```dart
 base class A {}
 class [!B!] extends A {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add either `base`, `final` or `sealed` to the class or mixin declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 base class A {}
 final class B extends A {}
-{% endprettify %}
+```
 
 ### subtype_of_deferred_class
 
@@ -19603,29 +19944,29 @@ For more information, check out
 
 Given a file `a.dart` that defines the class `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the superclass of `B`
 is declared in a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' deferred as a;
 
 class B extends [!a.A!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to create a subtype of a type from the deferred library, then
 remove the `deferred` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'a.dart' as a;
 
 class B extends a.A {}
-{% endprettify %}
+```
 
 ### subtype_of_disallowed_type
 
@@ -19650,45 +19991,45 @@ implementations.
 The following code produces this diagnostic because `String` is used in an
 `extends` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A extends [!String!] {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `String` is used in an
 `implements` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class B implements [!String!] {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `String` is used in a
 `with` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C with [!String!] {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `String` is used in an
 `on` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 mixin M on [!String!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a different type should be specified, then replace the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A extends Object {}
-{% endprettify %}
+```
 
 If there isn't a different type that would be appropriate, then remove the
 type, and possibly the whole clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class B {}
-{% endprettify %}
+```
 
 ### subtype_of_ffi_class
 
@@ -19712,32 +20053,32 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C` extends
 `Double`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends [!Double!] {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class should extend either `Struct` or `Union`, then change the
 declaration of the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class C extends Struct {
   @Int32()
   external int i;
 }
-{% endprettify %}
+```
 
 If the class shouldn't extend either `Struct` or `Union`, then remove any
 references to FFI classes:
 
-{% prettify dart tag=pre+code %}
+```dart
 final class C {}
-{% endprettify %}
+```
 
 ### subtype_of_sealed_class
 
@@ -19757,34 +20098,34 @@ the same package as the sealed class.
 Given a library in a package other than the package being analyzed that
 contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class A {}
 
 @sealed
 class B {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `C`, which isn't in the
 same package as `B`, is extending the sealed class `B`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:a/a.dart';
 
 [!class C extends B {}!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the class doesn't need to be a subtype of the sealed class, then change
 the declaration so that it isn't:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:a/a.dart';
 
 class B extends A {}
-{% endprettify %}
+```
 
 If the class needs to be a subtype of the sealed class, then either change
 the sealed class so that it's no longer sealed or move the subclass into
@@ -19814,7 +20155,7 @@ For more information about FFI, see [C interop using dart:ffi][ffi].
 The following code produces this diagnostic because the class `C` extends
 `S`, and `S` extends `Struct`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class S extends Struct {
@@ -19824,7 +20165,7 @@ final class S extends Struct {
 final class C extends [!S!] {
   external Pointer g;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -19832,7 +20173,7 @@ If you're trying to define a struct or union that shares some fields
 declared by a different struct or union, then extend `Struct` or `Union`
 directly and copy the shared fields:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:ffi';
 
 final class S extends Struct {
@@ -19844,7 +20185,7 @@ final class C extends Struct {
 
   external Pointer g;
 }
-{% endprettify %}
+```
 
 ### supertype_expands_to_type_parameter
 
@@ -19869,21 +20210,21 @@ The following code produces this diagnostic because the type alias `T`,
 which expands to the type parameter `S`, is used in the `extends` clause of
 the class `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef T<S> = S;
 
 class C extends [!T!]<Object> {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use the value of the type argument directly:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef T<S> = S;
 
 class C extends Object {}
-{% endprettify %}
+```
 
 ### super_formal_parameter_type_is_not_subtype_of_associated
 
@@ -19901,7 +20242,7 @@ The following code produces this diagnostic because the type of the super
 parameter `x` in the constructor for `B` isn't a subtype of the parameter
 `x` in the constructor for `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(num x);
 }
@@ -19909,7 +20250,7 @@ class A {
 class B extends A {
   B(String super.[!x!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -19918,7 +20259,7 @@ the super constructor, then remove the type annotation from the super
 parameter (if the type is implicit, it is inferred from the type in the
 super constructor):
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(num x);
 }
@@ -19926,12 +20267,12 @@ class A {
 class B extends A {
   B(super.x);
 }
-{% endprettify %}
+```
 
 If the type of the super parameter can be a subtype of the corresponding
 parameter's type, then change the type of the super parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(num x);
 }
@@ -19939,12 +20280,12 @@ class A {
 class B extends A {
   B(int super.x);
 }
-{% endprettify %}
+```
 
 If the type of the super parameter can't be changed, then use a normal
 parameter instead of a super parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(num x);
 }
@@ -19952,7 +20293,7 @@ class A {
 class B extends A {
   B(String x) : super(x.length);
 }
-{% endprettify %}
+```
 
 ### super_formal_parameter_without_associated_named
 
@@ -19972,7 +20313,7 @@ super constructor.
 The following code produces this diagnostic because the constructor in `A`
 doesn't have a parameter named `y`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({int? x});
 }
@@ -19980,7 +20321,7 @@ class A {
 class B extends A {
   B({super.[!y!]});
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -19988,7 +20329,7 @@ If the super parameter should be associated with an existing parameter
 from the super constructor, then change the name to match the name of the
 corresponding parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({int? x});
 }
@@ -19996,12 +20337,12 @@ class A {
 class B extends A {
   B({super.x});
 }
-{% endprettify %}
+```
 
 If the super parameter should be associated with a parameter that hasn't
 yet been added to the super constructor, then add it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({int? x, int? y});
 }
@@ -20009,12 +20350,12 @@ class A {
 class B extends A {
   B({super.y});
 }
-{% endprettify %}
+```
 
 If the super parameter doesn't correspond to a named parameter from the
 super constructor, then change it to be a normal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({int? x});
 }
@@ -20022,7 +20363,7 @@ class A {
 class B extends A {
   B({int? y});
 }
-{% endprettify %}
+```
 
 ### super_formal_parameter_without_associated_positional
 
@@ -20046,7 +20387,7 @@ The following code produces this diagnostic because the constructor in `B`
 has a positional super parameter, but there's no positional parameter in
 the super constructor in `A`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A({int? x});
 }
@@ -20054,14 +20395,14 @@ class A {
 class B extends A {
   B(super.[!x!]);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the constructor in `B`
 has two positional super parameters, but there's only one positional
 parameter in the super constructor in `A`, which means that there's no
 corresponding parameter for `y`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -20069,14 +20410,14 @@ class A {
 class B extends A {
   B(super.x, super.[!y!]);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the super constructor should have a positional parameter corresponding
 to the super parameter, then update the super constructor appropriately:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x, int y);
 }
@@ -20084,12 +20425,12 @@ class A {
 class B extends A {
   B(super.x, super.y);
 }
-{% endprettify %}
+```
 
 If the super constructor is correct, or can't be changed, then convert the
 super parameter into a normal parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -20097,7 +20438,7 @@ class A {
 class B extends A {
   B(super.x, int y);
 }
-{% endprettify %}
+```
 
 ### super_invocation_not_last
 
@@ -20116,7 +20457,7 @@ the invocation isn't the last item in the initializer list.
 The following code produces this diagnostic because the invocation of the
 superclass' constructor isn't the last item in the initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -20124,14 +20465,14 @@ class A {
 class B extends A {
   B(int x) : [!super!](x), assert(x >= 0);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Move the invocation of the superclass' constructor to the end of the
 initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int x);
 }
@@ -20139,7 +20480,7 @@ class A {
 class B extends A {
   B(int x) : assert(x >= 0), super(x);
 }
-{% endprettify %}
+```
 
 ### super_in_enum_constructor
 
@@ -20155,25 +20496,25 @@ constructor in an enum contains an invocation of a super constructor.
 The following code produces this diagnostic because the constructor in
 the enum `E` has a super constructor invocation in the initializer list:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   const E() : [!super!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the super constructor invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   e;
 
   const E();
 }
-{% endprettify %}
+```
 
 ### super_in_extension
 
@@ -20191,21 +20532,21 @@ have superclasses, so the `super` keyword serves no purpose.
 The following code produces this diagnostic because `super` can't be used
 in an extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on Object {
   String get displayString => [!super!].toString();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the `super` keyword :
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on Object {
   String get displayString => toString();
 }
-{% endprettify %}
+```
 
 ### super_in_extension_type
 
@@ -20222,25 +20563,25 @@ there's no inherited member that could be invoked.
 
 The following code produces this diagnostic because :
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {
   void m() {
     [!super!].m();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace or remove the `super` invocation:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension type E(String s) {
   void m() {
     s.toLowerCase();
   }
 }
-{% endprettify %}
+```
 
 ### super_in_invalid_context
 
@@ -20256,11 +20597,11 @@ outside of an instance method.
 The following code produces this diagnostic because `super` is used in a
 top-level function:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   [!super!].f();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -20282,23 +20623,23 @@ that the redirecting constructor is redirected to is invoked.
 The following code produces this diagnostic because the constructor `C.a`
 both redirects to `C.b` and invokes a constructor from the superclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b(), [!super()!];
   C.b();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the invocation of the `super` constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C.a() : this.b();
   C.b();
 }
-{% endprettify %}
+```
 
 ### switch_case_completes_normally
 
@@ -20315,7 +20656,7 @@ or `default` label.
 The following code produces this diagnostic because the `case` label with
  a value of zero (`0`) falls through to the `default` statements:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int a) {
   switch (a) {
     [!case!] 0:
@@ -20324,7 +20665,7 @@ void f(int a) {
       return;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -20353,40 +20694,40 @@ The analyzer produces this diagnostic when the type of the expression in a
 The following code produces this diagnostic because the type of `s`
 (`String`) isn't assignable to the type of `0` (`int`):
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   switch ([!s!]) {
     case 0:
       break;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type of the `case` expressions is correct, then change the
 expression in the `switch` statement to have the correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   switch (int.parse(s)) {
     case 0:
       break;
   }
 }
-{% endprettify %}
+```
 
 If the type of the `switch` expression is correct, then change the `case`
 expressions to have the correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   switch (s) {
     case '0':
       break;
   }
 }
-{% endprettify %}
+```
 
 ### tearoff_of_generative_constructor_of_abstract_class
 
@@ -20404,7 +20745,7 @@ any valid use for the torn off constructor.
 The following code produces this diagnostic because the constructor `C.new`
 is being torn off and the class `C` is an abstract class:
 
-{% prettify dart tag=pre+code %}
+```dart
 abstract class C {
   C();
 }
@@ -20412,7 +20753,7 @@ abstract class C {
 void f() {
   [!C.new!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -20436,25 +20777,25 @@ possible security vulnerabilities.
 The following code produces this diagnostic twice because there are
 hidden characters at the start and end of the label string:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = '[!I!]nteractive text[!'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the code points are intended to be included in the string literal,
 then escape them:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = '\u202AInteractive text\u202C';
-{% endprettify %}
+```
 
 If the code points aren't intended to be included in the string literal,
 then remove them:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = 'Interactive text';
-{% endprettify %}
+```
 
 ### text_direction_code_point_in_literal
 
@@ -20474,25 +20815,25 @@ possible security vulnerabilities.
 The following code produces this diagnostic twice because there are
 hidden characters at the start and end of the label string:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = '[!I!]nteractive text[!'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the code points are intended to be included in the string literal,
 then escape them:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = '\u202AInteractive text\u202C';
-{% endprettify %}
+```
 
 If the code points aren't intended to be included in the string literal,
 then remove them:
 
-{% prettify dart tag=pre+code %}
+```dart
 var label = 'Interactive text';
-{% endprettify %}
+```
 
 ### throw_of_invalid_type
 
@@ -20509,21 +20850,21 @@ throw expression isn't assignable to `Object`. It isn't valid to throw
 
 The following code produces this diagnostic because `s` might be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   throw [!s!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add an explicit null-check to the expression:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   throw s!;
 }
-{% endprettify %}
+```
 
 ### top_level_cycle
 
@@ -20542,28 +20883,28 @@ The following code produces this diagnostic because the variables `x` and
 `y` are defined in terms of each other, and neither has an explicit type,
 so the type of the other can't be inferred:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = y;
 var y = [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the two variables don't need to refer to each other, then break the
 cycle:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = 0;
 var y = x;
-{% endprettify %}
+```
 
 If the two variables need to refer to each other, then give at least one of
 them an explicit type:
 
-{% prettify dart tag=pre+code %}
+```dart
 int x = y;
 var y = x;
-{% endprettify %}
+```
 
 Note, however, that while this code doesn't produce any diagnostics, it
 will produce a stack overflow at runtime unless at least one of the
@@ -20585,20 +20926,20 @@ either directly or indirectly.
 The following code produces this diagnostic because `F` depends on itself
 indirectly through `G`:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef [!F!] = void Function(G);
 typedef G = void Function(F);
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change one or more of the typedefs in the cycle so that none of them refer
 to themselves:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef F = void Function(G);
 typedef G = void Function(int);
-{% endprettify %}
+```
 
 ### type_annotation_deferred_class
 
@@ -20619,22 +20960,22 @@ For more information, check out
 The following code produces this diagnostic because the type of the
 parameter `f` is imported from a deferred library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:io' deferred as io;
 
 void f([!io.File!] f) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the imported type, then remove the `deferred`
 keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:io' as io;
 
 void f(io.File f) {}
-{% endprettify %}
+```
 
 If the import is required to be deferred and there's another type that is
 appropriate, then use that type in place of the type from the deferred
@@ -20654,21 +20995,21 @@ as or a subclass of the bounds of the corresponding type parameter.
 The following code produces this diagnostic because `String` isn't a
 subclass of `num`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A<E extends num> {}
 
 var a = A<[!String!]>();
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the type argument to be a subclass of the bounds:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A<E extends num> {}
 
 var a = A<int>();
-{% endprettify %}
+```
 
 ### type_check_with_null
 
@@ -20688,39 +21029,39 @@ tests for `null` explicitly.
 The following code produces this diagnostic because the code is testing to
 see whether the value of `s` is `null` by using a type check:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if ([!s is Null!]) {
     return;
   }
   print(s);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the code is testing to
 see whether the value of `s` is something other than `null` by using a type
 check:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if ([!s is! Null!]) {
     print(s);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the type check with the equivalent comparison with `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if (s == null) {
     return;
   }
   print(s);
 }
-{% endprettify %}
+```
 
 ### type_parameter_referenced_by_static
 
@@ -20737,29 +21078,29 @@ meaning for instances of the class.
 The following code produces this diagnostic because the static method
 `hasType` has a reference to the type parameter `T`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   static bool hasType(Object o) => o is [!T!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the member can be an instance member, then remove the keyword `static`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   bool hasType(Object o) => o is T;
 }
-{% endprettify %}
+```
 
 If the member must be a static member, then make the member be generic:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   static bool hasType<S>(Object o) => o is S;
 }
-{% endprettify %}
+```
 
 Note, however, that there isn't a relationship between `T` and `S`, so this
 second option changes the semantics from what was likely to be intended.
@@ -20781,32 +21122,32 @@ because it will always be the same as itself.
 The following code produces this diagnostic because the bound of `T` is
 `T`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<[!T!] extends T> {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the bound of `T1` is
 `T2`, and the bound of `T2` is `T1`, effectively making the bound of `T1`
 be `T1`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<[!T1!] extends T2, T2 extends T1> {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type parameter needs to be a subclass of some type, then replace the
 bound with the required type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T extends num> {}
-{% endprettify %}
+```
 
 If the type parameter can be any type, then remove the `extends` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {}
-{% endprettify %}
+```
 
 ### type_test_with_non_type
 
@@ -20822,7 +21163,7 @@ or `is!` test isn't a type.
 The following code produces this diagnostic because the right-hand side is
 a parameter, not a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef B = int Function(int);
 
 void f(Object a, B b) {
@@ -20830,14 +21171,14 @@ void f(Object a, B b) {
     return;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intended to use a type test, then replace the right-hand side with a
 type:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef B = int Function(int);
 
 void f(Object a, B b) {
@@ -20845,11 +21186,11 @@ void f(Object a, B b) {
     return;
   }
 }
-{% endprettify %}
+```
 
 If you intended to use a different kind of test, then change the test:
 
-{% prettify dart tag=pre+code %}
+```dart
 typedef B = int Function(int);
 
 void f(Object a, B b) {
@@ -20857,7 +21198,7 @@ void f(Object a, B b) {
     return;
   }
 }
-{% endprettify %}
+```
 
 ### type_test_with_undefined_name
 
@@ -20873,25 +21214,25 @@ type test expression isn't defined.
 The following code produces this diagnostic because the name `Srting` isn't
 defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object o) {
   if (o is [!Srting!]) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Replace the name with the name of a type:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(Object o) {
   if (o is String) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### unchecked_use_of_nullable_value
 
@@ -20925,50 +21266,50 @@ the value isn't `null`.
 The following code produces this diagnostic because `s` can be `null` at
 the point where it's referenced:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if (s.[!length!] > 3) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the value really can be `null`, then add a test to ensure that members
 are only accessed when the value isn't `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if (s != null && s.length > 3) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 If the expression is a variable and the value should never be `null`, then
 change the type of the variable to be non-nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String s) {
   if (s.length > 3) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 If you believe that the value of the expression should never be `null`, but
 you can't change the type of the variable, and you're willing to risk
 having an exception thrown at runtime if you're wrong, then you can assert
 that the value isn't null:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(String? s) {
   if (s!.length > 3) {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### undefined_annotation
 
@@ -20984,29 +21325,29 @@ used as an annotation.
 The following code produces this diagnostic because the name `undefined`
 isn't defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 [!@undefined!]
 void f() {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name is correct, but it isn't declared yet, then declare the name as
 a constant value:
 
-{% prettify dart tag=pre+code %}
+```dart
 const undefined = 'undefined';
 
 @undefined
 void f() {}
-{% endprettify %}
+```
 
 If the name is wrong, replace the name with the name of a valid constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 @deprecated
 void f() {}
-{% endprettify %}
+```
 
 Otherwise, remove the annotation.
 
@@ -21024,11 +21365,11 @@ in the scope in which it's being referenced.
 
 The following code produces this diagnostic because `Piont` isn't defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 class Point {}
 
 void f([!Piont!] p) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21036,11 +21377,11 @@ If the identifier isn't defined, then either define it or replace it with
 the name of a class that is defined. The example above can be corrected by
 fixing the spelling of the class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class Point {}
 
 void f(Point p) {}
-{% endprettify %}
+```
 
 If the class is defined but isn't visible, then you probably need to add an
 import.
@@ -21062,45 +21403,45 @@ doesn't define the constructor being invoked.
 The following code produces this diagnostic because `A` doesn't have an
 unnamed constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.n();
 }
 class B extends A {
   B() : [!super()!];
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `A` doesn't have a
 constructor named `m`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.n();
 }
 class B extends A {
   B() : [!super.m()!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the superclass defines a constructor that should be invoked, then change
 the constructor being invoked:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.n();
 }
 class B extends A {
   B() : super.n();
 }
-{% endprettify %}
+```
 
 If the superclass doesn't define an appropriate constructor, then define
 the constructor being invoked:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A.m();
   A.n();
@@ -21108,7 +21449,7 @@ class A {
 class B extends A {
   B() : super.m();
 }
-{% endprettify %}
+```
 
 ### undefined_enum_constant
 
@@ -21116,8 +21457,8 @@ _There's no constant named '{0}' in '{1}'._
 
 #### Description
 
-The analyzer produces this diagnostic when it encounters an identifier that
-appears to be the name of an enum constant, and the name either isn't
+The analyzer produces this diagnostic when it encounters an identifier
+that appears to be the name of an enum value, and the name either isn't
 defined or isn't visible in the scope in which it's being referenced.
 
 #### Example
@@ -21125,31 +21466,31 @@ defined or isn't visible in the scope in which it's being referenced.
 The following code produces this diagnostic because `E` doesn't define a
 constant named `c`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {a, b}
 
 var e = E.[!c!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the constant should be defined, then add it to the declaration of the
 enum:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {a, b, c}
 
 var e = E.c;
-{% endprettify %}
+```
 
 If the constant shouldn't be defined, then change the name to the name of
 an existing constant:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {a, b}
 
 var e = E.b;
-{% endprettify %}
+```
 
 ### undefined_enum_constructor
 
@@ -21160,85 +21501,85 @@ _The enum doesn't have an unnamed constructor._
 #### Description
 
 The analyzer produces this diagnostic when the constructor invoked to
-initialize an enum constant doesn't exist.
+initialize an enum value doesn't exist.
 
 #### Examples
 
-The following code produces this diagnostic because the enum constant `c`
+The following code produces this diagnostic because the enum value `c`
 is being initialized by the unnamed constructor, but there's no unnamed
 constructor defined in `E`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   [!c!]();
 
   const E.x();
 }
-{% endprettify %}
+```
 
-The following code produces this diagnostic because the enum constant `c`
-is being initialized by the constructor named `x`, but there's no
-constructor named `x` defined in `E`:
+The following code produces this diagnostic because the enum value `c` is
+being initialized by the constructor named `x`, but there's no constructor
+named `x` defined in `E`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c.[!x!]();
 
   const E.y();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
-If the enum constant is being initialized by the unnamed constructor and
-one of the named constructors should have been used, then add the name of
-the constructor:
+If the enum value is being initialized by the unnamed constructor and one
+of the named constructors should have been used, then add the name of the
+constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c.x();
 
   const E.x();
 }
-{% endprettify %}
+```
 
-If the enum constant is being initialized by the unnamed constructor and
-none of the named constructors are appropriate, then define the unnamed
+If the enum value is being initialized by the unnamed constructor and none
+of the named constructors are appropriate, then define the unnamed
 constructor:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c();
 
   const E();
 }
-{% endprettify %}
+```
 
-If the enum constant is being initialized by a named constructor and one
-of the existing constructors should have been used, then change the name
-of the constructor being invoked (or remove it if the unnamed constructor
+If the enum value is being initialized by a named constructor and one of
+the existing constructors should have been used, then change the name of
+the constructor being invoked (or remove it if the unnamed constructor
 should be used):
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c.y();
 
   const E();
   const E.y();
 }
-{% endprettify %}
+```
 
-If the enum constant is being initialized by a named constructor and none
-of the existing constructors should have been used, then define a
-constructor with the name that was used:
+If the enum value is being initialized by a named constructor and none of
+the existing constructors should have been used, then define a constructor
+with the name that was used:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   c.x();
 
   const E.x();
 }
-{% endprettify %}
+```
 
 ### undefined_extension_getter
 
@@ -21256,7 +21597,7 @@ referenced but isn't defined by the specified extension.
 The following code produces this diagnostic because the extension `E`
 doesn't declare an instance getter named `b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String get a => 'a';
 }
@@ -21268,23 +21609,23 @@ extension F on String {
 void f() {
   E('c').[!b!];
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the extension `E`
 doesn't declare a static getter named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {}
 
 var x = E.[!a!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name of the getter is incorrect, then change it to the name of an
 existing getter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String get a => 'a';
 }
@@ -21296,12 +21637,12 @@ extension F on String {
 void f() {
   E('c').a;
 }
-{% endprettify %}
+```
 
 If the name of the getter is correct but the name of the extension is
 wrong, then change the name of the extension to the correct name:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String get a => 'a';
 }
@@ -21313,12 +21654,12 @@ extension F on String {
 void f() {
   F('c').b;
 }
-{% endprettify %}
+```
 
 If the name of the getter and extension are both correct, but the getter
 isn't defined, then define the getter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String get a => 'a';
   String get b => 'z';
@@ -21331,7 +21672,7 @@ extension F on String {
 void f() {
   E('c').b;
 }
-{% endprettify %}
+```
 
 ### undefined_extension_method
 
@@ -21349,7 +21690,7 @@ referenced but isn't defined by the specified extension.
 The following code produces this diagnostic because the extension `E`
 doesn't declare an instance method named `b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String a() => 'a';
 }
@@ -21361,23 +21702,23 @@ extension F on String {
 void f() {
   E('c').[!b!]();
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the extension `E`
 doesn't declare a static method named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {}
 
 var x = E.[!a!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name of the method is incorrect, then change it to the name of an
 existing method:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String a() => 'a';
 }
@@ -21389,12 +21730,12 @@ extension F on String {
 void f() {
   E('c').a();
 }
-{% endprettify %}
+```
 
 If the name of the method is correct, but the name of the extension is
 wrong, then change the name of the extension to the correct name:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String a() => 'a';
 }
@@ -21406,12 +21747,12 @@ extension F on String {
 void f() {
   F('c').b();
 }
-{% endprettify %}
+```
 
 If the name of the method and extension are both correct, but the method
 isn't defined, then define the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   String a() => 'a';
   String b() => 'z';
@@ -21424,7 +21765,7 @@ extension F on String {
 void f() {
   E('c').b();
 }
-{% endprettify %}
+```
 
 ### undefined_extension_operator
 
@@ -21440,24 +21781,24 @@ specific extension when that extension doesn't implement the operator.
 The following code produces this diagnostic because the extension `E`
 doesn't define the operator `*`:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = E('') [!*!] 4;
 
 extension E on String {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the extension is expected to implement the operator, then add an
 implementation of the operator to the extension:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = E('') * 4;
 
 extension E on String {
   int operator *(int multiplier) => length * multiplier;
 }
-{% endprettify %}
+```
 
 If the operator is defined by a different extension, then change the name
 of the extension to the name of the one that defines the operator.
@@ -21465,11 +21806,11 @@ of the extension to the name of the one that defines the operator.
 If the operator is defined on the argument of the extension override, then
 remove the extension override:
 
-{% prettify dart tag=pre+code %}
+```dart
 var x = '' * 4;
 
 extension E on String {}
-{% endprettify %}
+```
 
 ### undefined_extension_setter
 
@@ -21487,7 +21828,7 @@ referenced but isn't defined by the specified extension.
 The following code produces this diagnostic because the extension `E`
 doesn't declare an instance setter named `b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   set a(String v) {}
 }
@@ -21499,25 +21840,25 @@ extension F on String {
 void f() {
   E('c').[!b!] = 'd';
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the extension `E`
 doesn't declare a static setter named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {}
 
 void f() {
   E.[!a!] = 3;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the name of the setter is incorrect, then change it to the name of an
 existing setter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   set a(String v) {}
 }
@@ -21529,12 +21870,12 @@ extension F on String {
 void f() {
   E('c').a = 'd';
 }
-{% endprettify %}
+```
 
 If the name of the setter is correct, but the name of the extension is
 wrong, then change the name of the extension to the correct name:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   set a(String v) {}
 }
@@ -21546,12 +21887,12 @@ extension F on String {
 void f() {
   F('c').b = 'd';
 }
-{% endprettify %}
+```
 
 If the name of the setter and extension are both correct, but the setter
 isn't defined, then define the setter:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E on String {
   set a(String v) {}
   set b(String v) {}
@@ -21564,7 +21905,7 @@ extension F on String {
 void f() {
   E('c').b = 'd';
 }
-{% endprettify %}
+```
 
 ### undefined_function
 
@@ -21581,13 +21922,13 @@ visible in the scope in which it's being referenced.
 The following code produces this diagnostic because the name `emty` isn't
 defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> empty() => [];
 
 void main() {
   print([!emty!]());
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21595,13 +21936,13 @@ If the identifier isn't defined, then either define it or replace it with
 the name of a function that is defined. The example above can be corrected
 by fixing the spelling of the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 List<int> empty() => [];
 
 void main() {
   print(empty());
 }
-{% endprettify %}
+```
 
 If the function is defined but isn't visible, then you probably need to add
 an import or re-arrange your code to make the function visible.
@@ -21623,9 +21964,9 @@ visible in the scope in which it's being referenced.
 The following code produces this diagnostic because `String` has no member
 named `len`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(String s) => s.[!len!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21633,9 +21974,9 @@ If the identifier isn't defined, then either define it or replace it with
 the name of a getter that is defined. The example above can be corrected by
 fixing the spelling of the getter:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(String s) => s.length;
-{% endprettify %}
+```
 
 ### undefined_hidden_name
 
@@ -21651,22 +21992,22 @@ name that isn't defined by the library being imported.
 The following code produces this diagnostic because `dart:math` doesn't
 define the name `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' hide [!String!], max;
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a different name should be hidden, then correct the name. Otherwise,
 remove the name from the list:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' hide max;
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 ### undefined_identifier
 
@@ -21683,9 +22024,9 @@ referenced.
 The following code produces this diagnostic because the name `rihgt` isn't
 defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 int min(int left, int right) => left <= [!rihgt!] ? left : right;
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21693,9 +22034,9 @@ If the identifier isn't defined, then either define it or replace it with
 an identifier that is defined. The example above can be corrected by
 fixing the spelling of the variable:
 
-{% prettify dart tag=pre+code %}
+```dart
 int min(int left, int right) => left <= right ? left : right;
-{% endprettify %}
+```
 
 If the identifier is defined but isn't visible, then you probably need to
 add an import or re-arrange your code to make the identifier visible.
@@ -21717,17 +22058,17 @@ The following code produces this diagnostic because the name `await` is
 used in the body of `f` even though the body of `f` isn't marked with the
 `async` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(p) { [!await!] p; }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add the keyword `async` to the function body:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(p) async { await p; }
-{% endprettify %}
+```
 
 ### undefined_method
 
@@ -21746,9 +22087,9 @@ visible in the scope in which it's being referenced.
 The following code produces this diagnostic because the identifier
 `removeMiddle` isn't defined:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(List<int> l) => l.[!removeMiddle!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21756,9 +22097,9 @@ If the identifier isn't defined, then either define it or replace it with
 the name of a method that is defined. The example above can be corrected by
 fixing the spelling of the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(List<int> l) => l.removeLast();
-{% endprettify %}
+```
 
 ### undefined_named_parameter
 
@@ -21775,59 +22116,59 @@ define a parameter with the same name.
 The following code produces this diagnostic because `m` doesn't declare a
 named parameter named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  m({int b}) {}
+  m({int? b}) {}
 }
 
 void f(C c) {
   c.m([!a!]: 1);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the argument name is mistyped, then replace it with the correct name.
 The example above can be fixed by changing `a` to `b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  m({int b}) {}
+  m({int? b}) {}
 }
 
 void f(C c) {
   c.m(b: 1);
 }
-{% endprettify %}
+```
 
 If a subclass adds a parameter with the name in question, then cast the
 receiver to the subclass:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  m({int b}) {}
+  m({int? b}) {}
 }
 
 class D extends C {
-  m({int a, int b}) {}
+  m({int? a, int? b}) {}
 }
 
 void f(C c) {
   (c as D).m(a: 1);
 }
-{% endprettify %}
+```
 
 If the parameter should be added to the function, then add it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  m({int a, int b}) {}
+  m({int? a, int? b}) {}
 }
 
 void f(C c) {
   c.m(a: 1);
 }
-{% endprettify %}
+```
 
 ### undefined_operator
 
@@ -21843,23 +22184,23 @@ invoked on an object for which the operator isn't defined.
 The following code produces this diagnostic because the class `C` doesn't
 define the operator `+`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {}
 
 C f(C c) => c [!+!] 2;
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the operator should be defined for the class, then define it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   C operator +(int i) => this;
 }
 
 C f(C c) => c + 2;
-{% endprettify %}
+```
 
 ### undefined_prefixed_name
 
@@ -21877,13 +22218,13 @@ libraries imported using that prefix.
 The following code produces this diagnostic because `dart:core` doesn't
 define anything named `a`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:core' as p;
 
 void f() {
   p.[!a!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21908,24 +22249,24 @@ specifies a parameter name that isn't defined by the annotated function.
 The following code produces this diagnostic because the function `f`
 doesn't have a parameter named `b`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @UseResult.unless(parameterDefined: [!'b'!])
 int f([int? a]) => a ?? 0;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the argument named `parameterDefined` to match the name of one of
 the parameters to the function:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 @UseResult.unless(parameterDefined: 'a')
 int f([int? a]) => a ?? 0;
-{% endprettify %}
+```
 
 ### undefined_setter
 
@@ -21944,14 +22285,14 @@ visible in the scope in which the identifier is being referenced.
 The following code produces this diagnostic because there isn't a setter
 named `z`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x = 0;
   void m(int y) {
     this.[!z!] = y;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -21959,14 +22300,14 @@ If the identifier isn't defined, then either define it or replace it with
 the name of a setter that is defined. The example above can be corrected by
 fixing the spelling of the setter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int x = 0;
   void m(int y) {
     this.x = y;
   }
 }
-{% endprettify %}
+```
 
 ### undefined_shown_name
 
@@ -21982,22 +22323,22 @@ name that isn't defined by the library being imported.
 The following code produces this diagnostic because `dart:math` doesn't
 define the name `String`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min, [!String!];
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If a different name should be shown, then correct the name. Otherwise,
 remove the name from the list:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min;
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 ### undefined_super_member
 
@@ -22022,24 +22363,24 @@ member with that name in the superclass chain.
 The following code produces this diagnostic because `Object` doesn't define
 a method named `n`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m() {
     super.[!n!]();
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `Object` doesn't define
 a getter named `g`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void m() {
     super.[!g!];
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -22068,25 +22409,25 @@ check out the [documentation on platform declarations](https://dart.dev/tools/pu
 The following `pubspec.yaml` produces this diagnostic because the platform
 `browser` is unknown.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   [!browser:!]
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you can rely on automatic platform detection, then omit the
 top-level `platforms` key.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
-{% endprettify %}
+```
 
 If you need to manually specify the list of supported platforms, then
 write the `platforms` field as a map with known platform names as keys.
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 platforms:
   # These are the known platforms
@@ -22096,7 +22437,7 @@ platforms:
   macos:
   web:
   windows:
-{% endprettify %}
+```
 
 ### unnecessary_cast
 
@@ -22112,25 +22453,25 @@ known to be of the type that it's being cast to.
 The following code produces this diagnostic because `n` is already known to
 be an `int` as a result of the `is` test:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(num n) {
   if (n is int) {
     ([!n as int!]).isEven;
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary cast:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(num n) {
   if (n is int) {
     n.isEven;
   }
 }
-{% endprettify %}
+```
 
 ### unnecessary_dev_dependency
 
@@ -22149,24 +22490,24 @@ package, so there's no need to also list them under `dev_dependencies`.
 The following code produces this diagnostic because the package `meta` is
 listed under both `dependencies` and `dev_dependencies`:
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
 dev_dependencies:
   [!meta!]: ^1.0.2
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the entry under `dev_dependencies` (and the `dev_dependencies` key
 if that's the only package listed there):
 
-{% prettify yaml tag=pre+code %}
+```yaml
 name: example
 dependencies:
   meta: ^1.0.2
-{% endprettify %}
+```
 
 ### unnecessary_final
 
@@ -22185,18 +22526,18 @@ implicitly `final`.
 The following code produces this diagnostic because the field initializing
 parameter has the keyword `final`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   int value;
 
   A([!final!] this.value);
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the super parameter in
 `B` has the keyword `final`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int value);
 }
@@ -22204,13 +22545,13 @@ class A {
 class B extends A {
   B([!final!] super.value);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary `final` keyword:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   A(int value);
 }
@@ -22218,7 +22559,7 @@ class A {
 class B extends A {
   B(super.value);
 }
-{% endprettify %}
+```
 
 ### unnecessary_import
 
@@ -22235,28 +22576,28 @@ library are also visible through another import.
 
 Given a file `a.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {}
-{% endprettify %}
+```
 
 And, given a file `b.dart` that contains the following:
 
-{% prettify dart tag=pre+code %}
+```dart
 export 'a.dart';
 
 class B {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the class `A`, which is
 imported from `a.dart`, is also imported from `b.dart`. Removing the import
 of `a.dart` leaves the semantics unchanged:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'a.dart'!];
 import 'b.dart';
 
 void f(A a, B b) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -22291,17 +22632,17 @@ already known (based on the comparison operator being used).
 The following code produces this diagnostic because `d` is being compared
 to `double.nan`:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool isNaN(double d) => d [!== double.nan!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 Use the getter `double.isNaN` instead:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool isNaN(double d) => d.isNaN;
-{% endprettify %}
+```
 
 ### unnecessary_non_null_assertion
 
@@ -22316,21 +22657,21 @@ can't be `null`.
 
 The following code produces this diagnostic because `x` can't be `null`:
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(int x) {
   return x[!!!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the null check operator (`!`):
 
-{% prettify dart tag=pre+code %}
+```dart
 int f(int x) {
   return x;
 }
-{% endprettify %}
+```
 
 ### unnecessary_no_such_method
 
@@ -22355,7 +22696,7 @@ The following code produces this diagnostic because the declaration of
 `noSuchMethod` in `A` makes the declaration of `noSuchMethod` in `B`
 unnecessary:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   @override
   dynamic noSuchMethod(x) => super.noSuchMethod(x);
@@ -22366,19 +22707,19 @@ class B extends A {
     return super.noSuchMethod(y);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unnecessary declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   @override
   dynamic noSuchMethod(x) => super.noSuchMethod(x);
 }
 class B extends A {}
-{% endprettify %}
+```
 
 ### unnecessary_null_assert_pattern
 
@@ -22395,21 +22736,21 @@ to match a value that isn't nullable.
 The following code produces this diagnostic because the variable `x` isn't
 nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a[!!!] when a > 0) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the null-assert pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a when a > 0) {}
 }
-{% endprettify %}
+```
 
 ### unnecessary_null_check_pattern
 
@@ -22426,21 +22767,21 @@ match a value that isn't nullable.
 The following code produces this diagnostic because the value `x` isn't
 nullable:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a[!?!] when a > 0) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the null-check pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x case var a when a > 0) {}
 }
-{% endprettify %}
+```
 
 ### unnecessary_null_comparison
 
@@ -22460,45 +22801,45 @@ they serve no purpose.
 The following code produces this diagnostic because `x` can never be
 `null`, so the comparison always evaluates to `true`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x [!!= null!]) {
     print(x);
   }
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `x` can never be
 `null`, so the comparison always evaluates to `false`:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   if (x [!== null!]) {
     throw ArgumentError("x can't be null");
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the other operand should be able to be `null`, then change the type of
 the operand:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int? x) {
   if (x != null) {
     print(x);
   }
 }
-{% endprettify %}
+```
 
 If the other operand really can't be `null`, then remove the condition:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   print(x);
 }
-{% endprettify %}
+```
 
 ### unnecessary_question_mark
 
@@ -22515,17 +22856,17 @@ inherently nullable so the question mark doesn't change the semantics.
 The following code produces this diagnostic because the question mark
 following `dynamic` isn't necessary:
 
-{% prettify dart tag=pre+code %}
+```dart
 dynamic[!?!] x;
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unneeded question mark:
 
-{% prettify dart tag=pre+code %}
+```dart
 dynamic x;
-{% endprettify %}
+```
 
 ### unnecessary_set_literal
 
@@ -22548,25 +22889,25 @@ braces aren't necessary and can be removed.
 The following code produces this diagnostic because the closure being
 passed to `g` has a return type of `void`, but is returning a set:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   g(() => [!{1}!]);
 }
 
 void g(void Function() p) {}
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the braces from around the value:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   g(() => 1);
 }
 
 void g(void Function() p) {}
-{% endprettify %}
+```
 
 ### unnecessary_type_check
 
@@ -22584,25 +22925,25 @@ either `is` or `is!`) is known at compile time.
 The following code produces this diagnostic because the test `a is Object?`
 is always `true`:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool f<T>(T a) => [!a is Object?!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type check doesn't check what you intended to check, then change the
 test:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool f<T>(T a) => a is Object;
-{% endprettify %}
+```
 
 If the type check does check what you intended to check, then replace the
 type check with its known value or completely remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 bool f<T>(T a) => true;
-{% endprettify %}
+```
 
 ### unqualified_reference_to_non_local_static_member
 
@@ -22622,7 +22963,7 @@ The following code produces this diagnostic because the static field `x` is
 referenced in the getter `g` without prefixing it with the name of the
 defining class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   static int x = 3;
 }
@@ -22630,13 +22971,13 @@ class A {
 class B extends A {
   int get g => [!x!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Prefix the name of the static member with the name of the declaring class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class A {
   static int x = 3;
 }
@@ -22644,7 +22985,7 @@ class A {
 class B extends A {
   int get g => A.x;
 }
-{% endprettify %}
+```
 
 ### unqualified_reference_to_static_member_of_extended_type
 
@@ -22662,7 +23003,7 @@ superclasses.
 The following code produces this diagnostic because `m` is a static member
 of the extended type `C`:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static void m() {}
 }
@@ -22672,7 +23013,7 @@ extension E on C {
     [!m!]();
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -22680,7 +23021,7 @@ If you're trying to reference a static member that's declared outside the
 extension, then add the name of the class or extension before the reference
 to the member:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static void m() {}
 }
@@ -22690,11 +23031,11 @@ extension E on C {
     C.m();
   }
 }
-{% endprettify %}
+```
 
 If you're referencing a member that isn't declared yet, add a declaration:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   static void m() {}
 }
@@ -22706,7 +23047,7 @@ extension E on C {
 
   void m() {}
 }
-{% endprettify %}
+```
 
 ### unreachable_switch_case
 
@@ -22723,7 +23064,7 @@ matched by an earlier `case` clause.
 The following code produces this diagnostic because the value `1` was
 matched in the preceding case:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case 1:
@@ -22732,13 +23073,13 @@ void f(int x) {
       print('two');
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change one or both of the conflicting cases to match different values:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int x) {
   switch (x) {
     case 1:
@@ -22747,7 +23088,7 @@ void f(int x) {
       print('two');
   }
 }
-{% endprettify %}
+```
 
 ### unused_catch_clause
 
@@ -22763,7 +23104,7 @@ used in the `catch` block.
 
 The following code produces this diagnostic because `e` isn't referenced:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     int.parse(';');
@@ -22771,13 +23112,13 @@ void f() {
     // ignored
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the unused `catch` clause:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     int.parse(';');
@@ -22785,7 +23126,7 @@ void f() {
     // ignored
   }
 }
-{% endprettify %}
+```
 
 ### unused_catch_stack
 
@@ -22801,7 +23142,7 @@ The analyzer produces this diagnostic when the stack trace parameter in a
 The following code produces this diagnostic because `stackTrace` isn't
 referenced:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
@@ -22809,14 +23150,14 @@ void f() {
     // ...
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you need to reference the stack trace parameter, then add a reference to
 it. Otherwise, remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {
   try {
     // ...
@@ -22824,7 +23165,7 @@ void f() {
     // ...
   }
 }
-{% endprettify %}
+```
 
 ### unused_element
 
@@ -22856,32 +23197,32 @@ Not all references to an element will mark it as "used":
 Assuming that no code in the library references `_C`, the following code
 produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 class [!_C!] {}
-{% endprettify %}
+```
 
 Assuming that no code in the library passes a value for `y` in any
 invocation of `_m`, the following code produces this diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  void _m(int x, [int [!y!]]) {}
+  void _m(int x, [int? [!y!]]) {}
 
   void n() => _m(0);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the declaration isn't needed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   void _m(int x) {}
 
   void n() => _m(0);
 }
-{% endprettify %}
+```
 
 If the declaration is intended to be used, then add the code to use it.
 
@@ -22899,7 +23240,7 @@ never read, even if it's written in one or more places.
 The following code produces this diagnostic because the field
 `_originalValue` isn't read anywhere in the library:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   final String [!_originalValue!];
   final String _currentValue;
@@ -22908,7 +23249,7 @@ class C {
 
   String get value => _currentValue;
 }
-{% endprettify %}
+```
 
 It might appear that the field `_originalValue` is being read in the
 initializer (`_currentValue = _originalValue`), but that is actually a
@@ -22935,11 +23276,11 @@ library.
 The following code produces this diagnostic because nothing defined in
 `dart:async` is referenced in the library:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'dart:async'!];
 
 void main() {}
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -22962,29 +23303,29 @@ found.
 The following code produces this diagnostic because the label `loop` isn't
 referenced anywhere in the method:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int limit) {
   [!loop:!] for (int i = 0; i < limit; i++) {
     print(i);
   }
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the label isn't needed, then remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int limit) {
   for (int i = 0; i < limit; i++) {
     print(i);
   }
 }
-{% endprettify %}
+```
 
 If the label is needed, then use it:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f(int limit) {
   loop: for (int i = 0; i < limit; i++) {
     print(i);
@@ -22993,7 +23334,7 @@ void f(int limit) {
     }
   }
 }
-{% endprettify %}
+```
 
 ### unused_local_variable
 
@@ -23009,11 +23350,11 @@ never read, even if it's written in one or more places.
 The following code produces this diagnostic because the value of `count` is
 never read:
 
-{% prettify dart tag=pre+code %}
+```dart
 void main() {
   int [!count!] = 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -23041,7 +23382,7 @@ The following code produces this diagnostic because the invocation of
 `c.a()` isn't used, even though the method `a` is annotated with
 [`useResult`][meta-useResult]:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -23054,14 +23395,14 @@ class C {
 void f(C c) {
   c.[!a!]();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If you intended to invoke the annotated function, then use the value that
 was returned:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -23074,12 +23415,12 @@ class C {
 void f(C c) {
   print(c.a());
 }
-{% endprettify %}
+```
 
 If you intended to invoke a different function, then correct the name of
 the function being invoked:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'package:meta/meta.dart';
 
 class C {
@@ -23092,7 +23433,7 @@ class C {
 void f(C c) {
   c.b();
 }
-{% endprettify %}
+```
 
 ### unused_shown_name
 
@@ -23109,21 +23450,21 @@ name can be removed.
 The following code produces this diagnostic because the function `max`
 isn't used:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min, [!max!];
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 #### Common fixes
 
 Either use the name or remove it:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math' show min;
 
 var x = min(0, 1);
-{% endprettify %}
+```
 
 ### uri_does_not_exist
 
@@ -23134,14 +23475,22 @@ _Target of URI doesn't exist: '{0}'._
 The analyzer produces this diagnostic when an import, export, or part
 directive is found where the URI refers to a file that doesn't exist.
 
-#### Example
+#### Examples
 
 If the file `lib.dart` doesn't exist, the following code produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'lib.dart'!];
-{% endprettify %}
+```
+
+If the file `lib.dart` doesn't exist, the following code produces this
+diagnostic:
+
+```dart
+/// @docImport [!'lib.dart'!];
+library;
+```
 
 #### Common fixes
 
@@ -23171,9 +23520,9 @@ generators, such as one of the following:
 If the file `lib.g.dart` doesn't exist, the following code produces this
 diagnostic:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'lib.g.dart'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -23200,21 +23549,21 @@ values of the URIs.
 The following code produces this diagnostic because the string in the
 `import` directive contains an interpolation:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'dart:$m'!];
 
 const m = 'math';
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the interpolation from the URI:
 
-{% prettify dart tag=pre+code %}
+```dart
 import 'dart:math';
 
 var zero = min(0, 0);
-{% endprettify %}
+```
 
 ### use_of_native_extension
 
@@ -23230,9 +23579,9 @@ The analyzer produces this diagnostic when a library is imported using the
 The following code produces this diagnostic because the native library `x`
 is being imported using a scheme of `dart-ext`:
 
-{% prettify dart tag=pre+code %}
+```dart
 import [!'dart-ext:x'!];
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -23255,13 +23604,13 @@ assignment.
 The following code produces this diagnostic because `f` doesn't produce an
 object on which `toString` can be invoked:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f() {}
 
 void g() {
   [!f()!].toString();
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
@@ -23275,7 +23624,7 @@ _A member named 'values' can't be declared in an enum._
 #### Description
 
 The analyzer produces this diagnostic when an enum declaration defines a
-member named `values`, whether the member is an enum constant, an instance
+member named `values`, whether the member is an enum value, an instance
 member, or a static member.
 
 Any such member conflicts with the implicit declaration of the static
@@ -23287,23 +23636,23 @@ constants.
 The following code produces this diagnostic because the enum `E` defines
 an instance member named `values`:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   v;
   void [!values!]() {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the name of the conflicting member:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E {
   v;
   void getValues() {}
 }
-{% endprettify %}
+```
 
 ### variable_pattern_keyword_in_declaration_context
 
@@ -23320,23 +23669,23 @@ within a declaration context.
 The following code produces this diagnostic because the variable patterns
 in the record pattern are in a declaration context:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   var ([!var!] x, y) = r;
   print(x + y);
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Remove the `var` or `final` keyword(s) within the variable pattern:
 
-{% prettify dart tag=pre+code %}
+```dart
 void f((int, int) r) {
   var (x, y) = r;
   print(x + y);
 }
-{% endprettify %}
+```
 
 ### variable_type_mismatch
 
@@ -23352,28 +23701,122 @@ expression would result in a `CastException`.
 The following code produces this diagnostic because the value of `x` is an
 `int`, which can't be assigned to `y` because an `int` isn't a `String`:
 
-{% prettify dart tag=pre+code %}
-const Object x = 0;
+```dart
+const dynamic x = 0;
 const String y = [!x!];
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the declaration of the constant is correct, then change the value being
 assigned to be of the correct type:
 
-{% prettify dart tag=pre+code %}
-const Object x = 0;
+```dart
+const dynamic x = 0;
 const String y = '$x';
-{% endprettify %}
+```
 
 If the assigned value is correct, then change the declaration to have the
 correct type:
 
-{% prettify dart tag=pre+code %}
-const Object x = 0;
+```dart
+const int x = 0;
 const int y = x;
-{% endprettify %}
+```
+
+### workspace_field_not_list
+
+_The value of the 'workspace' field is required to be a list of relative file
+paths._
+
+#### Description
+
+The analyzer produces this diagnostic when the value of the `workspace` key
+isn't a list.
+
+#### Example
+
+The following code produces this diagnostic because the value of the
+`workspace` key is a string when a list is expected:
+
+```yaml
+name: example
+workspace: [!notPaths!]
+```
+
+#### Common fixes
+
+Change the value of the workspace field so that it's a list:
+
+```yaml
+name: example
+workspace:
+    - pkg/package_1
+    - pkg/package_2
+```
+
+### workspace_value_not_string
+
+_Workspace entries are required to be directory paths (strings)._
+
+#### Description
+
+The analyzer produces this diagnostic when a `workspace` list contains a
+value that isn't a string.
+
+#### Example
+
+The following code produces this diagnostic because the `workspace` list
+contains a map:
+
+```yaml
+name: example
+workspace:
+    - [!image.gif: true!]
+```
+
+#### Common fixes
+
+Change the `workspace` list so that it only contains valid POSIX-style directory
+paths:
+
+```yaml
+name: example
+workspace:
+    - pkg/package_1
+    - pkg/package_2
+```
+
+### workspace_value_not_subdirectory
+
+_Workspace values must be a relative path of a subdirectory of '{0}'._
+
+#### Description
+
+The analyzer produces this diagnostic when a `workspace` list contains a
+value that is not a subdirectory of the directory containing the `pubspec.yaml`` file.
+
+#### Example
+
+The following code produces this diagnostic because the value in the `workspace` list is not a
+relative path of a subdirectory of the directory containing the 'pubspec.yaml' file:
+
+```yaml
+name: example
+workspace:
+    - /home/my_package
+```
+
+#### Common fixes
+
+Change the `workspace` list so that it only contains only subdirectory paths.
+
+```yaml
+name: example
+workspace:
+    - pkg/package_1
+    - pkg/package_2
+```
 
 ### wrong_number_of_parameters_for_operator
 
@@ -23391,21 +23834,21 @@ the wrong number of parameters.
 The following code produces this diagnostic because the operator `+` must
 have a single parameter corresponding to the right operand:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int operator [!+!](a, b) => 0;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add or remove parameters to match the required number:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int operator +(a) => 0;
 }
-{% endprettify %}
+```
 
 ### wrong_number_of_parameters_for_setter
 
@@ -23421,31 +23864,31 @@ declare exactly one required positional parameter.
 The following code produces this diagnostic because the setter `s` declares
 two required parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   set [!s!](int x, int y) {}
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because the setter `s` declares
 one optional parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
-  set [!s!]([int x]) {}
+  set [!s!]([int? x]) {}
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the declaration so that there's exactly one required positional
 parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   set s(int x) {}
 }
-{% endprettify %}
+```
 
 ### wrong_number_of_type_arguments
 
@@ -23468,31 +23911,31 @@ The following code produces this diagnostic because `C` has one type
 parameter but two type arguments are provided when it is used as a type
 annotation:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<E> {}
 
 void f([!C<int, int>!] x) {}
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `C` declares one type
 parameter, but two type arguments are provided when creating an instance:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<E> {}
 
 var c = [!C<int, int>!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add or remove type arguments, as necessary, to match the number of type
 parameters defined for the type:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<E> {}
 
 void f(C<int> x) {}
-{% endprettify %}
+```
 
 ### wrong_number_of_type_arguments_constructor
 
@@ -23512,34 +23955,34 @@ The following code produces this diagnostic because the type parameters
 (`<String>`) follow the name of the constructor rather than the name of the
 class:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   C.named();
 }
 C f() => C.named[!<String>!]();
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type arguments are for the class' type parameters, then move the
 type arguments to follow the class name:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   C.named();
 }
 C f() => C<String>.named();
-{% endprettify %}
+```
 
 If the type arguments aren't for the class' type parameters, then remove
 them:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C<T> {
   C.named();
 }
 C f() => C.named();
-{% endprettify %}
+```
 
 ### wrong_number_of_type_arguments_enum
 
@@ -23548,42 +23991,42 @@ given._
 
 #### Description
 
-The analyzer produces this diagnostic when an enum constant in an enum
-that has type parameters is instantiated and type arguments are provided,
-but the number of type arguments isn't the same as the number of type
+The analyzer produces this diagnostic when an enum value in an enum that
+has type parameters is instantiated and type arguments are provided, but
+the number of type arguments isn't the same as the number of type
 parameters.
 
 #### Example
 
-The following code produces this diagnostic because the enum constant `c`
+The following code produces this diagnostic because the enum value `c`
 provides one type argument even though the enum `E` is declared to have
 two type parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E<T, U> {
   c[!<int>!]()
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the number of type parameters is correct, then change the number of
 type arguments to match the number of type parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E<T, U> {
   c<int, String>()
 }
-{% endprettify %}
+```
 
 If the number of type arguments is correct, then change the number of type
 parameters to match the number of type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 enum E<T> {
   c<int>()
 }
-{% endprettify %}
+```
 
 ### wrong_number_of_type_arguments_extension
 
@@ -23602,7 +24045,7 @@ The following code produces this diagnostic because the extension `E` is
 declared to have a single type parameter (`T`), but the extension override
 has two type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E<T> on List<T> {
   int get len => length;
 }
@@ -23610,14 +24053,14 @@ extension E<T> on List<T> {
 void f(List<int> p) {
   E[!<int, String>!](p).len;
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Change the type arguments so that there are the same number of type
 arguments as there are type parameters:
 
-{% prettify dart tag=pre+code %}
+```dart
 extension E<T> on List<T> {
   int get len => length;
 }
@@ -23625,7 +24068,7 @@ extension E<T> on List<T> {
 void f(List<int> p) {
   E<int>(p).len;
 }
-{% endprettify %}
+```
 
 ### wrong_number_of_type_arguments_method
 
@@ -23645,36 +24088,36 @@ The following code produces this diagnostic because the invocation of the
 method `m` has two type arguments, but the declaration of `m` only has one
 type parameter:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int m<A>(A a) => 0;
 }
 
 int f(C c) => c.m[!<int, int>!](2);
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the type arguments are necessary, then make them match the number of
 type parameters by either adding or removing type arguments:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int m<A>(A a) => 0;
 }
 
 int f(C c) => c.m<int>(2);
-{% endprettify %}
+```
 
 If the type arguments aren't necessary, then remove them:
 
-{% prettify dart tag=pre+code %}
+```dart
 class C {
   int m<A>(A a) => 0;
 }
 
 int f(C c) => c.m(2);
-{% endprettify %}
+```
 
 ### yield_in_non_generator
 
@@ -23695,32 +24138,32 @@ appears in a function whose body isn't marked with one of the `async*` or
 The following code produces this diagnostic because `yield` is being used
 in a function whose body doesn't have a modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> get digits {
   yield* [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 }
-{% endprettify %}
+```
 
 The following code produces this diagnostic because `yield*` is being used
 in a function whose body has the `async` modifier rather than the `async*`
 modifier:
 
-{% prettify dart tag=pre+code %}
+```dart
 Stream<int> get digits async {
   yield* [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 Add a modifier, or change the existing modifier to be either `async*` or
 `sync*`:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> get digits sync* {
   yield* [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 }
-{% endprettify %}
+```
 
 ### yield_of_invalid_type
 
@@ -23742,28 +24185,4541 @@ The following code produces this diagnostic because the getter `zero` is
 declared to return an `Iterable` that returns integers, but the `yield` is
 returning a string from the iterable:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> get zero sync* {
   yield [!'0'!];
 }
-{% endprettify %}
+```
 
 #### Common fixes
 
 If the return type of the function is correct, then fix the expression
 following the keyword `yield` to return the correct type:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<int> get zero sync* {
   yield 0;
 }
-{% endprettify %}
+```
 
 If the expression following the `yield` is correct, then change the return
 type of the function to allow it:
 
-{% prettify dart tag=pre+code %}
+```dart
 Iterable<String> get zero sync* {
   yield '0';
 }
-{% endprettify %}
+```
+
+### always_declare_return_types
+
+_The function '{0}' should have a return type but doesn't._
+
+_The method '{0}' should have a return type but doesn't._
+
+#### Description
+
+The analyzer produces this diagnostic when a method or function doesn't
+have an explicit return type.
+
+#### Example
+
+The following code produces this diagnostic because the function `f`
+doesn't have a return type:
+
+```dart
+[!f!]() {}
+```
+
+#### Common fixes
+
+Add an explicit return type:
+
+```dart
+void f() {}
+```
+
+### always_put_control_body_on_new_line
+
+_Statement should be on a separate line._
+
+#### Description
+
+The analyzer produces this diagnostic when the code being controlled by a
+control flow statement (`if`, `for`, `while`, or `do`) is on the same line
+as the control flow statement.
+
+#### Example
+
+The following code produces this diagnostic because the `return` statement
+is on the same line as the `if` that controls whether the `return` will be
+executed:
+
+```dart
+void f(bool b) {
+  if (b) [!return!];
+}
+```
+
+#### Common fixes
+
+Put the controlled statement onto a separate, indented, line:
+
+```dart
+void f(bool b) {
+  if (b)
+    return;
+}
+```
+
+### always_put_required_named_parameters_first
+
+_Required named parameters should be before optional named parameters._
+
+#### Description
+
+The analyzer produces this diagnostic when required named parameters occur
+after optional named parameters.
+
+#### Example
+
+The following code produces this diagnostic because the required parameter
+`x` is after the optional parameter `y`:
+
+```dart
+void f({int? y, required int [!x!]}) {}
+```
+
+#### Common fixes
+
+Reorder the parameters so that all required named parameters are before
+any optional named parameters:
+
+```dart
+void f({required int x, int? y}) {}
+```
+
+### always_use_package_imports
+
+_Use 'package:' imports for files in the 'lib' directory._
+
+#### Description
+
+The analyzer produces this diagnostic when an `import` in a library inside
+the `lib` directory uses a relative path to import another library inside
+the `lib` directory of the same package.
+
+#### Example
+
+Given that a file named `a.dart` and the code below are both inside the
+`lib` directory of the same package, the following code produces this
+diagnostic because a relative URI is used to import `a.dart`:
+
+```dart
+import [!'a.dart'!];
+```
+
+#### Common fixes
+
+Use a package import:
+
+```dart
+import 'package:p/a.dart';
+```
+
+### annotate_overrides
+
+_The member '{0}' overrides an inherited member but isn't annotated with
+'@override'._
+
+#### Description
+
+The analyzer produces this diagnostic when a member overrides an inherited
+member, but isn't annotated with `@override`.
+
+#### Example
+
+The following code produces this diagnostic because the method `m` in the
+class `B` overrides the method with the same name in class `A`, but isn't
+marked as an intentional override:
+
+```dart
+class A {
+  void m() {}
+}
+
+class B extends A {
+  void [!m!]() {}
+}
+```
+
+#### Common fixes
+
+If the member in the subclass is intended to override the member in the
+superclass, then add an `@override` annotation:
+
+```dart
+class A {
+  void m() {}
+}
+
+class B extends A {
+  @override
+  void m() {}
+}
+```
+
+If the member in the subclass is not intended to override the member in
+the superclass, then rename one of the members:
+
+```dart
+class A {
+  void m() {}
+}
+
+class B extends A {
+  void m2() {}
+}
+```
+
+### avoid_empty_else
+
+_Empty statements are not allowed in an 'else' clause._
+
+#### Description
+
+The analyzer produces this diagnostic when the statement after an `else`
+is an empty statement (a semicolon).
+
+For more information, see the documentation for
+[`avoid_empty_else`](https://dart.dev/diagnostics/avoid_empty_else).
+
+#### Example
+
+The following code produces this diagnostic because the statement
+following the `else` is an empty statement:
+
+```dart
+void f(int x, int y) {
+  if (x > y)
+    print("1");
+  else [!;!]
+    print("2");
+}
+```
+
+#### Common fixes
+
+If the statement after the empty statement is intended to be executed only
+when the condition is `false`, then remove the empty statement:
+
+```dart
+void f(int x, int y) {
+  if (x > y)
+    print("1");
+  else
+    print("2");
+}
+```
+
+If there is no code that is intended to be executed only when the
+condition is `false`, then remove the whole `else` clause:
+
+```dart
+void f(int x, int y) {
+  if (x > y)
+    print("1");
+  print("2");
+}
+```
+
+### avoid_function_literals_in_foreach_calls
+
+_Function literals shouldn't be passed to 'forEach'._
+
+#### Description
+
+The analyzer produces this diagnostic when the argument to
+`Iterable.forEach` is a closure.
+
+#### Example
+
+The following code produces this diagnostic because the argument to the
+invocation of `forEach` is a closure:
+
+```dart
+void f(Iterable<String> s) {
+  s.[!forEach!]((e) => print(e));
+}
+```
+
+#### Common fixes
+
+If the closure can be replaced by a tear-off, then replace the closure:
+
+```dart
+void f(Iterable<String> s) {
+  s.forEach(print);
+}
+```
+
+If the closure can't be replaced by a tear-off, then use a `for` loop to
+iterate over the elements:
+
+```dart
+void f(Iterable<String> s) {
+  for (var e in s) {
+    print(e);
+  }
+}
+```
+
+### avoid_init_to_null
+
+_Redundant initialization to 'null'._
+
+#### Description
+
+The analyzer produces this diagnostic when a nullable variable is
+explicitly initialized to `null`. The variable can be a local variable,
+field, or top-level variable.
+
+A variable or field that isn't explicitly initialized automatically gets
+initialized to `null`. There's no concept of "uninitialized memory" in
+Dart.
+
+#### Example
+
+The following code produces this diagnostic because the variable `f` is
+explicitly initialized to `null`:
+
+```dart
+class C {
+  int? [!f = null!];
+
+  void m() {
+    if (f != null) {
+      print(f);
+    }
+  }
+}
+```
+
+#### Common fixes
+
+Remove the unnecessary initialization:
+
+```dart
+class C {
+  int? f;
+
+  void m() {
+    if (f != null) {
+      print(f);
+    }
+  }
+}
+```
+
+### avoid_print
+
+_Don't invoke 'print' in production code._
+
+#### Description
+
+The analyzer produces this diagnostic when the function `print` is invoked
+in production code.
+
+#### Example
+
+The following code produces this diagnostic because the function `print`
+can't be invoked in production:
+
+```dart
+void f(int x) {
+  [!print!]('x = $x');
+}
+```
+
+#### Common fixes
+
+If you're writing code that uses Flutter, then use the function
+[`debugPrint`][debugPrint], guarded by a test
+using [`kDebugMode`][kDebugMode]:
+
+```dart
+import 'package:flutter/foundation.dart';
+
+void f(int x) {
+  if (kDebugMode) {
+    debugPrint('x = $x');
+  }
+}
+```
+
+If you're writing code that doesn't use Flutter, then use a logging
+service, such as [`package:logging`][package-logging], to write the
+information.
+
+### avoid_relative_lib_imports
+
+_Can't use a relative path to import a library in 'lib'._
+
+#### Description
+
+The analyzer produces this diagnostic when the URI in an `import`
+directive has `lib` in the path.
+
+#### Example
+
+Assuming that there is a file named `a.dart` in the `lib` directory:
+
+```dart
+class A {}
+```
+
+The following code produces this diagnostic because the import contains a
+path that includes `lib`:
+
+```dart
+import [!'../lib/a.dart'!];
+```
+
+#### Common fixes
+
+Rewrite the import to not include `lib` in the URI:
+
+```dart
+import 'a.dart';
+```
+
+### avoid_renaming_method_parameters
+
+_The parameter name '{0}' doesn't match the name '{1}' in the overridden
+method._
+
+#### Description
+
+The analyzer produces this diagnostic when a method that overrides a
+method from a superclass changes the names of the parameters.
+
+#### Example
+
+The following code produces this diagnostic because the parameter of the
+method `m` in `B` is named `b`, which is different from the name of the
+overridden method's parameter in `A`:
+
+```dart
+class A {
+  void m(int a) {}
+}
+
+class B extends A {
+  @override
+  void m(int [!b!]) {}
+}
+```
+
+#### Common fixes
+
+Rename one of the parameters so that they are the same:
+
+```dart
+class A {
+  void m(int a) {}
+}
+
+class B extends A {
+  @override
+  void m(int a) {}
+}
+```
+
+### avoid_return_types_on_setters
+
+_Unnecessary return type on a setter._
+
+#### Description
+
+The analyzer produces this diagnostic when a setter has an explicit return
+type.
+
+Setters never return a value, so declaring the return type of one is
+redundant.
+
+#### Example
+
+The following code produces this diagnostic because the setter `s` has an
+explicit return type (`void`):
+
+```dart
+[!void!] set s(int p) {}
+```
+
+#### Common fixes
+
+Remove the return type:
+
+```dart
+set s(int p) {}
+```
+
+### avoid_returning_null_for_void
+
+_Don't return 'null' from a function with a return type of 'void'._
+
+_Don't return 'null' from a method with a return type of 'void'._
+
+#### Description
+
+The analyzer produces this diagnostic when a function that has a return
+type of `void` explicitly returns `null`.
+
+#### Example
+
+The following code produces this diagnostic because there is an explicit
+return of `null` in a `void` function:
+
+```dart
+void f() {
+  [!return null;!]
+}
+```
+
+#### Common fixes
+
+Remove the unnecessary explicit `null`:
+
+```dart
+void f() {
+  return;
+}
+```
+
+### avoid_shadowing_type_parameters
+
+_The type parameter '{0}' shadows a type parameter from the enclosing {1}._
+
+#### Description
+
+The analyzer produces this diagnostic when a type parameter shadows a type
+parameter from an enclosing declaration.
+
+Shadowing a type parameter with a different type parameter can lead to
+subtle bugs that are difficult to debug.
+
+#### Example
+
+The following code produces this diagnostic because the type parameter `T`
+defined by the method `m` shadows the type parameter `T` defined by the
+class `C`:
+
+```dart
+class C<T> {
+  void m<[!T!]>() {}
+}
+```
+
+#### Common fixes
+
+Rename one of the type parameters:
+
+```dart
+class C<T> {
+  void m<S>() {}
+}
+```
+
+### avoid_single_cascade_in_expression_statements
+
+_Unnecessary cascade expression._
+
+#### Description
+
+The analyzer produces this diagnostic when a single cascade operator is
+used and the value of the expression isn't being used for anything (such
+as being assigned to a variable or being passed as an argument).
+
+#### Example
+
+The following code produces this diagnostic because the value of the
+cascade expression `s..length` isn't being used:
+
+```dart
+void f(String s) {
+  [!s..length!];
+}
+```
+
+#### Common fixes
+
+Replace the cascade operator with a simple access operator:
+
+```dart
+void f(String s) {
+  s.length;
+}
+```
+
+### avoid_slow_async_io
+
+_Use of an async 'dart:io' method._
+
+#### Description
+
+The analyzer produces this diagnostic when an asynchronous file I/O method
+with a synchronous equivalent is used.
+
+The following are the specific flagged asynchronous methods:
+
+- `Directory.exists`
+- `Directory.stat`
+- `File.lastModified`
+- `File.exists`
+- `File.stat`
+- `FileSystemEntity.isDirectory`
+- `FileSystemEntity.isFile`
+- `FileSystemEntity.isLink`
+- `FileSystemEntity.type`
+
+#### Example
+
+The following code produces this diagnostic because the async method
+`exists` is invoked:
+
+```dart
+import 'dart:io';
+
+Future<void> g(File f) async {
+  await [!f.exists()!];
+}
+```
+
+#### Common fixes
+
+Use the synchronous version of the method:
+
+```dart
+import 'dart:io';
+
+void g(File f) {
+  f.existsSync();
+}
+```
+
+### avoid_type_to_string
+
+_Using 'toString' on a 'Type' is not safe in production code._
+
+#### Description
+
+The analyzer produces this diagnostic when the method `toString` is
+invoked on a value whose static type is `Type`.
+
+#### Example
+
+The following code produces this diagnostic because the method `toString`
+is invoked on the `Type` returned by `runtimeType`:
+
+```dart
+bool isC(Object o) => o.runtimeType.[!toString!]() == 'C';
+
+class C {}
+```
+
+#### Common fixes
+
+If it's essential that the type is exactly the same, then use an explicit
+comparison:
+
+```dart
+bool isC(Object o) => o.runtimeType == C;
+
+class C {}
+```
+
+If it's alright for instances of subtypes of the type to return `true`,
+then use a type check:
+
+```dart
+bool isC(Object o) => o is C;
+
+class C {}
+```
+
+### avoid_types_as_parameter_names
+
+_The parameter name '{0}' matches a visible type name._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a parameter in a
+parameter list is the same as a visible type (a type whose name is in
+scope).
+
+This often indicates that the intended name of the parameter is missing,
+causing the name of the type to be used as the name of the parameter
+rather than the type of the parameter. Even when that's not the case (the
+name of the parameter is intentional), the name of the parameter will
+shadow the existing type, which can lead to bugs that are difficult to
+diagnose.
+
+#### Example
+
+The following code produces this diagnostic because the function `f` has a
+parameter named `int`, which shadows the type `int` from `dart:core`:
+
+```dart
+void f([!int!]) {}
+```
+
+#### Common fixes
+
+If the parameter name is missing, then add a name for the parameter:
+
+```dart
+void f(int x) {}
+```
+
+If the parameter is intended to have an implicit type of `dynamic`, then
+rename the parameter so that it doesn't shadow the name of any visible type:
+
+```dart
+void f(int_) {}
+```
+
+### avoid_unnecessary_containers
+
+_Unnecessary instance of 'Container'._
+
+#### Description
+
+The analyzer produces this diagnostic when a widget tree contains an
+instance of `Container` and the only argument to the constructor is
+`child:`.
+
+#### Example
+
+The following code produces this diagnostic because the invocation of the
+`Container` constructor only has a `child:` argument:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget buildRow() {
+  return [!Container!](
+    child: Row(
+      children: [
+        Text('a'),
+        Text('b'),
+      ],
+    )
+  );
+}
+```
+
+#### Common fixes
+
+If you intended to provide other arguments to the constructor, then add
+them:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget buildRow() {
+  return Container(
+    color: Colors.red.shade100,
+    child: Row(
+      children: [
+        Text('a'),
+        Text('b'),
+      ],
+    )
+  );
+}
+```
+
+If no other arguments are needed, then unwrap the child widget:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget buildRow() {
+  return Row(
+    children: [
+      Text('a'),
+      Text('b'),
+    ],
+  );
+}
+```
+
+### avoid_web_libraries_in_flutter
+
+_Don't use web-only libraries outside Flutter web plugin packages._
+
+#### Description
+
+The analyzer produces this diagnostic when a library in a package that
+isn't a web plugin contains an import of a web-only library:
+- `dart:html`
+- `dart:js`
+- `dart:js_util`
+- `dart:js_interop`
+- `dart:js_interop_unsafe`
+- `package:js`
+- `package:web`
+
+#### Example
+
+When found in a package that isn't a web plugin, the following code
+produces this diagnostic because it imports `dart:html`:
+
+```dart
+import [!'dart:html'!];
+
+import 'package:flutter/material.dart';
+
+class C {}
+```
+
+#### Common fixes
+
+If the package isn't intended to be a web plugin, then remove the import:
+
+```dart
+import 'package:flutter/material.dart';
+
+class C {}
+```
+
+If the package is intended to be a web plugin, then add the following
+lines to the `pubspec.yaml` file of the package:
+
+```yaml
+flutter:
+  plugin:
+    platforms:
+      web:
+        pluginClass: HelloPlugin
+        fileName: hello_web.dart
+```
+
+See [Developing packages & plugins](https://flutter.dev/to/develop-packages)
+for more information.
+
+### await_only_futures
+
+_Uses 'await' on an instance of '{0}', which is not a subtype of 'Future'._
+
+#### Description
+
+The analyzer produces this diagnostic when the expression after `await`
+has any type other than `Future<T>`, `FutureOr<T>`, `Future<T>?`,
+`FutureOr<T>?` or `dynamic`.
+
+An exception is made for the expression `await null` because it is a
+common way to introduce a microtask delay.
+
+Unless the expression can produce a `Future`, the `await` is unnecessary
+and can cause a reader to assume a level of asynchrony that doesn't exist.
+
+#### Example
+
+The following code produces this diagnostic because the expression after
+`await` has the type `int`:
+
+```dart
+void f() async {
+  [!await!] 23;
+}
+```
+
+#### Common fixes
+
+Remove the `await`:
+
+```dart
+void f() async {
+  23;
+}
+```
+
+### camel_case_extensions
+
+_The extension name '{0}' isn't an UpperCamelCase identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of an extension
+doesn't use the 'UpperCamelCase' naming convention.
+
+#### Example
+
+The following code produces this diagnostic because the name of the
+extension doesn't start with an uppercase letter:
+
+```dart
+extension [!stringExtension!] on String {}
+```
+
+#### Common fixes
+
+If the extension needs to have a name (needs to be visible outside this
+library), then rename the extension so that it has a valid name:
+
+```dart
+extension StringExtension on String {}
+```
+
+If the extension doesn't need to have a name, then remove the name of the
+extension:
+
+```dart
+extension on String {}
+```
+
+### camel_case_types
+
+_The type name '{0}' isn't an UpperCamelCase identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a type (a class,
+mixin, enum, or typedef) doesn't use the 'UpperCamelCase' naming
+convention.
+
+#### Example
+
+The following code produces this diagnostic because the name of the class
+doesn't start with an uppercase letter:
+
+```dart
+class [!c!] {}
+```
+
+#### Common fixes
+
+Rename the type so that it has a valid name:
+
+```dart
+class C {}
+```
+
+### cancel_subscriptions
+
+_Uncancelled instance of 'StreamSubscription'._
+
+#### Description
+
+The analyzer produces this diagnostic when an instance of
+`StreamSubscription` is created but the method `cancel` isn't invoked.
+
+#### Example
+
+The following code produces this diagnostic because the `subscription`
+isn't canceled:
+
+```dart
+import 'dart:async';
+
+void f(Stream stream) {
+  // ignore: unused_local_variable
+  var [!subscription = stream.listen((_) {})!];
+}
+```
+
+#### Common fixes
+
+Cancel the subscription:
+
+```dart
+import 'dart:async';
+
+void f(Stream stream) {
+  var subscription = stream.listen((_) {});
+  subscription.cancel();
+}
+```
+
+### close_sinks
+
+_Unclosed instance of 'Sink'._
+
+#### Description
+
+The analyzer produces this diagnostic when an instance of `Sink` is
+created but the method `close` isn't invoked.
+
+#### Example
+
+The following code produces this diagnostic because the `sink` isn't
+closed:
+
+```dart
+import 'dart:io';
+
+void g(File f) {
+  var [!sink = f.openWrite()!];
+  sink.write('x');
+}
+```
+
+#### Common fixes
+
+Close the sink:
+
+```dart
+import 'dart:io';
+
+void g(File f) {
+  var sink = f.openWrite();
+  sink.write('x');
+  sink.close();
+}
+```
+
+### collection_methods_unrelated_type
+
+_The argument type '{0}' isn't related to '{1}'._
+
+#### Description
+
+The analyzer produces this diagnostic when any one of several methods in
+the core libraries are invoked with arguments of an inappropriate type.
+These methods are ones that don't provide a specific enough type for the
+parameter to allow the normal type checking to catch the error.
+
+The arguments that are checked are:
+- an argument to `Iterable<E>.contains` should be related to `E`
+- an argument to `List<E>.remove` should be related to `E`
+- an argument to `Map<K, V>.containsKey` should be related to `K`
+- an argument to `Map<K, V>.containsValue` should be related to `V`
+- an argument to `Map<K, V>.remove` should be related to `K`
+- an argument to `Map<K, V>.[]` should be related to `K`
+- an argument to `Queue<E>.remove` should be related to `E`
+- an argument to `Set<E>.lookup` should be related to `E`
+- an argument to `Set<E>.remove` should be related to `E`
+
+#### Example
+
+The following code produces this diagnostic because the argument to
+`contains` is a `String`, which isn't assignable to `int`, the element
+type of the list `l`:
+
+```dart
+bool f(List<int> l)  => l.contains([!'1'!]);
+```
+
+#### Common fixes
+
+If the element type is correct, then change the argument to have the same
+type:
+
+```dart
+bool f(List<int> l)  => l.contains(1);
+```
+
+If the argument type is correct, then change the element type:
+
+```dart
+bool f(List<String> l)  => l.contains('1');
+```
+
+### constant_identifier_names
+
+_The constant name '{0}' isn't a lowerCamelCase identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a constant doesn't
+follow the lowerCamelCase naming convention.
+
+#### Example
+
+The following code produces this diagnostic because the name of the
+top-level variable isn't a lowerCamelCase identifier:
+
+```dart
+const [!EMPTY_STRING!] = '';
+```
+
+#### Common fixes
+
+Rewrite the name to follow the lowerCamelCase naming convention:
+
+```dart
+const emptyString = '';
+```
+
+### control_flow_in_finally
+
+_Use of '{0}' in a 'finally' clause._
+
+#### Description
+
+The analyzer produces this diagnostic when a `finally` clause contains a
+`return`, `break`, or `continue` statement.
+
+#### Example
+
+The following code produces this diagnostic because there is a `return`
+statement inside a `finally` block:
+
+```dart
+int f() {
+  try {
+    return 1;
+  } catch (e) {
+    print(e);
+  } finally {
+    [!return 0;!]
+  }
+}
+```
+
+#### Common fixes
+
+If the statement isn't needed, then remove the statement, and remove the
+`finally` clause if the block is empty:
+
+```dart
+int f() {
+  try {
+    return 1;
+  } catch (e) {
+    print(e);
+  }
+}
+```
+
+If the statement is needed, then move the statement outside the `finally`
+block:
+
+```dart
+int f() {
+  try {
+    return 1;
+  } catch (e) {
+    print(e);
+  }
+  return 0;
+}
+```
+
+### curly_braces_in_flow_control_structures
+
+_Statements in {0} should be enclosed in a block._
+
+#### Description
+
+The analyzer produces this diagnostic when a control structure (`if`,
+`for`, `while`, or `do` statement) has a statement other than a block.
+
+#### Example
+
+The following code produces this diagnostic because the `then` statement
+is not enclosed in a block:
+
+```dart
+int f(bool b) {
+  if (b)
+    [!return 1;!]
+  return 0;
+}
+```
+
+#### Common fixes
+
+Add braces around the statement that should be a block:
+
+```dart
+int f(bool b) {
+  if (b) {
+    return 1;
+  }
+  return 0;
+}
+```
+
+### dangling_library_doc_comments
+
+_Dangling library doc comment._
+
+#### Description
+
+The analyzer produces this diagnostic when a documentation comment that
+appears to be library documentation isn't followed by a `library`
+directive. More specifically, it is produced when a documentation comment
+appears before the first directive in the library, assuming that it isn't
+a `library` directive, or before the first top-level declaration and is
+separated from the declaration by one or more blank lines.
+
+#### Example
+
+The following code produces this diagnostic because there's a
+documentation comment before the first `import` directive:
+
+```dart
+[!/// This is a great library.!]
+import 'dart:core';
+```
+
+The following code produces this diagnostic because there's a
+documentation comment before the first class declaration, but there's a
+blank line between the comment and the declaration.
+
+```dart
+[!/// This is a great library.!]
+
+class C {}
+```
+
+#### Common fixes
+
+If the comment is library documentation, then add a `library` directive
+without a name:
+
+```dart
+/// This is a great library.
+library;
+
+import 'dart:core';
+```
+
+If the comment is documentation for the following declaration, then remove
+the blank line:
+
+```dart
+/// This is a great library.
+class C {}
+```
+
+### depend_on_referenced_packages
+
+_The imported package '{0}' isn't a dependency of the importing package._
+
+#### Description
+
+The analyzer produces this diagnostic when a package import refers to a
+package that is not specified in the `pubspec.yaml` file.
+
+Depending explicitly on packages that you reference ensures they will
+always exist and allows you to put a dependency constraint on them to
+guard against breaking changes.
+
+#### Example
+
+Given a `pubspec.yaml` file containing the following:
+
+```yaml
+dependencies:
+  meta: ^3.0.0
+```
+
+The following code produces this diagnostic because there is no dependency
+on the package `a`:
+
+```dart
+import 'package:a/a.dart';
+```
+
+#### Common fixes
+
+Whether the dependency should be a regular dependency or dev dependency
+depends on whether the package is referenced from a public library (one
+under either `lib` or `bin`), or only private libraries, (such as one
+under `test`).
+
+If the package is referenced from at least one public library, then add a
+regular dependency on the package to the `pubspec.yaml` file under the
+`dependencies` field:
+
+```yaml
+dependencies:
+  a: ^1.0.0
+  meta: ^3.0.0
+```
+
+If the package is referenced only from private libraries, then add a
+dev dependency on the package to the `pubspec.yaml` file under the
+`dev_dependencies` field:
+
+```yaml
+dependencies:
+  meta: ^3.0.0
+dev_dependencies:
+  a: ^1.0.0
+```
+
+### empty_catches
+
+_Empty catch block._
+
+#### Description
+
+The analyzer produces this diagnostic when the block in a `catch` clause
+is empty.
+
+#### Example
+
+The following code produces this diagnostic because the catch block is
+empty:
+
+```dart
+void f() {
+  try {
+    print('Hello');
+  } catch (exception) [!{}!]
+}
+```
+
+#### Common fixes
+
+If the exception shouldn't be ignored, then add code to handle the
+exception:
+
+```dart
+void f() {
+  try {
+    print('We can print.');
+  } catch (exception) {
+    print("We can't print.");
+  }
+}
+```
+
+If the exception is intended to be ignored, then add a comment explaining
+why:
+
+```dart
+void f() {
+  try {
+    print('We can print.');
+  } catch (exception) {
+    // Nothing to do.
+  }
+}
+```
+
+If the exception is intended to be ignored and there isn't any good
+explanation for why, then rename the exception parameter:
+
+```dart
+void f() {
+  try {
+    print('We can print.');
+  } catch (_) {}
+}
+```
+
+### empty_constructor_bodies
+
+_Empty constructor bodies should be written using a ';' rather than '{}'._
+
+#### Description
+
+The analyzer produces this diagnostic when a constructor has an empty
+block body.
+
+#### Example
+
+The following code produces this diagnostic because the constructor for
+`C` has a block body that is empty:
+
+```dart
+class C {
+  C() [!{}!]
+}
+```
+
+#### Common fixes
+
+Replace the block with a semicolon:
+
+```dart
+class C {
+  C();
+}
+```
+
+### empty_statements
+
+_Unnecessary empty statement._
+
+#### Description
+
+The analyzer produces this diagnostic when an empty statement is found.
+
+#### Example
+
+The following code produces this diagnostic because the statement
+controlled by the `while` loop is an empty statement:
+
+```dart
+void f(bool condition) {
+  while (condition)[!;!]
+    g();
+}
+
+void g() {}
+```
+
+#### Common fixes
+
+If there are no statements that need to be controlled, then remove both
+the empty statement and the control structure it's part of (being careful
+that any other code being removed doesn't have a side-effect that needs to
+be preserved):
+
+```dart
+void f(bool condition) {
+  g();
+}
+
+void g() {}
+```
+
+If there are no statements that need to be controlled but the control
+structure is still required for other reasons, then replace the empty
+statement with a block to make the structure of the code more obvious:
+
+```dart
+void f(bool condition) {
+  while (condition) {}
+  g();
+}
+
+void g() {}
+```
+
+If there are statements that need to be controlled, remove the empty
+statement and adjust the code so that the appropriate statements are being
+controlled, possibly adding a block:
+
+```dart
+void f(bool condition) {
+  while (condition) {
+    g();
+  }
+}
+
+void g() {}
+```
+
+### file_names
+
+_The file name '{0}' isn't a lower\_case\_with\_underscores identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a `.dart` file
+doesn't use lower_case_with_underscores.
+
+#### Example
+
+A file named `SliderMenu.dart` produces this diagnostic because the file
+name uses the UpperCamelCase convention.
+
+#### Common fixes
+
+Rename the file to use the lower_case_with_underscores convention, such as
+`slider_menu.dart`.
+
+### hash_and_equals
+
+_Missing a corresponding override of '{0}'._
+
+#### Description
+
+The analyzer produces this diagnostic when a class or mixin either
+overrides the definition of `==` but doesn't override the definition of
+`hashCode`, or conversely overrides the definition of `hashCode` but
+doesn't override the definition of `==`.
+
+Both the `==` operator and the `hashCode` property of objects must be
+consistent for a common hash map implementation to function properly. As a
+result, when overriding either method, both should be overridden.
+
+#### Example
+
+The following code produces this diagnostic because the class `C`
+overrides the `==` operator but doesn't override the getter `hashCode`:
+
+```dart
+class C {
+  final int value;
+
+  C(this.value);
+
+  @override
+  bool operator [!==!](Object other) =>
+      other is C &&
+      other.runtimeType == runtimeType &&
+      other.value == value;
+}
+```
+
+#### Common fixes
+
+If you need to override one of the members, then add an override of the
+other:
+
+```dart
+class C {
+  final int value;
+
+  C(this.value);
+
+  @override
+  bool operator ==(Object other) =>
+      other is C &&
+      other.runtimeType == runtimeType &&
+      other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+}
+```
+
+If you don't need to override either of the members, then remove the
+unnecessary override:
+
+```dart
+class C {
+  final int value;
+
+  C(this.value);
+}
+```
+
+### implementation_imports
+
+_Import of a library in the 'lib/src' directory of another package._
+
+#### Description
+
+The analyzer produces this diagnostic when an import references a library
+that's inside the `lib/src` directory of a different package, which
+violates [the convention for pub
+packages](https://dart.dev/tools/pub/package-layout#implementation-files).
+
+#### Example
+
+The following code, assuming that it isn't part of the `ffi` package,
+produces this diagnostic because the library being imported is inside the
+top-level `src` directory:
+
+```dart
+import [!'package:ffi/src/allocation.dart'!];
+```
+
+#### Common fixes
+
+If the library being imported contains code that's part of the public API,
+then import the public library that exports the public API:
+
+```dart
+import 'package:ffi/ffi.dart';
+```
+
+If the library being imported isn't part of the public API of the package,
+then either find a different way to accomplish your goal, assuming that
+it's possible, or open an issue asking the package authors to make it part
+of the public API.
+
+### implicit_call_tearoffs
+
+_Implicit tear-off of the 'call' method._
+
+#### Description
+
+The analyzer produces this diagnostic when an object with a `call` method
+is assigned to a function-typed variable, implicitly tearing off the
+`call` method.
+
+#### Example
+
+The following code produces this diagnostic because an instance of
+`Callable` is passed to a function expecting a `Function`:
+
+```dart
+class Callable {
+  void call() {}
+}
+
+void callIt(void Function() f) {
+  f();
+}
+
+void f() {
+  callIt([!Callable()!]);
+}
+```
+
+#### Common fixes
+
+Explicitly tear off the `call` method:
+
+```dart
+class Callable {
+  void call() {}
+}
+
+void callIt(void Function() f) {
+  f();
+}
+
+void f() {
+  callIt(Callable().call);
+}
+```
+
+### invalid_use_of_do_not_submit_member
+
+_Uses of '{0}' should not be submitted to source control._
+
+#### Description
+
+The analyzer produces this diagnostic when a member that is annotated with
+[`@doNotSubmit`][meta-doNotSubmit] is referenced outside of a member
+declaration that is also annotated with `@doNotSubmit`.
+
+#### Example
+
+Given a file `a.dart` containing the following declaration:
+
+```dart
+import 'package:meta/meta.dart';
+
+@doNotSubmit
+void emulateCrash() { /* ... */ }
+```
+
+The following code produces this diagnostic because the declaration is
+being referenced outside of a member that is also annotated with
+`@doNotSubmit`:
+
+```dart
+import 'a.dart';
+
+void f() {
+  [!emulateCrash!]();
+}
+```
+
+#### Common fixes
+
+Most commonly, when complete with local testing, the reference to the
+member should be removed.
+
+If building additional functionality on top of the member, annotate the
+newly added member with `@doNotSubmit` as well:
+
+```dart
+import 'package:meta/meta.dart';
+
+import 'a.dart';
+
+@doNotSubmit
+void emulateCrashWithOtherFunctionality() {
+  emulateCrash();
+  // do other things.
+}
+```
+
+### library_names
+
+_The library name '{0}' isn't a lower\_case\_with\_underscores identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a library doesn't
+use the lower_case_with_underscores naming convention.
+
+#### Example
+
+The following code produces this diagnostic because the library name
+`libraryName` isn't a lower_case_with_underscores identifier:
+
+```dart
+library [!libraryName!];
+```
+
+#### Common fixes
+
+If the library name is not required, then remove the library name:
+
+```dart
+library;
+```
+
+If the library name is required, then convert it to use the
+lower_case_with_underscores naming convention:
+
+```dart
+library library_name;
+```
+
+### library_prefixes
+
+_The prefix '{0}' isn't a lower\_case\_with\_underscores identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when an import prefix doesn't use
+the lower_case_with_underscores naming convention.
+
+#### Example
+
+The following code produces this diagnostic because the prefix
+`ffiSupport` isn't a lower_case_with_underscores identifier:
+
+```dart
+import 'package:ffi/ffi.dart' as [!ffiSupport!];
+```
+
+#### Common fixes
+
+Convert the prefix to use the lower_case_with_underscores naming
+convention:
+
+```dart
+import 'package:ffi/ffi.dart' as ffi_support;
+```
+
+### library_private_types_in_public_api
+
+_Invalid use of a private type in a public API._
+
+#### Description
+
+The analyzer produces this diagnostic when a type that is not part of the
+public API of a library is referenced in the public API of that library.
+
+Using a private type in a public API can make the API unusable outside the
+defining library.
+
+#### Example
+
+The following code produces this diagnostic because the parameter `c` of
+the public function `f` has a type that is library private (`_C`):
+
+```dart
+void f([!_C!] c) {}
+
+class _C {}
+```
+
+#### Common fixes
+
+If the API doesn't need to be used outside the defining library, then make
+it private:
+
+```dart
+void _f(_C c) {}
+
+class _C {}
+```
+
+If the API needs to be part of the public API of the library, then either
+use a different type that's public, or make the referenced type public:
+
+```dart
+void f(C c) {}
+
+class C {}
+```
+
+### literal_only_boolean_expressions
+
+_The Boolean expression has a constant value._
+
+#### Description
+
+The analyzer produces this diagnostic when the value of the condition in
+an `if` or loop statement is known to be either always `true` or always
+`false`. An exception is made for a `while` loop whose condition is the
+Boolean literal `true`.
+
+#### Examples
+
+The following code produces this diagnostic because the condition will
+always evaluate to `true`:
+
+```dart
+void f() {
+  [!if (true) {
+    print('true');
+  }!]
+}
+```
+
+The lint will evaluate a subset of expressions that are composed of
+constants, so the following code will also produce this diagnostic because
+the condition will always evaluate to `false`:
+
+```dart
+void g(int i) {
+  [!if (1 == 0 || 3 > 4) {
+    print('false');
+  }!]
+}
+```
+
+#### Common fixes
+
+If the condition is wrong, then correct the condition so that it's value
+can't be known at compile time:
+
+```dart
+void g(int i) {
+  if (i == 0 || i > 4) {
+    print('false');
+  }
+}
+```
+
+If the condition is correct, then simplify the code to not evaluate the
+condition:
+
+```dart
+void f() {
+  print('true');
+}
+```
+
+### no_adjacent_strings_in_list
+
+_Don't use adjacent strings in a list literal._
+
+#### Description
+
+The analyzer produces this diagnostic when two string literals are
+adjacent in a list literal. Adjacent strings in Dart are concatenated
+together to form a single string, but the intent might be for each string
+to be a separate element in the list.
+
+#### Example
+
+The following code produces this diagnostic because the strings `'a'` and
+`'b'` are adjacent:
+
+```dart
+List<String> list = [[!'a' 'b'!], 'c'];
+```
+
+#### Common fixes
+
+If the two strings are intended to be separate elements of the list, then
+add a comma between them:
+
+```dart
+List<String> list = ['a', 'b', 'c'];
+```
+
+If the two strings are intended to be a single concatenated string, then
+either manually merge the strings:
+
+```dart
+List<String> list = ['ab', 'c'];
+```
+
+Or use the `+` operator to concatenate the strings:
+
+```dart
+List<String> list = ['a' + 'b', 'c'];
+```
+
+### no_duplicate_case_values
+
+_The value of the case clause ('{0}') is equal to the value of an earlier case
+clause ('{1}')._
+
+#### Description
+
+The analyzer produces this diagnostic when two or more `case` clauses in
+the same `switch` statement have the same value.
+
+Any `case` clauses after the first can't be executed, so having duplicate
+`case` clauses is misleading.
+
+This diagnostic is often the result of either a typo or a change to the
+value of a constant.
+
+#### Example
+
+The following code produces this diagnostic because two case clauses have
+the same value (1):
+
+```dart
+// @dart = 2.14
+void f(int v) {
+  switch (v) {
+    case 1:
+      break;
+    case [!1!]:
+      break;
+  }
+}
+```
+
+#### Common fixes
+
+If one of the clauses should have a different value, then change the value
+of the clause:
+
+```dart
+void f(int v) {
+  switch (v) {
+    case 1:
+      break;
+    case 2:
+      break;
+  }
+}
+```
+
+If the value is correct, then merge the statements into a single clause:
+
+```dart
+void f(int v) {
+  switch (v) {
+    case 1:
+      break;
+  }
+}
+```
+
+### no_leading_underscores_for_library_prefixes
+
+_The library prefix '{0}' starts with an underscore._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a prefix declared
+on an import starts with an underscore.
+
+Library prefixes are inherently not visible outside the declaring library,
+so a leading underscore indicating private adds no value.
+
+#### Example
+
+The following code produces this diagnostic because the prefix `_core`
+starts with an underscore:
+
+```dart
+import 'dart:core' as [!_core!];
+```
+
+#### Common fixes
+
+Remove the underscore:
+
+```dart
+import 'dart:core' as core;
+```
+
+### no_leading_underscores_for_local_identifiers
+
+_The local variable '{0}' starts with an underscore._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a local variable
+starts with an underscore.
+
+Local variables are inherently not visible outside the declaring library,
+so a leading underscore indicating private adds no value.
+
+#### Example
+
+The following code produces this diagnostic because the parameter `_s`
+starts with an underscore:
+
+```dart
+int f(String [!_s!]) => _s.length;
+```
+
+#### Common fixes
+
+Remove the underscore:
+
+```dart
+int f(String s) => s.length;
+```
+
+### no_logic_in_create_state
+
+_Don't put any logic in 'createState'._
+
+#### Description
+
+The analyzer produces this diagnostic when an implementation of
+`createState` in a subclass of `StatefulWidget` contains any logic other
+than the return of the result of invoking a zero argument constructor.
+
+#### Examples
+
+The following code produces this diagnostic because the constructor
+invocation has arguments:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends StatefulWidget {
+  @override
+  MyState createState() => [!MyState(0)!];
+}
+
+class MyState extends State {
+  int x;
+
+  MyState(this.x);
+}
+```
+
+#### Common fixes
+
+Rewrite the code so that `createState` doesn't contain any logic:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends StatefulWidget {
+  @override
+  MyState createState() => MyState();
+}
+
+class MyState extends State {
+  int x = 0;
+
+  MyState();
+}
+```
+
+### no_wildcard_variable_uses
+
+_The referenced identifier is a wildcard._
+
+#### Description
+
+The analyzer produces this diagnostic when either a parameter or local
+variable whose name consists of only underscores is referenced. Such
+names will become non-binding in a future version of the Dart language,
+making the reference illegal.
+
+#### Example
+
+The following code produces this diagnostic because the name of the
+parameter consists of two underscores:
+
+```dart
+void f(int __) {
+  print([!__!]);
+}
+```
+
+The following code produces this diagnostic because the name of the
+local variable consists of a single underscore:
+
+```dart
+void f() {
+  int _ = 0;
+  print([!_!]);
+}
+```
+
+#### Common fixes
+
+If the variable or parameter is intended to be referenced, then give it a
+name that has at least one non-underscore character:
+
+```dart
+void f(int p) {
+  print(p);
+}
+```
+
+If the variable or parameter is not intended to be referenced, then
+replace the reference with a different expression:
+
+```dart
+void f() {
+  print(0);
+}
+```
+
+### non_constant_identifier_names
+
+_The variable name '{0}' isn't a lowerCamelCase identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a class member,
+top-level declaration, variable, parameter, named parameter, or named
+constructor that isn't declared to be `const`, doesn't use the
+lowerCamelCase convention.
+
+#### Example
+
+The following code produces this diagnostic because the top-level variable
+`Count` doesn't start with a lowercase letter:
+
+```dart
+var [!Count!] = 0;
+```
+
+#### Common fixes
+
+Change the name in the declaration to follow the lowerCamelCase
+convention:
+
+```dart
+var count = 0;
+```
+
+### null_check_on_nullable_type_parameter
+
+_The null check operator shouldn't be used on a variable whose type is a
+potentially nullable type parameter._
+
+#### Description
+
+The analyzer produces this diagnostic when a null check operator is used
+on a variable whose type is `T?`, where `T` is a type parameter that
+allows the type argument to be nullable (either has no bound or has a
+bound that is nullable).
+
+Given a generic type parameter `T` which has a nullable bound, it is very
+easy to introduce erroneous null checks when working with a variable of
+type `T?`. Specifically, it is not uncommon to have `T? x;` and want to
+assert that `x` has been set to a valid value of type `T`. A common
+mistake is to do so using `x!`. This is almost always incorrect, because
+if `T` is a nullable type, `x` may validly hold `null` as a value of type
+`T`.
+
+#### Example
+
+The following code produces this diagnostic because `t` has the type `T?`
+and `T` allows the type argument to be nullable (because it has no
+`extends` clause):
+
+```dart
+T f<T>(T? t) => t[!!!];
+```
+
+#### Common fixes
+
+Use the type parameter to cast the variable:
+
+```dart
+T f<T>(T? t) => t as T;
+```
+
+### overridden_fields
+
+_Field overrides a field inherited from '{0}'._
+
+#### Description
+
+The analyzer produces this diagnostic when a class defines a field that
+overrides a field from a superclass.
+
+Overriding a field with another field causes the object to have two
+distinct fields, but because the fields have the same name only one of the
+fields can be referenced in a given scope. That can lead to confusion
+where a reference to one of the fields can be mistaken for a reference to
+the other.
+
+#### Example
+
+The following code produces this diagnostic because the field `f` in `B`
+shadows the field `f` in `A`:
+
+```dart
+class A {
+  int f = 1;
+}
+
+class B extends A {
+  @override
+  int [!f!] = 2;
+}
+```
+
+#### Common fixes
+
+If the two fields are representing the same property, then remove the
+field from the subclass:
+
+```dart
+class A {
+  int f = 1;
+}
+
+class B extends A {}
+```
+
+If the two fields should be distinct, then rename one of the fields:
+
+```dart
+class A {
+  int f = 1;
+}
+
+class B extends A {
+  int g = 2;
+}
+```
+
+If the two fields are related in some way, but can't be the same, then
+find a different way to implement the semantics you need.
+
+### package_names
+
+_The package name '{0}' isn't a lower\_case\_with\_underscores identifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the name of a package doesn't
+use the lower_case_with_underscores naming convention.
+
+#### Example
+
+The following code produces this diagnostic because the name of the
+package uses the lowerCamelCase naming convention:
+
+```yaml
+name: [!somePackage!]
+```
+
+#### Common fixes
+
+Rewrite the name of the package using the lower_case_with_underscores
+naming convention:
+
+```yaml
+name: some_package
+```
+
+### package_prefixed_library_names
+
+_The library name is not a dot-separated path prefixed by the package name._
+
+#### Description
+
+The analyzer produces this diagnostic when a library has a name that
+doesn't follow these guidelines:
+
+- Prefix all library names with the package name.
+- Make the entry library have the same name as the package.
+- For all other libraries in a package, after the package name add the
+  dot-separated path to the library's Dart file.
+- For libraries under `lib`, omit the top directory name.
+
+For example, given a package named `my_package`, here are the library
+names for various files in the package:
+
+
+#### Example
+
+Assuming that the file containing the following code is not in a file
+named `special.dart` in the `lib` directory of a package named `something`
+(which would be an exception to the rule), the analyzer produces this
+diagnostic because the name of the library doesn't conform to the
+guidelines above:
+
+```dart
+library [!something.special!];
+```
+
+#### Common fixes
+
+Change the name of the library to conform to the guidelines.
+
+### prefer_adjacent_string_concatenation
+
+_String literals shouldn't be concatenated by the '+' operator._
+
+#### Description
+
+The analyzer produces this diagnostic when the `+` operator is used to
+concatenate two string literals.
+
+#### Example
+
+The following code produces this diagnostic because two string literals
+are being concatenated by using the `+` operator:
+
+```dart
+var s = 'a' [!+!] 'b';
+```
+
+#### Common fixes
+
+Remove the operator:
+
+```dart
+var s = 'a' 'b';
+```
+
+### prefer_collection_literals
+
+_Unnecessary constructor invocation._
+
+#### Description
+
+The analyzer produces this diagnostic when a constructor is used to create
+a list, map, or set, but a literal would produce the same result.
+
+#### Example
+
+The following code produces this diagnostic because the constructor for
+`Map` is being used to create a map that could also be created using a
+literal:
+
+```dart
+var m = [!Map<String, String>()!];
+```
+
+#### Common fixes
+
+Use the literal representation:
+
+```dart
+var m = <String, String>{};
+```
+
+### prefer_conditional_assignment
+
+_The 'if' statement could be replaced by a null-aware assignment._
+
+#### Description
+
+The analyzer produces this diagnostic when an assignment to a variable is
+conditional based on whether the variable has the value `null` and the
+`??=` operator could be used instead.
+
+#### Example
+
+The following code produces this diagnostic because the parameter `s` is
+being compared to `null` in order to determine whether to assign a
+different value:
+
+```dart
+int f(String? s) {
+  [!if (s == null) {
+    s = '';
+  }!]
+  return s.length;
+}
+```
+
+#### Common fixes
+
+Use the `??=` operator instead of an explicit `if` statement:
+
+```dart
+int f(String? s) {
+  s ??= '';
+  return s.length;
+}
+```
+
+### prefer_const_constructors
+
+_Use 'const' with the constructor to improve performance._
+
+#### Description
+
+The analyzer produces this diagnostic when an invocation of a const
+constructor isn't either preceded by `const` or in a [constant context][].
+
+#### Example
+
+The following code produces this diagnostic because the invocation of the
+`const` constructor is neither prefixed by `const` nor in a
+[constant context][]:
+
+```dart
+class C {
+  const C();
+}
+
+C c = [!C()!];
+```
+
+#### Common fixes
+
+If the context can be made a [constant context][], then do so:
+
+```dart
+class C {
+  const C();
+}
+
+const C c = C();
+```
+
+If the context can't be made a [constant context][], then add `const`
+before the constructor invocation:
+
+```dart
+class C {
+  const C();
+}
+
+C c = const C();
+```
+
+### prefer_const_constructors_in_immutables
+
+_Constructors in '@immutable' classes should be declared as 'const'._
+
+#### Description
+
+The analyzer produces this diagnostic when a non-`const` constructor is
+found in a class that has the `@immutable` annotation.
+
+#### Example
+
+The following code produces this diagnostic because the constructor in `C`
+isn't declared as `const` even though `C` has the `@immutable` annotation:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  [!C!](this.f);
+}
+```
+
+#### Common fixes
+
+If the class really is intended to be immutable, then add the `const`
+modifier to the constructor:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  const C(this.f);
+}
+```
+
+If the class is mutable, then remove the `@immutable` annotation:
+
+```dart
+class C {
+  final f;
+
+  C(this.f);
+}
+```
+
+### prefer_const_declarations
+
+_Use 'const' for final variables initialized to a constant value._
+
+#### Description
+
+The analyzer produces this diagnostic when a top-level variable, static
+field, or local variable is marked as `final` and is initialized to a
+constant value.
+
+#### Examples
+
+The following code produces this diagnostic because the top-level variable
+`v` is both `final` and initialized to a constant value:
+
+```dart
+[!final v = const <int>[]!];
+```
+
+The following code produces this diagnostic because the static field `f`
+is both `final` and initialized to a constant value:
+
+```dart
+class C {
+  static [!final f = const <int>[]!];
+}
+```
+
+The following code produces this diagnostic because the local variable `v`
+is both `final` and initialized to a constant value:
+
+```dart
+void f() {
+  [!final v = const <int>[]!];
+  print(v);
+}
+```
+
+#### Common fixes
+
+Replace the keyword `final` with `const` and remove `const` from the
+initializer:
+
+```dart
+class C {
+  static const f = <int>[];
+}
+```
+
+### prefer_const_literals_to_create_immutables
+
+_Use 'const' literals as arguments to constructors of '@immutable' classes._
+
+#### Description
+
+The analyzer produces this diagnostic when a non-const list, map, or set
+literal is passed as an argument to a constructor declared in a class
+annotated with `@immutable`.
+
+#### Example
+
+The following code produces this diagnostic because the list literal
+(`[1]`) is being passed to a constructor in an immutable class but isn't
+a constant list:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  const C(this.f);
+}
+
+C c = C([![1]!]);
+```
+
+#### Common fixes
+
+If the context can be made a [constant context][], then do so:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  const C(this.f);
+}
+
+const C c = C([1]);
+```
+
+If the context can't be made a [constant context][] but the constructor
+can be invoked using `const`, then add `const` before the constructor
+invocation:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  const C(this.f);
+}
+
+C c = const C([1]);
+```
+
+If the context can't be made a [constant context][] and the constructor
+can't be invoked using `const`, then add the keyword `const` before the
+collection literal:
+
+```dart
+import 'package:meta/meta.dart';
+
+@immutable
+class C {
+  final f;
+
+  const C(this.f);
+}
+
+C c = C(const [1]);
+```
+
+### prefer_contains
+
+_Always false because indexOf is always greater or equal -1._
+
+_Always true because indexOf is always greater or equal -1._
+
+_Unnecessary use of 'indexOf' to test for containment._
+
+#### Description
+
+The analyzer produces this diagnostic when the method `indexOf` is used and
+the result is only compared with `-1` or `0` in a way where the semantics
+are equivalent to using `contains`.
+
+#### Example
+
+The following code produces this diagnostic because the condition in the
+`if` statement is checking to see whether the list contains the string:
+
+```dart
+void f(List<String> l, String s) {
+  if ([!l.indexOf(s) < 0!]) {
+    // ...
+  }
+}
+```
+
+#### Common fixes
+
+Use `contains` instead, negating the condition when necessary:
+
+```dart
+void f(List<String> l, String s) {
+  if (l.contains(s)) {
+    // ...
+  }
+}
+```
+
+### prefer_final_fields
+
+_The private field {0} could be 'final'._
+
+#### Description
+
+The analyzer produces this diagnostic when a private field is only
+assigned one time. The field can be initialized in multiple constructors
+and still be flagged because only one of those constructors can ever run.
+
+#### Example
+
+The following code produces this diagnostic because the field `_f` is only
+assigned one time, in the field's initializer:
+
+```dart
+class C {
+  int [!_f = 1!];
+
+  int get f => _f;
+}
+```
+
+#### Common fixes
+
+Mark the field `final`:
+
+```dart
+class C {
+  final int _f = 1;
+
+  int get f => _f;
+}
+```
+
+### prefer_for_elements_to_map_fromiterable
+
+_Use 'for' elements when building maps from iterables._
+
+#### Description
+
+The analyzer produces this diagnostic when `Map.fromIterable` is used to
+build a map that could be built using the `for` element.
+
+#### Example
+
+The following code produces this diagnostic because `fromIterable` is
+being used to build a map that could be built using a `for` element:
+
+```dart
+void f(Iterable<String> data) {
+  [!Map<String, int>.fromIterable(
+    data,
+    key: (element) => element,
+    value: (element) => element.length,
+  )!];
+}
+```
+
+#### Common fixes
+
+Use a `for` element to build the map:
+
+```dart
+void f(Iterable<String> data) {
+  <String, int>{
+    for (var element in data)
+      element: element.length
+  };
+}
+```
+
+### prefer_function_declarations_over_variables
+
+_Use a function declaration rather than a variable assignment to bind a function
+to a name._
+
+#### Description
+
+The analyzer produces this diagnostic when a closure is assigned to a
+local variable and the local variable is not re-assigned anywhere.
+
+#### Example
+
+The following code produces this diagnostic because the local variable `f`
+is initialized to be a closure and isn't assigned any other value:
+
+```dart
+void g() {
+  var [!f = (int i) => i * 2!];
+  f(1);
+}
+```
+
+#### Common fixes
+
+Replace the local variable with a local function:
+
+```dart
+void g() {
+  int f(int i) => i * 2;
+  f(1);
+}
+```
+
+### prefer_generic_function_type_aliases
+
+_Use the generic function type syntax in 'typedef's._
+
+#### Description
+
+The analyzer produces this diagnostic when a typedef is written using the
+older syntax for function type aliases in which the name being declared is
+embedded in the function type.
+
+#### Example
+
+The following code produces this diagnostic because it uses the older
+syntax:
+
+```dart
+typedef void [!F!]<T>();
+```
+
+#### Common fixes
+
+Rewrite the typedef to use the newer syntax:
+
+```dart
+typedef F<T> = void Function();
+```
+
+### prefer_if_null_operators
+
+_Use the '??' operator rather than '?:' when testing for 'null'._
+
+#### Description
+
+The analyzer produces this diagnostic when a conditional expression (using
+the `?:` operator) is used to select a different value when a local
+variable is `null`.
+
+#### Example
+
+The following code produces this diagnostic because the variable `s` is
+being compared to `null` so that a different value can be returned when
+`s` is `null`:
+
+```dart
+String f(String? s) => [!s == null ? '' : s!];
+```
+
+#### Common fixes
+
+Use the if-null operator instead:
+
+```dart
+String f(String? s) => s ?? '';
+```
+
+### prefer_initializing_formals
+
+_Use an initializing formal to assign a parameter to a field._
+
+#### Description
+
+The analyzer produces this diagnostic when a constructor parameter is used
+to initialize a field without modification.
+
+#### Example
+
+The following code produces this diagnostic because the parameter `c` is
+only used to set the field `c`:
+
+```dart
+class C {
+  int c;
+
+  C(int c) : [!this.c = c!];
+}
+```
+
+#### Common fixes
+
+Use an initializing formal parameter to initialize the field:
+
+```dart
+class C {
+  int c;
+
+  C(this.c);
+}
+```
+
+### prefer_inlined_adds
+
+_The addition of a list item could be inlined._
+
+_The addition of multiple list items could be inlined._
+
+#### Description
+
+The analyzer produces this diagnostic when the methods `add` and `addAll`
+are invoked on a list literal where the elements being added could be
+included in the list literal.
+
+#### Example
+
+The following code produces this diagnostic because the `add` method is
+being used to add `b`, when it could have been included directly in the
+list literal:
+
+```dart
+List<String> f(String a, String b) {
+  return [a]..[!add!](b);
+}
+```
+
+The following code produces this diagnostic because the `addAll` method is
+being used to add the elements of `b`, when it could have been included
+directly in the list literal:
+
+```dart
+List<String> f(String a, List<String> b) {
+  return [a]..[!addAll!](b);
+}
+```
+
+#### Common fixes
+
+If the `add` method is being used, then make the argument an element of
+the list and remove the invocation:
+
+```dart
+List<String> f(String a, String b) {
+  return [a, b];
+}
+```
+
+If the `addAll` method is being used, then use the spread operator on the
+argument to add its elements to the list and remove the invocation:
+
+```dart
+List<String> f(String a, List<String> b) {
+  return [a, ...b];
+}
+```
+
+### prefer_interpolation_to_compose_strings
+
+_Use interpolation to compose strings and values._
+
+#### Description
+
+The analyzer produces this diagnostic when string literals and computed
+strings are being concatenated using the `+` operator, but string
+interpolation would achieve the same result.
+
+#### Example
+
+The following code produces this diagnostic because the elements of the
+list `l` are being concatenated with other strings using the `+` operator:
+
+```dart
+String f(List<String> l) {
+  return [!'(' + l[0] + ', ' + l[1] + ')'!];
+}
+```
+
+#### Common fixes
+
+Use string interpolation:
+
+```dart
+String f(List<String> l) {
+  return '(${l[0]}, ${l[1]})';
+}
+```
+
+### prefer_is_empty
+
+_The comparison is always 'false' because the length is always greater than or
+equal to 0._
+
+_The comparison is always 'true' because the length is always greater than or
+equal to 0._
+
+_Use 'isEmpty' instead of 'length' to test whether the collection is empty._
+
+_Use 'isNotEmpty' instead of 'length' to test whether the collection is empty._
+
+#### Description
+
+The analyzer produces this diagnostic when the result of invoking either
+`Iterable.length` or `Map.length` is compared for equality with zero
+(`0`).
+
+#### Example
+
+The following code produces this diagnostic because the result of invoking
+`length` is checked for equality with zero:
+
+```dart
+int f(Iterable<int> p) => [!p.length == 0!] ? 0 : p.first;
+```
+
+#### Common fixes
+
+Replace the use of `length` with a use of either `isEmpty` or
+`isNotEmpty`:
+
+```dart
+void f(Iterable<int> p) => p.isEmpty ? 0 : p.first;
+```
+
+### prefer_is_not_empty
+
+_Use 'isNotEmpty' rather than negating the result of 'isEmpty'._
+
+#### Description
+
+The analyzer produces this diagnostic when the result of invoking
+`Iterable.isEmpty` or `Map.isEmpty` is negated.
+
+#### Example
+
+The following code produces this diagnostic because the result of invoking
+`Iterable.isEmpty` is negated:
+
+```dart
+void f(Iterable<int> p) => [!!p.isEmpty!] ? p.first : 0;
+```
+
+#### Common fixes
+
+Rewrite the code to use `isNotEmpty`:
+
+```dart
+void f(Iterable<int> p) => p.isNotEmpty ? p.first : 0;
+```
+
+### prefer_is_not_operator
+
+_Use the 'is!' operator rather than negating the value of the 'is' operator._
+
+#### Description
+
+The analyzer produces this diagnostic when the prefix `!` operator is used
+to negate the result of an `is` test.
+
+#### Example
+
+The following code produces this diagnostic because the result of testing
+to see whether `o` is a `String` is negated using the prefix `!` operator:
+
+```dart
+String f(Object o) {
+  if ([!!(o is String)!]) {
+    return o.toString();
+  }
+  return o;
+}
+```
+
+#### Common fixes
+
+Use the `is!` operator instead:
+
+```dart
+String f(Object o) {
+  if (o is! String) {
+    return o.toString();
+  }
+  return o;
+}
+```
+
+### prefer_iterable_wheretype
+
+_Use 'whereType' to select elements of a given type._
+
+#### Description
+
+The analyzer produces this diagnostic when the method `Iterable.where` is
+being used to filter elements based on their type.
+
+#### Example
+
+The following code produces this diagnostic because the method `where` is
+being used to access only the strings within the iterable:
+
+```dart
+Iterable<Object> f(Iterable<Object> p) => p.[!where!]((e) => e is String);
+```
+
+#### Common fixes
+
+Rewrite the code to use `whereType`:
+
+```dart
+Iterable<String> f(Iterable<Object> p) => p.whereType<String>();
+```
+
+This might also allow you to tighten the types in your code or remove
+other type checks.
+
+### prefer_null_aware_operators
+
+_Use the null-aware operator '?.' rather than an explicit 'null' comparison._
+
+#### Description
+
+The analyzer produces this diagnostic when a comparison with `null` is
+used to guard a member reference, and `null` is used as a result when the
+guarded target is `null`.
+
+#### Example
+
+The following code produces this diagnostic because the invocation of
+`length` is guarded by a `null` comparison even though the default value
+is `null`:
+
+```dart
+int? f(List<int>? p) {
+  return [!p == null ? null : p.length!];
+}
+```
+
+#### Common fixes
+
+Use a null-aware access operator instead:
+
+```dart
+int? f(List<int>? p) {
+  return p?.length;
+}
+```
+
+### prefer_relative_imports
+
+_Use relative imports for files in the 'lib' directory._
+
+#### Description
+
+The analyzer produces this diagnostic when an `import` in a library inside
+the `lib` directory uses a `package:` URI to refer to another library in
+the same package.
+
+#### Example
+
+The following code produces this diagnostic because it uses a `package:`
+URI when a relative URI could have been used:
+
+```dart
+import 'package:my_package/bar.dart';
+```
+
+#### Common fixes
+
+Use a relative URI to import the library:
+
+```dart
+import 'bar.dart';
+```
+
+### prefer_typing_uninitialized_variables
+
+_Prefer typing uninitialized variables and fields._
+
+#### Description
+
+The analyzer produces this diagnostic when a variable without an
+initializer doesn't have an explicit type annotation.
+
+Without either a type annotation or an initializer, a variable has the
+type `dynamic`, which allows any value to be assigned to the variable,
+often causing hard to identify bugs.
+
+#### Example
+
+The following code produces this diagnostic because the variable `r`
+doesn't have either a type annotation or an initializer:
+
+```dart
+Object f() {
+  var [!r!];
+  r = '';
+  return r;
+}
+```
+
+#### Common fixes
+
+If the variable can be initialized, then add an initializer:
+
+```dart
+Object f() {
+  var r = '';
+  return r;
+}
+```
+
+If the variable can't be initialized, then add an explicit type
+annotation:
+
+```dart
+Object f() {
+  String r;
+  r = '';
+  return r;
+}
+```
+
+### prefer_void_to_null
+
+_Unnecessary use of the type 'Null'._
+
+#### Description
+
+The analyzer produces this diagnostic when `Null` is used in a location
+where `void` would be a valid choice.
+
+#### Example
+
+The following code produces this diagnostic because the function `f` is
+declared to return `null` (at some future time):
+
+```dart
+Future<[!Null!]> f() async {}
+```
+
+#### Common fixes
+
+Replace the use of `Null` with a use of `void`:
+
+```dart
+Future<void> f() async {}
+```
+
+### provide_deprecation_message
+
+_Missing a deprecation message._
+
+#### Description
+
+The analyzer produces this diagnostic when a `deprecated` annotation is
+used instead of the `Deprecated` annotation.
+
+#### Example
+
+The following code produces this diagnostic because the function `f` is
+annotated with `deprecated`:
+
+```dart
+[!@deprecated!]
+void f() {}
+```
+
+#### Common fixes
+
+Convert the code to use the longer form:
+
+```dart
+@Deprecated('Use g instead. Will be removed in 4.0.0.')
+void f() {}
+```
+
+### recursive_getters
+
+_The getter '{0}' recursively returns itself._
+
+#### Description
+
+The analyzer produces this diagnostic when a getter invokes itself,
+resulting in an infinite loop.
+
+#### Example
+
+The following code produces this diagnostic because the getter `count`
+invokes itself:
+
+```dart
+class C {
+  int _count = 0;
+
+  int get [!count!] => count;
+}
+```
+
+#### Common fixes
+
+Change the getter to not invoke itself:
+
+```dart
+class C {
+  int _count = 0;
+
+  int get count => _count;
+}
+```
+
+### secure_pubspec_urls
+
+_The '{0}' protocol shouldn't be used because it isn't secure._
+
+#### Description
+
+The analyzer produces this diagnostic when a URL in a `pubspec.yaml` file is
+using a non-secure scheme, such as `http`.
+
+#### Example
+
+The following code produces this diagnostic because the `pubspec.yaml` file
+contains an `http` URL:
+
+```yaml
+dependencies:
+  example: any
+    repository: [!http://github.com/dart-lang/example!]
+```
+
+#### Common fixes
+
+Change the scheme of the URL to use a secure scheme, such as `https`:
+
+```yaml
+dependencies:
+  example: any
+    repository: https://github.com/dart-lang/example
+```
+
+### sized_box_for_whitespace
+
+_Use a 'SizedBox' to add whitespace to a layout._
+
+#### Description
+
+The analyzer produces this diagnostic when a `Container` is created using
+only the `height` and/or `width` arguments.
+
+#### Example
+
+The following code produces this diagnostic because the `Container` has
+only the `width` argument:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget buildRow() {
+  return Row(
+    children: <Widget>[
+      const Text('...'),
+      [!Container!](
+        width: 4,
+        child: Text('...'),
+      ),
+      const Expanded(
+        child: Text('...'),
+      ),
+    ],
+  );
+}
+```
+
+#### Common fixes
+
+Replace the `Container` with a `SizedBox` of the same dimensions:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget buildRow() {
+  return Row(
+    children: <Widget>[
+      Text('...'),
+      SizedBox(
+        width: 4,
+        child: Text('...'),
+      ),
+      Expanded(
+        child: Text('...'),
+      ),
+    ],
+  );
+}
+```
+
+### slash_for_doc_comments
+
+_Use the end-of-line form ('///') for doc comments._
+
+#### Description
+
+The analyzer produces this diagnostic when a documentation comment uses
+the block comment style (delimited by `/**` and `*/`).
+
+#### Example
+
+The following code produces this diagnostic because the documentation
+comment for `f` uses a block comment style:
+
+```dart
+[!/**
+ * Example.
+ */!]
+void f() {}
+```
+
+#### Common fixes
+
+Use an end-of-line comment style:
+
+```dart
+/// Example.
+void f() {}
+```
+
+### sort_child_properties_last
+
+_The '{0}' argument should be last in widget constructor invocations._
+
+#### Description
+
+The analyzer produces this diagnostic when the `child` or `children`
+argument isn't the last argument in an invocation of a widget class'
+constructor. An exception is made if all of the arguments after the
+`child` or `children` argument are function expressions.
+
+#### Example
+
+The following code produces this diagnostic because the `child` argument
+isn't the last argument in the invocation of the `Center` constructor:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget createWidget() {
+  return Center(
+    [!child: Text('...')!],
+    widthFactor: 0.5,
+  );
+}
+```
+
+#### Common fixes
+
+Move the `child` or `children` argument to be last:
+
+```dart
+import 'package:flutter/material.dart';
+
+Widget createWidget() {
+  return Center(
+    widthFactor: 0.5,
+    child: Text('...'),
+  );
+}
+```
+
+### sort_pub_dependencies
+
+_Dependencies not sorted alphabetically._
+
+#### Description
+
+The analyzer produces this diagnostic when the keys in a dependency map in
+the `pubspec.yaml` file aren't sorted alphabetically. The dependency maps
+that are checked are the `dependencies`, `dev_dependencies`, and
+`dependency_overrides` maps.
+
+#### Example
+
+The following code produces this diagnostic because the entries in the
+`dependencies` map are not sorted:
+
+```yaml
+dependencies:
+  path: any
+  collection: any
+```
+
+#### Common fixes
+
+Sort the entries:
+
+```yaml
+dependencies:
+  collection: any
+  path: any
+```
+
+### test_types_in_equals
+
+_Missing type test for '{0}' in '=='._
+
+#### Description
+
+The analyzer produces this diagnostic when an override of the `==`
+operator doesn't include a type test on the value of the parameter.
+
+#### Example
+
+The following code produces this diagnostic because `other` is not type
+tested:
+
+```dart
+class C {
+  final int f;
+
+  C(this.f);
+
+  @override
+  bool operator ==(Object other) {
+    return ([!other as C!]).f == f;
+  }
+}
+```
+
+#### Common fixes
+
+Perform an `is` test as part of computing the return value:
+
+```dart
+class C {
+  final int f;
+
+  C(this.f);
+
+  @override
+  bool operator ==(Object other) {
+    return other is C && other.f == f;
+  }
+}
+```
+
+### throw_in_finally
+
+_Use of '{0}' in 'finally' block._
+
+#### Description
+
+The analyzer produces this diagnostic when a `throw` statement is found
+inside a `finally` block.
+
+#### Example
+
+The following code produces this diagnostic because there is a `throw`
+statement inside a `finally` block:
+
+```dart
+void f() {
+  try {
+    // ...
+  } catch (e) {
+    // ...
+  } finally {
+    [!throw 'error'!];
+  }
+}
+```
+
+#### Common fixes
+
+Rewrite the code so that the `throw` statement isn't inside a `finally`
+block:
+
+```dart
+void f() {
+  try {
+    // ...
+  } catch (e) {
+    // ...
+  }
+  throw 'error';
+}
+```
+
+### type_init_formals
+
+_Don't needlessly type annotate initializing formals._
+
+#### Description
+
+The analyzer produces this diagnostic when an initializing formal
+parameter (`this.x`) or a super parameter (`super.x`) has an explicit type
+annotation that is the same as the field or overridden parameter.
+
+If a constructor parameter is using `this.x` to initialize a field, then
+the type of the parameter is implicitly the same type as the field. If a
+constructor parameter is using `super.x` to forward to a super
+constructor, then the type of the parameter is implicitly the same as the
+super constructor parameter.
+
+#### Example
+
+The following code produces this diagnostic because the parameter `this.c`
+has an explicit type that is the same as the field `c`:
+
+```dart
+class C {
+  int c;
+
+  C([!int!] this.c);
+}
+```
+
+The following code produces this diagnostic because the parameter
+`super.a` has an explicit type that is the same as the parameter `a` from
+the superclass:
+
+```dart
+class A {
+  A(int a);
+}
+
+class B extends A {
+  B([!int!] super.a);
+}
+```
+
+#### Common fixes
+
+Remove the type annotation from the parameter:
+
+```dart
+class C {
+  int c;
+
+  C(this.c);
+}
+```
+
+### type_literal_in_constant_pattern
+
+_Use 'TypeName \_' instead of a type literal._
+
+#### Description
+
+The analyzer produces this diagnostic when a type literal appears as a
+pattern.
+
+#### Example
+
+The following code produces this diagnostic because a type literal is used
+as a constant pattern:
+
+```dart
+void f(Object? x) {
+  if (x case [!num!]) {
+    // ...
+  }
+}
+```
+
+#### Common fixes
+
+If the type literal is intended to match an object of the given type, then
+use either a variable pattern:
+
+```dart
+void f(Object? x) {
+  if (x case num _) {
+    // ...
+  }
+}
+```
+
+Or an object pattern:
+
+```dart
+void f(Object? x) {
+  if (x case num()) {
+    // ...
+  }
+}
+```
+
+If the type literal is intended to match the type literal, then write it
+as a constant pattern:
+
+```dart
+void f(Object? x) {
+  if (x case const (num)) {
+    // ...
+  }
+}
+```
+
+### unnecessary_brace_in_string_interps
+
+_Unnecessary braces in a string interpolation._
+
+#### Description
+
+The analyzer produces this diagnostic when a string interpolation with
+braces is used to interpolate a simple identifier and isn't followed by
+alphanumeric text.
+
+#### Example
+
+The following code produces this diagnostic because the interpolation
+element `${s}` uses braces when they are not necessary:
+
+```dart
+String f(String s) {
+  return '"[!${s}!]"';
+}
+```
+
+#### Common fixes
+
+Remove the unnecessary braces:
+
+```dart
+String f(String s) {
+  return '"$s"';
+}
+```
+
+### unnecessary_const
+
+_Unnecessary 'const' keyword._
+
+#### Description
+
+The analyzer produces this diagnostic when the keyword `const` is used in
+a [constant context][]. The keyword isn't required because it's implied.
+
+#### Example
+
+The following code produces this diagnostic because the keyword `const` in
+the list literal isn't needed:
+
+```dart
+const l = [!const!] <int>[];
+```
+
+The list is implicitly `const` because of the keyword `const` on the
+variable declaration.
+
+#### Common fixes
+
+Remove the unnecessary keyword:
+
+```dart
+const l = <int>[];
+```
+
+### unnecessary_constructor_name
+
+_Unnecessary '.new' constructor name._
+
+#### Description
+
+The analyzer produces this diagnostic when a reference to an unnamed
+constructor uses `.new`. The only place where `.new` is required is in a
+constructor tear-off.
+
+#### Example
+
+The following code produces this diagnostic because `.new` is being used
+to refer to the unnamed constructor where it isn't required:
+
+```dart
+var o = Object.[!new!]();
+```
+
+#### Common fixes
+
+Remove the unnecessary `.new`:
+
+```dart
+var o = Object();
+```
+
+### unnecessary_getters_setters
+
+_Unnecessary use of getter and setter to wrap a field._
+
+#### Description
+
+The analyzer produces this diagnostic when a getter and setter pair
+returns and sets the value of a field without any additional processing.
+
+#### Example
+
+The following code produces this diagnostic because the getter/setter pair
+named `c` only expose the field named `_c`:
+
+```dart
+class C {
+  int? _c;
+
+  int? get [!c!] => _c;
+
+  set c(int? v) => _c = v;
+}
+```
+
+#### Common fixes
+
+Make the field public and remove the getter and setter:
+
+```dart
+class C {
+  int? c;
+}
+```
+
+### unnecessary_late
+
+_Unnecessary 'late' modifier._
+
+#### Description
+
+The analyzer produces this diagnostic when a top-level variable or static
+field with an initializer is marked as `late`. Top-level variables and
+static fields are implicitly late, so they don't need to be explicitly
+marked.
+
+#### Example
+
+The following code produces this diagnostic because the static field `c`
+has the modifier `late` even though it has an initializer:
+
+```dart
+class C {
+  static [!late!] String c = '';
+}
+```
+
+#### Common fixes
+
+Remove the keyword `late`:
+
+```dart
+class C {
+  static String c = '';
+}
+```
+
+### unnecessary_new
+
+_Unnecessary 'new' keyword._
+
+#### Description
+
+The analyzer produces this diagnostic when the keyword `new` is used to
+invoke a constructor.
+
+#### Example
+
+The following code produces this diagnostic because the keyword `new` is
+used to invoke the unnamed constructor from `Object`:
+
+```dart
+var o = [!new!] Object();
+```
+
+#### Common fixes
+
+Remove the keyword `new`:
+
+```dart
+var o = Object();
+```
+
+### unnecessary_null_aware_assignments
+
+_Unnecessary assignment of 'null'._
+
+#### Description
+
+The analyzer produces this diagnostic when the right-hand side of a
+null-aware assignment is the `null` literal.
+
+#### Example
+
+The following code produces this diagnostic because the null aware
+operator is being used to assign `null` to `s` when `s` is already `null`:
+
+```dart
+void f(String? s) {
+  [!s ??= null!];
+}
+```
+
+#### Common fixes
+
+If a non-null value should be assigned to the left-hand operand, then
+change the right-hand side:
+
+```dart
+void f(String? s) {
+  s ??= '';
+}
+```
+
+If there is no non-null value to assign to the left-hand operand, then
+remove the assignment:
+
+```dart
+void f(String? s) {
+}
+```
+
+### unnecessary_null_in_if_null_operators
+
+_Unnecessary use of '??' with 'null'._
+
+#### Description
+
+The analyzer produces this diagnostic when the right operand of the `??`
+operator is the literal `null`.
+
+#### Example
+
+The following code produces this diagnostic because the right-hand operand
+of the `??` operator is `null`:
+
+```dart
+String? f(String? s) => s ?? [!null!];
+```
+
+#### Common fixes
+
+If a non-null value should be used for the right-hand operand, then
+change the right-hand side:
+
+```dart
+String f(String? s) => s ?? '';
+```
+
+If there is no non-null value to use for the right-hand operand, then
+remove the operator and the right-hand operand:
+
+```dart
+String? f(String? s) => s;
+```
+
+### unnecessary_nullable_for_final_variable_declarations
+
+_Type could be non-nullable._
+
+#### Description
+
+The analyzer produces this diagnostic when a final field or variable has a
+nullable type but is initialized to a non-nullable value.
+
+#### Example
+
+The following code produces this diagnostic because the final variable `i`
+has a nullable type (`int?`), but can never be `null`:
+
+```dart
+final int? [!i!] = 1;
+```
+
+#### Common fixes
+
+Make the type non-nullable:
+
+```dart
+final int i = 1;
+```
+
+### unnecessary_overrides
+
+_Unnecessary override._
+
+#### Description
+
+The analyzer produces this diagnostic when an instance member overrides an
+inherited member but only invokes the overridden member with exactly the
+same arguments.
+
+#### Example
+
+The following code produces this diagnostic because the method `D.m`
+doesn't do anything other than invoke the overridden method:
+
+```dart
+class C {
+  int m(int x) => x;
+}
+
+class D extends C {
+  @override
+  int [!m!](int x) => super.m(x);
+}
+```
+
+#### Common fixes
+
+If the method should do something more than what the overridden method
+does, then implement the missing functionality:
+
+```dart
+class C {
+  int m(int x) => x;
+}
+
+class D extends C {
+  @override
+  int m(int x) => super.m(x) + 1;
+}
+```
+
+If the overridden method should be modified by changing the return type or
+one or more of the parameter types, making one of the parameters
+`covariant`, having a documentation comment, or by having additional
+annotations, then update the code:
+
+```dart
+import 'package:meta/meta.dart';
+
+class C {
+  int m(int x) => x;
+}
+
+class D extends C {
+  @mustCallSuper
+  @override
+  int m(int x) => super.m(x);
+}
+```
+
+If the overriding method doesn't change or enhance the semantics of the
+code, then remove it:
+
+```dart
+class C {
+  int m(int x) => x;
+}
+
+class D extends C {}
+```
+
+### unnecessary_statements
+
+_Unnecessary statement._
+
+#### Description
+
+The analyzer produces this diagnostic when an expression statement has no
+clear effect.
+
+#### Example
+
+The following code produces this diagnostic because the addition of the
+returned values from the two invocations has no clear effect:
+
+```dart
+void f(int Function() first, int Function() second) {
+  [!first() + second()!];
+}
+```
+
+#### Common fixes
+
+If the expression doesn't need to be computed, then remove it:
+
+```dart
+void f(int Function() first, int Function() second) {
+}
+```
+
+If the value of the expression is needed, then make use of it, possibly
+assigning it to a local variable first:
+
+```dart
+void f(int Function() first, int Function() second) {
+  print(first() + second());
+}
+```
+
+If portions of the expression need to be executed, then remove the
+unnecessary portions:
+
+```dart
+void f(int Function() first, int Function() second) {
+  first();
+  second();
+}
+```
+
+### unnecessary_string_escapes
+
+_Unnecessary escape in string literal._
+
+#### Description
+
+The analyzer produces this diagnostic when characters in a string are
+escaped when escaping them is unnecessary.
+
+#### Example
+
+The following code produces this diagnostic because single quotes don't
+need to be escaped inside strings delimited by double quotes:
+
+```dart
+var s = "Don[!\!]'t use a backslash here.";
+```
+
+#### Common fixes
+
+Remove the unnecessary backslashes:
+
+```dart
+var s = "Don't use a backslash here.";
+```
+
+### unnecessary_string_interpolations
+
+_Unnecessary use of string interpolation._
+
+#### Description
+
+The analyzer produces this diagnostic when a string literal contains a
+single interpolation of a `String`-valued variable and no other
+characters.
+
+#### Example
+
+The following code produces this diagnostic because the string literal
+contains a single interpolation and doesn't contain any character outside
+the interpolation:
+
+```dart
+String f(String s) => [!'$s'!];
+```
+
+#### Common fixes
+
+Replace the string literal with the content of the interpolation:
+
+```dart
+String f(String s) => s;
+```
+
+### unnecessary_this
+
+_Unnecessary 'this.' qualifier._
+
+#### Description
+
+The analyzer produces this diagnostic when the keyword `this` is used to
+access a member that isn't shadowed.
+
+#### Example
+
+The following code produces this diagnostic because the use of `this` to
+access the field `_f` isn't necessary:
+
+```dart
+class C {
+  int _f = 2;
+
+  int get f => [!this!]._f;
+}
+```
+
+#### Common fixes
+
+Remove the `this.`:
+
+```dart
+class C {
+  int _f = 2;
+
+  int get f => _f;
+}
+```
+
+### unnecessary_to_list_in_spreads
+
+_Unnecessary use of 'toList' in a spread._
+
+#### Description
+
+The analyzer produces this diagnostic when `toList` is used to convert an
+`Iterable` to a `List` just before a spread operator is applied to the
+list. The spread operator can be applied to any `Iterable`, so the
+conversion isn't necessary.
+
+#### Example
+
+The following code produces this diagnostic because `toList` is invoked on
+the result of `map`, which is an `Iterable` that the spread operator could
+be applied to directly:
+
+```dart
+List<String> toLowercase(List<String> strings) {
+  return [
+    ...strings.map((String s) => s.toLowerCase()).[!toList!](),
+  ];
+}
+```
+
+#### Common fixes
+
+Remove the invocation of `toList`:
+
+```dart
+List<String> toLowercase(List<String> strings) {
+  return [
+    ...strings.map((String s) => s.toLowerCase()),
+  ];
+}
+```
+
+### unrelated_type_equality_checks
+
+_The type of the operand ('{0}') isn't a subtype or a supertype of the value
+being matched ('{1}')._
+
+_The type of the right operand ('{0}') isn't a subtype or a supertype of the
+left operand ('{1}')._
+
+#### Description
+
+The analyzer produces this diagnostic when two objects are being compared
+and neither of the static types of the two objects is a subtype of the
+other.
+
+Such a comparison will usually return `false` and might not reflect the
+programmer's intent.
+
+There can be false positives. For example, a class named `Point` might
+have subclasses named `CartesianPoint` and `PolarPoint`, neither of which
+is a subtype of the other, but it might still be appropriate to test the
+equality of instances.
+
+As a concrete case, the classes `Int64` and `Int32` from `package:fixnum`
+allow comparing instances to an `int` provided the `int` is on the
+right-hand side. This case is specifically allowed by the diagnostic, but
+other such cases are not.
+
+#### Example
+
+The following code produces this diagnostic because the string `s` is
+being compared to the integer `1`:
+
+```dart
+bool f(String s) {
+  return s [!==!] 1;
+}
+```
+
+#### Common fixes
+
+Replace one of the operands with something compatible with the other
+operand:
+
+```dart
+bool f(String s) {
+  return s.length == 1;
+}
+```
+
+### use_build_context_synchronously
+
+_Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted'
+check._
+
+_Don't use 'BuildContext's across async gaps._
+
+#### Description
+
+The analyzer produces this diagnostic when a `BuildContext` is referenced
+by a `StatefulWidget` after an asynchronous gap without first checking the
+`mounted` property.
+
+Storing a `BuildContext` for later use can lead to difficult to diagnose
+crashes. Asynchronous gaps implicitly store a `BuildContext`, making them
+easy to overlook for diagnosis.
+
+#### Example
+
+The following code produces this diagnostic because the `context` is
+passed to a constructor after the `await`:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends Widget {
+  void onButtonTapped(BuildContext context) async {
+    await Future.delayed(const Duration(seconds: 1));
+    Navigator.of([!context!]).pop();
+  }
+}
+```
+
+#### Common fixes
+
+If you can remove the asynchronous gap, do so:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends Widget {
+  void onButtonTapped(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+}
+```
+
+If you can't remove the asynchronous gap, then use `mounted` to guard the
+use of the `context`:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends Widget {
+  void onButtonTapped(BuildContext context) async {
+    await Future.delayed(const Duration(seconds: 1));
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+}
+```
+
+### use_full_hex_values_for_flutter_colors
+
+_Instances of 'Color' should be created using an 8-digit hexadecimal integer
+(such as '0xFFFFFFFF')._
+
+#### Description
+
+The analyzer produces this diagnostic when the argument to the constructor
+of the `Color` class is a literal integer that isn't represented as an
+8-digit hexadecimal integer.
+
+#### Example
+
+The following code produces this diagnostic because the argument (`1`)
+isn't represented as an 8-digit hexadecimal integer:
+
+```dart
+import 'package:flutter/material.dart';
+
+Color c = Color([!1!]);
+```
+
+#### Common fixes
+
+Convert the representation to be an 8-digit hexadecimal integer:
+
+```dart
+import 'package:flutter/material.dart';
+
+Color c = Color(0x00000001);
+```
+
+### use_function_type_syntax_for_parameters
+
+_Use the generic function type syntax to declare the parameter '{0}'._
+
+#### Description
+
+The analyzer produces this diagnostic when the older style function-valued
+parameter syntax is used.
+
+#### Example
+
+The following code produces this diagnostic because the function-valued
+parameter `f` is declared using an older style syntax:
+
+```dart
+void g([!bool f(String s)!]) {}
+```
+
+#### Common fixes
+
+Use the generic function type syntax to declare the parameter:
+
+```dart
+void g(bool Function(String) f) {}
+```
+
+### use_key_in_widget_constructors
+
+_Constructors for public widgets should have a named 'key' parameter._
+
+#### Description
+
+The analyzer produces this diagnostic when a constructor in a subclass of
+`Widget` that isn't private to its library doesn't have a parameter named
+`key`.
+
+#### Example
+
+The following code produces this diagnostic because the constructor for
+the class `MyWidget` doesn't have a parameter named `key`:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends StatelessWidget {
+  [!MyWidget!]({required int height});
+}
+```
+
+The following code produces this diagnostic because the default
+constructor for the class `MyWidget` doesn't have a parameter named `key`:
+
+```dart
+import 'package:flutter/material.dart';
+
+class [!MyWidget!] extends StatelessWidget {}
+```
+
+#### Common fixes
+
+Add a parameter named `key` to the constructor, explicitly declaring the
+constructor if necessary:
+
+```dart
+import 'package:flutter/material.dart';
+
+class MyWidget extends StatelessWidget {
+  MyWidget({super.key, required int height});
+}
+```
+
+### use_rethrow_when_possible
+
+_Use 'rethrow' to rethrow a caught exception._
+
+#### Description
+
+The analyzer produces this diagnostic when a caught exception is thrown
+using a `throw` expression rather than a `rethrow` statement.
+
+#### Example
+
+The following code produces this diagnostic because the caught exception
+`e` is thrown using a `throw` expression:
+
+```dart
+void f() {
+  try {
+    // ...
+  } catch (e) {
+    [!throw e!];
+  }
+}
+```
+
+#### Common fixes
+
+Use `rethrow` instead of `throw`:
+
+```dart
+void f() {
+  try {
+    // ...
+  } catch (e) {
+    rethrow;
+  }
+}
+```
+
+### use_string_in_part_of_directives
+
+_The part-of directive uses a library name._
+
+#### Description
+
+The analyzer produces this diagnostic when a `part of` directive uses a
+library name to refer to the library that the part is a part of.
+
+#### Example
+
+Given a file named `lib.dart` that contains the following:
+
+```dart
+library lib;
+
+part 'test.dart';
+```
+
+The following code produces this diagnostic because the `part of`
+directive uses the name of the library rather than the URI of the library
+it's part of:
+
+```dart
+[!part of lib;!]
+```
+
+#### Common fixes
+
+Use a URI to reference the library:
+
+```dart
+part of 'lib.dart';
+```
+
+### use_super_parameters
+
+_Use super-initializer parameters where possible._
+
+#### Description
+
+The analyzer produces this diagnostic when a parameter to a constructor is
+passed to a super constructor without being referenced or modified and a
+`super` parameter isn't used.
+
+#### Example
+
+The following code produces this diagnostic because the parameters of the
+constructor for `B` are only used as arguments to the super constructor:
+
+```dart
+class A {
+  A({int? x, int? y});
+}
+class B extends A {
+  [!B!]({int? x, int? y}) : super(x: x, y: y);
+}
+```
+
+#### Common fixes
+
+Use a `super` parameter to pass the arguments:
+
+```dart
+class A {
+  A({int? x, int? y});
+}
+class B extends A {
+  B({super.x, super.y});
+}
+```
+
+### valid_regexps
+
+_Invalid regular expression syntax._
+
+#### Description
+
+The analyzer produces this diagnostic when the string passed to the
+default constructor of the class `RegExp` doesn't contain a valid regular
+expression.
+
+A regular expression created with invalid syntax will throw a
+`FormatException` at runtime.
+
+#### Example
+
+The following code produces this diagnostic because the regular expression
+isn't valid:
+
+```dart
+var r = RegExp([!r'('!]);
+```
+
+#### Common fixes
+
+Fix the regular expression:
+
+```dart
+var r = RegExp(r'\(');
+```
+
+### void_checks
+
+_Assignment to a variable of type 'void'._
+
+#### Description
+
+The analyzer produces this diagnostic when a value is assigned to a
+variable of type `void`.
+
+It isn't possible to access the value of such a variable, so the
+assignment has no value.
+
+#### Example
+
+The following code produces this diagnostic because the field `value` has
+the type `void`, but a value is being assigned to it:
+
+```dart
+class A<T> {
+  T? value;
+}
+
+void f(A<void> a) {
+  [!a.value = 1!];
+}
+```
+
+The following code produces this diagnostic because the type of the
+parameter `p` in the method `m` is `void`, but a value is being assigned
+to it in the invocation:
+
+```dart
+class A<T> {
+  void m(T p) { }
+}
+
+void f(A<void> a) {
+  a.m([!1!]);
+}
+```
+
+#### Common fixes
+
+If the type of the variable is incorrect, then change the type of the
+variable:
+
+```dart
+class A<T> {
+  T? value;
+}
+
+void f(A<int> a) {
+  a.value = 1;
+}
+```
+
+If the type of the variable is correct, then remove the assignment:
+
+```dart
+class A<T> {
+  T? value;
+}
+
+void f(A<void> a) {}
+```

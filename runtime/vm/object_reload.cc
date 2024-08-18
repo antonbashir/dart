@@ -374,6 +374,19 @@ class EnsureFinalizedError : public ClassReasonForCancelling {
   StringPtr ToString() { return String::New(error_.ToErrorCString()); }
 };
 
+class DeeplyImmutableChange : public ClassReasonForCancelling {
+ public:
+  DeeplyImmutableChange(Zone* zone, const Class& from, const Class& to)
+      : ClassReasonForCancelling(zone, from, to) {}
+
+ private:
+  StringPtr ToString() {
+    return String::NewFormatted(
+        "Classes cannot change their @pragma('vm:deeply-immutable'): %s",
+        from_.ToCString());
+  }
+};
+
 class ConstToNonConstClass : public ClassReasonForCancelling {
  public:
   ConstToNonConstClass(Zone* zone, const Class& from, const Class& to)
@@ -510,6 +523,13 @@ void Class::CheckReload(const Class& replacement,
     }
     ASSERT(replacement.is_finalized());
     TIR_Print("Finalized replacement class for %s\n", ToCString());
+  }
+
+  if (is_deeply_immutable() != replacement.is_deeply_immutable()) {
+    context->group_reload_context()->AddReasonForCancelling(
+        new (context->zone())
+            DeeplyImmutableChange(context->zone(), *this, replacement));
+    return;  // No reason to check other properties.
   }
 
   if (is_finalized() && is_const() && (constants() != Array::null()) &&
@@ -757,7 +777,8 @@ void CallSiteResetter::Reset(const ICData& ic) {
       name_ = ic.target_name();
       const Class& smi_class = Class::Handle(zone_, Smi::Class());
       const Function& smi_op_target = Function::Handle(
-          zone_, Resolver::ResolveDynamicAnyArgs(zone_, smi_class, name_));
+          zone_, Resolver::ResolveDynamicAnyArgs(zone_, smi_class, name_,
+                                                 /*allow_add=*/true));
       GrowableArray<intptr_t> class_ids(2);
       Function& target = Function::Handle(zone_);
       ic.GetCheckAt(0, &class_ids, &target);

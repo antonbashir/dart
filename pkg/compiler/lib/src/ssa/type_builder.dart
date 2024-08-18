@@ -166,13 +166,6 @@ abstract class TypeBuilder {
   HInstruction analyzeTypeArgument(
       DartType argument, MemberEntity sourceElement,
       {SourceInformation? sourceInformation}) {
-    return analyzeTypeArgumentNewRti(argument, sourceElement,
-        sourceInformation: sourceInformation);
-  }
-
-  HInstruction analyzeTypeArgumentNewRti(
-      DartType argument, MemberEntity sourceElement,
-      {SourceInformation? sourceInformation}) {
     if (!argument.containsTypeVariables) {
       HInstruction rti =
           HLoadType.type(argument, _abstractValueDomain.dynamicType)
@@ -236,7 +229,7 @@ abstract class TypeBuilder {
         case ClassTypeVariableAccess.property:
           usesInstanceParameters = true;
           return;
-        default:
+        case ClassTypeVariableAccess.none:
           builder.reporter.internalError(
               type.element, 'Unexpected type variable in static context.');
       }
@@ -250,6 +243,42 @@ abstract class TypeBuilder {
     if (usesInstanceParameters) {
       HInstruction target =
           builder.localsHandler.readThis(sourceInformation: sourceInformation);
+      // Add a HTypeKnown node to assert that 'this' is known to be a subtype of
+      // the declared type at this point.
+      //
+      // The pinned asserted type prevents the HInstanceEnvironment being
+      // hoisted to an illegal location. Consider:
+      //
+      //     class C<T> {
+      //       method() => List<T>;
+      //     }
+      //
+      //       final Object o = ...
+      //       while (...) {
+      //         if (o is C && something()) {
+      //           o.method();
+      //           // inlined, including:
+      //           //     t1 = HTypeKnown(C, o);
+      //           //     t2 = HInstanceEnvironment(t1)
+      //         }
+      //
+      // The inlined `method` accesses the instance type parameter, o.(C.T). The
+      // access would become illegal if hoisted out of the `if` statement. The
+      // HTypeKnown is pinned in the if-then branch, preventing the hoisting.
+      //
+      // It is often the case that hoisting _is_ legal. When hoisting is legal,
+      // the HTypeKnown is redundant (e.g. if the type of `o` is known to be `C`
+      // by some means, or there is no guarding condition). The redundant pinned
+      // HTypeKnown goes away (never inserted, or later optimized), no longer
+      // preventing the rest of the type expression from being hoisted.
+
+      HTypeKnown constrained =
+          HTypeKnown.pinned(builder.localsHandler.getTypeOfThis(), target);
+      if (!constrained.isRedundant(builder.closedWorld)) {
+        builder.add(constrained);
+        target = constrained;
+      }
+
       // TODO(sra): HInstanceEnvironment should probably take an interceptor to
       // allow the getInterceptor call to be reused.
       environment =
@@ -310,17 +339,20 @@ abstract class TypeBuilder {
   /// See [LocalsHandler.substInContext].
   HInstruction buildAsCheck(HInstruction original, DartType type,
       {required bool isTypeError, SourceInformation? sourceInformation}) {
-    if (_closedWorld.dartTypes.isTopType(type)) return original;
+    if (builder.options.experimentNullSafetyChecks) {
+      if (_closedWorld.dartTypes.isStrongTopType(type)) return original;
+    } else {
+      if (_closedWorld.dartTypes.isTopType(type)) return original;
+    }
 
-    HInstruction reifiedType = analyzeTypeArgumentNewRti(
-        type, builder.sourceElement,
+    HInstruction reifiedType = analyzeTypeArgument(type, builder.sourceElement,
         sourceInformation: sourceInformation);
     AbstractValueWithPrecision checkedType =
         _abstractValueDomain.createFromStaticType(type, nullable: true);
     AbstractValue instructionType = _abstractValueDomain.intersection(
         original.instructionType, checkedType.abstractValue);
     return HAsCheck(
-        original, reifiedType, checkedType, type, isTypeError, instructionType)
+        checkedType, type, isTypeError, reifiedType, original, instructionType)
       ..sourceInformation = sourceInformation;
   }
 }

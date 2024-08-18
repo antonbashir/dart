@@ -79,6 +79,8 @@ class JsBackendStrategy {
   final Compiler _compiler;
   late JsKernelToElementMap _elementMap;
 
+  bool _isInitialized = false;
+
   /// Codegen support for generating table of interceptors and
   /// constructors for custom elements.
   late final CustomElementsCodegenAnalysis _customElementsCodegenAnalysis;
@@ -236,26 +238,25 @@ class JsBackendStrategy {
   CodegenEnqueuer createCodegenEnqueuer(
       CompilerTask task,
       JClosedWorld closedWorld,
+      InferredData inferredData,
       CodegenInputs codegen,
       CodegenResults codegenResults,
       SourceLookup sourceLookup) {
-    OneShotInterceptorData oneShotInterceptorData = OneShotInterceptorData(
-        closedWorld.interceptorData,
-        closedWorld.commonElements,
-        closedWorld.nativeData);
-    _onCodegenEnqueuerStart(closedWorld, codegen, oneShotInterceptorData);
+    initialize(closedWorld, codegen);
     ElementEnvironment elementEnvironment = closedWorld.elementEnvironment;
     CommonElements commonElements = closedWorld.commonElements;
     BackendImpacts impacts = BackendImpacts(commonElements, _compiler.options);
     _customElementsCodegenAnalysis = CustomElementsCodegenAnalysis(
         commonElements, elementEnvironment, closedWorld.nativeData);
     _recordsCodegen = RecordsCodegen(commonElements, closedWorld.recordData);
+    final worldBuilder = CodegenWorldBuilder(
+        closedWorld,
+        inferredData,
+        _compiler.abstractValueStrategy.createSelectorStrategy(),
+        _codegenImpactTransformer.oneShotInterceptorData);
     return CodegenEnqueuer(
         task,
-        CodegenWorldBuilderImpl(
-            closedWorld,
-            _compiler.abstractValueStrategy.createSelectorStrategy(),
-            oneShotInterceptorData),
+        worldBuilder,
         KernelCodegenWorkItemBuilder(
             this,
             closedWorld.abstractValueDomain,
@@ -276,13 +277,23 @@ class JsBackendStrategy {
             customElementsCodegenAnalysis,
             recordsCodegen,
             closedWorld.nativeData,
-            nativeCodegenEnqueuer),
+            nativeCodegenEnqueuer,
+            worldBuilder),
         closedWorld.annotationsData);
   }
 
   /// Called before the compiler starts running the codegen enqueuer.
-  void _onCodegenEnqueuerStart(JClosedWorld closedWorld, CodegenInputs codegen,
-      OneShotInterceptorData oneShotInterceptorData) {
+  void initialize(JClosedWorld closedWorld, CodegenInputs codegen) {
+    // This can be initialized during the emitter phase and when running dump
+    // info. Make sure if both are running together that this is only
+    // initialized once.
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    OneShotInterceptorData oneShotInterceptorData = OneShotInterceptorData(
+        closedWorld.interceptorData,
+        closedWorld.commonElements,
+        closedWorld.nativeData);
     FixedNames fixedNames = codegen.fixedNames;
     _namer = _compiler.options.enableMinification
         ? _compiler.options.useFrequencyNamer
@@ -317,6 +328,10 @@ class JsBackendStrategy {
         emitterTask.nativeEmitter);
   }
 
+  WorldImpact transformCodegenImpact(CodegenImpact impact) {
+    return _codegenImpactTransformer.transformCodegenImpact(impact);
+  }
+
   WorldImpact generateCode(
       WorkItem work,
       AbstractValueDomain abstractValueDomain,
@@ -324,7 +339,7 @@ class JsBackendStrategy {
       ComponentLookup componentLookup,
       SourceLookup sourceLookup) {
     MemberEntity member = work.element;
-    CodegenResult result = codegenResults.getCodegenResults(member);
+    var (:result, :isGenerated) = codegenResults.getCodegenResults(member);
     if (_compiler.options.testMode) {
       final indices = SerializationIndices(testMode: true);
       bool useDataKinds = true;
@@ -350,9 +365,13 @@ class JsBackendStrategy {
       codegenImpactsForTesting ??= {};
       codegenImpactsForTesting![member] = result.impact;
     }
+
+    // Register the untransformed impact here as dump info will transform it
+    // again later if needed.
+    _compiler.dumpInfoRegistry
+        .registerImpact(member, result.impact, isGenerated: isGenerated);
     WorldImpact worldImpact =
         _codegenImpactTransformer.transformCodegenImpact(result.impact);
-    _compiler.dumpInfoRegistry.registerImpact(member, worldImpact);
     result.applyModularState(_namer, emitterTask.emitter);
     return worldImpact;
   }
@@ -373,14 +392,15 @@ class JsBackendStrategy {
   }
 
   /// Creates the [SsaBuilder] used for the element model.
-  SsaBuilder createSsaBuilder(
-      CompilerTask task, SourceInformationStrategy sourceInformationStrategy) {
+  SsaBuilder createSsaBuilder(CompilerTask task, JClosedWorld closedWorld,
+      SourceInformationStrategy sourceInformationStrategy) {
     return KernelSsaBuilder(
         task,
         _compiler.options,
         _compiler.reporter,
         _compiler.dumpInfoTask,
         _ssaMetrics,
+        closedWorld,
         _elementMap,
         sourceInformationStrategy);
   }
@@ -471,11 +491,11 @@ class KernelSsaBuilder implements SsaBuilder {
   final DiagnosticReporter _reporter;
   final DumpInfoTask _dumpInfoTask;
   final SsaMetrics _metrics;
+  final JClosedWorld _closedWorld;
   final JsToElementMap _elementMap;
   final SourceInformationStrategy _sourceInformationStrategy;
 
-  // TODO(48820): Make this final by passing in closed world to constructor.
-  FunctionInlineCache? _inlineCache;
+  final FunctionInlineCache _inlineCache;
   final InlineDataCache _inlineDataCache;
 
   KernelSsaBuilder(
@@ -484,22 +504,22 @@ class KernelSsaBuilder implements SsaBuilder {
       this._reporter,
       this._dumpInfoTask,
       this._metrics,
+      this._closedWorld,
       this._elementMap,
       this._sourceInformationStrategy)
-      : _inlineDataCache = InlineDataCache(
+      : _inlineCache = FunctionInlineCache(_closedWorld.annotationsData),
+        _inlineDataCache = InlineDataCache(
             enableUserAssertions: _options.enableUserAssertions,
             omitImplicitCasts: _options.omitImplicitChecks);
 
   @override
   HGraph? build(
       MemberEntity member,
-      JClosedWorld closedWorld,
       GlobalTypeInferenceResults results,
       CodegenInputs codegen,
       CodegenRegistry registry,
       ModularNamer namer,
       ModularEmitter emitter) {
-    _inlineCache ??= FunctionInlineCache(closedWorld.annotationsData);
     return _task.measure(() {
       KernelSsaGraphBuilder builder = KernelSsaGraphBuilder(
           _options,
@@ -510,13 +530,13 @@ class KernelSsaBuilder implements SsaBuilder {
           _metrics,
           _elementMap,
           results,
-          closedWorld,
+          _closedWorld,
           registry,
           namer,
           emitter,
           codegen.tracer,
           _sourceInformationStrategy,
-          _inlineCache!,
+          _inlineCache,
           _inlineDataCache);
       return builder.build();
     });

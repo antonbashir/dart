@@ -32,14 +32,15 @@ class UnnecessaryNullableForFinalVariableDeclarations extends LintRule {
   static const LintCode code = LintCode(
       'unnecessary_nullable_for_final_variable_declarations',
       'Type could be non-nullable.',
-      correctionMessage: 'Try changing the type to be non-nullable.');
+      correctionMessage: 'Try changing the type to be non-nullable.',
+      hasPublishedDocs: true);
 
   UnnecessaryNullableForFinalVariableDeclarations()
       : super(
             name: 'unnecessary_nullable_for_final_variable_declarations',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   LintCode get lintCode => code;
@@ -61,16 +62,16 @@ class _Visitor extends SimpleAstVisitor<void> {
   final LinterContext context;
   _Visitor(this.rule, this.context);
 
-  void check(AstNode element) {
-    if (element is! DeclaredVariablePattern) return;
-    var type = element.declaredElement?.type;
+  void check(AstNode node) {
+    if (node is! DeclaredVariablePattern) return;
+    var type = node.declaredElement?.type;
     if (type == null) return;
     if (type is DynamicType) return;
-    var valueType = element.matchedValueType;
+    var valueType = node.matchedValueType;
     if (valueType == null) return;
     if (context.typeSystem.isNullable(type) &&
         context.typeSystem.isNonNullable(valueType)) {
-      rule.reportLint(element);
+      rule.reportLintForToken(node.name);
     }
   }
 
@@ -126,7 +127,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     if (context.typeSystem.isNullable(declaredElement.type) &&
         context.typeSystem.isNonNullable(initializerType)) {
-      rule.reportLint(variable);
+      rule.reportLintForToken(variable.name);
     }
   }
 }

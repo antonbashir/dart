@@ -84,7 +84,7 @@ class ExhaustiveCases extends LintRule {
             name: 'exhaustive_cases',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   LintCode get lintCode => code;
@@ -164,7 +164,12 @@ class _Visitor extends SimpleAstVisitor {
 extension on Element? {
   Element? get variableElement {
     var self = this;
-    if (self is PropertyAccessorElement) return self.variable;
+    if (self is PropertyAccessorElement) {
+      var variable = self.variable2;
+      if (variable != null) {
+        return variable;
+      }
+    }
     return self;
   }
 }

@@ -42,6 +42,14 @@ class U {
     expect(names, unorderedEquals(['A', 'b']));
   }
 
+  test_class_extends_sameName_importPrefix() {
+    Set<String> names = _computeReferencedNames('''
+import 'a.dart' as p;
+class A extends p.A {}
+''');
+    expect(names, unorderedEquals(['A']));
+  }
+
   test_class_field() {
     Set<String> names = _computeReferencedNames('''
 class U {
@@ -421,11 +429,11 @@ main() {
     String code, {
     FeatureSet? featureSet,
   }) {
-    final parseResult = parseString(
+    var parseResult = parseString(
       content: code,
       featureSet: featureSet ?? FeatureSets.latestWithExperiments,
     );
-    final unit = parseResult.unit;
+    var unit = parseResult.unit;
     return computeReferencedNames(unit);
   }
 }
@@ -483,11 +491,11 @@ class X extends A<B> {}
   }
 
   Set<String> _computeSubtypedNames(String code) {
-    final parseResult = parseString(
+    var parseResult = parseString(
       content: code,
       featureSet: FeatureSets.latestWithExperiments,
     );
-    final unit = parseResult.unit;
+    var unit = parseResult.unit;
     return computeSubtypedNames(unit);
   }
 }

@@ -941,11 +941,6 @@ intptr_t HeapSnapshotWriter::GetObjectId(ObjectPtr obj) const {
     return id;
   }
 
-  if (FLAG_write_protect_code && obj->IsInstructions() && !OnImagePage(obj)) {
-    // A non-writable alias mapping may exist for instruction pages.
-    obj = Page::ToWritable(obj);
-  }
-
   CountingPage* counting_page = FindCountingPage(obj);
   intptr_t id;
   if (counting_page != nullptr) {
@@ -1142,9 +1137,6 @@ class Pass2Visitor : public ObjectVisitor,
       if (obj == Object::sentinel().ptr()) {
         writer_->WriteUnsigned(kNameData);
         writer_->WriteUtf8("uninitialized");
-      } else if (obj == Object::transition_sentinel().ptr()) {
-        writer_->WriteUnsigned(kNameData);
-        writer_->WriteUtf8("initializing");
       } else {
         writer_->WriteUnsigned(kNoData);
       }
@@ -1165,14 +1157,6 @@ class Pass2Visitor : public ObjectVisitor,
       writer_->WriteUnsigned(len);
       writer_->WriteUnsigned(trunc_len);
       writer_->WriteBytes(&str->untag()->data()[0], trunc_len);
-    } else if (cid == kExternalOneByteStringCid) {
-      ExternalOneByteStringPtr str = static_cast<ExternalOneByteStringPtr>(obj);
-      intptr_t len = Smi::Value(str->untag()->length());
-      intptr_t trunc_len = Utils::Minimum(len, kMaxStringElements);
-      writer_->WriteUnsigned(kLatin1Data);
-      writer_->WriteUnsigned(len);
-      writer_->WriteUnsigned(trunc_len);
-      writer_->WriteBytes(&str->untag()->external_data_[0], trunc_len);
     } else if (cid == kTwoByteStringCid) {
       TwoByteStringPtr str = static_cast<TwoByteStringPtr>(obj);
       intptr_t len = Smi::Value(str->untag()->length());
@@ -1181,14 +1165,6 @@ class Pass2Visitor : public ObjectVisitor,
       writer_->WriteUnsigned(len);
       writer_->WriteUnsigned(trunc_len);
       writer_->WriteBytes(&str->untag()->data()[0], trunc_len * 2);
-    } else if (cid == kExternalTwoByteStringCid) {
-      ExternalTwoByteStringPtr str = static_cast<ExternalTwoByteStringPtr>(obj);
-      intptr_t len = Smi::Value(str->untag()->length());
-      intptr_t trunc_len = Utils::Minimum(len, kMaxStringElements);
-      writer_->WriteUnsigned(kUTF16Data);
-      writer_->WriteUnsigned(len);
-      writer_->WriteUnsigned(trunc_len);
-      writer_->WriteBytes(&str->untag()->external_data_[0], trunc_len * 2);
     } else if (cid == kArrayCid || cid == kImmutableArrayCid) {
       writer_->WriteUnsigned(kLengthData);
       writer_->WriteUnsigned(
@@ -1789,8 +1765,6 @@ uint32_t HeapSnapshotWriter::GetHeapSnapshotIdentityHash(Thread* thread,
     case kCodeSourceMapCid:
     case kCompressedStackMapsCid:
     case kDoubleCid:
-    case kExternalOneByteStringCid:
-    case kExternalTwoByteStringCid:
     case kGrowableObjectArrayCid:
     case kImmutableArrayCid:
     case kConstMapCid:

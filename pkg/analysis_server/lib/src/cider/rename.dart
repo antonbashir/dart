@@ -8,7 +8,8 @@ import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/services/refactoring/legacy/naming_conventions.dart';
 import 'package:analysis_server/src/services/refactoring/legacy/refactoring.dart';
 import 'package:analysis_server/src/services/search/hierarchy.dart';
-import 'package:analysis_server/src/utilities/flutter.dart';
+import 'package:analysis_server/src/utilities/change_builder.dart';
+import 'package:analysis_server/src/utilities/extensions/flutter.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/line_info.dart';
@@ -80,9 +81,9 @@ class CanRenameResponse {
   }
 
   FlutterWidgetState? _findFlutterStateClass(Element element, String newName) {
-    if (Flutter.isStatefulWidgetDeclaration(element)) {
+    if (element is ClassElement && element.isStatefulWidgetDeclaration) {
       var oldStateName = '${element.displayName}State';
-      var library = element.library!;
+      var library = element.library;
       var state =
           library.getClass(oldStateName) ?? library.getClass('_$oldStateName');
       if (state != null) {
@@ -215,11 +216,10 @@ class CheckNameResponse {
             element.setter!.nameLength));
       }
     } else if (element is LibraryImportElement) {
-      var unit =
-          (await canRename._fileResolver.resolve2(path: sourcePath)).unit;
+      var unit = (await canRename._fileResolver.resolve(path: sourcePath)).unit;
       var index = element.library.libraryImports.indexOf(element);
       var node = unit.directives.whereType<ImportDirective>().elementAt(index);
-      final prefixNode = node.prefix;
+      var prefixNode = node.prefix;
       if (newName.isEmpty) {
         // We should not get `prefix == null` because we check in
         // `checkNewName` that the new name is different.
@@ -240,7 +240,7 @@ class CheckNameResponse {
         }
       }
     } else {
-      var location = (await canRename._fileResolver.resolve2(path: sourcePath))
+      var location = (await canRename._fileResolver.resolve(path: sourcePath))
           .lineInfo
           .getLocation(element.nameOffset);
       infos.add(ReplaceInfo(newName, location, element.nameLength));
@@ -281,7 +281,7 @@ class CheckNameResponse {
   /// it. Otherwise return `null`.
   Future<SimpleIdentifier?> _getInterpolationIdentifier(
       String path, CharacterLocation loc) async {
-    var resolvedUnit = await canRename._fileResolver.resolve2(path: path);
+    var resolvedUnit = await canRename._fileResolver.resolve(path: path);
     var lineInfo = resolvedUnit.lineInfo;
     var node = NodeLocator(
             lineInfo.getOffsetOfLine(loc.lineNumber - 1) + loc.columnNumber)
@@ -313,31 +313,30 @@ class CheckNameResponse {
     }
 
     var node = result.node;
-    if (node is ClassDeclaration) {
-      var utils = CorrectionUtils(resolvedUnit);
-      var location = utils.prepareNewConstructorLocation(
-          fileResolver.contextObjects!.analysisSession,
-          node,
-          resolvedUnit.file);
-      if (location == null) {
-        return null;
-      }
-
-      var header = '${interfaceElement.name}.$newName();';
-      return CiderReplaceMatch(libraryPath, [
-        ReplaceInfo(location.prefix + header + location.suffix,
-            resolvedUnit.lineInfo.getLocation(location.offset), 0)
-      ]);
-    } else if (node is EnumDeclaration) {
-      var utils = CorrectionUtils(resolvedUnit);
-      var location = utils.prepareEnumNewConstructorLocation(node);
-      var header = 'const ${interfaceElement.name}.$newName();';
-      return CiderReplaceMatch(libraryPath, [
-        ReplaceInfo(location.prefix + header + location.suffix,
-            resolvedUnit.lineInfo.getLocation(location.offset), 0)
-      ]);
+    if (node is! NamedCompilationUnitMember) {
+      return null;
     }
-    return null;
+    var edit = await buildEditForInsertedConstructor(
+      node,
+      resolvedUnit: resolvedUnit,
+      session: fileResolver.contextObjects!.analysisSession,
+      (builder) => builder.writeConstructorDeclaration(
+        interfaceElement.name!,
+        constructorName: newName,
+        isConst: node is EnumDeclaration,
+      ),
+    );
+    if (edit == null) {
+      return null;
+    }
+
+    return CiderReplaceMatch(libraryPath, [
+      ReplaceInfo(
+        edit.replacement,
+        resolvedUnit.lineInfo.getLocation(edit.offset),
+        0,
+      )
+    ]);
   }
 }
 
@@ -350,7 +349,7 @@ class CiderRenameComputer {
   /// [filePath] can be renamed.
   Future<CanRenameResponse?> canRename2(
       String filePath, int line, int column) async {
-    var resolvedUnit = await _fileResolver.resolve2(path: filePath);
+    var resolvedUnit = await _fileResolver.resolve(path: filePath);
     var lineInfo = resolvedUnit.lineInfo;
     var offset = lineInfo.getOffsetOfLine(line) + column;
 
@@ -367,7 +366,10 @@ class CiderRenameComputer {
       return null;
     }
     if (element is PropertyAccessorElement) {
-      element = element.variable;
+      element = element.variable2;
+      if (element == null) {
+        return null;
+      }
     }
     if (!_canRenameElement(element)) {
       return null;

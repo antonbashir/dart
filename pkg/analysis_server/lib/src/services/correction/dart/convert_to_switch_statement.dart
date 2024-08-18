@@ -3,11 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
-import 'package:analysis_server/src/services/correction/dart/abstract_producer.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -15,6 +16,13 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dar
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
+  ConvertIfStatementToSwitchStatement({required super.context});
+
+  @override
+  CorrectionApplicability get applicability =>
+      // TODO(applicability): comment on why.
+      CorrectionApplicability.singleLocation;
+
   @override
   AssistKind get assistKind => DartAssistKind.CONVERT_TO_SWITCH_STATEMENT;
 
@@ -24,34 +32,34 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
       return;
     }
 
-    final ifStatement = node;
+    var ifStatement = node;
     if (ifStatement is! IfStatement) {
       return;
     }
 
-    final cases = _buildCases(ifStatement);
+    var cases = _buildCases(ifStatement);
     if (cases == null) {
       return;
     }
 
-    final firstThen = cases.firstOrNull;
+    var firstThen = cases.firstOrNull;
     if (firstThen is! _IfCaseThen) {
       return;
     }
 
-    final indent = utils.getLinePrefix(ifStatement.offset);
-    final singleIndent = utils.getIndent(1);
-    final caseIndent = '$indent$singleIndent';
+    var indent = utils.getLinePrefix(ifStatement.offset);
+    var singleIndent = utils.oneIndent;
+    var caseIndent = '$indent$singleIndent';
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addReplacement(range.node(ifStatement), (builder) {
-        final expressionCode = firstThen.expressionCode;
+        var expressionCode = firstThen.expressionCode;
         builder.writeln('switch ($expressionCode) {');
 
-        for (final case_ in cases) {
+        for (var case_ in cases) {
           switch (case_) {
             case _IfCaseThen():
-              final patternCode = case_.patternCode;
+              var patternCode = case_.patternCode;
               builder.writeln('${caseIndent}case $patternCode:');
               _writeStatement(
                 builder: builder,
@@ -74,21 +82,21 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
   }
 
   List<_IfCase>? _buildCases(IfStatement ifStatement) {
-    final thenCase = _buildThenCase(ifStatement);
+    var thenCase = _buildThenCase(ifStatement);
     if (thenCase == null) {
       return null;
     }
 
-    final cases = <_IfCase>[];
+    var cases = <_IfCase>[];
     cases.add(thenCase);
 
-    final elseStatement = ifStatement.elseStatement;
+    var elseStatement = ifStatement.elseStatement;
     if (elseStatement is IfStatement) {
-      final elseCases = _buildCases(elseStatement);
+      var elseCases = _buildCases(elseStatement);
       if (elseCases == null) {
         return null;
       }
-      for (final elseCase in elseCases) {
+      for (var elseCase in elseCases) {
         if (elseCase is _IfCaseThen) {
           if (elseCase.expressionCode != thenCase.expressionCode) {
             return null;
@@ -108,15 +116,15 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
   }
 
   _IfCaseThen? _buildThenCase(IfStatement ifStatement) {
-    final expression = ifStatement.expression;
-    final caseClause = ifStatement.caseClause;
+    var expression = ifStatement.expression;
+    var caseClause = ifStatement.caseClause;
 
     if (caseClause != null) {
       if (expression is! SimpleIdentifier) {
         return null;
       }
-      final guardedPattern = caseClause.guardedPattern;
-      final patternCode = utils.getNodeText(guardedPattern);
+      var guardedPattern = caseClause.guardedPattern;
+      var patternCode = utils.getNodeText(guardedPattern);
       return _IfCaseThen(
         expressionCode: expression.token.lexeme,
         patternCode: patternCode,
@@ -125,7 +133,7 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
     }
 
     // The expression is the bool condition.
-    final result = utils.patternOfBoolCondition(expression);
+    var result = _patternOfBoolCondition(expression);
     if (result == null) {
       return null;
     }
@@ -137,24 +145,57 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
     );
   }
 
+  ({String expressionCode, String patternCode})? _patternOfBoolCondition(
+      Expression node) {
+    if (node is BinaryExpression) {
+      if (node.isNotEqNull) {
+        return (
+          expressionCode: utils.getNodeText(node.leftOperand),
+          patternCode: '_?',
+        );
+      } else if (node.operator.type.isRelationalOperator) {
+        if (node.rightOperand is Literal) {
+          return (
+            expressionCode: utils.getNodeText(node.leftOperand),
+            patternCode: utils.getRangeText(
+              range.startEnd(node.operator, node.rightOperand),
+            ),
+          );
+        }
+      }
+    } else if (node is IsExpression) {
+      var expressionCode = utils.getNodeText(node.expression);
+      var typeCode = utils.getNodeText(node.type);
+      var patternCode = switch (node.type.typeOrThrow) {
+        InterfaceType() => '$typeCode()',
+        _ => '$typeCode _',
+      };
+      return (
+        expressionCode: expressionCode,
+        patternCode: patternCode,
+      );
+    }
+    return null;
+  }
+
   /// Writes [statement], if it is a [Block], inlines it.
   void _writeStatement({
     required DartEditBuilder builder,
     required Statement statement,
     required String ifStatementIndent,
   }) {
-    final statements = statement.selfOrBlockStatements;
-    final range = utils.getLinesRangeStatements(statements);
+    var statements = statement.selfOrBlockStatements;
+    var range = utils.getLinesRangeStatements(statements);
 
     // if
     //   statement
     // switch
     //   case
     //     statement
-    final singleIndent = utils.getIndent(1);
-    final newIndent = '$ifStatementIndent$singleIndent';
+    var singleIndent = utils.oneIndent;
+    var newIndent = '$ifStatementIndent$singleIndent';
 
-    final code = utils.replaceSourceRangeIndent(
+    var code = utils.replaceSourceRangeIndent(
       range,
       ifStatementIndent,
       newIndent,
@@ -168,12 +209,19 @@ class ConvertIfStatementToSwitchStatement extends ResolvedCorrectionProducer {
 
 class ConvertSwitchExpressionToSwitchStatement
     extends ResolvedCorrectionProducer {
+  ConvertSwitchExpressionToSwitchStatement({required super.context});
+
+  @override
+  CorrectionApplicability get applicability =>
+      // TODO(applicability): comment on why.
+      CorrectionApplicability.singleLocation;
+
   @override
   AssistKind get assistKind => DartAssistKind.CONVERT_TO_SWITCH_STATEMENT;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    final switchExpression = node;
+    var switchExpression = node;
     if (switchExpression is! SwitchExpression) {
       return;
     }
@@ -198,12 +246,12 @@ class ConvertSwitchExpressionToSwitchStatement
     required ChangeBuilder builder,
     required SwitchExpression switchExpression,
   }) async {
-    final returnStatement = switchExpression.parent;
+    var returnStatement = switchExpression.parent;
     if (returnStatement is! ReturnStatement) {
       return;
     }
 
-    final indent = utils.getLinePrefix(returnStatement.offset);
+    var indent = utils.getLinePrefix(returnStatement.offset);
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addSimpleReplacement(
@@ -227,8 +275,8 @@ class ConvertSwitchExpressionToSwitchStatement
     required String beforeCaseExpression,
     required Token semicolon,
   }) async {
-    for (final case_ in switchExpression.cases) {
-      final guardedPattern = case_.guardedPattern;
+    for (var case_ in switchExpression.cases) {
+      var guardedPattern = case_.guardedPattern;
       // `_ =>` -> `default:`
       // `X _ =>` -> `X _:`
       if (guardedPattern.isPureUntypedWildcard) {
@@ -245,7 +293,7 @@ class ConvertSwitchExpressionToSwitchStatement
         ':$eol$indent    $beforeCaseExpression',
       );
       // Replace `,` with `;` or just insert `;`.
-      final comma = case_.expression.endToken.next;
+      var comma = case_.expression.endToken.next;
       if (comma != null && comma.type == TokenType.COMMA) {
         builder.addSimpleReplacement(range.token(comma), ';');
       } else {
@@ -261,12 +309,12 @@ class ConvertSwitchExpressionToSwitchStatement
     required ChangeBuilder builder,
     required SwitchExpression switchExpression,
   }) async {
-    final declaration = switchExpression.parent;
+    var declaration = switchExpression.parent;
     if (declaration is! VariableDeclaration) {
       return;
     }
 
-    final declarationList = declaration.parent;
+    var declarationList = declaration.parent;
     if (declarationList is! VariableDeclarationList) {
       return;
     }
@@ -274,17 +322,17 @@ class ConvertSwitchExpressionToSwitchStatement
       return;
     }
 
-    final declarationStatement = declarationList.parent;
+    var declarationStatement = declarationList.parent;
     if (declarationStatement is! VariableDeclarationStatement) {
       return;
     }
 
-    final indent = utils.getLinePrefix(declarationStatement.offset);
+    var indent = utils.getLinePrefix(declarationStatement.offset);
 
     await builder.addDartFileEdit(file, (builder) {
       // Replace implicit type with explicit.
       if (declarationList.type == null) {
-        final keyword = declarationList.keyword;
+        var keyword = declarationList.keyword;
         if (keyword != null) {
           if (keyword.keyword == Keyword.FINAL) {
             builder.addReplacement(
@@ -323,7 +371,7 @@ class ConvertSwitchExpressionToSwitchStatement
     required ChangeBuilder builder,
     required SwitchExpression switchExpression,
   }) async {
-    final assignment = switchExpression.parent;
+    var assignment = switchExpression.parent;
     if (assignment is! AssignmentExpression) {
       return;
     }
@@ -331,22 +379,22 @@ class ConvertSwitchExpressionToSwitchStatement
       return;
     }
 
-    final variableId = assignment.leftHandSide;
+    var variableId = assignment.leftHandSide;
     if (variableId is! SimpleIdentifier) {
       return;
     }
 
-    final expressionStatement = assignment.parent;
+    var expressionStatement = assignment.parent;
     if (expressionStatement is! ExpressionStatement) {
       return;
     }
 
-    final semicolon = expressionStatement.semicolon;
+    var semicolon = expressionStatement.semicolon;
     if (semicolon == null) {
       return;
     }
 
-    final indent = utils.getLinePrefix(expressionStatement.offset);
+    var indent = utils.getLinePrefix(expressionStatement.offset);
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addSimpleReplacement(
@@ -392,7 +440,7 @@ class _IfCaseThen extends _IfCase {
 extension on GuardedPattern {
   bool get isPureUntypedWildcard {
     if (whenClause == null) {
-      final pattern = this.pattern;
+      var pattern = this.pattern;
       return pattern is WildcardPattern && pattern.type == null;
     }
     return false;

@@ -330,29 +330,6 @@ intptr_t SourceReport::GetTokenPosOrLine(const Script& script,
   return line;
 }
 
-bool SourceReport::ShouldCoverageSkipCallSite(const ICData* ic_data) {
-  if (ic_data == nullptr) return true;
-  if (!ic_data->is_static_call()) return false;
-  Function& func = Function::Handle(ic_data->GetTargetAt(0));
-
-  // Ignore calls to the LateError functions. These are used to throw errors to
-  // do with late variables. These errors shouldn't be hit in working code, so
-  // shouldn't count against the coverage total.
-  // See https://github.com/dart-lang/coverage/issues/341
-  if (late_error_class_id_ == ClassId::kIllegalCid) {
-    const auto& dart_internal = Library::Handle(Library::InternalLibrary());
-    const auto& late_error_class =
-        Class::Handle(dart_internal.LookupClass(Symbols::LateError()));
-    ASSERT(!late_error_class.IsNull());
-    late_error_class_id_ = late_error_class.id();
-  }
-  Class& cls = Class::Handle(func.Owner());
-  if (late_error_class_id_ == cls.id()) {
-    return true;
-  }
-  return false;
-}
-
 void SourceReport::PrintCoverageData(JSONObject* jsobj,
                                      const Function& function,
                                      const Code& code,
@@ -361,11 +338,6 @@ void SourceReport::PrintCoverageData(JSONObject* jsobj,
   const TokenPosition& begin_pos = function.token_pos();
   const TokenPosition& end_pos = function.end_token_pos();
 
-  ZoneGrowableArray<const ICData*>* ic_data_array =
-      new (zone()) ZoneGrowableArray<const ICData*>();
-  function.RestoreICDataMap(ic_data_array, false /* clone ic-data */);
-  const PcDescriptors& descriptors =
-      PcDescriptors::Handle(zone(), code.pc_descriptors());
   const Script& script = Script::Handle(zone(), function.script());
 
   const int kCoverageNone = 0;
@@ -386,7 +358,7 @@ void SourceReport::PrintCoverageData(JSONObject* jsobj,
   }
 
   auto update_coverage = [&](TokenPosition token_pos, bool was_executed) {
-    if (!token_pos.IsWithin(begin_pos, end_pos)) {
+    if (!(token_pos.IsReal() && token_pos.IsWithin(begin_pos, end_pos))) {
       return;
     }
 
@@ -399,21 +371,6 @@ void SourceReport::PrintCoverageData(JSONObject* jsobj,
       }
     }
   };
-
-  if (!report_branch_coverage) {
-    PcDescriptors::Iterator iter(descriptors,
-                                 UntaggedPcDescriptors::kIcCall |
-                                     UntaggedPcDescriptors::kUnoptStaticCall);
-    while (iter.MoveNext()) {
-      HANDLESCOPE(thread());
-      ASSERT(iter.DeoptId() < ic_data_array->length());
-      const ICData* ic_data = (*ic_data_array)[iter.DeoptId()];
-      if (!ShouldCoverageSkipCallSite(ic_data)) {
-        const TokenPosition& token_pos = iter.TokenPos();
-        update_coverage(token_pos, ic_data->AggregateCount() > 0);
-      }
-    }
-  }
 
   // Merge the coverage from coverage_array attached to the function.
   const Array& coverage_array = Array::Handle(function.GetCoverageArray());

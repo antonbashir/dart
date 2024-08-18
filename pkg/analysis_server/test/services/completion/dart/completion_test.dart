@@ -99,10 +99,10 @@ void r2(var vim) {
 replacement
   left: 1
 suggestions
-  var
-    kind: keyword
   vim
     kind: parameter
+  var
+    kind: keyword
   void
     kind: keyword
 ''');
@@ -259,16 +259,16 @@ void rr(var vim) {
 replacement
   left: 1
 suggestions
-  var
-    kind: keyword
   vf
+    kind: localVariable
+  vq
     kind: localVariable
   vim
     kind: parameter
+  var
+    kind: keyword
   void
     kind: keyword
-  vq
-    kind: localVariable
 ''');
   }
 
@@ -323,7 +323,53 @@ class Fclass extends Bclass with  Eclass {}
 replacement
   right: 5
 suggestions
+  import '';
+    kind: keyword
+    selection: 8
+  export '';
+    kind: keyword
+    selection: 8
+  abstract
+    kind: keyword
+  base
+    kind: keyword
   class
+    kind: keyword
+  const
+    kind: keyword
+  covariant
+    kind: keyword
+  dynamic
+    kind: keyword
+  enum
+    kind: keyword
+  extension
+    kind: keyword
+  external
+    kind: keyword
+  final
+    kind: keyword
+  interface
+    kind: keyword
+  late
+    kind: keyword
+  library
+    kind: keyword
+  mixin
+    kind: keyword
+  part '';
+    kind: keyword
+    selection: 6
+  part of '';
+    kind: keyword
+    selection: 9
+  sealed
+    kind: keyword
+  typedef
+    kind: keyword
+  var
+    kind: keyword
+  void
     kind: keyword
 ''');
   }
@@ -393,15 +439,39 @@ class Fclass extends Bclass with Eclass {}
 replacement
   right: 8
 suggestions
+  class
+    kind: keyword
+  const
+    kind: keyword
+  void
+    kind: keyword
+  final
+    kind: keyword
+  enum
+    kind: keyword
+  typedef
+    kind: keyword
   abstract
     kind: keyword
   base
     kind: keyword
-  final
+  covariant
+    kind: keyword
+  dynamic
+    kind: keyword
+  extension
+    kind: keyword
+  external
     kind: keyword
   interface
     kind: keyword
+  late
+    kind: keyword
   mixin
+    kind: keyword
+  sealed
+    kind: keyword
+  var
     kind: keyword
 ''');
   }
@@ -793,6 +863,26 @@ class X {
 replacement
   right: 4
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -803,31 +893,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -875,6 +945,28 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  k
+    kind: field
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -887,33 +979,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
-  k
-    kind: field
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -945,6 +1015,10 @@ class Q {
 replacement
   right: 1
 suggestions
+  true
+    kind: keyword
+  x
+    kind: field
   false
     kind: keyword
   null
@@ -955,10 +1029,6 @@ suggestions
     kind: keyword
   this
     kind: keyword
-  true
-    kind: keyword
-  x
-    kind: field
 ''');
   }
 
@@ -987,6 +1057,10 @@ replacement
 suggestions
   false
     kind: keyword
+  true
+    kind: keyword
+  x
+    kind: field
   null
     kind: keyword
   super
@@ -995,10 +1069,6 @@ suggestions
     kind: keyword
   this
     kind: keyword
-  true
-    kind: keyword
-  x
-    kind: field
 ''');
   }
 
@@ -1025,10 +1095,10 @@ class Q {
 replacement
   right: 2
 suggestions
-  await
-    kind: keyword
   zs
     kind: field
+  await
+    kind: keyword
 ''');
   }
 
@@ -1055,12 +1125,12 @@ class Q {
 replacement
   right: 1
 suggestions
+  k
+    kind: field
   const
     kind: keyword
   false
     kind: keyword
-  k
-    kind: field
   null
     kind: keyword
   super
@@ -1157,22 +1227,22 @@ class Q {
 replacement
   right: 1
 suggestions
-  const
-    kind: keyword
+  x
+    kind: field
   false
     kind: keyword
+  true
+    kind: keyword
   null
+    kind: keyword
+  this
+    kind: keyword
+  const
     kind: keyword
   super
     kind: keyword
   switch
     kind: keyword
-  this
-    kind: keyword
-  true
-    kind: keyword
-  x
-    kind: field
 ''');
   }
 
@@ -1249,6 +1319,26 @@ class Q {
 replacement
   right: 5
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -1261,31 +1351,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1319,6 +1389,26 @@ class Q {
 replacement
   right: 2
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -1331,31 +1421,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1420,6 +1490,26 @@ class Q {
 replacement
   right: 3
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -1432,31 +1522,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1520,6 +1590,26 @@ class Q {
 replacement
   right: 3
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -1532,31 +1622,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1590,6 +1660,26 @@ class Q {
 replacement
   right: 6
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   break
@@ -1602,31 +1692,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1722,6 +1792,26 @@ class Q {
 replacement
   right: 3
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   do
@@ -1730,31 +1820,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1848,9 +1918,13 @@ class Q {
 replacement
   right: 3
 suggestions
-  abstract
+  final
     kind: keyword
   const
+    kind: keyword
+  var
+    kind: keyword
+  abstract
     kind: keyword
   covariant
     kind: keyword
@@ -1858,13 +1932,9 @@ suggestions
     kind: keyword
   external
     kind: keyword
-  final
-    kind: keyword
   late
     kind: keyword
   static
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -1896,15 +1966,21 @@ class Q {
 replacement
   right: 4
 suggestions
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -1912,13 +1988,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -1948,7 +2018,43 @@ class Q {
 replacement
   right: 6
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
+    kind: keyword
+  do
+    kind: keyword
+  dynamic
+    kind: keyword
+  false
+    kind: keyword
+  late
+    kind: keyword
+  null
+    kind: keyword
+  true
+    kind: keyword
+  void
+    kind: keyword
+  while
     kind: keyword
 ''');
   }
@@ -2038,6 +2144,26 @@ class Q {
 replacement
   right: 2
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -2048,31 +2174,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -2177,6 +2283,26 @@ class Q {
 replacement
   right: 6
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   do
@@ -2185,31 +2311,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -2235,19 +2341,19 @@ class X {dynamic f(a,b,c) {return a + b * c ^;}}
 ''');
     assertResponse(r'''
 suggestions
-  const
+  true
+    kind: keyword
+  null
     kind: keyword
   false
     kind: keyword
-  null
+  this
+    kind: keyword
+  const
     kind: keyword
   super
     kind: keyword
   switch
-    kind: keyword
-  this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -2384,8 +2490,6 @@ suggestions
     kind: import
   dart:convert
     kind: import
-  dart:core
-    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -2393,6 +2497,10 @@ suggestions
   dart:io
     kind: import
   dart:isolate
+    kind: import
+  dart:js
+    kind: import
+  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -2403,6 +2511,8 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
+    kind: import
+  dart:core
     kind: import
 ''');
   }
@@ -2450,10 +2560,10 @@ replacement
 suggestions
   falsetrue
     kind: topLevelVariable
-  true
-    kind: keyword
   truefalse
     kind: topLevelVariable
+  true
+    kind: keyword
 ''');
   }
 
@@ -2590,12 +2700,14 @@ class T {
 replacement
   right: 1
 suggestions
+  m
+    kind: field
   const
     kind: keyword
   false
     kind: keyword
-  m
-    kind: field
+  true
+    kind: keyword
   null
     kind: keyword
   super
@@ -2603,8 +2715,6 @@ suggestions
   switch
     kind: keyword
   this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -2701,6 +2811,8 @@ suggestions
     kind: keyword
   g
     kind: methodInvocation
+  true
+    kind: keyword
   null
     kind: keyword
   super
@@ -2708,8 +2820,6 @@ suggestions
   switch
     kind: keyword
   this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -2754,17 +2864,17 @@ class T {
 replacement
   right: 1
 suggestions
+  m
+    kind: field
   const
     kind: keyword
   false
     kind: keyword
-  m
-    kind: field
+  true
+    kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -2861,11 +2971,11 @@ suggestions
     kind: keyword
   g
     kind: methodInvocation
+  true
+    kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -3328,18 +3438,18 @@ m(){[1].forEach((x)=>^x);}
 replacement
   right: 1
 suggestions
-  const
+  x
+    kind: parameter
+  null
     kind: keyword
   false
     kind: keyword
-  null
+  true
+    kind: keyword
+  const
     kind: keyword
   switch
     kind: keyword
-  true
-    kind: keyword
-  x
-    kind: parameter
 ''');
   }
 
@@ -3350,6 +3460,24 @@ n(){[1].forEach((x){^});}
 ''');
     assertResponse(r'''
 suggestions
+  x
+    kind: parameter
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -3360,34 +3488,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  x
-    kind: parameter
 ''');
   }
 
@@ -3415,8 +3525,24 @@ class Caster {} m() {try {} on Caster catch (CastBlock) {^}}
 suggestions
   CastBlock
     kind: localVariable
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Caster
     kind: class
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Caster
     kind: constructorInvocation
   assert
@@ -3429,29 +3555,13 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
   rethrow
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -3785,16 +3895,6 @@ m(){f(a, b, {x1, x2, y}) {};f(1, 2, ^);}
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
-  null
-    kind: keyword
-  switch
-    kind: keyword
-  true
-    kind: keyword
   |x1: |
     kind: namedArgument
   |x2: |
@@ -3820,16 +3920,6 @@ m(){f(a, b, {x1, x2, y}) {};f(1, 2, ^
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
-  null
-    kind: keyword
-  switch
-    kind: keyword
-  true
-    kind: keyword
   |x1: |
     kind: namedArgument
   |x2: |
@@ -3845,16 +3935,6 @@ m(){f(a, b, {x1, x2, y}) {};f(1, 2, ^;
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
-  null
-    kind: keyword
-  switch
-    kind: keyword
-  true
-    kind: keyword
   |x1: |
     kind: namedArgument
   |x2: |
@@ -3871,6 +3951,22 @@ m(){f(a, b, {x1, x2, y}) {};f(1, 2, ;^
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -3881,27 +3977,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -4056,15 +4136,21 @@ suggestions
     selection: 90 38
   A
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -4072,13 +4158,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4094,15 +4174,21 @@ replacement
 suggestions
   B
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -4110,13 +4196,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4130,6 +4210,28 @@ class A {int x; mth() {^int y = this.x;}}class B{}
 replacement
   right: 3
 suggestions
+  return
+    kind: keyword
+  x
+    kind: field
+  if
+    kind: keyword
+  final
+    kind: keyword
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -4140,38 +4242,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  x
-    kind: field
 ''');
   }
 
@@ -4214,9 +4294,9 @@ replacement
   right: 2
 suggestions
   Date
-    kind: class
-  Date
     kind: constructorInvocation
+  Date
+    kind: class
 ''');
   }
 
@@ -4246,13 +4326,13 @@ class C {mth(Map x, ^) {}mtf(, Map x) {}m() {for (int i=0; i<5; i++); A x;}}clas
 suggestions
   bool
     kind: class
+  void
+    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4266,13 +4346,13 @@ class C {mth(Map x, ) {}mtf(^, Map x) {}m() {for (int i=0; i<5; i++); A x;}}clas
 suggestions
   bool
     kind: class
+  void
+    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4280,7 +4360,16 @@ suggestions
   Future<void> test_commentSnippets007_3() async {
     allowedIdentifiers = {'int'};
     await computeSuggestions('''
-class C {mth(Map x, ) {}mtf(, Map x) {}m() {for (in^t i=0; i<5; i++); A x;}}class int{}class Arrays{}
+class C {
+  mth(Map x, ) {}
+  mtf(, Map x) {}
+  m() {
+    for (in^t i=0; i<5; i++);
+    A x;
+  }
+}
+class int{}
+class Arrays{}
 ''');
     assertResponse(r'''
 replacement
@@ -4320,9 +4409,9 @@ replacement
   left: 3
 suggestions
   Date
-    kind: class
-  Date
     kind: constructorInvocation
+  Date
+    kind: class
 ''');
   }
 
@@ -4468,31 +4557,62 @@ class x {^}
 ''');
     assertResponse(r'''
 suggestions
+  @override
+  // TODO: implement hashCode
+  int get hashCode => super.hashCode;
+    kind: override
+    selection: 62 14
+  @override
+  // TODO: implement runtimeType
+  Type get runtimeType => super.runtimeType;
+    kind: override
+    selection: 69 17
+  @override
+  String toString() {
+    // TODO: implement toString
+    return super.toString();
+  }
+    kind: override
+    selection: 68 24
+  @override
+  bool operator ==(Object other) {
+    // TODO: implement ==
+    return super == other;
+  }
+    kind: override
+    selection: 75 22
+  @override
+  noSuchMethod(Invocation invocation) {
+    // TODO: implement noSuchMethod
+    return super.noSuchMethod(invocation);
+  }
+    kind: override
+    selection: 90 38
+  num
+    kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
-  factory
-    kind: keyword
-  final
-    kind: keyword
   get
     kind: keyword
   late
     kind: keyword
-  num
-    kind: class
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4520,13 +4640,23 @@ class x {}^
 ''');
     assertResponse(r'''
 suggestions
+  class
+    kind: keyword
+  num
+    kind: class
+  const
+    kind: keyword
+  void
+    kind: keyword
+  final
+    kind: keyword
+  enum
+    kind: keyword
+  typedef
+    kind: keyword
   abstract
     kind: keyword
   base
-    kind: keyword
-  class
-    kind: keyword
-  const
     kind: keyword
   covariant
     kind: keyword
@@ -4536,23 +4666,15 @@ suggestions
     kind: keyword
   external
     kind: keyword
-  final
-    kind: keyword
   interface
     kind: keyword
   late
     kind: keyword
   mixin
     kind: keyword
-  num
-    kind: class
   sealed
     kind: keyword
-  typedef
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4580,13 +4702,13 @@ class D {f(){} g(){f^(f);}}
 replacement
   left: 1
 suggestions
-  f
-    kind: methodInvocation
-  false
-    kind: keyword
   final
     kind: keyword
+  f
+    kind: methodInvocation
   for
+    kind: keyword
+  false
     kind: keyword
 ''');
   }
@@ -4594,7 +4716,7 @@ suggestions
   Future<void> test_commentSnippets015_2() async {
     allowedIdentifiers = {'f'};
     await computeSuggestions('''
-class D {f(){} g(){f(f^);}}
+class D {f(p){} g(){f(f^);}}
 ''');
     assertResponse(r'''
 replacement
@@ -4614,6 +4736,28 @@ class F {m() { m(); ^}}
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  m
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -4624,33 +4768,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
-  m
-    kind: methodInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -4671,11 +4793,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
+  true
+    kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -4689,13 +4811,13 @@ class Map{}class Arrays{}class C{ m(^){} n( x, q)
 suggestions
   Map
     kind: class
+  void
+    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4709,13 +4831,13 @@ class Map{}class Arrays{}class C{ m(){} n(^ x, q)
 suggestions
   Arrays
     kind: class
+  void
+    kind: keyword
   covariant
     kind: keyword
   dynamic
     kind: keyword
   final
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -4741,12 +4863,12 @@ classMap{}class tst {var newt;void newf(){}test() {var newz;new^/**/;}}
 replacement
   left: 3
 suggestions
-  newf
-    kind: methodInvocation
-  newt
-    kind: field
   newz
     kind: localVariable
+  newt
+    kind: field
+  newf
+    kind: methodInvocation
 ''');
   }
 
@@ -4883,22 +5005,22 @@ class q {m(Map q){var x;m(^)}n(){var x;n()}}
 ''');
     assertResponse(r'''
 suggestions
-  const
+  x
+    kind: localVariable
+  true
     kind: keyword
   false
     kind: keyword
   null
     kind: keyword
+  this
+    kind: keyword
+  const
+    kind: keyword
   super
     kind: keyword
   switch
     kind: keyword
-  this
-    kind: keyword
-  true
-    kind: keyword
-  x
-    kind: localVariable
 ''');
   }
 
@@ -4919,21 +5041,21 @@ class C {num m() {var q; num x=^ q + /**/;}}
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
+  q
+    kind: localVariable
   false
+    kind: keyword
+  true
+    kind: keyword
+  const
     kind: keyword
   null
     kind: keyword
-  q
-    kind: localVariable
   super
     kind: keyword
   switch
     kind: keyword
   this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -4945,14 +5067,14 @@ class C {num m() {var q; num x= q + ^/**/;}}
 ''');
     assertResponse(r'''
 suggestions
+  q
+    kind: localVariable
   const
     kind: keyword
   false
     kind: keyword
   null
     kind: keyword
-  q
-    kind: localVariable
   super
     kind: keyword
   switch
@@ -5040,22 +5162,6 @@ suggestions
 ''');
   }
 
-  Future<void> test_commentSnippets029_1() async {
-    allowedIdentifiers = {'DateTime'};
-    await computeSuggestions('''
-interface A<X> default B<X extends ^List> {}
-''');
-    assertResponse(r'''
-replacement
-  right: 4
-suggestions
-  DateTime
-    kind: class
-  dynamic
-    kind: keyword
-''');
-  }
-
   Future<void> test_commentSnippets029_2() async {
     allowedIdentifiers = {'List'};
     await computeSuggestions('''
@@ -5079,6 +5185,10 @@ class Bar<T extends Foo> {const Bar(^T k);T m(T a, T b){}final T f = null;}
 replacement
   right: 1
 suggestions
+  this
+    kind: keyword
+  void
+    kind: keyword
   T
     kind: typeParameter
   covariant
@@ -5088,10 +5198,6 @@ suggestions
   final
     kind: keyword
   super
-    kind: keyword
-  this
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -5105,10 +5211,10 @@ class Bar<T extends Foo> {const Bar(T^ k);T m(T a, T b){}final T f = null;}
 replacement
   left: 1
 suggestions
-  T
-    kind: typeParameter
   this
     kind: keyword
+  T
+    kind: typeParameter
 ''');
   }
 
@@ -5208,9 +5314,9 @@ replacement
 suggestions
   Fit
     kind: class
-  factory
-    kind: keyword
   final
+    kind: keyword
+  factory
     kind: keyword
 ''');
   }
@@ -5226,15 +5332,21 @@ replacement
 suggestions
   Fit
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -5242,13 +5354,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -5482,12 +5588,28 @@ class List{}class XXX {XXX.fisk();}void f() {f(); ^}}
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   List
     kind: class
-  List
-    kind: constructorInvocation
   XXX
     kind: class
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
+  List
+    kind: constructorInvocation
   XXX.fisk
     kind: constructorInvocation
   assert
@@ -5500,27 +5622,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -5536,18 +5642,18 @@ f(){int x;int y=^;}
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
+  x
+    kind: localVariable
   false
+    kind: keyword
+  true
+    kind: keyword
+  const
     kind: keyword
   null
     kind: keyword
   switch
     kind: keyword
-  true
-    kind: keyword
-  x
-    kind: localVariable
 ''');
   }
 
@@ -5843,18 +5949,18 @@ void r() {
 ''');
     assertResponse(r'''
 suggestions
-  const
+  v
+    kind: localVariable
+  true
     kind: keyword
   false
     kind: keyword
   null
     kind: keyword
+  const
+    kind: keyword
   switch
     kind: keyword
-  true
-    kind: keyword
-  v
-    kind: localVariable
 ''');
   }
 
@@ -5908,6 +6014,30 @@ class A{m(){^f(3);}}n(){f(3);}f(x)=>x*3;
 replacement
   right: 1
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  f
+    kind: functionInvocation
+  n
+    kind: functionInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -5916,37 +6046,13 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  f
-    kind: functionInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
     kind: keyword
   late
     kind: keyword
-  n
-    kind: functionInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -5962,6 +6068,30 @@ class A{m(){f(3);^}}n(){f(3);}f(x)=>x*3;
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  f
+    kind: functionInvocation
+  n
+    kind: functionInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -5970,37 +6100,13 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  f
-    kind: functionInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
     kind: keyword
   late
     kind: keyword
-  n
-    kind: functionInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -6018,6 +6124,26 @@ class A{m(){f(3);}}n(){^f(3);}f(x)=>x*3;
 replacement
   right: 1
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  f
+    kind: functionInvocation
+  n
+    kind: functionInvocation
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -6026,33 +6152,13 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  f
-    kind: functionInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
     kind: keyword
   late
     kind: keyword
-  n
-    kind: functionInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -6068,6 +6174,26 @@ class A{m(){f(3);}}n(){f(3);^}f(x)=>x*3;
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  f
+    kind: functionInvocation
+  n
+    kind: functionInvocation
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -6076,33 +6202,13 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  f
-    kind: functionInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
     kind: keyword
   late
     kind: keyword
-  n
-    kind: functionInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -6704,14 +6810,14 @@ p(x)=>0;var E;f(q)=>^p(E);
 replacement
   right: 1
 suggestions
-  const
+  p
+    kind: functionInvocation
+  null
     kind: keyword
   false
     kind: keyword
-  null
+  const
     kind: keyword
-  p
-    kind: functionInvocation
   switch
     kind: keyword
   true
@@ -6732,13 +6838,13 @@ suggestions
     kind: topLevelVariable
   const
     kind: keyword
+  true
+    kind: keyword
   false
     kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -6782,11 +6888,11 @@ class Map<K,V>{}class List<E>{}class int{}void f() {var m=new Map<List<Map<int,i
 replacement
   right: 3
 suggestions
-  dynamic
-    kind: keyword
   int
     kind: class
   void
+    kind: keyword
+  dynamic
     kind: keyword
 ''');
   }
@@ -6828,11 +6934,11 @@ class Map<K,V>{}class List<E>{}class int{}void f() {var m=new Map<List<Map<int,i
 ''');
     assertResponse(r'''
 suggestions
-  dynamic
-    kind: keyword
   int
     kind: class
   void
+    kind: keyword
+  dynamic
     kind: keyword
 ''');
   }
@@ -7053,6 +7159,30 @@ class Q{f(){xy() {^};xy();}}
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  xy
+    kind: functionInvocation
+  f
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -7061,42 +7191,18 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  f
-    kind: methodInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
     kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  xy
-    kind: functionInvocation
 ''');
   }
 
@@ -7115,6 +7221,8 @@ suggestions
     kind: keyword
   void
     kind: keyword
+  HashMap
+    kind: class
 ''');
   }
 
@@ -7167,8 +7275,36 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Q
     kind: class
+  xya
+    kind: functionInvocation
+  xyb
+    kind: functionInvocation
+  fqe
+    kind: methodInvocation
+  fqi
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Q
     kind: constructorInvocation
   assert
@@ -7181,44 +7317,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  fqe
-    kind: methodInvocation
-  fqi
-    kind: methodInvocation
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  xya
-    kind: functionInvocation
-  xyb
-    kind: functionInvocation
 ''');
   }
 
@@ -7246,8 +7354,36 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Q
     kind: class
+  xya
+    kind: functionInvocation
+  xza
+    kind: functionInvocation
+  fqe
+    kind: methodInvocation
+  fqi
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Q
     kind: constructorInvocation
   assert
@@ -7260,44 +7396,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  fqe
-    kind: methodInvocation
-  fqi
-    kind: methodInvocation
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  xya
-    kind: functionInvocation
-  xza
-    kind: functionInvocation
 ''');
   }
 
@@ -7325,8 +7433,36 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Q
     kind: class
+  xya
+    kind: functionInvocation
+  xyb
+    kind: functionInvocation
+  fqe
+    kind: methodInvocation
+  fqi
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Q
     kind: constructorInvocation
   assert
@@ -7339,44 +7475,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  fqe
-    kind: methodInvocation
-  fqi
-    kind: methodInvocation
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  xya
-    kind: functionInvocation
-  xyb
-    kind: functionInvocation
 ''');
   }
 
@@ -7404,8 +7512,36 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Q
     kind: class
+  xya
+    kind: functionInvocation
+  xza
+    kind: functionInvocation
+  fqe
+    kind: methodInvocation
+  fqi
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Q
     kind: constructorInvocation
   assert
@@ -7418,44 +7554,16 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  fqe
-    kind: methodInvocation
-  fqi
-    kind: methodInvocation
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
-  xya
-    kind: functionInvocation
-  xza
-    kind: functionInvocation
 ''');
   }
 
@@ -7483,8 +7591,32 @@ class Q {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
   Q
     kind: class
+  fqe
+    kind: methodInvocation
+  fqi
+    kind: methodInvocation
+  var
+    kind: keyword
+  super
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  this
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   Q
     kind: constructorInvocation
   assert
@@ -7497,35 +7629,11 @@ suggestions
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  fqe
-    kind: methodInvocation
-  fqi
-    kind: methodInvocation
-  if
-    kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  super
-    kind: keyword
-  switch
-    kind: keyword
-  this
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -7663,9 +7771,9 @@ replacement
   left: 2
 suggestions
   Enum
-    kind: class
-  Enum
     kind: constructorInvocation
+  Enum
+    kind: class
 ''');
   }
 
@@ -7886,15 +7994,15 @@ suggestions
     kind: constructorInvocation
   A.second
     kind: constructorInvocation
-  const
+  null
     kind: keyword
   false
     kind: keyword
-  null
+  true
+    kind: keyword
+  const
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -7956,7 +8064,7 @@ suggestions
   int
     kind: class
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8022,7 +8130,7 @@ suggestions
   int
     kind: class
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8086,7 +8194,7 @@ suggestions
   int
     kind: class
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8155,7 +8263,7 @@ suggestions
   int
     kind: class
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8224,7 +8332,7 @@ suggestions
   int
     kind: class
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8301,16 +8409,16 @@ class C {}
 suggestions
   String
     kind: class
-  String.fromCharCode
-    kind: constructorInvocation
-  String.fromCharCodes
-    kind: constructorInvocation
-  String.fromEnvironment
-    kind: constructorInvocation
   int
     kind: class
+  String.fromCharCode
+    kind: constructor
+  String.fromCharCodes
+    kind: constructor
+  String.fromEnvironment
+    kind: constructor
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8336,16 +8444,16 @@ class C {}
 suggestions
   String
     kind: class
-  String.fromCharCode
-    kind: constructorInvocation
-  String.fromCharCodes
-    kind: constructorInvocation
-  String.fromEnvironment
-    kind: constructorInvocation
   int
     kind: class
+  String.fromCharCode
+    kind: constructor
+  String.fromCharCodes
+    kind: constructor
+  String.fromEnvironment
+    kind: constructor
   int.fromEnvironment
-    kind: constructorInvocation
+    kind: constructor
 ''');
   }
 
@@ -8371,14 +8479,14 @@ void f() {
 ''');
     assertResponse(r'''
 suggestions
+  values
+    kind: field
   A
     kind: enumConstant
   B
     kind: enumConstant
   C
     kind: enumConstant
-  values
-    kind: field
 ''');
   }
 
@@ -8397,10 +8505,10 @@ void f(p) {
 replacement
   left: 3
 suggestions
-  STR
-    kind: topLevelVariable
   str
     kind: localVariable
+  STR
+    kind: topLevelVariable
 ''');
   }
 
@@ -8419,10 +8527,10 @@ void f(p) {
 replacement
   left: 3
 suggestions
-  STR
-    kind: topLevelVariable
   str
     kind: localVariable
+  STR
+    kind: topLevelVariable
 ''');
   }
 
@@ -8441,18 +8549,18 @@ void f(p) {
 replacement
   left: 3
 suggestions
-  STR
-    kind: topLevelVariable
+  str
+    kind: localVariable
   String
     kind: class
+  STR
+    kind: topLevelVariable
   String.fromCharCode
     kind: constructorInvocation
   String.fromCharCodes
     kind: constructorInvocation
   String.fromEnvironment
     kind: constructorInvocation
-  str
-    kind: localVariable
 ''');
   }
 
@@ -8491,7 +8599,12 @@ suggestions
   Future<void> test_completion_forStmt_vars_1() async {
     allowedIdentifiers = {'int'};
     await computeSuggestions('''
-class int{}class Foo { mth() { for (in^t i = 0; i < 5; i++); }}
+class int{}
+class Foo {
+  mth() {
+    for (in^t i = 0; i < 5; i++);
+  }
+}
 ''');
     assertResponse(r'''
 replacement
@@ -8569,16 +8682,6 @@ void f(FFF fff) {
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
-  null
-    kind: keyword
-  switch
-    kind: keyword
-  true
-    kind: keyword
   |x1: |
     kind: namedArgument
   |x2: |
@@ -8607,21 +8710,21 @@ class Foo { int myField = 7; mth() { if (^) {}}}
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
   myField
     kind: field
+  false
+    kind: keyword
+  true
+    kind: keyword
   null
+    kind: keyword
+  this
+    kind: keyword
+  const
     kind: keyword
   super
     kind: keyword
   switch
-    kind: keyword
-  this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -8633,21 +8736,21 @@ class Foo { int myField = 7; mth() { if (^) }}
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
   myField
     kind: field
+  false
+    kind: keyword
+  true
+    kind: keyword
   null
+    kind: keyword
+  this
+    kind: keyword
+  const
     kind: keyword
   super
     kind: keyword
   switch
-    kind: keyword
-  this
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -8729,11 +8832,11 @@ int topValue = 7; class Foo { mth() { if (t^) {}}}
 replacement
   left: 1
 suggestions
-  this
+  true
     kind: keyword
   topValue
     kind: topLevelVariable
-  true
+  this
     kind: keyword
 ''');
   }
@@ -8747,11 +8850,11 @@ topValue = 7; class Foo { mth() { if (t^) {}}}
 replacement
   left: 1
 suggestions
-  this
+  true
     kind: keyword
   topValue
     kind: topLevelVariable
-  true
+  this
     kind: keyword
 ''');
   }
@@ -8815,8 +8918,6 @@ suggestions
     kind: import
   dart:convert
     kind: import
-  dart:core
-    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -8824,6 +8925,10 @@ suggestions
   dart:io
     kind: import
   dart:isolate
+    kind: import
+  dart:js
+    kind: import
+  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -8834,6 +8939,8 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
+    kind: import
+  dart:core
     kind: import
 ''');
   }
@@ -8878,8 +8985,6 @@ suggestions
     kind: import
   dart:convert
     kind: import
-  dart:core
-    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -8887,6 +8992,10 @@ suggestions
   dart:io
     kind: import
   dart:isolate
+    kind: import
+  dart:js
+    kind: import
+  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -8897,6 +9006,8 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
+    kind: import
+  dart:core
     kind: import
 ''');
   }
@@ -8932,6 +9043,10 @@ suggestions
     kind: import
   dart:isolate
     kind: import
+  dart:js
+    kind: import
+  dart:js_interop
+    kind: import
   dart:math
     kind: import
   my_lib.dart
@@ -8954,6 +9069,9 @@ import^
 replacement
   left: 6
 suggestions
+  import '';
+    kind: keyword
+    selection: 8
 ''');
   }
 
@@ -9126,15 +9244,15 @@ void f() {
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
   int
     kind: class
   int.fromEnvironment
     kind: constructorInvocation
+  const
+    kind: keyword
   null
+    kind: keyword
+  false
     kind: keyword
   switch
     kind: keyword
@@ -9155,15 +9273,15 @@ void f() {
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
-    kind: keyword
   int
     kind: class
   int.fromEnvironment
     kind: constructorInvocation
+  const
+    kind: keyword
   null
+    kind: keyword
+  false
     kind: keyword
   switch
     kind: keyword
@@ -9444,9 +9562,9 @@ void f(p) {
     assertResponse(r'''
 suggestions
   myFuncDouble
-    kind: methodInvocation
+    kind: method
   myFuncInt
-    kind: methodInvocation
+    kind: method
 ''');
   }
 
@@ -9465,7 +9583,7 @@ void f(p) {
     assertResponse(r'''
 suggestions
   myFunc
-    kind: methodInvocation
+    kind: method
 ''');
   }
 
@@ -9483,7 +9601,7 @@ void f(p) {
     assertResponse(r'''
 suggestions
   myFunc
-    kind: methodInvocation
+    kind: method
 ''');
   }
 
@@ -9572,19 +9690,56 @@ class Collection{}class List extends Collection{}class Foo { ^ }
 ''');
     assertResponse(r'''
 suggestions
+  @override
+  // TODO: implement hashCode
+  int get hashCode => super.hashCode;
+    kind: override
+    selection: 62 14
+  @override
+  // TODO: implement runtimeType
+  Type get runtimeType => super.runtimeType;
+    kind: override
+    selection: 69 17
+  @override
+  String toString() {
+    // TODO: implement toString
+    return super.toString();
+  }
+    kind: override
+    selection: 68 24
+  @override
+  bool operator ==(Object other) {
+    // TODO: implement ==
+    return super == other;
+  }
+    kind: override
+    selection: 75 22
+  @override
+  noSuchMethod(Invocation invocation) {
+    // TODO: implement noSuchMethod
+    return super.noSuchMethod(invocation);
+  }
+    kind: override
+    selection: 90 38
   Collection
     kind: class
   List
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -9592,13 +9747,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -9610,19 +9759,56 @@ class Collection{}class List extends Collection{}class Foo {^}
 ''');
     assertResponse(r'''
 suggestions
+  @override
+  // TODO: implement hashCode
+  int get hashCode => super.hashCode;
+    kind: override
+    selection: 62 14
+  @override
+  // TODO: implement runtimeType
+  Type get runtimeType => super.runtimeType;
+    kind: override
+    selection: 69 17
+  @override
+  String toString() {
+    // TODO: implement toString
+    return super.toString();
+  }
+    kind: override
+    selection: 68 24
+  @override
+  bool operator ==(Object other) {
+    // TODO: implement ==
+    return super == other;
+  }
+    kind: override
+    selection: 75 22
+  @override
+  noSuchMethod(Invocation invocation) {
+    // TODO: implement noSuchMethod
+    return super.noSuchMethod(invocation);
+  }
+    kind: override
+    selection: 90 38
   Collection
     kind: class
   List
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -9630,13 +9816,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }
@@ -9690,9 +9870,9 @@ void f() {
 suggestions
   const
     kind: keyword
-  false
-    kind: keyword
   null
+    kind: keyword
+  false
     kind: keyword
   switch
     kind: keyword
@@ -9716,9 +9896,9 @@ void f() {
 suggestions
   const
     kind: keyword
-  false
-    kind: keyword
   null
+    kind: keyword
+  false
     kind: keyword
   switch
     kind: keyword
@@ -9740,13 +9920,13 @@ void f() {
 suggestions
   const
     kind: keyword
+  true
+    kind: keyword
   false
     kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -9764,13 +9944,13 @@ void f() {
 suggestions
   const
     kind: keyword
+  true
+    kind: keyword
   false
     kind: keyword
   null
     kind: keyword
   switch
-    kind: keyword
-  true
     kind: keyword
 ''');
   }
@@ -9925,9 +10105,9 @@ void f(B b, C c) {
 ''');
     assertResponse(r'''
 suggestions
-  fieldA
-    kind: field
   fieldC
+    kind: field
+  fieldA
     kind: field
 ''');
   }
@@ -9953,18 +10133,18 @@ f() { var vvv = 42; return ^ }
 ''');
     assertResponse(r'''
 suggestions
-  const
-    kind: keyword
-  false
+  vvv
+    kind: localVariable
+  true
     kind: keyword
   null
     kind: keyword
+  false
+    kind: keyword
+  const
+    kind: keyword
   switch
     kind: keyword
-  true
-    kind: keyword
-  vvv
-    kind: localVariable
 ''');
   }
 
@@ -10000,7 +10180,14 @@ suggestions
   Future<void> test_completion_staticField1_3() async {
     allowedIdentifiers = {'num'};
     await computeSuggestions('''
-class num{}class Sunflower {static final num MAX_D = 300;nu^m xc, yc;Sunflower() {xc = yc = MA }}
+class num{}
+class Sunflower {
+  static final num MAX_D = 300;
+  nu^m xc, yc;
+  Sunflower() {
+    xc = yc = MA
+  }
+}
 ''');
     assertResponse(r'''
 replacement
@@ -10015,7 +10202,14 @@ suggestions
   Future<void> test_completion_staticField1_4() async {
     allowedIdentifiers = {'Sunflower'};
     await computeSuggestions('''
-class num{}class Sunflower {static final num MAX_D = 300;num xc, yc;Sun^flower() {xc = yc = MA }}
+class num{}
+class Sunflower {
+  static final num MAX_D = 300;
+  num xc, yc;
+  Sun^flower() {
+    xc = yc = MA
+  }
+}
 ''');
     assertResponse(r'''
 replacement
@@ -10066,13 +10260,6 @@ class num{}class Sunflower {static n^}
 replacement
   left: 1
 suggestions
-  @override
-  noSuchMethod(Invocation invocation) {
-    // TODO: implement noSuchMethod
-    return super.noSuchMethod(invocation);
-  }
-    kind: override
-    selection: 90 38
   num
     kind: class
 ''');
@@ -10117,8 +10304,6 @@ class B extends A {
 ''');
     assertResponse(r'''
 suggestions
-  assert
-    kind: keyword
   bar
     kind: constructorInvocation
   fooA
@@ -10256,9 +10441,9 @@ class B extends A {
 ''');
     assertResponse(r'''
 suggestions
-  fa
-    kind: field
   fb
+    kind: field
+  fa
     kind: field
   ma
     kind: methodInvocation
@@ -10278,9 +10463,9 @@ replacement
   right: 5
 suggestions
   DateTime
-    kind: class
-  DateTime
     kind: constructorInvocation
+  DateTime
+    kind: class
 ''');
   }
 
@@ -10309,48 +10494,46 @@ void f() {
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  libFunction
+    kind: functionInvocation
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
     kind: keyword
-  cos
-    kind: functionInvocation
-  cos
-    kind: functionInvocation
   do
     kind: keyword
   dynamic
     kind: keyword
   false
     kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  if
-    kind: keyword
   late
     kind: keyword
-  libFunction
-    kind: functionInvocation
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
   while
     kind: keyword
+  cos
+    kind: functionInvocation
 ''');
   }
 
@@ -10592,6 +10775,32 @@ void f() {^
 ''');
     assertResponse(r'''
 suggestions
+  return
+    kind: keyword
+  if
+    kind: keyword
+  final
+    kind: keyword
+  e1a
+    kind: functionInvocation
+  e1b
+    kind: functionInvocation
+  e2a
+    kind: functionInvocation
+  i1
+    kind: functionInvocation
+  i2
+    kind: functionInvocation
+  var
+    kind: keyword
+  throw
+    kind: keyword
+  for
+    kind: keyword
+  switch
+    kind: keyword
+  try
+    kind: keyword
   assert
     kind: keyword
   const
@@ -10600,39 +10809,13 @@ suggestions
     kind: keyword
   dynamic
     kind: keyword
-  e1a
-    kind: functionInvocation
-  e1b
-    kind: functionInvocation
-  e2a
-    kind: functionInvocation
   false
-    kind: keyword
-  final
-    kind: keyword
-  for
-    kind: keyword
-  i1
-    kind: functionInvocation
-  i2
-    kind: functionInvocation
-  if
     kind: keyword
   late
     kind: keyword
   null
     kind: keyword
-  return
-    kind: keyword
-  switch
-    kind: keyword
-  throw
-    kind: keyword
   true
-    kind: keyword
-  try
-    kind: keyword
-  var
     kind: keyword
   void
     kind: keyword
@@ -10746,6 +10929,8 @@ suggestions
     kind: topLevelVariable
   Y
     kind: class
+  Y
+    kind: constructorInvocation
   m
     kind: functionInvocation
 ''');
@@ -10780,6 +10965,8 @@ suggestions
     kind: topLevelVariable
   Y
     kind: class
+  Y
+    kind: constructorInvocation
   m
     kind: functionInvocation
 ''');
@@ -10814,11 +11001,14 @@ suggestions
     kind: topLevelVariable
   Y
     kind: class
+  Y
+    kind: constructorInvocation
   m
     kind: functionInvocation
 ''');
   }
 
+  @FailingTest(reason: 'We suggest also the variable')
   Future<void> test_library009_4() async {
     allowedIdentifiers = {'Y', 'm', 'X'};
     newFile('$testPackageLibPath/lib.dart', '''
@@ -10941,15 +11131,21 @@ replacement
 suggestions
   B
     kind: class
+  final
+    kind: keyword
+  static
+    kind: keyword
+  void
+    kind: keyword
   const
+    kind: keyword
+  set
+    kind: keyword
+  factory
     kind: keyword
   covariant
     kind: keyword
   dynamic
-    kind: keyword
-  factory
-    kind: keyword
-  final
     kind: keyword
   get
     kind: keyword
@@ -10957,13 +11153,7 @@ suggestions
     kind: keyword
   operator
     kind: keyword
-  set
-    kind: keyword
-  static
-    kind: keyword
   var
-    kind: keyword
-  void
     kind: keyword
 ''');
   }

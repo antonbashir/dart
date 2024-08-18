@@ -7,11 +7,12 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/scope.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/listener.dart';
-import 'package:analyzer/src/clients/build_resolvers/build_resolvers.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
+import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/dart/resolver/resolution_visitor.dart';
+import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/resolver.dart';
 import 'package:analyzer/src/summary2/link.dart';
 
@@ -26,12 +27,14 @@ class AstResolver {
   final AnalysisOptionsImpl analysisOptions;
   final InterfaceElement? enclosingClassElement;
   final ExecutableElement? enclosingExecutableElement;
+  final AugmentableElement? enclosingAugmentation;
   late final _resolutionVisitor = ResolutionVisitor(
     unitElement: _unitElement,
-    featureSet: _featureSet,
     nameScope: _nameScope,
     errorListener: _errorListener,
     strictInference: analysisOptions.strictInference,
+    strictCasts: analysisOptions.strictCasts,
+    dataForTesting: null,
   );
   late final _scopeResolverVisitor = ScopeResolverVisitor(
     _unitElement.library,
@@ -40,12 +43,14 @@ class AstResolver {
     _errorListener,
     nameScope: _nameScope,
   );
-  late final _flowAnalysis = FlowAnalysisHelper(
-      _unitElement.library.typeSystem, false, _featureSet,
-      strictCasts: analysisOptions.strictCasts);
+  late final _flowAnalysis = FlowAnalysisHelper(false, _featureSet,
+      typeSystemOperations: TypeSystemOperations(
+          _unitElement.library.typeSystem,
+          strictCasts: analysisOptions.strictCasts));
   late final _resolverVisitor = ResolverVisitor(
     _linker.inheritance,
     _unitElement.library,
+    LibraryResolutionContext(),
     _unitElement.source,
     _unitElement.library.typeProvider,
     _errorListener,
@@ -61,6 +66,7 @@ class AstResolver {
     this.analysisOptions, {
     this.enclosingClassElement,
     this.enclosingExecutableElement,
+    this.enclosingAugmentation,
   }) : _featureSet = _unitElement.library.featureSet;
 
   void resolveAnnotation(AnnotationImpl node) {
@@ -95,7 +101,7 @@ class AstResolver {
 
   void resolveExpression(
     Expression Function() getNode, {
-    DartType? contextType,
+    DartType contextType = UnknownInferredType.instance,
   }) {
     Expression node = getNode();
     node.accept(_resolutionVisitor);
@@ -114,6 +120,7 @@ class AstResolver {
     _resolverVisitor.prepareEnclosingDeclarations(
       enclosingClassElement: enclosingClassElement,
       enclosingExecutableElement: enclosingExecutableElement,
+      enclosingAugmentation: enclosingAugmentation,
     );
   }
 }

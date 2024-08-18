@@ -72,7 +72,7 @@ String f() {
     await waitForTasksFinished();
     await _getNavigation(search: examplePath, length: 1);
     expect(regions, hasLength(1));
-    assertHasRegion(examplePath, examplePath.length);
+    assertHasRegion(examplePath, length: examplePath.length);
   }
 
   Future<void> test_comment_toolSeeCodeComment_multiple() async {
@@ -94,7 +94,7 @@ String f() {
     // Ensure we only get the expected region when there are multiple.
     await _getNavigation(search: example2Path, length: 1);
     expect(regions, hasLength(1));
-    assertHasRegion(example2Path, example2Path.length);
+    assertHasRegion(example2Path, length: example2Path.length);
   }
 
   Future<void> test_constructorInvocation() async {
@@ -209,8 +209,8 @@ void f() {
   }
 
   Future<void> test_importUri_configurations() async {
-    final ioFile = newFile('$testPackageLibPath/io.dart', '');
-    final htmlFile = newFile('$testPackageLibPath/html.dart', '');
+    var ioFile = newFile('$testPackageLibPath/io.dart', '');
+    var htmlFile = newFile('$testPackageLibPath/html.dart', '');
     addTestFile('''
 import 'foo.dart'
   if (dart.library.io) 'io.dart'
@@ -337,7 +337,7 @@ void f(A a) {
   }
 
   Future<void> test_partDirective() async {
-    final partFile = newFile(
+    var partFile = newFile(
       '$testPackageLibPath/a.dart',
       '''
 part of 'test.dart';
@@ -347,7 +347,7 @@ part of 'test.dart';
 part 'a.dart';
 ''');
     await waitForTasksFinished();
-    await _getNavigation(offset: 8, length: 0);
+    await _getNavigation(offset: 8);
     expect(regions, hasLength(1));
     assertHasRegionString("'a.dart'");
     expect(testTargets, hasLength(1));
@@ -356,7 +356,7 @@ part 'a.dart';
   }
 
   Future<void> test_partOfDirective_named() async {
-    final partOfFile = newFile(
+    var partOfFile = newFile(
       '$testPackageLibPath/a.dart',
       '''
 library foo;
@@ -367,7 +367,7 @@ part 'test.dart';
 part of foo;
 ''');
     await waitForTasksFinished();
-    await _getNavigation(offset: 10, length: 0);
+    await _getNavigation(offset: 10);
     expect(regions, hasLength(1));
     assertHasRegionString('foo');
     expect(testTargets, hasLength(1));
@@ -376,7 +376,7 @@ part of foo;
   }
 
   Future<void> test_partOfDirective_uri() async {
-    final partOfFile = newFile(
+    var partOfFile = newFile(
       '$testPackageLibPath/a.dart',
       '''
 part 'test.dart';
@@ -386,7 +386,7 @@ part 'test.dart';
 part of 'a.dart';
 ''');
     await waitForTasksFinished();
-    await _getNavigation(offset: 11, length: 0);
+    await _getNavigation(offset: 11);
     expect(regions, hasLength(1));
     assertHasRegionString("'a.dart'");
     expect(testTargets, hasLength(1));
@@ -422,7 +422,7 @@ void f() {
 
   Request _createGetNavigationRequest(String file, int offset, int length) {
     return AnalysisGetNavigationParams(file, offset, length)
-        .toRequest(requestId);
+        .toRequest(requestId, clientUriConverter: server.uriConverter);
   }
 
   Future<void> _getNavigation({
@@ -443,7 +443,8 @@ void f() {
 
     var request = _createGetNavigationRequest(file.path, offset, length);
     var response = await serverChannel.simulateRequestFromClient(request);
-    var result = AnalysisGetNavigationResult.fromResponse(response);
+    var result = AnalysisGetNavigationResult.fromResponse(response,
+        clientUriConverter: server.uriConverter);
     targetFiles = result.files;
     targets = result.targets;
     regions = result.regions;

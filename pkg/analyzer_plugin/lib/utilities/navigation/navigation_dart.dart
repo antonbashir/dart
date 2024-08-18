@@ -60,7 +60,7 @@ AstNode _getNavigationTargetNode(AstNode node) {
   // To navigate to formal params, we need to visit the parameter and not just
   // the identifier but they don't start at the same offset as they have a
   // prefix.
-  final parent = current.parent;
+  var parent = current.parent;
   if (parent is FormalParameter) {
     current = parent;
   }
@@ -220,6 +220,12 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitAugmentationImportDirective(AugmentationImportDirective node) {
+    super.visitAugmentationImportDirective(node);
+    _addUriDirectiveRegion(node, node.element?.importedAugmentation);
+  }
+
+  @override
   void visitBinaryExpression(BinaryExpression node) {
     node.leftOperand.accept(this);
     computer._addRegionForToken(node.operator, node.staticElement);
@@ -236,7 +242,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
   void visitComment(Comment node) {
     super.visitComment(node);
 
-    for (final link in _documentLinkVisitor.findLinks(node)) {
+    for (var link in _documentLinkVisitor.findLinks(node)) {
       computer._addRegion(
         link.offset,
         link.length,
@@ -271,9 +277,9 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitConfiguration(Configuration node) {
-    final resolvedUri = node.resolvedUri;
+    var resolvedUri = node.resolvedUri;
     if (resolvedUri is DirectiveUriWithSource) {
-      final source = resolvedUri.source;
+      var source = resolvedUri.source;
       if (resourceProvider.getResource(source.fullName).exists) {
         // TODO(brianwilkerson): If the analyzer ever resolves the URI to a
         //  library, use that library element to create the region.
@@ -293,6 +299,8 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
+    node.metadata.accept(this);
+
     // For a default constructor, override the class name to be the declaration
     // itself rather than linking to the class.
     var nameToken = node.name;
@@ -302,6 +310,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
       node.returnType.accept(this);
       computer._addRegionForToken(nameToken, node.declaredElement);
     }
+
     node.parameters.accept(this);
     node.initializers.accept(this);
     node.redirectedConstructor?.accept(this);
@@ -318,7 +327,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
     var namedType = node.type;
     // [prefix].ClassName
     {
-      final importPrefix = namedType.importPrefix;
+      var importPrefix = namedType.importPrefix;
       if (importPrefix != null) {
         computer._addRegionForToken(importPrefix.name, importPrefix.element);
       }
@@ -388,7 +397,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitFieldFormalParameter(FieldFormalParameter node) {
-    final element = node.declaredElement;
+    var element = node.declaredElement;
     if (element is FieldFormalParameterElementImpl) {
       computer._addRegionForToken(node.thisKeyword, element.field);
       computer._addRegionForToken(node.name, element.field);
@@ -429,6 +438,18 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitLibraryAugmentationDirective(LibraryAugmentationDirective node) {
+    super.visitLibraryAugmentationDirective(node);
+    var element = node.element;
+    var library = element?.library;
+    // If the library URI is unresolved, library will be the augmentation
+    // itself, so don't create a navigation region in that case.
+    if (element != library) {
+      _addUriDirectiveRegion(node, library);
+    }
+  }
+
+  @override
   void visitLibraryDirective(LibraryDirective node) {
     computer._addRegionForNode(node.name2, node.element);
   }
@@ -448,14 +469,14 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitPartDirective(PartDirective node) {
-    final element = node.element;
+    var element = node.element;
     if (element is PartElement) {
-      final uri = element.uri;
+      var uri = element.uri;
       if (uri is DirectiveUriWithUnit) {
         computer._addRegionForNode(node.uri, uri.unit);
       } else if (uri is DirectiveUriWithSource) {
-        final uriNode = node.uri;
-        final source = uri.source;
+        var uriNode = node.uri;
+        var source = uri.source;
         computer.collector.addRegion(
           uriNode.offset,
           uriNode.length,
@@ -477,9 +498,9 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitPatternField(covariant PatternFieldImpl node) {
-    final nameNode = node.name;
+    var nameNode = node.name;
     if (nameNode != null) {
-      final nameToken = nameNode.name ?? node.pattern.variablePattern?.name;
+      var nameToken = nameNode.name ?? node.pattern.variablePattern?.name;
       if (nameToken != null) {
         computer._addRegionForToken(nameToken, node.element);
       }
@@ -516,7 +537,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitRepresentationDeclaration(RepresentationDeclaration node) {
-    if (node.constructorName?.name case final constructorName?) {
+    if (node.constructorName?.name case var constructorName?) {
       computer._addRegionForToken(constructorName, node.constructorElement);
     }
     computer._addRegionForToken(node.fieldName, node.fieldElement);
@@ -525,7 +546,7 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    final nameToken = node.name;
+    var nameToken = node.name;
     if (nameToken != null) {
       computer._addRegionForToken(nameToken, node.declaredElement);
     }
@@ -584,14 +605,14 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
     /// the given list of [variables], or `null` if not all variable have the
     /// same inferred type.
     Element? getCommonElement(List<VariableDeclaration> variables) {
-      final firstType = variables[0].declaredElement?.type;
+      var firstType = variables[0].declaredElement?.type;
       if (firstType is! InterfaceType) {
         return null;
       }
 
       var firstElement = firstType.element;
       for (var i = 1; i < variables.length; i++) {
-        final type = variables[i].declaredElement?.type;
+        var type = variables[i].declaredElement?.type;
         if (type is! InterfaceType) {
           return null;
         }
@@ -616,7 +637,10 @@ class _DartNavigationComputerVisitor extends RecursiveAstVisitor<void> {
 
   /// If the source of the given [element] (referenced by the [node]) exists,
   /// then add the navigation region from the [node] to the [element].
-  void _addUriDirectiveRegion(UriBasedDirective node, LibraryElement? element) {
+  void _addUriDirectiveRegion(
+    UriBasedDirective node,
+    LibraryOrAugmentationElement? element,
+  ) {
     var source = element?.source;
     if (source != null) {
       if (resourceProvider.getResource(source.fullName).exists) {

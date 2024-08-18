@@ -150,6 +150,12 @@ abstract class DartDevelopmentService {
   /// Returns `null` if DevTools is not running.
   Uri? get devToolsUri;
 
+  /// Metadata for the Dart Tooling Daemon instance that is hosted by DevTools.
+  ///
+  /// This will be null if DTD was not started by the DevTools server. For
+  /// example, it may have been started by an IDE.
+  ({String? uri, String? secret})? get hostedDartToolingDaemon;
+
   /// Set to `true` if this instance of [DartDevelopmentService] is accepting
   /// requests.
   bool get isRunning;
@@ -160,7 +166,7 @@ abstract class DartDevelopmentService {
 
   /// The version of the DDS protocol supported by this [DartDevelopmentService]
   /// instance.
-  static const String protocolVersion = '1.6';
+  static const String protocolVersion = '2.0';
 }
 
 class DartDevelopmentServiceException implements Exception {
@@ -200,6 +206,11 @@ class DartDevelopmentServiceException implements Exception {
   @override
   String toString() => 'DartDevelopmentServiceException: $message';
 
+  Map<String, Object?> toJson() => {
+        'error_code': errorCode,
+        'message': message,
+      };
+
   final int errorCode;
   final String message;
 }
@@ -220,14 +231,22 @@ class ExistingDartDevelopmentServiceException
   /// not the WebSocket URI (which can be obtained by mapping the scheme to
   /// `ws` (or `wss`) and appending `ws` to the path segments).
   final Uri? ddsUri;
+
+  @override
+  Map<String, Object?> toJson() => {
+        ...super.toJson(),
+        'uri': ddsUri.toString(),
+      };
 }
 
 class DevToolsConfiguration {
   const DevToolsConfiguration({
     required this.customBuildDirectoryPath,
+    this.devToolsServerAddress,
     this.enable = false,
   });
 
   final bool enable;
+  final Uri? devToolsServerAddress;
   final Uri customBuildDirectoryPath;
 }

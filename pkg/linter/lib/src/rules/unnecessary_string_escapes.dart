@@ -30,14 +30,14 @@ Remove unnecessary backslashes in strings.
 class UnnecessaryStringEscapes extends LintRule {
   static const LintCode code = LintCode(
       'unnecessary_string_escapes', 'Unnecessary escape in string literal.',
-      correctionMessage: "Remove the '\\' escape.");
+      correctionMessage: "Remove the '\\' escape.", hasPublishedDocs: true);
 
   UnnecessaryStringEscapes()
       : super(
             name: 'unnecessary_string_escapes',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   bool get canUseParsedResult => true;
@@ -93,7 +93,7 @@ class _Visitor extends SimpleAstVisitor<void> {
         for (var index in escapeIndexes) {
           // case for '''___\'''' : without last backslash it leads a parsing error
           if (contentsEnd != token.end && index + 2 == contentsEnd) continue;
-          rule.reporter.reportErrorForOffset(rule.lintCode, index, 1);
+          rule.reportLintForOffset(index, 1);
         }
       }
     }
@@ -110,8 +110,7 @@ class _Visitor extends SimpleAstVisitor<void> {
         if (isSingleQuoted && current == '"' ||
             !isSingleQuoted && current == "'" ||
             !allowedEscapedChars.contains(current)) {
-          rule.reporter
-              .reportErrorForOffset(rule.lintCode, contentsOffset + i - 1, 1);
+          rule.reportLintForOffset(contentsOffset + i - 1, 1);
         }
       }
       if (isSingleQuoted ? current == "'" : current == '"') {

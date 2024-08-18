@@ -4,13 +4,13 @@
 
 import 'dart:io';
 
-import 'package:_fe_analyzer_shared/src/macros/bootstrap.dart';
-import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart';
 import 'package:frontend_server/compute_kernel.dart';
+import 'package:macros/src/bootstrap.dart';
+import 'package:macros/src/executor/serialization.dart';
 import 'package:test/test.dart';
 
 void main() async {
-  group('basic macro', () {
+  group('basic macro', timeout: new Timeout(new Duration(minutes: 2)), () {
     late File productPlatformDill;
     late Directory tempDir;
     late Uri testMacroUri;
@@ -18,12 +18,12 @@ void main() async {
     late File bootstrapDillFile;
 
     setUp(() async {
-      productPlatformDill = File('${Platform.resolvedExecutable}/../../'
+      productPlatformDill = new File('${Platform.resolvedExecutable}/../../'
           'lib/_internal/vm_platform_strong_product.dill');
-      var systemTempDir = Directory.systemTemp;
+      Directory systemTempDir = Directory.systemTemp;
       tempDir = systemTempDir.createTempSync('frontendServerTest');
       testMacroUri = Uri.parse('package:test_macro/test_macro.dart');
-      var bootstrapContent = bootstrapMacroIsolate(
+      String bootstrapContent = bootstrapMacroIsolate(
         {
           testMacroUri.toString(): {
             'TestMacro': [''],
@@ -31,9 +31,9 @@ void main() async {
         },
         SerializationMode.byteData,
       );
-      var bootstrapFile = File('${tempDir.path}/bootstrap.dart')
+      File bootstrapFile = new File('${tempDir.path}/bootstrap.dart')
         ..writeAsStringSync(bootstrapContent);
-      packageConfig = File('${tempDir.path}/.dart_tool/package_config.json')
+      packageConfig = new File('${tempDir.path}/.dart_tool/package_config.json')
         ..createSync(recursive: true)
         ..writeAsStringSync('''
   {
@@ -45,8 +45,13 @@ void main() async {
         "packageUri": "lib/"
       },
       {
-        "name": "_fe_analyzer_shared",
-        "rootUri": "${Platform.script.resolve('../../_fe_analyzer_shared')}",
+        "name": "macros",
+        "rootUri": "${Platform.script.resolve('../../macros')}",
+        "packageUri": "lib/"
+      },
+      {
+        "name": "_macros",
+        "rootUri": "${Platform.script.resolve('../../_macros')}",
         "packageUri": "lib/"
       },
       {
@@ -57,10 +62,10 @@ void main() async {
     ]
   }
   ''');
-      var testMacroFile = File('${tempDir.path}/lib/test_macro.dart')
+      File testMacroFile = new File('${tempDir.path}/lib/test_macro.dart')
         ..createSync(recursive: true)
         ..writeAsStringSync('''
-import 'package:_fe_analyzer_shared/src/macros/api.dart';
+import 'package:macros/macros.dart';
 
 macro class TestMacro implements ClassDeclarationsMacro {
   const TestMacro();
@@ -73,8 +78,8 @@ macro class TestMacro implements ClassDeclarationsMacro {
 }
 ''');
 
-      bootstrapDillFile = File('${tempDir.path}/bootstrap.dart.dill');
-      var bootstrapResult = await computeKernel([
+      bootstrapDillFile = new File('${tempDir.path}/bootstrap.dart.dill');
+      ComputeKernelResult bootstrapResult = await computeKernel([
         '--enable-experiment=macros',
         '--no-summary',
         '--no-summary-only',
@@ -92,13 +97,13 @@ macro class TestMacro implements ClassDeclarationsMacro {
       tempDir.deleteSync(recursive: true);
     });
 
-    for (var useIncrementalCompiler in [true, false]) {
+    for (bool useIncrementalCompiler in [true, false]) {
       test(
           'can be compiled and applied'
           '${useIncrementalCompiler ? ' with incremental compiler' : ''}',
           () async {
-        var applyTestMacroFile =
-            File('${tempDir.path}/lib/apply_test_macro.dart')
+        File applyTestMacroFile =
+            new File('${tempDir.path}/lib/apply_test_macro.dart')
               ..createSync(recursive: true)
               ..writeAsStringSync('''
 import 'package:test_macro/test_macro.dart';
@@ -112,9 +117,9 @@ void main() {
   print(TestClass().x);
 }
 ''');
-        var applyTestMacroDill =
-            File('${tempDir.path}/apply_test_macro.dart.dill');
-        var applyTestMacroResult = await computeKernel([
+        File applyTestMacroDill =
+            new File('${tempDir.path}/apply_test_macro.dart.dill');
+        ComputeKernelResult applyTestMacroResult = await computeKernel([
           if (useIncrementalCompiler) '--use-incremental-compiler',
           '--enable-experiment=macros',
           '--no-summary',

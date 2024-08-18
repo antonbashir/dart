@@ -9,7 +9,10 @@
 #error "AOT runtime should not use compiler sources (including header files)"
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 
+#include <utility>
+
 #include "vm/bit_vector.h"
+#include "vm/compiler/backend/dart_calling_conventions.h"
 #include "vm/compiler/backend/il.h"
 #include "vm/growable_array.h"
 #include "vm/hash_map.h"
@@ -49,9 +52,34 @@ class BlockIterator : public ValueObject {
   intptr_t current_;
 };
 
-struct ConstantAndRepresentation {
-  const Object& constant;
-  Representation representation;
+class ConstantAndRepresentation {
+ public:
+  ConstantAndRepresentation(const Object& constant, Representation rep)
+      : constant_(constant),
+        representation_(rep),
+        hash_(ComputeHash(constant)) {}
+
+  const Object& constant() const { return constant_; }
+  Representation representation() const { return representation_; }
+  uword hash() const { return hash_; }
+
+ private:
+  static inline uword ComputeHash(const Object& constant) {
+    // Caveat: a null might be hiding inside a handle which overrides
+    // CanonicalizeHash() and does not check for |null| before computing the
+    // hash. Thus doing Instance::Cast(constant).CanonicalizeHash() and
+    // Instance::Handle(constant.ptr()).CanonicalizeHash() will produce
+    // different results. To work-around this problem check for null first.
+    if (constant.IsNull()) {
+      return kNullIdentityHash;
+    }
+    return constant.IsInstance() ? Instance::Cast(constant).CanonicalizeHash()
+                                 : Utils::WordHash(constant.GetClassId());
+  }
+
+  const Object& constant_;
+  Representation representation_;
+  uword hash_;
 };
 
 struct ConstantPoolTrait {
@@ -59,32 +87,15 @@ struct ConstantPoolTrait {
   typedef ConstantAndRepresentation Key;
   typedef ConstantInstr* Pair;
 
-  static Key KeyOf(Pair kv) {
-    return ConstantAndRepresentation{kv->value(), kv->representation()};
-  }
+  static Key KeyOf(Pair kv) { return {kv->value(), kv->representation()}; }
 
   static Value ValueOf(Pair kv) { return kv; }
 
-  static inline uword Hash(Key key) {
-    if (key.constant.IsSmi()) {
-      return Smi::Cast(key.constant).Value();
-    }
-    if (key.constant.IsDouble()) {
-      return static_cast<intptr_t>(bit_cast<int32_t, float>(
-          static_cast<float>(Double::Cast(key.constant).value())));
-    }
-    if (key.constant.IsMint()) {
-      return static_cast<intptr_t>(Mint::Cast(key.constant).value());
-    }
-    if (key.constant.IsString()) {
-      return String::Cast(key.constant).Hash();
-    }
-    return key.constant.GetClassId();
-  }
+  static inline uword Hash(Key key) { return key.hash(); }
 
   static inline bool IsKeyEqual(Pair kv, Key key) {
-    return (kv->value().ptr() == key.constant.ptr()) &&
-           (kv->representation() == key.representation);
+    return (kv->value().ptr() == key.constant().ptr()) &&
+           (kv->representation() == key.representation());
   }
 };
 
@@ -110,10 +121,17 @@ struct PrologueInfo {
 // Class to encapsulate the construction and manipulation of the flow graph.
 class FlowGraph : public ZoneAllocated {
  public:
+  enum class CompilationMode {
+    kUnoptimized,
+    kOptimized,
+    kIntrinsic,
+  };
+
   FlowGraph(const ParsedFunction& parsed_function,
             GraphEntryInstr* graph_entry,
             intptr_t max_block_id,
-            PrologueInfo prologue_info);
+            PrologueInfo prologue_info,
+            CompilationMode compilation_mode);
 
   // Function properties.
   const ParsedFunction& parsed_function() const { return parsed_function_; }
@@ -125,9 +143,6 @@ class FlowGraph : public ZoneAllocated {
   // All other parameters can only be indirectly loaded via metadata found in
   // the arguments descriptor.
   intptr_t num_direct_parameters() const { return num_direct_parameters_; }
-
-  // The number of words on the stack used by the direct parameters.
-  intptr_t direct_parameters_size() const { return direct_parameters_size_; }
 
   // The number of variables (or boxes) which code can load from / store to.
   // The SSA renaming will insert phi's for them (and only them - i.e. there
@@ -143,14 +158,6 @@ class FlowGraph : public ZoneAllocated {
     ASSERT(IsCompiledForOsr());
     return variable_count() + graph_entry()->osr_entry()->stack_depth();
   }
-
-  // This function returns the offset (in words) of the [index]th
-  // parameter, relative to the first parameter.
-  // If [last_slot] is true it gives the offset of the last slot of that
-  // location, otherwise it returns the first one.
-  static intptr_t ParameterOffsetAt(const Function& function,
-                                    intptr_t index,
-                                    bool last_slot = true);
 
   static Representation ParameterRepresentationAt(const Function& function,
                                                   intptr_t index);
@@ -211,8 +218,10 @@ class FlowGraph : public ZoneAllocated {
   const GrowableArray<BlockEntryInstr*>& optimized_block_order() const {
     return optimized_block_order_;
   }
-  static bool ShouldReorderBlocks(const Function& function, bool is_optimized);
-  GrowableArray<BlockEntryInstr*>* CodegenBlockOrder(bool is_optimized);
+
+  // In AOT these are guaranteed to be topologically sorted, but not in JIT.
+  GrowableArray<BlockEntryInstr*>* CodegenBlockOrder();
+  const GrowableArray<BlockEntryInstr*>* CodegenBlockOrder() const;
 
   // Iterators.
   BlockIterator reverse_postorder_iterator() const {
@@ -472,10 +481,15 @@ class FlowGraph : public ZoneAllocated {
 
   void SelectRepresentations();
 
-  void WidenSmiToInt32();
-
   // Remove environments from the instructions which do not deoptimize.
   void EliminateEnvironments();
+
+  // Extract typed data payloads prior to any LoadIndexed, StoreIndexed, or
+  // MemoryCopy instruction where the incoming typed data array(s) are not
+  // proven to be internal typed data objects at compile time.
+  //
+  // Once this is done, no intra-block code motion should be performed.
+  void ExtractNonInternalTypedDataPayloads();
 
   bool IsReceiver(Definition* def) const;
 
@@ -497,6 +511,12 @@ class FlowGraph : public ZoneAllocated {
   bool should_print() const { return should_print_; }
   const uint8_t* compiler_pass_filters() const {
     return compiler_pass_filters_;
+  }
+
+  bool should_reorder_blocks() const { return should_reorder_blocks_; }
+
+  bool should_remove_all_bounds_checks() const {
+    return should_remove_all_bounds_checks_;
   }
 
   //
@@ -555,6 +575,37 @@ class FlowGraph : public ZoneAllocated {
     RELEASE_ASSERT(max_argument_slot_count_ == -1);
     max_argument_slot_count_ = count;
   }
+
+  const std::pair<Location, Representation>& GetDirectParameterInfoAt(
+      intptr_t i) {
+    return direct_parameter_locations_[i];
+  }
+
+  static intptr_t ComputeLocationsOfFixedParameters(
+      Zone* zone,
+      const Function& function,
+      bool should_assign_stack_locations = false,
+      compiler::ParameterInfoArray* parameter_info = nullptr);
+
+  static intptr_t ComputeArgumentsSizeInWords(const Function& function,
+                                              intptr_t arguments_count);
+
+  static constexpr CompilationMode CompilationModeFrom(bool is_optimizing) {
+    return is_optimizing ? CompilationMode::kOptimized
+                         : CompilationMode::kUnoptimized;
+  }
+
+  // If either IsExternalPayloadClassId([cid]) or
+  // IsExternalPayloadClassId(array()->Type()->ToCid()) is true and
+  // [array] (an input of [instr]) is tagged, inserts a load of the array
+  // payload as an untagged pointer and rebinds [array] to the new load.
+  //
+  // Otherwise does not change the flow graph.
+  //
+  // Returns whether any changes were made to the flow graph.
+  bool ExtractExternalUntaggedPayload(Instruction* instr,
+                                      Value* array,
+                                      classid_t cid);
 
  private:
   friend class FlowGraphCompiler;  // TODO(ajcbik): restructure
@@ -648,6 +699,15 @@ class FlowGraph : public ZoneAllocated {
                                        Representation rep,
                                        intptr_t cid);
 
+  void ExtractUntaggedPayload(Instruction* instr,
+                              Value* array,
+                              const Slot& slot,
+                              InnerPointerAccess access);
+
+  void ExtractNonInternalTypedDataPayload(Instruction* instr,
+                                          Value* array,
+                                          classid_t cid);
+
   Thread* thread_;
 
   // DiscoverBlocks computes parent_ and assigned_vars_ which are then used
@@ -660,7 +720,7 @@ class FlowGraph : public ZoneAllocated {
   // Flow graph fields.
   const ParsedFunction& parsed_function_;
   intptr_t num_direct_parameters_;
-  intptr_t direct_parameters_size_;
+  compiler::ParameterInfoArray direct_parameter_locations_;
   GraphEntryInstr* graph_entry_;
   GrowableArray<BlockEntryInstr*> preorder_;
   GrowableArray<BlockEntryInstr*> postorder_;
@@ -672,6 +732,7 @@ class FlowGraph : public ZoneAllocated {
   bool licm_allowed_;
   bool unmatched_representations_allowed_ = true;
   bool huge_method_ = false;
+  const bool should_reorder_blocks_;
 
   const PrologueInfo prologue_info_;
 
@@ -684,6 +745,7 @@ class FlowGraph : public ZoneAllocated {
 
   intptr_t inlining_id_;
   bool should_print_;
+  const bool should_remove_all_bounds_checks_;
   uint8_t* compiler_pass_filters_ = nullptr;
 
   intptr_t max_argument_slot_count_ = -1;

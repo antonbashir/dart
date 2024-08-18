@@ -32,6 +32,52 @@ class RenameClassTest extends _AbstractRenameTest {
   @override
   String get _kind => 'class';
 
+  Future<void> test_as_deprecated() async {
+    setPackageContent('''
+class A {}
+@deprecated
+class Old extends A {}
+class New extends A {}
+''');
+    setPackageData(_rename(['Old'], 'New'));
+    await resolveTestCode('''
+import '$importUri';
+
+void f(A o) {
+  print(o as Old);
+}
+''');
+    await assertHasFix('''
+import '$importUri';
+
+void f(A o) {
+  print(o as New);
+}
+''');
+  }
+
+  Future<void> test_as_removed() async {
+    setPackageContent('''
+class A {}
+class New extends A {}
+''');
+    setPackageData(_rename(['Old'], 'New'));
+    await resolveTestCode('''
+import '$importUri';
+
+void f(A o) {
+  print(o as Old);
+}
+''');
+    await assertHasFix('''
+import '$importUri';
+
+void f(A o) {
+  print(o as New);
+}
+''');
+  }
+
   Future<void> test_constructor_named_deprecated() async {
     setPackageContent('''
 @deprecated
@@ -297,6 +343,58 @@ import '$importUri';
 
 void f(New o) {}
 ''', errorFilter: ignoreUnusedImport);
+  }
+
+  Future<void> test_inTypeArgument_deprecated() async {
+    setPackageContent('''
+@deprecated
+class Old {}
+class New {}
+''');
+    setPackageData(_rename(['Old'], 'New'));
+    await resolveTestCode('''
+import '$importUri';
+
+void f() {
+ var a = <Old>[];
+ print(a);
+}
+''');
+    await assertHasFix('''
+import '$importUri';
+
+void f() {
+ var a = <New>[];
+ print(a);
+}
+''');
+  }
+
+  Future<void> test_inTypeArgument_removed() async {
+    setPackageContent('''
+class New {}
+''');
+    setPackageData(_rename(['Old'], 'New'));
+    await resolveTestCode('''
+import '$importUri';
+
+void f() {
+  var a = <Old>[];
+  var b = New();
+  print(a);
+  print(b);
+}
+''');
+    await assertHasFix('''
+import '$importUri';
+
+void f() {
+  var a = <New>[];
+  var b = New();
+  print(a);
+  print(b);
+}
+''');
   }
 
   Future<void> test_inWith_deprecated() async {

@@ -1,7 +1,7 @@
 // Copyright (c) 2018, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-import 'package:expect/minitest.dart';
+import 'package:expect/minitest.dart'; // ignore: deprecated_member_use
 
 import 'package:smith/smith.dart';
 
@@ -207,7 +207,7 @@ void main() {
               "enable-asserts": true,
               "checked": true,
               "csp": true,
-              "host-checked": true,
+              "host-asserts": true,
               "minified": true,
               "hot-reload": true,
               "hot-reload-rollback": true,
@@ -223,7 +223,7 @@ void main() {
                 enableAsserts: true,
                 isChecked: true,
                 isCsp: true,
-                isHostChecked: true,
+                enableHostAsserts: true,
                 isMinified: true,
                 useHotReload: true,
                 useHotReloadRollback: true,
@@ -236,6 +236,13 @@ void main() {
             {},
             'Must specify at least one of compiler or runtime in options or '
                 'configuration name.');
+      });
+
+      test("custom configuration", () {
+        final result = Configuration.parse("custom-configuration-1", {});
+        // Succeeds. Since this test runs in JIT mode, should be dartk and vm.
+        expect(result.compiler, Compiler.dartk);
+        expect(result.runtime, Runtime.vm);
       });
 
       test("empty string", () {
@@ -379,7 +386,7 @@ void main() {
         enableAsserts: true,
         isChecked: true,
         isCsp: true,
-        isHostChecked: true,
+        enableHostAsserts: true,
         isMinified: true,
         useAnalyzerCfe: true,
         useAnalyzerFastaParser: true,
@@ -409,11 +416,10 @@ architecture: ia32 x64
    enable-asserts: false true
    checked: false true
    csp: false true
-   host-checked: false true
+   host-asserts: false true
    minified: false true
    use-cfe: false true
    analyzer-use-fasta-parser: false true
-   host-checked: false true
    hot-reload: false true
    hot-reload-rollback: false true
    use-sdk: false true

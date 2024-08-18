@@ -30,17 +30,8 @@
 #include <lib/trace-engine/context.h>
 #include <lib/trace-engine/instrumentation.h>
 #elif defined(DART_HOST_OS_MACOS)
-#include <os/availability.h>
-#if defined(__MAC_10_14) || defined (__IPHONE_12_0)
-#define DART_HOST_OS_SUPPORTS_SIGNPOST 1
-#endif
-// signpost.h exists in macOS 10.14, iOS 12 or above
-#if defined(DART_HOST_OS_SUPPORTS_SIGNPOST)
 #include <os/signpost.h>
-#else
-#include <os/log.h>
-#endif
-#endif
+#endif  // defined(FUCHSIA_SDK) || defined(DART_HOST_OS_FUCHSIA)
 
 namespace dart {
 
@@ -556,12 +547,8 @@ class TimelineEvent {
     return PreSerializedArgsBit::decode(state_);
   }
 
-  TimelineEvent* next() const {
-    return next_;
-  }
-  void set_next(TimelineEvent* next) {
-    next_ = next;
-  }
+  TimelineEvent* next() const { return next_; }
+  void set_next(TimelineEvent* next) { next_ = next; }
 
  private:
   void StreamInit(TimelineStream* stream) { stream_ = stream; }
@@ -651,11 +638,11 @@ class TimelineTrackMetadata {
  public:
   TimelineTrackMetadata(intptr_t pid,
                         intptr_t tid,
-                        Utils::CStringUniquePtr&& track_name);
+                        CStringUniquePtr&& track_name);
   intptr_t pid() const { return pid_; }
   intptr_t tid() const { return tid_; }
   const char* track_name() const { return track_name_.get(); }
-  inline void set_track_name(Utils::CStringUniquePtr&& track_name);
+  inline void set_track_name(CStringUniquePtr&& track_name);
 #if !defined(PRODUCT)
   /*
    * Prints a Chrome-format event representing the metadata stored by this
@@ -678,7 +665,7 @@ class TimelineTrackMetadata {
   // The trace ID of the thread that this track is associated with.
   intptr_t tid_;
   // The name of this track.
-  Utils::CStringUniquePtr track_name_;
+  CStringUniquePtr track_name_;
 };
 
 class AsyncTimelineTrackMetadata {
@@ -1096,9 +1083,7 @@ class TimelineEventCallbackRecorder : public TimelineEventRecorder {
   virtual void OnEvent(TimelineEvent* event) = 0;
 
   const char* name() const { return CALLBACK_RECORDER_NAME; }
-  intptr_t Size() {
-    return 0;
-  }
+  intptr_t Size() { return 0; }
 
  protected:
   TimelineEventBlock* GetNewBlockLocked() { UNREACHABLE(); }
@@ -1248,18 +1233,18 @@ class TimelineEventSystraceRecorder : public TimelineEventPlatformRecorder {
 #endif  // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
 
 #if defined(DART_HOST_OS_MACOS)
-// A recorder that sends events to Macos's tracing app. See:
+// A recorder that sends events to macOS's tracing app. See:
 // https://developer.apple.com/documentation/os/logging?language=objc
 class TimelineEventMacosRecorder : public TimelineEventPlatformRecorder {
  public:
-  TimelineEventMacosRecorder() API_AVAILABLE(ios(12.0), macos(10.14));
-  virtual ~TimelineEventMacosRecorder() API_AVAILABLE(ios(12.0), macos(10.14));
+  TimelineEventMacosRecorder();
+  virtual ~TimelineEventMacosRecorder();
 
   const char* name() const { return MACOS_RECORDER_NAME; }
   intptr_t Size() { return 0; }
 
  private:
-  void OnEvent(TimelineEvent* event) API_AVAILABLE(ios(12.0), macos(10.14));
+  void OnEvent(TimelineEvent* event);
 };
 #endif  // defined(DART_HOST_OS_MACOS)
 

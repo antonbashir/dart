@@ -13,6 +13,8 @@ import 'package:analyzer/dart/element/element.dart' as element;
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/line_info.dart';
 
+import 'completion_metrics.dart';
+
 class ExpectedCompletion {
   final String _filePath;
 
@@ -88,14 +90,14 @@ class ExpectedCompletion {
 
   SyntacticEntity get syntacticEntity => _entity;
 
-  bool matches(protocol.CompletionSuggestion completionSuggestion) {
+  bool matches(CompletionSuggestionLite completionSuggestion) {
     if (completionSuggestion.completion == completion) {
       if (kind != null && completionSuggestion.kind != kind) {
         return false;
       }
       if (elementKind != null &&
-          completionSuggestion.element?.kind != null &&
-          completionSuggestion.element?.kind != elementKind) {
+          completionSuggestion.elementKind != null &&
+          completionSuggestion.elementKind != elementKind) {
         return false;
       }
       return true;
@@ -407,7 +409,7 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
     safelyRecordKeywordCompletion(node.extensionKeyword);
-    safelyRecordKeywordCompletion(node.onKeyword);
+    safelyRecordKeywordCompletion(node.onClause);
     super.visitExtensionDeclaration(node);
   }
 
@@ -559,6 +561,12 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitMixinOnClause(MixinOnClause node) {
+    safelyRecordKeywordCompletion(node.onKeyword);
+    super.visitMixinOnClause(node);
+  }
+
+  @override
   void visitNativeClause(NativeClause node) {
     safelyRecordKeywordCompletion(node.nativeKeyword);
     super.visitNativeClause(node);
@@ -574,12 +582,6 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   void visitNullLiteral(NullLiteral node) {
     safelyRecordKeywordCompletion(node.literal);
     super.visitNullLiteral(node);
-  }
-
-  @override
-  void visitOnClause(OnClause node) {
-    safelyRecordKeywordCompletion(node.onKeyword);
-    super.visitOnClause(node);
   }
 
   @override

@@ -4,17 +4,15 @@
 
 import 'dart:math' show min;
 
-import 'package:dart2wasm/class_info.dart';
-import 'package:dart2wasm/param_info.dart';
-import 'package:dart2wasm/reference_extensions.dart';
-import 'package:dart2wasm/translator.dart';
-
 import 'package:kernel/ast.dart';
-
 import 'package:vm/metadata/procedure_attributes.dart';
 import 'package:vm/metadata/table_selector.dart';
-
 import 'package:wasm_builder/wasm_builder.dart' as w;
+
+import 'class_info.dart';
+import 'param_info.dart';
+import 'reference_extensions.dart';
+import 'translator.dart';
 
 /// Information for a dispatch table selector.
 ///
@@ -103,7 +101,7 @@ class SelectorInfo {
         if (target.isImplicitGetter) {
           positional = const [];
           named = const {};
-          returns = [member.getterType];
+          returns = [translator.typeOfReturnValue(member)];
         } else {
           positional = [member.setterType];
           named = const {};
@@ -116,39 +114,19 @@ class SelectorInfo {
           named = const {};
           returns = [function.computeFunctionType(Nullability.nonNullable)];
         } else {
-          DartType typeForParam(VariableDeclaration param, int index) {
-            if (param.isCovariantByClass) {
-              // The type argument of a static type is not required to conform
-              // to the bounds of the type variable. Thus, any object can be
-              // passed to a parameter that is covariant by class.
-              return translator.coreTypes.objectNullableRawType;
-            }
-            if (param.isCovariantByDeclaration) {
-              if (hasTearOffUses) {
-                // The type of a covariant parameter in the runtime function
-                // type of a tear-off is always `Object?`. Thus, if the method
-                // has any tear-off uses, any object could be passed into the
-                // parameter.
-                return translator.coreTypes.objectNullableRawType;
-              }
-              if (!translator.options.omitTypeChecks) {
-                // A runtime type check of the parameter will be generated.
-                // The value therefore must be boxed.
-                ensureBoxed[index] = true;
-              }
-            }
-            return param.type;
-          }
-
+          final typeForParam = translator.typeOfParameterVariable;
           positional = [
             for (int i = 0; i < function.positionalParameters.length; i++)
-              typeForParam(function.positionalParameters[i], 1 + i)
+              typeForParam(function.positionalParameters[i],
+                  i < function.requiredParameterCount)
           ];
           named = {
             for (VariableDeclaration param in function.namedParameters)
-              param.name!: typeForParam(param, 1 + nameIndex[param.name!]!)
+              param.name!: typeForParam(param, param.isRequired)
           };
-          returns = target.isSetter ? const [] : [function.returnType];
+          returns = target.isSetter
+              ? const []
+              : [translator.typeOfReturnValue(member)];
         }
       }
       assert(returns.length <= outputSets.length);
@@ -331,10 +309,11 @@ class DispatchTable {
     // Collect class/selector combinations
 
     // Maps class IDs to selector IDs of the class
-    List<Set<int>> selectorsInClass = [];
+    List<Set<int>> selectorsInClass =
+        List.filled(translator.classes.length, const {});
 
     // Add classes to selector targets for their members
-    for (ClassInfo info in translator.classes) {
+    for (ClassInfo info in translator.classesSupersFirst) {
       Set<int> selectorIds = {};
       final ClassInfo? superInfo = info.superInfo;
 
@@ -393,7 +372,7 @@ class DispatchTable {
         }
       }
 
-      selectorsInClass.add(selectorIds);
+      selectorsInClass[info.classId] = selectorIds;
     }
 
     // Build lists of class IDs and count targets

@@ -255,10 +255,6 @@ void ClassFinalizer::VerifyBootstrapClasses() {
   ASSERT_EQUAL(OneByteString::InstanceSize(), cls.host_instance_size());
   cls = object_store->two_byte_string_class();
   ASSERT_EQUAL(TwoByteString::InstanceSize(), cls.host_instance_size());
-  cls = object_store->external_one_byte_string_class();
-  ASSERT_EQUAL(ExternalOneByteString::InstanceSize(), cls.host_instance_size());
-  cls = object_store->external_two_byte_string_class();
-  ASSERT_EQUAL(ExternalTwoByteString::InstanceSize(), cls.host_instance_size());
   cls = object_store->double_class();
   ASSERT_EQUAL(Double::InstanceSize(), cls.host_instance_size());
   cls = object_store->bool_class();
@@ -496,7 +492,9 @@ void ClassFinalizer::FinalizeMemberTypes(const Class& cls) {
     type = field.type();
     type = FinalizeType(type);
     field.SetFieldType(type);
-    if (track_exactness && IsPotentialExactGeneric(type)) {
+    ASSERT(!field.static_type_exactness_state().IsTracking());
+    if (track_exactness && (field.guarded_cid() != kDynamicCid) &&
+        IsPotentialExactGeneric(type)) {
       field.set_static_type_exactness_state(
           StaticTypeExactnessState::Uninitialized());
     }
@@ -614,6 +612,9 @@ void ClassFinalizer::FinalizeTypesInClass(const Class& cls) {
   if (is_future_subtype && !cls.is_abstract()) {
     MarkClassCanBeFuture(zone, cls);
   }
+  if (cls.is_dynamically_extendable()) {
+    MarkClassHasDynamicallyExtendableSubtypes(zone, cls);
+  }
 
   RegisterClassInHierarchy(zone, cls);
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
@@ -678,6 +679,26 @@ void ClassFinalizer::MarkClassCanBeFuture(Zone* zone, const Class& cls) {
     type ^= interfaces.At(i);
     base = type.type_class();
     MarkClassCanBeFuture(zone, base);
+  }
+}
+
+void ClassFinalizer::MarkClassHasDynamicallyExtendableSubtypes(
+    Zone* zone,
+    const Class& cls) {
+  if (cls.has_dynamically_extendable_subtypes()) return;
+
+  cls.set_has_dynamically_extendable_subtypes(true);
+
+  Class& base = Class::Handle(zone, cls.SuperClass());
+  if (!base.IsNull()) {
+    MarkClassHasDynamicallyExtendableSubtypes(zone, base);
+  }
+  auto& interfaces = Array::Handle(zone, cls.interfaces());
+  auto& type = AbstractType::Handle(zone);
+  for (intptr_t i = 0; i < interfaces.Length(); ++i) {
+    type ^= interfaces.At(i);
+    base = type.type_class();
+    MarkClassHasDynamicallyExtendableSubtypes(zone, base);
   }
 }
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
@@ -1290,15 +1311,6 @@ void ClassFinalizer::ClearAllCode(bool including_nonchanging_cids) {
 
   ClearCodeVisitor visitor(zone, including_nonchanging_cids);
   ProgramVisitor::WalkProgram(zone, isolate_group, &visitor);
-
-  // Apart from normal function code and allocation stubs we have two global
-  // code objects to clear.
-  if (including_nonchanging_cids) {
-    auto object_store = isolate_group->object_store();
-    auto& null_code = Code::Handle(zone);
-    object_store->set_build_generic_method_extractor_code(null_code);
-    object_store->set_build_nongeneric_method_extractor_code(null_code);
-  }
 }
 
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)

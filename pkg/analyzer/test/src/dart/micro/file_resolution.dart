@@ -67,7 +67,7 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
   }
 
   void assertStateString(String expected) {
-    final buffer = StringBuffer();
+    var buffer = StringBuffer();
     printer.AnalyzerStatePrinter(
       byteStore: byteStore,
       unlinkedUnitStore: fsState.unlinkedUnitStore as UnlinkedUnitStoreImpl,
@@ -78,7 +78,7 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
       sink: buffer,
       withKeysGetPut: true,
     ).writeFileResolver(testData);
-    final actual = buffer.toString();
+    var actual = buffer.toString();
 
     if (actual != expected) {
       print(actual);
@@ -118,11 +118,11 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
 
   @override
   Future<ResolvedUnitResult> resolveFile(
-    String path, {
+    File file, {
     OperationPerformanceImpl? performance,
   }) async {
-    result = await fileResolver.resolve2(
-      path: path,
+    result = await fileResolver.resolve(
+      path: file.path,
       performance: performance,
     );
     return result;
@@ -130,7 +130,7 @@ class FileResolutionTest with ResourceProviderMixin, ResolutionTest {
 
   @override
   Future<void> resolveTestFile() async {
-    result = await resolveFile(testFile.path);
+    result = await resolveFile(testFile);
     findNode = FindNode(result.content, result.unit);
     findElement = FindElement(result.unit);
   }

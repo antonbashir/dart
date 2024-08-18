@@ -56,9 +56,9 @@ class BaseMarshaller : public ZoneAllocated {
   // `arg_index` is the index of an argument.
   // `def_index_in_argument` is the definition in one argument.
   // `def_index_global` is the index of the definition in all arguments.
-  intptr_t NumDefinitions() const;
-  intptr_t NumDefinitions(intptr_t arg_index) const;
-  intptr_t NumReturnDefinitions() const;
+  intptr_t NumArgumentDefinitions() const;
+  virtual intptr_t NumDefinitions(intptr_t arg_index) const;
+  virtual intptr_t NumReturnDefinitions() const = 0;
   bool ArgumentIndexIsReturn(intptr_t arg_index) const;
   bool DefinitionIndexIsReturn(intptr_t def_index_global) const;
   intptr_t ArgumentIndex(intptr_t def_index_global) const;
@@ -80,9 +80,7 @@ class BaseMarshaller : public ZoneAllocated {
   //
   // Implemented in BaseMarshaller because most Representations are the same
   // in Calls and Callbacks.
-  Representation RepInDart(intptr_t arg_index) const {
-    return Location(arg_index).payload_type().AsRepresentationOverApprox(zone_);
-  }
+  Representation RepInDart(intptr_t arg_index) const;
 
   // Representation on how the value is passed to or received from the FfiCall
   // instruction or StaticCall, NativeParameter, and NativeReturn instructions.
@@ -110,36 +108,45 @@ class BaseMarshaller : public ZoneAllocated {
 
   AbstractTypePtr DartType(intptr_t arg_index) const;
 
+ protected:
+  bool IsPointerDartType(intptr_t arg_index) const;
+  bool IsPointerCType(intptr_t arg_index) const;
+
+ public:
   // The Dart and C Type is Pointer.
   //
   // Requires boxing or unboxing the Pointer object to int.
-  bool IsPointer(intptr_t arg_index) const {
-    if (IsHandle(arg_index) || IsTypedData(arg_index)) {
-      return false;
-    }
-    return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
-           kPointerCid;
-  }
+  bool IsPointerPointer(intptr_t arg_index) const;
 
-  // The C type is Handle.
+  // The Dart type is TypedData and the C type is Pointer.
+  //
+  // Requires passing the typed data base in as tagged pointer.
+  //
+  // TODO(https://dartbug.com/55444): The typed data address load could be
+  // done in IL.
+  bool IsTypedDataPointer(intptr_t arg_index) const;
+
+  // The Dart type is a compound (for example an Array or a TypedData+offset),
+  // and the C type is Pointer.
+  //
+  // Requires passing in two definitions in IL: TypedDataBase + offset.
+  //
+  // TODO(https://dartbug.com/55444): The typed data address load could be
+  // done in IL.
+  bool IsCompoundPointer(intptr_t arg_index) const;
+
+  // The C type is Handle, the Dart type can be anything.
   //
   // Requires passing the pointer to the Dart object in a handle.
-  bool IsHandle(intptr_t arg_index) const {
-    return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
-           kFfiHandleCid;
-  }
+  bool IsHandleCType(intptr_t arg_index) const;
 
-  // The Dart type is a TypedData and C Type is Pointer.
+  // The Dart and C Types are boolean.
   //
-  // Requires unboxing the typed data to an int address.
-  bool IsTypedData(intptr_t arg_index) const;
+  // Requires converting the boolean into an int in IL.
+  bool IsBool(intptr_t arg_index) const;
 
-  bool IsBool(intptr_t arg_index) const {
-    return AbstractType::Handle(zone_, CType(arg_index)).type_class_id() ==
-           kFfiBoolCid;
-  }
-
-  bool IsCompound(intptr_t arg_index) const;
+  // The Dart and C Types are compound (pass by value).
+  bool IsCompoundCType(intptr_t arg_index) const;
 
   // Treated as a null constant in Dart.
   bool IsVoid(intptr_t arg_index) const {
@@ -207,6 +214,9 @@ class CallMarshaller : public BaseMarshaller {
                        c_signature,
                        native_calling_convention) {}
 
+  virtual intptr_t NumDefinitions(intptr_t arg_index) const;
+  virtual intptr_t NumReturnDefinitions() const;
+
   virtual Representation RepInFfiCall(intptr_t def_index_global) const;
 
   // The location of the inputs to the IL FfiCall instruction.
@@ -249,6 +259,9 @@ class CallbackMarshaller : public BaseMarshaller {
         callback_locs_(callback_locs) {}
 
   virtual Representation RepInFfiCall(intptr_t def_index_global) const;
+
+  virtual intptr_t NumDefinitions(intptr_t arg_index) const;
+  virtual intptr_t NumReturnDefinitions() const;
 
   // All parameters are saved on stack to do safe-point transition.
   const NativeLocation& NativeLocationOfNativeParameter(

@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:js_shared/variance.dart';
 import 'package:kernel/ast.dart' as ir;
 
 import '../closure.dart';
@@ -11,7 +12,6 @@ import '../elements/names.dart';
 import '../elements/types.dart';
 import '../ir/closure.dart';
 import '../ir/element_map.dart';
-import '../ir/static_type_cache.dart';
 import '../js_backend/annotations.dart';
 import '../js_model/element_map.dart';
 import '../ordered_typeset.dart';
@@ -31,7 +31,7 @@ class ClosureDataImpl implements ClosureData {
   final JsToElementMap _elementMap;
 
   /// Map of the scoping information that corresponds to a particular entity.
-  final Deferrable<Map<MemberEntity, ScopeInfo>> _scopeMap;
+  final Map<MemberEntity, ScopeInfo> _scopeMap;
   final Deferrable<Map<ir.TreeNode, CapturedScope>> _capturedScopesMap;
   // Indicates the type variables (if any) that are captured in a given
   // Signature function.
@@ -45,14 +45,13 @@ class ClosureDataImpl implements ClosureData {
 
   ClosureDataImpl(
       this._elementMap,
-      Map<MemberEntity, ScopeInfo> scopeMap,
+      this._scopeMap,
       Map<ir.TreeNode, CapturedScope> capturedScopesMap,
       Map<MemberEntity, CapturedScope> capturedScopeForSignatureMap,
       Map<ir.LocalFunction, ClosureRepresentationInfo>
           localClosureRepresentationMap,
       this._enclosingMembers)
-      : _scopeMap = Deferrable.eager(scopeMap),
-        _capturedScopesMap = Deferrable.eager(capturedScopesMap),
+      : _capturedScopesMap = Deferrable.eager(capturedScopesMap),
         _capturedScopeForSignatureMap =
             Deferrable.eager(capturedScopeForSignatureMap),
         _localClosureRepresentationMap =
@@ -65,11 +64,6 @@ class ClosureDataImpl implements ClosureData {
       this._capturedScopeForSignatureMap,
       this._localClosureRepresentationMap,
       this._enclosingMembers);
-
-  static Map<MemberEntity, ScopeInfo> _readScopeMap(DataSourceReader source) {
-    return source.readMemberMap(
-        (MemberEntity member) => ScopeInfo.readFromDataSource(source));
-  }
 
   static Map<ir.TreeNode, CapturedScope> _readCapturedScopesMap(
       DataSourceReader source) {
@@ -94,7 +88,8 @@ class ClosureDataImpl implements ClosureData {
       JsToElementMap elementMap, DataSourceReader source) {
     source.begin(tag);
     // TODO(johnniwinther): Support shared [ScopeInfo].
-    final scopeMap = source.readDeferrable(_readScopeMap);
+    final scopeMap = source.readMemberMap((MemberEntity member) =>
+        source.readDeferrable(ScopeInfo.readFromDataSource));
     final capturedScopesMap = source.readDeferrable(_readCapturedScopesMap);
     final capturedScopeForSignatureMap =
         source.readDeferrable(_readCapturedScopeForSignatureMap);
@@ -105,7 +100,7 @@ class ClosureDataImpl implements ClosureData {
     source.end(tag);
     return ClosureDataImpl._deserialized(
         elementMap,
-        scopeMap,
+        DeferrableValueMap(scopeMap),
         capturedScopesMap,
         capturedScopeForSignatureMap,
         localClosureRepresentationMap,
@@ -116,8 +111,10 @@ class ClosureDataImpl implements ClosureData {
   @override
   void writeToDataSink(DataSinkWriter sink) {
     sink.begin(tag);
-    sink.writeDeferrable(() => sink.writeMemberMap(_scopeMap.loaded(),
-        (MemberEntity member, ScopeInfo info) => info.writeToDataSink(sink)));
+    sink.writeMemberMap(
+        _scopeMap,
+        (_, ScopeInfo info) =>
+            sink.writeDeferrable(() => info.writeToDataSink(sink)));
     sink.writeDeferrable(() => sink.writeTreeNodeMap(
             _capturedScopesMap.loaded(), (CapturedScope scope) {
           scope.writeToDataSink(sink);
@@ -144,11 +141,12 @@ class ClosureDataImpl implements ClosureData {
     // eagerly with the J-model; a constructor body should have it's own
     // [ClosureRepresentationInfo].
     if (entity is ConstructorBodyEntity) {
-      ConstructorBodyEntity constructorBody = entity;
-      entity = constructorBody.constructor;
+      entity = entity.constructor;
+    } else if (entity is JParameterStub) {
+      entity = entity.target;
     }
 
-    return _scopeMap.loaded()[entity]!;
+    return _scopeMap[entity]!;
   }
 
   // TODO(efortuna): Eventually capturedScopesMap[node] should always
@@ -166,7 +164,11 @@ class ClosureDataImpl implements ClosureData {
       case MemberKind.signature:
         return _capturedScopeForSignatureMap.loaded()[entity] ??
             const CapturedScope();
-      default:
+      case MemberKind.parameterStub:
+        return const CapturedScope();
+      case MemberKind.closureField:
+      case MemberKind.generatorBody:
+      case MemberKind.recordGetter:
         throw failedAt(entity, "Unexpected member definition $definition");
     }
   }
@@ -224,116 +226,124 @@ class ClosureDataBuilder {
       MemberEntity outermostEntity) {
     bool includeForRti(Set<VariableUse> useSet) {
       for (VariableUse usage in useSet) {
-        switch (usage.kind) {
-          case VariableUseKind.explicit:
+        switch (usage) {
+          case SimpleVariableUse.explicit:
             return true;
-          case VariableUseKind.implicitCast:
+          case SimpleVariableUse.implicitCast:
             if (_annotationsData
                 .getImplicitDowncastCheckPolicy(outermostEntity)
                 .isEmitted) {
               return true;
             }
             break;
-          case VariableUseKind.localType:
+          case SimpleVariableUse.localType:
             break;
-          case VariableUseKind.constructorTypeArgument:
-            ConstructorEntity constructor =
-                _elementMap.getConstructor(usage.member!);
+          case ConstructorTypeArgumentVariableUse(:final member):
+            ConstructorEntity constructor = _elementMap.getConstructor(member);
             if (rtiNeed.classNeedsTypeArguments(constructor.enclosingClass)) {
               return true;
             }
             break;
-          case VariableUseKind.staticTypeArgument:
-            FunctionEntity method =
-                _elementMap.getMethod(usage.member as ir.Procedure);
+          case StaticTypeArgumentVariableUse(:final procedure):
+            FunctionEntity method = _elementMap.getMethod(procedure);
             if (rtiNeed.methodNeedsTypeArguments(method)) {
               return true;
             }
             break;
-          case VariableUseKind.instanceTypeArgument:
-            Selector selector = _elementMap.getSelector(usage.invocation!);
+          case InstanceTypeArgumentVariableUse(:final invocation):
+            Selector selector = _elementMap.getSelector(invocation);
             if (rtiNeed.selectorNeedsTypeArguments(selector)) {
               return true;
             }
             break;
-          case VariableUseKind.localTypeArgument:
+          case LocalTypeArgumentVariableUse(
+              :final localFunction,
+              :final invocation
+            ):
             // TODO(johnniwinther): We should be able to track direct local
             // function invocations and not have to use the selector here.
-            Selector selector = _elementMap.getSelector(usage.invocation!);
-            if (rtiNeed.localFunctionNeedsTypeArguments(usage.localFunction!) ||
+            Selector selector = _elementMap.getSelector(invocation);
+            if (rtiNeed.localFunctionNeedsTypeArguments(localFunction) ||
                 rtiNeed.selectorNeedsTypeArguments(selector)) {
               return true;
             }
             break;
-          case VariableUseKind.memberParameter:
+          case MemberParameterVariableUse(:final member):
             if (_annotationsData
                 .getParameterCheckPolicy(outermostEntity)
                 .isEmitted) {
               return true;
             } else {
               FunctionEntity method =
-                  _elementMap.getMethod(usage.member as ir.Procedure);
+                  _elementMap.getMethod(member as ir.Procedure);
               if (rtiNeed.methodNeedsSignature(method)) {
+                return true;
+              }
+              if (rtiNeed.methodNeedsTypeArguments(method)) {
+                // Stubs generated for this method might make use of this type
+                // parameter for default type arguments.
                 return true;
               }
             }
             break;
-          case VariableUseKind.localParameter:
+          case LocalParameterVariableUse(:final localFunction):
             if (_annotationsData
                 .getParameterCheckPolicy(outermostEntity)
                 .isEmitted) {
               return true;
-            } else if (rtiNeed
-                .localFunctionNeedsSignature(usage.localFunction!)) {
+            } else if (rtiNeed.localFunctionNeedsSignature(localFunction)) {
+              return true;
+            } else if (rtiNeed.localFunctionNeedsTypeArguments(localFunction)) {
+              // Stubs generated for this local function might make use of this
+              // type parameter for default type arguments.
               return true;
             }
             break;
-          case VariableUseKind.memberReturnType:
+          case MemberReturnTypeVariableUse(:final member):
             FunctionEntity method =
-                _elementMap.getMethod(usage.member as ir.Procedure);
+                _elementMap.getMethod(member as ir.Procedure);
             if (rtiNeed.methodNeedsSignature(method)) {
               return true;
             }
             break;
-          case VariableUseKind.localReturnType:
-            if (usage.localFunction!.function.asyncMarker !=
-                ir.AsyncMarker.Sync) {
+          case LocalReturnTypeVariableUse(:final localFunction):
+            if (localFunction.function.asyncMarker != ir.AsyncMarker.Sync) {
               // The Future/Iterator/Stream implementation requires the type.
               return true;
             }
-            if (rtiNeed.localFunctionNeedsSignature(usage.localFunction!)) {
+            if (rtiNeed.localFunctionNeedsSignature(localFunction)) {
               return true;
             }
             break;
-          case VariableUseKind.fieldType:
+          case SimpleVariableUse.fieldType:
             if (_annotationsData
                 .getParameterCheckPolicy(outermostEntity)
                 .isEmitted) {
               return true;
             }
             break;
-          case VariableUseKind.listLiteral:
+          case SimpleVariableUse.listLiteral:
             if (rtiNeed.classNeedsTypeArguments(
                 _elementMap.commonElements.jsArrayClass)) {
               return true;
             }
             break;
-          case VariableUseKind.setLiteral:
+          case SimpleVariableUse.setLiteral:
             if (rtiNeed.classNeedsTypeArguments(
                 _elementMap.commonElements.setLiteralClass)) {
               return true;
             }
             break;
-          case VariableUseKind.mapLiteral:
+          case SimpleVariableUse.mapLiteral:
             if (rtiNeed.classNeedsTypeArguments(
                 _elementMap.commonElements.mapLiteralClass)) {
               return true;
             }
             break;
-          case VariableUseKind.instantiationTypeArgument:
+          case InstantiationTypeArgumentVariableUse(:final instantiation):
             // TODO(johnniwinther): Use the static type of the expression.
             if (rtiNeed.instantiationNeedsTypeArguments(
-                null, usage.instantiation!.typeArguments.length)) {
+                null, instantiation.typeArguments.length)) {
               return true;
             }
             break;
@@ -510,7 +520,7 @@ class JsScopeInfo extends ScopeInfo {
 
   @override
   void forEachBoxedVariable(
-      KernelToLocalsMap localsMap, f(Local local, FieldEntity field)) {
+      KernelToLocalsMap localsMap, void f(Local local, FieldEntity field)) {
     _ensureBoxedVariableCache(localsMap);
     _boxedVariablesCache!.forEach(f);
   }
@@ -854,7 +864,7 @@ class JsClosureClassInfo extends JsScopeInfo
 
   @override
   void forEachFreeVariable(
-      KernelToLocalsMap localsMap, f(Local variable, JField field)) {
+      KernelToLocalsMap localsMap, void f(Local variable, JField field)) {
     _ensureFieldToLocalsMap(localsMap);
     _ensureBoxedVariableCache(localsMap);
     _fieldToLocalsMap!.forEach((JField field, Local local) {
@@ -869,7 +879,7 @@ class JsClosureClassInfo extends JsScopeInfo
   @override
   Local? getClosureEntity(KernelToLocalsMap localsMap) {
     return _closureEntityVariable != null
-        ? localsMap.getLocalVariable(_closureEntityVariable!)
+        ? localsMap.getLocalVariable(_closureEntityVariable)
         : _closureEntity;
   }
 }
@@ -1192,12 +1202,6 @@ abstract class ClosureMemberData implements JMemberData {
   ClosureMemberData(this.definition, this.memberThisType);
 
   @override
-  StaticTypeCache get staticTypes {
-    // The cached types are stored in the data for enclosing member.
-    throw UnsupportedError("ClosureMemberData.staticTypes");
-  }
-
-  @override
   InterfaceType? getMemberThisType(covariant JsToElementMap elementMap) {
     return memberThisType;
   }
@@ -1255,15 +1259,6 @@ class ClosureFunctionData extends ClosureMemberData
     sink.writeEnum(classTypeVariableAccess);
     sink.end(tag);
   }
-
-  @override
-  late final ir.Member memberContext = (() {
-    ir.TreeNode parent = functionNode;
-    while (parent is! ir.Member) {
-      parent = parent.parent!;
-    }
-    return parent;
-  })();
 
   @override
   FunctionType getFunctionType(IrToElementMap elementMap) {

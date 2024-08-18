@@ -29,52 +29,71 @@ class ConvertAllFormalParametersToNamed extends RefactoringProducer {
   String get title => constTitle;
 
   @override
-  Future<void> compute(
+  Future<ComputeStatus> compute(
     List<Object?> commandArguments,
     ChangeBuilder builder,
   ) async {
-    final availability = analyzeAvailability(
+    var availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
+
+    // This should not happen, `isAvailable()` returns `false`.
     if (availability is! Available) {
-      return;
+      return ComputeStatusFailure();
     }
 
-    final selection = await analyzeSelection(
+    var selection = await analyzeSelection(
       available: availability,
     );
 
+    // This should not happen, `isAvailable()` returns `false`.
     if (selection is! ValidSelectionState) {
-      return;
+      return ComputeStatusFailure();
     }
 
-    final formalParameterUpdates = selection.formalParameters.map(
+    var formalParameterUpdates = selection.formalParameters.map(
       (formalParameter) {
+        var newKind = formalParameter.kind;
+        if (formalParameter.kind.isPositional) {
+          newKind = FormalParameterKind.requiredNamed;
+        }
         return FormalParameterUpdate(
           id: formalParameter.id,
-          kind: FormalParameterKind.requiredNamed,
+          kind: newKind,
         );
       },
     ).toList();
 
-    final signatureUpdate = MethodSignatureUpdate(
+    var signatureUpdate = MethodSignatureUpdate(
       formalParameters: formalParameterUpdates,
       formalParametersTrailingComma: TrailingComma.ifPresent,
       argumentsTrailingComma: ArgumentsTrailingComma.ifPresent,
     );
 
-    await computeSourceChange(
+    var status = await computeSourceChange(
       selectionState: selection,
       signatureUpdate: signatureUpdate,
       builder: builder,
     );
+
+    switch (status) {
+      case ChangeStatusFailure():
+        return ComputeStatusFailure(
+          reason: 'Failed to compute the change.',
+        );
+      case ChangeStatusSuccess():
+        return ComputeStatusSuccess();
+    }
   }
 
   @override
   bool isAvailable() {
-    final availability = analyzeAvailability(
+    var availability = analyzeAvailability(
       refactoringContext: refactoringContext,
     );
-    return availability is Available;
+    if (availability is! Available) {
+      return false;
+    }
+    return availability.hasPositionalParameters;
   }
 }

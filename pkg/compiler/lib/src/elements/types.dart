@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:js_shared/variance.dart';
+
 import '../common/elements.dart' show CommonElements;
 import '../common/names.dart';
 import '../options.dart';
@@ -119,7 +121,7 @@ abstract class DartType {
 
   /// Applies [f] to each occurrence of a [TypeVariableType] within this
   /// type. This excludes function type variables, whether free or bound.
-  void forEachTypeVariable(f(TypeVariableType variable)) {}
+  void forEachTypeVariable(void f(TypeVariableType variable)) {}
 
   /// Calls the visit method on [visitor] corresponding to this type.
   R accept<R, A>(DartTypeVisitor<R, A> visitor, A argument);
@@ -234,7 +236,7 @@ class LegacyType extends DartType {
   bool get containsTypeVariables => baseType.containsTypeVariables;
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     baseType.forEachTypeVariable(f);
   }
 
@@ -289,7 +291,7 @@ class NullableType extends DartType {
   bool get containsTypeVariables => baseType.containsTypeVariables;
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     baseType.forEachTypeVariable(f);
   }
 
@@ -358,7 +360,7 @@ class InterfaceType extends DartType {
       typeArguments.any((type) => type.containsTypeVariables);
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     typeArguments.forEach((type) => type.forEachTypeVariable(f));
   }
 
@@ -431,7 +433,7 @@ class RecordType extends DartType {
   }
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     fields.forEach((type) => type.forEachTypeVariable(f));
   }
 
@@ -490,7 +492,7 @@ class TypeVariableType extends DartType {
   bool get containsTypeVariables => true;
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     f(this);
   }
 
@@ -831,7 +833,7 @@ class FunctionType extends DartType {
   }
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     typeVariables.forEach((type) => type.bound.forEachTypeVariable(f));
     returnType.forEachTypeVariable(f);
     parameterTypes.forEach((type) => type.forEachTypeVariable(f));
@@ -927,7 +929,7 @@ class FutureOrType extends DartType {
   bool get containsTypeVariables => typeArgument.containsTypeVariables;
 
   @override
-  void forEachTypeVariable(f(TypeVariableType variable)) {
+  void forEachTypeVariable(void f(TypeVariableType variable)) {
     typeArgument.forEachTypeVariable(f);
   }
 
@@ -1550,7 +1552,7 @@ class _DeferredName {
 class _DartTypeToStringVisitor extends DartTypeVisitor<void, void> {
   final DartTypes? _dartTypes; // May be null.
   final CompilerOptions? _options; // May be null.
-  final List _fragments = []; // Strings and _DeferredNames
+  final List<Object> _fragments = []; // Strings and _DeferredNames
   bool _lastIsIdentifier = false;
   List<FunctionTypeVariable>? _boundVariables;
   Map<FunctionTypeVariable, _DeferredName>? _variableToName;
@@ -1622,7 +1624,7 @@ class _DartTypeToStringVisitor extends DartTypeVisitor<void, void> {
     // internal notion. The language specification does not define a '*' token
     // in the type language, and no such token should be surfaced to users.
     // For debugging, pass `--debug-print-legacy-stars` to emit the '*'.
-    if (_options == null || _options!.printLegacyStars) {
+    if (_options == null || _options.printLegacyStars) {
       _token('*');
     }
   }
@@ -1710,7 +1712,7 @@ class _DartTypeToStringVisitor extends DartTypeVisitor<void, void> {
         needsComma = _comma(needsComma);
         _visit(typeVariable);
         DartType bound = typeVariable.bound;
-        if (_dartTypes == null || !_dartTypes!.isTopType(bound)) {
+        if (_dartTypes == null || !_dartTypes.isTopType(bound)) {
           _token(' extends ');
           _visit(bound);
         }
@@ -2261,9 +2263,6 @@ abstract class DartTypes {
                 if (!_isSubtype(sArgs[i], tArgs[i], env) ||
                     !_isSubtype(tArgs[i], sArgs[i], env)) return false;
                 break;
-              default:
-                throw StateError(
-                    "Invalid variance ${variances[i]} used for subtype check.");
             }
           }
           return true;
@@ -2366,16 +2365,11 @@ abstract class DartTypes {
 
   List<Variance> getTypeVariableVariances(ClassEntity cls);
 
-  DartType getTearOffParameterType(
-      DartType type, bool isCovariant, bool isNonNullableByDefaultLibrary) {
+  DartType getTearOffParameterType(DartType type, bool isCovariant) {
     if (isCovariant) {
       // A covariant parameter has type `Object` in the method signature.
       var objectType = commonElements.objectType;
-      if (isNonNullableByDefaultLibrary) {
-        return nullableType(objectType);
-      } else {
-        return legacyType(objectType);
-      }
+      return nullableType(objectType);
     }
     return type;
   }

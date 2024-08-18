@@ -146,8 +146,41 @@ DEFINE_RUNTIME_ENTRY(RangeError, 2) {
   Exceptions::ThrowByType(Exceptions::kRange, args);
 }
 
-DEFINE_RUNTIME_ENTRY(WriteError, 0) {
-  Exceptions::ThrowUnsupportedError("Cannot modify an unmodifiable list");
+DEFINE_RUNTIME_ENTRY(RangeErrorUnboxedInt64, 0) {
+  int64_t unboxed_length = thread->unboxed_int64_runtime_arg();
+  int64_t unboxed_index = thread->unboxed_int64_runtime_second_arg();
+  const auto& length = Integer::Handle(zone, Integer::New(unboxed_length));
+  const auto& index = Integer::Handle(zone, Integer::New(unboxed_index));
+  // Throw: new RangeError.range(index, 0, length - 1, "length");
+  const Array& args = Array::Handle(zone, Array::New(4));
+  args.SetAt(0, index);
+  args.SetAt(1, Integer::Handle(zone, Integer::New(0)));
+  args.SetAt(
+      2, Integer::Handle(
+             zone, Integer::Cast(length).ArithmeticOp(
+                       Token::kSUB, Integer::Handle(zone, Integer::New(1)))));
+  args.SetAt(3, Symbols::Length());
+  Exceptions::ThrowByType(Exceptions::kRange, args);
+}
+
+DEFINE_RUNTIME_ENTRY(WriteError, 2) {
+  const Instance& receiver = Instance::CheckedHandle(zone, arguments.ArgAt(0));
+  const Smi& kind = Smi::CheckedHandle(zone, arguments.ArgAt(1));
+  auto& message = String::Handle(zone);
+  switch (kind.Value()) {
+    case 0:  // CheckWritableInstr::Kind::kWriteUnmodifiableTypedData:
+      message = String::NewFormatted("Cannot modify an unmodifiable list: %s",
+                                     receiver.ToCString());
+      break;
+    case 1:  // CheckWritableInstr::Kind::kDeeplyImmutableAttachNativeFinalizer:
+      message = String::NewFormatted(
+          "Cannot attach NativeFinalizer to deeply immutable object: %s",
+          receiver.ToCString());
+      break;
+  }
+  const Array& args = Array::Handle(Array::New(1));
+  args.SetAt(0, message);
+  Exceptions::ThrowByType(Exceptions::kUnsupported, args);
 }
 
 static void NullErrorHelper(Zone* zone,
@@ -528,39 +561,35 @@ DEFINE_LEAF_RUNTIME_ENTRY(uword /*ObjectPtr*/,
                           Thread* thread) {
   ObjectPtr object = static_cast<ObjectPtr>(object_in);
 
-  // If we eliminate a generational write barriers on allocations of an object
+  // If we eliminate the generational write barrier when writing into an object,
   // we need to ensure it's either a new-space object or it has been added to
-  // the remembered set.
+  // the remembered set. If we eliminate the incremental write barrier, we need
+  // to add the object to the deferred marking stack so it will be [re]scanned.
   //
   // NOTE: We use static_cast<>() instead of ::RawCast() to avoid handle
   // allocations in debug mode. Handle allocations in leaf runtimes can cause
   // memory leaks because they will allocate into a handle scope from the next
   // outermost runtime code (to which the generated Dart code might not return
   // in a long time).
-  bool add_to_remembered_set = true;
-  if (object->IsNewObject()) {
-    add_to_remembered_set = false;
-  } else if (object->IsArray()) {
+  bool skips_barrier = true;
+  if (object->IsArray()) {
     const intptr_t length = Array::LengthOf(static_cast<ArrayPtr>(object));
-    add_to_remembered_set =
-        compiler::target::WillAllocateNewOrRememberedArray(length);
+    skips_barrier = compiler::target::WillAllocateNewOrRememberedArray(length);
   } else if (object->IsContext()) {
     const intptr_t num_context_variables =
         Context::NumVariables(static_cast<ContextPtr>(object));
-    add_to_remembered_set =
-        compiler::target::WillAllocateNewOrRememberedContext(
-            num_context_variables);
+    skips_barrier = compiler::target::WillAllocateNewOrRememberedContext(
+        num_context_variables);
   }
 
-  if (add_to_remembered_set) {
-    object->untag()->EnsureInRememberedSet(thread);
-  }
+  if (skips_barrier) {
+    if (object->IsOldObject()) {
+      object->untag()->EnsureInRememberedSet(thread);
+    }
 
-  // For incremental write barrier elimination, we need to ensure that the
-  // allocation ends up in the new space or else the object needs to added
-  // to deferred marking stack so it will be [re]scanned.
-  if (thread->is_marking()) {
-    thread->DeferredMarkingStackAddObject(object);
+    if (thread->is_marking()) {
+      thread->DeferredMarkingStackAddObject(object);
+    }
   }
 
   return static_cast<uword>(object);
@@ -626,9 +655,8 @@ static void PrintSubtypeCheck(const AbstractType& subtype,
 
   LogBlock lb;
   THR_Print("SubtypeCheck: '%s' %d %s '%s' %d (pc: %#" Px ").\n",
-            String::Handle(subtype.Name()).ToCString(), subtype.type_class_id(),
-            result ? "is" : "is !",
-            String::Handle(supertype.Name()).ToCString(),
+            subtype.NameCString(), subtype.type_class_id(),
+            result ? "is" : "is !", supertype.NameCString(),
             supertype.type_class_id(), caller_frame->pc());
 
   const Function& function =
@@ -687,19 +715,24 @@ DEFINE_RUNTIME_ENTRY(SubtypeCheck, 5) {
   UNREACHABLE();
 }
 
-// Allocate a new closure and initializes its function and context fields with
-// the arguments and all other fields to null.
+// Allocate a new closure and initializes its function, context,
+// instantiator type arguments and delayed type arguments fields.
 // Arg0: function.
 // Arg1: context.
+// Arg2: instantiator type arguments.
+// Arg3: delayed type arguments.
 // Return value: newly allocated closure.
-DEFINE_RUNTIME_ENTRY(AllocateClosure, 2) {
+DEFINE_RUNTIME_ENTRY(AllocateClosure, 4) {
   const auto& function = Function::CheckedHandle(zone, arguments.ArgAt(0));
-  const auto& context = Context::CheckedHandle(zone, arguments.ArgAt(1));
+  const auto& context = Object::Handle(zone, arguments.ArgAt(1));
+  const auto& instantiator_type_args =
+      TypeArguments::CheckedHandle(zone, arguments.ArgAt(2));
+  const auto& delayed_type_args =
+      TypeArguments::CheckedHandle(zone, arguments.ArgAt(3));
   const Closure& closure = Closure::Handle(
-      zone,
-      Closure::New(Object::null_type_arguments(), Object::null_type_arguments(),
-                   Object::null_type_arguments(), function, context,
-                   SpaceForRuntimeAllocation()));
+      zone, Closure::New(instantiator_type_args, Object::null_type_arguments(),
+                         delayed_type_args, function, context,
+                         SpaceForRuntimeAllocation()));
   arguments.SetReturn(closure);
   RuntimeAllocationEpilogue(thread);
 }
@@ -840,21 +873,19 @@ static void PrintTypeCheck(const char* message,
   LogBlock lb;
   if (type.IsInstantiated()) {
     THR_Print("%s: '%s' %d %s '%s' %d (pc: %#" Px ").\n", message,
-              String::Handle(instance_type.Name()).ToCString(),
-              instance_type.type_class_id(),
+              instance_type.NameCString(), instance_type.type_class_id(),
               (result.ptr() == Bool::True().ptr()) ? "is" : "is !",
-              String::Handle(type.Name()).ToCString(), type.type_class_id(),
-              caller_frame->pc());
+              type.NameCString(), type.type_class_id(), caller_frame->pc());
   } else {
     // Instantiate type before printing.
     const AbstractType& instantiated_type = AbstractType::Handle(
         type.InstantiateFrom(instantiator_type_arguments,
                              function_type_arguments, kAllFree, Heap::kOld));
     THR_Print("%s: '%s' %s '%s' instantiated from '%s' (pc: %#" Px ").\n",
-              message, String::Handle(instance_type.Name()).ToCString(),
+              message, instance_type.NameCString(),
               (result.ptr() == Bool::True().ptr()) ? "is" : "is !",
-              String::Handle(instantiated_type.Name()).ToCString(),
-              String::Handle(type.Name()).ToCString(), caller_frame->pc());
+              instantiated_type.NameCString(), type.NameCString(),
+              caller_frame->pc());
   }
   const Function& function =
       Function::Handle(caller_frame->LookupDartFunction());
@@ -1169,10 +1200,8 @@ DEFINE_RUNTIME_ENTRY(TypeCheck, 7) {
   }
 #endif  // defined(TARGET_ARCH_IA32)
 
-  // These are guaranteed on the calling side.
+  // This is guaranteed on the calling side.
   ASSERT(!dst_type.IsDynamicType());
-  ASSERT(!src_instance.IsNull() ||
-         isolate->group()->use_strict_null_safety_checks());
 
   const bool is_instance_of = src_instance.IsAssignableTo(
       dst_type, instantiator_type_arguments, function_type_arguments);
@@ -1441,11 +1470,13 @@ DEFINE_RUNTIME_ENTRY(Throw, 1) {
   Exceptions::Throw(thread, exception);
 }
 
-DEFINE_RUNTIME_ENTRY(ReThrow, 2) {
+DEFINE_RUNTIME_ENTRY(ReThrow, 3) {
   const Instance& exception = Instance::CheckedHandle(zone, arguments.ArgAt(0));
   const Instance& stacktrace =
       Instance::CheckedHandle(zone, arguments.ArgAt(1));
-  Exceptions::ReThrow(thread, exception, stacktrace);
+  const Smi& bypass_debugger = Smi::CheckedHandle(zone, arguments.ArgAt(2));
+  Exceptions::ReThrow(thread, exception, stacktrace,
+                      bypass_debugger.Value() != 0);
 }
 
 // Patches static call in optimized code with the target's entry point.
@@ -1530,6 +1561,7 @@ static bool ResolveCallThroughGetter(const Class& receiver_class,
                                      const String& demangled,
                                      const Array& arguments_descriptor,
                                      Function* result) {
+  const bool create_if_absent = !FLAG_precompiled_mode;
   const String& getter_name = String::Handle(Field::GetterName(demangled));
   const int kTypeArgsLen = 0;
   const int kNumArguments = 1;
@@ -1537,7 +1569,7 @@ static bool ResolveCallThroughGetter(const Class& receiver_class,
       ArgumentsDescriptor::NewBoxed(kTypeArgsLen, kNumArguments)));
   const Function& getter =
       Function::Handle(Resolver::ResolveDynamicForReceiverClass(
-          receiver_class, getter_name, args_desc));
+          receiver_class, getter_name, args_desc, create_if_absent));
   if (getter.IsNull() || getter.IsMethodExtractor()) {
     return false;
   }
@@ -1547,8 +1579,8 @@ static bool ResolveCallThroughGetter(const Class& receiver_class,
   const Function& target_function =
       Function::Handle(receiver_class.GetInvocationDispatcher(
           target_name, arguments_descriptor,
-          UntaggedFunction::kInvokeFieldDispatcher, FLAG_lazy_dispatchers));
-  ASSERT(!target_function.IsNull() || !FLAG_lazy_dispatchers);
+          UntaggedFunction::kInvokeFieldDispatcher, create_if_absent));
+  ASSERT(!create_if_absent || !target_function.IsNull());
   if (FLAG_trace_ic) {
     OS::PrintErr(
         "InvokeField IC miss: adding <%s> id:%" Pd " -> <%s>\n",
@@ -1573,6 +1605,11 @@ FunctionPtr InlineCacheMissHelper(const Class& receiver_class,
   }
   const bool is_getter = Field::IsGetterName(*demangled);
   Function& result = Function::Handle();
+#if defined(DART_PRECOMPILED_RUNTIME)
+  const bool create_if_absent = false;
+#else
+  const bool create_if_absent = true;
+#endif
   if (is_getter ||
       !ResolveCallThroughGetter(receiver_class, target_name, *demangled,
                                 args_descriptor, &result)) {
@@ -1580,7 +1617,7 @@ FunctionPtr InlineCacheMissHelper(const Class& receiver_class,
     const Function& target_function =
         Function::Handle(receiver_class.GetInvocationDispatcher(
             *demangled, args_descriptor,
-            UntaggedFunction::kNoSuchMethodDispatcher, FLAG_lazy_dispatchers));
+            UntaggedFunction::kNoSuchMethodDispatcher, create_if_absent));
     if (FLAG_trace_ic) {
       OS::PrintErr(
           "NoSuchMethod IC miss: adding <%s> id:%" Pd " -> <%s>\n",
@@ -1589,9 +1626,9 @@ FunctionPtr InlineCacheMissHelper(const Class& receiver_class,
     }
     result = target_function.ptr();
   }
-  // May be null if --no-lazy-dispatchers, in which case dispatch will be
+  // May be null if in the precompiled runtime, in which case dispatch will be
   // handled by NoSuchMethodFromCallStub.
-  ASSERT(!result.IsNull() || !FLAG_lazy_dispatchers);
+  ASSERT(!create_if_absent || !result.IsNull());
   return result.ptr();
 }
 
@@ -1602,6 +1639,7 @@ static void TrySwitchInstanceCall(Thread* thread,
                                   const Function& caller_function,
                                   const ICData& ic_data,
                                   const Function& target_function) {
+  ASSERT(!target_function.IsNull());
   auto zone = thread->zone();
 
   // Monomorphic/megamorphic calls only check the receiver CID.
@@ -1706,9 +1744,10 @@ static FunctionPtr Resolve(
   auto& target_function = Function::Handle(zone);
   ArgumentsDescriptor args_desc(descriptor);
 
+  const bool allow_add = !FLAG_precompiled_mode;
   if (receiver_class.EnsureIsFinalized(thread) == Error::null()) {
-    target_function = Resolver::ResolveDynamicForReceiverClass(receiver_class,
-                                                               name, args_desc);
+    target_function = Resolver::ResolveDynamicForReceiverClass(
+        receiver_class, name, args_desc, allow_add);
   }
   if (caller_arguments.length() == 2 &&
       target_function.ptr() == thread->isolate_group()
@@ -1723,10 +1762,7 @@ static FunctionPtr Resolve(
   if (target_function.IsNull()) {
     target_function = InlineCacheMissHelper(receiver_class, descriptor, name);
   }
-  if (target_function.IsNull()) {
-    ASSERT(!FLAG_lazy_dispatchers);
-  }
-
+  ASSERT(!allow_add || !target_function.IsNull());
   return target_function.ptr();
 }
 
@@ -2703,6 +2739,7 @@ DEFINE_RUNTIME_ENTRY(SwitchableCallMiss, 2) {
   handler.ResolveSwitchAndReturn(old_data);
 }
 
+#if defined(DART_PRECOMPILED_RUNTIME)
 // Used to find the correct receiver and function to invoke or to fall back to
 // invoking noSuchMethod when lazy dispatchers are disabled. Returns the
 // result of the invocation or an Error.
@@ -2713,7 +2750,6 @@ static ObjectPtr InvokeCallThroughGetterOrNoSuchMethod(
     const String& target_name,
     const Array& orig_arguments,
     const Array& orig_arguments_desc) {
-  ASSERT(!FLAG_lazy_dispatchers);
   const bool is_dynamic_call =
       Function::IsDynamicInvocationForwarderName(target_name);
   String& demangled_target_name = String::Handle(zone, target_name.ptr());
@@ -2721,7 +2757,6 @@ static ObjectPtr InvokeCallThroughGetterOrNoSuchMethod(
     demangled_target_name =
         Function::DemangleDynamicInvocationForwarderName(target_name);
   }
-
   Class& cls = Class::Handle(zone, receiver.clazz());
   Function& function = Function::Handle(zone);
 
@@ -2738,17 +2773,13 @@ static ObjectPtr InvokeCallThroughGetterOrNoSuchMethod(
         String::Handle(zone, Field::NameFromGetter(demangled_target_name));
     while (!cls.IsNull()) {
       // We don't generate dyn:* forwarders for method extractors so there is no
-      // need to try to find a dyn:get:foo first (see assertion below)
+      // need to try to find a dyn:get:foo first.
       if (function.IsNull()) {
         if (cls.EnsureIsFinalized(thread) == Error::null()) {
           function = Resolver::ResolveDynamicFunction(zone, cls, function_name);
         }
       }
       if (!function.IsNull()) {
-#if !defined(DART_PRECOMPILED_RUNTIME)
-        ASSERT(!kernel::NeedsDynamicInvocationForwarder(Function::Handle(
-            function.GetMethodExtractor(demangled_target_name))));
-#endif
         const Function& closure_function =
             Function::Handle(zone, function.ImplicitClosureFunction());
         const Object& result = Object::Handle(
@@ -2854,6 +2885,7 @@ static ObjectPtr InvokeCallThroughGetterOrNoSuchMethod(
                                     orig_arguments, orig_arguments_desc));
   return result.ptr();
 }
+#endif
 
 // Invoke appropriate noSuchMethod or closure from getter.
 // Arg0: receiver
@@ -2861,12 +2893,7 @@ static ObjectPtr InvokeCallThroughGetterOrNoSuchMethod(
 // Arg2: arguments descriptor array
 // Arg3: arguments array
 DEFINE_RUNTIME_ENTRY(NoSuchMethodFromCallStub, 4) {
-  ASSERT(!FLAG_lazy_dispatchers);
-  const Instance& receiver = Instance::CheckedHandle(zone, arguments.ArgAt(0));
   const Object& ic_data_or_cache = Object::Handle(zone, arguments.ArgAt(1));
-  const Array& orig_arguments_desc =
-      Array::CheckedHandle(zone, arguments.ArgAt(2));
-  const Array& orig_arguments = Array::CheckedHandle(zone, arguments.ArgAt(3));
   String& target_name = String::Handle(zone);
   if (ic_data_or_cache.IsICData()) {
     target_name = ICData::Cast(ic_data_or_cache).target_name();
@@ -2874,13 +2901,21 @@ DEFINE_RUNTIME_ENTRY(NoSuchMethodFromCallStub, 4) {
     ASSERT(ic_data_or_cache.IsMegamorphicCache());
     target_name = MegamorphicCache::Cast(ic_data_or_cache).target_name();
   }
-
+#if defined(DART_PRECOMPILED_RUNTIME)
+  const Instance& receiver = Instance::CheckedHandle(zone, arguments.ArgAt(0));
+  const Array& orig_arguments_desc =
+      Array::CheckedHandle(zone, arguments.ArgAt(2));
+  const Array& orig_arguments = Array::CheckedHandle(zone, arguments.ArgAt(3));
   const auto& result =
       Object::Handle(zone, InvokeCallThroughGetterOrNoSuchMethod(
                                thread, zone, receiver, target_name,
                                orig_arguments, orig_arguments_desc));
   ThrowIfError(result);
   arguments.SetReturn(result);
+#else
+  FATAL("Dispatcher for %s should have been lazily created",
+        target_name.ToCString());
+#endif
 }
 
 // Invoke appropriate noSuchMethod function.
@@ -3791,8 +3826,7 @@ DEFINE_RUNTIME_ENTRY(InitInstanceField, 2) {
   Object& result = Object::Handle(zone, field.InitializeInstance(instance));
   ThrowIfError(result);
   result = instance.GetField(field);
-  ASSERT((result.ptr() != Object::sentinel().ptr()) &&
-         (result.ptr() != Object::transition_sentinel().ptr()));
+  ASSERT(result.ptr() != Object::sentinel().ptr());
   arguments.SetReturn(result);
 }
 
@@ -3801,8 +3835,7 @@ DEFINE_RUNTIME_ENTRY(InitStaticField, 1) {
   Object& result = Object::Handle(zone, field.InitializeStatic());
   ThrowIfError(result);
   result = field.StaticValue();
-  ASSERT((result.ptr() != Object::sentinel().ptr()) &&
-         (result.ptr() != Object::transition_sentinel().ptr()));
+  ASSERT(result.ptr() != Object::sentinel().ptr());
   arguments.SetReturn(result);
 }
 
@@ -3841,103 +3874,90 @@ typedef double (*UnaryMathCFunction)(double x);
 typedef double (*BinaryMathCFunction)(double x, double y);
 typedef void* (*MemMoveCFunction)(void* dest, const void* src, size_t n);
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcPow,
-    2,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<BinaryMathCFunction>(&pow)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcPow,
+                              /*argument_count=*/2,
+                              /*is_float=*/true,
+                              static_cast<BinaryMathCFunction>(pow));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    DartModulo,
-    2,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(
-        static_cast<BinaryMathCFunction>(&DartModulo)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(DartModulo,
+                              /*argument_count=*/2,
+                              /*is_float=*/true,
+                              static_cast<BinaryMathCFunction>(DartModulo));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcAtan2,
-    2,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(
-        static_cast<BinaryMathCFunction>(&atan2_ieee)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcFmod,
+                              2,
+                              /*is_float=*/true,
+                              static_cast<BinaryMathCFunction>(fmod_ieee));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcFloor,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&floor)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcAtan2,
+                              2,
+                              /*is_float=*/true,
+                              static_cast<BinaryMathCFunction>(atan2_ieee));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcCeil,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&ceil)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcFloor,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(floor));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcTrunc,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&trunc)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcCeil,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(ceil));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcRound,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&round)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcTrunc,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(trunc));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcCos,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&cos)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcRound,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(round));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcSin,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&sin)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcCos,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(cos));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcAsin,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&asin)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcSin,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(sin));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcAcos,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&acos)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcAsin,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(asin));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcTan,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&tan)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcAcos,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(acos));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcAtan,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&atan)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcTan,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(tan));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcExp,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&exp)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcAtan,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(atan));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    LibcLog,
-    1,
-    true /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<UnaryMathCFunction>(&log)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcExp,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(exp));
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    MemoryMove,
-    3,
-    false /* is_float */,
-    reinterpret_cast<RuntimeFunction>(static_cast<MemMoveCFunction>(&memmove)));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(LibcLog,
+                              /*argument_count=*/1,
+                              /*is_float=*/true,
+                              static_cast<UnaryMathCFunction>(log));
+
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(MemoryMove,
+                              /*argument_count=*/3,
+                              /*is_float=*/false,
+                              static_cast<MemMoveCFunction>(memmove));
 
 extern "C" void DFLRT_EnterSafepoint(NativeArguments __unusable_) {
   CHECK_STACK_ALIGNMENT;
@@ -3948,7 +3968,10 @@ extern "C" void DFLRT_EnterSafepoint(NativeArguments __unusable_) {
   thread->EnterSafepoint();
   TRACE_RUNTIME_CALL("%s", "EnterSafepoint done");
 }
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(EnterSafepoint, 0, false, &DFLRT_EnterSafepoint);
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(EnterSafepoint,
+                              /*argument_count=*/0,
+                              /*is_float=*/false,
+                              DFLRT_EnterSafepoint);
 
 extern "C" void DFLRT_ExitSafepoint(NativeArguments __unusable_) {
   CHECK_STACK_ALIGNMENT;
@@ -3972,7 +3995,10 @@ extern "C" void DFLRT_ExitSafepoint(NativeArguments __unusable_) {
 
   TRACE_RUNTIME_CALL("%s", "ExitSafepoint done");
 }
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(ExitSafepoint, 0, false, &DFLRT_ExitSafepoint);
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(ExitSafepoint,
+                              /*argument_count=*/0,
+                              /*is_float=*/false,
+                              DFLRT_ExitSafepoint);
 
 // This is expected to be invoked when jumping to destination frame,
 // during exception handling.
@@ -3994,9 +4020,9 @@ extern "C" void DFLRT_ExitSafepointIgnoreUnwindInProgress(
   TRACE_RUNTIME_CALL("%s", "ExitSafepointIgnoreUnwindInProgress done");
 }
 DEFINE_RAW_LEAF_RUNTIME_ENTRY(ExitSafepointIgnoreUnwindInProgress,
-                              0,
-                              false,
-                              &DFLRT_ExitSafepointIgnoreUnwindInProgress);
+                              /*argument_count=*/0,
+                              /*is_float*/ false,
+                              DFLRT_ExitSafepointIgnoreUnwindInProgress);
 
 // This is called by a native callback trampoline
 // (see StubCodeCompiler::GenerateFfiCallbackTrampolineStub). Not registered as
@@ -4137,11 +4163,10 @@ extern "C" ApiLocalScope* DLRT_EnterHandleScope(Thread* thread) {
   TRACE_RUNTIME_CALL("EnterHandleScope returning %p", return_value);
   return return_value;
 }
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    EnterHandleScope,
-    1,
-    false /* is_float */,
-    reinterpret_cast<RuntimeFunction>(&DLRT_EnterHandleScope));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(EnterHandleScope,
+                              /*argument_count=*/1,
+                              /*is_float=*/false,
+                              DLRT_EnterHandleScope);
 
 extern "C" void DLRT_ExitHandleScope(Thread* thread) {
   CHECK_STACK_ALIGNMENT;
@@ -4149,11 +4174,10 @@ extern "C" void DLRT_ExitHandleScope(Thread* thread) {
   thread->ExitApiScope();
   TRACE_RUNTIME_CALL("ExitHandleScope %s", "done");
 }
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    ExitHandleScope,
-    1,
-    false /* is_float */,
-    reinterpret_cast<RuntimeFunction>(&DLRT_ExitHandleScope));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(ExitHandleScope,
+                              /*argument_count=*/1,
+                              /*is_float=*/false,
+                              DLRT_ExitHandleScope);
 
 extern "C" LocalHandle* DLRT_AllocateHandle(ApiLocalScope* scope) {
   CHECK_STACK_ALIGNMENT;
@@ -4165,11 +4189,10 @@ extern "C" LocalHandle* DLRT_AllocateHandle(ApiLocalScope* scope) {
   return return_value;
 }
 
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    AllocateHandle,
-    1,
-    false /* is_float */,
-    reinterpret_cast<RuntimeFunction>(&DLRT_AllocateHandle));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(AllocateHandle,
+                              /*argument_count=*/1,
+                              /*is_float=*/false,
+                              DLRT_AllocateHandle);
 
 // Enables reusing `Dart_PropagateError` from `FfiCallInstr`.
 // `Dart_PropagateError` requires the native state and transitions into the VM.
@@ -4191,27 +4214,27 @@ extern "C" void DLRT_PropagateError(Dart_Handle handle) {
 }
 
 // Not a leaf-function, throws error.
-DEFINE_RAW_LEAF_RUNTIME_ENTRY(
-    PropagateError,
-    1,
-    false /* is_float */,
-    reinterpret_cast<RuntimeFunction>(&DLRT_PropagateError));
+DEFINE_RAW_LEAF_RUNTIME_ENTRY(PropagateError,
+                              /*argument_count=*/1,
+                              /*is_float=*/false,
+                              DLRT_PropagateError);
 
-#if defined(USING_MEMORY_SANITIZER)
-#define MSAN_UNPOISON_RANGE reinterpret_cast<RuntimeFunction>(&__msan_unpoison)
-#define MSAN_UNPOISON_PARAM                                                    \
-  reinterpret_cast<RuntimeFunction>(&__msan_unpoison_param)
-#else
-#define MSAN_UNPOISON_RANGE nullptr
-#define MSAN_UNPOISON_PARAM nullptr
+#if !defined(USING_MEMORY_SANITIZER)
+extern "C" void __msan_unpoison(const volatile void*, size_t) {
+  UNREACHABLE();
+}
+extern "C" void __msan_unpoison_param(size_t) {
+  UNREACHABLE();
+}
 #endif
 
-#if defined(USING_THREAD_SANITIZER)
-#define TSAN_ACQUIRE reinterpret_cast<RuntimeFunction>(&__tsan_acquire)
-#define TSAN_RELEASE reinterpret_cast<RuntimeFunction>(&__tsan_release)
-#else
-#define TSAN_ACQUIRE nullptr
-#define TSAN_RELEASE nullptr
+#if !defined(USING_THREAD_SANITIZER)
+extern "C" void __tsan_acquire(void* addr) {
+  UNREACHABLE();
+}
+extern "C" void __tsan_release(void* addr) {
+  UNREACHABLE();
+}
 #endif
 
 // These runtime entries are defined even when not using MSAN / TSAN to keep
@@ -4220,21 +4243,21 @@ DEFINE_RAW_LEAF_RUNTIME_ENTRY(
 DEFINE_RAW_LEAF_RUNTIME_ENTRY(MsanUnpoison,
                               /*argument_count=*/2,
                               /*is_float=*/false,
-                              MSAN_UNPOISON_RANGE);
+                              __msan_unpoison);
 
 DEFINE_RAW_LEAF_RUNTIME_ENTRY(MsanUnpoisonParam,
                               /*argument_count=*/1,
                               /*is_float=*/false,
-                              MSAN_UNPOISON_PARAM);
+                              __msan_unpoison_param);
 
 DEFINE_RAW_LEAF_RUNTIME_ENTRY(TsanLoadAcquire,
                               /*argument_count=*/1,
                               /*is_float=*/false,
-                              TSAN_ACQUIRE);
+                              __tsan_acquire);
 
 DEFINE_RAW_LEAF_RUNTIME_ENTRY(TsanStoreRelease,
                               /*argument_count=*/1,
                               /*is_float=*/false,
-                              TSAN_RELEASE);
+                              __tsan_release);
 
 }  // namespace dart

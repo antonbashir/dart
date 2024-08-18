@@ -35,6 +35,7 @@ import 'package:js_shared/synced/embedded_names.dart'
         RTI_UNIVERSE,
         RtiUniverseFieldNames,
         TYPES;
+import 'package:js_shared/variance.dart';
 
 import 'package:js_ast/src/precedence.dart' as js_precedence;
 
@@ -347,7 +348,7 @@ class ModelEmitter {
     });
 
     if (_closedWorld.backendUsage.requiresPreamble &&
-        !_closedWorld.backendUsage.isHtmlLoaded) {
+        _options.compileForServer) {
       _reporter.reportHintMessage(NO_LOCATION_SPANNABLE, MessageKind.PREAMBLE);
     }
 
@@ -617,8 +618,7 @@ var ${startupMetricsGlobal} =
         });
     output.add('\n');
     output.add(js
-        .createCodeBuffer(epilogue, _options,
-            _sourceInformationStrategy as JavaScriptSourceInformationStrategy)
+        .createCodeBuffer(epilogue, _options, _sourceInformationStrategy)
         .getText());
     // Add semi-colon to separate from other fragments in the same part.
     output.add(';');

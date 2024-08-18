@@ -5,7 +5,7 @@
 // There is no public API exposed yet, the in-progress API lives here.
 import 'dart:async';
 
-import 'package:_fe_analyzer_shared/src/macros/api.dart';
+import 'package:macros/macros.dart';
 
 /*macro*/ class Observable implements FieldDeclarationsMacro {
   const Observable();
@@ -13,7 +13,7 @@ import 'package:_fe_analyzer_shared/src/macros/api.dart';
   @override
   Future<void> buildDeclarationsForField(
       FieldDeclaration field, MemberDeclarationBuilder builder) async {
-    final name = field.identifier.name;
+    var name = field.identifier.name;
     if (!name.startsWith('_')) {
       throw ArgumentError(
           '@observable can only annotate private fields, and it will create '

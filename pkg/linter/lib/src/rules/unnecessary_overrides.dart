@@ -54,14 +54,15 @@ class UnnecessaryOverrides extends LintRule {
   static const LintCode code = LintCode(
       'unnecessary_overrides', 'Unnecessary override.',
       correctionMessage:
-          'Try adding behavior in the overriding member or removing the override.');
+          'Try adding behavior in the overriding member or removing the override.',
+      hasPublishedDocs: true);
 
   UnnecessaryOverrides()
       : super(
             name: 'unnecessary_overrides',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   LintCode get lintCode => code;
@@ -250,9 +251,12 @@ class _UnnecessaryMethodOverrideVisitor
   ExecutableElement? getInheritedElement(node) {
     var element = node.declaredElement;
     if (element == null) return null;
+
     var enclosingElement = element.enclosingElement;
     if (enclosingElement is! InterfaceElement) return null;
-    return enclosingElement.thisType.lookUpMethod2(
+
+    var augmented = enclosingElement.augmented;
+    return augmented.declaration.thisType.lookUpMethod2(
       node.name.lexeme,
       element.library,
       concrete: true,

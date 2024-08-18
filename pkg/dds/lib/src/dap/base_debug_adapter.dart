@@ -146,7 +146,10 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
       final messageText = e is DebugAdapterException ? e.message : '$e';
       final errorMessage = Message(
         id: ErrorMessageType.general,
-        format: '{message}\n{stack}',
+        format: '{message}',
+        // We include stack in the payload for debugging, but we don't include
+        // it in format above because we don't want it used to build the error
+        // shown to the user.
         variables: {'message': messageText, 'stack': '$s'},
         // DAP specification did not specify how to handle the case where
         // showUser does not exist. VSCode defaults to true, but some other
@@ -168,7 +171,7 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
 
   Future<void> initializeRequest(
     Request request,
-    InitializeRequestArguments args,
+    DartInitializeRequestArguments args,
     void Function(Capabilities) sendResponse,
   );
 
@@ -325,7 +328,7 @@ abstract class BaseDebugAdapter<TLaunchArgs extends LaunchRequestArguments,
       handle(
         request,
         initializeRequest,
-        InitializeRequestArguments.fromJson,
+        DartInitializeRequestArguments.fromJson,
         responseWriter,
       );
     } else if (request.command == 'launch') {

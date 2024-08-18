@@ -8,10 +8,10 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../analyzer.dart';
 
-const _desc = r'Avoid const keyword.';
+const _desc = r'Avoid `const` keyword.';
 
 const _details = r'''
-**AVOID** repeating const keyword in a const context.
+**AVOID** repeating `const` keyword in a `const` context.
 
 **BAD:**
 ```dart
@@ -36,14 +36,14 @@ m(){
 class UnnecessaryConst extends LintRule {
   static const LintCode code = LintCode(
       'unnecessary_const', "Unnecessary 'const' keyword.",
-      correctionMessage: 'Try removing the keyword.');
+      correctionMessage: 'Try removing the keyword.', hasPublishedDocs: true);
 
   UnnecessaryConst()
       : super(
             name: 'unnecessary_const',
             description: _desc,
             details: _details,
-            group: Group.style);
+            categories: {Category.style});
 
   @override
   bool get canUseParsedResult => true;
@@ -71,7 +71,7 @@ class _Visitor extends SimpleAstVisitor {
     if (node.keyword?.type != Keyword.CONST) return;
 
     if (node.inConstantContext) {
-      rule.reportLint(node);
+      rule.reportLintForToken(node.keyword);
     }
   }
 
@@ -86,7 +86,7 @@ class _Visitor extends SimpleAstVisitor {
     if (node.constKeyword == null) return;
 
     if (node.inConstantContext) {
-      rule.reportLint(node);
+      rule.reportLintForToken(node.constKeyword);
     }
   }
 
@@ -100,7 +100,7 @@ class _Visitor extends SimpleAstVisitor {
     if (node.constKeyword?.type != Keyword.CONST) return;
 
     if (node.inConstantContext) {
-      rule.reportLint(node);
+      rule.reportLintForToken(node.constKeyword);
     }
   }
 }

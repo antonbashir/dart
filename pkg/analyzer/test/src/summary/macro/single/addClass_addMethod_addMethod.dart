@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/macros/api.dart';
+import 'package:macros/macros.dart';
 
 /*macro*/ class AddClassB implements ClassTypesMacro {
   const AddClassB();
@@ -10,7 +10,7 @@ import 'package:_fe_analyzer_shared/src/macros/api.dart';
   @override
   buildTypesForClass(clazz, builder) async {
     // ignore: deprecated_member_use
-    final identifier = await builder.resolveIdentifier(
+    var identifier = await builder.resolveIdentifier(
       Uri.parse('package:test/a.dart'),
       'AddMethodFoo',
     );
@@ -42,7 +42,7 @@ import 'package:_fe_analyzer_shared/src/macros/api.dart';
   @override
   buildDeclarationsForClass(clazz, builder) async {
     // ignore: deprecated_member_use
-    final identifier = await builder.resolveIdentifier(
+    var identifier = await builder.resolveIdentifier(
       Uri.parse('package:test/a.dart'),
       'AddMethodBar',
     );

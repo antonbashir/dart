@@ -40,7 +40,7 @@ class _CompilerFileSystemEntity implements fe.FileSystemEntity {
 
   @override
   Future<String> readAsString() async {
-    api.Input input;
+    api.Input<List<int>> input;
     try {
       input = await fs.inputProvider
           .readFromUri(uri, inputKind: api.InputKind.UTF8);
@@ -56,7 +56,7 @@ class _CompilerFileSystemEntity implements fe.FileSystemEntity {
 
   @override
   Future<List<int>> readAsBytes() async {
-    api.Input input;
+    api.Input<List<int>> input;
     try {
       input = await fs.inputProvider
           .readFromUri(uri, inputKind: api.InputKind.binary);
@@ -123,7 +123,8 @@ void reportFrontEndMessage(
     case fe.Severity.info:
       reporter.reportInfo(mainMessage, infos);
       break;
-    default:
+    case fe.Severity.context:
+    case fe.Severity.ignored:
       throw UnimplementedError('unhandled severity ${message.severity}');
   }
 }

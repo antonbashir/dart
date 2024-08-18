@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io';
+import '../macros/uri.dart';
 import 'annotated_code_helper.dart';
 import 'id.dart';
 import 'id_generation.dart';
@@ -10,7 +11,6 @@ import '../util/colors.dart' as colors;
 import '../util/options.dart';
 
 const String cfeMarker = 'cfe';
-const String cfeWithNnbdMarker = '$cfeMarker:nnbd';
 const String dart2jsMarker = 'dart2js';
 const String analyzerMarker = 'analyzer';
 const String ddcMarker = 'ddc';
@@ -26,20 +26,6 @@ const List<String> sharedMarkers = [
 const List<String> cfeAnalyzerMarkers = [
   cfeMarker,
   analyzerMarker,
-];
-
-/// Markers used in annotated tests shared by CFE, analyzer and dart2js.
-const List<String> sharedMarkersWithNnbd = [
-  cfeMarker,
-  cfeWithNnbdMarker,
-  dart2jsMarker,
-  analyzerMarker,
-];
-
-/// Markers used in annotated tests used by CFE in both with and without nnbd.
-const List<String> cfeMarkersWithNnbd = [
-  cfeMarker,
-  cfeWithNnbdMarker,
 ];
 
 /// `true` if ANSI colors are supported by stdout.
@@ -262,6 +248,7 @@ TestData computeTestData(FileSystemEntity testFile,
     {required Iterable<String> supportedMarkers,
     required Uri createTestUri(Uri uri, String fileName),
     required void onFailure(String message),
+    String Function(String) preprocessFile = _noProcessing,
     bool preserveWhitespaceInAnnotations = false,
     bool preserveInfixWhitespaceInAnnotations = false}) {
   Uri? entryPoint;
@@ -295,7 +282,8 @@ TestData computeTestData(FileSystemEntity testFile,
     throw new UnimplementedError();
   }
 
-  String annotatedCode = new File.fromUri(mainTestFile!.uri).readAsStringSync();
+  String annotatedCode =
+      preprocessFile(new File.fromUri(mainTestFile!.uri).readAsStringSync());
   Map<Uri, AnnotatedCode> code = {
     entryPoint!:
         new AnnotatedCode.fromText(annotatedCode, commentStart, commentEnd)
@@ -319,7 +307,7 @@ TestData computeTestData(FileSystemEntity testFile,
       String libFileName = additionalFileData.key;
       File libEntity = additionalFileData.value;
       Uri libFileUri = createTestUri(libEntity.uri, libFileName);
-      String libCode = libEntity.readAsStringSync();
+      String libCode = preprocessFile(libEntity.readAsStringSync());
       AnnotatedCode annotatedLibCode =
           new AnnotatedCode.fromText(libCode, commentStart, commentEnd);
       memorySourceFiles[libFileUri.path] = annotatedLibCode.sourceCode;
@@ -819,6 +807,8 @@ const List<Option> idTestOptions = [
   Options.forceUpdate,
 ];
 
+String _noProcessing(String s) => s;
+
 /// Check code for all tests in [dataDir] using [runTest].
 Future<void> runTests<T>(Directory dataDir,
     {List<String> args = const <String>[],
@@ -831,7 +821,9 @@ Future<void> runTests<T>(Directory dataDir,
     List<String>? skipList,
     Map<String, List<String>>? skipMap,
     bool preserveWhitespaceInAnnotations = false,
-    bool preserveInfixWhitespaceInAnnotations = false}) async {
+    bool preserveInfixWhitespaceInAnnotations = false,
+    String Function(String) preProcessFile = _noProcessing,
+    String Function(String) postProcessFile = _noProcessing}) async {
   ParsedOptions parsedOptions = ParsedOptions.parse(args, idTestOptions);
   MarkerOptions markerOptions =
       new MarkerOptions.fromDataDir(dataDir, shouldFindScript: shards == 1);
@@ -902,7 +894,8 @@ Future<void> runTests<T>(Directory dataDir,
         onFailure: onFailure,
         preserveWhitespaceInAnnotations: preserveWhitespaceInAnnotations,
         preserveInfixWhitespaceInAnnotations:
-            preserveInfixWhitespaceInAnnotations);
+            preserveInfixWhitespaceInAnnotations,
+        preprocessFile: preProcessFile);
     print('Test: ${testData.testFileUri}');
 
     Map<String, TestResult<T>> results = await runTest(markerOptions, testData,
@@ -939,6 +932,9 @@ Future<void> runTests<T>(Directory dataDir,
               actualData[marker] = {};
 
           void addActualData(Uri uri, Map<Id, ActualData<T>> actualData) {
+            if (isMacroLibraryUri(uri)) {
+              uri = toOriginLibraryUri(uri);
+            }
             assert(testData.code.containsKey(uri) || actualData.isEmpty,
                 "Unexpected data ${actualData} for $uri");
             if (actualData.isEmpty) {
@@ -970,7 +966,8 @@ Future<void> runTests<T>(Directory dataDir,
           AnnotatedCode generated = new AnnotatedCode(
               code?.annotatedCode ?? "", code?.sourceCode ?? "", annotations);
           Uri fileUri = testToFileUri[uri]!;
-          new File.fromUri(fileUri).writeAsStringSync(generated.toText());
+          new File.fromUri(fileUri)
+              .writeAsStringSync(postProcessFile(generated.toText()));
           print('Generated annotations for ${fileUri}');
         });
       } else {

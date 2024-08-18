@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:compiler/src/commandline_options.dart';
 
-main(List<String> args) async {
+Future<void> main(List<String> args) async {
   Stopwatch stopwatch = new Stopwatch();
   String? input;
   String? serializedInput;
@@ -76,18 +76,28 @@ main(List<String> args) async {
   stopwatch.start();
   if (start <= 0 && stop >= 0) {
     await subProcess(
-        baseOptions, [input, Flags.cfeOnly, '--out=$cfeOutput'], '0:\t');
+        baseOptions, [input, '${Flags.stage}=cfe', '--out=$cfeOutput'], '0:\t');
   }
   if (start <= 1 && stop >= 1) {
     await subProcess(
         baseOptions,
-        [cfeOutput, '--out=$dillOutput', '${Flags.writeData}=${dataOutput}'],
+        [
+          cfeOutput,
+          '--out=$dillOutput',
+          '${Flags.closedWorldUri}=${dataOutput}',
+          '${Flags.stage}=closed-world'
+        ],
         '1:\t');
   }
   if (shards <= 1) {
     await subProcess(
         baseOptions,
-        [dillOutput, '${Flags.readData}=${dataOutput}', '--out=${output}'],
+        [
+          dillOutput,
+          '${Flags.globalInferenceUri}=${dataOutput}',
+          '${Flags.stage}=codegen-emit-js',
+          '--out=${output}'
+        ],
         '3:\t');
   } else {
     if (start <= 2 && stop >= 2) {
@@ -96,17 +106,18 @@ main(List<String> args) async {
       for (int shard = 0; shard < shards; shard++) {
         additionalArguments.add([
           dillOutput,
-          '${Flags.readData}=${dataOutput}',
+          '${Flags.globalInferenceUri}=${dataOutput}',
           '${Flags.codegenShard}=$shard',
           '${Flags.codegenShards}=$shards',
-          '${Flags.writeCodegen}=${codeOutput}'
+          '${Flags.codegenUri}=${codeOutput}',
+          '${Flags.stage}=codegen'
         ]);
         outputPrefixes.add('2:${shard + 1}/$shards\t');
       }
 
       Stopwatch subwatch = new Stopwatch();
       subwatch.start();
-      await Future.wait(new List<Future>.generate(shards, (int shard) {
+      await Future.wait(new List<Future<void>>.generate(shards, (int shard) {
         return subProcess(
             baseOptions, additionalArguments[shard], outputPrefixes[shard]);
       }));
@@ -118,9 +129,10 @@ main(List<String> args) async {
           baseOptions,
           [
             dillOutput,
-            '${Flags.readData}=${dataOutput}',
-            '${Flags.readCodegen}=${codeOutput}',
+            '${Flags.globalInferenceUri}=${dataOutput}',
+            '${Flags.codegenUri}=${codeOutput}',
             '${Flags.codegenShards}=$shards',
+            '${Flags.stage}=emit-js',
             '--out=${output}'
           ],
           '3:\t');
@@ -130,8 +142,8 @@ main(List<String> args) async {
   print('Total time: ${_formatMs(stopwatch.elapsedMilliseconds)}');
 }
 
-Future subProcess(List<String> baseOptions, List<String> additionalOptions,
-    String outputPrefix) async {
+Future<void> subProcess(List<String> baseOptions,
+    List<String> additionalOptions, String outputPrefix) async {
   List<String> options = []
     ..addAll(baseOptions)
     ..addAll(additionalOptions);

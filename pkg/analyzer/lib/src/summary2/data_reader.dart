@@ -56,6 +56,25 @@ class SummaryDataReader {
     return _doubleBuffer[0];
   }
 
+  T readEnum<T extends Enum>(List<T> values) {
+    var index = readByte();
+    return values[index];
+  }
+
+  Map<K, V> readMap<K, V>({
+    required K Function() readKey,
+    required V Function() readValue,
+  }) {
+    var length = readUInt30();
+    if (length == 0) {
+      return const {};
+    }
+
+    return {
+      for (var i = 0; i < length; i++) readKey(): readValue(),
+    };
+  }
+
   T? readOptionalObject<T>(T Function(SummaryDataReader reader) read) {
     if (readBool()) {
       return read(this);
@@ -218,7 +237,7 @@ class _StringTable {
     }
     _offsets[length] = offset;
 
-    _strings = List.filled(length, null, growable: false);
+    _strings = List.filled(length, null);
   }
 
   String operator [](int index) {

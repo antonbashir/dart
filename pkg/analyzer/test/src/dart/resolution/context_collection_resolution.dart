@@ -5,6 +5,7 @@
 import 'package:analyzer/dart/analysis/analysis_context.dart';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/context_root.dart';
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/sdk/build_sdk_summary.dart';
 import 'package:analyzer/file_system/file_system.dart';
@@ -12,22 +13,22 @@ import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
-import 'package:analyzer/src/dart/analysis/experiments.dart';
+import 'package:analyzer/src/dart/analysis/results.dart';
 import 'package:analyzer/src/dart/analysis/unlinked_unit_store.dart';
+import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/generated/engine.dart' show AnalysisOptionsImpl;
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:analyzer/src/summary2/kernel_compilation_service.dart';
 import 'package:analyzer/src/summary2/macro.dart';
-import 'package:analyzer/src/test_utilities/mock_packages.dart';
 import 'package:analyzer/src/test_utilities/mock_sdk.dart';
 import 'package:analyzer/src/test_utilities/package_config_file_builder.dart';
 import 'package:analyzer/src/test_utilities/resource_provider_mixin.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
-import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:analyzer/src/workspace/basic.dart';
 import 'package:analyzer/src/workspace/blaze.dart';
 import 'package:analyzer/src/workspace/gn.dart';
 import 'package:analyzer/src/workspace/pub.dart';
+import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:linter/src/rules.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
@@ -35,7 +36,6 @@ import 'package:test/test.dart';
 import '../../../generated/test_support.dart';
 import '../../summary/macros_environment.dart';
 import '../analysis/analyzer_state_printer.dart';
-import 'context_collection_resolution_caching.dart';
 import 'node_text_expectations.dart';
 import 'resolution.dart';
 
@@ -121,7 +121,13 @@ abstract class ContextResolutionTest
     with ResourceProviderMixin, ResolutionTest {
   static bool _lintRulesAreRegistered = false;
 
-  MemoryByteStore _byteStore = getContextResolutionTestByteStore();
+  /// The byte store that is reused between tests. This allows reusing all
+  /// unlinked and linked summaries for SDK, so that tests run much faster.
+  /// However nothing is preserved between Dart VM runs, so changes to the
+  /// implementation are still fully verified.
+  static final MemoryByteStore _sharedByteStore = MemoryByteStore();
+
+  MemoryByteStore _byteStore = _sharedByteStore;
 
   Map<String, String> _declaredVariables = {};
   AnalysisContextCollectionImpl? _analysisContextCollection;
@@ -137,7 +143,7 @@ abstract class ContextResolutionTest
   List<File>? librarySummaryFiles;
 
   /// By default the kernel implementation is used, this can override it.
-  MacroSupport? macroSupport;
+  MacroSupportFactory? macroSupportFactory;
 
   AnalyzerStatePrinterConfiguration analyzerStatePrinterConfiguration =
       AnalyzerStatePrinterConfiguration();
@@ -169,7 +175,8 @@ abstract class ContextResolutionTest
       sdkSummaryPath: sdkSummaryFile?.path,
       librarySummaryPaths: librarySummaryFiles?.map((e) => e.path).toList(),
       updateAnalysisOptions2: updateAnalysisOptions,
-      macroSupport: macroSupport,
+      macroSupportFactory: macroSupportFactory,
+      drainStreams: false,
     );
 
     _analysisContextCollection = collection;
@@ -203,9 +210,9 @@ abstract class ContextResolutionTest
   }
 
   void assertDriverStateString(File file, String expected) {
-    final analysisDriver = driverFor(file);
+    var analysisDriver = driverFor(file);
 
-    final buffer = StringBuffer();
+    var buffer = StringBuffer();
     AnalyzerStatePrinter(
       byteStore: _byteStore,
       unlinkedUnitStore:
@@ -217,7 +224,7 @@ abstract class ContextResolutionTest
       sink: buffer,
       withKeysGetPut: false,
     ).writeAnalysisDriver(analysisDriver.testView!);
-    final actual = buffer.toString();
+    var actual = buffer.toString();
 
     if (actual != expected) {
       print(actual);
@@ -231,17 +238,9 @@ abstract class ContextResolutionTest
     expect(workspace, TypeMatcher<GnWorkspace>());
   }
 
-  void assertPackageBuildWorkspaceFor(File file) {
+  void assertPackageConfigWorkspaceFor(File file) {
     var workspace = contextFor(file).contextRoot.workspace;
-    expect(
-        workspace,
-        isA<PubWorkspace>()
-            .having((e) => e.usesPackageBuild, 'usesPackageBuild', true));
-  }
-
-  void assertPubWorkspaceFor(File file) {
-    var workspace = contextFor(file).contextRoot.workspace;
-    expect(workspace, TypeMatcher<PubWorkspace>());
+    expect(workspace, TypeMatcher<PackageConfigWorkspace>());
   }
 
   AnalysisContext contextFor(File file) {
@@ -249,7 +248,7 @@ abstract class ContextResolutionTest
   }
 
   Future<void> disposeAnalysisContextCollection() async {
-    final analysisContextCollection = _analysisContextCollection;
+    var analysisContextCollection = _analysisContextCollection;
     if (analysisContextCollection != null) {
       await analysisContextCollection.dispose(
         forTesting: true,
@@ -262,6 +261,17 @@ abstract class ContextResolutionTest
     return _contextFor(file).driver;
   }
 
+  Future<LibraryElementImpl> libraryElementForFile(File file) async {
+    var analysisContext = contextFor(file);
+    var analysisSession = analysisContext.currentSession;
+
+    var uri = analysisSession.uriConverter.pathToUri(file.path);
+    var uriStr = uri.toString();
+    var libraryResult = await analysisSession.getLibraryByUri(uriStr);
+    libraryResult as LibraryElementResultImpl;
+    return libraryResult.element as LibraryElementImpl;
+  }
+
   @override
   File newFile(String path, String content) {
     if (_analysisContextCollection != null && !path.endsWith('.dart')) {
@@ -272,11 +282,10 @@ abstract class ContextResolutionTest
   }
 
   @override
-  Future<ResolvedUnitResult> resolveFile(String path) async {
-    final file = getFile(path); // TODO(scheglov): migrate to File
+  Future<ResolvedUnitResult> resolveFile(File file) async {
     var analysisContext = contextFor(fileForContextSelection ?? file);
     var session = analysisContext.currentSession;
-    return await session.getResolvedUnit(path) as ResolvedUnitResult;
+    return await session.getResolvedUnit(file.path) as ResolvedUnitResult;
   }
 
   @mustCallSuper
@@ -289,7 +298,6 @@ abstract class ContextResolutionTest
 
   @mustCallSuper
   Future<void> tearDown() async {
-    noSoundNullSafety = true;
     await disposeAnalysisContextCollection();
     KernelCompilationService.disposeDelayed(
       const Duration(milliseconds: 500),
@@ -317,7 +325,8 @@ abstract class ContextResolutionTest
   }
 }
 
-class PubPackageResolutionTest extends ContextResolutionTest {
+class PubPackageResolutionTest extends ContextResolutionTest
+    with MockPackagesMixin {
   AnalysisOptionsImpl get analysisOptions {
     return contextFor(testFile).getAnalysisOptionsForFile(testFile)
         as AnalysisOptionsImpl;
@@ -326,13 +335,14 @@ class PubPackageResolutionTest extends ContextResolutionTest {
   @override
   List<String> get collectionIncludedPaths => [workspaceRootPath];
 
-  List<String> get experiments => [
-        EnableString.inference_update_2,
-        EnableString.inline_class,
-        EnableString.macros,
-      ];
+  List<String> get experiments {
+    return [
+      Feature.macros.enableString,
+      Feature.wildcard_variables.enableString,
+    ];
+  }
 
-  /// The path that is not in [workspaceRootPath], contains external packages.
+  @override
   String get packagesRootPath => '/packages';
 
   @override
@@ -347,30 +357,48 @@ class PubPackageResolutionTest extends ContextResolutionTest {
 
   String get workspaceRootPath => '/home';
 
+  /// Creates `package:macro` and `package:_macro` files, adds to [config].
+  void addMacrosEnvironment(
+    PackageConfigFileBuilder config,
+    MacrosEnvironment macrosEnvironment,
+  ) {
+    var packagesRootFolder = getFolder(packagesRootPath);
+    macrosEnvironment.publicMacrosFolder.copyTo(packagesRootFolder);
+    macrosEnvironment.privateMacrosFolder.copyTo(packagesRootFolder);
+    config.add(
+      name: '_macros',
+      rootPath: getFolder('$packagesRootPath/_macros').path,
+    );
+    config.add(
+      name: 'macros',
+      rootPath: getFolder('$packagesRootPath/macros').path,
+    );
+  }
+
   /// Build summary bundle for a single URI `package:foo/foo.dart`.
   Future<File> buildPackageFooSummary({
     required Map<String, String> files,
   }) async {
-    final rootFolder = getFolder('$workspaceRootPath/foo');
+    var rootFolder = getFolder('$workspaceRootPath/foo');
 
     writePackageConfig(
       rootFolder.path,
       PackageConfigFileBuilder()..add(name: 'foo', rootPath: rootFolder.path),
     );
 
-    for (final entry in files.entries) {
+    for (var entry in files.entries) {
       newFile('${rootFolder.path}/${entry.key}', entry.value);
     }
 
-    final targetFile = getFile(rootFolder.path);
-    final analysisDriver = driverFor(targetFile);
-    final bundleBytes = await analysisDriver.buildPackageBundle(
+    var targetFile = getFile(rootFolder.path);
+    var analysisDriver = driverFor(targetFile);
+    var bundleBytes = await analysisDriver.buildPackageBundle(
       uriList: [
         Uri.parse('package:foo/foo.dart'),
       ],
     );
 
-    final bundleFile = getFile('/home/summaries/packages.sum');
+    var bundleFile = getFile('/home/summaries/packages.sum');
     bundleFile.writeAsBytesSync(bundleBytes);
 
     // Delete, so it is not available as a file.
@@ -380,6 +408,25 @@ class PubPackageResolutionTest extends ContextResolutionTest {
     await disposeAnalysisContextCollection();
 
     return bundleFile;
+  }
+
+  bool configureWithCommonMacros() {
+    try {
+      writeTestPackageConfig(
+        PackageConfigFileBuilder(),
+        macrosEnvironment: MacrosEnvironment.instance,
+      );
+
+      newFile(
+        '$testPackageLibPath/append.dart',
+        getMacroCode('append.dart'),
+      );
+
+      return true;
+    } catch (_) {
+      markTestSkipped('Cannot initialize macro environment.');
+      return false;
+    }
   }
 
   @override
@@ -399,15 +446,15 @@ class PubPackageResolutionTest extends ContextResolutionTest {
     String directoryPath,
     PackageConfigFileBuilder config,
   ) {
-    final content = config.toContent(
+    var content = config.toContent(
       toUriStr: toUriStr,
     );
     newPackageConfigJsonFile(directoryPath, content);
   }
 
   Future<File> writeSdkSummary() async {
-    final file = getFile('/home/summaries/sdk.sum');
-    final bytes = await buildSdkSummary(
+    var file = getFile('/home/summaries/sdk.sum');
+    var bytes = await buildSdkSummary(
       resourceProvider: resourceProvider,
       sdkPath: sdkRoot.path,
     );
@@ -427,6 +474,7 @@ class PubPackageResolutionTest extends ContextResolutionTest {
     String? languageVersion,
     bool angularMeta = false,
     bool ffi = false,
+    bool flutter = false,
     bool js = false,
     bool meta = false,
     MacrosEnvironment? macrosEnvironment,
@@ -440,49 +488,35 @@ class PubPackageResolutionTest extends ContextResolutionTest {
     );
 
     if (angularMeta) {
-      var angularMetaPath = '/packages/angular_meta';
-      MockPackages.addAngularMetaPackageFiles(
-        getFolder(angularMetaPath),
-      );
+      var angularMetaPath = addAngularMeta().parent.path;
       config.add(name: 'angular_meta', rootPath: angularMetaPath);
     }
 
     if (ffi) {
-      var ffiPath = '/packages/ffi';
-      MockPackages.addFfiPackageFiles(
-        getFolder(ffiPath),
-      );
+      var ffiPath = addFfi().parent.path;
       config.add(name: 'ffi', rootPath: ffiPath);
     }
 
+    if (flutter) {
+      var uiPath = addUI().parent.path;
+      config.add(name: 'ui', rootPath: uiPath);
+
+      var flutterPath = addFlutter().parent.path;
+      config.add(name: 'flutter', rootPath: flutterPath);
+    }
+
     if (js) {
-      var jsPath = '/packages/js';
-      MockPackages.addJsPackageFiles(
-        getFolder(jsPath),
-      );
+      var jsPath = addJs().parent.path;
       config.add(name: 'js', rootPath: jsPath);
     }
 
-    if (meta) {
-      var metaPath = '/packages/meta';
-      MockPackages.addMetaPackageFiles(
-        getFolder(metaPath),
-      );
+    if (meta || flutter) {
+      var metaPath = addMeta().parent.path;
       config.add(name: 'meta', rootPath: metaPath);
     }
 
     if (macrosEnvironment != null) {
-      var packagesRootFolder = getFolder(packagesRootPath);
-      macrosEnvironment.packageSharedFolder.copyTo(packagesRootFolder);
-      macrosEnvironment.packageDartInternalFolder.copyTo(packagesRootFolder);
-      config.add(
-        name: '_fe_analyzer_shared',
-        rootPath: getFolder('$packagesRootPath/_fe_analyzer_shared').path,
-      );
-      config.add(
-        name: 'dart_internal',
-        rootPath: getFolder('$packagesRootPath/dart_internal').path,
-      );
+      addMacrosEnvironment(config, macrosEnvironment);
     }
 
     writePackageConfig(testPackageRootPath, config);
@@ -554,14 +588,6 @@ mixin WithoutConstructorTearoffsMixin on PubPackageResolutionTest {
 mixin WithoutEnhancedEnumsMixin on PubPackageResolutionTest {
   @override
   String? get testPackageLanguageVersion => '2.16';
-}
-
-mixin WithoutNullSafetyMixin on PubPackageResolutionTest {
-  @override
-  bool get isNullSafetyEnabled => false;
-
-  @override
-  String? get testPackageLanguageVersion => '2.9';
 }
 
 mixin WithStrictCastsMixin on PubPackageResolutionTest {

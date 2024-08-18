@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/error/codes.dart';
-import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -73,6 +72,42 @@ f(C c) {
 }
 ''', [
       error(CompileTimeErrorCode.UNDEFINED_METHOD, 33, 1),
+    ]);
+  }
+
+  test_extensionMethodHiddenByStaticSetter() async {
+    await assertErrorsInCode('''
+class C {
+  void f() {
+    foo();
+  }
+  static set foo(int x) {}
+}
+
+extension E on C {
+  int foo() => 1;
+}
+
+''', [
+      error(CompileTimeErrorCode.UNDEFINED_METHOD, 27, 3),
+    ]);
+  }
+
+  test_extensionMethodShadowingTopLevelSetter() async {
+    await assertErrorsInCode('''
+class C {
+  void f() {
+    foo();
+  }
+}
+
+extension E on C {
+  int foo() => 1;
+}
+
+set foo(int x) {}
+''', [
+      error(CompileTimeErrorCode.UNDEFINED_METHOD, 27, 3),
     ]);
   }
 
@@ -153,13 +188,23 @@ class C {
     ]);
   }
 
-  test_leastUpperBoundWithNull() async {
-    noSoundNullSafety = false;
+  test_localSetterShadowingExtensionMethod() async {
     await assertErrorsInCode('''
-// @dart = 2.9
-f(bool b, int i) => (b ? null : i).foo();
+class C {}
+
+extension E1 on C {
+  int foo(int x) => 1;
+}
+
+extension E2 on C {
+  static set foo(int x) {}
+
+  void f() {
+    foo();
+  }
+}
 ''', [
-      error(CompileTimeErrorCode.UNDEFINED_METHOD, 50, 3),
+      error(CompileTimeErrorCode.UNDEFINED_METHOD, 123, 3),
     ]);
   }
 
@@ -217,19 +262,6 @@ f(M m) {
     ]);
   }
 
-  test_method_undefined_onNull() async {
-    noSoundNullSafety = false;
-    await assertErrorsInCode(r'''
-// @dart = 2.9
-Null f(int x) => null;
-main() {
-  f(42).abs();
-}
-''', [
-      error(CompileTimeErrorCode.UNDEFINED_METHOD, 55, 3),
-    ]);
-  }
-
   test_static_conditionalAccess_defined() async {
     await assertErrorsInCode('''
 class A {
@@ -238,6 +270,22 @@ class A {
 f() { A?.m(); }
 ''', [
       error(StaticWarningCode.INVALID_NULL_AWARE_OPERATOR, 40, 2),
+    ]);
+  }
+
+  test_static_extension_instanceAccess() async {
+    await assertErrorsInCode('''
+class C {}
+
+extension E on C {
+  static void a() {}
+}
+
+f(C c) {
+  c.a();
+}
+''', [
+      error(CompileTimeErrorCode.UNDEFINED_METHOD, 68, 1),
     ]);
   }
 

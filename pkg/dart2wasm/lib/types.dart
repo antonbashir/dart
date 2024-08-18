@@ -2,29 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:collection';
 import 'dart:math' show max;
-import 'dart:typed_data' show Uint8List;
-
-import 'package:dart2wasm/class_info.dart';
-import 'package:dart2wasm/code_generator.dart';
-import 'package:dart2wasm/translator.dart';
 
 import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
-
+import 'package:kernel/type_environment.dart' as type_env;
 import 'package:wasm_builder/wasm_builder.dart' as w;
 
-/// Values for the type category table. Entries for masqueraded classes contain
-/// the class ID of the masquerade.
-class TypeCategory {
-  static const abstractClass = 0;
-  static const object = 1;
-  static const function = 2;
-  static const record = 3;
-  static const notMasqueraded = 4;
-  static const minMasqueradeClassId = 5;
-  static const maxMasqueradeClassId = 63; // Leaves 2 unused bits for future use
-}
+import 'class_info.dart';
+import 'code_generator.dart';
+import 'translator.dart';
 
 /// Values for the `_kind` field in `_TopType`. Must match the definitions in
 /// `_TopType`.
@@ -76,34 +64,12 @@ class Types {
   late final w.ValueType recordTypeNamesFieldExpectedType = classAndFieldToType(
       translator.recordTypeClass, FieldIndex.recordTypeNames);
 
-  /// A mapping from concrete subclass `classID` to [Map]s of superclass
-  /// `classID` and the necessary substitutions which must be performed to test
-  /// for a valid subtyping relationship.
-  late final Map<int, Map<int, List<DartType>>> typeRules = _buildTypeRules();
+  late final RuntimeTypeInformation rtt = RuntimeTypeInformation(translator);
 
   /// We will build the [interfaceTypeEnvironment] when building the
   /// [typeRules].
   final InterfaceTypeEnvironment interfaceTypeEnvironment =
       InterfaceTypeEnvironment();
-
-  /// Because we can't currently support [Map]s in our `TypeUniverse`, we have
-  /// to decompose [typeRules] into two [Map]s based on [List]s.
-  ///
-  /// [typeRulesSupers] is a [List] where the index in the list is a subclasses'
-  /// `classID` and the value at that index is a [List] of superclass
-  /// `classID`s.
-  late final List<List<int>> typeRulesSupers = _buildTypeRulesSupers();
-
-  /// [typeRulesSubstitutions] is a [List] where the index in the list is a
-  /// subclasses' `classID` and the value at that index is a [List] indexed by
-  /// the index of the superclasses' `classID` in [typeRulesSuper] and the value
-  /// at that index is a [List] of [DartType]s which must be substituted for the
-  /// subtyping relationship to be valid.
-  late final List<List<List<DartType>>> typeRulesSubstitutions =
-      _buildTypeRulesSubstitutions();
-
-  /// A list which maps class ID to the classes [String] name.
-  late final List<String> typeNames = _buildTypeNames();
 
   /// Type parameter offset for function types, specifying the lower end of
   /// their index range for type parameter types.
@@ -113,16 +79,10 @@ class Types {
   /// parameter index range of their corresponding function type.
   Map<StructuralParameter, int> functionTypeParameterIndex = Map.identity();
 
-  /// An `i8` array of type category values, indexed by class ID.
-  late final w.Global typeCategoryTable = _buildTypeCategoryTable();
-
   Types(this.translator);
 
   w.ValueType classAndFieldToType(Class cls, int fieldIndex) =>
       translator.classInfo[cls]!.struct.fields[fieldIndex].type.unpacked;
-
-  Iterable<Class> _getConcreteSubtypes(Class cls) =>
-      translator.subtypes.getSubtypesOf(cls).where((c) => !c.isAbstract);
 
   /// Wasm value type for non-nullable `_Type` values
   w.ValueType get nonNullableTypeType => typeClassInfo.nonNullableType;
@@ -135,236 +95,23 @@ class Types {
 
   CoreTypes get coreTypes => translator.coreTypes;
 
-  /// Builds a [Map<int, Map<int, List<DartType>>>] to store subtype
-  /// information.  The first key is the class id of a subtype. This returns a
-  /// map where each key is the class id of a transitively implemented super
-  /// type and each value is a list of the necessary type substitutions required
-  /// for the subtyping relationship to be valid.
-  Map<int, Map<int, List<DartType>>> _buildTypeRules() {
-    List<ClassInfo> classes = translator.classes;
-    Map<int, Map<int, List<DartType>>> subtypeMap = {};
-    for (ClassInfo classInfo in classes) {
-      ClassInfo superclassInfo = classInfo;
-
-      // We don't need type rules for any class without a superclass, or for
-      // classes whose supertype is [Object]. The latter case will be handled
-      // directly in the subtype checking algorithm.
-      if (superclassInfo.cls == null ||
-          superclassInfo.cls == coreTypes.objectClass) continue;
-      Class superclass = superclassInfo.cls!;
-
-      // TODO(joshualitt): This includes abstract types that can't be
-      // instantiated, but might be needed for subtype checks. The majority of
-      // abstract classes are probably unnecessary though. We should filter
-      // these cases to reduce the size of the type rules.
-      Iterable<Class> subclasses = translator.subtypes
-          .getSubtypesOf(superclass)
-          .where((cls) => cls != superclass);
-      Iterable<InterfaceType> subtypes = subclasses.map(
-          (Class cls) => cls.getThisType(coreTypes, Nullability.nonNullable));
-      for (InterfaceType subtype in subtypes) {
-        interfaceTypeEnvironment._add(subtype);
-        List<DartType>? typeArguments = translator.hierarchy
-            .getInterfaceTypeArgumentsAsInstanceOfClass(subtype, superclass)
-            ?.map(normalize)
-            .toList();
-        ClassInfo subclassInfo = translator.classInfo[subtype.classNode]!;
-        Map<int, List<DartType>> substitutionMap =
-            subtypeMap[subclassInfo.classId] ??= {};
-        substitutionMap[superclassInfo.classId] = typeArguments ?? const [];
-      }
-    }
-    return subtypeMap;
-  }
-
-  List<List<int>> _buildTypeRulesSupers() {
-    List<List<int>> typeRulesSupers = [];
-    for (int classId = 0; classId < translator.classes.length; classId++) {
-      List<int>? superclassIds = typeRules[classId]?.keys.toList();
-      if (superclassIds == null) {
-        typeRulesSupers.add(const []);
-      } else {
-        superclassIds.sort();
-        typeRulesSupers.add(superclassIds);
-      }
-    }
-    return typeRulesSupers;
-  }
-
-  List<List<List<DartType>>> _buildTypeRulesSubstitutions() {
-    List<List<List<DartType>>> typeRulesSubstitutions = [];
-    for (int classId = 0; classId < translator.classes.length; classId++) {
-      List<int> supers = typeRulesSupers[classId];
-      typeRulesSubstitutions.add(supers.isEmpty ? const [] : []);
-      for (int j = 0; j < supers.length; j++) {
-        int superId = supers[j];
-        typeRulesSubstitutions.last.add(typeRules[classId]![superId]!);
-      }
-    }
-    return typeRulesSubstitutions;
-  }
-
-  List<String> _buildTypeNames() {
-    // This logic assumes `translator.classes` returns the classes indexed by
-    // class ID. If we ever change that logic, we will need to change this code.
-    List<String> typeNames = [];
-    for (ClassInfo classInfo in translator.classes) {
-      Class? cls = classInfo.cls;
-      if (cls == null || cls.isAnonymousMixin) {
-        typeNames.add("");
-      } else {
-        typeNames.add(cls.name);
-      }
-    }
-    return typeNames;
-  }
-
-  /// Builds a map of subclasses to the transitive set of superclasses they
-  /// implement.
-  /// TODO(joshualitt): This implementation is just temporary. Eventually we
-  /// should move to a data structure more closely resembling [typeRules].
-  w.ValueType makeTypeRulesSupers(w.InstructionsBuilder b) {
-    final wasmI32Type =
-        InterfaceType(translator.wasmI32Class, Nullability.nonNullable);
-
-    final supersOfClasses = <Constant>[];
-    for (List<int> supers in typeRulesSupers) {
-      supersOfClasses.add(translator.constants.makeArrayOf(
-          wasmI32Type, [for (final cid in supers) IntConstant(cid)]));
-    }
-
-    final arrayOfWasmI32Type = InterfaceType(
-        translator.wasmArrayClass, Nullability.nonNullable, [wasmI32Type]);
-    final typeRuleSupers =
-        translator.constants.makeArrayOf(arrayOfWasmI32Type, supersOfClasses);
-
-    final arrayOfArrayOfWasmI32Type = InterfaceType(translator.wasmArrayClass,
-        Nullability.nonNullable, [arrayOfWasmI32Type]);
-
-    final typeRulesSupersType =
-        translator.translateStorageType(arrayOfArrayOfWasmI32Type).unpacked;
-    translator.constants
-        .instantiateConstant(null, b, typeRuleSupers, typeRulesSupersType);
-    return typeRulesSupersType;
-  }
-
-  /// Similar to the above, but provides the substitutions required for each
-  /// supertype.
-  /// TODO(joshualitt): Like [makeTypeRulesSupers], this is just temporary.
-  w.ValueType makeTypeRulesSubstitutions(w.InstructionsBuilder b) {
-    final typeType =
-        InterfaceType(translator.typeClass, Nullability.nonNullable);
-    final arrayOfType = InterfaceType(
-        translator.wasmArrayClass, Nullability.nonNullable, [typeType]);
-    final arrayOfArrayOfType = InterfaceType(
-        translator.wasmArrayClass, Nullability.nonNullable, [arrayOfType]);
-    final arrayOfArrayOfArrayOfType = InterfaceType(translator.wasmArrayClass,
-        Nullability.nonNullable, [arrayOfArrayOfType]);
-
-    final substitutionsConstantL0 = <Constant>[];
-    for (List<List<DartType>> substitutionsL1 in typeRulesSubstitutions) {
-      final substitutionsConstantL1 = <Constant>[];
-      for (List<DartType> substitutionsL2 in substitutionsL1) {
-        substitutionsConstantL1.add(translator.constants.makeArrayOf(typeType,
-            [for (final t in substitutionsL2) TypeLiteralConstant(t)]));
-      }
-      substitutionsConstantL0.add(translator.constants
-          .makeArrayOf(arrayOfType, substitutionsConstantL1));
-    }
-
-    final typeRulesSubstitutionsType =
-        translator.translateStorageType(arrayOfArrayOfArrayOfType).unpacked;
-    translator.constants.instantiateConstant(
-        null,
-        b,
-        translator.constants
-            .makeArrayOf(arrayOfArrayOfType, substitutionsConstantL0),
-        typeRulesSubstitutionsType);
-    return typeRulesSubstitutionsType;
-  }
-
-  /// Returns a list of string type names for pretty printing types.
-  w.ValueType makeTypeNames(w.InstructionsBuilder b) {
-    final stringType =
-        translator.coreTypes.stringRawType(Nullability.nonNullable);
-    final arrayOfStringType = InterfaceType(
-        translator.wasmArrayClass, Nullability.nonNullable, [stringType]);
-
-    final arrayOfStrings = translator.constants.makeArrayOf(
-        stringType, [for (final name in typeNames) StringConstant(name)]);
-
-    final typeNamesType =
-        translator.translateStorageType(arrayOfStringType).unpacked;
-    translator.constants
-        .instantiateConstant(null, b, arrayOfStrings, typeNamesType);
-    return typeNamesType;
-  }
-
-  /// Build a global array of byte values used to categorize runtime types.
-  w.Global _buildTypeCategoryTable() {
-    Set<Class> recordClasses = Set.from(translator.recordClasses.values);
-    Uint8List table = Uint8List(translator.classes.length);
-    for (int i = 0; i < translator.classes.length; i++) {
-      ClassInfo info = translator.classes[i];
-      ClassInfo? masquerade = info.masquerade;
-      Class? cls = info.cls;
-      int category;
-      if (cls == null || cls.isAbstract) {
-        category = TypeCategory.abstractClass;
-      } else if (cls == coreTypes.objectClass) {
-        category = TypeCategory.object;
-      } else if (cls == translator.closureClass) {
-        category = TypeCategory.function;
-      } else if (recordClasses.contains(cls)) {
-        category = TypeCategory.record;
-      } else if (masquerade == null || masquerade.classId == i) {
-        category = TypeCategory.notMasqueraded;
-      } else {
-        // Masqueraded class
-        assert(cls.enclosingLibrary.importUri.scheme == "dart");
-        assert(masquerade.classId >= TypeCategory.minMasqueradeClassId);
-        assert(masquerade.classId <= TypeCategory.maxMasqueradeClassId);
-        category = masquerade.classId;
-      }
-      table[i] = category;
-    }
-
-    final segment = translator.m.dataSegments.define(table);
-    w.ArrayType arrayType =
-        translator.wasmArrayType(w.PackedType.i8, "const i8", mutable: false);
-    final global = translator.m.globals
-        .define(w.GlobalType(w.RefType.def(arrayType, nullable: false)));
-    // Initialize the global to a dummy array, since `array.new_data` is not
-    // a constant instruction and thus can't be used in the initializer.
-    global.initializer.array_new_fixed(arrayType, 0);
-    global.initializer.end();
-    // Create the actual table in the init function.
-    final b = translator.initFunction.body;
-    b.i32_const(0);
-    b.i32_const(table.length);
-    b.array_new_data(arrayType, segment);
-    b.global_set(global);
-
-    return global;
-  }
-
-  bool _isTypeConstant(DartType type) {
+  bool isTypeConstant(DartType type) {
     return type is DynamicType ||
         type is VoidType ||
         type is NeverType ||
         type is NullType ||
-        type is FutureOrType && _isTypeConstant(type.typeArgument) ||
+        type is FutureOrType && isTypeConstant(type.typeArgument) ||
         (type is FunctionType &&
-            type.typeParameters.every((p) => _isTypeConstant(p.bound)) &&
-            _isTypeConstant(type.returnType) &&
-            type.positionalParameters.every(_isTypeConstant) &&
-            type.namedParameters.every((n) => _isTypeConstant(n.type))) ||
-        type is InterfaceType && type.typeArguments.every(_isTypeConstant) ||
+            type.typeParameters.every((p) => isTypeConstant(p.bound)) &&
+            isTypeConstant(type.returnType) &&
+            type.positionalParameters.every(isTypeConstant) &&
+            type.namedParameters.every((n) => isTypeConstant(n.type))) ||
+        type is InterfaceType && type.typeArguments.every(isTypeConstant) ||
         (type is RecordType &&
-            type.positional.every(_isTypeConstant) &&
-            type.named.every((n) => _isTypeConstant(n.type))) ||
+            type.positional.every(isTypeConstant) &&
+            type.named.every((n) => isTypeConstant(n.type))) ||
         type is StructuralParameterType ||
-        type is ExtensionType && _isTypeConstant(type.extensionTypeErasure);
+        type is ExtensionType && isTypeConstant(type.extensionTypeErasure);
   }
 
   Class classForType(DartType type) {
@@ -417,22 +164,10 @@ class Types {
             : TopTypeKind.objectKind;
   }
 
-  /// Allocates a `List<_Type>` from [types] and pushes it to the stack.
-  void _makeTypeList(CodeGenerator codeGen, Iterable<DartType> types) {
-    if (types.every(_isTypeConstant)) {
-      translator.constants.instantiateConstant(codeGen.function, codeGen.b,
-          translator.constants.makeTypeList(types), typeListExpectedType);
-    } else {
-      w.ValueType listType = codeGen.makeListFromExpressions(
-          types.map((t) => TypeLiteral(t)).toList(), typeType);
-      translator.convertType(codeGen.function, listType, typeListExpectedType);
-    }
-  }
-
   /// Allocates a `WasmArray<_Type>` from [types] and pushes it to the
   /// stack.
   void _makeTypeArray(CodeGenerator codeGen, Iterable<DartType> types) {
-    if (types.every(_isTypeConstant)) {
+    if (types.every(isTypeConstant)) {
       translator.constants.instantiateConstant(codeGen.function, codeGen.b,
           translator.constants.makeTypeArray(types), typeArrayExpectedType);
     } else {
@@ -453,16 +188,14 @@ class Types {
 
   void _makeRecordType(CodeGenerator codeGen, RecordType type) {
     codeGen.b.i32_const(encodedNullability(type));
+
+    final names = translator.constants.makeArrayOf(
+        translator.coreTypes.stringNonNullableRawType,
+        type.named.map((t) => StringConstant(t.name)).toList());
+
     translator.constants.instantiateConstant(
-        codeGen.function,
-        codeGen.b,
-        ListConstant(
-          InterfaceType(
-              translator.coreTypes.stringClass, Nullability.nonNullable),
-          type.named.map((t) => StringConstant(t.name)).toList(),
-        ),
-        recordTypeNamesFieldExpectedType);
-    _makeTypeList(
+        codeGen.function, codeGen.b, names, recordTypeNamesFieldExpectedType);
+    _makeTypeArray(
         codeGen, type.positional.followedBy(type.named.map((t) => t.type)));
   }
 
@@ -485,10 +218,10 @@ class Types {
           : s;
     } else if (s is NeverType) {
       return InterfaceType(coreTypes.futureClass, Nullability.nonNullable,
-          const [const NeverType.nonNullable()]);
+          const [NeverType.nonNullable()]);
     } else if (s is NullType) {
-      return InterfaceType(coreTypes.futureClass, Nullability.nullable,
-          const [const NullType()]);
+      return InterfaceType(
+          coreTypes.futureClass, Nullability.nullable, const [NullType()]);
     }
 
     // The type is normalized, and remains a `FutureOr` so now we normalize its
@@ -532,7 +265,7 @@ class Types {
     b.i64_const(type.requiredParameterCount);
 
     // WasmArray<_NamedParameter> namedParameters
-    if (type.namedParameters.every((n) => _isTypeConstant(n.type))) {
+    if (type.namedParameters.every((n) => isTypeConstant(n.type))) {
       translator.constants.instantiateConstant(
           codeGen.function,
           b,
@@ -544,7 +277,7 @@ class Types {
           namedParameterClass.constructors.single;
       List<Expression> expressions = [];
       for (NamedType n in type.namedParameters) {
-        expressions.add(_isTypeConstant(n.type)
+        expressions.add(isTypeConstant(n.type)
             ? ConstantExpression(
                 translator.constants.makeNamedParameterConstant(n),
                 namedParameterType)
@@ -570,7 +303,7 @@ class Types {
     // Always ensure type is normalized before making a type.
     type = normalize(type);
     final b = codeGen.b;
-    if (_isTypeConstant(type)) {
+    if (isTypeConstant(type)) {
       translator.constants.instantiateConstant(
           codeGen.function, b, TypeLiteralConstant(type), nonNullableTypeType);
       return nonNullableTypeType;
@@ -601,7 +334,7 @@ class Types {
       return info.nonNullableType;
     }
 
-    translator.functions.allocateClass(info.classId);
+    translator.functions.recordClassAllocation(info.classId);
     b.i32_const(info.classId);
     b.i32_const(initialIdentityHash);
     if (type is InterfaceType) {
@@ -645,29 +378,55 @@ class Types {
   /// Emit code for testing a value against a Dart type. Expects the value on
   /// the stack as a (ref null #Top) and leaves the result on the stack as an
   /// i32.
-  void emitTypeCheck(CodeGenerator codeGen, DartType type, DartType operandType,
-      [TreeNode? node]) {
+  void emitIsTest(
+      CodeGenerator codeGen, DartType testedAgainstType, DartType operandType,
+      [Location? location]) {
     final b = codeGen.b;
-    b.comment("Type check against $type");
+    b.comment("type check against $testedAgainstType");
     w.Local? operandTemp;
     if (translator.options.verifyTypeChecks) {
-      operandTemp = codeGen.addLocal(translator.topInfo.nullableType);
+      operandTemp =
+          b.addLocal(translator.topInfo.nullableType, isParameter: false);
       b.local_tee(operandTemp);
     }
-    if (!_emitOptimizedTypeCheck(codeGen, type, operandType)) {
-      // General fallback path
-      makeType(codeGen, type);
-      codeGen.call(translator.isSubtype.reference);
+    final typeToCheck = _canUseTypeCheckHelper(testedAgainstType, operandType);
+    if (typeToCheck != null) {
+      b.call(
+          _generateIsChecker(typeToCheck, operandType.isPotentiallyNullable));
+    } else {
+      if (testedAgainstType is InterfaceType &&
+          classForType(testedAgainstType) == translator.interfaceTypeClass) {
+        final typeClassInfo =
+            translator.classInfo[testedAgainstType.classNode]!;
+        final typeArguments = testedAgainstType.typeArguments;
+        b.i32_const(encodedNullability(testedAgainstType));
+        b.i64_const(typeClassInfo.classId);
+        if (typeArguments.isEmpty) {
+          codeGen.call(translator.isInterfaceSubtype0.reference);
+        } else if (typeArguments.length == 1) {
+          makeType(codeGen, typeArguments[0]);
+          codeGen.call(translator.isInterfaceSubtype1.reference);
+        } else if (typeArguments.length == 2) {
+          makeType(codeGen, typeArguments[0]);
+          makeType(codeGen, typeArguments[1]);
+          codeGen.call(translator.isInterfaceSubtype2.reference);
+        } else {
+          _makeTypeArray(codeGen, typeArguments);
+          codeGen.call(translator.isInterfaceSubtype.reference);
+        }
+      } else {
+        makeType(codeGen, testedAgainstType);
+        codeGen.call(translator.isSubtype.reference);
+      }
     }
     if (translator.options.verifyTypeChecks) {
       b.local_get(operandTemp!);
-      makeType(codeGen, type);
-      if (node != null && node.location != null) {
+      makeType(codeGen, testedAgainstType);
+      if (location != null) {
         w.FunctionType verifyFunctionType = translator.functions
             .getFunctionType(translator.verifyOptimizedTypeCheck.reference);
-        String location = node.location.toString();
         translator.constants.instantiateConstant(codeGen.function, b,
-            StringConstant(location), verifyFunctionType.inputs.last);
+            StringConstant('$location'), verifyFunctionType.inputs.last);
       } else {
         b.ref_null(w.HeapType.none);
       }
@@ -675,95 +434,458 @@ class Types {
     }
   }
 
-  /// Emit optimized code for testing a value against a Dart type. If the type
-  /// to be tested against is of a shape where we can generate more efficient
-  /// code than the general fallback path, generate such code and return `true`.
-  /// Otherwise, return `false` to indicate that the general path should be
-  /// taken.
-  bool _emitOptimizedTypeCheck(
-      CodeGenerator codeGen, DartType type, DartType operandType) {
-    if (type is! InterfaceType) return false;
-
-    if (type.typeArguments.any((t) => t is! DynamicType)) {
-      // Type has at least one type argument that is not `dynamic`.
-      //
-      // In cases like `x is List<T>` where `x : Iterable<T>` (tested-against
-      // type is a subtype of the operand's static type and the types have same
-      // number of type arguments), it is not necessary to test the type
-      // arguments.
-      Class cls = translator.classForType(operandType);
-      InterfaceType? base = translator.hierarchy
-          .getInterfaceTypeAsInstanceOfClass(type, cls,
-              isNonNullableByDefault:
-                  codeGen.member.enclosingLibrary.isNonNullableByDefault)
-          ?.withDeclaredNullability(operandType.declaredNullability);
-
-      final sameNumTypeParams = operandType is InterfaceType &&
-          operandType.typeArguments.length == type.typeArguments.length;
-
-      if (!(sameNumTypeParams && base == operandType)) {
-        return false;
-      }
-    }
-
+  w.ValueType emitAsCheck(CodeGenerator codeGen, DartType testedAgainstType,
+      DartType operandType, w.RefType boxedOperandType,
+      [Location? location]) {
     final b = codeGen.b;
-    bool isPotentiallyNullable = operandType.isPotentiallyNullable;
-    w.Label? resultLabel;
-    if (isPotentiallyNullable) {
-      // Store operand in a temporary variable, since Binaryen does not support
-      // block inputs.
-      w.Local operand = codeGen.addLocal(translator.topInfo.nullableType);
-      b.local_set(operand);
-      resultLabel = b.block(const [], const [w.NumType.i32]);
-      w.Label nullLabel = b.block(const [], const []);
-      b.local_get(operand);
-      b.br_on_null(nullLabel);
+
+    final typeToCheck = _canUseTypeCheckHelper(testedAgainstType, operandType);
+    if (typeToCheck != null) {
+      b.call(
+          _generateAsChecker(typeToCheck, operandType.isPotentiallyNullable));
+      return translator.translateType(testedAgainstType);
     }
 
-    List<Class> concrete = _getConcreteSubtypes(type.classNode).toList();
-    if (type.classNode == coreTypes.objectClass) {
-      b.drop();
-      b.i32_const(1);
-    } else if (type.classNode == coreTypes.functionClass) {
-      b.ref_test(translator.closureInfo.nonNullableType);
-    } else if (concrete.isEmpty) {
-      b.drop();
-      b.i32_const(0);
-    } else if (concrete.length == 1) {
-      ClassInfo info = translator.classInfo[concrete.single]!;
-      b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-      b.i32_const(info.classId);
-      b.i32_eq();
-    } else {
-      w.Local idLocal = codeGen.addLocal(w.NumType.i32);
-      b.struct_get(translator.topInfo.struct, FieldIndex.classId);
-      b.local_set(idLocal);
-      w.Label done = b.block(const [], const [w.NumType.i32]);
-      b.i32_const(1);
-      for (Class cls in concrete) {
-        ClassInfo info = translator.classInfo[cls]!;
-        b.i32_const(info.classId);
-        b.local_get(idLocal);
-        b.i32_eq();
-        b.br_if(done);
+    w.Local operand = b.addLocal(boxedOperandType, isParameter: false);
+    b.local_tee(operand);
+
+    late List<w.ValueType> outputsToDrop;
+    if (testedAgainstType is InterfaceType &&
+        classForType(testedAgainstType) == translator.interfaceTypeClass) {
+      final typeClassInfo = translator.classInfo[testedAgainstType.classNode]!;
+      final typeArguments = testedAgainstType.typeArguments;
+      b.i32_const(encodedNullability(testedAgainstType));
+      b.i64_const(typeClassInfo.classId);
+      if (typeArguments.isEmpty) {
+        outputsToDrop = codeGen.call(translator.asInterfaceSubtype0.reference);
+      } else if (typeArguments.length == 1) {
+        makeType(codeGen, typeArguments[0]);
+        outputsToDrop = codeGen.call(translator.asInterfaceSubtype1.reference);
+      } else if (typeArguments.length == 2) {
+        makeType(codeGen, typeArguments[0]);
+        makeType(codeGen, typeArguments[1]);
+        outputsToDrop = codeGen.call(translator.asInterfaceSubtype2.reference);
+      } else {
+        _makeTypeArray(codeGen, typeArguments);
+        outputsToDrop = codeGen.call(translator.asInterfaceSubtype.reference);
       }
+    } else {
+      makeType(codeGen, testedAgainstType);
+      outputsToDrop = codeGen.call(translator.asSubtype.reference);
+    }
+    for (final _ in outputsToDrop) {
       b.drop();
-      b.i32_const(0);
-      b.end(); // done
+    }
+    b.local_get(operand);
+    return operand.type;
+  }
+
+  // Returns the type to check against if a helper can be used, otherwise `null`
+  InterfaceType? _canUseTypeCheckHelper(
+      DartType testedAgainstType, DartType operandType) {
+    // The is/as check helpers are for cid-range checks of interface types.
+    if (testedAgainstType is! InterfaceType) return null;
+
+    if (_hasOnlyDefaultTypeArguments(testedAgainstType)) {
+      return testedAgainstType;
     }
 
-    if (isPotentiallyNullable) {
-      b.br(resultLabel!);
-      b.end(); // nullLabel
-      b.i32_const(encodedNullability(type));
-      b.end(); // resultLabel
+    if (operandType is InterfaceType &&
+        _staticTypesEnsureTypeArgumentsMatch(testedAgainstType, operandType)) {
+      // We only need to check whether the nullability and the class itself fits
+      // (the [testedAgainstType] arguments are guaranteed to fit statically)
+      final parameters = testedAgainstType.classNode.typeParameters;
+      final args = [
+        for (int i = 0; i < parameters.length; ++i) parameters[i].defaultType,
+      ];
+      return InterfaceType(
+          testedAgainstType.classNode, testedAgainstType.nullability, args);
     }
+    return null;
+  }
 
+  bool _staticTypesEnsureTypeArgumentsMatch(
+      InterfaceType testedAgainstType, InterfaceType operandType) {
+    assert(testedAgainstType.typeArguments.isNotEmpty);
+
+    // If the operand type doesn't have any type arguments it will not be able
+    // to tell us anything about the type arguments of testedAgainstType.
+    if (operandType.typeArguments.isEmpty) return false;
+
+    final sufficiency = translator.typeEnvironment
+        .computeTypeShapeCheckSufficiency(
+            expressionStaticType: operandType,
+            checkTargetType:
+                testedAgainstType.withDeclaredNullability(Nullability.nullable),
+            subtypeCheckMode: type_env.SubtypeCheckMode.withNullabilities);
+
+    // If `true` the caller only needs to check nullabillity and the actual
+    // concrete class, no need to check [testedAgainstType] arguments.
+    return sufficiency == type_env.TypeShapeCheckSufficiency.interfaceShape;
+  }
+
+  bool _hasOnlyDefaultTypeArguments(InterfaceType testedAgainstType) {
+    if (testedAgainstType.typeArguments.isEmpty) return true;
+
+    final parameters = testedAgainstType.classNode.typeParameters;
+    final arguments = testedAgainstType.typeArguments;
+    assert(parameters.length == arguments.length);
+    for (int i = 0; i < arguments.length; ++i) {
+      if (arguments[i] != parameters[i].defaultType) return false;
+    }
     return true;
+  }
+
+  final Map<DartType, w.BaseFunction> _nullableIsCheckers = {};
+  final Map<DartType, w.BaseFunction> _isCheckers = {};
+
+  // Currently the is-checker helper functions only check nullability and the
+  // concrete class (the arguments do not have to be checked).
+  w.BaseFunction _generateIsChecker(
+      InterfaceType testedAgainstType, bool operandIsNullable) {
+    assert(_hasOnlyDefaultTypeArguments(testedAgainstType));
+
+    final interfaceClass = testedAgainstType.classNode;
+
+    final cachedIsCheckers =
+        operandIsNullable ? _nullableIsCheckers : _isCheckers;
+
+    return cachedIsCheckers.putIfAbsent(testedAgainstType, () {
+      final argumentType = operandIsNullable
+          ? translator.topInfo.nullableType
+          : translator.topInfo.nonNullableType;
+      final function = translator.m.functions.define(
+          translator.m.types.defineFunction(
+            [argumentType],
+            [w.NumType.i32],
+          ),
+          '<obj> is ${testedAgainstType.classNode}');
+
+      final b = function.body;
+      b.local_get(b.locals[0]);
+
+      w.Label? resultLabel;
+      if (operandIsNullable) {
+        // Store operand in a temporary variable, since Binaryen does not support
+        // block inputs.
+        w.Local operand = function.addLocal(translator.topInfo.nullableType);
+        b.local_set(operand);
+        resultLabel = b.block(const [], const [w.NumType.i32]);
+        w.Label nullLabel = b.block(const [], const []);
+        b.local_get(operand);
+        b.br_on_null(nullLabel);
+      }
+
+      if (interfaceClass == coreTypes.objectClass) {
+        b.drop();
+        b.i32_const(1);
+      } else if (interfaceClass == coreTypes.functionClass) {
+        b.ref_test(translator.closureInfo.nonNullableType);
+      } else {
+        final ranges = translator.classIdNumbering
+            .getConcreteClassIdRanges(interfaceClass);
+        b.struct_get(translator.topInfo.struct, FieldIndex.classId);
+        b.emitClassIdRangeCheck(ranges);
+      }
+
+      if (operandIsNullable) {
+        b.br(resultLabel!);
+        b.end(); // nullLabel
+        b.i32_const(encodedNullability(testedAgainstType));
+        b.end(); // resultLabel
+      }
+
+      b.return_();
+      b.end();
+
+      return function;
+    });
+  }
+
+  final Map<DartType, w.BaseFunction> _nullableAsCheckers = {};
+  final Map<DartType, w.BaseFunction> _asCheckers = {};
+
+  // Currently the as-checker helper functions only check nullability and the
+  // concrete class (the arguments do not have to be checked).
+  w.BaseFunction _generateAsChecker(
+      InterfaceType testedAgainstType, bool operandIsNullable) {
+    assert(_hasOnlyDefaultTypeArguments(testedAgainstType));
+
+    final cachedAsCheckers =
+        operandIsNullable ? _nullableAsCheckers : _asCheckers;
+    final returnType = translator.translateType(testedAgainstType);
+    return cachedAsCheckers.putIfAbsent(testedAgainstType, () {
+      final argumentType = operandIsNullable
+          ? translator.topInfo.nullableType
+          : translator.topInfo.nonNullableType;
+      final function = translator.m.functions.define(
+          translator.m.types.defineFunction(
+            [argumentType],
+            [returnType],
+          ),
+          '<obj> as ${testedAgainstType.classNode}');
+
+      final b = function.body;
+      w.Label asCheckBlock = b.block();
+      b.local_get(b.locals[0]);
+      b.call(_generateIsChecker(testedAgainstType, operandIsNullable));
+      b.br_if(asCheckBlock);
+
+      b.local_get(b.locals[0]);
+      translator.constants.instantiateConstant(function, b,
+          TypeLiteralConstant(testedAgainstType), nonNullableTypeType);
+      b.call(translator.functions
+          .getFunction(translator.throwAsCheckError.reference));
+      b.unreachable();
+
+      b.end();
+
+      b.local_get(b.locals[0]);
+      translator.convertType(function, argumentType, returnType);
+      b.return_();
+      b.end();
+
+      return function;
+    });
   }
 
   int encodedNullability(DartType type) =>
       type.declaredNullability == Nullability.nullable ? 1 : 0;
+}
+
+/// Builds up data structures that the Runtime Type System implementation uses.
+///
+/// There are 3 data structures:
+///
+///   * The name of all classes represented as an wasm array of strings.
+///
+///   * A canonical substitution table where each entry represents
+///     (potentially uninstantiated) type arguments to a superclass.
+///
+///     => This is used for translating type arguments between related classes
+///     in a hierarchy.
+///
+///   * A table mapping each class id to its transitive super classes (i.e.
+///     transitive implements/extends) and an index into the canonical
+///     substitution table on how to translate type arguments between the two
+///     related clases.
+///
+/// See sdk/lib/_internal/wasm/lib/type.dart for more information.
+class RuntimeTypeInformation {
+  final Translator translator;
+
+  /// Canonical substitution table of type `const WasmArray<WasmArray<_Type>>`.
+  ///
+  /// Stores a canonical table of substitution arrays. Each substitution array
+  /// describes (possibly uninstantiated) type arguments that can be
+  /// instantiated with actual object type arguments.
+  /// => This allows translating an objects type arguments to the type arguments
+  /// of a related super class.
+  ///
+  /// See sdk/lib/_internal/wasm/lib/type.dart:_canonicalSubstitutionTable for
+  /// what this contains and how it's used for substitution.
+  late final InstanceConstant substitutionTableConstant;
+
+  /// The Dart type of the [substitutionTableConstant] constant.
+  late final DartType substitutionTableConstantType;
+
+  /// This index in the substitution canonicalization table indicates that we do
+  /// not have to substitute anything.
+  static const int noSubstitutionIndex = 0;
+
+  /// Type rules supers table of type `const WasmArray<WasmArray<_WasmI32>>`.
+  ///
+  /// Has an array for every class id in the system. For a particular class id
+  /// it has (super-classId, canonical-substitutionIndex) tuples used by the RTT
+  /// system to determine whether two classes are related and how to translate
+  /// type arguments from one class to type arguments of a related other class.
+  ///
+  /// See sdk/lib/_internal/wasm/lib/type.dart:_typeRulesSupers for
+  /// what this contains and how it's used for substitution.
+  late final InstanceConstant typeRulesSupers;
+  late final DartType typeRulesSupersType;
+
+  /// Table of type names indexed by class id.
+  late final InstanceConstant typeNames;
+  late final DartType typeNamesType;
+
+  CoreTypes get coreTypes => translator.coreTypes;
+  Types get types => translator.types;
+
+  RuntimeTypeInformation(this.translator) {
+    final (
+      Map<int, Map<int, int>> typeRules,
+      LinkedHashMap<InstanceConstant, int> substitutionTable
+    ) = _buildTypeRules();
+
+    // The canonical substitution table of type WasmArray<WasmArray<_Type>>
+    _initSubstitutionTableConstant(substitutionTable);
+
+    // The super type substitution rules for each class of type
+    // WasmArray<WasmArray<WasmI32>>.
+    _initTypeRulesSupers(typeRules);
+
+    // The class name table of type WasmArray<String>
+    _initTypeNames();
+  }
+
+  (Map<int, Map<int, int>>, LinkedHashMap<InstanceConstant, int>)
+      _buildTypeRules() {
+    final subtypeMap = <int, Map<int, int>>{};
+    // ignore: prefer_collection_literals
+    final substitutionTable = LinkedHashMap<InstanceConstant, int>();
+
+    assert(noSubstitutionIndex == 0);
+    assert(substitutionTable.length == noSubstitutionIndex);
+    substitutionTable[translator.constants.makeTypeArray([])] =
+        noSubstitutionIndex;
+
+    for (ClassInfo classInfo in translator.classes) {
+      ClassInfo superclassInfo = classInfo;
+
+      // We don't need type rules for any class without a superclass, or for
+      // classes whose supertype is [Object]. The latter case will be handled
+      // directly in the subtype checking algorithm.
+      if (superclassInfo.cls == null ||
+          superclassInfo.cls == coreTypes.objectClass) {
+        continue;
+      }
+      Class superclass = superclassInfo.cls!;
+
+      // TODO(joshualitt): This includes abstract types that can't be
+      // instantiated, but might be needed for subtype checks. The majority of
+      // abstract classes are probably unnecessary though. We should filter
+      // these cases to reduce the size of the type rules.
+      Iterable<Class> subclasses = translator.subtypes
+          .getSubtypesOf(superclass)
+          .where((cls) => cls != superclass);
+      Iterable<InterfaceType> subtypes = subclasses.map(
+          (Class cls) => cls.getThisType(coreTypes, Nullability.nonNullable));
+      for (InterfaceType subtype in subtypes) {
+        types.interfaceTypeEnvironment._add(subtype);
+
+        final List<DartType>? typeArguments = translator.hierarchy
+            .getInterfaceTypeArgumentsAsInstanceOfClass(subtype, superclass)
+            ?.map(types.normalize)
+            .toList();
+
+        int substitutionIndex;
+        if (_isIdentitySubstitution(typeArguments)) {
+          substitutionIndex = noSubstitutionIndex;
+        } else {
+          final substitution =
+              translator.constants.makeTypeArray(typeArguments!);
+          substitutionIndex = substitutionTable.putIfAbsent(
+              substitution, () => substitutionTable.length);
+        }
+
+        final subclassId = translator.classInfo[subtype.classNode]!.classId;
+        (subtypeMap[subclassId] ??= {})[superclassInfo.classId] =
+            substitutionIndex;
+      }
+    }
+    return (subtypeMap, substitutionTable);
+  }
+
+  /// Whether the substitution [typeArguments] would cause a NOP substitution.
+  ///
+  /// We have a NOP substitution if one of the following conditions apply:
+  ///
+  ///   - the classes are unrelated
+  ///   - the super class is not generic
+  ///   - the type arguments from subclass are the same as for the super class
+  ///
+  bool _isIdentitySubstitution(List<DartType>? typeArguments) {
+    // This happen if the classes are not related to each other.
+    if (typeArguments == null) return true;
+
+    for (int i = 0; i < typeArguments.length; ++i) {
+      final typeArgument = typeArguments[i];
+      if (typeArgument is! TypeParameterType) {
+        return false;
+      }
+      if (typeArgument.declaredNullability == Nullability.nullable) {
+        return false;
+      }
+      final int environmentIndex =
+          types.interfaceTypeEnvironment.lookup(typeArgument.parameter);
+      if (i != environmentIndex) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _initSubstitutionTableConstant(
+      LinkedHashMap<InstanceConstant, int> substitutionTable) {
+    final typeType =
+        InterfaceType(translator.typeClass, Nullability.nonNullable);
+    final arrayOfType = InterfaceType(
+        translator.wasmArrayClass, Nullability.nonNullable, [typeType]);
+
+    // We rely on the keys being in insertion order.
+    substitutionTableConstant = translator.constants
+        .makeArrayOf(arrayOfType, substitutionTable.keys.toList());
+    substitutionTableConstantType = InterfaceType(
+        translator.wasmArrayClass, Nullability.nonNullable, [arrayOfType]);
+  }
+
+  void _initTypeRulesSupers(Map<int, Map<int, int>> typeRules) {
+    final wasmI32 =
+        InterfaceType(translator.wasmI32Class, Nullability.nonNullable);
+    final arrayOfI32 = InterfaceType(
+        translator.wasmArrayClass, Nullability.nonNullable, [wasmI32]);
+
+    // Maps each class id to a list of super class ids followed by a list of
+    // substitution table indices.
+    final typeRulesArray = <InstanceConstant>[];
+    for (int classId = 0; classId < translator.classes.length; classId++) {
+      final rules = typeRules[classId];
+      if (rules == null) {
+        typeRulesArray.add(
+            translator.constants.makeArrayOf(wasmI32, const <IntConstant>[]));
+        continue;
+      }
+
+      final List<int> superclassIds = rules.keys.toList();
+      superclassIds.sort();
+      final superClassSubstitutionTuples =
+          List<IntConstant>.filled(2 * superclassIds.length, IntConstant(0));
+      for (int i = 0; i < superclassIds.length; ++i) {
+        final superClassId = superclassIds[i];
+        final substitutionTableIndex = rules[superClassId]!;
+
+        superClassSubstitutionTuples[i] = IntConstant(superClassId);
+        superClassSubstitutionTuples[superclassIds.length + i] =
+            IntConstant(substitutionTableIndex);
+      }
+      typeRulesArray.add(translator.constants
+          .makeArrayOf(wasmI32, superClassSubstitutionTuples));
+    }
+    typeRulesSupers =
+        translator.constants.makeArrayOf(arrayOfI32, typeRulesArray);
+    typeRulesSupersType = InterfaceType(
+        translator.wasmArrayClass, Nullability.nonNullable, [arrayOfI32]);
+  }
+
+  void _initTypeNames() {
+    final stringType =
+        translator.coreTypes.stringRawType(Nullability.nonNullable);
+
+    final emptyString = StringConstant('');
+    List<StringConstant> nameConstants = [];
+    for (ClassInfo classInfo in translator.classes) {
+      Class? cls = classInfo.cls;
+      if (cls == null || cls.isAnonymousMixin) {
+        nameConstants.add(emptyString);
+      } else {
+        nameConstants.add(StringConstant(cls.name));
+      }
+    }
+    typeNames = translator.constants.makeArrayOf(stringType, nameConstants);
+    typeNamesType = InterfaceType(
+        translator.wasmArrayClass, Nullability.nonNullable, [stringType]);
+  }
 }
 
 /// For a function type F = `... Function<X0, ..., Xn-1>(...)` compute offset(F)

@@ -2,87 +2,75 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
+    as shared show TypeDeclarationKind, TypeDeclarationMatchResult, Variance;
+import 'package:_fe_analyzer_shared/src/type_inference/type_constraint.dart';
+import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
-
-/// A constraint on the type [parameter] that we're inferring.
-/// We require that `lower <: parameter <: upper`.
-class TypeConstraint {
-  final TypeParameterElement parameter;
-  final DartType lower;
-  final DartType upper;
-
-  TypeConstraint._(this.parameter, this.lower, this.upper);
-
-  bool get isEmpty {
-    return identical(lower, UnknownInferredType.instance) &&
-        identical(upper, UnknownInferredType.instance);
-  }
-
-  @override
-  String toString() {
-    var lowerStr = lower.getDisplayString(withNullability: true);
-    var upperStr = upper.getDisplayString(withNullability: true);
-    return '$lowerStr <: ${parameter.name} <: $upperStr';
-  }
-}
+import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 
 /// Creates sets of [TypeConstraint]s for type parameters, based on an attempt
 /// to make one type schema a subtype of another.
 class TypeConstraintGatherer {
   final TypeSystemImpl _typeSystem;
   final Set<TypeParameterElement> _typeParameters = Set.identity();
-  final List<TypeConstraint> _constraints = [];
+  final List<
+      GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+          PromotableElement>> _constraints = [];
+  final TypeSystemOperations _typeSystemOperations;
+  final TypeConstraintGenerationDataForTesting? dataForTesting;
 
   TypeConstraintGatherer({
     required TypeSystemImpl typeSystem,
     required Iterable<TypeParameterElement> typeParameters,
-  }) : _typeSystem = typeSystem {
+    required TypeSystemOperations typeSystemOperations,
+    required this.dataForTesting,
+  })  : _typeSystem = typeSystem,
+        _typeSystemOperations = typeSystemOperations {
     _typeParameters.addAll(typeParameters);
   }
 
   bool get isConstraintSetEmpty => _constraints.isEmpty;
 
-  DartType get _defaultTypeParameterBound {
-    if (_typeSystem.isNonNullableByDefault) {
-      return _typeSystem.objectQuestion;
-    } else {
-      return DynamicTypeImpl.instance;
-    }
-  }
-
   /// Returns the set of type constraints that was gathered.
-  Map<TypeParameterElement, TypeConstraint> computeConstraints() {
-    var result = <TypeParameterElement, TypeConstraint>{};
+  Map<
+      TypeParameterElement,
+      MergedTypeConstraint<
+          DartType,
+          DartType,
+          TypeParameterElement,
+          PromotableElement,
+          InterfaceType,
+          InterfaceElement>> computeConstraints() {
+    var result = <TypeParameterElement,
+        MergedTypeConstraint<DartType, DartType, TypeParameterElement,
+            PromotableElement, InterfaceType, InterfaceElement>>{};
     for (var parameter in _typeParameters) {
-      result[parameter] = TypeConstraint._(
-        parameter,
-        UnknownInferredType.instance,
-        UnknownInferredType.instance,
+      result[parameter] = MergedTypeConstraint<
+          DartType,
+          DartType,
+          TypeParameterElement,
+          PromotableElement,
+          InterfaceType,
+          InterfaceElement>(
+        lower: UnknownInferredType.instance,
+        upper: UnknownInferredType.instance,
+        origin: const UnknownTypeConstraintOrigin(),
       );
     }
 
     for (var constraint in _constraints) {
-      var parameter = constraint.parameter;
+      var parameter = constraint.typeParameter;
       var mergedConstraint = result[parameter]!;
 
-      var lower = _typeSystem.leastUpperBound(
-        mergedConstraint.lower,
-        constraint.lower,
-      );
-
-      var upper = _typeSystem.greatestLowerBound(
-        mergedConstraint.upper,
-        constraint.upper,
-      );
-
-      result[parameter] = TypeConstraint._(parameter, lower, upper);
+      mergedConstraint.mergeIn(constraint, _typeSystemOperations);
     }
 
     return result;
@@ -93,34 +81,35 @@ class TypeConstraintGatherer {
   /// If the match succeeds, the resulting type constraints are recorded for
   /// later use by [computeConstraints].  If the match fails, the set of type
   /// constraints is unchanged.
-  bool trySubtypeMatch(DartType P, DartType Q, bool leftSchema) {
+  bool trySubtypeMatch(DartType P, DartType Q, bool leftSchema,
+      {required AstNode? nodeForTesting}) {
     // If `P` is `_` then the match holds with no constraints.
-    if (identical(P, UnknownInferredType.instance)) {
+    if (P is SharedUnknownType) {
       return true;
     }
 
     // If `Q` is `_` then the match holds with no constraints.
-    if (identical(Q, UnknownInferredType.instance)) {
+    if (Q is SharedUnknownType) {
       return true;
     }
 
     // If `P` is a type variable `X` in `L`, then the match holds:
     //   Under constraint `_ <: X <: Q`.
     var P_nullability = P.nullabilitySuffix;
-    if (P is TypeParameterType &&
-        P_nullability == NullabilitySuffix.none &&
-        _typeParameters.contains(P.element)) {
-      _addUpper(P.element, Q);
+    if (_typeSystemOperations.matchInferableParameter(P) case var P_element?
+        when P_nullability == NullabilitySuffix.none &&
+            _typeParameters.contains(P_element)) {
+      _addUpper(P_element, Q, nodeForTesting: nodeForTesting);
       return true;
     }
 
     // If `Q` is a type variable `X` in `L`, then the match holds:
     //   Under constraint `P <: X <: _`.
     var Q_nullability = Q.nullabilitySuffix;
-    if (Q is TypeParameterType &&
-        Q_nullability == NullabilitySuffix.none &&
-        _typeParameters.contains(Q.element)) {
-      _addLower(Q.element, P);
+    if (_typeSystemOperations.matchInferableParameter(Q) case var Q_element?
+        when Q_nullability == NullabilitySuffix.none &&
+            _typeParameters.contains(Q_element)) {
+      _addLower(Q_element, P, nodeForTesting: nodeForTesting);
       return true;
     }
 
@@ -130,47 +119,17 @@ class TypeConstraintGatherer {
       return true;
     }
 
-    // If `P` is a legacy type `P0*` then the match holds under constraint
-    // set `C`:
-    //   Only if `P0` is a subtype match for `Q` under constraint set `C`.
-    if (P_nullability == NullabilitySuffix.star) {
-      var P0 = (P as TypeImpl).withNullability(NullabilitySuffix.none);
-      return trySubtypeMatch(P0, Q, leftSchema);
-    }
-
-    // If `Q` is a legacy type `Q0*` then the match holds under constraint
-    // set `C`:
-    if (Q_nullability == NullabilitySuffix.star) {
-      // If `P` is `dynamic` or `void` and `P` is a subtype match
-      // for `Q0` under constraint set `C`.
-      if (identical(P, DynamicTypeImpl.instance) ||
-          identical(P, VoidTypeImpl.instance)) {
-        var rewind = _constraints.length;
-        var Q0 = (Q as TypeImpl).withNullability(NullabilitySuffix.none);
-        if (trySubtypeMatch(P, Q0, leftSchema)) {
-          return true;
-        }
-        _constraints.length = rewind;
-      }
-      // Or if `P` is a subtype match for `Q0?` under constraint set `C`.
-      var Qq = (Q as TypeImpl).withNullability(NullabilitySuffix.question);
-      return trySubtypeMatch(P, Qq, leftSchema);
-    }
-
     // If `Q` is `FutureOr<Q0>` the match holds under constraint set `C`:
-    if (Q_nullability == NullabilitySuffix.none &&
-        Q is InterfaceType &&
-        Q.isDartAsyncFutureOr) {
-      var Q0 = Q.typeArguments[0];
+    if (_typeSystemOperations.matchFutureOr(Q) case var Q0?
+        when Q_nullability == NullabilitySuffix.none) {
       var rewind = _constraints.length;
 
       // If `P` is `FutureOr<P0>` and `P0` is a subtype match for `Q0` under
       // constraint set `C`.
-      if (P_nullability == NullabilitySuffix.none &&
-          P is InterfaceType &&
-          P.isDartAsyncFutureOr) {
-        var P0 = P.typeArguments[0];
-        if (trySubtypeMatch(P0, Q0, leftSchema)) {
+      if (_typeSystemOperations.matchFutureOr(P) case var P0?
+          when P_nullability == NullabilitySuffix.none) {
+        if (trySubtypeMatch(P0, Q0, leftSchema,
+            nodeForTesting: nodeForTesting)) {
           return true;
         }
         _constraints.length = rewind;
@@ -178,15 +137,16 @@ class TypeConstraintGatherer {
 
       // Or if `P` is a subtype match for `Future<Q0>` under non-empty
       // constraint set `C`.
-      var futureQ0 = _futureNone(Q0);
-      var P_matches_FutureQ0 = trySubtypeMatch(P, futureQ0, leftSchema);
+      var futureQ0 = _typeSystemOperations.futureType(Q0);
+      var P_matches_FutureQ0 = trySubtypeMatch(P, futureQ0, leftSchema,
+          nodeForTesting: nodeForTesting);
       if (P_matches_FutureQ0 && _constraints.length != rewind) {
         return true;
       }
       _constraints.length = rewind;
 
       // Or if `P` is a subtype match for `Q0` under constraint set `C`.
-      if (trySubtypeMatch(P, Q0, leftSchema)) {
+      if (trySubtypeMatch(P, Q0, leftSchema, nodeForTesting: nodeForTesting)) {
         return true;
       }
       _constraints.length = rewind;
@@ -200,14 +160,17 @@ class TypeConstraintGatherer {
 
     // If `Q` is `Q0?` the match holds under constraint set `C`:
     if (Q_nullability == NullabilitySuffix.question) {
-      var Q0 = (Q as TypeImpl).withNullability(NullabilitySuffix.none);
+      var Q0 = _typeSystemOperations.withNullabilitySuffix(
+          Q, NullabilitySuffix.none);
       var rewind = _constraints.length;
 
       // If `P` is `P0?` and `P0` is a subtype match for `Q0` under
       // constraint set `C`.
       if (P_nullability == NullabilitySuffix.question) {
-        var P0 = (P as TypeImpl).withNullability(NullabilitySuffix.none);
-        if (trySubtypeMatch(P0, Q0, leftSchema)) {
+        var P0 = _typeSystemOperations.withNullabilitySuffix(
+            P, NullabilitySuffix.none);
+        if (trySubtypeMatch(P0, Q0, leftSchema,
+            nodeForTesting: nodeForTesting)) {
           return true;
         }
         _constraints.length = rewind;
@@ -215,9 +178,9 @@ class TypeConstraintGatherer {
 
       // Or if `P` is `dynamic` or `void` and `Object` is a subtype match
       // for `Q0` under constraint set `C`.
-      if (identical(P, DynamicTypeImpl.instance) ||
-          identical(P, VoidTypeImpl.instance)) {
-        if (trySubtypeMatch(_typeSystem.objectNone, Q0, leftSchema)) {
+      if (P is SharedDynamicType || P is SharedVoidType) {
+        if (trySubtypeMatch(_typeSystem.objectNone, Q0, leftSchema,
+            nodeForTesting: nodeForTesting)) {
           return true;
         }
         _constraints.length = rewind;
@@ -225,14 +188,16 @@ class TypeConstraintGatherer {
 
       // Or if `P` is a subtype match for `Q0` under non-empty
       // constraint set `C`.
-      var P_matches_Q0 = trySubtypeMatch(P, Q0, leftSchema);
+      var P_matches_Q0 =
+          trySubtypeMatch(P, Q0, leftSchema, nodeForTesting: nodeForTesting);
       if (P_matches_Q0 && _constraints.length != rewind) {
         return true;
       }
       _constraints.length = rewind;
 
       // Or if `P` is a subtype match for `Null` under constraint set `C`.
-      if (trySubtypeMatch(P, _typeSystem.nullNone, leftSchema)) {
+      if (trySubtypeMatch(P, _typeSystem.nullNone, leftSchema,
+          nodeForTesting: nodeForTesting)) {
         return true;
       }
       _constraints.length = rewind;
@@ -245,17 +210,16 @@ class TypeConstraintGatherer {
     }
 
     // If `P` is `FutureOr<P0>` the match holds under constraint set `C1 + C2`:
-    if (P_nullability == NullabilitySuffix.none &&
-        P is InterfaceType &&
-        P.isDartAsyncFutureOr) {
-      var P0 = P.typeArguments[0];
+    if (_typeSystemOperations.matchFutureOr(P) case var P0?
+        when P_nullability == NullabilitySuffix.none) {
       var rewind = _constraints.length;
 
       // If `Future<P0>` is a subtype match for `Q` under constraint set `C1`.
       // And if `P0` is a subtype match for `Q` under constraint set `C2`.
-      var future_P0 = _futureNone(P0);
-      if (trySubtypeMatch(future_P0, Q, leftSchema) &&
-          trySubtypeMatch(P0, Q, leftSchema)) {
+      var future_P0 = _typeSystemOperations.futureType(P0);
+      if (trySubtypeMatch(future_P0, Q, leftSchema,
+              nodeForTesting: nodeForTesting) &&
+          trySubtypeMatch(P0, Q, leftSchema, nodeForTesting: nodeForTesting)) {
         return true;
       }
 
@@ -264,13 +228,15 @@ class TypeConstraintGatherer {
 
     // If `P` is `P0?` the match holds under constraint set `C1 + C2`:
     if (P_nullability == NullabilitySuffix.question) {
-      var P0 = (P as TypeImpl).withNullability(NullabilitySuffix.none);
+      var P0 = _typeSystemOperations.withNullabilitySuffix(
+          P, NullabilitySuffix.none);
       var rewind = _constraints.length;
 
       // If `P0` is a subtype match for `Q` under constraint set `C1`.
       // And if `Null` is a subtype match for `Q` under constraint set `C2`.
-      if (trySubtypeMatch(P0, Q, leftSchema) &&
-          trySubtypeMatch(_typeSystem.nullNone, Q, leftSchema)) {
+      if (trySubtypeMatch(P0, Q, leftSchema, nodeForTesting: nodeForTesting) &&
+          trySubtypeMatch(_typeSystem.nullNone, Q, leftSchema,
+              nodeForTesting: nodeForTesting)) {
         return true;
       }
 
@@ -279,26 +245,27 @@ class TypeConstraintGatherer {
 
     // If `Q` is `dynamic`, `Object?`, or `void` then the match holds under
     // no constraints.
-    if (identical(Q, DynamicTypeImpl.instance) ||
-        identical(Q, VoidTypeImpl.instance) ||
-        Q_nullability == NullabilitySuffix.question && Q.isDartCoreObject) {
+    if (Q is SharedDynamicType ||
+        Q is SharedVoidType ||
+        Q == _typeSystemOperations.objectQuestionType) {
       return true;
     }
 
     // If `P` is `Never` then the match holds under no constraints.
-    if (identical(P, NeverTypeImpl.instance)) {
+    if (_typeSystemOperations.isNever(P)) {
       return true;
     }
 
     // If `Q` is `Object`, then the match holds under no constraints:
     //  Only if `P` is non-nullable.
-    if (Q_nullability == NullabilitySuffix.none && Q.isDartCoreObject) {
+    if (Q == _typeSystemOperations.objectType) {
       return _typeSystem.isNonNullable(P);
     }
 
     // If `P` is `Null`, then the match holds under no constraints:
     //  Only if `Q` is nullable.
-    if (P_nullability == NullabilitySuffix.none && P.isDartCoreNull) {
+    if (P_nullability == NullabilitySuffix.none &&
+        _typeSystemOperations.isNull(P)) {
       return _typeSystem.isNullable(Q);
     }
 
@@ -309,57 +276,121 @@ class TypeConstraintGatherer {
     if (P_nullability == NullabilitySuffix.none && P is TypeParameterTypeImpl) {
       var rewind = _constraints.length;
       var B = P.promotedBound ?? P.element.bound;
-      if (B != null && trySubtypeMatch(B, Q, leftSchema)) {
+      if (B != null &&
+          trySubtypeMatch(B, Q, leftSchema, nodeForTesting: nodeForTesting)) {
         return true;
       }
       _constraints.length = rewind;
     }
 
-    if (P is InterfaceType && Q is InterfaceType) {
-      return _interfaceType(P, Q, leftSchema);
+    switch ((
+      _typeSystemOperations.matchTypeDeclarationType(P),
+      _typeSystemOperations.matchTypeDeclarationType(Q)
+    )) {
+      // If `P` is `C<M0, ..., Mk> and `Q` is `C<N0, ..., Nk>`, then the match
+      // holds under constraints `C0 + ... + Ck`:
+      //   If `Mi` is a subtype match for `Ni` with respect to L under
+      //   constraints `Ci`.
+      case (
+            shared.TypeDeclarationMatchResult(
+              typeDeclarationKind: shared.TypeDeclarationKind
+                  P_typeDeclarationKind,
+              typeDeclaration: InterfaceElement P_declarationObject,
+              typeDeclarationType: InterfaceType _,
+              typeArguments: List<DartType> P_typeArguments
+            ),
+            shared.TypeDeclarationMatchResult(
+              typeDeclarationKind: shared.TypeDeclarationKind
+                  Q_typeDeclarationKind,
+              typeDeclaration: InterfaceElement Q_declarationObject,
+              typeDeclarationType: InterfaceType _,
+              typeArguments: List<DartType> Q_typeArguments
+            )
+          )
+          when P_typeDeclarationKind == Q_typeDeclarationKind &&
+              P_declarationObject == Q_declarationObject:
+        return _interfaceType_arguments(P_declarationObject, P_typeArguments,
+            Q_declarationObject, Q_typeArguments, leftSchema,
+            nodeForTesting: nodeForTesting);
+
+      case (
+          shared.TypeDeclarationMatchResult(
+            typeDeclarationKind: shared.TypeDeclarationKind _,
+            typeDeclaration: InterfaceElement _,
+            typeDeclarationType: InterfaceType P_interfaceType,
+            typeArguments: List<DartType> _
+          ),
+          shared.TypeDeclarationMatchResult(
+            typeDeclarationKind: shared.TypeDeclarationKind _,
+            typeDeclaration: InterfaceElement _,
+            typeDeclarationType: InterfaceType Q_interfaceType,
+            typeArguments: List<DartType> _
+          )
+        ):
+        return _interfaceType(P_interfaceType, Q_interfaceType, leftSchema,
+            nodeForTesting: nodeForTesting);
     }
 
     // If `Q` is `Function` then the match holds under no constraints:
     //   If `P` is a function type.
-    if (Q_nullability == NullabilitySuffix.none && Q.isDartCoreFunction) {
-      if (P is FunctionType) {
+    if (_typeSystemOperations.isDartCoreFunction(Q)) {
+      if (_typeSystemOperations.isFunctionType(P)) {
         return true;
       }
     }
 
-    if (P is FunctionType && Q is FunctionType) {
-      return _functionType(P, Q, leftSchema);
+    if (_typeSystemOperations.isFunctionType(P) &&
+        _typeSystemOperations.isFunctionType(Q)) {
+      return _functionType(P as FunctionType, Q as FunctionType, leftSchema,
+          nodeForTesting: nodeForTesting);
     }
 
     // A type `P` is a subtype match for `Record` with respect to `L` under no
     // constraints:
     //   If `P` is a record type or `Record`.
     if (Q_nullability == NullabilitySuffix.none && Q.isDartCoreRecord) {
-      if (P is RecordType) {
+      if (_typeSystemOperations.isRecordType(P)) {
         return true;
       }
     }
 
-    if (P is RecordTypeImpl && Q is RecordTypeImpl) {
-      return _recordType(P, Q, leftSchema);
+    if (_typeSystemOperations.isRecordType(P) &&
+        _typeSystemOperations.isRecordType(Q)) {
+      return _recordType(P as RecordTypeImpl, Q as RecordTypeImpl, leftSchema,
+          nodeForTesting: nodeForTesting);
     }
 
     return false;
   }
 
-  void _addLower(TypeParameterElement element, DartType lower) {
-    _constraints.add(
-      TypeConstraint._(element, lower, UnknownInferredType.instance),
-    );
+  void _addLower(TypeParameterElement element, DartType lower,
+      {required AstNode? nodeForTesting}) {
+    GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+            PromotableElement> generatedTypeConstraint =
+        GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+            PromotableElement>.lower(element, lower);
+    _constraints.add(generatedTypeConstraint);
+    if (dataForTesting != null && nodeForTesting != null) {
+      (dataForTesting!.generatedTypeConstraints[nodeForTesting] ??= [])
+          .add(generatedTypeConstraint);
+    }
   }
 
-  void _addUpper(TypeParameterElement element, DartType upper) {
-    _constraints.add(
-      TypeConstraint._(element, UnknownInferredType.instance, upper),
-    );
+  void _addUpper(TypeParameterElement element, DartType upper,
+      {required AstNode? nodeForTesting}) {
+    GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+            PromotableElement> generatedTypeConstraint =
+        GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+            PromotableElement>.upper(element, upper);
+    _constraints.add(generatedTypeConstraint);
+    if (dataForTesting != null && nodeForTesting != null) {
+      (dataForTesting!.generatedTypeConstraints[nodeForTesting] ??= [])
+          .add(generatedTypeConstraint);
+    }
   }
 
-  bool _functionType(FunctionType P, FunctionType Q, bool leftSchema) {
+  bool _functionType(FunctionType P, FunctionType Q, bool leftSchema,
+      {required AstNode? nodeForTesting}) {
     if (P.nullabilitySuffix != NullabilitySuffix.none) {
       return false;
     }
@@ -375,7 +406,7 @@ class TypeConstraintGatherer {
     }
 
     if (P_typeFormals.isEmpty && Q_typeFormals.isEmpty) {
-      return _functionType0(P, Q, leftSchema);
+      return _functionType0(P, Q, leftSchema, nodeForTesting: nodeForTesting);
     }
 
     // We match two generic function types:
@@ -388,13 +419,15 @@ class TypeConstraintGatherer {
     // If `B1i` is a subtype match for `B0i` with constraint set `Ci1`.
     // And `Ci2` is `Ci0 + Ci1`.
     for (var i = 0; i < P_typeFormals.length; i++) {
-      var B0 = P_typeFormals[i].bound ?? _defaultTypeParameterBound;
-      var B1 = Q_typeFormals[i].bound ?? _defaultTypeParameterBound;
-      if (!trySubtypeMatch(B0, B1, leftSchema)) {
+      var B0 = P_typeFormals[i].bound ?? _typeSystem.objectQuestion;
+      var B1 = Q_typeFormals[i].bound ?? _typeSystem.objectQuestion;
+      if (!trySubtypeMatch(B0, B1, leftSchema,
+          nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
-      if (!trySubtypeMatch(B1, B0, !leftSchema)) {
+      if (!trySubtypeMatch(B1, B0, !leftSchema,
+          nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
@@ -424,7 +457,8 @@ class TypeConstraintGatherer {
         .toList();
     var P_instantiated = P.instantiate(typeArguments);
     var Q_instantiated = Q.instantiate(typeArguments);
-    if (!_functionType0(P_instantiated, Q_instantiated, leftSchema)) {
+    if (!_functionType0(P_instantiated, Q_instantiated, leftSchema,
+        nodeForTesting: nodeForTesting)) {
       _constraints.length = rewind;
       return false;
     }
@@ -440,12 +474,14 @@ class TypeConstraintGatherer {
   /// A function type `(M0,..., Mn, [M{n+1}, ..., Mm]) -> R0` is a subtype
   /// match for a function type `(N0,..., Nk, [N{k+1}, ..., Nr]) -> R1` with
   /// respect to `L` under constraints `C0 + ... + Cr + C`.
-  bool _functionType0(FunctionType f, FunctionType g, bool leftSchema) {
+  bool _functionType0(FunctionType f, FunctionType g, bool leftSchema,
+      {required AstNode? nodeForTesting}) {
     var rewind = _constraints.length;
 
     // If `R0` is a subtype match for a type `R1` with respect to `L` under
     // constraints `C`.
-    if (!trySubtypeMatch(f.returnType, g.returnType, leftSchema)) {
+    if (!trySubtypeMatch(f.returnType, g.returnType, leftSchema,
+        nodeForTesting: nodeForTesting)) {
       _constraints.length = rewind;
       return false;
     }
@@ -462,7 +498,8 @@ class TypeConstraintGatherer {
       var gParameter = gParameters[gIndex];
       if (fParameter.isRequiredPositional) {
         if (gParameter.isRequiredPositional) {
-          if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema)) {
+          if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema,
+              nodeForTesting: nodeForTesting)) {
             fIndex++;
             gIndex++;
           } else {
@@ -475,7 +512,8 @@ class TypeConstraintGatherer {
         }
       } else if (fParameter.isOptionalPositional) {
         if (gParameter.isPositional) {
-          if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema)) {
+          if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema,
+              nodeForTesting: nodeForTesting)) {
             fIndex++;
             gIndex++;
           } else {
@@ -490,7 +528,8 @@ class TypeConstraintGatherer {
         if (gParameter.isNamed) {
           var compareNames = fParameter.name.compareTo(gParameter.name);
           if (compareNames == 0) {
-            if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema)) {
+            if (trySubtypeMatch(gParameter.type, fParameter.type, leftSchema,
+                nodeForTesting: nodeForTesting)) {
               fIndex++;
               gIndex++;
             } else {
@@ -535,32 +574,14 @@ class TypeConstraintGatherer {
     return true;
   }
 
-  InterfaceType _futureNone(DartType valueType) {
-    var element = _typeSystem.typeProvider.futureElement;
-    return element.instantiate(
-      typeArguments: fixedTypeList(valueType),
-      nullabilitySuffix: NullabilitySuffix.none,
-    );
-  }
-
-  bool _interfaceType(InterfaceType P, InterfaceType Q, bool leftSchema) {
+  bool _interfaceType(InterfaceType P, InterfaceType Q, bool leftSchema,
+      {required AstNode? nodeForTesting}) {
     if (P.nullabilitySuffix != NullabilitySuffix.none) {
       return false;
     }
 
     if (Q.nullabilitySuffix != NullabilitySuffix.none) {
       return false;
-    }
-
-    // If `P` is `C<M0, ..., Mk> and `Q` is `C<N0, ..., Nk>`, then the match
-    // holds under constraints `C0 + ... + Ck`:
-    //   If `Mi` is a subtype match for `Ni` with respect to L under
-    //   constraints `Ci`.
-    if (P.element == Q.element) {
-      if (!_interfaceType_arguments(P, Q, leftSchema)) {
-        return false;
-      }
-      return true;
     }
 
     // If `P` is `C0<M0, ..., Mk>` and `Q` is `C1<N0, ..., Nj>` then the match
@@ -573,40 +594,49 @@ class TypeConstraintGatherer {
     for (var interface in C0.allSupertypes) {
       if (interface.element == C1) {
         var substitution = Substitution.fromInterfaceType(P);
+        var substitutedInterface =
+            substitution.substituteType(interface) as InterfaceType;
         return _interfaceType_arguments(
-          substitution.substituteType(interface) as InterfaceType,
-          Q,
-          leftSchema,
-        );
+            substitutedInterface.element,
+            substitutedInterface.typeArguments,
+            Q.element,
+            Q.typeArguments,
+            leftSchema,
+            nodeForTesting: nodeForTesting);
       }
     }
 
     return false;
   }
 
-  /// Match arguments of [P] against arguments of [Q].
-  /// If returns `false`, the constraints are unchanged.
+  /// Match arguments [P_typeArguments] of P against arguments [Q_typeArguments]
+  /// of Q, taking into account the variance of type variables in [P_element]
+  /// and [Q_element]. If returns `false`, the constraints are unchanged.
   bool _interfaceType_arguments(
-    InterfaceType P,
-    InterfaceType Q,
-    bool leftSchema,
-  ) {
-    assert(P.element == Q.element);
+      InterfaceElement P_element,
+      List<DartType> P_typeArguments,
+      InterfaceElement Q_element,
+      List<DartType> Q_typeArguments,
+      bool leftSchema,
+      {required AstNode? nodeForTesting}) {
+    assert(P_typeArguments.length == Q_typeArguments.length);
 
     var rewind = _constraints.length;
 
-    for (var i = 0; i < P.typeArguments.length; i++) {
+    for (var i = 0; i < P_typeArguments.length; i++) {
       var variance =
-          (P.element.typeParameters[i] as TypeParameterElementImpl).variance;
-      var M = P.typeArguments[i];
-      var N = Q.typeArguments[i];
-      if ((variance.isCovariant || variance.isInvariant) &&
-          !trySubtypeMatch(M, N, leftSchema)) {
+          _typeSystemOperations.getTypeParameterVariance(P_element, i);
+      var M = P_typeArguments[i];
+      var N = Q_typeArguments[i];
+      if ((variance == shared.Variance.covariant ||
+              variance == shared.Variance.invariant) &&
+          !trySubtypeMatch(M, N, leftSchema, nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
-      if ((variance.isContravariant || variance.isInvariant) &&
-          !trySubtypeMatch(N, M, leftSchema)) {
+      if ((variance == shared.Variance.contravariant ||
+              variance == shared.Variance.invariant) &&
+          !trySubtypeMatch(N, M, leftSchema, nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
@@ -619,7 +649,8 @@ class TypeConstraintGatherer {
   /// holds under constraints `C0 + ... + Ck`:
   ///   If `Mi` is a subtype match for `Ni` with respect to L under
   ///   constraints `Ci`.
-  bool _recordType(RecordTypeImpl P, RecordTypeImpl Q, bool leftSchema) {
+  bool _recordType(RecordTypeImpl P, RecordTypeImpl Q, bool leftSchema,
+      {required AstNode? nodeForTesting}) {
     if (P.nullabilitySuffix != NullabilitySuffix.none) {
       return false;
     }
@@ -628,42 +659,76 @@ class TypeConstraintGatherer {
       return false;
     }
 
-    final positionalP = P.positionalFields;
-    final positionalQ = Q.positionalFields;
+    var positionalP = P.positionalFields;
+    var positionalQ = Q.positionalFields;
     if (positionalP.length != positionalQ.length) {
       return false;
     }
 
-    final namedP = P.namedFields;
-    final namedQ = Q.namedFields;
+    var namedP = P.namedFields;
+    var namedQ = Q.namedFields;
     if (namedP.length != namedQ.length) {
       return false;
     }
 
-    final rewind = _constraints.length;
+    var rewind = _constraints.length;
 
     for (var i = 0; i < positionalP.length; i++) {
-      final fieldP = positionalP[i];
-      final fieldQ = positionalQ[i];
-      if (!trySubtypeMatch(fieldP.type, fieldQ.type, leftSchema)) {
+      var fieldP = positionalP[i];
+      var fieldQ = positionalQ[i];
+      if (!trySubtypeMatch(fieldP.type, fieldQ.type, leftSchema,
+          nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
     }
 
     for (var i = 0; i < namedP.length; i++) {
-      final fieldP = namedP[i];
-      final fieldQ = namedQ[i];
+      var fieldP = namedP[i];
+      var fieldQ = namedQ[i];
       if (fieldP.name != fieldQ.name) {
         _constraints.length = rewind;
         return false;
       }
-      if (!trySubtypeMatch(fieldP.type, fieldQ.type, leftSchema)) {
+      if (!trySubtypeMatch(fieldP.type, fieldQ.type, leftSchema,
+          nodeForTesting: nodeForTesting)) {
         _constraints.length = rewind;
         return false;
       }
     }
 
     return true;
+  }
+}
+
+/// Data structure maintaining intermediate type inference results, such as
+/// type constraints, for testing purposes.  Under normal execution, no
+/// instance of this class should be created.
+class TypeConstraintGenerationDataForTesting {
+  /// Map from nodes requiring type inference to the generated type constraints
+  /// for the node.
+  final Map<
+      AstNode,
+      List<
+          GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+              PromotableElement>>> generatedTypeConstraints = {};
+
+  /// Merges [other] into the receiver, combining the constraints.
+  ///
+  /// The method reuses data structures from [other] whenever possible, to
+  /// avoid extra memory allocations. This process is destructive to [other]
+  /// because the changes made to the reused structures will be visible to
+  /// [other].
+  void mergeIn(TypeConstraintGenerationDataForTesting other) {
+    for (AstNode node in other.generatedTypeConstraints.keys) {
+      List<
+          GeneratedTypeConstraint<DartType, DartType, TypeParameterElement,
+              PromotableElement>>? constraints = generatedTypeConstraints[node];
+      if (constraints != null) {
+        constraints.addAll(other.generatedTypeConstraints[node]!);
+      } else {
+        generatedTypeConstraints[node] = other.generatedTypeConstraints[node]!;
+      }
+    }
   }
 }

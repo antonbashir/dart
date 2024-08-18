@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// @dart=2.9
-
 /*@testedFeatures=inference*/
 library test;
 
@@ -11,7 +9,7 @@ import 'dart:math' as math;
 import 'dart:math' show min;
 
 class C {
-  T m<T extends num>(T x, T y) => null;
+  T m<T extends num>(T x, T y) => throw '';
 }
 
 test() {
@@ -71,24 +69,22 @@ test() {
 // That's legal because we're loosening parameter types.
 //
 // We do issue the inference error though, similar to generic function calls.
-  takeOON(/*error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE*/ new C()
-      . /*@target=C.m*/ m);
-  takeOOO(/*error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE*/ new C()
-      . /*@target=C.m*/ m);
+  // Error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE
+  takeOON(new C() . /*@target=C.m*/ m);
+  // Error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE
+  takeOOO(new C() . /*@target=C.m*/ m);
 
 // Note: this is a warning because a downcast of a method tear-off could work
 // in "normal" Dart, due to bivariance.
 //
 // We do issue the inference error though, similar to generic function calls.
-  takeOOI(/*error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE*/ new C()
-      . /*@target=C.m*/ m);
+  // Error:COULD_NOT_INFER,info:DOWN_CAST_COMPOSITE
+  takeOOI(new C() . /*@target=C.m*/ m);
 
-  takeIDI(
-      /*error:COULD_NOT_INFER,error:ARGUMENT_TYPE_NOT_ASSIGNABLE*/ new C()
-          . /*@target=C.m*/ m);
-  takeDID(
-      /*error:COULD_NOT_INFER,error:ARGUMENT_TYPE_NOT_ASSIGNABLE*/ new C()
-          . /*@target=C.m*/ m);
+  // Error:COULD_NOT_INFER,error:ARGUMENT_TYPE_NOT_ASSIGNABLE
+  takeIDI(new C() . /*@target=C.m*/ m);
+  // Error:COULD_NOT_INFER,error:ARGUMENT_TYPE_NOT_ASSIGNABLE
+  takeDID(new C() . /*@target=C.m*/ m);
 }
 
 void takeIII(int fn(int a, int b)) {}

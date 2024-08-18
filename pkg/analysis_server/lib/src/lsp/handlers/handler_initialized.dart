@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
+import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_states.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 
@@ -36,6 +37,10 @@ class InitializedMessageHandler
       // fetchClientConfigurationAndPerformDynamicRegistration.
       await server.updateWorkspaceFolders(openWorkspacePaths, const []);
     }
+
+    // Mark initialization as done so that handlers that want to wait on this
+    // can continue.
+    server.completeLspInitialization();
 
     return success(null);
   }

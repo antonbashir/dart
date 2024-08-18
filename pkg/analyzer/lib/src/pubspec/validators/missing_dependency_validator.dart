@@ -38,9 +38,15 @@ class MissingDependencyValidator {
   /// The listener to record the errors.
   final RecordingErrorListener recorder;
 
+  /// A set of names of special packages that should not be added as
+  /// dependencies in the `pubspec.yaml` file. For example, the flutter_gen
+  /// codegen package is specified in a special `flutter` section of the
+  /// `pubspec.yaml` file and not as part of the `dependencies` section.
+  final Set noDepsPackages = <String>{'flutter_gen'};
+
   MissingDependencyValidator(this.contents, this.source, this.provider)
       : recorder = RecordingErrorListener() {
-    reporter = ErrorReporter(recorder, source, isNonNullableByDefault: false);
+    reporter = ErrorReporter(recorder, source);
   }
 
   /// Given the set of dependencies and dev dependencies used in the sources,
@@ -49,7 +55,7 @@ class MissingDependencyValidator {
   /// Returns the list of names of the packages to be added/removed for these
   /// sections.
   List<AnalysisError> validate(Set<String> usedDeps, Set<String> usedDevDeps) {
-    final contents = this.contents;
+    var contents = this.contents;
     if (contents is! YamlMap) {
       return [];
     }
@@ -69,16 +75,18 @@ class MissingDependencyValidator {
       return <String, YamlNode>{};
     }
 
-    final dependencies =
-        getDeclaredDependencies(PubspecField.DEPENDENCIES_FIELD);
-    final devDependencies =
+    var dependencies = getDeclaredDependencies(PubspecField.DEPENDENCIES_FIELD);
+    var devDependencies =
         getDeclaredDependencies(PubspecField.DEV_DEPENDENCIES_FIELD);
 
-    final packageName =
-        contents.nodes[PubspecField.NAME_FIELD]?.value.toString();
+    var packageName = contents.nodes[PubspecField.NAME_FIELD]?.value.toString();
     // Ensure that the package itself is not listed as a dependency.
     usedDeps.remove(packageName);
     usedDevDeps.remove(packageName);
+    for (var package in noDepsPackages) {
+      usedDeps.remove(package);
+      usedDevDeps.remove(package);
+    }
 
     var availableDeps = [
       if (dependencies.isNotEmpty)
@@ -132,14 +140,14 @@ class MissingDependencyValidator {
     List<DiagnosticMessage>? messages,
     Object? data,
   ]) {
-    final span = node.span;
-    reporter.reportErrorForOffset(
-      errorCode,
-      span.start.offset,
-      span.length,
-      arguments,
-      messages,
-      data,
+    var span = node.span;
+    reporter.atOffset(
+      offset: span.start.offset,
+      length: span.length,
+      errorCode: errorCode,
+      arguments: arguments,
+      contextMessages: messages,
+      data: data,
     );
   }
 }

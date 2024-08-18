@@ -181,8 +181,6 @@ ErrorPtr ObjectStore::PreallocateObjects() {
   ASSERT(this->stack_overflow() == Instance::null());
   ASSERT(this->out_of_memory() == Instance::null());
 
-  this->closure_functions_ = GrowableObjectArray::New();
-
   Object& result = Object::Handle();
   const Library& library = Library::Handle(Library::CoreLibrary());
 
@@ -223,7 +221,7 @@ void ObjectStore::InitKnownObjects() {
   ASSERT(!cls.IsNull());
   set_set_impl_class(cls);
 
-#ifdef DART_PRECOMPILED_RUNTIME
+#if defined(DART_PRECOMPILED_RUNTIME)
   // The rest of these objects are only needed for code generation.
   return;
 #else
@@ -387,29 +385,37 @@ void ObjectStore::InitKnownObjects() {
   RELEASE_ASSERT(smi_class.EnsureIsFinalized(thread) == Error::null());
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::Plus());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::Minus());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::Equals());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::LAngleBracket());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::RAngleBracket());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::BitAnd());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::BitOr());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
   function_name =
       Function::CreateDynamicInvocationForwarderName(Symbols::Star());
-  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name);
-#endif
+  Resolver::ResolveDynamicAnyArgs(zone, smi_class, function_name,
+                                  /*allow_add=*/true);
+#endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
 void ObjectStore::LazyInitCoreMembers() {

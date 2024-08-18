@@ -108,6 +108,10 @@ suggestions
     kind: class
   B01
     kind: class
+  dynamic
+    kind: keyword
+  void
+    kind: keyword
 ''');
   }
 
@@ -127,6 +131,46 @@ suggestions
     kind: class
   B01
     kind: class
+  dynamic
+    kind: keyword
+  void
+    kind: keyword
+''');
+  }
+
+  Future<void> test_outside_right_x() async {
+    await computeSuggestions('''
+class A01 {}
+class A02 {}
+class B01 {}
+(int, )^ f() {}
+''');
+
+    assertResponse(r'''
+suggestions
+''');
+  }
+
+  Future<void> test_outside_x_left() async {
+    await computeSuggestions('''
+class A01 {}
+class A02 {}
+class B01 {}
+void f(int a, ^(int, ) b) {}
+''');
+
+    assertResponse(r'''
+suggestions
+  A01
+    kind: class
+  A02
+    kind: class
+  B01
+    kind: class
+  void
+    kind: keyword
+  dynamic
+    kind: keyword
 ''');
   }
 
@@ -204,6 +248,10 @@ suggestions
     kind: class
   B01
     kind: class
+  dynamic
+    kind: keyword
+  void
+    kind: keyword
 ''');
   }
 
@@ -223,6 +271,10 @@ suggestions
     kind: class
   B01
     kind: class
+  dynamic
+    kind: keyword
+  void
+    kind: keyword
 ''');
   }
 
@@ -244,6 +296,10 @@ suggestions
     kind: class
   B01
     kind: class
+  dynamic
+    kind: keyword
+  void
+    kind: keyword
 ''');
   }
 }

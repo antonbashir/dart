@@ -4,6 +4,8 @@
 
 import 'dart:math' show max;
 
+import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart'
+    show Variance;
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -12,7 +14,6 @@ import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/resolver/variance.dart';
 import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:meta/meta.dart';
 
@@ -111,14 +112,7 @@ class InterfaceLeastUpperBoundHelper {
   Set<InterfaceTypeImpl> computeSuperinterfaceSet(InterfaceType type) {
     var result = <InterfaceTypeImpl>{};
     _addSuperinterfaces(result, type);
-    if (typeSystem.isNonNullableByDefault) {
-      return result;
-    } else {
-      return result
-          .map(typeSystem.toLegacyTypeIfOptOut)
-          .cast<InterfaceTypeImpl>()
-          .toSet();
-    }
+    return result;
   }
 
   /// Add all of the superinterfaces of the given [type] to the given [set].
@@ -198,9 +192,6 @@ class InterfaceLeastUpperBoundHelper {
     if (nullability1 == NullabilitySuffix.question ||
         nullability2 == NullabilitySuffix.question) {
       return NullabilitySuffix.question;
-    } else if (nullability1 == NullabilitySuffix.star ||
-        nullability2 == NullabilitySuffix.star) {
-      return NullabilitySuffix.star;
     }
     return NullabilitySuffix.none;
   }
@@ -212,7 +203,7 @@ class InterfaceLeastUpperBoundHelper {
   /// structure.
   static int _computeLongestInheritancePathToObject(
       InterfaceType type, Set<InterfaceElement> visitedElements) {
-    final element = type.element;
+    var element = type.element;
     // recursion
     if (visitedElements.contains(element)) {
       return 0;
@@ -227,6 +218,14 @@ class InterfaceLeastUpperBoundHelper {
         return type.nullabilitySuffix == NullabilitySuffix.none ? 1 : 0;
       }
     }
+
+    // Extension type without interfaces, implicit `Object?`
+    if (element is ExtensionTypeElement) {
+      if (element.interfaces.isEmpty) {
+        return 1;
+      }
+    }
+
     int longestPath = 0;
     try {
       visitedElements.add(element);
@@ -370,8 +369,8 @@ class LeastUpperBoundHelper {
       return T2;
     }
 
-    var T1_isBottom = _typeSystem.isBottom(T1);
-    var T2_isBottom = _typeSystem.isBottom(T2);
+    var T1_isBottom = T1.isBottom;
+    var T2_isBottom = T2.isBottom;
 
     // UP(T1, T2) where BOTTOM(T1) and BOTTOM(T2)
     if (T1_isBottom && T2_isBottom) {
@@ -395,8 +394,8 @@ class LeastUpperBoundHelper {
     }
 
     // UP(X1 & B1, T2)
-    if (T1 case TypeParameterTypeImpl(promotedBound: final B1?)) {
-      final X1 = T1.withoutPromotedBound;
+    if (T1 case TypeParameterTypeImpl(promotedBound: var B1?)) {
+      var X1 = T1.withoutPromotedBound;
       // T2 if X1 <: T2
       if (_typeSystem.isSubtypeOf(X1, T2)) {
         return T2;
@@ -407,13 +406,13 @@ class LeastUpperBoundHelper {
       }
       // otherwise UP(B1a, T2)
       //   where B1a is the greatest closure of B1 with respect to X1
-      final B1a = _typeSystem.greatestClosure(B1, [X1.element]);
+      var B1a = _typeSystem.greatestClosure(B1, [X1.element]);
       return getLeastUpperBound(B1a, T2);
     }
 
     // UP(T1, X2 & B2)
-    if (T2 case TypeParameterTypeImpl(promotedBound: final B2?)) {
-      final X2 = T2.withoutPromotedBound;
+    if (T2 case TypeParameterTypeImpl(promotedBound: var B2?)) {
+      var X2 = T2.withoutPromotedBound;
       // X2 if T1 <: X2
       if (_typeSystem.isSubtypeOf(T1, X2)) {
         return X2;
@@ -424,7 +423,7 @@ class LeastUpperBoundHelper {
       }
       // otherwise UP(T1, B2a)
       //   where B2a is the greatest closure of B2 with respect to X2
-      final B2a = _typeSystem.greatestClosure(B2, [X2.element]);
+      var B2a = _typeSystem.greatestClosure(B2, [X2.element]);
       return getLeastUpperBound(T1, B2a);
     }
 
@@ -451,13 +450,9 @@ class LeastUpperBoundHelper {
     // UP(T1, T2) where NULL(T1)
     if (T1_isNull) {
       // * T2 if T2 is nullable
-      // * T2* if Null <: T2 or T1 <: Object (that is, T1 or T2 is legacy)
       // * T2? otherwise
       if (_typeSystem.isNullable(T2)) {
         return T2;
-      } else if (T1_nullability == NullabilitySuffix.star ||
-          T2_nullability == NullabilitySuffix.star) {
-        return T2_impl.withNullability(NullabilitySuffix.star);
       } else {
         return _typeSystem.makeNullable(T2);
       }
@@ -466,13 +461,9 @@ class LeastUpperBoundHelper {
     // UP(T1, T2) where NULL(T2)
     if (T2_isNull) {
       // * T1 if T1 is nullable
-      // * T1* if Null <: T1 or T2 <: Object (that is, T1 or T2 is legacy)
       // * T1? otherwise
       if (_typeSystem.isNullable(T1)) {
         return T1;
-      } else if (T1_nullability == NullabilitySuffix.star ||
-          T2_nullability == NullabilitySuffix.star) {
-        return T1_impl.withNullability(NullabilitySuffix.star);
       } else {
         return _typeSystem.makeNullable(T1);
       }
@@ -514,28 +505,15 @@ class LeastUpperBoundHelper {
       }
     }
 
-    // UP(T1*, T2*) = S* where S is UP(T1, T2)
-    // UP(T1*, T2?) = S? where S is UP(T1, T2)
-    // UP(T1?, T2*) = S? where S is UP(T1, T2)
-    // UP(T1*, T2) = S* where S is UP(T1, T2)
-    // UP(T1, T2*) = S* where S is UP(T1, T2)
     // UP(T1?, T2?) = S? where S is UP(T1, T2)
     // UP(T1?, T2) = S? where S is UP(T1, T2)
     // UP(T1, T2?) = S? where S is UP(T1, T2)
     if (T1_nullability != NullabilitySuffix.none ||
         T2_nullability != NullabilitySuffix.none) {
-      var resultNullability = NullabilitySuffix.none;
-      if (T1_nullability == NullabilitySuffix.question ||
-          T2_nullability == NullabilitySuffix.question) {
-        resultNullability = NullabilitySuffix.question;
-      } else if (T1_nullability == NullabilitySuffix.star ||
-          T2_nullability == NullabilitySuffix.star) {
-        resultNullability = NullabilitySuffix.star;
-      }
       var T1_none = T1_impl.withNullability(NullabilitySuffix.none);
       var T2_none = T2_impl.withNullability(NullabilitySuffix.none);
       var S = getLeastUpperBound(T1_none, T2_none);
-      return (S as TypeImpl).withNullability(resultNullability);
+      return (S as TypeImpl).withNullability(NullabilitySuffix.question);
     }
 
     assert(T1_nullability == NullabilitySuffix.none);
@@ -814,23 +792,23 @@ class LeastUpperBoundHelper {
   }
 
   DartType _recordType(RecordTypeImpl T1, RecordTypeImpl T2) {
-    final positional1 = T1.positionalFields;
-    final positional2 = T2.positionalFields;
+    var positional1 = T1.positionalFields;
+    var positional2 = T2.positionalFields;
     if (positional1.length != positional2.length) {
       return _typeSystem.typeProvider.recordType;
     }
 
-    final named1 = T1.namedFields;
-    final named2 = T2.namedFields;
+    var named1 = T1.namedFields;
+    var named2 = T2.namedFields;
     if (named1.length != named2.length) {
       return _typeSystem.typeProvider.recordType;
     }
 
-    final positionalFields = <RecordTypePositionalFieldImpl>[];
+    var positionalFields = <RecordTypePositionalFieldImpl>[];
     for (var i = 0; i < positional1.length; i++) {
-      final field1 = positional1[i];
-      final field2 = positional2[i];
-      final type = getLeastUpperBound(field1.type, field2.type);
+      var field1 = positional1[i];
+      var field2 = positional2[i];
+      var type = getLeastUpperBound(field1.type, field2.type);
       positionalFields.add(
         RecordTypePositionalFieldImpl(
           type: type,
@@ -838,14 +816,14 @@ class LeastUpperBoundHelper {
       );
     }
 
-    final namedFields = <RecordTypeNamedFieldImpl>[];
+    var namedFields = <RecordTypeNamedFieldImpl>[];
     for (var i = 0; i < named1.length; i++) {
-      final field1 = named1[i];
-      final field2 = named2[i];
+      var field1 = named1[i];
+      var field2 = named2[i];
       if (field1.name != field2.name) {
         return _typeSystem.typeProvider.recordType;
       }
-      final type = getLeastUpperBound(field1.type, field2.type);
+      var type = getLeastUpperBound(field1.type, field2.type);
       namedFields.add(
         RecordTypeNamedFieldImpl(
           name: field1.name,
@@ -867,8 +845,6 @@ class LeastUpperBoundHelper {
     if (bound != null) {
       return bound;
     }
-    return _typeSystem.isNonNullableByDefault
-        ? _typeSystem.objectQuestion
-        : _typeSystem.objectStar;
+    return _typeSystem.objectQuestion;
   }
 }

@@ -72,7 +72,12 @@ class CloningOutputProvider extends OutputProvider {
   RandomAccessFileOutputProvider outputProvider;
 
   CloningOutputProvider(Uri jsUri, Uri jsMapUri)
-      : outputProvider = RandomAccessFileOutputProvider(jsUri, jsMapUri);
+      : outputProvider = RandomAccessFileOutputProvider(jsUri, jsMapUri,
+            onInfo: _ignore, onFailure: _fail);
+
+  static void _ignore(String message) {}
+
+  static Never _fail(String message) => throw StateError('unreachable');
 
   @override
   api.OutputSink createOutputSink(
@@ -298,6 +303,35 @@ class FindVisitor extends js.BaseVisitorVoid {
   }
 }
 
+class HelperOnlinePositionSourceInformationStrategy
+    implements JavaScriptSourceInformationStrategy {
+  final List<TraceListener> listeners;
+  HelperOnlinePositionSourceInformationStrategy(this.listeners);
+
+  @override
+  SourceInformationProcessor createProcessor(
+      SourceMapperProvider provider, SourceInformationReader reader) {
+    return OnlineSourceInformationProcessor(provider, reader, listeners);
+  }
+
+  @override
+  void onComplete() {}
+
+  @override
+  SourceInformation buildSourceMappedMarker() {
+    return const SourceMappedMarker();
+  }
+
+  @override
+  SourceInformationBuilder createBuilderForContext(
+      covariant MemberEntity member) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void onElementMapAvailable(JsToElementMap elementMap) {}
+}
+
 /// Processor that computes [SourceMapInfo] for the JavaScript compiled for a
 /// given Dart file.
 class SourceMapProcessor {
@@ -362,7 +396,7 @@ class SourceMapProcessor {
       throw "Compilation failed.";
     }
 
-    var compiler = result.compiler;
+    var compiler = result.compiler!;
     JsBackendStrategy backendStrategy = compiler.backendStrategy;
     final strategy = backendStrategy.sourceInformationStrategy
         as RecordingSourceInformationStrategy;
@@ -385,9 +419,21 @@ class SourceMapProcessor {
         CodePositionRecorder codePositions = subProcess.codePositions;
         CodePointComputer visitor =
             CodePointComputer(sourceFileManager, code, nodeMap);
-        JavaScriptTracer(
-                codePositions, const SourceInformationReader(), [visitor])
-            .apply(node);
+        final outBuffer = NoopCodeOutput();
+        SourceInformationProcessor sourceInformationProcessor =
+            HelperOnlinePositionSourceInformationStrategy([visitor])
+                .createProcessor(SourceMapperProviderImpl(outBuffer),
+                    const SourceInformationReader());
+
+        js.Dart2JSJavaScriptPrintingContext context =
+            js.Dart2JSJavaScriptPrintingContext(
+                null,
+                outBuffer,
+                sourceInformationProcessor,
+                const js.JavaScriptAnnotationMonitor());
+        js.Printer printer =
+            js.Printer(const js.JavaScriptPrintingOptions(), context);
+        printer.visit(node);
         List<CodePoint> codePoints = visitor.codePoints;
         elementSourceMapInfos[element] = SourceMapInfo(
             element, code, node, codePoints, codePositions, nodeMap);
@@ -405,9 +451,21 @@ class SourceMapProcessor {
       codePositions = process.codePositions;
       CodePointComputer visitor =
           CodePointComputer(sourceFileManager, code, nodeMap);
-      JavaScriptTracer(
-              codePositions, const SourceInformationReader(), [visitor])
-          .apply(node);
+      final outBuffer = NoopCodeOutput();
+      SourceInformationProcessor sourceInformationProcessor =
+          HelperOnlinePositionSourceInformationStrategy([visitor])
+              .createProcessor(SourceMapperProviderImpl(outBuffer),
+                  const SourceInformationReader());
+
+      js.Dart2JSJavaScriptPrintingContext context =
+          js.Dart2JSJavaScriptPrintingContext(
+              null,
+              outBuffer,
+              sourceInformationProcessor,
+              const js.JavaScriptAnnotationMonitor());
+      js.Printer printer =
+          js.Printer(const js.JavaScriptPrintingOptions(), context);
+      printer.visit(node);
       List<CodePoint> codePoints = visitor.codePoints;
       mainSourceMapInfo =
           SourceMapInfo(null, code, node, codePoints, codePositions, nodeMap);

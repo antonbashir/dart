@@ -152,7 +152,7 @@ class RangeFactory {
       }
       return node(item);
     }
-    final index = list.indexOf(item);
+    var index = list.indexOf(item);
     if (index == 0) {
       // Remove the trailing comma.
       return startStart(item, list[1]);
@@ -202,6 +202,13 @@ class RangeFactory {
   /// Return a source range that starts at the given [startOffset], and has
   /// the given [length].
   SourceRange startOffsetLength(int startOffset, int length) {
+    return SourceRange(startOffset, length);
+  }
+
+  /// Returns the source range that starts at [startOffset] and ends at the
+  /// start of [rightEntity].
+  SourceRange startOffsetStart(int startOffset, SyntacticEntity rightEntity) {
+    var length = rightEntity.offset - startOffset;
     return SourceRange(startOffset, length);
   }
 

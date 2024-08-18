@@ -76,7 +76,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -116,6 +116,106 @@ InstanceCreationExpression
         parameter: self::@class::A::@constructor::new::@parameter::c
     rightParenthesis: )
   staticType: A
+''');
+  }
+
+  test_class_generic_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A<T2> {
+  A.named(T2 value);
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A<T> {}
+
+void f() {
+  A.named(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A<int>
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: ConstructorMember
+        base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+        augmentationSubstitution: {T2: T}
+        substitution: {T: dynamic}
+      staticType: null
+    staticElement: ConstructorMember
+      base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+''');
+  }
+
+  test_class_generic_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A<T2> {
+  A(T2 value);
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A<T> {
+  A._();
+}
+
+void f() {
+  A(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A<int>
+    staticElement: ConstructorMember
+      base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
 ''');
   }
 
@@ -277,6 +377,158 @@ InstanceCreationExpression
 ''');
   }
 
+  test_class_notGeneric_constructor_named_augmentationAugments() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  augment A.named();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {
+  A.named();
+}
+
+void f() {
+  A.named();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructorAugmentation::named
+      staticType: null
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructorAugmentation::named
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
+  test_class_notGeneric_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  A.named();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {}
+
+void f() {
+  A.named();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+      staticType: null
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
+  test_class_notGeneric_constructor_unnamed_augmentationAugments() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  augment A();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {
+  A();
+}
+
+void f() {
+  A();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructorAugmentation::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
+  test_class_notGeneric_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  A();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {
+  A._();
+}
+
+void f() {
+  A();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: A
+      element: self::@class::A
+      type: A
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
   test_class_notGeneric_named() async {
     await assertNoErrorsInCode(r'''
 class A {
@@ -288,7 +540,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -326,7 +578,7 @@ void f() {
 
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -359,7 +611,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_UNDEFINED_CONSTRUCTOR, 31, 10),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -723,7 +975,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -759,7 +1011,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -793,7 +1045,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -828,7 +1080,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -860,7 +1112,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -897,7 +1149,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -929,7 +1181,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_UNDEFINED_CONSTRUCTOR, 48, 5),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -968,7 +1220,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 48, 6),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -990,6 +1242,124 @@ InstanceCreationExpression
 ''');
   }
 
+  test_importPrefix_class_generic_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+
+class A<T> {}
+''');
+
+    newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart'
+
+augment class A<T2> {
+  A.named(T2 value);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+import 'a.dart' as prefix;
+
+void f() {
+  prefix.A.named(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: self::@prefix::prefix
+      name: A
+      element: package:test/a.dart::@class::A
+      type: A<int>
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: ConstructorMember
+        base: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::named
+        augmentationSubstitution: {T2: T}
+        substitution: {T: dynamic}
+      staticType: null
+    staticElement: ConstructorMember
+      base: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::named
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::named::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+''');
+  }
+
+  test_importPrefix_class_generic_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+
+class A<T> {
+  A._();
+}
+''');
+
+    newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart'
+
+augment class A<T2> {
+  A(T2 value);
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+import 'a.dart' as prefix;
+
+void f() {
+  prefix.A(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: self::@prefix::prefix
+      name: A
+      element: package:test/a.dart::@class::A
+      type: A<int>
+    staticElement: ConstructorMember
+      base: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::new
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::new::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+''');
+  }
+
   test_importPrefix_class_named() async {
     newFile('$testPackageLibPath/a.dart', r'''
 class A {
@@ -1006,7 +1376,7 @@ void f() {
 
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -1036,6 +1406,99 @@ InstanceCreationExpression
 ''');
   }
 
+  test_importPrefix_class_notGeneric_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+
+class A {}
+''');
+
+    newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart'
+
+augment class A {
+  A.named();
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+import 'a.dart' as prefix;
+
+void f() {
+  prefix.A.named();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: self::@prefix::prefix
+      name: A
+      element: package:test/a.dart::@class::A
+      type: A
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::named
+      staticType: null
+    staticElement: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::named
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
+  test_importPrefix_class_notGeneric_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+
+class A {
+  A._();
+}
+''');
+
+    newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart'
+
+augment class A {
+  A();
+}
+''');
+
+    await assertNoErrorsInCode(r'''
+import 'a.dart' as prefix;
+
+void f() {
+  prefix.A();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: self::@prefix::prefix
+      name: A
+      element: package:test/a.dart::@class::A
+      type: A
+    staticElement: package:test/a.dart::@augmentation::package:test/b.dart::@classAugmentation::A::@constructor::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
   test_importPrefix_class_typeArguments_named() async {
     newFile('$testPackageLibPath/a.dart', r'''
 class A<T> {
@@ -1052,7 +1515,7 @@ void f() {
 
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -1112,7 +1575,7 @@ void f() {
 
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -1165,7 +1628,7 @@ void f() {
 
 ''');
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   constructorName: ConstructorName
@@ -1206,7 +1669,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_UNDEFINED_CONSTRUCTOR, 54, 3),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -1249,7 +1712,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 55, 3),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -1381,6 +1844,110 @@ InstanceCreationExpression
         parameter: self::@class::X::@constructor::new::@parameter::d
     rightParenthesis: )
   staticType: X
+''');
+  }
+
+  test_typeAlias_generic_class_generic_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A<T2> {
+  A.named(T2 value);
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A<T> {}
+
+typedef X<U> = A<U>;
+
+void f() {
+  X.named(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: X
+      element: self::@typeAlias::X
+      type: A<int>
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: ConstructorMember
+        base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+        augmentationSubstitution: {T2: T}
+        substitution: {T: dynamic}
+      staticType: null
+    staticElement: ConstructorMember
+      base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+''');
+  }
+
+  test_typeAlias_generic_class_generic_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A<T2> {
+  A(T2 value);
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A<T> {
+  A._();
+}
+
+typedef X<U> = A<U>;
+
+void f() {
+  X(0);
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: X
+      element: self::@typeAlias::X
+      type: A<int>
+    staticElement: ConstructorMember
+      base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new
+      augmentationSubstitution: {T2: T}
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments
+      IntegerLiteral
+        literal: 0
+        parameter: ParameterMember
+          base: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new::@parameter::value
+          augmentationSubstitution: {T2: T}
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
 ''');
   }
 
@@ -1641,6 +2208,85 @@ InstanceCreationExpression
 ''');
   }
 
+  test_typeAlias_notGeneric_class_notGeneric_constructor_named_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  A.named();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {}
+
+typedef X = A;
+
+void f() {
+  X.named();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: X
+      element: self::@typeAlias::X
+      type: A
+    period: .
+    name: SimpleIdentifier
+      token: named
+      staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+      staticType: null
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::named
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
+  test_typeAlias_notGeneric_class_notGeneric_constructor_unnamed_augmentationDeclares() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+augment library 'test.dart'
+
+augment class A {
+  A();
+}
+''');
+    await assertNoErrorsInCode(r'''
+import augment 'a.dart';
+
+class A {
+  A._();
+}
+
+typedef X = A;
+
+void f() {
+  X();
+}
+''');
+
+    var node = findNode.singleInstanceCreationExpression;
+    assertResolvedNodeText(node, r'''
+InstanceCreationExpression
+  constructorName: ConstructorName
+    type: NamedType
+      name: X
+      element: self::@typeAlias::X
+      type: A
+    staticElement: self::@augmentation::package:test/a.dart::@classAugmentation::A::@constructor::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: A
+''');
+  }
+
   test_unnamed_declaredNew() async {
     await assertNoErrorsInCode('''
 class A {
@@ -1760,7 +2406,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 17, 10),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -1792,7 +2438,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 17, 16),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new
@@ -1828,7 +2474,7 @@ void f() {
       error(CompileTimeErrorCode.NEW_WITH_NON_TYPE, 17, 14),
     ]);
 
-    final node = findNode.singleInstanceCreationExpression;
+    var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
 InstanceCreationExpression
   keyword: new

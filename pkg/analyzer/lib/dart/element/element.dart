@@ -85,18 +85,38 @@ abstract class AugmentedClassElement implements AugmentedInterfaceElement {
 /// The result of applying augmentations to an [EnumElement].
 ///
 /// Clients may not extend, implement or mix-in this class.
-abstract class AugmentedEnumElement implements AugmentedInterfaceElement {}
+abstract class AugmentedEnumElement implements AugmentedInterfaceElement {
+  /// The enum constants declared in this element.
+  List<FieldElement> get constants;
+
+  @override
+  EnumElement get declaration;
+}
 
 /// The result of applying augmentations to an [ExtensionElement].
 ///
 /// Clients may not extend, implement or mix-in this class.
-abstract class AugmentedExtensionElement implements AugmentedInstanceElement {}
+abstract class AugmentedExtensionElement implements AugmentedInstanceElement {
+  /// The type that is extended by this extension.
+  DartType get extendedType;
+}
 
 /// The result of applying augmentations to an [ExtensionTypeElement].
 ///
 /// Clients may not extend, implement or mix-in this class.
 abstract class AugmentedExtensionTypeElement
-    implements AugmentedInterfaceElement {}
+    implements AugmentedInterfaceElement {
+  /// The primary constructor of this extension.
+  ConstructorElement get primaryConstructor;
+
+  /// The representation of this extension.
+  FieldElement get representation;
+
+  /// The extension type erasure, obtained by recursively replacing every
+  /// subterm which is an extension type by the corresponding representation
+  /// type.
+  DartType get typeErasure;
+}
 
 /// The result of applying augmentations to a [InstanceElement].
 ///
@@ -129,6 +149,9 @@ abstract class AugmentedInstanceElement {
   /// [MethodElement]s are appended.
   List<MethodElement> get methods;
 
+  /// The type of `this` expression.
+  DartType get thisType;
+
   /// Returns the field from [fields] that has the given [name].
   FieldElement? getField(String name);
 
@@ -140,6 +163,39 @@ abstract class AugmentedInstanceElement {
 
   /// Returns the setter from [accessors] that has the given [name].
   PropertyAccessorElement? getSetter(String name);
+
+  /// Returns the element representing the getter that results from looking up
+  /// the given [name] in this class with respect to the given [library],
+  /// or `null` if the look up fails.
+  ///
+  /// The behavior of this method is defined by the Dart Language Specification
+  /// in section 17.18 Lookup.
+  PropertyAccessorElement? lookUpGetter({
+    required String name,
+    required LibraryElement library,
+  });
+
+  /// Returns the element representing the method that results from looking up
+  /// the given [name] in this class with respect to the given [library],
+  /// or `null` if the look up fails.
+  ///
+  /// The behavior of this method is defined by the Dart Language Specification
+  /// in section 17.18 Lookup.
+  MethodElement? lookUpMethod({
+    required String name,
+    required LibraryElement library,
+  });
+
+  /// Returns the element representing the setter that results from looking up
+  /// the given [name] in this class with respect to the given [library],
+  /// or `null` if the look up fails.
+  ///
+  /// The behavior of this method is defined by the Dart Language Specification
+  /// in section 17.18 Lookup.
+  PropertyAccessorElement? lookUpSetter({
+    required String name,
+    required LibraryElement library,
+  });
 }
 
 /// The result of applying augmentations to a [InterfaceElement].
@@ -166,6 +222,9 @@ abstract class AugmentedInterfaceElement implements AugmentedInstanceElement {
   /// This is a union of mixins applied by the class declaration and all its
   /// augmentations.
   List<InterfaceType> get mixins;
+
+  @override
+  InterfaceType get thisType;
 
   /// The unnamed constructor from [constructors].
   ConstructorElement? get unnamedConstructor;
@@ -206,7 +265,7 @@ abstract class ClassElement implements InterfaceElement {
 
   @experimental
   @override
-  AugmentedClassElement? get augmented;
+  AugmentedClassElement get augmented;
 
   /// Whether the class or its superclass declares a non-final instance field.
   bool get hasNonFinalField;
@@ -244,12 +303,6 @@ abstract class ClassElement implements InterfaceElement {
   /// The final modifier prohibits this class from being extended, implemented,
   /// or mixed in.
   bool get isFinal;
-
-  /// Whether the class is an inline class.
-  ///
-  /// A class is an inline class if it has an explicit `inline` modifier.
-  @experimental
-  bool get isInline;
 
   /// Whether the class is an interface class.
   ///
@@ -563,6 +616,9 @@ abstract class Element implements AnalysisTarget {
   /// Whether the element has an annotation of the form `@doNotStore`.
   bool get hasDoNotStore;
 
+  /// Whether the element has an annotation of the form `@doNotSubmit`.
+  bool get hasDoNotSubmit;
+
   /// Whether the element has an annotation of the form `@factory`.
   bool get hasFactory;
 
@@ -583,6 +639,9 @@ abstract class Element implements AnalysisTarget {
 
   /// Whether the element has an annotation of the form `@literal`.
   bool get hasLiteral;
+
+  /// Whether the element has an annotation of the form `@mustBeConst`.
+  bool get hasMustBeConst;
 
   /// Whether the element has an annotation of the form `@mustBeOverridden`.
   bool get hasMustBeOverridden;
@@ -742,7 +801,8 @@ abstract class Element implements AnalysisTarget {
   /// Clients should not depend on the content of the returned value as it will
   /// be changed if doing so would improve the UX.
   String getDisplayString({
-    required bool withNullability,
+    @Deprecated('Only non-nullable by default mode is supported')
+    bool withNullability = true,
     bool multiline = false,
   });
 
@@ -809,6 +869,9 @@ abstract class ElementAnnotation implements ConstantEvaluationTarget {
   /// Whether the annotation marks the associated element as not to be stored.
   bool get isDoNotStore;
 
+  /// Whether the annotation marks the associated member as not to be used.
+  bool get isDoNotSubmit;
+
   /// Whether the annotation marks the associated member as a factory.
   bool get isFactory;
 
@@ -834,6 +897,10 @@ abstract class ElementAnnotation implements ConstantEvaluationTarget {
 
   /// Whether the annotation marks the associated constructor as being literal.
   bool get isLiteral;
+
+  /// Whether the annotation marks the associated returned element as
+  /// requiring a constant argument.
+  bool get isMustBeConst;
 
   /// Whether the annotation marks the associated member as requiring
   /// subclasses to override this member.
@@ -1159,7 +1226,7 @@ abstract class EnumElement implements InterfaceElement {
 
   @experimental
   @override
-  AugmentedEnumElement? get augmented;
+  AugmentedEnumElement get augmented;
 }
 
 /// An element representing an executable object, including functions, methods,
@@ -1255,7 +1322,7 @@ abstract class ExtensionElement implements InstanceElement {
 
   @experimental
   @override
-  AugmentedExtensionElement? get augmented;
+  AugmentedExtensionElement get augmented;
 
   /// The type that is extended by this extension.
   DartType get extendedType;
@@ -1296,7 +1363,7 @@ abstract class ExtensionTypeElement implements InterfaceElement {
 
   @experimental
   @override
-  AugmentedExtensionTypeElement? get augmented;
+  AugmentedExtensionTypeElement get augmented;
 
   /// The primary constructor of this extension.
   ConstructorElement get primaryConstructor;
@@ -1424,9 +1491,16 @@ abstract class GenericFunctionTypeElement implements FunctionTypedElement {}
 ///
 /// Clients may not extend, implement or mix-in this class.
 abstract class HideElementCombinator implements NamespaceCombinator {
+  /// The offset of the character immediately following the last character of
+  /// this node.
+  int get end;
+
   /// The names that are not to be made visible in the importing library even
   /// if they are defined in the imported library.
   List<String> get hiddenNames;
+
+  /// The offset of the 'hide' keyword of this element.
+  int get offset;
 }
 
 /// Usage of a [PrefixElement] in an `import` directive.
@@ -1464,9 +1538,12 @@ abstract class InstanceElement
   @experimental
   InstanceElement? get augmentationTarget;
 
-  /// The result of applying augmentations.
+  /// The result of merging augmentations.
+  ///
+  /// It includes the members of the base element and its augmentations as
+  /// specified by the merge operations.
   @experimental
-  AugmentedInstanceElement? get augmented;
+  AugmentedInstanceElement get augmented;
 
   @override
   CompilationUnitElement get enclosingElement;
@@ -1484,11 +1561,7 @@ abstract class InstanceElement
 
   /// The type of `this` expression.
   ///
-  /// For a class like `class MyClass<T, U> {}` the returned type is equivalent
-  /// to the type `MyClass<T, U>`. So, the type arguments are the types of the
-  /// type parameters, and either `none` or `star` is used for the nullability
-  /// suffix is used, depending on the nullability status of the declaring
-  /// library.
+  /// Same as `augmented.thisType`.
   DartType get thisType;
 }
 
@@ -1506,7 +1579,7 @@ abstract class InterfaceElement implements InstanceElement {
 
   @experimental
   @override
-  AugmentedInterfaceElement? get augmented;
+  AugmentedInterfaceElement get augmented;
 
   /// The declared constructors.
   ///
@@ -1633,7 +1706,7 @@ abstract class InterfaceElement implements InstanceElement {
   /// <i>m</i> in <i>S</i> with respect to <i>L</i>. Otherwise, we say that the
   /// lookup has failed.
   /// </blockquote>
-  // TODO(scheglov): Deprecate and remove it.
+  @Deprecated('Use `element.augmented.lookUpGetter`.')
   PropertyAccessorElement? lookUpGetter(
       String getterName, LibraryElement library);
 
@@ -1733,7 +1806,7 @@ abstract class InterfaceElement implements InstanceElement {
   /// <i>S</i> with respect to <i>L</i>. Otherwise, we say that the lookup has
   /// failed.
   /// </blockquote>
-  // TODO(scheglov): Deprecate and remove it.
+  @Deprecated('Use `element.augmented.lookUpMethod`.')
   MethodElement? lookUpMethod(String methodName, LibraryElement library);
 
   /// Returns the element representing the setter that results from looking up
@@ -1752,7 +1825,7 @@ abstract class InterfaceElement implements InstanceElement {
   /// <i>m</i> in <i>S</i> with respect to <i>L</i>. Otherwise, we say that the
   /// lookup has failed.
   /// </blockquote>
-  // TODO(scheglov): Deprecate and remove it.
+  @Deprecated('Use `element.augmented.lookUpSetter`.')
   PropertyAccessorElement? lookUpSetter(
       String setterName, LibraryElement library);
 }
@@ -1865,10 +1938,12 @@ abstract class LibraryElement
   /// If a legacy library, returns the legacy view on the [element].
   ///
   /// Otherwise, return the original element.
+  @Deprecated('Only non-nullable by default mode is supported')
   T toLegacyElementIfOptOut<T extends Element>(T element);
 
   /// If a legacy library, return the legacy version of the [type].
   /// Otherwise, return the original type.
+  @Deprecated('Only non-nullable by default mode is supported')
   DartType toLegacyTypeIfOptOut(DartType type);
 }
 
@@ -1955,6 +2030,7 @@ abstract class LibraryOrAugmentationElement implements Element {
   /// version override comment at the top of the file.
   FeatureSet get featureSet;
 
+  @Deprecated('Only non-nullable by default mode is supported')
   bool get isNonNullableByDefault;
 
   /// The language version for this library.
@@ -2037,7 +2113,7 @@ abstract class MixinElement implements InterfaceElement {
 
   @experimental
   @override
-  AugmentedMixinElement? get augmented;
+  AugmentedMixinElement get augmented;
 
   /// Whether the mixin is a base mixin.
   ///
@@ -2185,7 +2261,8 @@ abstract class ParameterElement
   /// to the given [buffer].
   void appendToWithoutDelimiters(
     StringBuffer buffer, {
-    bool withNullability = false,
+    @Deprecated('Only non-nullable by default mode is supported')
+    bool withNullability = true,
   });
 }
 
@@ -2286,7 +2363,17 @@ abstract class PropertyAccessorElement implements ExecutableElement {
   ///
   /// If this accessor was explicitly defined (is not synthetic) then the
   /// variable associated with it will be synthetic.
+  @Deprecated('Use variable2')
   PropertyInducingElement get variable;
+
+  /// The field or top-level variable associated with this accessor.
+  ///
+  /// If this accessor was explicitly defined (is not synthetic) then the
+  /// variable associated with it will be synthetic.
+  ///
+  /// If this accessor is an augmentation, and [augmentationTarget] is `null`,
+  /// the variable is `null`.
+  PropertyInducingElement? get variable2;
 }
 
 /// A variable that has an associated getter and possibly a setter. Note that
@@ -2428,6 +2515,11 @@ abstract class TypeAliasElement
 
   @override
   CompilationUnitElement get enclosingElement;
+
+  /// Whether the element is an augmentation.
+  ///
+  /// If `true`, declaration has the explicit `augment` modifier.
+  bool get isAugmentation;
 
   @override
   String get name;

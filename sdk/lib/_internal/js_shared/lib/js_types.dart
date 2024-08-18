@@ -20,16 +20,9 @@ typedef JSAnyRepType = Object;
 
 typedef JSObjectRepType = interceptors.JSObject;
 
-// TODO(srujzs): The JS function types have to be typed as
-// `LegacyJavaScriptObject` for now until we reify JS functions as
-// `JavaScriptFunction` instead of `LegacyJavaScriptObject` in DDC. This will
-// happen with the new RTI. Note that we *cannot* make this `Function`, even
-// though all JS functions are Dart functions in our type system, because
-// `Function` is not <: `JSObject`. This subtyping relationship is required for
-// `dart:js_interop`'s extension types.
-typedef JSFunctionRepType = interceptors.LegacyJavaScriptObject;
+typedef JSFunctionRepType = interceptors.JavaScriptFunction;
 
-typedef JSExportedDartFunctionRepType = interceptors.LegacyJavaScriptObject;
+typedef JSExportedDartFunctionRepType = interceptors.JavaScriptFunction;
 
 typedef JSArrayRepType = interceptors.JSArray<Object?>;
 
@@ -71,7 +64,9 @@ typedef JSSymbolRepType = interceptors.JavaScriptSymbol;
 
 typedef JSBigIntRepType = interceptors.JavaScriptBigInt;
 
-/// [JSVoid] is just a typedef for [void]. While we could just use
-/// `JSUndefined`, in the future we may be able to use this to elide `return`s
-/// in JS trampolines.
+// While this type is not a JS type, it is here for convenience so we don't need
+// to create a new shared library.
+typedef ExternalDartReferenceRepType<T> = T;
+
+// JSVoid is just a typedef for void.
 typedef JSVoidRepType = void;

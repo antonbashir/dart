@@ -77,12 +77,20 @@ static ExtraLoopInfo* ComputeExtraLoopInfo(Zone* zone, LoopInfo* loop_info) {
   return new (zone) ExtraLoopInfo(start, end);
 }
 
+static const GrowableArray<BlockEntryInstr*>& BlockOrderForAllocation(
+    const FlowGraph& flow_graph) {
+  // Currently CodegenBlockOrder is not topologically sorted in JIT and can't
+  // be used for register allocation.
+  return CompilerState::Current().is_aot() ? *flow_graph.CodegenBlockOrder()
+                                           : flow_graph.reverse_postorder();
+}
+
 FlowGraphAllocator::FlowGraphAllocator(const FlowGraph& flow_graph,
                                        bool intrinsic_mode)
     : flow_graph_(flow_graph),
       reaching_defs_(flow_graph),
       value_representations_(flow_graph.max_vreg()),
-      block_order_(flow_graph.reverse_postorder()),
+      block_order_(BlockOrderForAllocation(flow_graph)),
       postorder_(flow_graph.postorder()),
       instructions_(),
       block_entries_(),
@@ -202,6 +210,22 @@ void SSALivenessAnalysis::ComputeInitialSets() {
         live_in->Add(input->definition()->vreg(0));
         if (input->definition()->HasPairRepresentation()) {
           live_in->Add(input->definition()->vreg(1));
+        }
+      }
+
+      // Process detached MoveArguments interpreting them as
+      // fixed register inputs.
+      if (current->ArgumentCount() != 0) {
+        auto move_arguments = current->GetMoveArguments();
+        for (auto move : *move_arguments) {
+          if (move->is_register_move()) {
+            auto input = move->value();
+
+            live_in->Add(input->definition()->vreg(0));
+            if (input->definition()->HasPairRepresentation()) {
+              live_in->Add(input->definition()->vreg(1));
+            }
+          }
         }
       }
 
@@ -566,19 +590,21 @@ static bool HasOnlyUnconstrainedUses(LiveRange* range) {
 }
 
 void FlowGraphAllocator::BuildLiveRanges() {
-  const intptr_t block_count = postorder_.length();
-  ASSERT(postorder_.Last()->IsGraphEntry());
+  const intptr_t block_count = block_order_.length();
+  ASSERT(block_order_[0]->IsGraphEntry());
   BitVector* current_interference_set = nullptr;
   Zone* zone = flow_graph_.zone();
-  for (intptr_t i = 0; i < (block_count - 1); i++) {
-    BlockEntryInstr* block = postorder_[i];
+  for (intptr_t x = block_count - 1; x > 0; --x) {
+    BlockEntryInstr* block = block_order_[x];
+
     ASSERT(BlockEntryAt(block->start_pos()) == block);
 
     // For every SSA value that is live out of this block, create an interval
     // that covers the whole block.  It will be shortened if we encounter a
     // definition of this value in this block.
-    for (BitVector::Iterator it(liveness_.GetLiveOutSetAt(i)); !it.Done();
-         it.Advance()) {
+    for (BitVector::Iterator it(
+             liveness_.GetLiveOutSetAt(block->postorder_number()));
+         !it.Done(); it.Advance()) {
       LiveRange* range = GetLiveRange(it.Current());
       range->AddUseInterval(block->start_pos(), block->end_pos());
     }
@@ -621,8 +647,9 @@ void FlowGraphAllocator::BuildLiveRanges() {
     if (block->IsLoopHeader()) {
       ASSERT(loop_info != nullptr);
       current_interference_set = nullptr;
-      for (BitVector::Iterator it(liveness_.GetLiveInSetAt(i)); !it.Done();
-           it.Advance()) {
+      for (BitVector::Iterator it(
+               liveness_.GetLiveInSetAt(block->postorder_number()));
+           !it.Done(); it.Advance()) {
         LiveRange* range = GetLiveRange(it.Current());
         intptr_t loop_end = extra_loop_info_[loop_info->id()]->end;
         if (HasOnlyUnconstrainedUsesInLoop(range, loop_end)) {
@@ -689,10 +716,11 @@ void FlowGraphAllocator::BuildLiveRanges() {
 }
 
 void FlowGraphAllocator::SplitInitialDefinitionAt(LiveRange* range,
-                                                  intptr_t pos) {
+                                                  intptr_t pos,
+                                                  Location::Kind kind) {
   if (range->End() > pos) {
     LiveRange* tail = range->SplitAt(pos);
-    CompleteRange(tail, Location::kRegister);
+    CompleteRange(tail, kind);
   }
 }
 
@@ -778,60 +806,26 @@ void FlowGraphAllocator::ProcessInitialDefinition(
   // Save the range end because it may change below.
   const intptr_t range_end = range->End();
 
-  // TODO(31956): Clean up this code and factor common functionality out.
-  // Consider also making a separate [ProcessInitialDefinition] for
-  // [CatchBlockEntry]'s.
-  if (block->IsCatchBlockEntry()) {
-    if (SpecialParameterInstr* param = defn->AsSpecialParameter()) {
-      Location loc;
-      switch (param->kind()) {
-        case SpecialParameterInstr::kException:
-          loc = LocationExceptionLocation();
-          break;
-        case SpecialParameterInstr::kStackTrace:
-          loc = LocationStackTraceLocation();
-          break;
-        default:
-          UNREACHABLE();
-      }
-      range->set_assigned_location(loc);
-      CompleteRange(defn, range);
-      range->finger()->Initialize(range);
-      SplitInitialDefinitionAt(range, GetLifetimePosition(block) + 1);
-      ConvertAllUses(range);
-
-      // We have exception/stacktrace in a register and need to
-      // ensure this register is not available for register allocation during
-      // the [CatchBlockEntry] to ensure it's not overwritten.
-      if (loc.IsRegister()) {
-        BlockLocation(loc, GetLifetimePosition(block),
-                      GetLifetimePosition(block) + 1);
-      }
-      return;
-    }
-  }
-
   if (auto param = defn->AsParameter()) {
-    const auto location =
-        ComputeParameterLocation(block, param, param->base_reg(),
-                                 second_location_for_definition ? 1 : 0);
+    auto location = param->location();
+    RELEASE_ASSERT(!location.IsInvalid());
+    if (location.IsPairLocation()) {
+      location =
+          location.AsPairLocation()->At(second_location_for_definition ? 1 : 0);
+    }
     range->set_assigned_location(location);
-    range->set_spill_slot(location);
-  } else if (defn->IsSpecialParameter()) {
-    SpecialParameterInstr* param = defn->AsSpecialParameter();
-    ASSERT(param->kind() == SpecialParameterInstr::kArgDescriptor);
-    Location loc;
-    loc = Location::RegisterLocation(ARGS_DESC_REG);
-    range->set_assigned_location(loc);
-    if (loc.IsRegister()) {
+    if (location.IsMachineRegister()) {
       CompleteRange(defn, range);
-      if (range->End() > (GetLifetimePosition(block) + 2)) {
-        SplitInitialDefinitionAt(range, GetLifetimePosition(block) + 2);
+      if (range->End() > (GetLifetimePosition(block) + 1)) {
+        SplitInitialDefinitionAt(range, GetLifetimePosition(block) + 1,
+                                 location.kind());
       }
       ConvertAllUses(range);
-      BlockLocation(loc, GetLifetimePosition(block),
-                    GetLifetimePosition(block) + 2);
+      BlockLocation(location, GetLifetimePosition(block),
+                    GetLifetimePosition(block) + 1);
       return;
+    } else {
+      range->set_spill_slot(location);
     }
   } else {
     ConstantInstr* constant = defn->AsConstant();
@@ -1485,6 +1479,32 @@ void FlowGraphAllocator::ProcessOneInstruction(BlockEntryInstr* block,
     }
   }
 
+  // Process MoveArguments interpreting them as fixed register inputs.
+  if (current->ArgumentCount() != 0) {
+    auto move_arguments = current->GetMoveArguments();
+    for (auto move : *move_arguments) {
+      if (move->is_register_move()) {
+        auto input = move->value();
+        if (move->location().IsPairLocation()) {
+          auto pair = move->location().AsPairLocation();
+          RELEASE_ASSERT(pair->At(0).IsMachineRegister() &&
+                         pair->At(1).IsMachineRegister());
+          ProcessOneInput(block, pos, pair->SlotAt(0), input,
+                          input->definition()->vreg(0),
+                          /*live_registers=*/nullptr);
+          ProcessOneInput(block, pos, pair->SlotAt(1), input,
+                          input->definition()->vreg(1),
+                          /*live_registers=*/nullptr);
+        } else {
+          RELEASE_ASSERT(move->location().IsMachineRegister());
+          ProcessOneInput(block, pos, move->location_slot(), input,
+                          input->definition()->vreg(0),
+                          /*live_registers=*/nullptr);
+        }
+      }
+    }
+  }
+
   // Process temps.
   for (intptr_t j = 0; j < locs->temp_count(); j++) {
     // Expected shape of live range:
@@ -1672,35 +1692,28 @@ static ParallelMoveInstr* CreateParallelMoveAfter(Instruction* instr,
 void FlowGraphAllocator::NumberInstructions() {
   intptr_t pos = 0;
 
-  // The basic block order is reverse postorder.
-  const intptr_t block_count = postorder_.length();
-  for (intptr_t i = block_count - 1; i >= 0; i--) {
-    BlockEntryInstr* block = postorder_[i];
-
+  for (auto block : block_order_) {
     instructions_.Add(block);
     block_entries_.Add(block);
     block->set_start_pos(pos);
     SetLifetimePosition(block, pos);
     pos += 2;
 
-    for (ForwardInstructionIterator it(block); !it.Done(); it.Advance()) {
-      Instruction* current = it.Current();
+    for (auto instr : block->instructions()) {
       // Do not assign numbers to parallel move instructions.
-      if (!current->IsParallelMove()) {
-        instructions_.Add(current);
-        block_entries_.Add(block);
-        SetLifetimePosition(current, pos);
-        pos += 2;
-      }
+      if (instr->IsParallelMove()) continue;
+
+      instructions_.Add(instr);
+      block_entries_.Add(block);
+      SetLifetimePosition(instr, pos);
+      pos += 2;
     }
     block->set_end_pos(pos);
   }
 
   // Create parallel moves in join predecessors.  This must be done after
   // all instructions are numbered.
-  for (intptr_t i = block_count - 1; i >= 0; i--) {
-    BlockEntryInstr* block = postorder_[i];
-
+  for (auto block : block_order_) {
     // For join entry predecessors create phi resolution moves if
     // necessary. They will be populated by the register allocator.
     JoinEntryInstr* join = block->AsJoinEntry();
@@ -2312,6 +2325,21 @@ bool FlowGraphAllocator::AllocateFreeRegister(LiveRange* unallocated) {
   // If hint is available try hint first.
   // TODO(vegorov): ensure that phis are hinted on the back edge.
   Location hint = unallocated->finger()->FirstHint();
+
+  // Handle special case for incoming register values (see
+  // ProcessInitialDefinition): we implement them differently from fixed outputs
+  // which use prefilled ParallelMove, but that means there is not hinted
+  // use created and as a result we produce worse code by assigning a random
+  // free register.
+  if (!hint.IsMachineRegister() && unallocated->vreg() >= 0) {
+    auto* parent_range = GetLiveRange(unallocated->vreg());
+    if (parent_range->End() == unallocated->Start() &&
+        !IsBlockEntry(unallocated->Start()) &&
+        parent_range->assigned_location().IsMachineRegister()) {
+      hint = parent_range->assigned_location();
+    }
+  }
+
   if (hint.IsMachineRegister()) {
     if (!blocked_registers_[hint.register_code()]) {
       free_until =
@@ -2759,6 +2787,23 @@ bool LiveRange::Contains(intptr_t pos) const {
   return false;
 }
 
+bool FlowGraphAllocator::IsLiveAfterCatchEntry(
+    CatchBlockEntryInstr* catch_entry,
+    ParameterInstr* param) {
+  ASSERT(param->GetBlock() == catch_entry);
+  auto* raw_exception_var = catch_entry->raw_exception_var();
+  if (raw_exception_var != nullptr &&
+      param->env_index() == flow_graph_.EnvIndex(raw_exception_var)) {
+    return true;
+  }
+  auto* raw_stacktrace_var = catch_entry->raw_stacktrace_var();
+  if (raw_stacktrace_var != nullptr &&
+      param->env_index() == flow_graph_.EnvIndex(raw_stacktrace_var)) {
+    return true;
+  }
+  return false;
+}
+
 void FlowGraphAllocator::AssignSafepoints(Definition* defn, LiveRange* range) {
   for (intptr_t i = safepoints_.length() - 1; i >= 0; i--) {
     Instruction* safepoint_instr = safepoints_[i];
@@ -2768,7 +2813,18 @@ void FlowGraphAllocator::AssignSafepoints(Definition* defn, LiveRange* range) {
       // definition's liverange.
       continue;
     }
-
+    // Exception and stack trace parameters of CatchBlockEntry are live
+    // only after catch block entry. Their spill slots should not be scanned
+    // if GC occurs during a safepoint with a catch block entry PC
+    // (before control is transferred to the catch entry).
+    if (auto* catch_entry = safepoint_instr->AsCatchBlockEntry()) {
+      if (auto* param = defn->AsParameter()) {
+        if ((param->GetBlock() == catch_entry) &&
+            IsLiveAfterCatchEntry(catch_entry, param)) {
+          continue;
+        }
+      }
+    }
     const intptr_t pos = GetLifetimePosition(safepoint_instr);
     if (range->End() <= pos) break;
 
@@ -2826,6 +2882,8 @@ bool FlowGraphAllocator::UnallocatedIsSorted() {
     LiveRange* a = unallocated_[i];
     LiveRange* b = unallocated_[i - 1];
     if (!ShouldBeAllocatedBefore(a, b)) {
+      a->Print();
+      b->Print();
       UNREACHABLE();
       return false;
     }
@@ -2929,8 +2987,8 @@ static void EmitMoveOnEdge(BlockEntryInstr* succ,
                            BlockEntryInstr* pred,
                            const MoveOperands& move) {
   Instruction* last = pred->last_instruction();
-  if ((last->SuccessorCount() == 1) && !pred->IsGraphEntry()) {
-    ASSERT(last->IsGoto());
+  if (last->IsGoto() && !pred->IsGraphEntry()) {
+    ASSERT(last->SuccessorCount() == 1);
     last->AsGoto()->GetParallelMove()->AddMove(move.dest(), move.src());
   } else {
     succ->GetParallelMove()->AddMove(move.dest(), move.src());
@@ -3157,10 +3215,7 @@ void FlowGraphAllocator::CollectRepresentations() {
     }
   }
 
-  for (BlockIterator it = flow_graph_.reverse_postorder_iterator(); !it.Done();
-       it.Advance()) {
-    BlockEntryInstr* block = it.Current();
-
+  for (auto block : block_order_) {
     if (auto entry = block->AsBlockEntryWithInitialDefs()) {
       initial_definitions = entry->initial_definitions();
       for (intptr_t i = 0; i < initial_definitions->length(); ++i) {
@@ -3186,9 +3241,8 @@ void FlowGraphAllocator::CollectRepresentations() {
     }
 
     // Normal instructions.
-    for (ForwardInstructionIterator instr_it(block); !instr_it.Done();
-         instr_it.Advance()) {
-      Definition* def = instr_it.Current()->AsDefinition();
+    for (auto instr : block->instructions()) {
+      Definition* def = instr->AsDefinition();
       if ((def != nullptr) && (def->vreg(0) >= 0)) {
         const intptr_t vreg = def->vreg(0);
         value_representations_[vreg] =
@@ -3199,47 +3253,6 @@ void FlowGraphAllocator::CollectRepresentations() {
         }
       }
     }
-  }
-}
-
-Location FlowGraphAllocator::ComputeParameterLocation(BlockEntryInstr* block,
-                                                      ParameterInstr* param,
-                                                      Register base_reg,
-                                                      intptr_t pair_index) {
-  ASSERT(pair_index == 0 || param->HasPairRepresentation());
-
-  // Only function entries may have unboxed parameters, possibly making the
-  // parameters size different from the number of parameters on 32-bit
-  // architectures.
-  const intptr_t parameters_size = block->IsFunctionEntry()
-                                       ? flow_graph_.direct_parameters_size()
-                                       : flow_graph_.num_direct_parameters();
-  intptr_t slot_index = param->param_offset() - pair_index;
-  ASSERT(slot_index >= 0);
-  if (base_reg == FPREG) {
-    // Slot index for the rightmost fixed parameter is -1.
-    slot_index -= parameters_size;
-  } else {
-    // Slot index for a "frameless" parameter is reversed.
-    ASSERT(base_reg == SPREG);
-    ASSERT(slot_index < parameters_size);
-    slot_index = parameters_size - 1 - slot_index;
-  }
-
-  if (base_reg == FPREG) {
-    slot_index =
-        compiler::target::frame_layout.FrameSlotForVariableIndex(-slot_index);
-  } else {
-    ASSERT(base_reg == SPREG);
-    slot_index += compiler::target::frame_layout.last_param_from_entry_sp;
-  }
-
-  if (param->representation() == kUnboxedInt64 ||
-      param->representation() == kTagged) {
-    return Location::StackSlot(slot_index, base_reg);
-  } else {
-    ASSERT(param->representation() == kUnboxedDouble);
-    return Location::DoubleStackSlot(slot_index, base_reg);
   }
 }
 
@@ -3274,11 +3287,21 @@ void FlowGraphAllocator::RemoveFrameIfNotNeeded() {
 #if defined(TARGET_ARCH_ARM64) || defined(TARGET_ARCH_ARM)
   bool has_write_barrier_call = false;
 #endif
-  for (auto block : flow_graph_.reverse_postorder()) {
+  intptr_t num_calls_on_shared_slow_path = 0;
+  for (auto block : block_order_) {
     for (auto instruction : block->instructions()) {
       if (instruction->HasLocs() && instruction->locs()->can_call()) {
-        // Function contains a call and thus needs a frame.
-        return;
+        if (!instruction->locs()->call_on_shared_slow_path()) {
+          // Function contains a call and thus needs a frame.
+          return;
+        }
+        // For calls on shared slow paths the frame can be created on
+        // a slow path around the call. Only allow one call on a shared
+        // slow path to avoid extra code size.
+        ++num_calls_on_shared_slow_path;
+        if (num_calls_on_shared_slow_path > 1) {
+          return;
+        }
       }
 
       // Some instructions contain write barriers inside, which can call
@@ -3326,10 +3349,18 @@ void FlowGraphAllocator::RemoveFrameIfNotNeeded() {
   // Fix location of parameters to use SP as their base register instead of FP.
   auto fix_location_for = [&](BlockEntryInstr* block, ParameterInstr* param,
                               intptr_t vreg, intptr_t pair_index) {
-    auto fp_relative =
-        ComputeParameterLocation(block, param, FPREG, pair_index);
-    auto sp_relative =
-        ComputeParameterLocation(block, param, SPREG, pair_index);
+    auto location = param->location();
+    if (location.IsPairLocation()) {
+      ASSERT(param->HasPairRepresentation());
+      location = location.AsPairLocation()->At(pair_index);
+    }
+    if (!location.HasStackIndex() || location.base_reg() != FPREG) {
+      return;
+    }
+
+    const auto fp_relative = location;
+    const auto sp_relative = fp_relative.ToEntrySpRelative();
+
     for (LiveRange* range = GetLiveRange(vreg); range != nullptr;
          range = range->next_sibling()) {
       if (range->assigned_location().Equals(fp_relative)) {
@@ -3360,14 +3391,19 @@ void FlowGraphAllocator::RemoveFrameIfNotNeeded() {
   }
 }
 
+// Locations assigned by this pass are used when constructing [DeoptInfo] so
+// there is no need to worry about assigning out locations for detached
+// [MoveArgument] instructions - because we don't support register based
+// calling convention in JIT.
 void FlowGraphAllocator::AllocateOutgoingArguments() {
   const intptr_t total_spill_slot_count =
       flow_graph_.graph_entry()->spill_slot_count();
 
-  for (auto block : flow_graph_.reverse_postorder()) {
+  for (auto block : block_order_) {
     for (auto instr : block->instructions()) {
       if (auto move_arg = instr->AsMoveArgument()) {
-        Location loc;
+        // Register calling conventions are not used in JIT.
+        ASSERT(!move_arg->is_register_move());
 
         const intptr_t spill_index =
             (total_spill_slot_count - 1) - move_arg->sp_relative_index();
@@ -3387,7 +3423,7 @@ void FlowGraphAllocator::AllocateOutgoingArguments() {
 void FlowGraphAllocator::ScheduleParallelMoves() {
   ParallelMoveResolver resolver;
 
-  for (auto block : flow_graph_.reverse_postorder()) {
+  for (auto block : block_order_) {
     if (block->HasParallelMove()) {
       resolver.Resolve(block->parallel_move());
     }

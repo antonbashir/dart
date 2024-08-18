@@ -16,7 +16,7 @@ import 'commandline_options.dart';
 import 'common/ram_usage.dart';
 import 'compiler.dart' as defaultCompiler show Compiler;
 import 'io/mapped_file.dart';
-import 'options.dart' show CompilerOptions, Dart2JSStage, FeatureOptions;
+import 'options.dart' show CompilerOptions, CompilerStage, FeatureOptions;
 import 'source_file_provider.dart';
 import 'util/command_line.dart';
 import 'util/util.dart' show stackTraceFilePrefix;
@@ -38,7 +38,7 @@ String? BUILD_ID;
 typedef HandleOption = void Function(String data);
 typedef HandleMultiOption = void Function(Iterator<String> data);
 
-abstract class OptionHandler<T> {
+abstract class OptionHandler<T extends Object> {
   String get pattern;
   void handle(T argument);
 }
@@ -236,7 +236,7 @@ Future<api.CompilationResult> compile(List<String> argv,
     }
   }
 
-  setStrip(String argument) {
+  Never setStrip(String argument) {
     _helpAndFail("Option '--force-strip' is not in use now that"
         "--output-type=dart is no longer supported.");
   }
@@ -417,21 +417,14 @@ Future<api.CompilationResult> compile(List<String> argv,
     _OneOption('--libraries-spec=.+', setLibrarySpecificationUri),
     _OneOption('${Flags.dillDependencies}=.+', setDillDependencies),
     _OneOption('${Flags.sources}=.+', ignoreOption),
-    _OneOption('${Flags.readModularAnalysis}=.+', ignoreOption),
-    _OneOption('${Flags.writeModularAnalysis}=.+', ignoreOption),
-    _OneOption('${Flags.readData}=.+', setDataUri(Flags.readData)),
-    _OneOption('${Flags.writeData}=.+', setDataUri(Flags.writeData)),
     _OneOption(
-        '${Flags.readClosedWorld}=.+', setDataUri(Flags.readClosedWorld)),
-    _OneOption(
-        '${Flags.writeClosedWorld}=.+', setDataUri(Flags.writeClosedWorld)),
-    _OneOption('${Flags.readCodegen}=.+', setDataUri(Flags.readCodegen)),
-    _OneOption('${Flags.writeCodegen}=.+', setDataUri(Flags.writeCodegen)),
+        '${Flags.globalInferenceUri}=.+', setDataUri(Flags.globalInferenceUri)),
+    _OneOption('${Flags.closedWorldUri}=.+', setDataUri(Flags.closedWorldUri)),
+    _OneOption('${Flags.codegenUri}=.+', setDataUri(Flags.codegenUri)),
     _OneOption('${Flags.codegenShard}=.+', passThrough),
     _OneOption('${Flags.codegenShards}=.+', passThrough),
     _OneOption(Flags.cfeOnly, passThrough),
     _OneOption(Flags.memoryMappedFiles, passThrough),
-    _OneOption(Flags.noClosedWorldInData, ignoreOption),
     _OneOption('${Flags.stage}=.+', passThrough),
     _OneOption(Flags.debugGlobalInference, passThrough),
     _ManyOptions('--output(?:=.+)?|--out(?:=.+)?|-o.*', setOutput),
@@ -459,6 +452,8 @@ Future<api.CompilationResult> compile(List<String> argv,
     _OneOption(Flags.enableNullAssertions, passThrough),
     _OneOption(Flags.nativeNullAssertions, passThrough),
     _OneOption(Flags.noNativeNullAssertions, passThrough),
+    _OneOption(Flags.interopNullAssertions, passThrough),
+    _OneOption(Flags.noInteropNullAssertions, passThrough),
     _OneOption(Flags.trustTypeAnnotations, setTrustTypeAnnotations),
     _OneOption(Flags.trustPrimitives, passThrough),
     _OneOption(Flags.trustJSInteropTypeAnnotations, ignoreOption),
@@ -489,9 +484,7 @@ Future<api.CompilationResult> compile(List<String> argv,
     _OneOption('${Flags.readProgramSplit}=.+', passThrough),
     _OneOption('${Flags.dumpInfo}|${Flags.dumpInfo}=.+', setDumpInfo),
     _OneOption(
-        '${Flags.readDumpInfoData}=.+', setDataUri(Flags.readDumpInfoData)),
-    _OneOption(
-        '${Flags.writeDumpInfoData}=.+', setDataUri(Flags.writeDumpInfoData)),
+        '${Flags.dumpInfoDataUri}=.+', setDataUri(Flags.dumpInfoDataUri)),
     _OneOption('--disallow-unsafe-eval', ignoreOption),
     _OneOption(Option.showPackageWarnings, passThrough),
     _OneOption(Option.enableLanguageExperiments, passThrough),
@@ -502,6 +495,7 @@ Future<api.CompilationResult> compile(List<String> argv,
     _OneOption(Flags.omitImplicitChecks, passThrough),
     _OneOption(Flags.omitAsCasts, passThrough),
     _OneOption(Flags.laxRuntimeTypeToString, passThrough),
+    _OneOption(Flags.enableProtoShaking, passThrough),
     _OneOption(Flags.benchmarkingProduction, passThrough),
     _OneOption(Flags.benchmarkingExperiment, passThrough),
     _OneOption(Flags.soundNullSafety, setNullSafetyMode),
@@ -618,7 +612,7 @@ Future<api.CompilationResult> compile(List<String> argv,
   }
 
   for (String hint in hints) {
-    diagnostic.info(hint, api.Diagnostic.HINT);
+    diagnostic.info(hint, api.Diagnostic.hint);
   }
 
   if (wantHelp || wantVersion) {
@@ -747,59 +741,59 @@ Future<api.CompilationResult> compile(List<String> argv,
 
     String? summary;
     switch (compilerOptions.stage) {
-      case Dart2JSStage.all:
-      case Dart2JSStage.cfe:
-      case Dart2JSStage.allFromDill:
-      case Dart2JSStage.cfeFromDill:
+      case CompilerStage.all:
+      case CompilerStage.cfe:
+      case CompilerStage.dumpInfoAll:
         final sourceCharCount =
             _formatCharacterCount(inputProvider.sourceBytesFromDill);
         inputName = 'input bytes ($sourceCharCount characters source)';
         inputSize = inputProvider.bytesRead;
         summary = 'Dart file $input ';
         break;
-      case Dart2JSStage.closedWorld:
-      case Dart2JSStage.deferredLoadIds:
+      case CompilerStage.closedWorld:
+      case CompilerStage.deferredLoadIds:
         inputName = 'input bytes';
         inputSize = inputProvider.bytesRead;
         summary = 'Dart file $input ';
         break;
-      case Dart2JSStage.globalInference:
+      case CompilerStage.globalInference:
         inputName = 'bytes data';
         inputSize = inputProvider.bytesRead;
         String dataInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.closedWorld),
+            compilerOptions.dataUriForStage(CompilerStage.closedWorld),
             Platform.isWindows);
         summary = 'Data files $input and $dataInput ';
         break;
-      case Dart2JSStage.codegenSharded:
-      case Dart2JSStage.codegenAndJsEmitter:
+      case CompilerStage.codegenSharded:
+      case CompilerStage.codegenAndJsEmitter:
+      case CompilerStage.dumpInfo:
         inputName = 'bytes data';
         inputSize = inputProvider.bytesRead;
         String worldInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.closedWorld),
+            compilerOptions.dataUriForStage(CompilerStage.closedWorld),
             Platform.isWindows);
         String dataInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.globalInference),
+            compilerOptions.dataUriForStage(CompilerStage.globalInference),
             Platform.isWindows);
         summary = 'Data files $input, $worldInput, and $dataInput ';
         break;
-      case Dart2JSStage.jsEmitter:
+      case CompilerStage.jsEmitter:
         inputName = 'bytes data';
         inputSize = inputProvider.bytesRead;
         String worldInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.closedWorld),
+            compilerOptions.dataUriForStage(CompilerStage.closedWorld),
             Platform.isWindows);
         String dataInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.globalInference),
+            compilerOptions.dataUriForStage(CompilerStage.globalInference),
             Platform.isWindows);
         String codeInput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataInputUriForStage(Dart2JSStage.codegenSharded),
+            compilerOptions.dataUriForStage(CompilerStage.codegenSharded),
             Platform.isWindows);
         summary = 'Data files $input, $worldInput, $dataInput and '
             '${codeInput}[0-${compilerOptions.codegenShards! - 1}] ';
@@ -807,10 +801,11 @@ Future<api.CompilationResult> compile(List<String> argv,
     }
 
     switch (compilerOptions.stage) {
-      case Dart2JSStage.all:
-      case Dart2JSStage.allFromDill:
-      case Dart2JSStage.jsEmitter:
-      case Dart2JSStage.codegenAndJsEmitter:
+      case CompilerStage.all:
+      case CompilerStage.dumpInfoAll:
+      case CompilerStage.jsEmitter:
+      case CompilerStage.codegenAndJsEmitter:
+      case CompilerStage.dumpInfo:
         processName = 'Compiled';
         outputName = 'characters JavaScript';
         outputSize = outputProvider.totalCharactersWrittenJavaScript;
@@ -819,51 +814,56 @@ Future<api.CompilationResult> compile(List<String> argv,
             Uri.base, out ?? Uri.parse('out.js'), Platform.isWindows);
         summary += 'compiled to JavaScript: ${output}';
         break;
-      case Dart2JSStage.cfe:
-      case Dart2JSStage.cfeFromDill:
+      case CompilerStage.cfe:
         processName = 'Compiled';
         outputName = 'kernel bytes';
         outputSize = outputProvider.totalDataWritten;
         String output = fe.relativizeUri(Uri.base, out!, Platform.isWindows);
         summary += 'compiled to dill: ${output}.';
         break;
-      case Dart2JSStage.closedWorld:
+      case CompilerStage.closedWorld:
         processName = 'Serialized';
         outputName = 'bytes data';
         outputSize = outputProvider.totalDataWritten;
+        final producesDill = compilerOptions.producesModifiedDill;
         String dataOutput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataOutputUriForStage(compilerOptions.stage),
+            compilerOptions.dataUriForStage(compilerOptions.stage),
             Platform.isWindows);
-        summary += 'serialized to data: ${dataOutput}.';
+        String summaryLine = dataOutput;
+        if (producesDill) {
+          summaryLine += ' and ';
+          summaryLine += fe.relativizeUri(Uri.base, out!, Platform.isWindows);
+        }
+        summary += 'serialized to data: $summaryLine.';
         break;
-      case Dart2JSStage.deferredLoadIds:
+      case CompilerStage.deferredLoadIds:
         processName = 'Serialized';
         outputName = 'character map';
         outputSize = outputProvider.totalCharactersWritten;
         String dataOutput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataOutputUriForStage(compilerOptions.stage),
+            compilerOptions.dataUriForStage(compilerOptions.stage),
             Platform.isWindows);
         summary += 'mapped to: ${dataOutput}.';
         break;
-      case Dart2JSStage.globalInference:
+      case CompilerStage.globalInference:
         processName = 'Serialized';
         outputName = 'bytes data';
         outputSize = outputProvider.totalDataWritten;
         String dataOutput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataOutputUriForStage(compilerOptions.stage),
+            compilerOptions.dataUriForStage(compilerOptions.stage),
             Platform.isWindows);
         summary += 'serialized to data: ${dataOutput}.';
         break;
-      case Dart2JSStage.codegenSharded:
+      case CompilerStage.codegenSharded:
         processName = 'Serialized';
         outputName = 'bytes data';
         outputSize = outputProvider.totalDataWritten;
         String codeOutput = fe.relativizeUri(
             Uri.base,
-            compilerOptions.dataOutputUriForStage(compilerOptions.stage),
+            compilerOptions.dataUriForStage(compilerOptions.stage),
             Platform.isWindows);
         summary += 'serialized to codegen data: '
             '${codeOutput}${compilerOptions.codegenShard}.';
@@ -921,13 +921,6 @@ String _formatDurationAsSeconds(Duration duration, [int width = 4]) {
   return text;
 }
 
-class AbortLeg {
-  final message;
-  AbortLeg(this.message);
-  @override
-  toString() => 'Aborted due to --throw-on-error: $message';
-}
-
 void writeString(Uri uri, String text) {
   if (!enableWriteString) return;
   if (!uri.isScheme('file')) {
@@ -942,7 +935,7 @@ void writeString(Uri uri, String text) {
 Never _fail(String message) {
   if (diagnosticHandler != null) {
     diagnosticHandler!
-        .report(null, null, -1, -1, message, api.Diagnostic.ERROR);
+        .report(null, null, -1, -1, message, api.Diagnostic.error);
   } else {
     print('Error: $message');
   }
@@ -1206,7 +1199,7 @@ Never _helpAndFail(String message) {
 void warning(String message) {
   if (diagnosticHandler != null) {
     diagnosticHandler!
-        .report(null, null, -1, -1, message, api.Diagnostic.WARNING);
+        .report(null, null, -1, -1, message, api.Diagnostic.warning);
   } else {
     print('Warning: $message');
   }
@@ -1269,7 +1262,7 @@ bool enableWriteString = true;
 
 Future<api.CompilationResult> internalMain(List<String> arguments,
     {fe.InitializedCompilerState? kernelInitializedCompilerState}) {
-  Future<api.CompilationResult> onError(exception, trace) {
+  Future<api.CompilationResult> onError(Object exception, StackTrace? trace) {
     // If we are already trying to exit, just continue exiting.
     if (exception == _EXIT_SIGNAL) throw exception;
 
@@ -1315,13 +1308,12 @@ void batchMain(List<String> batchArguments) {
   };
 
   var stream = stdin.transform(utf8.decoder).transform(LineSplitter());
-  late StreamSubscription subscription;
+  late StreamSubscription<String> subscription;
   fe.InitializedCompilerState? kernelInitializedCompilerState;
-  subscription = stream.listen((String? line) {
+  subscription = stream.listen((String line) {
     Future.sync(() {
       subscription.pause();
       exitCode = 0;
-      if (line == null) exit(0);
       List<String> testArgs = splitLine(line, windows: Platform.isWindows);
 
       // Ignore experiment flags given to the batch runner.
@@ -1348,7 +1340,7 @@ void batchMain(List<String> batchArguments) {
       if (result != null) {
         kernelInitializedCompilerState = result.kernelInitializedCompilerState;
       }
-    }).catchError((exception, trace) {
+    }).catchError((Object exception, StackTrace trace) {
       if (!identical(exception, _EXIT_SIGNAL)) {
         exitCode = 253;
       }

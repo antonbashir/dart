@@ -5,10 +5,12 @@
 import 'dart:io' as io;
 
 import 'package:analyzer/dart/analysis/context_root.dart';
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/sdk/build_sdk_summary.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
+import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
@@ -25,7 +27,6 @@ import 'package:analyzer/src/source/path_filter.dart';
 import 'package:analyzer/src/task/options.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/util/yaml.dart';
-import 'package:analyzer/src/utilities/legacy.dart';
 import 'package:analyzer/src/workspace/pub.dart';
 import 'package:analyzer_cli/src/analyzer_impl.dart';
 import 'package:analyzer_cli/src/batch_mode.dart';
@@ -93,7 +94,6 @@ class Driver implements CommandLineStarter {
     }
     _isStarted = true;
     var startTime = DateTime.now().millisecondsSinceEpoch;
-    noSoundNullSafety = false;
 
     linter.registerLintRules();
 
@@ -139,6 +139,8 @@ class Driver implements CommandLineStarter {
     if (analysisDriver != null) {
       _analyzedFileCount += analysisDriver!.knownFiles.length;
     }
+
+    await _analysisContextProvider.dispose();
 
     if (options.perfReport != null) {
       var json = makePerfReport(
@@ -243,27 +245,29 @@ class Driver implements CommandLineStarter {
       var pathContext = resourceProvider.pathContext;
       for (var path in filesToAnalyze) {
         if (file_paths.isAnalysisOptionsYaml(pathContext, path)) {
-          var file = resourceProvider.getFile(path);
-          var analysisOptions = analysisDriver.getAnalysisOptionsForFile(file);
+          var fileResult = analysisDriver.currentSession.getFile(path);
+          if (fileResult is! FileResult) continue;
+          var file = fileResult.file;
           var content = file.readAsStringSync();
           var lineInfo = LineInfo.fromContent(content);
           var contextRoot =
               analysisDriver.currentSession.analysisContext.contextRoot;
           var package = contextRoot.workspace.findPackageFor(file.path);
-          var sdkVersionConstraint = (package is PubWorkspacePackage)
-              ? package.sdkVersionConstraint
-              : null;
+          var sdkVersionConstraint =
+              (package is PubPackage) ? package.sdkVersionConstraint : null;
           var errors = analyzeAnalysisOptions(
-            file.createSource(),
+            FileSource(file),
             content,
             analysisDriver.sourceFactory,
             contextRoot.root.path,
             sdkVersionConstraint,
           );
+          var analysisOptions = fileResult.analysisOptions;
           await formatter.formatErrors([
             ErrorsResultImpl(
               session: analysisDriver.currentSession,
               file: file,
+              content: content,
               uri: pathContext.toUri(path),
               lineInfo: lineInfo,
               isAugmentation: false,
@@ -271,6 +275,7 @@ class Driver implements CommandLineStarter {
               isMacroAugmentation: false,
               isPart: false,
               errors: errors,
+              analysisOptions: analysisOptions,
             )
           ]);
           for (var error in errors) {
@@ -292,7 +297,7 @@ class Driver implements CommandLineStarter {
             if (node is YamlMap) {
               errors.addAll(validatePubspec(
                 contents: node,
-                source: file.createSource(),
+                source: FileSource(file),
                 provider: resourceProvider,
                 analysisOptions: analysisOptions,
               ));
@@ -308,6 +313,7 @@ class Driver implements CommandLineStarter {
                 ErrorsResultImpl(
                   session: analysisDriver.currentSession,
                   file: file,
+                  content: content,
                   uri: pathContext.toUri(path),
                   lineInfo: lineInfo,
                   isAugmentation: false,
@@ -315,6 +321,7 @@ class Driver implements CommandLineStarter {
                   isMacroAugmentation: false,
                   isPart: false,
                   errors: errors,
+                  analysisOptions: analysisOptions,
                 ),
               ]);
             }
@@ -327,7 +334,8 @@ class Driver implements CommandLineStarter {
             var analysisOptions =
                 analysisDriver.getAnalysisOptionsForFile(file);
             var content = file.readAsStringSync();
-            var validator = ManifestValidator(file.createSource());
+            var source = FileSource(file);
+            var validator = ManifestValidator(source);
             var lineInfo = LineInfo.fromContent(content);
             var errors = validator.validate(
                 content, analysisOptions.chromeOsManifestChecks);
@@ -335,6 +343,7 @@ class Driver implements CommandLineStarter {
               ErrorsResultImpl(
                 session: analysisDriver.currentSession,
                 file: file,
+                content: content,
                 uri: pathContext.toUri(path),
                 lineInfo: lineInfo,
                 isAugmentation: false,
@@ -342,6 +351,7 @@ class Driver implements CommandLineStarter {
                 isLibrary: true,
                 isPart: false,
                 errors: errors,
+                analysisOptions: analysisOptions,
               ),
             ]);
             for (var error in errors) {
@@ -503,6 +513,7 @@ class _AnalysisContextProvider {
   CommandLineOptions? _commandLineOptions;
   late List<String> _pathList;
 
+  final List<AnalysisContextCollectionImpl> _toDispose = [];
   final Map<Folder, DriverBasedAnalysisContext?> _folderContexts = {};
   AnalysisContextCollectionImpl? _collection;
   DriverBasedAnalysisContext? _analysisContext;
@@ -571,9 +582,19 @@ class _AnalysisContextProvider {
       updateAnalysisOptions2: _updateAnalysisOptions,
       fileContentCache: _fileContentCache,
     );
+    _toDispose.add(_collection!);
 
     _setContextForPath(path);
     _folderContexts[folder] = _analysisContext;
+  }
+
+  Future<void> dispose() async {
+    _collection = null;
+    var toDispose = _toDispose.toList();
+    _toDispose.clear();
+    for (var collection in toDispose) {
+      await collection.dispose();
+    }
   }
 
   void setCommandLineOptions(

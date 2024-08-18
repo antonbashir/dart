@@ -28,10 +28,13 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
   final ResourceProvider resourceProvider;
 
   /// The support for executing macros.
-  late final MacroSupport macroSupport;
+  late final MacroSupportFactory macroSupportFactory;
 
   /// The shared container into which drivers record files ownership.
   final OwnedFiles ownedFiles = OwnedFiles();
+
+  /// The scheduler used for all analysis contexts.
+  late final AnalysisDriverScheduler scheduler;
 
   /// The list of analysis contexts.
   @override
@@ -57,29 +60,36 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
     FileContentCache? fileContentCache,
     UnlinkedUnitStore? unlinkedUnitStore,
     InfoDeclarationStore? infoDeclarationStore,
-    @Deprecated('Use updateAnalysisOptions2, which must be a function that '
-        'accepts a second parameter')
-    void Function(AnalysisOptionsImpl)? updateAnalysisOptions,
     void Function({
       required AnalysisOptionsImpl analysisOptions,
       required ContextRoot contextRoot,
       required DartSdk sdk,
     })? updateAnalysisOptions2,
-    MacroSupport? macroSupport,
+    MacroSupportFactory? macroSupportFactory,
   }) : resourceProvider =
             resourceProvider ?? PhysicalResourceProvider.INSTANCE {
     sdkPath ??= getSdkPath();
 
+    performanceLog ??= PerformanceLog(null);
+
+    if (scheduler == null) {
+      scheduler = AnalysisDriverScheduler(performanceLog);
+      if (drainStreams) {
+        scheduler.events.drain<void>();
+      }
+      scheduler.start();
+    }
+    // TODO(scheglov): https://github.com/dart-lang/linter/issues/3134
+    // ignore: prefer_initializing_formals
+    this.scheduler = scheduler;
+
     _throwIfAnyNotAbsoluteNormalizedPath(includedPaths);
     _throwIfNotAbsoluteNormalizedPath(sdkPath);
 
-    if (updateAnalysisOptions != null && updateAnalysisOptions2 != null) {
-      throw ArgumentError(
-          'Either updateAnalysisOptions or updateAnalysisOptions2 must be '
-          'given, but not both.');
-    }
-
-    this.macroSupport = macroSupport ??= KernelMacroSupport();
+    macroSupportFactory ??= KernelMacroSupportFactory();
+    // TODO(scheglov): https://github.com/dart-lang/linter/issues/3134
+    // ignore: prefer_initializing_formals
+    this.macroSupportFactory = macroSupportFactory;
 
     var contextLocator = ContextLocator(
       resourceProvider: this.resourceProvider,
@@ -90,13 +100,15 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
       optionsFile: optionsFile,
       packagesFile: packagesFile,
     );
+    var contextBuilder = ContextBuilderImpl(
+      resourceProvider: this.resourceProvider,
+    );
     for (var root in roots) {
-      var contextBuilder = ContextBuilderImpl(
-        resourceProvider: this.resourceProvider,
-      );
+      var macroSupport = macroSupportFactory.newInstance();
       var context = contextBuilder.createContext(
         byteStore: byteStore,
         contextRoot: root,
+        definedOptionsFile: optionsFile != null,
         declaredVariables: DeclaredVariables.fromMap(declaredVariables ?? {}),
         drainStreams: drainStreams,
         enableIndex: enableIndex,
@@ -106,8 +118,6 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
         sdkPath: sdkPath,
         sdkSummaryPath: sdkSummaryPath,
         scheduler: scheduler,
-        // ignore: deprecated_member_use_from_same_package
-        updateAnalysisOptions: updateAnalysisOptions,
         updateAnalysisOptions2: updateAnalysisOptions2,
         fileContentCache: fileContentCache,
         unlinkedUnitStore: unlinkedUnitStore ?? UnlinkedUnitStoreImpl(),
@@ -149,10 +159,10 @@ class AnalysisContextCollectionImpl implements AnalysisContextCollection {
   Future<void> dispose({
     bool forTesting = false,
   }) async {
-    for (final analysisContext in contexts) {
+    for (var analysisContext in contexts) {
       await analysisContext.driver.dispose2();
     }
-    await macroSupport.dispose();
+    await macroSupportFactory.dispose();
     // If there are other collections, they will have to start it again.
     if (!forTesting) {
       await KernelCompilationService.dispose();

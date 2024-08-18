@@ -18,6 +18,8 @@
 namespace dart {
 namespace bin {
 
+class AppSnapshot;  // Forward declaration.
+
 class DFE {
  public:
   DFE();
@@ -100,6 +102,7 @@ class DFE {
   // to a shared pointer which owns the kernel buffer.
   // Otherwise, the caller is responsible for free()ing 'kernel_buffer'.
   void ReadScript(const char* script_uri,
+                  const AppSnapshot* app_snapshot,
                   uint8_t** kernel_buffer,
                   intptr_t* kernel_buffer_size,
                   bool decode_uri = true,
@@ -117,6 +120,7 @@ class DFE {
   // Otherwise, the caller is responsible for free()ing 'kernel_buffer'
   // if `true` was returned.
   bool TryReadKernelFile(const char* script_uri,
+                         const AppSnapshot* app_snapshot,
                          uint8_t** kernel_buffer,
                          intptr_t* kernel_buffer_size,
                          bool decode_uri = true,
@@ -174,13 +178,13 @@ class KernelBlob {
  public:
   // Takes ownership over [uri] and [buffer].
   KernelBlob(char* uri, uint8_t* buffer, intptr_t size)
-      : uri_(uri, std::free), buffer_(buffer, std::free), size_(size) {}
+      : uri_(uri), buffer_(buffer, std::free), size_(size) {}
 
   std::shared_ptr<uint8_t> buffer() { return buffer_; }
   intptr_t size() const { return size_; }
 
  private:
-  Utils::CStringUniquePtr uri_;
+  CStringUniquePtr uri_;
   std::shared_ptr<uint8_t> buffer_;
   const intptr_t size_;
 

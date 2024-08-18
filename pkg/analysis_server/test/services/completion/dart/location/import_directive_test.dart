@@ -62,10 +62,10 @@ suggestions
     kind: class
   B0
     kind: class
-  F1
-    kind: function
   P0
     kind: class
+  F1
+    kind: function
   T1
     kind: topLevelVariable
 ''');
@@ -117,8 +117,6 @@ suggestions
     kind: import
   dart:convert
     kind: import
-  dart:core
-    kind: import
   dart:ffi
     kind: import
   dart:html
@@ -126,6 +124,10 @@ suggestions
   dart:io
     kind: import
   dart:isolate
+    kind: import
+  dart:js
+    kind: import
+  dart:js_interop
     kind: import
   dart:math
     kind: import
@@ -136,6 +138,8 @@ suggestions
   package:test/
     kind: import
   package:test/test.dart
+    kind: import
+  dart:core
     kind: import
 ''');
   }
@@ -241,20 +245,17 @@ import "foo" d^ hide foo;
 replacement
   left: 1
 suggestions
-  as
-    kind: keyword
   deferred as
     kind: keyword
   hide
-    kind: keyword
-  show
     kind: keyword
 ''');
   }
 
   Future<void> test_afterUri_beforeImport_partial_d() async {
     await computeSuggestions('''
-import "foo" d^ import
+import "foo" d^
+import
 ''');
     assertResponse(r'''
 replacement
@@ -267,7 +268,9 @@ suggestions
 
   Future<void> test_afterUri_beforeImport_partial_sh() async {
     await computeSuggestions('''
-import "foo" sh^ import "bar"; import "baz";
+import "foo" sh^
+import "bar";
+import "baz";
 ''');
     assertResponse(r'''
 replacement
@@ -316,13 +319,9 @@ import "foo" d^ show foo;
 replacement
   left: 1
 suggestions
-  as
-    kind: keyword
   deferred as
     kind: keyword
   hide
-    kind: keyword
-  show
     kind: keyword
 ''');
   }
@@ -380,14 +379,14 @@ suggestions
     kind: class
   C1
     kind: class
-  F1
-    kind: function
-  F2
-    kind: typeAlias
   P1
     kind: class
   T1
     kind: topLevelVariable
+  F1
+    kind: function
+  F2
+    kind: typeAlias
 ''');
   }
 

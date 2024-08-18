@@ -3,10 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/plugin/edit/assist/assist_dart.dart';
+import 'package:analysis_server/src/services/correction/fix_processor.dart';
+import 'package:analysis_server_plugin/src/correction/change_workspace.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/instrumentation/service.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
-import 'package:analyzer_plugin/utilities/change_builder/change_workspace.dart';
 
 /// The implementation of [DartAssistContext].
 class DartAssistContextImpl implements DartAssistContext {
@@ -20,17 +21,26 @@ class DartAssistContextImpl implements DartAssistContext {
   final ResolvedUnitResult resolveResult;
 
   @override
+  final Map<ProducerGenerator, Set<String>> producerGeneratorsForLintRules;
+
+  @override
   final int selectionOffset;
 
   @override
   final int selectionLength;
 
-  DartAssistContextImpl(this.instrumentationService, this.workspace,
-      this.resolveResult, this.selectionOffset, this.selectionLength);
+  DartAssistContextImpl(
+    this.instrumentationService,
+    this.workspace,
+    this.resolveResult,
+    this.producerGeneratorsForLintRules,
+    this.selectionOffset,
+    this.selectionLength,
+  );
 }
 
 /// An enumeration of possible assist kinds.
-class DartAssistKind {
+abstract final class DartAssistKind {
   static const ADD_DIAGNOSTIC_PROPERTY_REFERENCE = AssistKind(
     'dart.assist.add.diagnosticPropertyReference',
     DartAssistKindPriority.DEFAULT,
@@ -445,7 +455,7 @@ class DartAssistKind {
 }
 
 /// The priorities associated with various groups of assists.
-class DartAssistKindPriority {
+abstract final class DartAssistKindPriority {
   static const int FLUTTER_REMOVE = 25;
   static const int FLUTTER_MOVE = 26;
   static const int FLUTTER_SWAP = 27;

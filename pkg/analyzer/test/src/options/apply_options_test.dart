@@ -3,11 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/error/error.dart';
-import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/source/error_processor.dart';
 import 'package:analyzer/src/analysis_options/analysis_options_provider.dart';
 import 'package:analyzer/src/analysis_options/apply_options.dart';
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/file_system/file_system.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/lint/linter.dart';
@@ -162,6 +162,41 @@ analyzer:
     expect(excludes, unorderedEquals(['foo/bar.dart', 'test/**']));
   }
 
+  test_analyzer_optionalChecks_propagateLinterExceptions_default() {
+    configureContext('''
+analyzer:
+  optional-checks:
+''');
+    expect(analysisOptions.propagateLinterExceptions, false);
+  }
+
+  test_analyzer_optionalChecks_propagateLinterExceptions_empty() {
+    configureContext('''
+analyzer:
+  optional-checks:
+    propagate-linter-exceptions
+''');
+    expect(analysisOptions.propagateLinterExceptions, true);
+  }
+
+  test_analyzer_optionalChecks_propagateLinterExceptions_false() {
+    configureContext('''
+analyzer:
+  optional-checks:
+    propagate-linter-exceptions: false
+''');
+    expect(analysisOptions.propagateLinterExceptions, false);
+  }
+
+  test_analyzer_optionalChecks_propagateLinterExceptions_true() {
+    configureContext('''
+analyzer:
+  optional-checks:
+    propagate-linter-exceptions: true
+''');
+    expect(analysisOptions.propagateLinterExceptions, true);
+  }
+
   test_analyzer_plugins_list() {
     // TODO(srawlins): Test plugins as a list of non-scalar values
     // (`- angular2: yes`).
@@ -272,7 +307,7 @@ analyzer:
     - plugin_ccc
 ''');
 
-    final options = _getOptionsObject('/');
+    var options = _getOptionsObject('/');
     expect(options.enabledPluginNames, unorderedEquals(['plugin_ddd']));
   }
 
@@ -308,11 +343,11 @@ linter:
 ''';
     newFile(optionsFilePath, code);
 
-    final lowlevellint = TestRule.withName('lowlevellint');
-    final toplevellint = TestRule.withName('toplevellint');
+    var lowlevellint = TestRule.withName('lowlevellint');
+    var toplevellint = TestRule.withName('toplevellint');
     Registry.ruleRegistry.register(lowlevellint);
     Registry.ruleRegistry.register(toplevellint);
-    final options = _getOptionsObject('/');
+    var options = _getOptionsObject('/');
 
     expect(options.lintRules, unorderedEquals([toplevellint, lowlevellint]));
     expect(options.enabledPluginNames, unorderedEquals(['toplevelplugin']));
@@ -329,7 +364,7 @@ linter:
   }
 
   AnalysisOptions _getOptionsObject(String posixPath) {
-    final map = provider.getOptions(getFolder(posixPath));
+    var map = provider.getOptions(getFolder(posixPath));
     return AnalysisOptionsImpl()..applyOptions(map);
   }
 }
@@ -340,7 +375,7 @@ class TestRule extends LintRule {
           name: 'fantastic_test_rule',
           description: '',
           details: '',
-          group: Group.style,
+          categories: {Category.style},
         );
 
   TestRule.withName(String name)
@@ -348,6 +383,6 @@ class TestRule extends LintRule {
           name: name,
           description: '',
           details: '',
-          group: Group.style,
+          categories: {Category.style},
         );
 }

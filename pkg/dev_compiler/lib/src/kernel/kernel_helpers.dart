@@ -30,7 +30,7 @@ Library getLibrary(NamedNode node) {
 
 final Pattern _syntheticTypeCharacters = RegExp('[&^#.|]');
 
-String? escapeIdentifier(String? identifier) {
+String escapeIdentifier(String identifier) {
   // Remove the special characters used to encode mixin application class names
   // and extension method / parameter names which are legal in Kernel, but not
   // in JavaScript.
@@ -38,7 +38,7 @@ String? escapeIdentifier(String? identifier) {
   // Note, there is an implicit assumption here that we won't have
   // collisions since everything is mapped to \$.  That may work out fine given
   // how these are synthesized, but may need to revisit.
-  return identifier?.replaceAll(_syntheticTypeCharacters, r'$');
+  return identifier.replaceAll(_syntheticTypeCharacters, r'$');
 }
 
 /// Returns the escaped name for class [node].
@@ -48,7 +48,7 @@ String? escapeIdentifier(String? identifier) {
 ///
 /// In the current encoding, generic classes are generated in a function scope
 /// which avoids name clashes of the escaped class name.
-String getLocalClassName(Class node) => escapeIdentifier(node.name)!;
+String getLocalClassName(Class node) => escapeIdentifier(node.name);
 
 /// Returns the escaped name for the type parameter [node].
 ///
@@ -58,10 +58,10 @@ String getTypeParameterName(
     /* TypeParameter | StructuralParameter */ Object node) {
   assert(node is TypeParameter || node is StructuralParameter);
   if (node is TypeParameter) {
-    return escapeIdentifier(node.name)!;
+    return escapeIdentifier(node.name!);
   } else {
     node as StructuralParameter;
-    return escapeIdentifier(node.name)!;
+    return escapeIdentifier(node.name!);
   }
 }
 
@@ -289,7 +289,7 @@ bool hasLabeledContinue(SwitchStatement node) {
   return visitor.found;
 }
 
-class LabelContinueFinder extends RecursiveVisitor<void> {
+class LabelContinueFinder extends RecursiveVisitor {
   var found = false;
 
   void visit(Statement? s) {
@@ -299,6 +299,23 @@ class LabelContinueFinder extends RecursiveVisitor<void> {
   @override
   void visitContinueSwitchStatement(ContinueSwitchStatement node) =>
       found = true;
+}
+
+/// Returns `true` if any of [n]s children are a [FunctionExpression] node.
+bool containsFunctionExpression(Node n) {
+  var visitor = _FunctionExpressionFinder.instance;
+  visitor.found = false;
+  n.accept(visitor);
+  return visitor.found;
+}
+
+class _FunctionExpressionFinder extends RecursiveVisitor {
+  var found = false;
+
+  static final instance = _FunctionExpressionFinder();
+
+  @override
+  void visitFunctionExpression(FunctionExpression node) => found = true;
 }
 
 /// Whether [member] is declared native, as in:
@@ -328,8 +345,8 @@ bool _isDartInternal(Uri uri) =>
 
 /// Collects all `TypeParameter`s from the `TypeParameterType`s present in the
 /// visited `DartType`.
-class TypeParameterFinder extends RecursiveVisitor<void> {
-  final _found = < /* TypeParameter | StructuralParameter */ Object>{};
+class TypeParameterFinder extends RecursiveVisitor {
+  final _found = <TypeParameter>{};
   static TypeParameterFinder? _instance;
 
   TypeParameterFinder._();
@@ -338,7 +355,7 @@ class TypeParameterFinder extends RecursiveVisitor<void> {
     return TypeParameterFinder._();
   }
 
-  Set< /* TypeParameter | StructuralParameter */ Object> find(DartType type) {
+  Set<TypeParameter> find(DartType type) {
     _found.clear();
     type.accept(this);
     return _found;
@@ -347,14 +364,10 @@ class TypeParameterFinder extends RecursiveVisitor<void> {
   @override
   void visitTypeParameterType(TypeParameterType node) =>
       _found.add(node.parameter);
-
-  @override
-  void visitStructuralParameterType(StructuralParameterType node) =>
-      _found.add(node.parameter);
 }
 
 /// Collects [InterfaceType] nodes that appear in in a DartType.
-class InterfaceTypeExtractor extends RecursiveVisitor<DartType> {
+class InterfaceTypeExtractor extends RecursiveVisitor {
   final Set<InterfaceType> _found = {};
 
   @override

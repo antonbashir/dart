@@ -228,36 +228,42 @@ abstract class CMFloat64x2List with Float64x2List {}
 abstract class CIInt32x4 implements Int32x4 {}
 //             ^
 // [cfe] 'Int32x4' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                                  ^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
 abstract class CMInt32x4 with Int32x4 {}
 //             ^
 // [cfe] 'Int32x4' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                            ^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
 abstract class CIFloat32x4 implements Float32x4 {}
 //             ^
 // [cfe] 'Float32x4' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                                    ^^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
 abstract class CMFloat32x4 with Float32x4 {}
 //             ^
 // [cfe] 'Float32x4' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                              ^^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
 abstract class CIFloat64x2 implements Float64x2 {}
 //             ^
 // [cfe] 'Float64x2' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                                    ^^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
 abstract class CMFloat64x2 with Float64x2 {}
 //             ^
 // [cfe] 'Float64x2' is restricted and can't be extended or implemented.
+// [cfe] Subtypes of deeply immutable classes must be deeply immutable.
 //                              ^^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
 
@@ -267,100 +273,4 @@ abstract class CIEndian implements Endian {}
 //             ^
 // [cfe] 'Endian' is restricted and can't be extended or implemented.
 //                                 ^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnByteBufferView implements UnmodifiableByteBufferView {}
-//             ^
-// [cfe] 'UnmodifiableByteBufferView' is restricted and can't be extended or implemented.
-//                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnByteDataView implements UnmodifiableByteDataView {}
-//             ^
-// [cfe] 'UnmodifiableByteDataView' is restricted and can't be extended or implemented.
-//                                         ^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnInt8LV implements UnmodifiableInt8ListView {}
-//             ^
-// [cfe] 'UnmodifiableInt8ListView' is restricted and can't be extended or implemented.
-//                                   ^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnUint8LV implements UnmodifiableUint8ListView {}
-//             ^
-// [cfe] 'UnmodifiableUint8ListView' is restricted and can't be extended or implemented.
-//                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnUint8ClampedLV implements UnmodifiableUint8ClampedListView {}
-//             ^
-// [cfe] 'UnmodifiableUint8ClampedListView' is restricted and can't be extended or implemented.
-//                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnInt16LV implements UnmodifiableInt16ListView {}
-//             ^
-// [cfe] 'UnmodifiableInt16ListView' is restricted and can't be extended or implemented.
-//                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnUint16LV implements UnmodifiableUint16ListView {}
-//             ^
-// [cfe] 'UnmodifiableUint16ListView' is restricted and can't be extended or implemented.
-//                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnInt32LV implements UnmodifiableInt32ListView {}
-//             ^
-// [cfe] 'UnmodifiableInt32ListView' is restricted and can't be extended or implemented.
-//                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnUint32LV implements UnmodifiableUint32ListView {}
-//             ^
-// [cfe] 'UnmodifiableUint32ListView' is restricted and can't be extended or implemented.
-//                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnInt64LV implements UnmodifiableInt64ListView {}
-//             ^
-// [cfe] 'UnmodifiableInt64ListView' is restricted and can't be extended or implemented.
-//                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnUint64LV implements UnmodifiableUint64ListView {}
-//             ^
-// [cfe] 'UnmodifiableUint64ListView' is restricted and can't be extended or implemented.
-//                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnFloat32LV implements UnmodifiableFloat32ListView {}
-//             ^
-// [cfe] 'UnmodifiableFloat32ListView' is restricted and can't be extended or implemented.
-//                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnFloat64LV implements UnmodifiableFloat64ListView {}
-//             ^
-// [cfe] 'UnmodifiableFloat64ListView' is restricted and can't be extended or implemented.
-//                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnInt32x4LV implements UnmodifiableInt32x4ListView {}
-//             ^
-// [cfe] 'UnmodifiableInt32x4ListView' is restricted and can't be extended or implemented.
-//                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnFloat32x4LV implements UnmodifiableFloat32x4ListView {}
-//             ^
-// [cfe] 'UnmodifiableFloat32x4ListView' is restricted and can't be extended or implemented.
-//                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE
-
-abstract class CIUnFloat64x2LV implements UnmodifiableFloat64x2ListView {}
-//             ^
-// [cfe] 'UnmodifiableFloat64x2ListView' is restricted and can't be extended or implemented.
-//                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // [analyzer] COMPILE_TIME_ERROR.SUBTYPE_OF_DISALLOWED_TYPE

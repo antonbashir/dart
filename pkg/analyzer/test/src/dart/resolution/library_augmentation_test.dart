@@ -10,6 +10,7 @@ import 'context_collection_resolution.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(LibraryAugmentationDirectiveResolutionTest);
+    defineReflectiveTests(LibraryAugmentationResolutionTest);
   });
 }
 
@@ -21,8 +22,8 @@ class LibraryAugmentationDirectiveResolutionTest
 import augment 'b.dart';
 ''');
 
-    final b = newFile('$testPackageLibPath/b.dart', r'''
-library augment 'a.dart';
+    var b = newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart';
 ''');
 
     newFile('$testPackageLibPath/c.dart', '');
@@ -30,11 +31,11 @@ library augment 'a.dart';
     await resolveFile2(b);
     assertNoErrorsInResult();
 
-    final node = findNode.libraryAugmentation('a.dart');
+    var node = findNode.libraryAugmentation('a.dart');
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -44,16 +45,16 @@ LibraryAugmentationDirective
 
   test_hasFile_doesNotExist() async {
     await assertErrorsInCode(r'''
-library augment 'a.dart';
+augment library 'a.dart';
 ''', [
       error(CompileTimeErrorCode.URI_DOES_NOT_EXIST, 16, 8),
     ]);
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -67,14 +68,14 @@ import augment 'test.dart';
 ''');
 
     await assertNoErrorsInCode(r'''
-library augment 'a.dart';
+augment library 'a.dart';
 ''');
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -86,16 +87,16 @@ LibraryAugmentationDirective
     newFile('$testPackageLibPath/a.dart', '');
 
     await assertErrorsInCode(r'''
-library augment 'a.dart';
+augment library 'a.dart';
 ''', [
       error(CompileTimeErrorCode.AUGMENTATION_WITHOUT_IMPORT, 16, 8),
     ]);
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -105,20 +106,20 @@ LibraryAugmentationDirective
 
   test_hasFile_notLibrary_augmentation() async {
     newFile('$testPackageLibPath/a.dart', r'''
-library augment 'b.dart';
+augment library 'b.dart';
 ''');
 
     await assertErrorsInCode(r'''
-library augment 'a.dart';
+augment library 'a.dart';
 ''', [
       error(CompileTimeErrorCode.AUGMENTATION_WITHOUT_LIBRARY, 16, 8),
     ]);
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -132,16 +133,16 @@ part of 'b.dart';
 ''');
 
     await assertErrorsInCode(r'''
-library augment 'a.dart';
+augment library 'a.dart';
 ''', [
       error(CompileTimeErrorCode.AUGMENTATION_WITHOUT_LIBRARY, 16, 8),
     ]);
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: SimpleStringLiteral
     literal: 'a.dart'
   semicolon: ;
@@ -151,16 +152,16 @@ LibraryAugmentationDirective
 
   test_noRelativeUriStr() async {
     await assertErrorsInCode(r'''
-library augment '${'foo.dart'}';
+augment library '${'foo.dart'}';
 ''', [
       error(CompileTimeErrorCode.AUGMENTATION_WITHOUT_LIBRARY, 16, 15),
     ]);
 
-    final node = findNode.singleLibraryAugmentationDirective;
+    var node = findNode.singleLibraryAugmentationDirective;
     assertResolvedNodeText(node, r'''
 LibraryAugmentationDirective
-  libraryKeyword: library
   augmentKeyword: augment
+  libraryKeyword: library
   uri: StringInterpolation
     elements
       InterpolationString
@@ -177,5 +178,192 @@ LibraryAugmentationDirective
   semicolon: ;
   element: self
 ''');
+  }
+}
+
+@reflectiveTest
+class LibraryAugmentationResolutionTest extends PubPackageResolutionTest {
+  test_namespace_import_augmentationImports() async {
+    var a = newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+math.Random get foo => throw 0;
+''');
+
+    var b = newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart';
+import 'dart:math' as math;
+math.Random get bar => throw 0;
+''');
+
+    // In the library.
+    {
+      await resolveFile2(a);
+      assertErrorsInResult([
+        error(CompileTimeErrorCode.UNDEFINED_CLASS, 25, 11),
+      ]);
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  importPrefix: ImportPrefixReference
+    name: math
+    period: .
+    element: <null>
+  name: Random
+  element: <null>
+  type: InvalidType
+''');
+    }
+
+    // In the augmentation.
+    {
+      await resolveFile2(b);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  importPrefix: ImportPrefixReference
+    name: math
+    period: .
+    element: self::@augmentation::package:test/b.dart::@prefix::math
+  name: Random
+  element: dart:math::@class::Random
+  type: Random
+''');
+    }
+  }
+
+  test_namespace_import_libraryImports() async {
+    var a = newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+import 'dart:math' as math;
+math.Random get foo => throw 0;
+''');
+
+    var b = newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart';
+math.Random get bar => throw 0;
+''');
+
+    // In the library.
+    {
+      await resolveFile2(a);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  importPrefix: ImportPrefixReference
+    name: math
+    period: .
+    element: self::@prefix::math
+  name: Random
+  element: dart:math::@class::Random
+  type: Random
+''');
+    }
+
+    // In the augmentation.
+    {
+      await resolveFile2(b);
+      assertErrorsInResult([
+        error(CompileTimeErrorCode.UNDEFINED_CLASS, 26, 11),
+      ]);
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  importPrefix: ImportPrefixReference
+    name: math
+    period: .
+    element: <null>
+  name: Random
+  element: <null>
+  type: InvalidType
+''');
+    }
+  }
+
+  test_namespace_top_class_augmentationDeclares() async {
+    var a = newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+A foo() => throw 0;
+''');
+
+    var b = newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart';
+class A {}
+A bar() => throw 0;
+''');
+
+    // In the library.
+    {
+      await resolveFile2(a);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  name: A
+  element: self::@augmentation::package:test/b.dart::@class::A
+  type: A
+''');
+    }
+
+    // In the augmentation.
+    {
+      await resolveFile2(b);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  name: A
+  element: self::@augmentation::package:test/b.dart::@class::A
+  type: A
+''');
+    }
+  }
+
+  test_namespace_top_class_libraryDeclares() async {
+    var a = newFile('$testPackageLibPath/a.dart', r'''
+import augment 'b.dart';
+class A {}
+A foo() => throw 0;
+''');
+
+    var b = newFile('$testPackageLibPath/b.dart', r'''
+augment library 'a.dart';
+A bar() => throw 0;
+''');
+
+    // In the library.
+    {
+      await resolveFile2(a);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  name: A
+  element: self::@class::A
+  type: A
+''');
+    }
+
+    // In the augmentation.
+    {
+      await resolveFile2(b);
+      assertNoErrorsInResult();
+
+      var node = findNode.singleNamedType;
+      assertResolvedNodeText(node, r'''
+NamedType
+  name: A
+  element: self::@class::A
+  type: A
+''');
+    }
   }
 }

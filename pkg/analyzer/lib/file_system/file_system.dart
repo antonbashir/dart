@@ -8,8 +8,6 @@ import 'package:analyzer/source/source.dart';
 import 'package:path/path.dart';
 import 'package:watcher/watcher.dart';
 
-export 'package:analyzer/src/file_system/file_system.dart';
-
 /// [File]s are leaf [Resource]s which contain data.
 abstract class File implements Resource {
   /// Watch for changes to this file.
@@ -33,6 +31,7 @@ abstract class File implements Resource {
   File copyTo(Folder parentFolder);
 
   /// Create a new [Source] instance that serves this file.
+  @Deprecated('Get Source instances from analysis results')
   Source createSource([Uri? uri]);
 
   /// Synchronously read the entire file contents as a list of bytes.
@@ -149,6 +148,15 @@ abstract class Folder implements Resource {
   ResourceWatcher watch();
 }
 
+/// The abstract class [Link] is an abstraction for a file system link.
+abstract class Link {
+  /// Return `true` if this link exists.
+  bool get exists;
+
+  /// If this link does not already exist, create it.
+  void create(String target);
+}
+
 /// Exception thrown when a file operation fails because a file or directory
 /// does not exist.
 class PathNotFoundException extends FileSystemException {
@@ -235,6 +243,13 @@ abstract class ResourceProvider {
   /// A folder may or may not exist at this location.
   Folder getFolder(String path);
 
+  /// Return a [Link] that corresponds to the given [path].
+  ///
+  /// The [path] must be absolute and normalized.
+  ///
+  /// A link may or may not exist at this location.
+  Link getLink(String path);
+
   /// Return the [Resource] that corresponds to the given [path].
   ///
   /// The [path] must be absolute and normalized.
@@ -255,16 +270,30 @@ abstract class ResourceProvider {
 /// The [ready] event will not fire until a listener has been set up on
 /// [changes] and the watcher initialization is complete.
 class ResourceWatcher {
+  /// A broadcast stream of changes from this watcher.
+  ///
+  /// This stream can be subscribed to by multiple listeners, but each listener
+  /// should await the latest [Future] returned by [ready] after subscribing to
+  /// ensure the watcher is set up. The internal watcher may be closed when
+  /// there are no subscribers and re-created when another subscriber appears.
   final Stream<WatchEvent> changes;
+
+  /// A function to obtain the to current [ready] [Future] from the underlying
+  /// watcher.
+  final Future<void> Function() _ready;
+
+  ResourceWatcher(this.changes, this._ready);
 
   /// An event that fires when the watcher is fully initialized and ready to
   /// produce events.
   ///
   /// This event will not fire until a listener has been set up on [changes] and
   /// the watcher initialization is complete.
-  final Future<void> ready;
-
-  ResourceWatcher(this.changes, this.ready);
+  ///
+  /// This Future may change over time because the internal watcher may be
+  /// closed when there are no subscribers and re-created when another
+  /// subscriber appears.
+  Future<void> get ready => _ready();
 }
 
 extension FolderExtension on Folder {

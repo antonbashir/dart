@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:_fe_analyzer_shared/src/macros/compiler/request_channel.dart';
-import 'package:_fe_analyzer_shared/src/macros/executor/serialization.dart';
+import 'package:_fe_analyzer_shared/src/macros/compiler/byte_data_serializer.dart';
 import 'package:test/test.dart';
 
 main() {
@@ -221,7 +221,7 @@ main() {
           try {
             await channel.sendRequest('throwIt', {});
             fail('Expected to throw RemoteException.');
-          } on RemoteException catch (e) {
+          } on RequestChannelException catch (e) {
             expect(e.message, 'Some error');
             expect(e.stackTrace, isNotEmpty);
           }
@@ -236,7 +236,7 @@ main() {
           try {
             await channel.sendRequest('noSuchHandler', {});
             fail('Expected to throw RemoteException.');
-          } on RemoteException catch (e) {
+          } on RequestChannelException catch (e) {
             expect(e.message, contains('noSuchHandler'));
             expect(e.stackTrace, isNotEmpty);
           }

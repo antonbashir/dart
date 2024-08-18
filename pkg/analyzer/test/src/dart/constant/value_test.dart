@@ -33,8 +33,8 @@ class DartObjectImplTest {
 
   void setUp() {
     var analysisContext = TestAnalysisContext();
-    _typeProvider = analysisContext.typeProviderLegacy;
-    _typeSystem = analysisContext.typeSystemLegacy;
+    _typeProvider = analysisContext.typeProvider;
+    _typeSystem = analysisContext.typeSystem;
   }
 
   void test_add_knownDouble_knownDouble() {
@@ -498,7 +498,7 @@ class DartObjectImplTest {
   }
 
   void test_getField_record() {
-    final record = _recordValue([
+    var record = _recordValue([
       _intValue(0),
       _intValue(1),
     ], {

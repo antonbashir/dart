@@ -2,15 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/src/dart/error/syntactic_errors.dart';
 import 'package:analyzer/src/error/codes.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(BinaryExpressionResolutionTest);
+    defineReflectiveTests(InferenceUpdate3Test);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -30,7 +34,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.binary('a == 0');
+    var node = findNode.binary('a == 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -147,7 +151,7 @@ extension on (String,) {
 }
 ''');
 
-    final node = findNode.binary('+ 0');
+    var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -174,7 +178,7 @@ void f((String,) a) {
       error(CompileTimeErrorCode.UNDEFINED_OPERATOR, 26, 1),
     ]);
 
-    final node = findNode.binary('+ 0');
+    var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -203,7 +207,7 @@ void f(A a) {
 }
 ''');
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -241,7 +245,7 @@ BinaryExpression
         NullLiteral
           literal: null
           parameter: ParameterMember
-            base: root::@parameter::t
+            base: self::@function::f::@parameter::t
             substitution: {T: int?}
           staticType: Null
       rightParenthesis: )
@@ -257,6 +261,40 @@ BinaryExpression
   staticElement: <null>
   staticInvokeType: null
   staticType: int
+''');
+  }
+
+  test_ifNull_lubUsedEvenIfItDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+// @dart=3.3
+class A {}
+class B1 extends A {}
+class B2 extends A {}
+class C1 implements B1, B2 {}
+class C2 implements B1, B2 {}
+f(C1? c1, C2 c2, Object? o) {
+  if (o is B1) {
+    o = c1 ?? c2;
+  }
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('c1 ?? c2'), r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: c1
+    staticElement: self::@function::f::@parameter::c1
+    staticType: C1?
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: c2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c2
+    staticType: C2
+  parameter: <null>
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: A
 ''');
   }
 
@@ -332,6 +370,254 @@ BinaryExpression
   staticElement: <null>
   staticInvokeType: null
   staticType: int?
+''');
+  }
+
+  test_plus_augmentedExpression_augments_nothing() async {
+    await assertErrorsInCode('''
+class A {
+  int operator+(Object? a) {
+    return augmented + 0;
+  }
+}
+''', [
+      error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 50, 9),
+    ]);
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: augmented
+    staticElement: <null>
+    staticType: InvalidType
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 0
+    parameter: <null>
+    staticType: int
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: InvalidType
+''');
+  }
+
+  test_plus_augmentedExpression_augments_plus() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  int operator+(Object? a) => 0;
+}
+''');
+
+    await assertNoErrorsInCode('''
+augment library 'a.dart';
+
+augment class A {
+  augment int operator+(Object? a) {
+    return augmented + 0;
+  }
+}
+''');
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: AugmentedExpression
+    augmentedKeyword: augmented
+    element: self::@class::A::@method::+
+    staticType: A
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 0
+    parameter: self::@class::A::@method::+::@parameter::a
+    staticType: int
+  staticElement: self::@class::A::@method::+
+  staticInvokeType: int Function(Object?)
+  staticType: int
+''');
+  }
+
+  test_plus_augmentedExpression_augments_unaryMinus() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  int operator-() => 0;
+}
+''');
+
+    await assertErrorsInCode('''
+augment library 'a.dart';
+
+augment class A {
+  augment int operator-() {
+    return augmented + 0;
+  }
+}
+''', [
+      error(CompileTimeErrorCode.AUGMENTED_EXPRESSION_NOT_OPERATOR, 84, 9),
+    ]);
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: AugmentedExpression
+    augmentedKeyword: augmented
+    element: self::@class::A::@method::unary-
+    staticType: A
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 0
+    parameter: <null>
+    staticType: int
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: InvalidType
+''');
+  }
+
+  test_plus_augmentedExpression_class_field() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  num foo = 0;
+}
+''');
+
+    await assertNoErrorsInCode('''
+augment library 'a.dart';
+
+augment class A {
+  augment num foo = augmented + 1;
+}
+''');
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: AugmentedExpression
+    augmentedKeyword: augmented
+    element: self::@class::A::@field::foo
+    staticType: num
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  staticElement: dart:core::@class::num::@method::+
+  staticInvokeType: num Function(num)
+  staticType: num
+''');
+  }
+
+  test_plus_augmentedExpression_getter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  int get foo => 0;
+}
+''');
+
+    await assertNoErrorsInCode('''
+augment library 'a.dart';
+
+augment class A {
+  augment int get foo {
+    return augmented + 1;
+  }
+}
+''');
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: AugmentedExpression
+    augmentedKeyword: augmented
+    element: self::@class::A::@getter::foo
+    staticType: int
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    parameter: dart:core::@class::num::@method::+::@parameter::other
+    staticType: int
+  staticElement: dart:core::@class::num::@method::+
+  staticInvokeType: num Function(num)
+  staticType: int
+''');
+  }
+
+  test_plus_augmentedExpression_setter() async {
+    newFile('$testPackageLibPath/a.dart', r'''
+import augment 'test.dart';
+
+class A {
+  set foo(int _) {}
+}
+''');
+
+    await assertErrorsInCode('''
+augment library 'a.dart';
+
+augment class A {
+  augment set foo(int _) {
+    augmented + 1;
+  }
+}
+''', [
+      error(CompileTimeErrorCode.AUGMENTED_EXPRESSION_IS_SETTER, 76, 9),
+    ]);
+
+    var node = findNode.singleBinaryExpression;
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: AugmentedExpression
+    augmentedKeyword: augmented
+    element: self::@class::A::@setter::foo
+    staticType: InvalidType
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    parameter: <null>
+    staticType: int
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: InvalidType
+''');
+  }
+
+  test_plus_extensionType_int() async {
+    await assertNoErrorsInCode('''
+extension type Int(int i) implements int {
+  Int operator +(int other) {
+    return Int(i + other);
+  }
+}
+
+void f(Int a, int b) {
+  a + b;
+}
+''');
+
+    var node = findNode.binary('a + b');
+    assertResolvedNodeText(node, r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: a
+    staticElement: self::@function::f::@parameter::a
+    staticType: Int
+  operator: +
+  rightOperand: SimpleIdentifier
+    token: b
+    parameter: self::@extensionType::Int::@method::+::@parameter::other
+    staticElement: self::@function::f::@parameter::b
+    staticType: int
+  staticElement: self::@extensionType::Int::@method::+
+  staticInvokeType: Int Function(int)
+  staticType: Int
 ''');
   }
 
@@ -487,7 +773,7 @@ void f() {
       error(ParserErrorCode.MISSING_IDENTIFIER, 25, 1),
     ]);
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -516,7 +802,7 @@ void f() {
       error(ParserErrorCode.MISSING_IDENTIFIER, 23, 1),
     ]);
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -544,7 +830,7 @@ void f() {
       error(ParserErrorCode.MISSING_IDENTIFIER, 27, 1),
     ]);
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: IntegerLiteral
@@ -577,7 +863,7 @@ class B extends A {
 }
 ''');
 
-    final node = findNode.binary('+ 0');
+    var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SuperExpression
@@ -605,7 +891,7 @@ class A {
 }
 ''');
 
-    final node = findNode.binary('+ 0');
+    var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: ThisExpression
@@ -721,7 +1007,7 @@ f(dynamic a) {
 }
 ''');
 
-    final node = findNode.binary('a == 0');
+    var node = findNode.binary('a == 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -784,7 +1070,7 @@ f(int a, int b) {
 }
 ''');
 
-    final node = findNode.binary('a == b');
+    var node = findNode.binary('a == b');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -812,7 +1098,7 @@ void f(A a) {
       error(CompileTimeErrorCode.UNDEFINED_CLASS, 7, 1),
     ]);
 
-    final node = findNode.binary('a == 0');
+    var node = findNode.binary('a == 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -858,9 +1144,8 @@ BinaryExpression
   }
 
   test_ifNull() async {
-    var question = isNullSafetyEnabled ? '?' : '';
     await assertNoErrorsInCode('''
-f(int$question a, double b) {
+f(int? a, double b) {
   a ?? b;
 }
 ''');
@@ -942,7 +1227,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1019,7 +1304,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1096,7 +1381,7 @@ g(double a) {
 h(double x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1125,7 +1410,7 @@ h(int x) {}
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 45, 7),
     ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1151,7 +1436,7 @@ g(double a) {
 }
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1203,7 +1488,7 @@ g(int a) {
 h(double x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1230,7 +1515,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1257,7 +1542,7 @@ g(int Function() a) {
 h(int x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1289,7 +1574,7 @@ h(int x) {}
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 98, 10),
     ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1315,7 +1600,7 @@ g(int a) {
 }
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1503,6 +1788,35 @@ BinaryExpression
 ''');
   }
 
+  test_plus_int_typeVariable_via_extension() async {
+    await assertNoErrorsInCode('''
+class Foo {}
+
+extension FooExtension<F extends Foo> on F {
+  F operator +(int i) => this;
+
+  F get gg => this + 1;
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('this + 1'), r'''
+BinaryExpression
+  leftOperand: ThisExpression
+    thisKeyword: this
+    staticType: F
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    parameter: root::@parameter::i
+    staticType: int
+  staticElement: MethodMember
+    base: self::@extension::FooExtension::@method::+
+    substitution: {F: F}
+  staticInvokeType: F Function(int)
+  staticType: F
+''');
+  }
+
   test_plus_invalidType_int() async {
     await assertErrorsInCode(r'''
 void f() {
@@ -1512,7 +1826,7 @@ void f() {
       error(CompileTimeErrorCode.UNDEFINED_IDENTIFIER, 13, 1),
     ]);
 
-    final node = findNode.binary('x + 0');
+    var node = findNode.binary('x + 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1531,19 +1845,17 @@ BinaryExpression
   }
 
   test_plus_num_context_int() async {
-    await assertErrorsInCode(
-        '''
+    await assertErrorsInCode('''
 T f<T>() => throw Error();
 g(num a) {
   h(a + f());
 }
 h(int x) {}
-''',
-        expectedErrorsByNullability(nullable: [
-          error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 42, 7),
-        ], legacy: []));
+''', [
+      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 42, 7),
+    ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1562,8 +1874,7 @@ MethodInvocation
   }
 
   test_plus_other_context_int() async {
-    await assertErrorsInCode(
-        '''
+    await assertErrorsInCode('''
 abstract class A {
   num operator+(String x);
 }
@@ -1572,12 +1883,11 @@ g(A a) {
   h(a + f());
 }
 h(int x) {}
-''',
-        expectedErrorsByNullability(nullable: [
-          error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 88, 7),
-        ], legacy: []));
+''', [
+      error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 88, 7),
+    ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1610,7 +1920,7 @@ h(int x) {}
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 105, 10),
     ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1643,7 +1953,7 @@ h(int x) {}
       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 105, 7),
     ]);
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1839,7 +2149,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    final node = findNode.methodInvocation('f()');
+    var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1904,6 +2214,142 @@ BinaryExpression
   staticElement: dart:core::@class::num::@method::*
   staticInvokeType: num Function(num)
   staticType: int
+''');
+  }
+}
+
+@reflectiveTest
+class InferenceUpdate3Test extends PubPackageResolutionTest {
+  @override
+  List<String> get experiments {
+    return [
+      ...super.experiments,
+      Feature.inference_update_3.enableString,
+    ];
+  }
+
+  test_ifNull_contextIsConvertedToATypeUsingGreatestClosure() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1<T> extends A {}
+class B2<T> extends A {}
+class C1<T> implements B1<T>, B2<T> {}
+class C2<T> implements B1<T>, B2<T> {}
+void contextB1<T>(B1<T> b1) {}
+f(C1<int>? c1, C2<double> c2) {
+  contextB1(c1 ?? c2);
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('c1 ?? c2'), r'''BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: c1
+    staticElement: self::@function::f::@parameter::c1
+    staticType: C1<int>?
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: c2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c2
+    staticType: C2<double>
+  parameter: ParameterMember
+    base: self::@function::contextB1::@parameter::b1
+    substitution: {T: Object?}
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: B1<Object?>
+''');
+  }
+
+  test_ifNull_contextNotUsedIfLhsDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1 extends A {}
+class B2 extends A {}
+class C1 implements B1, B2 {}
+class C2 implements B1, B2 {}
+f(B2? b2, C1 c1, Object? o) {
+  if (o is B1) {
+    o = b2 ?? c1;
+  }
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('b2 ?? c1'), r'''BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: b2
+    staticElement: self::@function::f::@parameter::b2
+    staticType: B2?
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: c1
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c1
+    staticType: C1
+  parameter: <null>
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: B2
+''');
+  }
+
+  test_ifNull_contextNotUsedIfRhsDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1 extends A {}
+class B2 extends A {}
+class C1 implements B1, B2 {}
+class C2 implements B1, B2 {}
+f(C1? c1, B2 b2, Object? o) {
+  if (o is B1) {
+    o = c1 ?? b2;
+  }
+}
+''');
+
+    assertResolvedNodeText(findNode.binary('c1 ?? b2'), r'''BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: c1
+    staticElement: self::@function::f::@parameter::c1
+    staticType: C1?
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: b2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::b2
+    staticType: B2
+  parameter: <null>
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: B2
+''');
+  }
+
+  test_ifNull_contextUsedInsteadOfLubIfLubDoesNotSatisfyContext() async {
+    await assertNoErrorsInCode('''
+class A {}
+class B1 extends A {}
+class B2 extends A {}
+class C1 implements B1, B2 {}
+class C2 implements B1, B2 {}
+B1 f(C1? c1, C2 c2) => c1 ?? c2;
+''');
+
+    assertResolvedNodeText(findNode.binary('c1 ?? c2'), r'''
+BinaryExpression
+  leftOperand: SimpleIdentifier
+    token: c1
+    staticElement: self::@function::f::@parameter::c1
+    staticType: C1?
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: c2
+    parameter: <null>
+    staticElement: self::@function::f::@parameter::c2
+    staticType: C2
+  staticElement: <null>
+  staticInvokeType: null
+  staticType: B1
 ''');
   }
 }

@@ -17,17 +17,14 @@ void main() {
 @reflectiveTest
 class FileModificationTest extends AbstractLspAnalysisServerTest {
   Future<void> test_change_badPosition() async {
-    final contents = '';
-    await initialize(
-      // Error is expected and checked below.
-      failTestOnAnyErrorNotification: false,
-    );
+    var contents = '';
+    await initialize();
     await openFile(mainFileUri, contents);
 
     // Since this is a notification and not a request, the server cannot
     // respond with an error, but instead sends a ShowMessage notification
     // to alert the user to something failing.
-    final error = await expectErrorNotification(() async {
+    var error = await expectErrorNotification(() async {
       await changeFile(222, mainFileUri, [
         TextDocumentContentChangeEvent.t1(TextDocumentContentChangeEvent1(
           range: Range(
@@ -42,21 +39,21 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_change_fullContents() async {
-    final initialContent = 'int a = 1;';
-    final updatedContent = 'int a = 2;';
+    var initialContent = 'int a = 1;';
+    var updatedContent = 'int a = 2;';
 
     await initialize();
     await openFile(mainFileUri, initialContent);
     await replaceFile(222, mainFileUri, updatedContent);
     expect(_getOverlay(mainFilePath), equals(updatedContent));
 
-    final documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
+    var documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
     expect(documentVersion.version, equals(222));
   }
 
   Future<void> test_change_incremental() async {
-    final initialContent = '0123456789\n0123456789';
-    final expectedUpdatedContent = '0123456789\n01234   89';
+    var initialContent = '// 0123456789\n// 0123456789';
+    var expectedUpdatedContent = '// 0123456789\n// 01234   89';
 
     await initialize();
     await openFile(mainFileUri, initialContent);
@@ -64,14 +61,14 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
       // Replace line1:5-1:8 with spaces.
       TextDocumentContentChangeEvent.t1(TextDocumentContentChangeEvent1(
         range: Range(
-            start: Position(line: 1, character: 5),
-            end: Position(line: 1, character: 8)),
+            start: Position(line: 1, character: 8),
+            end: Position(line: 1, character: 11)),
         text: '   ',
       ))
     ]);
     expect(_getOverlay(mainFilePath), equals(expectedUpdatedContent));
 
-    final documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
+    var documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
     expect(documentVersion.version, equals(222));
   }
 
@@ -79,18 +76,15 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
     // It's not valid for a client to send a request to modify a file that it
     // has not opened, but Visual Studio has done it in the past so we should
     // ensure it generates an obvious error that the user can understand.
-    final simpleEdit =
+    var simpleEdit =
         TextDocumentContentChangeEvent.t1(TextDocumentContentChangeEvent1(
       range: Range(
           start: Position(line: 1, character: 1),
           end: Position(line: 1, character: 1)),
       text: 'test',
     ));
-    await initialize(
-      // Error is expected and checked below.
-      failTestOnAnyErrorNotification: false,
-    );
-    final notificationParams = await expectErrorNotification(
+    await initialize();
+    var notificationParams = await expectErrorNotification(
       () => changeFile(222, mainFileUri, [simpleEdit]),
     );
     expect(notificationParams, isNotNull);
@@ -104,8 +98,8 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
   }
 
   Future<void> test_close() async {
-    final initialContent = 'int a = 1;';
-    final updatedContent = 'int a = 2;';
+    var initialContent = 'int a = 1;';
+    var updatedContent = 'int a = 2;';
 
     await initialize();
     await openFile(mainFileUri, initialContent);
@@ -115,12 +109,12 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
 
     // When we close a file, we expect the version in the versioned identifier to
     // return to `null`.
-    final documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
+    var documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
     expect(documentVersion.version, isNull);
   }
 
   Future<void> test_open() async {
-    const testContent = 'CONTENT';
+    const testContent = '// CONTENT';
 
     await initialize();
     expect(_getOverlay(mainFilePath), isNull);
@@ -129,23 +123,21 @@ class FileModificationTest extends AbstractLspAnalysisServerTest {
 
     // The version for a file that's just been opened (and never modified) is
     // `null` (this means the contents match what's on disk).
-    final documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
+    var documentVersion = server.getVersionedDocumentIdentifier(mainFilePath);
     expect(documentVersion.version, 2);
   }
 
   Future<void> test_open_invalidPath() async {
-    await initialize(
-      // Error is expected and checked below.
-      failTestOnAnyErrorNotification: false,
-    );
+    await initialize();
 
-    final notificationParams = await expectErrorNotification(
+    var notificationParams = await expectErrorNotification(
       () => openFile(Uri.http('localhost', 'not-a-file'), ''),
     );
     expect(notificationParams, isNotNull);
     expect(
       notificationParams.message,
-      contains('URI was not a valid file:// URI'),
+      contains(
+          "URI scheme 'http' is not supported. Allowed schemes are 'file'."),
     );
   }
 

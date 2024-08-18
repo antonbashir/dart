@@ -15,6 +15,10 @@ def ParseArgs(args):
 
     parser.add_argument(
         '--output', '-o', type=str, required=True, help='File to write')
+    parser.add_argument('--no-git-hash',
+                        help='Omit the git hash in the output',
+                        dest='no_git_hash',
+                        action='store_true')
 
     return parser.parse_args(args)
 
@@ -22,11 +26,30 @@ def ParseArgs(args):
 def Main(argv):
     args = ParseArgs(argv)
     # TODO(jcollins-g): switch to version numbers when github has its tags synced
-    revision = utils.GetGitRevision()
+    revision = None
+    if not args.no_git_hash:
+        revision = utils.GetGitRevision()
     if revision is None:
-        revision = 'master'
+        revision = 'main'
     output = '''dartdoc:
-  categoryOrder: ["Core", "VM", "Web"]
+  categoryOrder: ["Core", "VM", "Web", "Web (Legacy)"]
+  categories:
+    'Web':
+      external:
+        - name: 'package:web'
+          url: https://pub.dev/documentation/web/latest/
+          docs: >-
+            This package exposes browser APIs. It's intended to replace
+            dart:html and similar Dart SDK libraries. It will support access to
+            browser APIs from Dart code compiled to either JavaScript or
+            WebAssembly.
+    'Web (Legacy)':
+      external:
+        - name: 'package:js'
+          url: https://pub.dev/documentation/js/latest/
+          docs: >-
+            Use this package when you want to call JavaScript APIs from Dart
+            code, or vice versa.
   linkToSource:
     root: '.'
     uriTemplate: 'https://github.com/dart-lang/sdk/blob/%s/sdk/%%f%%#L%%l%%'
@@ -55,6 +78,12 @@ def Main(argv):
     - unknown-file
     - unknown-macro
     - unresolved-doc-reference
+  header:
+    - ../../../tools/bots/dartdoc_header.html
+  footer:
+    - ../../../tools/bots/dartdoc_footer.html
+  footerText:
+    - ../../../tools/bots/dartdoc_footer_text.html
 ''' % revision
     with open(args.output, 'w') as f:
         f.write(output)

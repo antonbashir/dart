@@ -2,7 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/src/services/correction/fix_internal.dart';
+import 'package:analysis_server/src/services/correction/fix_processor.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/error/error.dart';
 
 import 'parse_utils.dart';
@@ -25,8 +26,8 @@ Future<void> main() async {
     var missingExplanations = <String>[];
     var hasOverride = false;
     for (var generator in diagnostic.value) {
-      var producer = generator();
-      if (!producer.canBeAppliedInBulk) {
+      var producer = generator(context: StubCorrectionProducerContext.instance);
+      if (!producer.canBeAppliedAcrossFiles) {
         var producerName = producer.runtimeType.toString();
         if (overrideDetails.containsKey(producerName)) {
           hasOverride = true;

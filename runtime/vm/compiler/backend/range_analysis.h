@@ -18,8 +18,6 @@ class RangeBoundary : public ValueObject {
  public:
 #define FOR_EACH_RANGE_BOUNDARY_KIND(V)                                        \
   V(Unknown)                                                                   \
-  V(NegativeInfinity)                                                          \
-  V(PositiveInfinity)                                                          \
   V(Symbol)                                                                    \
   V(Constant)
 
@@ -27,11 +25,9 @@ class RangeBoundary : public ValueObject {
   enum Kind { FOR_EACH_RANGE_BOUNDARY_KIND(KIND_DEFN) };
 #undef KIND_DEFN
 
-  static const char* KindToCString(Kind kind);
-  static bool ParseKind(const char* str, Kind* out);
-
   enum RangeSize {
     kRangeBoundarySmi,
+    kRangeBoundaryInt8,
     kRangeBoundaryInt16,
     kRangeBoundaryInt32,
     kRangeBoundaryInt64,
@@ -61,16 +57,6 @@ class RangeBoundary : public ValueObject {
   // Construct a RangeBoundary for a constant value.
   static RangeBoundary FromConstant(int64_t val) { return RangeBoundary(val); }
 
-  // Construct a RangeBoundary for -inf.
-  static RangeBoundary NegativeInfinity() {
-    return RangeBoundary(kNegativeInfinity, 0, 0);
-  }
-
-  // Construct a RangeBoundary for +inf.
-  static RangeBoundary PositiveInfinity() {
-    return RangeBoundary(kPositiveInfinity, 0, 0);
-  }
-
   // Construct a RangeBoundary from a definition and offset.
   static RangeBoundary FromDefinition(Definition* defn, int64_t offs = 0);
 
@@ -98,6 +84,8 @@ class RangeBoundary : public ValueObject {
     switch (size) {
       case kRangeBoundarySmi:
         return FromConstant(compiler::target::kSmiMin);
+      case kRangeBoundaryInt8:
+        return FromConstant(kMinInt8);
       case kRangeBoundaryInt16:
         return FromConstant(kMinInt16);
       case kRangeBoundaryInt32:
@@ -113,6 +101,8 @@ class RangeBoundary : public ValueObject {
     switch (size) {
       case kRangeBoundarySmi:
         return FromConstant(compiler::target::kSmiMax);
+      case kRangeBoundaryInt8:
+        return FromConstant(kMaxInt8);
       case kRangeBoundaryInt16:
         return FromConstant(kMaxInt16);
       case kRangeBoundaryInt32:
@@ -158,28 +148,16 @@ class RangeBoundary : public ValueObject {
 
   // Returns true when this is a constant that is outside of Smi range.
   bool OverflowedSmi() const {
-    return (IsConstant() && !compiler::target::IsSmi(ConstantValue())) ||
-           IsInfinity();
+    return IsConstant() && !compiler::target::IsSmi(ConstantValue());
   }
 
   bool Overflowed(RangeBoundary::RangeSize size) const {
-    ASSERT(IsConstantOrInfinity());
+    ASSERT(IsConstant());
     return !Equals(Clamp(size));
   }
 
-  // Returns true if this outside mint range.
-  bool OverflowedMint() const { return IsInfinity(); }
-
-  // -/+ infinity are clamped to MinConstant/MaxConstant of the given type.
+  // Clamp constant boundary to MinConstant/MaxConstant of the given size.
   RangeBoundary Clamp(RangeSize size) const {
-    if (IsNegativeInfinity()) {
-      return RangeBoundary::MinConstant(size);
-    }
-
-    if (IsPositiveInfinity()) {
-      return RangeBoundary::MaxConstant(size);
-    }
-
     if (IsConstant()) {
       const RangeBoundary range_min = RangeBoundary::MinConstant(size);
       const RangeBoundary range_max = RangeBoundary::MaxConstant(size);
@@ -198,15 +176,13 @@ class RangeBoundary : public ValueObject {
   }
 
   bool IsMinimumOrBelow(RangeSize size) const {
-    return IsNegativeInfinity() ||
-           (IsConstant() && (ConstantValue() <=
-                             RangeBoundary::MinConstant(size).ConstantValue()));
+    return IsConstant() && (ConstantValue() <=
+                            RangeBoundary::MinConstant(size).ConstantValue());
   }
 
   bool IsMaximumOrAbove(RangeSize size) const {
-    return IsPositiveInfinity() ||
-           (IsConstant() && (ConstantValue() >=
-                             RangeBoundary::MaxConstant(size).ConstantValue()));
+    return IsConstant() && (ConstantValue() >=
+                            RangeBoundary::MaxConstant(size).ConstantValue());
   }
 
   intptr_t kind() const { return kind_; }
@@ -215,12 +191,6 @@ class RangeBoundary : public ValueObject {
   bool IsUnknown() const { return kind_ == kUnknown; }
   bool IsConstant() const { return kind_ == kConstant; }
   bool IsSymbol() const { return kind_ == kSymbol; }
-  bool IsNegativeInfinity() const { return kind_ == kNegativeInfinity; }
-  bool IsPositiveInfinity() const { return kind_ == kPositiveInfinity; }
-  bool IsInfinity() const {
-    return IsNegativeInfinity() || IsPositiveInfinity();
-  }
-  bool IsConstantOrInfinity() const { return IsConstant() || IsInfinity(); }
 
   // Returns the value of a kConstant RangeBoundary.
   int64_t ConstantValue() const;
@@ -235,13 +205,11 @@ class RangeBoundary : public ValueObject {
   int64_t offset() const { return offset_; }
 
   // Computes the LowerBound of this. Three cases:
-  // IsInfinity() -> NegativeInfinity().
   // IsConstant() -> value().
   // IsSymbol() -> lower bound computed from definition + offset.
   RangeBoundary LowerBound() const;
 
   // Computes the UpperBound of this. Three cases:
-  // IsInfinity() -> PositiveInfinity().
   // IsConstant() -> value().
   // IsSymbol() -> upper bound computed from definition + offset.
   RangeBoundary UpperBound() const;
@@ -249,28 +217,21 @@ class RangeBoundary : public ValueObject {
   void PrintTo(BaseTextBuffer* f) const;
   const char* ToCString() const;
 
-  static RangeBoundary Add(const RangeBoundary& a,
-                           const RangeBoundary& b,
-                           const RangeBoundary& overflow);
+  static bool WillAddOverflow(const RangeBoundary& a, const RangeBoundary& b);
 
-  static RangeBoundary Sub(const RangeBoundary& a,
-                           const RangeBoundary& b,
-                           const RangeBoundary& overflow);
+  static RangeBoundary Add(const RangeBoundary& a, const RangeBoundary& b);
+
+  static bool WillSubOverflow(const RangeBoundary& a, const RangeBoundary& b);
+
+  static RangeBoundary Sub(const RangeBoundary& a, const RangeBoundary& b);
+
+  static bool WillShlOverflow(const RangeBoundary& a, int64_t shift_count);
 
   static RangeBoundary Shl(const RangeBoundary& value_boundary,
-                           int64_t shift_count,
-                           const RangeBoundary& overflow);
+                           int64_t shift_count);
 
   static RangeBoundary Shr(const RangeBoundary& value_boundary,
-                           int64_t shift_count) {
-    ASSERT(value_boundary.IsConstant());
-    ASSERT(shift_count >= 0);
-    const int64_t value = static_cast<int64_t>(value_boundary.ConstantValue());
-    const int64_t result = (shift_count <= 63)
-                               ? (value >> shift_count)
-                               : (value >= 0 ? 0 : -1);  // Dart semantics
-    return RangeBoundary(result);
-  }
+                           int64_t shift_count);
 
   // Attempts to calculate a + b when:
   // a is a symbol and b is a constant OR
@@ -319,11 +280,6 @@ class Range : public ZoneAllocated {
 
   Range(RangeBoundary min, RangeBoundary max) : min_(min), max_(max) {
     ASSERT(min_.IsUnknown() == max_.IsUnknown());
-
-    if (min_.IsInfinity() || max_.IsInfinity()) {
-      // Value can wrap around, so fall back to the full 64-bit range.
-      SetInt64Range();
-    }
   }
 
   Range(const Range& other)
@@ -363,23 +319,9 @@ class Range : public ZoneAllocated {
   const RangeBoundary& min() const { return min_; }
   const RangeBoundary& max() const { return max_; }
 
-  void set_min(const RangeBoundary& value) {
-    min_ = value;
+  void set_min(const RangeBoundary& value) { min_ = value; }
 
-    if (min_.IsInfinity()) {
-      // Value can wrap around, so fall back to the full 64-bit range.
-      SetInt64Range();
-    }
-  }
-
-  void set_max(const RangeBoundary& value) {
-    max_ = value;
-
-    if (max_.IsInfinity()) {
-      // Value can wrap around, so fall back to the full 64-bit range.
-      SetInt64Range();
-    }
-  }
+  void set_max(const RangeBoundary& value) { max_ = value; }
 
   static RangeBoundary ConstantMinSmi(const Range* range) {
     return ConstantMin(range, RangeBoundary::kRangeBoundarySmi);
@@ -436,8 +378,6 @@ class Range : public ZoneAllocated {
 
   bool IsUnsatisfiable() const;
 
-  bool IsFinite() const { return !min_.IsInfinity() && !max_.IsInfinity(); }
-
   bool IsSingleton() const {
     return min_.IsConstant() && max_.IsConstant() &&
            min_.ConstantValue() == max_.ConstantValue();
@@ -462,21 +402,9 @@ class Range : public ZoneAllocated {
   // the given representation.
   static bool Fits(Range* range, Representation rep) {
     if (range == nullptr) return false;
-
-    switch (rep) {
-      case kUnboxedInt64:
-        return true;
-
-      case kUnboxedInt32:
-        return range->Fits(RangeBoundary::kRangeBoundaryInt32);
-
-      case kUnboxedUint32:
-        return range->IsWithin(0, kMaxUint32);
-
-      default:
-        break;
-    }
-    return false;
+    if (!RepresentationUtils::IsUnboxedInteger(rep)) return false;
+    const Range& other = Range::Full(rep);
+    return range->IsWithin(&other);
   }
 
   // Clamp this to be within size.
@@ -560,11 +488,6 @@ class Range : public ZoneAllocated {
  private:
   RangeBoundary min_;
   RangeBoundary max_;
-
-  void SetInt64Range() {
-    min_ = RangeBoundary::MinConstant(RangeBoundary::kRangeBoundaryInt64);
-    max_ = RangeBoundary::MaxConstant(RangeBoundary::kRangeBoundaryInt64);
-  }
 };
 
 class RangeUtils : public AllStatic {

@@ -100,9 +100,9 @@ class _LocalNameScope {
 
   factory _LocalNameScope.forExtensionType(
       _LocalNameScope enclosing, ExtensionTypeDeclaration node) {
-    final scope = _LocalNameScope(enclosing);
+    var scope = _LocalNameScope(enclosing);
     scope.addTypeParameters(node.typeParameters);
-    for (final member in node.members) {
+    for (var member in node.members) {
       if (member is FieldDeclaration) {
         scope.addVariableNames(member.fields);
       } else if (member is MethodDeclaration) {
@@ -249,7 +249,7 @@ class _ReferencedNamesComputer extends GeneralizingAstVisitor<void> {
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    final outerScope = localScope;
+    var outerScope = localScope;
     try {
       localScope = _LocalNameScope.forExtensionType(localScope, node);
       super.visitExtensionTypeDeclaration(node);
@@ -302,7 +302,10 @@ class _ReferencedNamesComputer extends GeneralizingAstVisitor<void> {
 
   @override
   void visitNamedType(NamedType node) {
-    _addIfNotShadowed(node.name2);
+    _addIfNotShadowed(
+      node.name2,
+      hasImportPrefix: node.importPrefix != null,
+    );
     super.visitNamedType(node);
   }
 
@@ -335,10 +338,13 @@ class _ReferencedNamesComputer extends GeneralizingAstVisitor<void> {
   }
 
   /// Adds [token] if it is not shadowed by a local element.
-  void _addIfNotShadowed(Token token) {
-    final name = token.lexeme;
+  void _addIfNotShadowed(
+    Token token, {
+    required bool hasImportPrefix,
+  }) {
+    var name = token.lexeme;
 
-    if (localScope.contains(name)) {
+    if (localScope.contains(name) && !hasImportPrefix) {
       return;
     }
 

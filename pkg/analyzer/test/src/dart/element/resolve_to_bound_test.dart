@@ -30,7 +30,6 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   test_interfaceType() {
     _check(intNone, 'int');
     _check(intQuestion, 'int?');
-    _check(intStar, 'int*');
   }
 
   test_typeParameter_bound() {
@@ -46,13 +45,6 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
         typeParameter('T', bound: intQuestion),
       ),
       'int?',
-    );
-
-    _check(
-      typeParameterTypeStar(
-        typeParameter('T', bound: intStar),
-      ),
-      'int*',
     );
   }
 
@@ -71,8 +63,8 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameter_bound_nested_noBound() {
-    final T = typeParameter('T');
-    final U = typeParameter(
+    var T = typeParameter('T');
+    var U = typeParameter(
       'U',
       bound: typeParameterTypeNone(T),
     );
@@ -80,8 +72,8 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameter_bound_nested_none() {
-    final T = typeParameter('T', bound: intNone);
-    final U = typeParameter(
+    var T = typeParameter('T', bound: intNone);
+    var U = typeParameter(
       'U',
       bound: typeParameterTypeNone(T),
     );
@@ -89,8 +81,8 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameter_bound_nested_none_outerNullable() {
-    final T = typeParameter('T', bound: intNone);
-    final U = typeParameter(
+    var T = typeParameter('T', bound: intNone);
+    var U = typeParameter(
       'U',
       bound: typeParameterTypeQuestion(T),
     );
@@ -98,8 +90,8 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   }
 
   test_typeParameter_bound_nested_question() {
-    final T = typeParameter('T', bound: intQuestion);
-    final U = typeParameter(
+    var T = typeParameter('T', bound: intQuestion);
+    var U = typeParameter(
       'U',
       bound: typeParameterTypeNone(T),
     );
@@ -158,14 +150,6 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
       ),
       'int?',
     );
-
-    _check(
-      typeParameterTypeNone(
-        typeParameter('T', bound: numStar),
-        promotedBound: intStar,
-      ),
-      'int*',
-    );
   }
 
   test_void() {
@@ -179,6 +163,6 @@ class ResolveToBoundTest extends AbstractTypeSystemTest {
   }
 
   String _typeString(DartType type) {
-    return type.getDisplayString(withNullability: true);
+    return type.getDisplayString();
   }
 }

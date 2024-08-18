@@ -9,7 +9,6 @@ import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
-import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
@@ -17,18 +16,13 @@ import 'package:analyzer/src/dart/resolver/extension_member_resolver.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inference_helper.dart';
 import 'package:analyzer/src/dart/resolver/invocation_inferrer.dart';
 import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/generated/inference_log.dart';
 import 'package:analyzer/src/generated/resolver.dart';
 import 'package:analyzer/src/generated/scope_helpers.dart';
 import 'package:analyzer/src/generated/super_context.dart';
 import 'package:analyzer/src/generated/variable_type_provider.dart';
 
 class MethodInvocationResolver with ScopeHelpers {
-  /// Resolver visitor is separated from the elements resolver, which calls
-  /// this method resolver. If we rewrite a [MethodInvocation] node, we put
-  /// the resulting [FunctionExpressionInvocation] into the original node
-  /// under this key.
-  static const _rewriteResultKey = 'methodInvocationRewriteResult';
-
   /// The resolver driving this participant.
   final ResolverVisitor _resolver;
 
@@ -77,9 +71,13 @@ class MethodInvocationResolver with ScopeHelpers {
 
   TypeSystemImpl get _typeSystem => _resolver.typeSystem;
 
-  void resolve(
+  /// Resolves the method invocation, [node].
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? resolve(
       MethodInvocationImpl node, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     _invocation = node;
 
     var nameNode = node.methodName;
@@ -89,58 +87,52 @@ class MethodInvocationResolver with ScopeHelpers {
     var receiver = node.realTarget;
 
     if (receiver == null) {
-      _resolveReceiverNull(node, nameNode, name, whyNotPromotedList,
+      return _resolveReceiverNull(node, nameNode, name, whyNotPromotedList,
           contextType: contextType);
-      return;
     }
 
     if (receiver is SimpleIdentifierImpl) {
       var receiverElement = receiver.staticElement;
       if (receiverElement is PrefixElement) {
-        _resolveReceiverPrefix(
+        return _resolveReceiverPrefix(
             node, receiverElement, nameNode, name, whyNotPromotedList,
             contextType: contextType);
-        return;
       }
     }
 
     if (receiver is IdentifierImpl) {
       var receiverElement = receiver.staticElement;
       if (receiverElement is ExtensionElement) {
-        _resolveExtensionMember(
+        return _resolveExtensionMember(
             node, receiver, receiverElement, nameNode, name, whyNotPromotedList,
             contextType: contextType);
-        return;
       }
     }
 
     if (receiver is SuperExpressionImpl) {
-      _resolveReceiverSuper(node, receiver, nameNode, name, whyNotPromotedList,
+      return _resolveReceiverSuper(
+          node, receiver, nameNode, name, whyNotPromotedList,
           contextType: contextType);
-      return;
     }
 
     if (receiver is ExtensionOverrideImpl) {
-      _resolveExtensionOverride(
+      return _resolveExtensionOverride(
           node, receiver, nameNode, name, whyNotPromotedList,
           contextType: contextType);
-      return;
     }
 
     if (receiver is IdentifierImpl) {
       var element = receiver.staticElement;
       if (element is InterfaceElement) {
-        _resolveReceiverTypeLiteral(
+        return _resolveReceiverTypeLiteral(
             node, element, nameNode, name, whyNotPromotedList,
             contextType: contextType);
-        return;
       } else if (element is TypeAliasElement) {
         var aliasedType = element.aliasedType;
         if (aliasedType is InterfaceType) {
-          _resolveReceiverTypeLiteral(
+          return _resolveReceiverTypeLiteral(
               node, aliasedType.element, nameNode, name, whyNotPromotedList,
               contextType: contextType);
-          return;
         }
       }
     }
@@ -150,22 +142,22 @@ class MethodInvocationResolver with ScopeHelpers {
     if (_typeSystem.isDynamicBounded(receiverType)) {
       _resolveReceiverDynamicBounded(node, receiverType, whyNotPromotedList,
           contextType: contextType);
-      return;
+      return null;
     }
 
     if (receiverType is NeverTypeImpl) {
-      _resolveReceiverNever(node, receiver, receiverType, whyNotPromotedList,
-          contextType: contextType);
-      return;
+      return _resolveReceiverNever(
+          node, receiver, receiverType, whyNotPromotedList,
+          contextType: contextType, nameNode: nameNode, name: name);
     }
 
     if (receiverType is VoidType) {
       _reportUseOfVoidType(node, receiver, whyNotPromotedList,
           contextType: contextType);
-      return;
+      return null;
     }
 
-    if (node.isNullAware && _typeSystem.isNonNullableByDefault) {
+    if (node.isNullAware) {
       receiverType = _typeSystem.promoteToNonNull(receiverType);
     }
 
@@ -175,17 +167,17 @@ class MethodInvocationResolver with ScopeHelpers {
       // There is no possible resolution for a property access of a function
       // type literal (which can only be a type instantiation of a type alias
       // of a function type).
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.UNDEFINED_METHOD_ON_FUNCTION_TYPE,
+      _resolver.errorReporter.atNode(
         nameNode,
-        [name, receiver.type.qualifiedName],
+        CompileTimeErrorCode.UNDEFINED_METHOD_ON_FUNCTION_TYPE,
+        arguments: [name, receiver.type.qualifiedName],
       );
       _setInvalidTypeResolution(node,
           whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-      return;
+      return null;
     }
 
-    _resolveReceiverType(
+    return _resolveReceiverType(
       node: node,
       receiver: receiver,
       receiverType: receiverType,
@@ -195,6 +187,12 @@ class MethodInvocationResolver with ScopeHelpers {
       whyNotPromotedList: whyNotPromotedList,
       contextType: contextType,
     );
+  }
+
+  bool _hasMatchingObjectMethod(
+      MethodElement target, NodeListImpl<ExpressionImpl> arguments) {
+    return arguments.length == target.parameters.length &&
+        !arguments.any((e) => e is NamedExpression);
   }
 
   bool _isCoreFunction(DartType type) {
@@ -210,36 +208,37 @@ class MethodInvocationResolver with ScopeHelpers {
     var enclosingElement = element.enclosingElement;
     if (nullReceiver) {
       if (_resolver.enclosingExtension != null) {
-        _resolver.errorReporter.reportErrorForNode(
+        _resolver.errorReporter.atNode(
+          nameNode,
           CompileTimeErrorCode
               .UNQUALIFIED_REFERENCE_TO_STATIC_MEMBER_OF_EXTENDED_TYPE,
-          nameNode,
-          [enclosingElement.displayName],
+          arguments: [enclosingElement.displayName],
         );
       } else {
-        _resolver.errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.UNQUALIFIED_REFERENCE_TO_NON_LOCAL_STATIC_MEMBER,
+        _resolver.errorReporter.atNode(
           nameNode,
-          [enclosingElement.displayName],
+          CompileTimeErrorCode.UNQUALIFIED_REFERENCE_TO_NON_LOCAL_STATIC_MEMBER,
+          arguments: [enclosingElement.displayName],
         );
       }
     } else if (enclosingElement is ExtensionElement &&
         enclosingElement.name == null) {
-      _resolver.errorReporter.reportErrorForNode(
-          CompileTimeErrorCode
-              .INSTANCE_ACCESS_TO_STATIC_MEMBER_OF_UNNAMED_EXTENSION,
-          nameNode,
-          [
-            nameNode.name,
-            element.kind.displayName,
-          ]);
+      _resolver.errorReporter.atNode(
+        nameNode,
+        CompileTimeErrorCode
+            .INSTANCE_ACCESS_TO_STATIC_MEMBER_OF_UNNAMED_EXTENSION,
+        arguments: [
+          nameNode.name,
+          element.kind.displayName,
+        ],
+      );
     } else {
       // It is safe to assume that `enclosingElement.name` is non-`null` because
       // it can only be `null` for extensions, and we handle that case above.
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.INSTANCE_ACCESS_TO_STATIC_MEMBER,
+      _resolver.errorReporter.atNode(
         nameNode,
-        [
+        CompileTimeErrorCode.INSTANCE_ACCESS_TO_STATIC_MEMBER,
+        arguments: [
           nameNode.name,
           element.kind.displayName,
           enclosingElement.name!,
@@ -253,33 +252,33 @@ class MethodInvocationResolver with ScopeHelpers {
 
   void _reportInvocationOfNonFunction(
       MethodInvocationImpl node, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     _setInvalidTypeResolution(node,
         setNameTypeToDynamic: false,
         whyNotPromotedList: whyNotPromotedList,
         contextType: contextType);
-    _resolver.errorReporter.reportErrorForNode(
-      CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION,
+    _resolver.errorReporter.atNode(
       node.methodName,
-      [node.methodName.name],
+      CompileTimeErrorCode.INVOCATION_OF_NON_FUNCTION,
+      arguments: [node.methodName.name],
     );
   }
 
   void _reportPrefixIdentifierNotFollowedByDot(SimpleIdentifier target) {
-    _resolver.errorReporter.reportErrorForNode(
-      CompileTimeErrorCode.PREFIX_IDENTIFIER_NOT_FOLLOWED_BY_DOT,
+    _resolver.errorReporter.atNode(
       target,
-      [target.name],
+      CompileTimeErrorCode.PREFIX_IDENTIFIER_NOT_FOLLOWED_BY_DOT,
+      arguments: [target.name],
     );
   }
 
   void _reportStaticAccessToInstanceMember(
       ExecutableElement element, SimpleIdentifier nameNode) {
     if (!element.isStatic) {
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.STATIC_ACCESS_TO_INSTANCE_MEMBER,
+      _resolver.errorReporter.atNode(
         nameNode,
-        [nameNode.name],
+        CompileTimeErrorCode.STATIC_ACCESS_TO_INSTANCE_MEMBER,
+        arguments: [nameNode.name],
       );
     }
   }
@@ -289,7 +288,7 @@ class MethodInvocationResolver with ScopeHelpers {
     required String? prefix,
     required String name,
     required List<WhyNotPromotedGetter> whyNotPromotedList,
-    required DartType? contextType,
+    required DartType contextType,
   }) {
     _setInvalidTypeResolution(node,
         whyNotPromotedList: whyNotPromotedList, contextType: contextType);
@@ -298,27 +297,27 @@ class MethodInvocationResolver with ScopeHelpers {
       return;
     }
 
-    _resolver.errorReporter.reportErrorForNode(
-      CompileTimeErrorCode.UNDEFINED_FUNCTION,
+    _resolver.errorReporter.atNode(
       node.methodName,
-      [node.methodName.name],
+      CompileTimeErrorCode.UNDEFINED_FUNCTION,
+      arguments: [node.methodName.name],
     );
   }
 
   void _reportUseOfVoidType(MethodInvocationImpl node, AstNode errorNode,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     _setInvalidTypeResolution(node,
         whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-    _resolver.errorReporter.reportErrorForNode(
-      CompileTimeErrorCode.USE_OF_VOID_RESULT,
+    _resolver.errorReporter.atNode(
       errorNode,
+      CompileTimeErrorCode.USE_OF_VOID_RESULT,
     );
   }
 
   void _resolveArguments_finishInference(
       MethodInvocationImpl node, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var rawType = node.methodName.staticType;
     DartType staticStaticType = MethodInvocationInferrer(
             resolver: _resolver,
@@ -327,15 +326,14 @@ class MethodInvocationResolver with ScopeHelpers {
             contextType: contextType,
             whyNotPromotedList: whyNotPromotedList)
         .resolveInvocation(rawType: rawType is FunctionType ? rawType : null);
-    _inferenceHelper.recordStaticType(node, staticStaticType,
-        contextType: contextType);
+    node.recordStaticType(staticStaticType, resolver: _resolver);
   }
 
   /// Given that we are accessing a property of the given [classElement] with the
   /// given [propertyName], return the element that represents the property.
   Element? _resolveElement(
       InterfaceElement classElement, SimpleIdentifier propertyName) {
-    final augmented = classElement.augmentedOfDeclaration;
+    var augmented = classElement.augmented;
     // TODO(scheglov): Replace with class hierarchy.
     String name = propertyName.name;
     Element? element;
@@ -350,114 +348,127 @@ class MethodInvocationResolver with ScopeHelpers {
     return null;
   }
 
-  void _resolveExtensionMember(
+  /// Resolves the method invocation, [node], as an extension member.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveExtensionMember(
       MethodInvocationImpl node,
       Identifier receiver,
       ExtensionElement extension,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var getter = extension.getGetter(name);
     if (getter != null) {
-      getter = _resolver.toLegacyElement(getter);
       nameNode.staticElement = getter;
       _reportStaticAccessToInstanceMember(getter, nameNode);
-      _rewriteAsFunctionExpressionInvocation(node, getter.returnType,
-          contextType: contextType);
-      return;
+      return _rewriteAsFunctionExpressionInvocation(node, getter.returnType);
     }
 
     var method = extension.getMethod(name);
     if (method != null) {
-      method = _resolver.toLegacyElement(method);
       nameNode.staticElement = method;
       _reportStaticAccessToInstanceMember(method, nameNode);
       _setResolution(node, method.type, whyNotPromotedList,
           contextType: contextType);
-      return;
+      return null;
     }
 
     _setInvalidTypeResolution(node,
         whyNotPromotedList: whyNotPromotedList, contextType: contextType);
     // This method is only called for named extensions, so we know that
     // `extension.name` is non-`null`.
-    _resolver.errorReporter.reportErrorForNode(
-      CompileTimeErrorCode.UNDEFINED_EXTENSION_METHOD,
+    _resolver.errorReporter.atNode(
       nameNode,
-      [name, extension.name!],
+      CompileTimeErrorCode.UNDEFINED_EXTENSION_METHOD,
+      arguments: [name, extension.name!],
     );
+    return null;
   }
 
-  void _resolveExtensionOverride(
+  /// Resolves the method invocation, [node], as called on an extension
+  /// override.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveExtensionOverride(
       MethodInvocationImpl node,
       ExtensionOverride override,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var result = _extensionResolver.getOverrideMember(override, name);
-    var member = _resolver.toLegacyElement(result.getter);
+    var member = result.getter;
 
     if (member == null) {
       _setInvalidTypeResolution(node,
           whyNotPromotedList: whyNotPromotedList, contextType: contextType);
       // Extension overrides always refer to named extensions, so we can safely
       // assume `override.staticElement!.name` is non-`null`.
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.UNDEFINED_EXTENSION_METHOD,
+      _resolver.errorReporter.atNode(
         nameNode,
-        [name, override.element.name!],
+        CompileTimeErrorCode.UNDEFINED_EXTENSION_METHOD,
+        arguments: [name, override.element.name!],
       );
-      return;
+      return null;
     }
 
     if (member.isStatic) {
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.EXTENSION_OVERRIDE_ACCESS_TO_STATIC_MEMBER,
+      _resolver.errorReporter.atNode(
         nameNode,
+        CompileTimeErrorCode.EXTENSION_OVERRIDE_ACCESS_TO_STATIC_MEMBER,
       );
     }
 
     if (node.isCascaded) {
       // Report this error and recover by treating it like a non-cascade.
-      _resolver.errorReporter.reportErrorForToken(
-        CompileTimeErrorCode.EXTENSION_OVERRIDE_WITH_CASCADE,
+      _resolver.errorReporter.atToken(
         override.name,
+        CompileTimeErrorCode.EXTENSION_OVERRIDE_WITH_CASCADE,
       );
     }
 
     nameNode.staticElement = member;
 
     if (member is PropertyAccessorElement) {
-      return _rewriteAsFunctionExpressionInvocation(node, member.returnType,
-          contextType: contextType);
+      return _rewriteAsFunctionExpressionInvocation(node, member.returnType);
     }
 
     _setResolution(node, member.type, whyNotPromotedList,
         contextType: contextType);
+    return null;
   }
 
   void _resolveReceiverDynamicBounded(MethodInvocationImpl node,
       DartType receiverType, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var nameNode = node.methodName;
 
     var objectElement = _typeSystem.typeProvider.objectElement;
     var target = objectElement.getMethod(nameNode.name);
 
     FunctionType? rawType;
-    if (target is MethodElement && !target.isStatic) {
-      var arguments = node.argumentList.arguments;
-      var hasMatchingObjectMethod =
-          arguments.length == target.parameters.length &&
-              !arguments.any((e) => e is NamedExpression);
-      if (hasMatchingObjectMethod) {
-        target = _resolver.toLegacyElement(target);
-        nameNode.staticElement = target;
-        rawType = target.type;
-        node.staticType = target.returnType;
-      }
+    if (receiverType is InvalidType) {
+      nameNode.staticElement = null;
+      nameNode.setPseudoExpressionStaticType(InvalidTypeImpl.instance);
+      node.staticInvokeType = InvalidTypeImpl.instance;
+      node.recordStaticType(InvalidTypeImpl.instance, resolver: _resolver);
+    } else if (target != null &&
+        !target.isStatic &&
+        _hasMatchingObjectMethod(target, node.argumentList.arguments)) {
+      nameNode.staticElement = target;
+      rawType = target.type;
+      nameNode.setPseudoExpressionStaticType(target.type);
+      node.staticInvokeType = target.type;
+      node.recordStaticType(target.returnType, resolver: _resolver);
+    } else {
+      nameNode.staticElement = null;
+      nameNode.setPseudoExpressionStaticType(DynamicTypeImpl.instance);
+      node.staticInvokeType = DynamicTypeImpl.instance;
+      node.recordStaticType(DynamicTypeImpl.instance, resolver: _resolver);
     }
 
     _setExplicitTypeArgumentTypes();
@@ -468,21 +479,22 @@ class MethodInvocationResolver with ScopeHelpers {
             whyNotPromotedList: whyNotPromotedList,
             contextType: contextType)
         .resolveInvocation(rawType: rawType);
-
-    if (receiverType is InvalidType) {
-      nameNode.staticType = InvalidTypeImpl.instance;
-      node.staticInvokeType = InvalidTypeImpl.instance;
-      node.staticType = InvalidTypeImpl.instance;
-    } else if (rawType == null) {
-      nameNode.staticType = DynamicTypeImpl.instance;
-      node.staticInvokeType = DynamicTypeImpl.instance;
-      node.staticType = DynamicTypeImpl.instance;
-    }
   }
 
-  void _resolveReceiverNever(MethodInvocationImpl node, Expression receiver,
-      DartType receiverType, List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+  /// Resolves the method invocation, [node], as an instance invocation on an
+  /// expression of type `Never` or `Never?`.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverNever(
+    MethodInvocationImpl node,
+    Expression receiver,
+    DartType receiverType,
+    List<WhyNotPromotedGetter> whyNotPromotedList, {
+    required DartType contextType,
+    required SimpleIdentifierImpl nameNode,
+    required String name,
+  }) {
     _setExplicitTypeArgumentTypes();
 
     if (receiverType == NeverTypeImpl.instanceNullable) {
@@ -490,7 +502,6 @@ class MethodInvocationResolver with ScopeHelpers {
       var objectElement = _resolver.typeProvider.objectElement;
       var objectMember = objectElement.getMethod(methodName.name);
       if (objectMember != null) {
-        objectMember = _resolver.toLegacyElement(objectMember);
         methodName.staticElement = objectMember;
         _setResolution(
           node,
@@ -498,16 +509,19 @@ class MethodInvocationResolver with ScopeHelpers {
           whyNotPromotedList,
           contextType: contextType,
         );
+        return null;
       } else {
-        _setInvalidTypeResolution(node,
-            whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-        _resolver.nullableDereferenceVerifier.report(
-          CompileTimeErrorCode.UNCHECKED_METHOD_INVOCATION_OF_NULLABLE_VALUE,
-          methodName,
-          receiverType,
+        return _resolveReceiverType(
+          node: node,
+          receiver: receiver,
+          receiverType: receiverType,
+          nameNode: nameNode,
+          name: name,
+          receiverErrorNode: receiver,
+          whyNotPromotedList: whyNotPromotedList,
+          contextType: contextType,
         );
       }
-      return;
     }
 
     if (receiverType == NeverTypeImpl.instance) {
@@ -519,39 +533,31 @@ class MethodInvocationResolver with ScopeHelpers {
               whyNotPromotedList: whyNotPromotedList)
           .resolveInvocation(rawType: null);
 
-      _resolver.errorReporter.reportErrorForNode(
-        WarningCode.RECEIVER_OF_TYPE_NEVER,
+      _resolver.errorReporter.atNode(
         receiver,
+        WarningCode.RECEIVER_OF_TYPE_NEVER,
       );
 
-      node.methodName.staticType = _dynamicType;
+      node.methodName.setPseudoExpressionStaticType(_dynamicType);
       node.staticInvokeType = _dynamicType;
-      node.staticType = NeverTypeImpl.instance;
-      return;
+      node.recordStaticType(NeverTypeImpl.instance, resolver: _resolver);
+      return null;
     }
-
-    if (receiverType == NeverTypeImpl.instanceLegacy) {
-      MethodInvocationInferrer(
-              resolver: _resolver,
-              node: node,
-              argumentList: node.argumentList,
-              contextType: contextType,
-              whyNotPromotedList: whyNotPromotedList)
-          .resolveInvocation(rawType: null);
-      node.methodName.staticType = _dynamicType;
-      node.staticInvokeType = _dynamicType;
-      node.staticType = _dynamicType;
-      return;
-    }
+    return null;
   }
 
-  void _resolveReceiverNull(
+  /// Resolves the method invocation, [node], as an instance invocation on an
+  /// expression of type `Null`.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverNull(
       MethodInvocationImpl node,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
-    final scopeLookupResult = nameNode.scopeLookupResult!;
+      {required DartType contextType}) {
+    var scopeLookupResult = nameNode.scopeLookupResult!;
     reportDeprecatedExportUseGetter(
       scopeLookupResult: scopeLookupResult,
       nameToken: nameNode.token,
@@ -559,49 +565,83 @@ class MethodInvocationResolver with ScopeHelpers {
 
     var element = scopeLookupResult.getter;
     if (element != null) {
-      element = _resolver.toLegacyElement(element);
       nameNode.staticElement = element;
       if (element is MultiplyDefinedElement) {
         MultiplyDefinedElement multiply = element;
         element = multiply.conflictingElements[0];
       }
       if (element is PropertyAccessorElement) {
-        return _rewriteAsFunctionExpressionInvocation(node, element.returnType,
-            contextType: contextType);
+        return _rewriteAsFunctionExpressionInvocation(node, element.returnType);
       }
       if (element is ExecutableElement) {
-        return _setResolution(node, element.type, whyNotPromotedList,
+        _setResolution(node, element.type, whyNotPromotedList,
             contextType: contextType);
+        return null;
       }
       if (element is VariableElement) {
         _resolver.checkReadOfNotAssignedLocalVariable(nameNode, element);
         var targetType =
             _localVariableTypeProvider.getType(nameNode, isRead: true);
-        return _rewriteAsFunctionExpressionInvocation(node, targetType,
-            contextType: contextType);
+        return _rewriteAsFunctionExpressionInvocation(node, targetType);
       }
       // TODO(scheglov): This is a questionable distinction.
       if (element is PrefixElement) {
         _setInvalidTypeResolution(node,
             whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-        return _reportPrefixIdentifierNotFollowedByDot(nameNode);
+        _reportPrefixIdentifierNotFollowedByDot(nameNode);
+        return null;
       }
-      return _reportInvocationOfNonFunction(node, whyNotPromotedList,
+      _reportInvocationOfNonFunction(node, whyNotPromotedList,
           contextType: contextType);
+      return null;
     }
 
-    final receiverType = _resolver.thisType;
+    var receiverType = _resolver.thisType;
     if (receiverType == null) {
-      return _reportUndefinedFunction(
+      _reportUndefinedFunction(
         node,
         prefix: null,
         name: node.methodName.name,
         whyNotPromotedList: whyNotPromotedList,
         contextType: contextType,
       );
+      return null;
     }
 
-    _resolveReceiverType(
+    element = scopeLookupResult.setter;
+    if (element != null) {
+      // If the scope lookup reveals a setter, but no getter, then we may still
+      // find the getter by looking up the inheritence chain (via
+      // TypePropertyResolver, via `_resolveReceiverType`). However, if the
+      // setter that was found is either top-level, or declared in an extension,
+      // or is static, then we do not keep searching for the getter; this
+      // setter represents the property being accessed (erroneously).
+      var noGetterIsPossible =
+          element.enclosingElement is CompilationUnitElement ||
+              element.enclosingElement is ExtensionElement ||
+              (element is ExecutableElement && element.isStatic);
+      if (noGetterIsPossible) {
+        nameNode.staticElement = element;
+
+        _setInvalidTypeResolution(node,
+            setNameTypeToDynamic: false,
+            whyNotPromotedList: whyNotPromotedList,
+            contextType: contextType);
+        var receiverTypeName = switch (receiverType) {
+          InterfaceType() => receiverType.element.name,
+          FunctionType() => 'Function',
+          _ => '<unknown>',
+        };
+        _resolver.errorReporter.atNode(
+          nameNode,
+          CompileTimeErrorCode.UNDEFINED_METHOD,
+          arguments: [name, receiverTypeName],
+        );
+        return null;
+      }
+    }
+
+    return _resolveReceiverType(
       node: node,
       receiver: null,
       receiverType: receiverType,
@@ -613,13 +653,18 @@ class MethodInvocationResolver with ScopeHelpers {
     );
   }
 
-  void _resolveReceiverPrefix(
+  /// Resolves the method invocation, [node], as a top-level function
+  /// invocation, referenced with a prefix.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverPrefix(
       MethodInvocationImpl node,
       PrefixElement prefix,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     // Note: prefix?.bar is reported as an error in ElementResolver.
 
     if (name == FunctionElement.LOAD_LIBRARY_NAME) {
@@ -628,24 +673,23 @@ class MethodInvocationResolver with ScopeHelpers {
           imports[0].prefix is DeferredImportElementPrefix) {
         var importedLibrary = imports[0].importedLibrary;
         var element = importedLibrary?.loadLibraryFunction;
-        element = _resolver.toLegacyElement(element);
         if (element is ExecutableElement) {
           nameNode.staticElement = element;
-          return _setResolution(
+          _setResolution(
               node, (element as ExecutableElement).type, whyNotPromotedList,
               contextType: contextType);
+          return null;
         }
       }
     }
 
-    final scopeLookupResult = prefix.scope.lookup(name);
+    var scopeLookupResult = prefix.scope.lookup(name);
     reportDeprecatedExportUseGetter(
       scopeLookupResult: scopeLookupResult,
       nameToken: nameNode.token,
     );
 
     var element = scopeLookupResult.getter;
-    element = _resolver.toLegacyElement(element);
     nameNode.staticElement = element;
 
     if (element is MultiplyDefinedElement) {
@@ -654,13 +698,13 @@ class MethodInvocationResolver with ScopeHelpers {
     }
 
     if (element is PropertyAccessorElement) {
-      return _rewriteAsFunctionExpressionInvocation(node, element.returnType,
-          contextType: contextType);
+      return _rewriteAsFunctionExpressionInvocation(node, element.returnType);
     }
 
     if (element is ExecutableElement) {
-      return _setResolution(node, element.type, whyNotPromotedList,
+      _setResolution(node, element.type, whyNotPromotedList,
           contextType: contextType);
+      return null;
     }
 
     _reportUndefinedFunction(
@@ -670,67 +714,80 @@ class MethodInvocationResolver with ScopeHelpers {
       whyNotPromotedList: whyNotPromotedList,
       contextType: contextType,
     );
+    return null;
   }
 
-  void _resolveReceiverSuper(
+  /// Resolves the method invocation, [node], as an instance invocation a
+  /// `super` expression.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverSuper(
       MethodInvocationImpl node,
       SuperExpression receiver,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     var enclosingClass = _resolver.enclosingClass;
     if (SuperContext.of(receiver) != SuperContext.valid) {
       _setInvalidTypeResolution(node,
           whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-      return;
+      return null;
     }
 
+    var augmented = enclosingClass!.augmented;
     var target = _inheritance.getMember2(
-      enclosingClass!,
+      augmented.declaration,
       _currentName!,
       forSuper: true,
     );
-    target = _resolver.toLegacyElement(target);
 
     // If there is that concrete dispatch target, then we are done.
     if (target != null) {
       nameNode.staticElement = target;
       if (target is PropertyAccessorElement) {
         return _rewriteAsFunctionExpressionInvocation(node, target.returnType,
-            contextType: contextType, isSuperAccess: true);
+            isSuperAccess: true);
       }
       _setResolution(node, target.type, whyNotPromotedList,
           contextType: contextType);
-      return;
+      return null;
     }
 
     // Otherwise, this is an error.
     // But we would like to give the user at least some resolution.
     // So, we try to find the interface target.
-    target = _inheritance.getInherited2(enclosingClass, _currentName!);
+    target = _inheritance.getInherited2(augmented.declaration, _currentName!);
     if (target != null) {
       nameNode.staticElement = target;
       _setResolution(node, target.type, whyNotPromotedList,
           contextType: contextType);
 
-      _resolver.errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE,
-          nameNode,
-          [target.kind.displayName, name]);
-      return;
+      _resolver.errorReporter.atNode(
+        nameNode,
+        CompileTimeErrorCode.ABSTRACT_SUPER_MEMBER_REFERENCE,
+        arguments: [target.kind.displayName, name],
+      );
+      return null;
     }
 
     // Nothing help, there is no target at all.
     _setInvalidTypeResolution(node,
         whyNotPromotedList: whyNotPromotedList, contextType: contextType);
-    _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.UNDEFINED_SUPER_METHOD,
-        nameNode,
-        [name, enclosingClass.displayName]);
+    _resolver.errorReporter.atNode(
+      nameNode,
+      CompileTimeErrorCode.UNDEFINED_SUPER_METHOD,
+      arguments: [name, augmented.declaration.displayName],
+    );
+    return null;
   }
 
-  void _resolveReceiverType({
+  /// Resolves the type of the receiver of the method invocation, [node].
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverType({
     required MethodInvocationImpl node,
     required Expression? receiver,
     required DartType receiverType,
@@ -738,7 +795,7 @@ class MethodInvocationResolver with ScopeHelpers {
     required String name,
     required Expression receiverErrorNode,
     required List<WhyNotPromotedGetter> whyNotPromotedList,
-    required DartType? contextType,
+    required DartType contextType,
   }) {
     var result = _resolver.typePropertyResolver.resolve(
       receiver: receiver,
@@ -748,7 +805,7 @@ class MethodInvocationResolver with ScopeHelpers {
       nameErrorEntity: nameNode,
     );
 
-    final callFunctionType = result.callFunctionType;
+    var callFunctionType = result.callFunctionType;
     if (callFunctionType != null) {
       assert(name == FunctionElement.CALL_METHOD_NAME);
       _setResolution(node, callFunctionType, whyNotPromotedList,
@@ -756,8 +813,8 @@ class MethodInvocationResolver with ScopeHelpers {
       // TODO(scheglov): Replace this with using FunctionType directly.
       // Here was erase resolution that _setResolution() sets.
       nameNode.staticElement = null;
-      nameNode.staticType = _dynamicType;
-      return;
+      nameNode.setPseudoExpressionStaticType(_dynamicType);
+      return null;
     }
 
     if (receiverType.isDartCoreFunction &&
@@ -765,16 +822,15 @@ class MethodInvocationResolver with ScopeHelpers {
       _setResolution(node, DynamicTypeImpl.instance, whyNotPromotedList,
           contextType: contextType);
       nameNode.staticElement = null;
-      nameNode.staticType = DynamicTypeImpl.instance;
+      nameNode.setPseudoExpressionStaticType(DynamicTypeImpl.instance);
       node.staticInvokeType = DynamicTypeImpl.instance;
-      node.staticType = DynamicTypeImpl.instance;
-      return;
+      node.setPseudoExpressionStaticType(DynamicTypeImpl.instance);
+      return null;
     }
 
-    final recordField = result.recordField;
+    var recordField = result.recordField;
     if (recordField != null) {
-      return _rewriteAsFunctionExpressionInvocation(node, recordField.type,
-          contextType: contextType);
+      return _rewriteAsFunctionExpressionInvocation(node, recordField.type);
     }
 
     var target = result.getter;
@@ -790,18 +846,18 @@ class MethodInvocationResolver with ScopeHelpers {
       }
 
       if (target is PropertyAccessorElement) {
-        return _rewriteAsFunctionExpressionInvocation(node, target.returnType,
-            contextType: contextType);
+        return _rewriteAsFunctionExpressionInvocation(node, target.returnType);
       }
-      return _setResolution(node, target.type, whyNotPromotedList,
+      _setResolution(node, target.type, whyNotPromotedList,
           contextType: contextType);
+      return null;
     }
 
     _setInvalidTypeResolution(node,
         whyNotPromotedList: whyNotPromotedList, contextType: contextType);
 
     if (!result.needsGetterError) {
-      return;
+      return null;
     }
 
     String receiverClassName = '<unknown>';
@@ -812,34 +868,38 @@ class MethodInvocationResolver with ScopeHelpers {
     }
 
     if (!nameNode.isSynthetic) {
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.UNDEFINED_METHOD,
+      _resolver.errorReporter.atNode(
         nameNode,
-        [name, receiverClassName],
+        CompileTimeErrorCode.UNDEFINED_METHOD,
+        arguments: [name, receiverClassName],
       );
     }
+    return null;
   }
 
-  void _resolveReceiverTypeLiteral(
+  /// Resolves the method invocation, [node], as an method invocation with a
+  /// type literal target.
+  ///
+  /// If [node] is rewritten to be a [FunctionExpressionInvocation] in the
+  /// process, then returns that new node. Otherwise, returns `null`.
+  FunctionExpressionInvocation? _resolveReceiverTypeLiteral(
       MethodInvocationImpl node,
       InterfaceElement receiver,
       SimpleIdentifierImpl nameNode,
       String name,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
     if (node.isCascaded) {
       receiver = _typeType.element;
     }
 
     var element = _resolveElement(receiver, nameNode);
-    element = _resolver.toLegacyElement(element) as ExecutableElement?;
     if (element != null) {
       if (element is ExecutableElement) {
         nameNode.staticElement = element;
         if (element is PropertyAccessorElement) {
           return _rewriteAsFunctionExpressionInvocation(
-              node, element.returnType,
-              contextType: contextType);
+              node, element.returnType);
         }
         _setResolution(node, element.type, whyNotPromotedList,
             contextType: contextType);
@@ -847,7 +907,7 @@ class MethodInvocationResolver with ScopeHelpers {
         _reportInvocationOfNonFunction(node, whyNotPromotedList,
             contextType: contextType);
       }
-      return;
+      return null;
     }
 
     _setInvalidTypeResolution(node,
@@ -855,32 +915,35 @@ class MethodInvocationResolver with ScopeHelpers {
     if (nameNode.name == 'new') {
       // Attempting to invoke the unnamed constructor via `C.new(`.
       if (_resolver.isConstructorTearoffsEnabled) {
-        _resolver.errorReporter.reportErrorForNode(
-          CompileTimeErrorCode.NEW_WITH_UNDEFINED_CONSTRUCTOR_DEFAULT,
+        _resolver.errorReporter.atNode(
           nameNode,
-          [receiver.displayName],
+          CompileTimeErrorCode.NEW_WITH_UNDEFINED_CONSTRUCTOR_DEFAULT,
+          arguments: [receiver.displayName],
         );
       } else {
         // [ParserErrorCode.EXPERIMENT_NOT_ENABLED] is reported by the parser.
         // Do not report extra errors.
       }
     } else {
-      _resolver.errorReporter.reportErrorForNode(
-        CompileTimeErrorCode.UNDEFINED_METHOD,
+      _resolver.errorReporter.atNode(
         node.methodName,
-        [name, receiver.displayName],
+        CompileTimeErrorCode.UNDEFINED_METHOD,
+        arguments: [name, receiver.displayName],
       );
     }
+    return null;
   }
 
+  /// Rewrites [node] as a [FunctionExpressionInvocation].
+  ///
   /// We have identified that [node] is not a real [MethodInvocation],
   /// because it does not invoke a method, but instead invokes the result
   /// of a getter execution, or implicitly invokes the `call` method of
   /// an [InterfaceType]. So, it should be represented as instead as a
   /// [FunctionExpressionInvocation].
-  void _rewriteAsFunctionExpressionInvocation(
+  FunctionExpressionInvocation _rewriteAsFunctionExpressionInvocation(
       MethodInvocationImpl node, DartType getterReturnType,
-      {required DartType? contextType, bool isSuperAccess = false}) {
+      {bool isSuperAccess = false}) {
     var targetType = _typeSystem.resolveToBound(getterReturnType);
 
     ExpressionImpl functionExpression;
@@ -933,10 +996,12 @@ class MethodInvocationResolver with ScopeHelpers {
                 getterReturnType) ??
             targetType;
       }
-      functionExpression.staticType = targetType;
+      functionExpression.setPseudoExpressionStaticType(targetType);
     }
-    _inferenceHelper.recordStaticType(node.methodName, targetType,
-        contextType: contextType);
+    inferenceLogWriter
+        ?.enterFunctionExpressionInvocationTarget(node.methodName);
+    node.methodName.recordStaticType(targetType, resolver: _resolver);
+    inferenceLogWriter?.exitExpression(node.methodName);
 
     var invocation = FunctionExpressionInvocationImpl(
       function: functionExpression,
@@ -944,19 +1009,19 @@ class MethodInvocationResolver with ScopeHelpers {
       argumentList: node.argumentList,
     );
     _resolver.replaceExpression(node, invocation);
-    node.setProperty(_rewriteResultKey, invocation);
     _resolver.flowAnalysis.transferTestData(node, invocation);
+    return invocation;
   }
 
   void _setDynamicTypeResolution(MethodInvocationImpl node,
       {bool setNameTypeToDynamic = true,
       required List<WhyNotPromotedGetter> whyNotPromotedList,
-      required DartType? contextType}) {
+      required DartType contextType}) {
     if (setNameTypeToDynamic) {
-      node.methodName.staticType = _dynamicType;
+      node.methodName.setPseudoExpressionStaticType(_dynamicType);
     }
     node.staticInvokeType = _dynamicType;
-    node.staticType = _dynamicType;
+    node.setPseudoExpressionStaticType(_dynamicType);
     _setExplicitTypeArgumentTypes();
     _resolveArguments_finishInference(node, whyNotPromotedList,
         contextType: contextType);
@@ -981,23 +1046,28 @@ class MethodInvocationResolver with ScopeHelpers {
   void _setInvalidTypeResolution(MethodInvocationImpl node,
       {bool setNameTypeToDynamic = true,
       required List<WhyNotPromotedGetter> whyNotPromotedList,
-      required DartType? contextType}) {
+      required DartType contextType}) {
     if (setNameTypeToDynamic) {
-      node.methodName.staticType = InvalidTypeImpl.instance;
+      node.methodName.setPseudoExpressionStaticType(InvalidTypeImpl.instance);
     }
     _setExplicitTypeArgumentTypes();
     _resolveArguments_finishInference(node, whyNotPromotedList,
         contextType: contextType);
     node.staticInvokeType = InvalidTypeImpl.instance;
-    node.staticType = InvalidTypeImpl.instance;
+    node.setPseudoExpressionStaticType(InvalidTypeImpl.instance);
   }
 
   void _setResolution(MethodInvocationImpl node, DartType type,
       List<WhyNotPromotedGetter> whyNotPromotedList,
-      {required DartType? contextType}) {
+      {required DartType contextType}) {
+    inferenceLogWriter?.recordLookupResult(
+        expression: node,
+        type: type,
+        target: node.target,
+        methodName: node.methodName.name);
     // TODO(scheglov): We need this for StaticTypeAnalyzer to run inference.
     // But it seems weird. Do we need to know the raw type of a function?!
-    node.methodName.staticType = type;
+    node.methodName.setPseudoExpressionStaticType(type);
 
     if (type == _dynamicType || _isCoreFunction(type)) {
       _setDynamicTypeResolution(node,
@@ -1023,15 +1093,6 @@ class MethodInvocationResolver with ScopeHelpers {
 
     _reportInvocationOfNonFunction(node, whyNotPromotedList,
         contextType: contextType);
-  }
-
-  /// Resolver visitor is separated from the elements resolver, which calls
-  /// this method resolver. If we rewrite a [MethodInvocation] node, this
-  /// method will return the resulting [FunctionExpressionInvocation], so
-  /// that the resolver visitor will know to continue resolving this new node.
-  static FunctionExpressionInvocation? getRewriteResult(
-      MethodInvocationImpl node) {
-    return node.getProperty(_rewriteResultKey);
   }
 
   /// Checks whether the given [expression] is a reference to a class. If it is

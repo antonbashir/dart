@@ -6,10 +6,11 @@ import 'package:_js_interop_checks/src/js_interop.dart'
     show getJSName, hasAnonymousAnnotation, hasJSInteropAnnotation;
 import 'package:_js_interop_checks/src/transformations/js_util_optimizer.dart'
     show ExtensionIndex;
-import 'package:dart2wasm/js/method_collector.dart';
-import 'package:dart2wasm/js/util.dart';
 import 'package:kernel/ast.dart';
 import 'package:kernel/type_environment.dart';
+
+import 'method_collector.dart';
+import 'util.dart';
 
 /// A general config class for an interop method.
 ///
@@ -147,9 +148,7 @@ abstract class _ProcedureSpecializer extends _Specializer {
 }
 
 class _ConstructorSpecializer extends _ProcedureSpecializer {
-  _ConstructorSpecializer(InteropSpecializerFactory factory,
-      Procedure interopMethod, String jsString)
-      : super(factory, interopMethod, jsString);
+  _ConstructorSpecializer(super.factory, super.interopMethod, super.jsString);
 
   @override
   bool get isConstructor => true;
@@ -200,13 +199,13 @@ class _OperatorSpecializer extends _ProcedureSpecializer {
 
   @override
   String bodyString(String object, List<String> callArguments) {
-    if (jsString == '[]') {
-      return '$object[${callArguments[0]}]';
-    } else if (jsString == '[]=') {
-      return '$object[${callArguments[0]}] = ${callArguments[1]}';
-    } else {
-      throw 'Unsupported operator: $jsString';
-    }
+    return switch (jsString) {
+      '[]' => '$object[${callArguments[0]}]',
+      '[]=' => '$object[${callArguments[0]}] = ${callArguments[1]}',
+      _ => throw UnimplementedError(
+          'External operator $jsString is unsupported for static interop. '
+          'Please file a request in the SDK if you want it to be supported.')
+    };
   }
 }
 
@@ -342,18 +341,10 @@ class InteropSpecializerFactory {
   final MethodCollector _methodCollector;
   final Map<Procedure, Map<int, Procedure>> _overloadedProcedures = {};
   final Map<Procedure, Map<String, Procedure>> _jsObjectLiteralMethods = {};
-  late String _libraryJSString;
   late final ExtensionIndex _extensionIndex;
 
   InteropSpecializerFactory(this._staticTypeContext, this._util,
       this._methodCollector, this._extensionIndex);
-
-  void enterLibrary(Library library) {
-    _libraryJSString = getJSName(library);
-    if (_libraryJSString.isNotEmpty) {
-      _libraryJSString = '$_libraryJSString.';
-    }
-  }
 
   String _getJSString(Annotatable a, String initial) {
     String selectorString = getJSName(a);
@@ -363,8 +354,13 @@ class InteropSpecializerFactory {
     return selectorString;
   }
 
-  String _getTopLevelJSString(Annotatable a, String initial) =>
-      '$_libraryJSString${_getJSString(a, initial)}';
+  String _getTopLevelJSString(
+      Annotatable a, String writtenName, Library enclosingLibrary) {
+    final name = _getJSString(a, writtenName);
+    final libraryName = getJSName(enclosingLibrary);
+    if (libraryName.isEmpty) return name;
+    return '$libraryName.$name';
+  }
 
   /// Get the `_Specializer` for the non-constructor [node] with its
   /// associated [jsString] name, and the [invocation] it's used in if this is
@@ -421,7 +417,8 @@ class InteropSpecializerFactory {
     if (node.enclosingClass != null &&
         hasJSInteropAnnotation(node.enclosingClass!)) {
       final cls = node.enclosingClass!;
-      final clsString = _getTopLevelJSString(cls, cls.name);
+      final clsString =
+          _getTopLevelJSString(cls, cls.name, cls.enclosingLibrary);
       if (node.isFactory) {
         return _getSpecializerForConstructor(
             hasAnonymousAnnotation(cls), node, clsString, invocation);
@@ -434,7 +431,8 @@ class InteropSpecializerFactory {
       final nodeDescriptor = _extensionIndex.getExtensionTypeDescriptor(node);
       if (nodeDescriptor != null) {
         final cls = _extensionIndex.getExtensionType(node)!;
-        final clsString = _getTopLevelJSString(cls, cls.name);
+        final clsString =
+            _getTopLevelJSString(cls, cls.name, node.enclosingLibrary);
         final kind = nodeDescriptor.kind;
         if ((kind == ExtensionTypeMemberKind.Constructor ||
             kind == ExtensionTypeMemberKind.Factory)) {
@@ -463,7 +461,9 @@ class InteropSpecializerFactory {
       }
     } else if (hasJSInteropAnnotation(node)) {
       return _getSpecializerForMember(
-          node, _getTopLevelJSString(node, node.name.text), invocation);
+          node,
+          _getTopLevelJSString(node, node.name.text, node.enclosingLibrary),
+          invocation);
     }
     return null;
   }

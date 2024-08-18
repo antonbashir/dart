@@ -34,7 +34,7 @@ class C {
 }
 ''');
 
-    final node = findNode.singleAssertInitializer;
+    var node = findNode.singleAssertInitializer;
     assertResolvedNodeText(node, r'''
 AssertInitializer
   assertKeyword: assert
@@ -50,7 +50,7 @@ AssertInitializer
         IntegerLiteral
           literal: 0
           parameter: ParameterMember
-            base: root::@parameter::_
+            base: self::@function::foo::@parameter::_
             substitution: {T: bool}
           staticType: int
       rightParenthesis: )
@@ -70,7 +70,7 @@ AssertInitializer
         IntegerLiteral
           literal: 1
           parameter: ParameterMember
-            base: root::@parameter::_
+            base: self::@function::foo::@parameter::_
             substitution: {T: dynamic}
           staticType: int
       rightParenthesis: )
@@ -91,7 +91,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleAssertStatement;
+    var node = findNode.singleAssertStatement;
     assertResolvedNodeText(node, r'''
 AssertStatement
   assertKeyword: assert
@@ -107,7 +107,7 @@ AssertStatement
         IntegerLiteral
           literal: 0
           parameter: ParameterMember
-            base: root::@parameter::_
+            base: self::@function::foo::@parameter::_
             substitution: {T: bool}
           staticType: int
       rightParenthesis: )
@@ -127,7 +127,7 @@ AssertStatement
         IntegerLiteral
           literal: 1
           parameter: ParameterMember
-            base: root::@parameter::_
+            base: self::@function::foo::@parameter::_
             substitution: {T: dynamic}
           staticType: int
       rightParenthesis: )
@@ -333,7 +333,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation
@@ -377,7 +377,7 @@ void f() {
 }
 ''');
 
-    final node = findNode.singleBinaryExpression;
+    var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
   leftOperand: MethodInvocation

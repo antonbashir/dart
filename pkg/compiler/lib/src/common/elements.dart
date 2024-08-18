@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:js_shared/variance.dart';
+
 import '../common.dart';
 import '../constants/constant_system.dart' as constant_system;
 import '../constants/values.dart';
@@ -9,9 +11,11 @@ import '../elements/entities.dart';
 import '../elements/names.dart';
 import '../elements/types.dart';
 import '../inferrer/abstract_value_domain.dart';
+import '../ir/element_map.dart';
 import '../js_backend/native_data.dart' show NativeBasicData;
 import '../js_model/locals.dart';
 import '../universe/selector.dart' show Selector;
+import '../universe/world_builder.dart';
 
 import 'names.dart' show Identifiers, Uris;
 
@@ -715,9 +719,21 @@ abstract class CommonElements {
   /// The class for native annotations defined in dart:_js_helper.
   late final ClassEntity nativeAnnotationClass = _findHelperClass('Native');
 
+  bool isAssertTest(MemberEntity member) =>
+      member.name == 'assertTest' &&
+      member.isFunction &&
+      member.isTopLevel &&
+      member.library == jsHelperLibrary;
+
   late final assertTest = _findHelperFunction('assertTest');
 
   late final assertThrow = _findHelperFunction('assertThrow');
+
+  bool isAssertHelper(MemberEntity member) =>
+      member.name == 'assertHelper' &&
+      member.isFunction &&
+      member.isTopLevel &&
+      member.library == jsHelperLibrary;
 
   late final assertHelper = _findHelperFunction('assertHelper');
 
@@ -859,6 +875,9 @@ abstract class CommonElements {
 
   FunctionEntity _findRtiFunction(String name) =>
       _findLibraryMember(rtiLibrary, name)!;
+
+  late final FunctionEntity interopNullAssertion =
+      _findRtiFunction('_interopNullAssertion');
 
   late final FunctionEntity setArrayType = _findRtiFunction('_setArrayType');
 
@@ -1064,9 +1083,8 @@ abstract class CommonElements {
 
   ClassEntity getDefaultSuperclass(
       ClassEntity cls, NativeBasicData nativeBasicData) {
-    if (nativeBasicData.isJsInteropClass(cls)) {
-      return jsLegacyJavaScriptObjectClass;
-    }
+    final defaultedClass = defaultReceiverClass(this, nativeBasicData, cls);
+    if (defaultedClass != cls) return defaultedClass;
     // Native classes inherit from Interceptor.
     return nativeBasicData.isNativeClass(cls)
         ? jsInterceptorClass
@@ -1277,6 +1295,8 @@ class JCommonElements extends CommonElements {
 // interface, the first should only be used during resolution and the latter in
 // both resolution and codegen.
 abstract class ElementEnvironment {
+  IrToElementMap get elementMap;
+
   /// Returns the main library for the compilation.
   LibraryEntity? get mainLibrary;
 

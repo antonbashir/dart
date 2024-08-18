@@ -8,7 +8,6 @@ import '../common/names.dart' show Identifiers, Names;
 import '../constants/values.dart';
 import '../elements/entities.dart';
 import '../elements/types.dart';
-import '../ir/static_type.dart';
 import '../js_backend/annotations.dart';
 import '../js_backend/field_analysis.dart' show KFieldAnalysis;
 import '../js_backend/backend_usage.dart'
@@ -147,7 +146,7 @@ class InstantiationInfo {
         break;
       case Instantiation.UNINSTANTIATED:
         break;
-      default:
+      case Instantiation.INDIRECTLY_INSTANTIATED:
         throw StateError("Instantiation $kind is not allowed.");
     }
   }
@@ -248,7 +247,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   final Set<FunctionEntity> _closurizedMembersWithFreeTypeVariables = {};
 
   final CompilerOptions _options;
-  final ElementEnvironment _elementEnvironment;
+  final ElementEnvironment elementEnvironment;
   final DartTypes _dartTypes;
   final CommonElements _commonElements;
 
@@ -263,7 +262,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   final AnnotationsDataBuilder _annotationsDataBuilder;
 
   final SelectorConstraintsStrategy _selectorConstraintsStrategy;
-  final ClassHierarchyBuilder _classHierarchyBuilder;
+  final ClassHierarchyBuilder classHierarchyBuilder;
 
   bool _closed = false;
   KClosedWorld? _closedWorldCache;
@@ -285,7 +284,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   ResolutionWorldBuilder(
       this._options,
       this._elementMap,
-      this._elementEnvironment,
+      this.elementEnvironment,
       this._dartTypes,
       this._commonElements,
       this._nativeBasicData,
@@ -298,7 +297,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
       this._noSuchMethodRegistry,
       this._annotationsDataBuilder,
       this._selectorConstraintsStrategy,
-      this._classHierarchyBuilder);
+      this.classHierarchyBuilder);
 
   /// Returns the classes registered as directly or indirectly instantiated.
   Iterable<ClassEntity> get processedClasses => _processedClasses.keys
@@ -338,7 +337,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   /// Registers that [element] has been closurized.
   void registerClosurizedMember(MemberEntity element) {
     FunctionType type =
-        _elementEnvironment.getFunctionType(element as FunctionEntity);
+        elementEnvironment.getFunctionType(element as FunctionEntity);
     if (type.containsTypeVariables) {
       _closurizedMembersWithFreeTypeVariables.add(element);
     }
@@ -369,7 +368,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
     }
     info.addInstantiation(constructor, type, kind);
     if (kind != Instantiation.UNINSTANTIATED) {
-      _classHierarchyBuilder.updateClassHierarchyNodeForClass(cls,
+      classHierarchyBuilder.updateClassHierarchyNodeForClass(cls,
           directlyInstantiated: info.isDirectlyInstantiated,
           abstractlyInstantiated: info.isAbstractlyInstantiated);
       _processInstantiatedClass(cls, classUsed);
@@ -379,7 +378,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
     // instead.
     if (_implementedClasses.add(cls)) {
       classUsed(cls, _getClassUsage(cls).implement());
-      _elementEnvironment.forEachSupertype(cls, (InterfaceType supertype) {
+      elementEnvironment.forEachSupertype(cls, (InterfaceType supertype) {
         if (_implementedClasses.add(supertype.element)) {
           classUsed(
               supertype.element, _getClassUsage(supertype.element).implement());
@@ -541,7 +540,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
     if (staticUse.kind == StaticUseKind.CLOSURE) {
       Local localFunction = staticUse.element as Local;
       FunctionType type =
-          _elementEnvironment.getLocalFunctionType(localFunction);
+          elementEnvironment.getLocalFunctionType(localFunction);
       if (type.typeVariables.isNotEmpty) {
         _genericLocalFunctions.add(localFunction);
       }
@@ -672,7 +671,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
 
     ClassEntity? current = cls;
     while (current != null && processClass(current)) {
-      current = _elementEnvironment.getSuperClass(current);
+      current = elementEnvironment.getSuperClass(current);
     }
   }
 
@@ -684,7 +683,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   /// collected member usage.
   void processClassMembers(ClassEntity cls, MemberUsedCallback memberUsed,
       {bool checkEnqueuerConsistency = false}) {
-    _elementEnvironment.forEachClassMember(cls,
+    elementEnvironment.forEachClassMember(cls,
         (ClassEntity cls, MemberEntity member) {
       _processMemberInUsedClass(cls, member, memberUsed,
           checkEnqueuerConsistency: checkEnqueuerConsistency);
@@ -693,7 +692,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
 
   void processAbstractClassMembers(
       ClassEntity cls, MemberUsedCallback memberUsed) {
-    _elementEnvironment.forEachLocalClassMember(cls, (MemberEntity member) {
+    elementEnvironment.forEachLocalClassMember(cls, (MemberEntity member) {
       if (member.isAbstract) {
         // Check for potential usages of abstract members (i.e. of their
         // overrides) and save them if they are used.
@@ -749,7 +748,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
           }
           if (member.isFunction &&
               member.name == Identifiers.call &&
-              _elementEnvironment.isGenericClass(cls)) {
+              elementEnvironment.isGenericClass(cls)) {
             _closurizedMembersWithFreeTypeVariables
                 .add(member as FunctionEntity);
           }
@@ -892,7 +891,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
       if (!info.hasInstantiation) {
         return;
       }
-      _classHierarchyBuilder.updateClassHierarchyNodeForClass(cls,
+      classHierarchyBuilder.updateClassHierarchyNodeForClass(cls,
           directlyInstantiated: info.isDirectlyInstantiated,
           abstractlyInstantiated: info.isAbstractlyInstantiated);
 
@@ -930,7 +929,7 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   }
 
   void registerClass(ClassEntity cls) {
-    _classHierarchyBuilder.registerClass(cls);
+    classHierarchyBuilder.registerClass(cls);
   }
 
   /// Returns `true` if [member] is inherited into a subtype of [type].
@@ -946,31 +945,20 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
   /// Here `A.m` is inherited into `A`, `B`, and `C`. Because `B` and
   /// `C` implement `I`, `isInheritedInSubtypeOf(A.m, I)` is true, but
   /// `isInheritedInSubtypeOf(A.m, J)` is false.
-  bool isInheritedIn(
-      MemberEntity member, ClassEntity type, ClassRelation relation) {
+  bool isInheritedIn(MemberEntity member, ClassEntity type) {
     // TODO(johnniwinther): Use the [member] itself to avoid enqueueing members
     // that are overridden.
-    return isInheritedInClass(member.enclosingClass!, type, relation);
+    return isInheritedInClass(member.enclosingClass!, type);
   }
 
-  bool isInheritedInClass(ClassEntity memberHoldingClass, ClassEntity type,
-      ClassRelation relation) {
-    switch (relation) {
-      case ClassRelation.exact:
-        return _classHierarchyBuilder.isInheritedInExactClass(
-            memberHoldingClass, type);
-      case ClassRelation.thisExpression:
-        return _classHierarchyBuilder.isInheritedInThisClass(
-            memberHoldingClass, type);
-      case ClassRelation.subtype:
-        if (memberHoldingClass == _commonElements.nullClass ||
-            memberHoldingClass == _commonElements.jsNullClass) {
-          // Members of `Null` and `JSNull` are always potential targets.
-          return true;
-        }
-        return _classHierarchyBuilder.isInheritedInSubtypeOf(
-            memberHoldingClass, type);
+  bool isInheritedInClass(ClassEntity memberHoldingClass, ClassEntity type) {
+    if (memberHoldingClass == _commonElements.nullClass ||
+        memberHoldingClass == _commonElements.jsNullClass) {
+      // Members of `Null` and `JSNull` are always potential targets.
+      return true;
     }
+    return classHierarchyBuilder.isInheritedInSubtypeOf(
+        memberHoldingClass, type);
   }
 
   KClosedWorld closeWorld(DiagnosticReporter reporter) {
@@ -1009,10 +997,10 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
 
     KClosedWorld closedWorld = KClosedWorld(_elementMap,
         options: _options,
-        elementEnvironment: _elementEnvironment as KElementEnvironment,
+        elementEnvironment: elementEnvironment as KElementEnvironment,
         dartTypes: _dartTypes,
         commonElements: _commonElements as KCommonElements,
-        nativeData: _nativeDataBuilder.close(),
+        nativeData: _nativeDataBuilder.close(reporter),
         interceptorData: _interceptorDataBuilder.close(),
         backendUsage: backendUsage,
         noSuchMethodData: _noSuchMethodRegistry.close(),
@@ -1024,9 +1012,9 @@ class ResolutionWorldBuilder extends WorldBuilder implements World {
         liveAbstractInstanceMembers: _liveAbstractInstanceMembers,
         assignedInstanceMembers: computeAssignedInstanceMembers(),
         liveMemberUsage: liveMemberUsage,
-        mixinUses: _classHierarchyBuilder.mixinUses,
+        mixinUses: classHierarchyBuilder.mixinUses,
         typesImplementedBySubclasses: typesImplementedBySubclasses,
-        classHierarchy: _classHierarchyBuilder.close(),
+        classHierarchy: classHierarchyBuilder.close(),
         annotationsData: _annotationsDataBuilder.close(_options, reporter),
         isChecks: _isChecks,
         staticTypeArgumentDependencies: staticTypeArgumentDependencies,

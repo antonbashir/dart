@@ -2,21 +2,27 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:_fe_analyzer_shared/src/field_promotability.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis.dart';
+import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis_operations.dart';
 import 'package:_fe_analyzer_shared/src/type_inference/assigned_variables.dart';
-import 'package:_fe_analyzer_shared/src/type_inference/type_operations.dart';
+import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
+import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
+import 'package:analyzer/src/dart/element/type_schema.dart';
 import 'package:analyzer/src/dart/element/type_system.dart' show TypeSystemImpl;
 import 'package:analyzer/src/generated/variable_type_provider.dart';
+
+export 'package:_fe_analyzer_shared/src/type_inference/nullability_suffix.dart'
+    show NullabilitySuffix;
 
 /// Data gathered by flow analysis, retained for testing purposes.
 class FlowAnalysisDataForTesting {
@@ -84,9 +90,9 @@ class FlowAnalysisHelper {
   FlowAnalysis<AstNode, Statement, Expression, PromotableElement, DartType>?
       flow;
 
-  FlowAnalysisHelper(TypeSystemImpl typeSystem, bool retainDataForTesting,
-      FeatureSet featureSet, {required bool strictCasts})
-      : this._(TypeSystemOperations(typeSystem, strictCasts: strictCasts),
+  FlowAnalysisHelper(bool retainDataForTesting, FeatureSet featureSet,
+      {required TypeSystemOperations typeSystemOperations})
+      : this._(typeSystemOperations,
             retainDataForTesting ? FlowAnalysisDataForTesting() : null,
             isNonNullableByDefault: featureSet.isEnabled(Feature.non_nullable),
             respectImplicitlyTypedVarInitializers:
@@ -264,7 +270,7 @@ class FlowAnalysisHelper {
     // Set this.flow to null before doing any clean-up so that if an exception
     // is raised, the state is already updated correctly, and we don't have
     // cascading failures.
-    final flow = this.flow;
+    var flow = this.flow;
     this.flow = null;
     assignedVariables = null;
 
@@ -275,7 +281,7 @@ class FlowAnalysisHelper {
   /// associated with [newNode].  We need to do this when doing AST rewriting,
   /// so that test data can be found using the rewritten tree.
   void transferTestData(AstNode oldNode, AstNode newNode) {
-    final dataForTesting = this.dataForTesting;
+    var dataForTesting = this.dataForTesting;
     if (dataForTesting != null) {
       var oldNonPromotionReasons = dataForTesting.nonPromotionReasons[oldNode];
       if (oldNonPromotionReasons != null) {
@@ -371,8 +377,9 @@ class FlowAnalysisHelper {
 }
 
 class TypeSystemOperations
-    with TypeOperations<DartType>
-    implements Operations<PromotableElement, DartType> {
+    implements
+        TypeAnalyzerOperations<PromotableElement, DartType, DartType,
+            TypeParameterElement, InterfaceType, InterfaceElement> {
   final bool strictCasts;
   final TypeSystemImpl typeSystem;
 
@@ -382,9 +389,31 @@ class TypeSystemOperations
   DartType get boolType => typeSystem.typeProvider.boolType;
 
   @override
-  bool areStructurallyEqual(DartType type1, DartType type2) {
-    return type1 == type2;
-  }
+  DartType get doubleType => throw UnimplementedError('TODO(paulberry)');
+
+  @override
+  DartType get dynamicType => typeSystem.typeProvider.dynamicType;
+
+  @override
+  DartType get errorType => InvalidTypeImpl.instance;
+
+  @override
+  DartType get intType => throw UnimplementedError('TODO(paulberry)');
+
+  @override
+  DartType get neverType => typeSystem.typeProvider.neverType;
+
+  @override
+  DartType get nullType => typeSystem.typeProvider.nullType;
+
+  @override
+  DartType get objectQuestionType => typeSystem.objectQuestion;
+
+  @override
+  DartType get objectType => typeSystem.objectNone;
+
+  @override
+  DartType get unknownType => UnknownInferredType.instance;
 
   @override
   TypeClassification classifyType(DartType type) {
@@ -398,13 +427,56 @@ class TypeSystemOperations
   }
 
   @override
+  DartType extensionTypeErasure(DartType type) {
+    return type.extensionTypeErasure;
+  }
+
+  @override
   DartType factor(DartType from, DartType what) {
     return typeSystem.factor(from, what);
   }
 
   @override
+  DartType futureType(DartType argumentType) {
+    return typeSystem.typeProvider.futureType(argumentType);
+  }
+
+  @override
+  TypeDeclarationKind? getTypeDeclarationKind(DartType type) {
+    if (isInterfaceType(type)) {
+      return TypeDeclarationKind.interfaceDeclaration;
+    } else if (isExtensionType(type)) {
+      return TypeDeclarationKind.extensionTypeDeclaration;
+    } else {
+      return null;
+    }
+  }
+
+  @override
+  Variance getTypeParameterVariance(
+      InterfaceElement typeDeclaration, int parameterIndex) {
+    return (typeDeclaration.typeParameters[parameterIndex]
+            as TypeParameterElementImpl)
+        .variance;
+  }
+
+  @override
+  TypeDeclarationKind? getTypeSchemaDeclarationKind(DartType typeSchema) {
+    return getTypeDeclarationKind(typeSchema);
+  }
+
+  @override
   DartType glb(DartType type1, DartType type2) {
     return typeSystem.greatestLowerBound(type1, type2);
+  }
+
+  @override
+  DartType greatestClosure(DartType schema) =>
+      typeSystem.greatestClosureOfSchema(schema);
+
+  @override
+  bool isAlwaysExhaustiveType(DartType type) {
+    return typeSystem.isAlwaysExhaustive(type);
   }
 
   @override
@@ -414,28 +486,60 @@ class TypeSystemOperations
   }
 
   @override
-  bool isDynamic(DartType type) => type is DynamicType;
+  bool isDartCoreFunction(DartType type) {
+    return type.nullabilitySuffix == NullabilitySuffix.none &&
+        type.isDartCoreFunction;
+  }
 
   @override
-  bool isError(DartType type) => type is InvalidType;
+  bool isExtensionType(DartType type) {
+    return type is InterfaceType && type.element is ExtensionTypeElement;
+  }
+
+  @override
+  bool isFunctionType(DartType type) {
+    return type is FunctionType;
+  }
+
+  @override
+  bool isInterfaceType(DartType type) {
+    return type is InterfaceType &&
+        !type.isDartCoreNull &&
+        !type.isDartAsyncFutureOr &&
+        type.element is! ExtensionTypeElement;
+  }
 
   @override
   bool isNever(DartType type) {
-    return typeSystem.isBottom(type);
+    return type.isBottom;
+  }
+
+  @override
+  bool isNonNullable(DartType typeSchema) {
+    return typeSystem.isNonNullable(typeSchema);
+  }
+
+  @override
+  bool isNull(DartType type) {
+    return type.isDartCoreNull;
+  }
+
+  @override
+  bool isObject(DartType type) {
+    return type.isDartCoreObject &&
+        type.nullabilitySuffix == NullabilitySuffix.none;
   }
 
   @override
   bool isPropertyPromotable(Object property) {
     if (property is! PropertyAccessorElement) return false;
-    var field = property.variable;
+    var field = property.variable2;
     if (field is! FieldElement) return false;
     return field.isPromotable;
   }
 
   @override
-  bool isSameType(covariant TypeImpl type1, covariant TypeImpl type2) {
-    return type1 == type2;
-  }
+  bool isRecordType(DartType type) => type is RecordType;
 
   @override
   bool isSubtypeOf(DartType leftType, DartType rightType) {
@@ -444,6 +548,31 @@ class TypeSystemOperations
 
   @override
   bool isTypeParameterType(DartType type) => type is TypeParameterType;
+
+  @override
+  bool isTypeSchemaSatisfied(
+          {required DartType typeSchema, required DartType type}) =>
+      isSubtypeOf(type, typeSchema);
+
+  @override
+  bool isVariableFinal(PromotableElement element) {
+    return element.isFinal;
+  }
+
+  @override
+  DartType iterableTypeSchema(DartType elementTypeSchema) {
+    return typeSystem.typeProvider.iterableType(elementTypeSchema);
+  }
+
+  @override
+  DartType listType(DartType elementType) {
+    return typeSystem.typeProvider.listType(elementType);
+  }
+
+  @override
+  DartType listTypeSchema(DartType elementTypeSchema) {
+    return typeSystem.typeProvider.listType(elementTypeSchema);
+  }
 
   @override
   DartType lub(DartType type1, DartType type2) {
@@ -456,9 +585,55 @@ class TypeSystemOperations
   }
 
   @override
+  DartType makeTypeSchemaNullable(DartType typeSchema) {
+    return typeSystem.makeNullable(typeSchema);
+  }
+
+  @override
+  DartType mapType({
+    required DartType keyType,
+    required DartType valueType,
+  }) {
+    return typeSystem.typeProvider.mapType(keyType, valueType);
+  }
+
+  @override
+  DartType mapTypeSchema({
+    required DartType keyTypeSchema,
+    required DartType valueTypeSchema,
+  }) {
+    return typeSystem.typeProvider.mapType(keyTypeSchema, valueTypeSchema);
+  }
+
+  @override
+  DartType? matchFutureOr(DartType type) {
+    if (type is InterfaceType && type.isDartAsyncFutureOr) {
+      return type.typeArguments[0];
+    } else {
+      return null;
+    }
+  }
+
+  @override
+  TypeParameterElement? matchInferableParameter(DartType type) {
+    if (type is TypeParameterType) {
+      return type.element;
+    } else {
+      return null;
+    }
+  }
+
+  @override
   DartType? matchIterableType(DartType type) {
     var iterableElement = typeSystem.typeProvider.iterableElement;
     var listType = type.asInstanceOf(iterableElement);
+    return listType?.typeArguments[0];
+  }
+
+  @override
+  DartType? matchIterableTypeSchema(DartType typeSchema) {
+    var iterableElement = typeSystem.typeProvider.iterableElement;
+    var listType = typeSchema.asInstanceOf(iterableElement);
     return listType?.typeArguments[0];
   }
 
@@ -470,11 +645,11 @@ class TypeSystemOperations
   }
 
   @override
-  MapPatternTypeArguments<DartType>? matchMapType(DartType type) {
+  ({DartType keyType, DartType valueType})? matchMapType(DartType type) {
     var mapElement = typeSystem.typeProvider.mapElement;
     var mapType = type.asInstanceOf(mapElement);
     if (mapType != null) {
-      return MapPatternTypeArguments<DartType>(
+      return (
         keyType: mapType.typeArguments[0],
         valueType: mapType.typeArguments[1],
       );
@@ -490,6 +665,27 @@ class TypeSystemOperations
   }
 
   @override
+  TypeDeclarationMatchResult? matchTypeDeclarationType(DartType type) {
+    if (isInterfaceType(type)) {
+      InterfaceType interfaceType = type as InterfaceType;
+      return TypeDeclarationMatchResult(
+          typeDeclarationKind: TypeDeclarationKind.interfaceDeclaration,
+          typeDeclarationType: interfaceType,
+          typeDeclaration: interfaceType.element,
+          typeArguments: interfaceType.typeArguments);
+    } else if (isExtensionType(type)) {
+      InterfaceType interfaceType = type as InterfaceType;
+      return TypeDeclarationMatchResult(
+          typeDeclarationKind: TypeDeclarationKind.extensionTypeDeclaration,
+          typeDeclarationType: interfaceType,
+          typeDeclaration: interfaceType.element,
+          typeArguments: interfaceType.typeArguments);
+    } else {
+      return null;
+    }
+  }
+
+  @override
   DartType normalize(DartType type) {
     return typeSystem.normalize(type);
   }
@@ -500,9 +696,68 @@ class TypeSystemOperations
   }
 
   @override
+  DartType recordType(
+      {required List<DartType> positional,
+      required List<(String, DartType)> named}) {
+    return RecordTypeImpl(
+      positionalFields: positional.map((type) {
+        return RecordTypePositionalFieldImpl(type: type);
+      }).toList(),
+      namedFields: named.map((namedType) {
+        var (name, type) = namedType;
+        return RecordTypeNamedFieldImpl(name: name, type: type);
+      }).toList(),
+      nullabilitySuffix: NullabilitySuffix.none,
+    );
+  }
+
+  @override
+  DartType recordTypeSchema(
+          {required List<DartType> positional,
+          required List<(String, DartType)> named}) =>
+      recordType(positional: positional, named: named);
+
+  @override
+  DartType streamTypeSchema(DartType elementTypeSchema) {
+    return typeSystem.typeProvider.streamType(elementTypeSchema);
+  }
+
+  @override
   DartType? tryPromoteToType(DartType to, DartType from) {
     return typeSystem.tryPromoteToType(to, from);
   }
+
+  @override
+  bool typeIsSubtypeOfTypeSchema(DartType leftType, DartType rightSchema) {
+    return isSubtypeOf(leftType, rightSchema);
+  }
+
+  @override
+  DartType typeSchemaGlb(DartType typeSchema1, DartType typeSchema2) {
+    return typeSystem.greatestLowerBound(typeSchema1, typeSchema2);
+  }
+
+  @override
+  bool typeSchemaIsDynamic(DartType typeSchema) => typeSchema is DynamicType;
+
+  @override
+  bool typeSchemaIsSubtypeOfType(DartType leftSchema, DartType rightType) {
+    return isSubtypeOf(leftSchema, rightType);
+  }
+
+  @override
+  bool typeSchemaIsSubtypeOfTypeSchema(
+      DartType leftSchema, DartType rightSchema) {
+    return isSubtypeOf(leftSchema, rightSchema);
+  }
+
+  @override
+  DartType typeSchemaLub(DartType typeSchema1, DartType typeSchema2) {
+    return typeSystem.leastUpperBound(typeSchema1, typeSchema2);
+  }
+
+  @override
+  DartType typeToSchema(DartType type) => type;
 
   @override
   DartType variableType(PromotableElement variable) {
@@ -516,7 +771,7 @@ class TypeSystemOperations
     if (property is! PropertyAccessorElement) {
       return PropertyNonPromotabilityReason.isNotField;
     }
-    var field = property.variable;
+    var field = property.variable2;
     if (field is! FieldElement) {
       return PropertyNonPromotabilityReason.isNotField;
     }
@@ -531,6 +786,11 @@ class TypeSystemOperations
     // Non-promotion reason must be due to a conflict with some other
     // declaration, or because field promotion is disabled.
     return null;
+  }
+
+  @override
+  DartType withNullabilitySuffix(DartType type, NullabilitySuffix suffix) {
+    return (type as TypeImpl).withNullability(suffix);
   }
 }
 

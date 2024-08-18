@@ -153,13 +153,15 @@ String ddcHtml(
     NnbdMode mode,
     String genDir,
     bool nonNullAsserts,
+    bool nativeNonNullAsserts,
+    bool jsInteropNonNullAsserts,
     bool weakNullSafetyErrors) {
   var testId = pathToJSIdentifier(testName);
   var testIdAlias = pathToJSIdentifier(testNameAlias);
   var soundNullSafety = mode == NnbdMode.strong;
   var ddcGenDir = '/root_build/$genDir';
   var packagePaths =
-      testPackages.map((p) => '    "$p": "$ddcGenDir/pkg/$p",').join("\n");
+      testPackages.map((p) => '    "$p": "$ddcGenDir/pkg/amd/$p",').join("\n");
   // The native JavaScript Object prototype is sealed before loading the Dart
   // SDK module to guard against prototype pollution.
   return """
@@ -242,6 +244,8 @@ requirejs(["$testName", "dart_sdk", "async_helper"],
   sdk.dart.weakNullSafetyWarnings(!($weakNullSafetyErrors || $soundNullSafety));
   sdk.dart.weakNullSafetyErrors($weakNullSafetyErrors);
   sdk.dart.nonNullAsserts($nonNullAsserts);
+  sdk.dart.nativeNonNullAsserts($nativeNonNullAsserts);
+  sdk.dart.jsInteropNonNullAsserts($jsInteropNonNullAsserts);
 
   dartMainRunner(function testMainWrapper() {
     // Some callbacks are not scheduled with timers/microtasks, so they don't

@@ -3,8 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/completion/dart/candidate_suggestion.dart';
+import 'package:analysis_server/src/services/completion/dart/completion_state.dart';
 import 'package:analysis_server/src/services/completion/dart/suggestion_collector.dart';
 import 'package:analysis_server/src/utilities/extensions/ast.dart';
+import 'package:analysis_server/src/utilities/extensions/string.dart';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -21,11 +23,14 @@ class KeywordHelper {
   /// The offset of the completion location.
   final int offset;
 
+  final CompletionState state;
+
   /// Initialize a newly created helper to add suggestions to the [collector].
   KeywordHelper(
       {required this.collector,
       required this.featureSet,
-      required this.offset});
+      required this.offset,
+      required this.state});
 
   /// Add the keywords that are appropriate when the selection is in a class
   /// declaration between the name of the class and the body. The [node] is the
@@ -60,9 +65,7 @@ class KeywordHelper {
     addKeyword(Keyword.STATIC);
     addKeyword(Keyword.VAR);
     addKeyword(Keyword.VOID);
-    if (featureSet.isEnabled(Feature.non_nullable)) {
-      addKeyword(Keyword.LATE);
-    }
+    addKeyword(Keyword.LATE);
   }
 
   /// Add the keywords that are appropriate when the selection is in a class
@@ -105,7 +108,7 @@ class KeywordHelper {
   /// beginning of an element in a collection [literal].
   void addCollectionElementKeywords(
       TypedLiteral literal, NodeList<CollectionElement> elements,
-      {bool mustBeStatic = false}) {
+      {bool mustBeConst = false, bool mustBeStatic = false}) {
     // TODO(brianwilkerson): Consider determining whether there is a comma before
     //  the selection and inserting the comma if there isn't one.
     addKeyword(Keyword.FOR);
@@ -128,7 +131,8 @@ class KeywordHelper {
         }
       }
     }
-    addExpressionKeywords(literal, mustBeStatic: mustBeStatic);
+    addExpressionKeywords(literal,
+        mustBeConstant: mustBeConst, mustBeStatic: mustBeStatic);
   }
 
   /// Add the keywords that are appropriate when the selection is after the
@@ -139,6 +143,7 @@ class KeywordHelper {
     addKeyword(Keyword.CONST);
     addKeyword(Keyword.COVARIANT);
     addKeyword(Keyword.DYNAMIC);
+    addKeyword(Keyword.ENUM);
     addKeyword(Keyword.EXTERNAL);
     addKeyword(Keyword.FINAL);
     addKeyword(Keyword.MIXIN);
@@ -148,9 +153,7 @@ class KeywordHelper {
     if (featureSet.isEnabled(Feature.extension_methods)) {
       addKeyword(Keyword.EXTENSION);
     }
-    if (featureSet.isEnabled(Feature.non_nullable)) {
-      addKeyword(Keyword.LATE);
-    }
+    addKeyword(Keyword.LATE);
     if (featureSet.isEnabled(Feature.class_modifiers)) {
       addKeyword(Keyword.BASE);
       addKeyword(Keyword.INTERFACE);
@@ -182,9 +185,9 @@ class KeywordHelper {
     var initializers = constructor.initializers;
     if (initializer == null || initializers.last == initializer) {
       var last = initializers.lastNonSynthetic;
-      if (offset >= last.end &&
-          last is! SuperConstructorInvocation &&
-          last is! RedirectingConstructorInvocation) {
+      if (last == initializer ||
+          (last is! SuperConstructorInvocation &&
+              last is! RedirectingConstructorInvocation)) {
         if (constructor.parent is! ExtensionTypeDeclaration) {
           addKeyword(Keyword.SUPER);
         }
@@ -207,9 +210,12 @@ class KeywordHelper {
     if (before == null && !unit.directives.any((d) => d is LibraryDirective)) {
       addKeyword(Keyword.LIBRARY);
     }
-    addKeywordFromText(Keyword.IMPORT, " '^';");
-    addKeywordFromText(Keyword.EXPORT, " '^';");
-    addKeywordFromText(Keyword.PART, " '^';");
+    addKeywordAndText(Keyword.IMPORT, " '^';");
+    addKeywordAndText(Keyword.EXPORT, " '^';");
+    addKeywordAndText(Keyword.PART, " '^';");
+    if (unit.directives.isEmpty) {
+      addText("${Keyword.PART.lexeme} ${Keyword.OF.lexeme} '^';");
+    }
   }
 
   /// Add the keywords that are appropriate when the selection is in an enum
@@ -317,10 +323,11 @@ class KeywordHelper {
   /// extension declaration between the name of the extension and the body. The
   /// [node] is the extension declaration containing the selection point.
   void addExtensionDeclarationKeywords(ExtensionDeclaration node) {
-    if (node.onKeyword.isSynthetic) {
+    var onClause = node.onClause;
+    if (onClause == null || onClause.onKeyword.isSynthetic) {
       addKeyword(Keyword.ON);
       if (node.name == null && featureSet.isEnabled(Feature.inline_class)) {
-        addPseudoKeyword('type');
+        addText('type');
       }
     }
   }
@@ -379,9 +386,7 @@ class KeywordHelper {
           keyword != Keyword.COVARIANT) {
         addKeyword(Keyword.COVARIANT);
       }
-      if (_isAbsentOrIn(fields.lateKeyword) &&
-          keyword != Keyword.LATE &&
-          featureSet.isEnabled(Feature.non_nullable)) {
+      if (_isAbsentOrIn(fields.lateKeyword) && keyword != Keyword.LATE) {
         addKeyword(Keyword.LATE);
       }
       addKeyword(Keyword.STATIC);
@@ -426,8 +431,8 @@ class KeywordHelper {
     if (_isAbsentOrIn(body?.keyword)) {
       addKeyword(Keyword.ASYNC);
       if (body is! ExpressionFunctionBody) {
-        addKeywordFromText(Keyword.ASYNC, '*');
-        addKeywordFromText(Keyword.SYNC, '*');
+        addKeywordAndText(Keyword.ASYNC, '*');
+        addKeywordAndText(Keyword.SYNC, '*');
       }
     }
   }
@@ -442,7 +447,7 @@ class KeywordHelper {
     if (firstCombinator == null || offset < firstCombinator.offset) {
       if (deferredKeyword == null) {
         if (asKeyword == null) {
-          addKeywordFromText(Keyword.DEFERRED, ' as');
+          addKeywordAndText(Keyword.DEFERRED, ' as');
           addKeyword(Keyword.AS);
           addKeyword(Keyword.HIDE);
           addKeyword(Keyword.SHOW);
@@ -469,7 +474,16 @@ class KeywordHelper {
 
   /// Add a keyword suggestion to suggest the [keyword].
   void addKeyword(Keyword keyword) {
-    collector.addSuggestion(KeywordSuggestion.fromKeyword(keyword));
+    var matcherScore = state.matcher.score(keyword.lexeme);
+    if (matcherScore != -1) {
+      collector.addSuggestion(
+        KeywordSuggestion.fromKeyword(
+          keyword: keyword,
+          annotatedText: null,
+          matcherScore: matcherScore,
+        ),
+      );
+    }
   }
 
   /// Add a keyword suggestion to suggest the [keyword] followed by the
@@ -481,9 +495,17 @@ class KeywordHelper {
   /// be used as the selection offset. If the text doesn't contain a caret, then
   /// the insert text will be the annotated text and the selection offset will
   /// be at the end of the text.
-  void addKeywordFromText(Keyword keyword, String annotatedText) {
-    collector.addSuggestion(
-        KeywordSuggestion.fromKeywordAndText(keyword, annotatedText));
+  void addKeywordAndText(Keyword keyword, String annotatedText) {
+    var matcherScore = state.matcher.score(keyword.lexeme);
+    if (matcherScore != -1) {
+      collector.addSuggestion(
+        KeywordSuggestion.fromKeyword(
+          keyword: keyword,
+          annotatedText: annotatedText,
+          matcherScore: matcherScore,
+        ),
+      );
+    }
   }
 
   /// Add the keywords that are appropriate when the selection is in a mixin
@@ -515,9 +537,7 @@ class KeywordHelper {
     addKeyword(Keyword.STATIC);
     addKeyword(Keyword.VAR);
     addKeyword(Keyword.VOID);
-    if (featureSet.isEnabled(Feature.non_nullable)) {
-      addKeyword(Keyword.LATE);
-    }
+    addKeyword(Keyword.LATE);
   }
 
   /// Add the keywords that are appropriate when the selection is in a mixin
@@ -536,11 +556,6 @@ class KeywordHelper {
     addVariablePatternKeywords();
   }
 
-  /// Add a keyword suggestion to suggest the [keyword].
-  void addPseudoKeyword(String keyword) {
-    collector.addSuggestion(KeywordSuggestion.fromPseudoKeyword(keyword));
-  }
-
   /// Add the keywords that are appropriate when the selection is at the
   /// beginning of a statement. The [node] provides context to determine which
   /// keywords to include.
@@ -550,7 +565,7 @@ class KeywordHelper {
     } else if (node.inAsyncStarOrSyncStarMethodOrFunction) {
       addKeyword(Keyword.AWAIT);
       addKeyword(Keyword.YIELD);
-      addKeywordFromText(Keyword.YIELD, '*');
+      addKeywordAndText(Keyword.YIELD, '*');
     }
     if (node.inLoop) {
       addKeyword(Keyword.BREAK);
@@ -565,6 +580,9 @@ class KeywordHelper {
     addKeyword(Keyword.FINAL);
     addKeyword(Keyword.FOR);
     addKeyword(Keyword.IF);
+    if (node.inCatchClause) {
+      addKeyword(Keyword.RETHROW);
+    }
     addKeyword(Keyword.RETURN);
     if (!featureSet.isEnabled(Feature.patterns)) {
       // We don't suggest `switch` when patterns is enabled because `switch`
@@ -579,10 +597,19 @@ class KeywordHelper {
     addKeyword(Keyword.WHILE);
     if (node.inAsyncStarOrSyncStarMethodOrFunction) {
       addKeyword(Keyword.YIELD);
-      addKeywordFromText(Keyword.YIELD, '*');
+      addKeywordAndText(Keyword.YIELD, '*');
     }
-    if (featureSet.isEnabled(Feature.non_nullable)) {
-      addKeyword(Keyword.LATE);
+    addKeyword(Keyword.LATE);
+  }
+
+  /// Add a keyword suggestion to suggest the [annotatedText].
+  void addText(String annotatedText) {
+    var (rawText, _) = annotatedText.withoutCaret;
+    var matcherScore = state.matcher.score(rawText);
+    if (matcherScore != -1) {
+      collector.addSuggestion(
+        KeywordSuggestion.fromText(annotatedText, matcherScore: matcherScore),
+      );
     }
   }
 
@@ -633,7 +660,7 @@ extension on CollectionElement? {
 
 extension on FormalParameterList {
   bool inNamedGroup(int offset) {
-    final leftDelimiter = this.leftDelimiter;
+    var leftDelimiter = this.leftDelimiter;
     if (leftDelimiter == null ||
         leftDelimiter.type != TokenType.OPEN_CURLY_BRACKET) {
       return false;
@@ -646,7 +673,7 @@ extension on FormalParameterList {
 
 extension on NodeList<ConstructorInitializer> {
   ConstructorInitializer get lastNonSynthetic {
-    final last = this.last;
+    var last = this.last;
     if (last.beginToken.isSynthetic && length > 1) {
       return this[length - 2];
     }

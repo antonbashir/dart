@@ -43,7 +43,6 @@ void/*: Skip # https://github.com/dart-lang/sdk/issues/34015
 class/large_class_declaration_test: Slow, Pass
 
 [ $mode == product ]
-assert/assert_test: SkipByDesign # Requires checked mode.
 generic/generic_test: SkipByDesign # Requires checked mode.
 map/literal4_test: SkipByDesign # Requires checked mode.
 parameter/named_type_test/01: SkipByDesign # Requires checked mode.
@@ -71,5 +70,6 @@ function_type/*: Skip # Needs checked mode.
 identifier/built_in_type_annotation_test/set: Crash # Not supported by legacy VM front-end.
 
 [ $hot_reload || $hot_reload_rollback ]
+macros/introspect/declaration_introspect_cycle_failure_test: Skip # Issue 54779
 regress/regress22780_test/01: Crash # Issue 29094
 vm/optimized_stacktrace_test: Slow, Pass

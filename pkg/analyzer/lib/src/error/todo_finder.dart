@@ -71,7 +71,7 @@ class TodoFinder {
     // This will be moved along if additional comments are consumed by multiline
     // TODOs.
     var nextComment = commentToken.next;
-    final commentLocation = lineInfo.getLocation(commentToken.offset);
+    var commentLocation = lineInfo.getLocation(commentToken.offset);
 
     for (RegExpMatch match in matches) {
       int offset = commentToken.offset + match.start + match.group(1)!.length;
@@ -95,13 +95,15 @@ class TodoFinder {
         // Append any indented lines onto the end.
         var line = commentLocation.lineNumber;
         while (nextComment != null) {
-          final nextCommentLocation = lineInfo.getLocation(nextComment.offset);
-          final columnOfFirstNoneMarkerOrWhitespace =
+          var nextCommentLocation = lineInfo.getLocation(nextComment.offset);
+          var columnOfFirstNoneMarkerOrWhitespace =
               nextCommentLocation.columnNumber +
                   nextComment.lexeme.indexOf(_nonWhitespaceOrCommentMarker);
 
-          final isContinuation =
+          var isContinuation =
               nextComment.type == TokenType.SINGLE_LINE_COMMENT &&
+                  // Don't consider Dartdocs that follow.
+                  !nextComment.lexeme.startsWith('///') &&
                   // Only consider TODOs on the very next line.
                   nextCommentLocation.lineNumber == line++ + 1 &&
                   // Only consider comment tokens starting at the same column.
@@ -117,17 +119,21 @@ class TodoFinder {
 
           // Track the end of the continuation for the diagnostic range.
           end = nextComment.end;
-          final lexemeTextOffset = columnOfFirstNoneMarkerOrWhitespace -
+          var lexemeTextOffset = columnOfFirstNoneMarkerOrWhitespace -
               nextCommentLocation.columnNumber;
-          final continuationText =
+          var continuationText =
               nextComment.lexeme.substring(lexemeTextOffset).trimRight();
           todoText = '$todoText $continuationText';
           nextComment = nextComment.next;
         }
       }
 
-      _errorReporter.reportErrorForOffset(
-          Todo.forKind(todoKind), offset, end - offset, [todoText]);
+      _errorReporter.atOffset(
+        offset: offset,
+        length: end - offset,
+        errorCode: Todo.forKind(todoKind),
+        arguments: [todoText],
+      );
     }
 
     return nextComment;

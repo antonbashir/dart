@@ -4,12 +4,15 @@
 
 #include "vm/compiler/backend/il.h"
 
+#include <optional>
 #include <vector>
 
 #include "platform/text_buffer.h"
 #include "platform/utils.h"
 #include "vm/class_id.h"
+#include "vm/compiler/assembler/disassembler.h"
 #include "vm/compiler/backend/block_builder.h"
+#include "vm/compiler/backend/flow_graph_compiler.h"
 #include "vm/compiler/backend/il_printer.h"
 #include "vm/compiler/backend/il_test_helper.h"
 #include "vm/compiler/backend/range_analysis.h"
@@ -23,11 +26,6 @@ ISOLATE_UNIT_TEST_CASE(InstructionTests) {
       new TargetEntryInstr(1, kInvalidTryIndex, DeoptId::kNone);
   EXPECT(target_instr->IsBlockEntry());
   EXPECT(!target_instr->IsDefinition());
-  SpecialParameterInstr* context = new SpecialParameterInstr(
-      SpecialParameterInstr::kContext, DeoptId::kNone, target_instr);
-  EXPECT(context->IsDefinition());
-  EXPECT(!context->IsBlockEntry());
-  EXPECT(context->GetBlock() == target_instr);
 }
 
 ISOLATE_UNIT_TEST_CASE(OptimizationTests) {
@@ -52,15 +50,14 @@ ISOLATE_UNIT_TEST_CASE(OptimizationTests) {
 }
 
 ISOLATE_UNIT_TEST_CASE(IRTest_EliminateWriteBarrier) {
-  const char* nullable_tag = TestCase::NullableTag();
   // clang-format off
-  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
+  const char* kScript = R"(
       class Container<T> {
         operator []=(var index, var value) {
           return data[index] = value;
         }
 
-        List<T%s> data = List<T%s>.filled(10, null);
+        List<T?> data = List<T?>.filled(10, null);
       }
 
       Container<int> x = Container<int>();
@@ -70,10 +67,10 @@ ISOLATE_UNIT_TEST_CASE(IRTest_EliminateWriteBarrier) {
           x[i] = i;
         }
       }
-    )", nullable_tag, nullable_tag), std::free);
+    )";
   // clang-format on
 
-  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
+  const auto& root_library = Library::Handle(LoadTestScript(kScript));
   const auto& function = Function::Handle(GetFunction(root_library, "foo"));
 
   Invoke(root_library, "foo");
@@ -138,7 +135,7 @@ static void RunInitializingStoresTest(
 
 ISOLATE_UNIT_TEST_CASE(IRTest_InitializingStores) {
   // clang-format off
-  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
+  const char* kScript = R"(
     class Bar {
       var f;
       var g;
@@ -150,7 +147,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_InitializingStores) {
     f3() {
       return () { };
     }
-    f4<T>({T%s value}) {
+    f4<T>({T? value}) {
       return () { return value; };
     }
     main() {
@@ -159,11 +156,10 @@ ISOLATE_UNIT_TEST_CASE(IRTest_InitializingStores) {
       f3();
       f4();
     }
-  )",
-  TestCase::NullableTag()), std::free);
+  )";
   // clang-format on
 
-  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
+  const auto& root_library = Library::Handle(LoadTestScript(kScript));
   Invoke(root_library, "main");
 
   RunInitializingStoresTest(root_library, "f1", CompilerPass::kJIT,
@@ -214,11 +210,11 @@ bool TestIntConverterCanonicalizationRule(Thread* thread,
   auto normal_entry = H.flow_graph()->graph_entry()->normal_entry();
 
   Definition* v0;
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
 
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, initial);
+    v0 = builder.AddParameter(0, initial);
     v0->set_range(Range(RangeBoundary::FromConstant(min_value),
                         RangeBoundary::FromConstant(max_value)));
     auto conv1 = builder.AddDefinition(new IntConverterInstr(
@@ -285,12 +281,12 @@ ISOLATE_UNIT_TEST_CASE(IL_PhiCanonicalization) {
   auto b4 = H.TargetEntry();
 
   Definition* v0;
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
   PhiInstr* phi;
 
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    v0 = builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    v0 = builder.AddParameter(0, kTagged);
     builder.AddInstruction(new GotoInstr(b2, S.GetNextDeoptId()));
   }
 
@@ -343,10 +339,8 @@ ISOLATE_UNIT_TEST_CASE(IL_UnboxIntegerCanonicalization) {
     Definition* int_type =
         H.flow_graph()->GetConstant(Type::Handle(Type::IntType()));
 
-    Definition* float64_array =
-        builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
-    Definition* int64_array =
-        builder.AddParameter(1, 1, /*with_frame=*/true, kTagged);
+    Definition* float64_array = builder.AddParameter(0, kTagged);
+    Definition* int64_array = builder.AddParameter(1, kTagged);
 
     Definition* load_indexed = builder.AddDefinition(new LoadIndexedInstr(
         new Value(float64_array), new Value(index),
@@ -416,10 +410,8 @@ static void TestNullAwareEqualityCompareCanonicalization(
   EqualityCompareInstr* compare = nullptr;
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    Definition* v0 =
-        builder.AddParameter(0, 0, /*with_frame=*/true, kUnboxedInt64);
-    Definition* v1 =
-        builder.AddParameter(1, 1, /*with_frame=*/true, kUnboxedInt64);
+    Definition* v0 = builder.AddParameter(0, kUnboxedInt64);
+    Definition* v1 = builder.AddParameter(1, kUnboxedInt64);
     Definition* box0 = builder.AddDefinition(new BoxInt64Instr(new Value(v0)));
     Definition* box1 = builder.AddDefinition(new BoxInt64Instr(new Value(v1)));
 
@@ -642,8 +634,6 @@ ISOLATE_UNIT_TEST_CASE(HierarchyInfo_String_Subtype) {
   GrowableArray<intptr_t> expected_concrete_cids;
   expected_concrete_cids.Add(kOneByteStringCid);
   expected_concrete_cids.Add(kTwoByteStringCid);
-  expected_concrete_cids.Add(kExternalOneByteStringCid);
-  expected_concrete_cids.Add(kExternalTwoByteStringCid);
 
   GrowableArray<intptr_t> expected_abstract_cids;
   expected_abstract_cids.Add(type.type_class_id());
@@ -687,203 +677,8 @@ ISOLATE_UNIT_TEST_CASE(IRTest_DoubleEqualsSmi) {
       kMoveGlob,
       kMatchAndMoveBinaryDoubleOp,
       kMatchAndMoveEqualityCompare,
-      kMatchReturn,
+      kMatchDartReturn,
   }));
-}
-
-#ifdef DART_TARGET_OS_WINDOWS
-const char* pointer_prefix = "0x";
-#else
-const char* pointer_prefix = "";
-#endif
-
-ISOLATE_UNIT_TEST_CASE(IRTest_RawStoreField) {
-  InstancePtr ptr = Smi::New(100);
-  OS::Print("&ptr %p\n", &ptr);
-
-  // clang-format off
-  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
-    import 'dart:ffi';
-
-    void myFunction() {
-      final pointer = Pointer<IntPtr>.fromAddress(%s%p);
-      anotherFunction();
-    }
-
-    void anotherFunction() {}
-  )", pointer_prefix, &ptr), std::free);
-  // clang-format on
-
-  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
-  Invoke(root_library, "myFunction");
-  EXPECT_EQ(Smi::New(100), ptr);
-
-  const auto& my_function =
-      Function::Handle(GetFunction(root_library, "myFunction"));
-
-  TestPipeline pipeline(my_function, CompilerPass::kJIT);
-  FlowGraph* flow_graph = pipeline.RunPasses({
-      CompilerPass::kComputeSSA,
-  });
-
-  Zone* const zone = Thread::Current()->zone();
-
-  StaticCallInstr* pointer = nullptr;
-  StaticCallInstr* another_function_call = nullptr;
-  {
-    ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
-
-    EXPECT(cursor.TryMatch({
-        kMoveGlob,
-        {kMatchAndMoveStaticCall, &pointer},
-        {kMatchAndMoveStaticCall, &another_function_call},
-    }));
-  }
-  auto pointer_value = Value(pointer);
-  auto* const load_field_instr = new (zone) LoadFieldInstr(
-      &pointer_value, Slot::PointerBase_data(),
-      InnerPointerAccess::kCannotBeInnerPointer, InstructionSource());
-  flow_graph->InsertBefore(another_function_call, load_field_instr, nullptr,
-                           FlowGraph::kValue);
-  auto load_field_value = Value(load_field_instr);
-  auto pointer_value2 = Value(pointer);
-  auto* const raw_store_field_instr =
-      new (zone) RawStoreFieldInstr(&load_field_value, &pointer_value2, 0);
-  flow_graph->InsertBefore(another_function_call, raw_store_field_instr,
-                           nullptr, FlowGraph::kEffect);
-  another_function_call->RemoveFromGraph();
-
-  {
-    // Check we constructed the right graph.
-    ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
-    EXPECT(cursor.TryMatch({
-        kMoveGlob,
-        kMatchAndMoveStaticCall,
-        kMatchAndMoveLoadField,
-        kMatchAndMoveRawStoreField,
-    }));
-  }
-
-  pipeline.RunForcedOptimizedAfterSSAPasses();
-
-  {
-#if !defined(PRODUCT) && !defined(USING_THREAD_SANITIZER)
-    SetFlagScope<bool> sfs(&FLAG_disassemble_optimized, true);
-#endif
-    pipeline.CompileGraphAndAttachFunction();
-  }
-
-  // Ensure we can successfully invoke the function.
-  Invoke(root_library, "myFunction");
-
-  // Might be garbage if we ran a GC, but should never be a Smi.
-  EXPECT(!ptr.IsSmi());
-}
-
-// We do not have a RawLoadFieldInstr, instead we just use LoadIndexed for
-// loading from outside the heap.
-//
-// This test constructs to instructions from FlowGraphBuilder::RawLoadField
-// and exercises them to do a load from outside the heap.
-ISOLATE_UNIT_TEST_CASE(IRTest_RawLoadField) {
-  InstancePtr ptr = Smi::New(100);
-  intptr_t ptr2 = 100;
-  OS::Print("&ptr %p &ptr2 %p\n", &ptr, &ptr2);
-
-  // clang-format off
-  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
-    import 'dart:ffi';
-
-    void myFunction() {
-      final pointer = Pointer<IntPtr>.fromAddress(%s%p);
-      anotherFunction();
-      final pointer2 = Pointer<IntPtr>.fromAddress(%s%p);
-      pointer2.value = 3;
-    }
-
-    void anotherFunction() {}
-  )", pointer_prefix, &ptr, pointer_prefix, &ptr2), std::free);
-  // clang-format on
-
-  const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
-  Invoke(root_library, "myFunction");
-  EXPECT_EQ(Smi::New(100), ptr);
-  EXPECT_EQ(3, ptr2);
-
-  const auto& my_function =
-      Function::Handle(GetFunction(root_library, "myFunction"));
-
-  TestPipeline pipeline(my_function, CompilerPass::kJIT);
-  FlowGraph* flow_graph = pipeline.RunPasses({
-      CompilerPass::kComputeSSA,
-  });
-
-  Zone* const zone = Thread::Current()->zone();
-
-  StaticCallInstr* pointer = nullptr;
-  StaticCallInstr* another_function_call = nullptr;
-  StaticCallInstr* pointer2 = nullptr;
-  StaticCallInstr* pointer2_store = nullptr;
-  {
-    ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
-
-    EXPECT(cursor.TryMatch({
-        kMoveGlob,
-        {kMatchAndMoveStaticCall, &pointer},
-        {kMatchAndMoveStaticCall, &another_function_call},
-        {kMatchAndMoveStaticCall, &pointer2},
-        {kMatchAndMoveStaticCall, &pointer2_store},
-    }));
-  }
-  auto pointer_value = Value(pointer);
-  auto* const load_field_instr = new (zone) LoadFieldInstr(
-      &pointer_value, Slot::PointerBase_data(),
-      InnerPointerAccess::kCannotBeInnerPointer, InstructionSource());
-  flow_graph->InsertBefore(another_function_call, load_field_instr, nullptr,
-                           FlowGraph::kValue);
-  auto load_field_value = Value(load_field_instr);
-  auto* const constant_instr = new (zone) UnboxedConstantInstr(
-      Integer::ZoneHandle(zone, Integer::New(0, Heap::kOld)), kUnboxedIntPtr);
-  flow_graph->InsertBefore(another_function_call, constant_instr, nullptr,
-                           FlowGraph::kValue);
-  auto constant_value = Value(constant_instr);
-  auto* const load_indexed_instr = new (zone)
-      LoadIndexedInstr(&load_field_value, &constant_value,
-                       /*index_unboxed=*/true, /*index_scale=*/1, kArrayCid,
-                       kAlignedAccess, DeoptId::kNone, InstructionSource());
-  flow_graph->InsertBefore(another_function_call, load_indexed_instr, nullptr,
-                           FlowGraph::kValue);
-
-  another_function_call->RemoveFromGraph();
-  pointer2_store->InputAt(2)->definition()->ReplaceUsesWith(load_indexed_instr);
-
-  {
-    // Check we constructed the right graph.
-    ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
-    EXPECT(cursor.TryMatch({
-        kMoveGlob,
-        kMatchAndMoveStaticCall,
-        kMatchAndMoveLoadField,
-        kMatchAndMoveUnboxedConstant,
-        kMatchAndMoveLoadIndexed,
-        kMatchAndMoveStaticCall,
-        kMatchAndMoveStaticCall,
-    }));
-  }
-
-  pipeline.RunForcedOptimizedAfterSSAPasses();
-
-  {
-#if !defined(PRODUCT) && !defined(USING_THREAD_SANITIZER)
-    SetFlagScope<bool> sfs(&FLAG_disassemble_optimized, true);
-#endif
-    pipeline.CompileGraphAndAttachFunction();
-  }
-
-  // Ensure we can successfully invoke the function.
-  Invoke(root_library, "myFunction");
-  EXPECT_EQ(Smi::New(100), ptr);
-  EXPECT_EQ(100, ptr2);
 }
 
 ISOLATE_UNIT_TEST_CASE(IRTest_LoadThread) {
@@ -913,13 +708,13 @@ ISOLATE_UNIT_TEST_CASE(IRTest_LoadThread) {
       CompilerPass::kComputeSSA,
   });
 
-  ReturnInstr* return_instr = nullptr;
+  DartReturnInstr* return_instr = nullptr;
   {
     ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry());
 
     EXPECT(cursor.TryMatch({
         kMoveGlob,
-        {kMatchReturn, &return_instr},
+        {kMatchDartReturn, &return_instr},
     }));
   }
 
@@ -929,12 +724,12 @@ ISOLATE_UNIT_TEST_CASE(IRTest_LoadThread) {
   auto load_thread_value = Value(load_thread_instr);
 
   auto* const convert_instr = new (zone) IntConverterInstr(
-      kUntagged, kUnboxedFfiIntPtr, &load_thread_value, DeoptId::kNone);
+      kUntagged, kUnboxedAddress, &load_thread_value, DeoptId::kNone);
   flow_graph->InsertBefore(return_instr, convert_instr, nullptr,
                            FlowGraph::kValue);
   auto convert_value = Value(convert_instr);
 
-  auto* const box_instr = BoxInstr::Create(kUnboxedFfiIntPtr, &convert_value);
+  auto* const box_instr = BoxInstr::Create(kUnboxedAddress, &convert_value);
   flow_graph->InsertBefore(return_instr, box_instr, nullptr, FlowGraph::kValue);
 
   return_instr->InputAt(0)->definition()->ReplaceUsesWith(box_instr);
@@ -947,7 +742,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_LoadThread) {
         kMatchAndMoveLoadThread,
         kMatchAndMoveIntConverter,
         kMatchAndMoveBox,
-        kMatchReturn,
+        kMatchDartReturn,
     }));
   }
 
@@ -969,7 +764,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_LoadThread) {
 #if !defined(TARGET_ARCH_IA32)
 ISOLATE_UNIT_TEST_CASE(IRTest_CachableIdempotentCall) {
   // clang-format off
-  auto kScript = Utils::CStringUniquePtr(OS::SCreate(nullptr, R"(
+  CStringUniquePtr kScript(OS::SCreate(nullptr, R"(
     int globalCounter = 0;
 
     int increment() => ++globalCounter;
@@ -990,7 +785,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_CachableIdempotentCall) {
       }
       return returnValue;
     }
-  )"), std::free);
+  )"));
   // clang-format on
 
   const auto& root_library = Library::Handle(LoadTestScript(kScript.get()));
@@ -1021,14 +816,15 @@ ISOLATE_UNIT_TEST_CASE(IRTest_CachableIdempotentCall) {
         kMoveGlob,
         {kMatchAndMoveStaticCall, &static_call},
         kMoveGlob,
-        kMatchReturn,
+        kMatchDartReturn,
     }));
   }
 
   InputsArray args;
   CachableIdempotentCallInstr* call = new CachableIdempotentCallInstr(
-      InstructionSource(), increment_function, static_call->type_args_len(),
-      Array::empty_array(), std::move(args), DeoptId::kNone);
+      InstructionSource(), kUnboxedAddress, increment_function,
+      static_call->type_args_len(), Array::empty_array(), std::move(args),
+      DeoptId::kNone);
   static_call->ReplaceWith(call, nullptr);
 
   pipeline.RunForcedOptimizedAfterSSAPasses();
@@ -1044,7 +840,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_CachableIdempotentCall) {
         // adds boxing.
         kMatchBox,
         kMoveGlob,
-        kMatchReturn,
+        kMatchDartReturn,
     }));
   }
 
@@ -1067,25 +863,13 @@ ISOLATE_UNIT_TEST_CASE(IRTest_CachableIdempotentCall) {
 
 // Helper to set up an inlined FfiCall by replacing a StaticCall.
 FlowGraph* SetupFfiFlowgraph(TestPipeline* pipeline,
-                             Zone* zone,
                              const compiler::ffi::CallMarshaller& marshaller,
                              uword native_entry,
                              bool is_leaf) {
   FlowGraph* flow_graph = pipeline->RunPasses({CompilerPass::kComputeSSA});
 
-  // Make an FfiCall based on ffi_trampoline that calls our native function.
-  auto ffi_call = new FfiCallInstr(DeoptId::kNone, marshaller, is_leaf);
-  RELEASE_ASSERT(ffi_call->InputCount() == 1);
-  // TargetAddress is the function pointer called.
-  const Representation address_repr =
-      compiler::target::kWordSize == 4 ? kUnboxedUint32 : kUnboxedInt64;
-  ffi_call->SetInputAt(
-      ffi_call->TargetAddressIndex(),
-      new Value(flow_graph->GetConstant(
-          Integer::Handle(Integer::NewCanonical(native_entry)), address_repr)));
-
-  // Replace the placeholder StaticCall with an FfiCall to our native function.
   {
+    // Locate the placeholder call.
     StaticCallInstr* static_call = nullptr;
     {
       ILMatcher cursor(flow_graph, flow_graph->graph_entry()->normal_entry(),
@@ -1094,8 +878,33 @@ FlowGraph* SetupFfiFlowgraph(TestPipeline* pipeline,
     }
     RELEASE_ASSERT(static_call != nullptr);
 
+    // Store the native entry as an unboxed constant and convert it to an
+    // untagged pointer for the FfiCall.
+    Zone* const Z = flow_graph->zone();
+    auto* const load_entry_point = new (Z) IntConverterInstr(
+        kUnboxedIntPtr, kUntagged,
+        new (Z) Value(flow_graph->GetConstant(
+            Integer::Handle(Z, Integer::NewCanonical(native_entry)),
+            kUnboxedIntPtr)),
+        DeoptId::kNone);
+    flow_graph->InsertBefore(static_call, load_entry_point, /*env=*/nullptr,
+                             FlowGraph::kValue);
+
+    // Make an FfiCall based on ffi_trampoline that calls our native function.
+    const intptr_t num_arguments =
+        FfiCallInstr::InputCountForMarshaller(marshaller);
+    RELEASE_ASSERT(num_arguments == 1);
+    InputsArray arguments(num_arguments);
+    arguments.Add(new (Z) Value(load_entry_point));
+    auto* const ffi_call = new (Z)
+        FfiCallInstr(DeoptId::kNone, marshaller, is_leaf, std::move(arguments));
+    RELEASE_ASSERT(
+        ffi_call->InputAt(ffi_call->TargetAddressIndex())->definition() ==
+        load_entry_point);
     flow_graph->InsertBefore(static_call, ffi_call, /*env=*/nullptr,
                              FlowGraph::kEffect);
+
+    // Remove the placeholder call.
     static_call->RemoveFromGraph(/*return_previous=*/false);
   }
 
@@ -1106,7 +915,6 @@ FlowGraph* SetupFfiFlowgraph(TestPipeline* pipeline,
       CompilerPass::kSetOuterInliningId,
       CompilerPass::kTypePropagation,
       // Skipping passes that don't seem to do anything for this test.
-      CompilerPass::kWidenSmiToInt32,
       CompilerPass::kSelectRepresentations,
       // Skipping passes that don't seem to do anything for this test.
       CompilerPass::kTypePropagation,
@@ -1126,8 +934,6 @@ FlowGraph* SetupFfiFlowgraph(TestPipeline* pipeline,
 // Additionally test that register allocation is done correctly by clobbering
 // all volatile registers in the native function being called.
 ISOLATE_UNIT_TEST_CASE(IRTest_FfiCallInstrLeafDoesntSpill) {
-  SetFlagScope<bool> sfs(&FLAG_sound_null_safety, true);
-
   const char* kScript = R"(
     import 'dart:ffi';
 
@@ -1223,8 +1029,8 @@ ISOLATE_UNIT_TEST_CASE(IRTest_FfiCallInstrLeafDoesntSpill) {
       [&](bool is_leaf, std::function<void(ParallelMoveInstr*)> verify) {
         // Build the SSA graph for "doFfiCall"
         TestPipeline pipeline(do_ffi_call, CompilerPass::kJIT);
-        FlowGraph* flow_graph = SetupFfiFlowgraph(
-            &pipeline, thread->zone(), marshaller, native_entry, is_leaf);
+        FlowGraph* flow_graph =
+            SetupFfiFlowgraph(&pipeline, marshaller, native_entry, is_leaf);
 
         {
           ParallelMoveInstr* parallel_move = nullptr;
@@ -1303,12 +1109,12 @@ static void TestConstantFoldToSmi(const Library& root_library,
   auto entry = flow_graph->graph_entry()->normal_entry();
   EXPECT(entry != nullptr);
 
-  ReturnInstr* ret = nullptr;
+  DartReturnInstr* ret = nullptr;
 
   ILMatcher cursor(flow_graph, entry, true, ParallelMovesHandling::kSkip);
   RELEASE_ASSERT(cursor.TryMatch({
       kMoveGlob,
-      {kMatchReturn, &ret},
+      {kMatchDartReturn, &ret},
   }));
 
   ConstantInstr* constant = ret->value()->definition()->AsConstant();
@@ -1391,7 +1197,7 @@ static void TestRepresentationChangeDuringCanonicalization(
   Definition* add = nullptr;
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    param = builder.AddParameter(0, 0, /*with_frame=*/true, kUnboxedInt64);
+    param = builder.AddParameter(0, kUnboxedInt64);
 
     InputsArray args;
     args.Add(new Value(H.flow_graph()->constant_null()));
@@ -1483,7 +1289,7 @@ static void TestCanonicalizationOfTypedDataViewFieldLoads(
 
   Definition* array;
   Definition* load;
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
@@ -1546,7 +1352,7 @@ ISOLATE_UNIT_TEST_CASE(IL_Canonicalize_InstanceCallWithNoICDataInAOT) {
   auto b1 = H.flow_graph()->graph_entry()->normal_entry();
 
   InstanceCallInstr* length_call;
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
@@ -1583,11 +1389,10 @@ static void TestTestRangeCanonicalize(const AbstractType& type,
 
   auto normal_entry = H.flow_graph()->graph_entry()->normal_entry();
 
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
   {
     BlockBuilder builder(H.flow_graph(), normal_entry);
-    Definition* param =
-        builder.AddParameter(0, 0, /*with_frame=*/true, kTagged);
+    Definition* param = builder.AddParameter(0, kTagged);
     Definition* load_cid =
         builder.AddDefinition(new LoadClassIdInstr(new Value(param)));
     Definition* test_range = builder.AddDefinition(new TestRangeInstr(
@@ -1632,7 +1437,7 @@ void TestStaticFieldForwarding(Thread* thread,
   const auto constant_42 = H.IntConstant(42);
   const auto constant_24 = H.IntConstant(24);
   Definition* load;
-  ReturnInstr* ret;
+  DartReturnInstr* ret;
 
   {
     BlockBuilder builder(H.flow_graph(), b1);
@@ -1725,6 +1530,231 @@ ISOLATE_UNIT_TEST_CASE(IL_Canonicalize_FinalFieldForwarding) {
                             /*expected_to_forward=*/false);
   TestStaticFieldForwarding(thread, test_cls, normal_field, /*num_stores=*/2,
                             /*expected_to_forward=*/false);
+}
+
+template <typename... Args>
+static ObjectPtr InvokeFunction(const Function& function, Args&... args) {
+  const Array& args_array = Array::Handle(Array::New(sizeof...(Args)));
+  intptr_t i = 0;
+  (args_array.SetAt(i++, args), ...);
+  return DartEntry::InvokeFunction(function, args_array);
+}
+
+static const Function& BuildTestFunction(
+    intptr_t num_parameters,
+    std::function<void(FlowGraphBuilderHelper&)> build_graph) {
+  using compiler::BlockBuilder;
+
+  TestPipeline pipeline(CompilerPass::kAOT, [&]() {
+    FlowGraphBuilderHelper H(num_parameters);
+    build_graph(H);
+    H.FinishGraph();
+    return H.flow_graph();
+  });
+  auto flow_graph = pipeline.RunPasses({
+      CompilerPass::kFinalizeGraph,
+      CompilerPass::kReorderBlocks,
+      CompilerPass::kAllocateRegisters,
+  });
+  pipeline.CompileGraphAndAttachFunction();
+  return flow_graph->function();
+}
+
+enum class TestIntVariant {
+  kTestBranch,
+  kTestValue,
+};
+
+static const Function& BuildTestIntFunction(
+    Zone* zone,
+    TestIntVariant test_variant,
+    bool eq_zero,
+    Representation rep,
+    std::optional<int64_t> immediate_mask) {
+  using compiler::BlockBuilder;
+  return BuildTestFunction(
+      /*num_parameters=*/1 + (!immediate_mask.has_value() ? 1 : 0),
+      [&](auto& H) {
+        H.AddVariable("lhs", AbstractType::ZoneHandle(Type::IntType()),
+                      new CompileType(CompileType::Int()));
+        if (!immediate_mask.has_value()) {
+          H.AddVariable("rhs", AbstractType::ZoneHandle(Type::IntType()),
+                        new CompileType(CompileType::Int()));
+        }
+
+        auto normal_entry = H.flow_graph()->graph_entry()->normal_entry();
+        auto true_successor = H.TargetEntry();
+        auto false_successor = H.TargetEntry();
+
+        {
+          BlockBuilder builder(H.flow_graph(), normal_entry);
+          Definition* lhs = builder.AddParameter(0);
+          Definition* rhs = immediate_mask.has_value()
+                                ? H.IntConstant(immediate_mask.value(), rep)
+                                : builder.AddParameter(1);
+          if (rep != lhs->representation()) {
+            lhs =
+                builder.AddUnboxInstr(kUnboxedInt64, lhs, /*is_checked=*/false);
+          }
+          if (rep != rhs->representation()) {
+            rhs =
+                builder.AddUnboxInstr(kUnboxedInt64, rhs, /*is_checked=*/false);
+          }
+
+          auto comparison = new TestIntInstr(
+              InstructionSource(), eq_zero ? Token::kEQ : Token::kNE, rep,
+              new Value(lhs), new Value(rhs));
+
+          if (test_variant == TestIntVariant::kTestValue) {
+            auto v2 = builder.AddDefinition(comparison);
+            builder.AddReturn(new Value(v2));
+          } else {
+            builder.AddBranch(comparison, true_successor, false_successor);
+          }
+        }
+
+        if (test_variant == TestIntVariant::kTestBranch) {
+          {
+            BlockBuilder builder(H.flow_graph(), true_successor);
+            builder.AddReturn(
+                new Value(H.flow_graph()->GetConstant(Bool::True())));
+          }
+
+          {
+            BlockBuilder builder(H.flow_graph(), false_successor);
+            builder.AddReturn(
+                new Value(H.flow_graph()->GetConstant(Bool::False())));
+          }
+        }
+      });
+}
+
+static void TestIntTestWithImmediate(Zone* zone,
+                                     TestIntVariant test_variant,
+                                     bool eq_zero,
+                                     Representation rep,
+                                     const std::vector<int64_t>& inputs,
+                                     int64_t mask) {
+  const auto& func =
+      BuildTestIntFunction(zone, test_variant, eq_zero, rep, mask);
+  auto invoke = [&](int64_t v) -> bool {
+    const auto& input = Integer::Handle(Integer::New(v));
+    EXPECT(rep == kUnboxedInt64 || input.IsSmi());
+    const auto& result = Bool::CheckedHandle(zone, InvokeFunction(func, input));
+    return result.value();
+  };
+
+  for (auto& input : inputs) {
+    const auto expected = ((input & mask) == 0) == eq_zero;
+    const auto got = invoke(input);
+    if (expected != got) {
+      FAIL("testing [%s] [%s] %" Px64 " & %" Px64
+           " %s 0: expected %s but got %s\n",
+           test_variant == TestIntVariant::kTestBranch ? "branch" : "value",
+           RepresentationUtils::ToCString(rep), input, mask,
+           eq_zero ? "==" : "!=", expected ? "true" : "false",
+           got ? "true" : "false");
+    }
+  }
+}
+
+static void TestIntTest(Zone* zone,
+                        TestIntVariant test_variant,
+                        bool eq_zero,
+                        Representation rep,
+                        const std::vector<int64_t>& inputs,
+                        const std::vector<int64_t>& masks) {
+  if (!TestIntInstr::IsSupported(rep)) {
+    return;
+  }
+
+  const auto& func = BuildTestIntFunction(zone, test_variant, eq_zero, rep, {});
+  auto invoke = [&](int64_t lhs, int64_t mask) -> bool {
+    const auto& arg0 = Integer::Handle(Integer::New(lhs));
+    const auto& arg1 = Integer::Handle(Integer::New(mask));
+    EXPECT(rep == kUnboxedInt64 || arg0.IsSmi());
+    EXPECT(rep == kUnboxedInt64 || arg1.IsSmi());
+    const auto& result =
+        Bool::CheckedHandle(zone, InvokeFunction(func, arg0, arg1));
+    return result.value();
+  };
+
+  for (auto& mask : masks) {
+    TestIntTestWithImmediate(zone, test_variant, eq_zero, rep, inputs, mask);
+
+    // We allow non-Smi masks as immediates but not as non-constant operands.
+    if (rep == kTagged && !Smi::IsValid(mask)) {
+      continue;
+    }
+
+    for (auto& input : inputs) {
+      const auto expected = ((input & mask) == 0) == eq_zero;
+      const auto got = invoke(input, mask);
+      if (expected != got) {
+        FAIL("testing [%s] [%s] %" Px64 " & %" Px64
+             " %s 0: expected %s but got %s\n",
+             test_variant == TestIntVariant::kTestBranch ? "branch" : "value",
+             RepresentationUtils::ToCString(rep), input, mask,
+             eq_zero ? "==" : "!=", expected ? "true" : "false",
+             got ? "true" : "false");
+      }
+    }
+  }
+}
+
+ISOLATE_UNIT_TEST_CASE(IL_TestIntInstr) {
+  const int64_t msb = static_cast<int64_t>(0x8000000000000000L);
+  const int64_t kSmiSignBit = kSmiMax + 1;
+
+  const std::initializer_list<int64_t> kMasks = {
+      1, 2, kSmiSignBit, kSmiSignBit | 1, msb, msb | 1};
+
+  const std::vector<std::pair<Representation, std::vector<int64_t>>> kValues = {
+      {kTagged,
+       {-2, -1, 0, 1, 2, 3, kSmiMax & ~1, kSmiMin & ~1, kSmiMax | 1,
+        kSmiMin | 1}},
+      {kUnboxedInt64,
+       {-2, -1, 0, 1, 2, 3, kSmiMax & ~1, kSmiMin & ~1, kSmiMax | 1,
+        kSmiMin | 1, msb, msb | 1, msb | 2}},
+  };
+
+  for (auto test_variant :
+       {TestIntVariant::kTestBranch, TestIntVariant::kTestValue}) {
+    for (auto eq_zero : {true, false}) {
+      for (auto& [rep, values] : kValues) {
+        TestIntTest(thread->zone(), test_variant, eq_zero, rep, values, kMasks);
+      }
+    }
+  }
+}
+
+// This is a smoke test which verifies that RecordCoverage instruction is not
+// accidentally removed by some overly eager optimization.
+ISOLATE_UNIT_TEST_CASE(IL_RecordCoverageSurvivesOptimizations) {
+  using compiler::BlockBuilder;
+  SetFlagScope<bool> sfs(&FLAG_reorder_basic_blocks, false);
+
+  TestPipeline pipeline(CompilerPass::kJIT, [&]() {
+    FlowGraphBuilderHelper H(/*num_parameters=*/0);
+
+    {
+      BlockBuilder builder(H.flow_graph(),
+                           H.flow_graph()->graph_entry()->normal_entry());
+      const auto& coverage_array = Array::Handle(Array::New(1));
+      coverage_array.SetAt(0, Smi::Handle(Smi::New(0)));
+      builder.AddInstruction(
+          new RecordCoverageInstr(coverage_array, 0, InstructionSource()));
+      builder.AddReturn(new Value(H.flow_graph()->constant_null()));
+    }
+
+    H.FinishGraph();
+    return H.flow_graph();
+  });
+
+  auto flow_graph = pipeline.RunPasses({});
+
+  // RecordCoverage instruction should remain in the graph.
+  EXPECT(flow_graph->graph_entry()->normal_entry()->next()->IsRecordCoverage());
 }
 
 }  // namespace dart

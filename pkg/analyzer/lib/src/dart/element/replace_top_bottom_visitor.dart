@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/type_inference/type_analyzer_operations.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/resolver/variance.dart';
 
 /// Replace every "top" type in a covariant position with [_bottomType].
 /// Replace every "bottom" type in a contravariant position with [_topType].
@@ -23,33 +23,17 @@ class ReplaceTopBottomVisitor {
   );
 
   DartType process(DartType type, Variance variance) {
-    if (_typeSystem.isNonNullableByDefault) {
-      if (variance.isContravariant) {
-        // ...replacing every occurrence in `T` of a type `S` in a contravariant
-        // position where `S <: Never` by `Object?`
-        if (_typeSystem.isSubtypeOf(type, NeverTypeImpl.instance)) {
-          return _topType;
-        }
-      } else {
-        // ...and every occurrence in `T` of a top type in a position which
-        // is not contravariant by `Never`.
-        if (_typeSystem.isTop(type)) {
-          return _bottomType;
-        }
+    if (variance.isContravariant) {
+      // ...replacing every occurrence in `T` of a type `S` in a contravariant
+      // position where `S <: Never` by `Object?`
+      if (_typeSystem.isSubtypeOf(type, NeverTypeImpl.instance)) {
+        return _topType;
       }
     } else {
-      if (variance.isCovariant) {
-        // ...replacing every occurrence in `T` of a top type in a covariant
-        // position by `Null`
-        if (_typeSystem.isTop(type)) {
-          return _bottomType;
-        }
-      } else if (variance.isContravariant) {
-        // ...and every occurrence in `T` of `Null` in a contravariant
-        // position by `Object`
-        if (type.isDartCoreNull) {
-          return _topType;
-        }
+      // ...and every occurrence in `T` of a top type in a position which
+      // is not contravariant by `Never`.
+      if (_typeSystem.isTop(type)) {
+        return _bottomType;
       }
     }
 

@@ -1,8 +1,6 @@
-// @dart = 2.9
-StateA a = StateA();
-StateB b = StateB();
+StateA? a = StateA();
 
-class Diagnosticable {}
+StateB b = StateB();
 
 class SomeClass with Diagnosticable {}
 
@@ -13,4 +11,7 @@ class StateA extends State {}
 class StateB extends State<int> {}
 
 foo<T>(T x) {}
+
 main() {}
+
+mixin Diagnosticable {}

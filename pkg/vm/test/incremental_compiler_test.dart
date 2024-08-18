@@ -13,7 +13,6 @@ import 'package:front_end/src/api_unstable/vm.dart'
         DiagnosticMessage,
         ExperimentalFlag,
         IncrementalCompilerResult,
-        NnbdMode,
         computePlatformBinariesLocation;
 import 'package:json_rpc_2/json_rpc_2.dart' as json_rpc;
 import 'package:kernel/binary/ast_to_binary.dart';
@@ -25,7 +24,7 @@ import 'package:test/test.dart';
 import 'package:web_socket_channel/io.dart';
 
 import 'package:vm/incremental_compiler.dart';
-import 'package:vm/target/vm.dart';
+import 'package:vm/modular/target/vm.dart';
 
 import 'common_test_utils.dart';
 
@@ -37,7 +36,6 @@ main() {
   CompilerOptions getFreshOptions() {
     return new CompilerOptions()
       ..sdkRoot = sdkRoot
-      ..nnbdMode = NnbdMode.Strong
       ..target = new VmTarget(new TargetFlags())
       ..additionalDills = <Uri>[platformKernel]
       ..onDiagnostic = (DiagnosticMessage message) {

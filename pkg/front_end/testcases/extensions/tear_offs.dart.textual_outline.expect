@@ -1,4 +1,3 @@
-// @dart = 2.9
 class Class {}
 
 extension Extension on Class {
@@ -9,4 +8,5 @@ extension Extension on Class {
 }
 
 main() {}
+
 errors() {}

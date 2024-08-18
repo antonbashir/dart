@@ -8,15 +8,12 @@
 #include "bin/directory.h"
 #include "bin/file.h"
 #include "bin/io_buffer.h"
-#include "bin/namespace.h"
-#include "bin/platform.h"
+#include "bin/typed_data_utils.h"
 #include "bin/utils.h"
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
-#include "include/dart_tools_api.h"
 #include "platform/assert.h"
 #include "platform/globals.h"
-#include "platform/memory_sanitizer.h"
 #include "platform/utils.h"
 
 // Return the error from the containing function if handle is in error handle.
@@ -36,6 +33,14 @@ const char* DartUtils::original_working_directory = nullptr;
 dart::SimpleHashMap* DartUtils::environment_ = nullptr;
 
 MagicNumberData appjit_magic_number = {8, {0xdc, 0xdc, 0xf6, 0xf6, 0, 0, 0, 0}};
+MagicNumberData aotelf_magic_number = {4, {0x7F, 0x45, 0x4C, 0x46, 0x0}};
+MagicNumberData aotmacho32_magic_number = {4, {0xFE, 0xED, 0xFA, 0xCE}};
+MagicNumberData aotmacho64_magic_number = {4, {0xFE, 0xED, 0xFA, 0xCF}};
+MagicNumberData aotmacho64_arm64_magic_number = {4, {0xCF, 0xFA, 0xED, 0xFE}};
+MagicNumberData aotcoff_arm32_magic_number = {2, {0x01, 0xC0}};
+MagicNumberData aotcoff_arm64_magic_number = {2, {0xAA, 0x64}};
+MagicNumberData aotcoff_riscv32_magic_number = {2, {0x50, 0x32}};
+MagicNumberData aotcoff_riscv64_magic_number = {2, {0x50, 0x64}};
 MagicNumberData kernel_magic_number = {4, {0x90, 0xab, 0xcd, 0xef}};
 MagicNumberData kernel_list_magic_number = {
     7,
@@ -185,6 +190,14 @@ const char* DartUtils::GetNativeStringArgument(Dart_NativeArguments args,
   }
   ASSERT(cstring != nullptr);
   return cstring;
+}
+
+const char* DartUtils::GetNativeTypedDataArgument(Dart_NativeArguments args,
+                                                  intptr_t index) {
+  Dart_Handle handle = Dart_GetNativeArgument(args, index);
+  TypedDataScope data(handle);
+  ASSERT(data.type() == Dart_TypedData_kUint8);
+  return data.GetScopedCString();
 }
 
 Dart_Handle DartUtils::SetIntegerField(Dart_Handle handle,
@@ -389,22 +402,24 @@ static bool CheckMagicNumber(const uint8_t* buffer,
 
 DartUtils::MagicNumber DartUtils::SniffForMagicNumber(const char* filename) {
   MagicNumber magic_number = DartUtils::kUnknownMagicNumber;
+  ASSERT(kMaxMagicNumberSize == appjit_magic_number.length);
+  ASSERT(aotelf_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotmacho32_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotmacho64_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotmacho64_arm64_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotcoff_arm32_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotcoff_arm64_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotcoff_riscv32_magic_number.length <= appjit_magic_number.length);
+  ASSERT(aotcoff_riscv64_magic_number.length <= appjit_magic_number.length);
+  ASSERT(kernel_magic_number.length <= appjit_magic_number.length);
+  ASSERT(kernel_list_magic_number.length <= appjit_magic_number.length);
+  ASSERT(gzip_magic_number.length <= appjit_magic_number.length);
   if (File::GetType(nullptr, filename, true) == File::kIsFile) {
     File* file = File::Open(nullptr, filename, File::kRead);
     if (file != nullptr) {
       RefCntReleaseScope<File> rs(file);
-      intptr_t max_magic_length = 0;
-      max_magic_length =
-          Utils::Maximum(max_magic_length, appjit_magic_number.length);
-      max_magic_length =
-          Utils::Maximum(max_magic_length, kernel_magic_number.length);
-      max_magic_length =
-          Utils::Maximum(max_magic_length, kernel_list_magic_number.length);
-      max_magic_length =
-          Utils::Maximum(max_magic_length, gzip_magic_number.length);
-      ASSERT(max_magic_length <= 8);
-      uint8_t header[8];
-      if (file->ReadFully(&header, max_magic_length)) {
+      uint8_t header[kMaxMagicNumberSize];
+      if (file->ReadFully(&header, kMaxMagicNumberSize)) {
         magic_number = DartUtils::SniffForMagicNumber(header, sizeof(header));
       }
     }
@@ -432,6 +447,38 @@ DartUtils::MagicNumber DartUtils::SniffForMagicNumber(const uint8_t* buffer,
 
   if (CheckMagicNumber(buffer, buffer_length, gzip_magic_number)) {
     return kGzipMagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotelf_magic_number)) {
+    return kAotELFMagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotmacho32_magic_number)) {
+    return kAotMachO32MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotmacho64_magic_number)) {
+    return kAotMachO64MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotmacho64_arm64_magic_number)) {
+    return kAotMachO64Arm64MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotcoff_arm32_magic_number)) {
+    return kAotCoffARM32MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotcoff_arm64_magic_number)) {
+    return kAotCoffARM64MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotcoff_riscv32_magic_number)) {
+    return kAotCoffRISCV32MagicNumber;
+  }
+
+  if (CheckMagicNumber(buffer, buffer_length, aotcoff_riscv64_magic_number)) {
+    return kAotCoffRISCV64MagicNumber;
   }
 
   return kUnknownMagicNumber;
@@ -502,11 +549,11 @@ Dart_Handle DartUtils::PrepareIsolateLibrary(Dart_Handle isolate_lib) {
 }
 
 Dart_Handle DartUtils::PrepareCLILibrary(Dart_Handle cli_lib) {
-  Dart_Handle wait_for_event_handle =
-      Dart_Invoke(cli_lib, NewString("_getWaitForEvent"), 0, nullptr);
-  RETURN_IF_ERROR(wait_for_event_handle);
-  return Dart_SetField(cli_lib, NewString("_waitForEventClosure"),
-                       wait_for_event_handle);
+  return Dart_Null();
+}
+
+Dart_Handle DartUtils::PrepareFiberLibrary(Dart_Handle fiber_lib) {
+  return Dart_Null();
 }
 
 Dart_Handle DartUtils::SetupPackageConfig(const char* packages_config) {
@@ -535,6 +582,10 @@ Dart_Handle DartUtils::PrepareForScriptLoading(bool is_service_isolate,
   RETURN_IF_ERROR(url);
   Dart_Handle async_lib = Dart_LookupLibrary(url);
   RETURN_IF_ERROR(async_lib);
+  url = NewString(kFiberLibURL);
+  RETURN_IF_ERROR(url);
+  Dart_Handle fiber_lib = Dart_LookupLibrary(url);
+  RETURN_IF_ERROR(fiber_lib);
   url = NewString(kIsolateLibURL);
   RETURN_IF_ERROR(url);
   Dart_Handle isolate_lib = Dart_LookupLibrary(url);
@@ -568,6 +619,7 @@ Dart_Handle DartUtils::PrepareForScriptLoading(bool is_service_isolate,
   RETURN_IF_ERROR(PrepareIsolateLibrary(isolate_lib));
   RETURN_IF_ERROR(PrepareIOLibrary(io_lib));
   RETURN_IF_ERROR(PrepareCLILibrary(cli_lib));
+  RETURN_IF_ERROR(PrepareFiberLibrary(fiber_lib));
   return result;
 }
 
@@ -723,14 +775,13 @@ Dart_Handle DartUtils::NewDartIOException(const char* exception_name,
 Dart_Handle DartUtils::NewError(const char* format, ...) {
   va_list measure_args;
   va_start(measure_args, format);
-  intptr_t len = vsnprintf(nullptr, 0, format, measure_args);
+  intptr_t len = Utils::VSNPrint(nullptr, 0, format, measure_args);
   va_end(measure_args);
 
   char* buffer = reinterpret_cast<char*>(Dart_ScopeAllocate(len + 1));
-  MSAN_UNPOISON(buffer, (len + 1));
   va_list print_args;
   va_start(print_args, format);
-  vsnprintf(buffer, (len + 1), format, print_args);
+  Utils::VSNPrint(buffer, (len + 1), format, print_args);
   va_end(print_args);
 
   return Dart_NewApiError(buffer);
@@ -741,19 +792,39 @@ Dart_Handle DartUtils::NewInternalError(const char* message) {
 }
 
 Dart_Handle DartUtils::NewStringFormatted(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char* result = ScopedCStringVFormatted(format, args);
+  va_end(args);
+  return NewString(result);
+}
+
+char* DartUtils::ScopedCStringVFormatted(const char* format, va_list args) {
   va_list measure_args;
-  va_start(measure_args, format);
-  intptr_t len = vsnprintf(nullptr, 0, format, measure_args);
+  va_copy(measure_args, args);
+  intptr_t len = Utils::VSNPrint(nullptr, 0, format, measure_args);
+  if (len < 0) {
+    return nullptr;
+  }
   va_end(measure_args);
 
-  char* buffer = reinterpret_cast<char*>(Dart_ScopeAllocate(len + 1));
-  MSAN_UNPOISON(buffer, (len + 1));
+  char* buffer = ScopedCString(len + 1);
   va_list print_args;
-  va_start(print_args, format);
-  vsnprintf(buffer, (len + 1), format, print_args);
+  va_copy(print_args, args);
+  len = Utils::VSNPrint(buffer, (len + 1), format, print_args);
+  if (len < 0) {
+    return nullptr;
+  }
   va_end(print_args);
+  return buffer;
+}
 
-  return NewString(buffer);
+char* DartUtils::ScopedCStringFormatted(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char* result = ScopedCStringVFormatted(format, args);
+  va_end(args);
+  return result;
 }
 
 bool DartUtils::SetOriginalWorkingDirectory() {

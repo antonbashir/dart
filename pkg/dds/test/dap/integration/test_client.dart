@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -10,6 +11,7 @@ import 'package:dap/dap.dart';
 import 'package:dds/src/dap/adapters/dart.dart';
 import 'package:dds/src/dap/logging.dart';
 import 'package:dds/src/dap/protocol_stream.dart';
+import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 import 'package:vm_service/vm_service.dart' as vm;
 
@@ -30,6 +32,17 @@ class DapTestClient {
   final Map<int, _OutgoingRequest> _pendingRequests = {};
   final _eventController = StreamController<Event>.broadcast();
   int _seq = 1;
+
+  /// Whether to advertise support for URIs and expect them in stack traces
+  /// and breakpoint updates from the debug adapter.
+  bool supportUris = false;
+
+  /// Whether to send URIs in breakpoints even for standard file paths.
+  ///
+  /// This is separate from [supportUris] so that we can test when support is
+  /// enabled that the client can still send paths. This is because VS Code will
+  /// send file paths for file:/// documents even though URIs are supported.
+  bool sendFileUris = false;
 
   /// Functions provided by tests to handle requests that may come from the
   /// server (such as `runInTerminal`).
@@ -123,7 +136,8 @@ class DapTestClient {
   /// Send an attachRequest to the server, asking it to attach to an existing
   /// Dart program.
   Future<Response> attach({
-    required bool autoResume,
+    required bool autoResumeOnEntry,
+    required bool autoResumeOnExit,
     String? vmServiceUri,
     String? vmServiceInfoFile,
     String? cwd,
@@ -142,9 +156,18 @@ class DapTestClient {
     // When attaching, the paused VM will not be automatically unpaused, but
     // instead send a Stopped(reason: 'entry') event. Respond to this by
     // resuming (if requested).
-    final resumeFuture = autoResume
+    final resumeFuture = autoResumeOnEntry
         ? expectStop('entry').then((event) => continue_(event.threadId!))
         : null;
+
+    // Also handle resuming on exit. This should be done if the test has
+    // started the app with a user-provided pause-on-exit but wants to
+    // simulate the user resuming after the exit pause.
+    if (autoResumeOnExit) {
+      stoppedEvents
+          .firstWhere((e) => e.reason == 'exit')
+          .then((event) => continue_(event.threadId!));
+    }
 
     cwd ??= defaultCwd;
     final attachResponse = sendRequest(
@@ -215,13 +238,22 @@ class DapTestClient {
   /// Returns a Future that completes with the next [event] event.
   Future<Event> event(String event) => _logIfSlow(
       'Event "$event"',
-      _eventController.stream.firstWhere((e) => e.event == event,
+      allEvents.firstWhere((e) => e.event == event,
           orElse: () =>
               throw 'Did not receive $event event before stream closed'));
 
   /// Returns a stream for [event] events.
   Stream<Event> events(String event) {
-    return _eventController.stream.where((e) => e.event == event);
+    return allEvents.where((e) => e.event == event);
+  }
+
+  Stream<Event> get allEvents => _eventController.stream;
+
+  /// Returns a stream for 'stopped' events.
+  Stream<StoppedEventBody> get stoppedEvents {
+    return allEvents
+        .where((e) => e.event == 'stopped')
+        .map((e) => StoppedEventBody.fromJson(e.body as Map<String, Object?>));
   }
 
   /// Returns a stream for standard progress events.
@@ -231,8 +263,7 @@ class DapTestClient {
       'progressUpdate',
       'progressEnd'
     };
-    return _eventController.stream
-        .where((e) => standardProgressEvents.contains(e.event));
+    return allEvents.where((e) => standardProgressEvents.contains(e.event));
   }
 
   /// Returns a stream for custom Dart progress events.
@@ -242,8 +273,7 @@ class DapTestClient {
       'dart.progressUpdate',
       'dart.progressEnd'
     };
-    return _eventController.stream
-        .where((e) => customProgressEvents.contains(e.event));
+    return allEvents.where((e) => customProgressEvents.contains(e.event));
   }
 
   /// Records a handler for when the server sends a [request] request.
@@ -270,10 +300,11 @@ class DapTestClient {
   }) async {
     final responses = await Future.wait([
       event('initialized'),
-      sendRequest(InitializeRequestArguments(
+      sendRequest(DartInitializeRequestArguments(
         adapterID: 'test',
         supportsRunInTerminalRequest: supportsRunInTerminalRequest,
         supportsProgressReporting: supportsProgressReporting,
+        supportsDartUris: supportUris,
       )),
       sendRequest(
         SetExceptionBreakpointsArguments(
@@ -519,7 +550,7 @@ class DapTestClient {
       if (message.success || pendingRequest.allowFailure) {
         completer.complete(message);
       } else {
-        completer.completeError(message);
+        completer.completeError(RequestException(pendingRequest.name, message));
       }
     } else if (message is Event && !_eventController.isClosed) {
       _eventController.add(message);
@@ -616,8 +647,11 @@ class DapTestClient {
     Logger? logger,
   }) async {
     final channel = ByteStreamServerChannel(server.stream, server.sink, logger);
-    return DapTestClient._(channel, logger,
-        captureVmServiceTraffic: captureVmServiceTraffic);
+    return DapTestClient._(
+      channel,
+      logger,
+      captureVmServiceTraffic: captureVmServiceTraffic,
+    );
   }
 }
 
@@ -660,6 +694,7 @@ extension DapTestClientExtension on DapTestClient {
     String? cwd,
     List<String>? args,
     List<String>? toolArgs,
+    bool? evaluateToStringInDebugViews,
     Future<Response> Function()? launch,
   }) async {
     assert(condition == null || additionalBreakpoints == null,
@@ -679,10 +714,33 @@ extension DapTestClientExtension on DapTestClient {
             cwd: cwd,
             args: args,
             toolArgs: toolArgs,
+            evaluateToStringInDebugViews: evaluateToStringInDebugViews,
           ),
     ], eagerError: true);
 
     return stop;
+  }
+
+  /// Converts a file path to a URI to send to the debug adapter if
+  /// [sendFileUris] is `true` and otherwise returns as-is.
+  String toPathOrUri(String filePath) {
+    assert(path.isAbsolute(filePath));
+    return sendFileUris ? Uri.file(filePath).toString() : filePath;
+  }
+
+  /// Converts a string from the debug adapter back to a file path, asserting
+  /// it was a URI if [useUris] is `true`, and not if [useUris] is `false`.
+  String fromPathOrUri(String filePathOrUri) {
+    if (!supportUris) {
+      // Expect an absolute path.
+      assert(path.isAbsolute(filePathOrUri));
+      return filePathOrUri;
+    }
+
+    // Expect a URI with file:/// scheme.
+    final uri = Uri.parse(filePathOrUri);
+    assert(uri.isScheme('file'));
+    return uri.toFilePath();
   }
 
   /// Sets a breakpoint at [line] in [file].
@@ -690,7 +748,7 @@ extension DapTestClientExtension on DapTestClient {
       {String? condition}) async {
     final response = await sendRequest(
       SetBreakpointsArguments(
-        source: Source(path: _normalizeBreakpointPath(file.path)),
+        source: Source(path: toPathOrUri(_normalizeBreakpointPath(file.path))),
         breakpoints: [SourceBreakpoint(line: line, condition: condition)],
       ),
     );
@@ -705,7 +763,7 @@ extension DapTestClientExtension on DapTestClient {
       File file, List<int> lines) async {
     final response = await sendRequest(
       SetBreakpointsArguments(
-        source: Source(path: _normalizeBreakpointPath(file.path)),
+        source: Source(path: toPathOrUri(_normalizeBreakpointPath(file.path))),
         breakpoints: lines.map((line) => SourceBreakpoint(line: line)).toList(),
       ),
     );
@@ -808,7 +866,8 @@ extension DapTestClientExtension on DapTestClient {
       initialize(),
       sendRequest(
         SetBreakpointsArguments(
-          source: Source(path: _normalizeBreakpointPath(file.path)),
+          source:
+              Source(path: toPathOrUri(_normalizeBreakpointPath(file.path))),
           breakpoints: [
             SourceBreakpoint(
               line: line,
@@ -861,14 +920,26 @@ extension DapTestClientExtension on DapTestClient {
   ///
   /// If [file] or [line] are provided, they will be checked against the stop
   /// location for the top stack frame.
+  ///
+  /// Stopped-on-entry events will be automatically skipped unless
+  /// [skipFirstStopOnEntry] is `false` or [reason] is `"entry"`.
   Future<StoppedEventBody> expectStop(
     String reason, {
     File? file,
     int? line,
     String? sourceName,
+    bool? skipFirstStopOnEntry,
   }) async {
-    final e = await event('stopped');
-    final stop = StoppedEventBody.fromJson(e.body as Map<String, Object?>);
+    skipFirstStopOnEntry ??= reason != 'entry';
+    assert(skipFirstStopOnEntry != (reason == 'entry'));
+
+    // Unless we're specifically waiting for stop-on-entry, skip over those
+    // events because they can be emitted at during startup because now we use
+    // readyToResume we don't know if the isolate will be immediately unpaused
+    // and the client needs to have a consistent view of threads.
+    final stop = skipFirstStopOnEntry
+        ? await stoppedEvents.skipWhile((e) => e.reason == 'entry').first
+        : await stoppedEvents.first;
     expect(stop.reason, equals(reason));
 
     final result =
@@ -879,7 +950,8 @@ extension DapTestClientExtension on DapTestClient {
       final frame = result.stackFrames[0];
 
       if (file != null) {
-        expect(frame.source?.path, equals(uppercaseDriveLetter(file.path)));
+        expect(fromPathOrUri(frame.source!.path!),
+            equals(uppercaseDriveLetter(file.path)));
       }
       if (sourceName != null) {
         expect(frame.source?.name, equals(sourceName));
@@ -1238,4 +1310,20 @@ extension DapTestClientExtension on DapTestClient {
 
     return body;
   }
+}
+
+/// Represents an error message returned from the debug adapter in response
+/// to a request.
+class RequestException implements Exception {
+  /// The name of the request that was made by the client.
+  final String requestName;
+
+  /// The raw message that came from back from the adapter.
+  final ProtocolMessage message;
+
+  RequestException(this.requestName, this.message);
+
+  @override
+  String toString() => 'Request "$requestName" failed:\n'
+      '${JsonEncoder.withIndent('    ').convert(message.toJson())}';
 }

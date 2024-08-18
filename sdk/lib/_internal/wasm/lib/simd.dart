@@ -4,14 +4,15 @@
 
 library dart._simd;
 
-import 'dart:_internal'
-    show FixedLengthListMixin, unsafeCast, IterableElementError;
+import 'dart:_internal' show FixedLengthListMixin, IterableElementError;
 
 import 'dart:collection' show ListMixin;
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:_internal' show WasmTypedDataBase;
+import 'dart:_wasm';
 
-final class NaiveInt32x4List
+final class NaiveInt32x4List extends WasmTypedDataBase
     with ListMixin<Int32x4>, FixedLengthListMixin<Int32x4>
     implements Int32x4List {
   final Int32List _storage;
@@ -67,7 +68,8 @@ final class NaiveInt32x4List
     _storage[(index * 4) + 3] = value.w;
   }
 
-  Int32x4List asUnmodifiableView() => UnmodifiableInt32x4ListView(this);
+  Int32x4List asUnmodifiableView() =>
+      NaiveUnmodifiableInt32x4List.externalStorage(_storage);
 
   Int32x4List sublist(int start, [int? end]) {
     int stop = RangeError.checkValidRange(start, end, length);
@@ -99,11 +101,7 @@ final class NaiveInt32x4List
   }
 }
 
-final class NaiveUnmodifiableInt32x4List extends NaiveInt32x4List
-    implements UnmodifiableInt32x4ListView {
-  NaiveUnmodifiableInt32x4List(Int32x4List list)
-      : super.externalStorage(unsafeCast<NaiveInt32x4List>(list)._storage);
-
+final class NaiveUnmodifiableInt32x4List extends NaiveInt32x4List {
   NaiveUnmodifiableInt32x4List.externalStorage(Int32List storage)
       : super.externalStorage(storage);
 
@@ -113,10 +111,10 @@ final class NaiveUnmodifiableInt32x4List extends NaiveInt32x4List
   }
 
   @override
-  ByteBuffer get buffer => UnmodifiableByteBufferView(super.buffer);
+  ByteBuffer get buffer => _storage.asUnmodifiableView().buffer;
 }
 
-final class NaiveFloat32x4List
+final class NaiveFloat32x4List extends WasmTypedDataBase
     with ListMixin<Float32x4>, FixedLengthListMixin<Float32x4>
     implements Float32x4List {
   final Float32List _storage;
@@ -172,7 +170,8 @@ final class NaiveFloat32x4List
     _storage[(index * 4) + 3] = value.w;
   }
 
-  Float32x4List asUnmodifiableView() => UnmodifiableFloat32x4ListView(this);
+  Float32x4List asUnmodifiableView() =>
+      NaiveUnmodifiableFloat32x4List.externalStorage(_storage);
 
   Float32x4List sublist(int start, [int? end]) {
     int stop = RangeError.checkValidRange(start, end, length);
@@ -205,11 +204,7 @@ final class NaiveFloat32x4List
   }
 }
 
-final class NaiveUnmodifiableFloat32x4List extends NaiveFloat32x4List
-    implements UnmodifiableFloat32x4ListView {
-  NaiveUnmodifiableFloat32x4List(Float32x4List list)
-      : super.externalStorage(unsafeCast<NaiveFloat32x4List>(list)._storage);
-
+final class NaiveUnmodifiableFloat32x4List extends NaiveFloat32x4List {
   NaiveUnmodifiableFloat32x4List.externalStorage(Float32List storage)
       : super.externalStorage(storage);
 
@@ -219,10 +214,10 @@ final class NaiveUnmodifiableFloat32x4List extends NaiveFloat32x4List
   }
 
   @override
-  ByteBuffer get buffer => UnmodifiableByteBufferView(super.buffer);
+  ByteBuffer get buffer => _storage.asUnmodifiableView().buffer;
 }
 
-final class NaiveFloat64x2List
+final class NaiveFloat64x2List extends WasmTypedDataBase
     with ListMixin<Float64x2>, FixedLengthListMixin<Float64x2>
     implements Float64x2List {
   final Float64List _storage;
@@ -272,7 +267,8 @@ final class NaiveFloat64x2List
     _storage[(index * 2) + 1] = value.y;
   }
 
-  Float64x2List asUnmodifiableView() => UnmodifiableFloat64x2ListView(this);
+  Float64x2List asUnmodifiableView() =>
+      NaiveUnmodifiableFloat64x2List.externalStorage(_storage);
 
   Float64x2List sublist(int start, [int? end]) {
     int stop = RangeError.checkValidRange(start, end, length);
@@ -305,11 +301,7 @@ final class NaiveFloat64x2List
   }
 }
 
-final class NaiveUnmodifiableFloat64x2List extends NaiveFloat64x2List
-    implements UnmodifiableFloat64x2ListView {
-  NaiveUnmodifiableFloat64x2List(Float64x2List list)
-      : super.externalStorage(unsafeCast<NaiveFloat64x2List>(list)._storage);
-
+final class NaiveUnmodifiableFloat64x2List extends NaiveFloat64x2List {
   NaiveUnmodifiableFloat64x2List.externalStorage(Float64List storage)
       : super.externalStorage(storage);
 
@@ -319,10 +311,10 @@ final class NaiveUnmodifiableFloat64x2List extends NaiveFloat64x2List
   }
 
   @override
-  ByteBuffer get buffer => UnmodifiableByteBufferView(super.buffer);
+  ByteBuffer get buffer => _storage.asUnmodifiableView().buffer;
 }
 
-final class NaiveFloat32x4 implements Float32x4 {
+final class NaiveFloat32x4 extends WasmTypedDataBase implements Float32x4 {
   final double x;
   final double y;
   final double z;
@@ -518,7 +510,8 @@ final class NaiveFloat32x4 implements Float32x4 {
   }
 
   Float32x4 shuffle(int mask) {
-    if ((mask < 0) || (mask > 255)) {
+    // mask < 0 || mask > 255
+    if (mask.gtU(255)) {
       throw RangeError.range(mask, 0, 255, 'mask');
     }
     _list[0] = x;
@@ -534,7 +527,8 @@ final class NaiveFloat32x4 implements Float32x4 {
   }
 
   Float32x4 shuffleMix(Float32x4 other, int mask) {
-    if ((mask < 0) || (mask > 255)) {
+    // mask < 0 || mask > 255
+    if (mask.gtU(255)) {
       throw RangeError.range(mask, 0, 255, 'mask');
     }
     _list[0] = x;
@@ -614,7 +608,7 @@ final class NaiveFloat32x4 implements Float32x4 {
   }
 }
 
-final class NaiveFloat64x2 implements Float64x2 {
+final class NaiveFloat64x2 extends WasmTypedDataBase implements Float64x2 {
   final double x;
   final double y;
 
@@ -688,7 +682,7 @@ final class NaiveFloat64x2 implements Float64x2 {
   Float64x2 sqrt() => NaiveFloat64x2._doubles(math.sqrt(x), math.sqrt(y));
 }
 
-final class NaiveInt32x4 implements Int32x4 {
+final class NaiveInt32x4 extends WasmTypedDataBase implements Int32x4 {
   final int x;
   final int y;
   final int z;
@@ -781,7 +775,8 @@ final class NaiveInt32x4 implements Int32x4 {
   }
 
   Int32x4 shuffle(int mask) {
-    if ((mask < 0) || (mask > 255)) {
+    // mask < 0 || mask > 255
+    if (mask.gtU(255)) {
       throw RangeError.range(mask, 0, 255, 'mask');
     }
     _list[0] = x;
@@ -796,7 +791,8 @@ final class NaiveInt32x4 implements Int32x4 {
   }
 
   Int32x4 shuffleMix(Int32x4 other, int mask) {
-    if ((mask < 0) || (mask > 255)) {
+    // mask < 0 || mask > 255
+    if (mask.gtU(255)) {
       throw RangeError.range(mask, 0, 255, 'mask');
     }
     _list[0] = x;

@@ -2,9 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/plugin/edit/fix/fix_core.dart';
 import 'package:analysis_server/src/services/correction/fix/analysis_options/fix_generator.dart';
+import 'package:analysis_server_plugin/edit/fix/fix.dart';
 import 'package:analyzer/error/error.dart';
+import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/lint/state.dart';
 import 'package:analyzer/src/task/options.dart';
@@ -44,7 +45,7 @@ class AnalysisOptionsFixTest with ResourceProviderMixin {
     var optionsFile = newFile('/analysis_options.yaml', content);
     var sourceFactory = SourceFactory([]);
     var errors = analyzeAnalysisOptions(
-      optionsFile.createSource(),
+      FileSource(optionsFile),
       content,
       sourceFactory,
       '/',

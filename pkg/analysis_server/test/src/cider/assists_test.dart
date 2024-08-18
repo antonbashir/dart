@@ -5,13 +5,15 @@
 import 'package:analysis_server/plugin/edit/assist/assist_core.dart';
 import 'package:analysis_server/src/cider/assists.dart';
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/assist_internal.dart';
+import 'package:analysis_server/src/services/correction/fix_processor.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' show SourceEdit;
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
+import 'package:analyzer_utilities/test/mock_packages/mock_packages.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import '../utilities/mock_packages.dart';
 import 'cider_service.dart';
 
 void main() {
@@ -24,6 +26,10 @@ void main() {
 class CiderAssistsComputerTest extends CiderServiceTest {
   late _CorrectionContext _correctionContext;
   late List<Assist> _assists;
+
+  /// A mapping of [ProducerGenerator]s to the set of lint names with which they
+  /// are associated (can fix).
+  late Map<ProducerGenerator, Set<String>> _producerGeneratorsForLintRules;
 
   void assertHasAssist(AssistKind kind, String expected) {
     var assist = _getAssist(kind);
@@ -42,6 +48,7 @@ class CiderAssistsComputerTest extends CiderServiceTest {
   void setUp() {
     super.setUp();
     BlazeMockPackages.instance.addFlutter(resourceProvider);
+    _producerGeneratorsForLintRules = AssistProcessor.computeLintRuleMap();
   }
 
   Future<void> test_addReturnType() async {
@@ -105,6 +112,7 @@ void f() {
     var result = await CiderAssistsComputer(
       logger,
       fileResolver,
+      _producerGeneratorsForLintRules,
     ).compute(
       convertPath(testPath),
       _correctionContext.line,

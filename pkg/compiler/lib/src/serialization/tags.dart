@@ -9,6 +9,7 @@
 enum DataKind {
   bool,
   uint30,
+  uint32,
   string,
   enumValue,
   uri,
@@ -91,8 +92,6 @@ enum DartTypeNodeKind {
   typedef,
   dynamicType,
   invalidType,
-  thisInterfaceType,
-  exactInterfaceType,
   neverType,
   futureOrType,
   nullType,

@@ -49,14 +49,14 @@ for any type of map or list:
 class PreferVoidToNull extends LintRule {
   static const LintCode code = LintCode(
       'prefer_void_to_null', "Unnecessary use of the type 'Null'.",
-      correctionMessage: "Try using 'void' instead.");
+      correctionMessage: "Try using 'void' instead.", hasPublishedDocs: true);
 
   PreferVoidToNull()
       : super(
             name: 'prefer_void_to_null',
             description: _desc,
             details: _details,
-            group: Group.errors);
+            categories: {Category.errors});
 
   @override
   LintCode get lintCode => code;
@@ -138,7 +138,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     }
 
     // extension _ on Null {}
-    if (parent is ExtensionDeclaration) {
+    if (parent is ExtensionOnClause) {
       return;
     }
 
@@ -151,6 +151,14 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (parent is MethodDeclaration &&
         isVoidIncompatibleOverride(parent, node)) {
       return;
+    }
+
+    if (parent != null) {
+      AstNode? declaration = parent.thisOrAncestorOfType<ClassMember>();
+      declaration ??= parent.thisOrAncestorOfType<NamedCompilationUnitMember>();
+      declaration ??=
+          parent.thisOrAncestorOfType<TopLevelVariableDeclaration>();
+      if (declaration?.isAugmentation ?? false) return;
     }
 
     rule.reportLintForToken(node.name2);

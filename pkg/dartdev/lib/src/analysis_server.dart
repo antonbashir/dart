@@ -35,6 +35,7 @@ class AnalysisServer {
     required this.commandName,
     required this.argResults,
     this.enabledExperiments = const [],
+    this.disableStatusNotificationDebouncing = false,
     this.suppressAnalytics = false,
   });
 
@@ -45,6 +46,7 @@ class AnalysisServer {
   final String commandName;
   final ArgResults? argResults;
   final List<String> enabledExperiments;
+  final bool disableStatusNotificationDebouncing;
   final bool suppressAnalytics;
 
   Process? _process;
@@ -56,6 +58,12 @@ class AnalysisServer {
   int _id = 0;
 
   bool _shutdownResponseReceived = false;
+
+  bool _serverErrorReceived = false;
+
+  /// Whether any server error occurred that could mean analysis was not
+  /// performed correctly.
+  bool get serverErrorReceived => _serverErrorReceived;
 
   Stream<bool> get onAnalyzing {
     // {"event":"server.status","params":{"analysis":{"isAnalyzing":true}}}
@@ -105,6 +113,9 @@ class AnalysisServer {
       '--${Driver.CLIENT_ID}=dart-$commandName',
       '--disable-server-feature-completion',
       '--disable-server-feature-search',
+      if (disableStatusNotificationDebouncing)
+        '--disable-status-notification-debouncing',
+      '--disable-silent-analysis-exceptions',
       '--sdk',
       sdkPath.path,
       if (cacheDirectoryPath != null) '--cache=$cacheDirectoryPath',
@@ -282,9 +293,14 @@ class AnalysisServer {
   }
 
   void _handleServerError(Map<String, dynamic>? error) {
+    _serverErrorReceived = true;
     final err = error!;
+    log.stderr('An unexpected error was encountered by the Analysis Server.');
+    log.stderr('Please file an issue at '
+        'https://github.com/dart-lang/sdk/issues/new/choose with the following '
+        'details:\n');
     // Fields are 'isFatal', 'message', and 'stackTrace'.
-    log.stderr('Error from the analysis server: ${err['message']}');
+    log.stderr(err['message']);
     if (err['stackTrace'] != null) {
       log.stderr(err['stackTrace'] as String);
     }

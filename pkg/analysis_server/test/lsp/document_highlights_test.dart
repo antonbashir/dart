@@ -43,8 +43,8 @@ void f() {
     await openFile(mainFileUri, content);
 
     // Lines are zero-based so 1 is invalid.
-    final pos = Position(line: 1, character: 0);
-    final request = getDocumentHighlights(mainFileUri, pos);
+    var pos = Position(line: 1, character: 0);
+    var request = getDocumentHighlights(mainFileUri, pos);
 
     await expectLater(
         request, throwsA(isResponseError(ServerErrorCodes.InvalidFileLineCol)));
@@ -58,12 +58,49 @@ void f() {
 }
 ''');
 
+  Future<void> test_macroGenerated() async {
+    setDartTextDocumentContentProviderSupport();
+    addMacros([declareInTypeMacro()]);
+
+    const content = '''
+import 'macros.dart';
+
+@DeclareInType('void f() { f(); }')
+class A {}
+''';
+    newFile(mainFilePath, content);
+    await Future.wait([
+      waitForAnalysisComplete(),
+      initialize(),
+    ]);
+
+    // Fetch the content and locate the two references to `f` we will test.
+    var generatedFile = await getDartTextDocumentContent(mainFileMacroUri);
+    var generatedContent = generatedFile!.content!;
+    var functionDefinitionOffset = generatedContent.indexOf('f() {');
+    var functionCallOffset = generatedContent.indexOf('f();');
+    var functionDefinitionPosition =
+        positionFromOffset(functionDefinitionOffset, generatedContent);
+    var functionCallOffsetPosition =
+        positionFromOffset(functionCallOffset, generatedContent);
+
+    // Request document highlights on one occurrence of `f`.
+    var highlights = await getDocumentHighlights(
+      mainFileMacroUri,
+      functionDefinitionPosition,
+    );
+
+    // Ensure we got back both.
+    expect(highlights, hasLength(2));
+    expect(highlights![0].range.start, functionDefinitionPosition);
+    expect(highlights[1].range.start, functionCallOffsetPosition);
+  }
+
   Future<void> test_nonDartFile() async {
     await initialize();
     await openFile(pubspecFileUri, simplePubspecContent);
 
-    final highlights =
-        await getDocumentHighlights(pubspecFileUri, startOfDocPos);
+    var highlights = await getDocumentHighlights(pubspecFileUri, startOfDocPos);
 
     // Non-Dart files should return empty results, not errors.
     expect(highlights, isEmpty);
@@ -77,7 +114,7 @@ void f() {
 
   Future<void> test_onlySelf() => _testMarkedContent('''
 void f() {
-  /*[0*/prin^t/*0]*/();
+  /*[0*/prin^t/*0]*/('');
 }
 ''');
 
@@ -116,7 +153,7 @@ void f() {
 String /*[0*/foo/*0]*/ = 'bar';
 void f() {
   print(/*[1*/foo/*1]*/);
-  /*[2*/fo^o/*2]*/ = 2;
+  /*[2*/fo^o/*2]*/ = '';
 }
 ''');
 
@@ -127,18 +164,18 @@ void f() {
   /// If the content does not include any ranges then the response is expected
   /// to be `null`.
   Future<void> _testMarkedContent(String content) async {
-    final code = TestCode.parse(content);
+    var code = TestCode.parse(content);
 
     await initialize();
     await openFile(mainFileUri, code.code);
 
-    final pos = code.position.position;
-    final highlights = await getDocumentHighlights(mainFileUri, pos);
+    var pos = code.position.position;
+    var highlights = await getDocumentHighlights(mainFileUri, pos);
 
     if (code.ranges.isEmpty) {
       expect(highlights, isNull);
     } else {
-      final highlightRanges = highlights!.map((h) => h.range).toList();
+      var highlightRanges = highlights!.map((h) => h.range).toList();
       expect(highlightRanges, equals(code.ranges.map((r) => r.range)));
     }
   }

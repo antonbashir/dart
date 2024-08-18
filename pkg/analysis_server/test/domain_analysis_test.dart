@@ -20,6 +20,7 @@ import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'analysis_server_base.dart';
 import 'mocks.dart';
+import 'services/completion/dart/text_expectations.dart';
 import 'utils/tree_string_sink.dart';
 
 void main() {
@@ -27,6 +28,7 @@ void main() {
     defineReflectiveTests(AnalysisDomainBlazeTest);
     defineReflectiveTests(AnalysisDomainPubTest);
     defineReflectiveTests(SetSubscriptionsTest);
+    defineReflectiveTests(UpdateTextExpectations);
   });
 }
 
@@ -99,6 +101,9 @@ class AnalysisDomainPubTest extends _AnalysisDomainTest {
     // Both a.dart and b.dart are analyzed.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/lib/a.dart
   errors: notEmpty
 AnalysisErrors
@@ -121,6 +126,10 @@ analyzer:
 AnalysisFlush
   /home/test/lib/a.dart
   /home/test/lib/b.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -142,6 +151,9 @@ AnalysisErrors
     // a.dart was analyzed
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/lib/a.dart
   errors: notEmpty
 ''');
@@ -158,6 +170,10 @@ analyzer:
     assertNotificationsText(r'''
 AnalysisFlush
   /home/test/lib/a.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: notEmpty
@@ -179,6 +195,9 @@ analyzer:
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -213,6 +232,9 @@ AnalysisErrors
     // We don't have a.dart yet.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 ''');
@@ -232,10 +254,10 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_addFile_dart_dotFolder() async {
-    var a_path = '$testPackageLibPath/.foo/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/.foo/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import '.foo/a.dart';
 void f(A a) {}
 ''');
@@ -246,6 +268,9 @@ void f(A a) {}
     // We don't have a.dart, so the import cannot be resolved.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -253,7 +278,7 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A {}
 ''');
     await pumpEventQueue();
@@ -269,8 +294,8 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_addFile_dart_excluded() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
     newAnalysisOptionsYamlFile(testPackageRootPath, r'''
 analyzer:
@@ -278,7 +303,7 @@ analyzer:
     - "**/a.dart"
 ''');
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import 'a.dart';
 void f(A a) {}
 ''');
@@ -289,6 +314,9 @@ void f(A a) {}
     // We don't have a.dart, so the import cannot be resolved.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -296,7 +324,7 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A {}
 ''');
     await pumpEventQueue();
@@ -321,6 +349,9 @@ AnalysisErrors
 
     // No `fix_data.yaml` to analyze yet.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -358,6 +389,9 @@ AnalysisErrors
     // No `fix_data.yaml` to analyze yet.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -385,9 +419,9 @@ AnalysisErrors
 
   Future<void> test_fileSystem_addFile_packageConfigJsonFile() async {
     var aaaRootPath = '/packages/aaa';
-    var a_path = '$aaaRootPath/lib/a.dart';
+    var aPath = '$aaaRootPath/lib/a.dart';
 
-    newFile(a_path, '''
+    newFile(aPath, '''
 class A {}
 ''');
 
@@ -401,6 +435,9 @@ void f(A a) {}
 
     // We cannot resolve `package:aaa/a.dart`
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -425,6 +462,10 @@ AnalysisErrors
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/test.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -435,10 +476,10 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_addFile_pubspec_analysis() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var pubspec_path = '$testPackageRootPath/pubspec.yaml';
+    var aPath = '$testPackageLibPath/a.dart';
+    var pubspecPath = '$testPackageRootPath/pubspec.yaml';
 
-    newFile(a_path, 'error');
+    newFile(aPath, 'error');
 
     // Write an empty file to force a new analysis context.
     // We look for `pubspec.yaml` files only in analysis context roots.
@@ -450,6 +491,9 @@ AnalysisErrors
     // a.dart was analyzed
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -458,7 +502,7 @@ AnalysisErrors
 ''');
 
     // Add a non-Dart file that we know how to analyze.
-    newFile(pubspec_path, '''
+    newFile(pubspecPath, '''
 name: sample
 dependencies: true
 ''');
@@ -471,12 +515,13 @@ dependencies: true
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/a.dart
-AnalysisErrors
-  file: /home/test/analysis_options.yaml
-  errors: empty
+  /home/test/pubspec.yaml
 AnalysisErrors
   file: /home/test/pubspec.yaml
   errors: notEmpty
+AnalysisErrors
+  file: /home/test/analysis_options.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/lib/a.dart
   errors: notEmpty
@@ -484,16 +529,19 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_addFile_unrelated() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var unrelated_path = '$testPackageRootPath/unrelated.txt';
+    var aPath = '$testPackageLibPath/a.dart';
+    var unrelatedPath = '$testPackageRootPath/unrelated.txt';
 
-    newFile(a_path, 'error');
+    newFile(aPath, 'error');
 
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
     // a.dart was analyzed
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -503,7 +551,7 @@ AnalysisErrors
 ''');
 
     // Add an unrelated file, no analysis.
-    newFile(unrelated_path, 'anything');
+    newFile(unrelatedPath, 'anything');
     await pumpEventQueue();
     await server.onAnalysisComplete;
 
@@ -513,15 +561,15 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_changeFile_analysisOptions() async {
-    var options_path = '$testPackageRootPath/analysis_options.yaml';
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
-    var c_path = '$testPackageLibPath/c.dart';
+    var optionsPath = '$testPackageRootPath/analysis_options.yaml';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
+    var cPath = '$testPackageLibPath/c.dart';
 
-    _createFilesWithErrors([a_path, b_path, c_path]);
+    _createFilesWithErrors([aPath, bPath, cPath]);
 
-    // Exclude b.dart from analysis.
-    newFile(options_path, r'''
+    // Exclude 'b.dart' from analysis.
+    newFile(optionsPath, r'''
 analyzer:
   exclude:
     - lib/b.dart
@@ -530,8 +578,11 @@ analyzer:
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
-    // Only a.dart and c.dart are analyzed, because b.dart is excluded.
+    // Only 'a.dart' and 'c.dart' are analyzed, because 'b.dart' is excluded.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -543,8 +594,8 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    // Exclude c.dart from analysis.
-    newFile(options_path, r'''
+    // Exclude 'c.dart' from analysis.
+    newFile(optionsPath, r'''
 analyzer:
   exclude:
     - lib/c.dart
@@ -554,12 +605,16 @@ analyzer:
     await server.onAnalysisComplete;
 
     // Analysis contexts were rebuilt.
-    // Only a.dart and b.dart analyzed.
+    // Only 'a.dart' and 'b.dart' analyzed.
     assertNotificationsText(r'''
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/a.dart
   /home/test/lib/c.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -591,11 +646,14 @@ analyzer:
 
     assertNotificationsText(r'''
 AnalysisErrors
-  file: /home/test/AndroidManifest.xml
-  errors: notEmpty
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
+AnalysisErrors
+  file: /home/test/AndroidManifest.xml
+  errors: notEmpty
 AnalysisErrors
   file: /home/test/lib/a.dart
   errors: empty
@@ -619,14 +677,14 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_changeFile_dart() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A2 {}
 ''');
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import 'a.dart';
 void f(A a) {}
 ''');
@@ -635,6 +693,9 @@ void f(A a) {}
     await server.onAnalysisComplete;
 
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -647,7 +708,7 @@ AnalysisErrors
 ''');
 
     // Update a.dart so that b.dart has no error.
-    newFile(a_path, 'class A {}');
+    newFile(aPath, 'class A {}');
     await pumpEventQueue();
     await server.onAnalysisComplete;
 
@@ -663,14 +724,14 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_changeFile_dart_dotFolder() async {
-    var a_path = '$testPackageLibPath/.foo/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/.foo/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class B {}
 ''');
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import '.foo/a.dart';
 void f(A a) {}
 ''');
@@ -683,6 +744,9 @@ void f(A a) {}
     // We have `B`, not `A`, in a.dart, so has errors.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -690,7 +754,7 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A {}
 ''');
     await pumpEventQueue();
@@ -706,8 +770,8 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_changeFile_dart_excluded() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
     newAnalysisOptionsYamlFile(testPackageRootPath, r'''
 analyzer:
@@ -715,11 +779,11 @@ analyzer:
     - "**/a.dart"
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class B {}
 ''');
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import 'a.dart';
 void f(A a) {}
 ''');
@@ -732,6 +796,9 @@ void f(A a) {}
     // We have `B`, not `A`, in a.dart, so has errors.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -739,7 +806,7 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A {}
 ''');
     await pumpEventQueue();
@@ -766,6 +833,9 @@ AnalysisErrors
 
     // The file was analyzed.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -812,6 +882,9 @@ AnalysisErrors
     // The file was analyzed.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -850,7 +923,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay(''),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     await setRoots(included: [workspaceRootPath], excluded: []);
@@ -858,6 +931,9 @@ AnalysisErrors
     // The test file (overlay) is analyzed, no errors.
     await _waitAnalysisComplete();
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -878,7 +954,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: RemoveContentOverlay(),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     // The file has errors.
@@ -892,9 +968,9 @@ AnalysisErrors
 
   Future<void> test_fileSystem_changeFile_packageConfigJsonFile() async {
     var aaaRootPath = '/packages/aaa';
-    var a_path = '$aaaRootPath/lib/a.dart';
+    var aPath = '$aaaRootPath/lib/a.dart';
 
-    newFile(a_path, '''
+    newFile(aPath, '''
 class A {}
 ''');
 
@@ -909,6 +985,9 @@ void f(A a) {}
     // The default `package_config.json` is without `package:aaa`.
     // We cannot resolve `package:aaa/a.dart`
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -932,6 +1011,10 @@ AnalysisErrors
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/test.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -942,14 +1025,14 @@ AnalysisErrors
   }
 
   Future<void> test_fileSystem_deleteFile_analysisOptions() async {
-    var options_path = '$testPackageRootPath/analysis_options.yaml';
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var optionsPath = '$testPackageRootPath/analysis_options.yaml';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    _createFilesWithErrors([a_path, b_path]);
+    _createFilesWithErrors([aPath, bPath]);
 
     // Exclude b.dart from analysis.
-    newFile(options_path, r'''
+    newFile(optionsPath, r'''
 analyzer:
   exclude:
     - lib/b.dart
@@ -961,6 +1044,9 @@ analyzer:
     // Only a.dart is analyzed, because b.dart is excluded.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -969,7 +1055,7 @@ AnalysisErrors
 ''');
 
     // Delete the options file.
-    deleteFile(options_path);
+    deleteFile(optionsPath);
 
     await pumpEventQueue();
     await server.onAnalysisComplete;
@@ -979,6 +1065,10 @@ AnalysisErrors
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/a.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/lib/a.dart
   errors: notEmpty
@@ -1008,11 +1098,14 @@ analyzer:
     // An error was reported.
     assertNotificationsText(r'''
 AnalysisErrors
-  file: /home/test/AndroidManifest.xml
-  errors: notEmpty
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
+AnalysisErrors
+  file: /home/test/AndroidManifest.xml
+  errors: notEmpty
 AnalysisErrors
   file: /home/test/lib/a.dart
   errors: empty
@@ -1035,15 +1128,18 @@ AnalysisFlush
   ///
   /// https://github.com/dart-lang/sdk/issues/53475
   Future<void> test_fileSystem_deleteFile_createFile_withOverlay_dart() async {
-    var a_path = convertPath('$testPackageLibPath/a.dart');
+    var aPath = convertPath('$testPackageLibPath/a.dart');
 
-    _createFilesWithErrors([a_path]);
+    _createFilesWithErrors([aPath]);
 
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
     // Initial file has errors.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1056,8 +1152,8 @@ AnalysisErrors
     // We get another notification with errors.
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
-        a_path: AddContentOverlay('error2'),
-      }).toRequest('0'),
+        aPath: AddContentOverlay('error2'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
     await pumpEventQueue();
     await server.onAnalysisComplete;
@@ -1068,14 +1164,14 @@ AnalysisErrors
 ''');
 
     // Delete the file, we have the overlay, so no notifications.
-    deleteFile(a_path);
+    deleteFile(aPath);
     await pumpEventQueue();
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
 ''');
 
     // Re-creating the file, we have the overlay, so no notifications.
-    _createFilesWithErrors([a_path]);
+    _createFilesWithErrors([aPath]);
     await pumpEventQueue();
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
@@ -1084,8 +1180,8 @@ AnalysisErrors
     // Remove the overlay, the file has different content, so notification.
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
-        a_path: RemoveContentOverlay(),
-      }).toRequest('1'),
+        aPath: RemoveContentOverlay(),
+      }).toRequest('1', clientUriConverter: server.uriConverter),
     );
     await pumpEventQueue();
     await server.onAnalysisComplete;
@@ -1096,7 +1192,7 @@ AnalysisErrors
 ''');
 
     // Delete the file, errors are now gone.
-    deleteFile(a_path);
+    deleteFile(aPath);
     await pumpEventQueue();
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
@@ -1106,15 +1202,18 @@ AnalysisFlush
   }
 
   Future<void> test_fileSystem_deleteFile_dart() async {
-    var a_path = '$testPackageLibPath/a.dart';
+    var aPath = '$testPackageLibPath/a.dart';
 
-    _createFilesWithErrors([a_path]);
+    _createFilesWithErrors([aPath]);
 
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
     // a.dart was analyzed
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1123,7 +1222,7 @@ AnalysisErrors
   errors: notEmpty
 ''');
 
-    deleteFile(a_path);
+    deleteFile(aPath);
     await pumpEventQueue();
     await server.onAnalysisComplete;
 
@@ -1135,8 +1234,8 @@ AnalysisFlush
   }
 
   Future<void> test_fileSystem_deleteFile_dart_excluded() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
     newAnalysisOptionsYamlFile(testPackageRootPath, r'''
 analyzer:
@@ -1144,11 +1243,11 @@ analyzer:
     - "**/a.dart"
 ''');
 
-    newFile(a_path, r'''
+    newFile(aPath, r'''
 class A {}
 ''');
 
-    newFile(b_path, r'''
+    newFile(bPath, r'''
 import 'a.dart';
 void f(A a) {}
 ''');
@@ -1161,6 +1260,9 @@ void f(A a) {}
     // We have `A` in a.dart, so no errors.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1168,7 +1270,7 @@ AnalysisErrors
   errors: empty
 ''');
 
-    deleteFile(a_path);
+    deleteFile(aPath);
     await pumpEventQueue();
     await server.onAnalysisComplete;
 
@@ -1195,6 +1297,9 @@ AnalysisErrors
     // The file was analyzed.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1218,9 +1323,9 @@ AnalysisFlush
 
   Future<void> test_fileSystem_deleteFile_packageConfigJsonFile() async {
     var aaaRootPath = '/packages/aaa';
-    var a_path = '$aaaRootPath/lib/a.dart';
+    var aPath = '$aaaRootPath/lib/a.dart';
 
-    newFile(a_path, '''
+    newFile(aPath, '''
 class A {}
 ''');
 
@@ -1241,6 +1346,9 @@ void f(A a) {}
     // We have `A` in 'package:aaa/a.dart', so no errors.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1253,7 +1361,7 @@ AnalysisErrors
       '$testPackageRootPath/.dart_tool/package_config.json',
     );
 
-    await pumpEventQueue();
+    await pumpEventQueue(times: 5000);
     await server.onAnalysisComplete;
 
     // We cannot resolve 'package:aaa/a.dart', so errors.
@@ -1262,6 +1370,10 @@ AnalysisErrors
 AnalysisFlush
   /home/test/analysis_options.yaml
   /home/test/lib/test.dart
+  /home/test/pubspec.yaml
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1276,15 +1388,18 @@ AnalysisErrors
   ///
   /// https://github.com/dart-lang/sdk/issues/53475
   Future<void> test_fileSystem_deleteFile_withOverlay_dart() async {
-    var a_path = convertPath('$testPackageLibPath/a.dart');
+    var aPath = convertPath('$testPackageLibPath/a.dart');
 
-    _createFilesWithErrors([a_path]);
+    _createFilesWithErrors([aPath]);
 
     await setRoots(included: [workspaceRootPath], excluded: []);
     await server.onAnalysisComplete;
 
     // Initial file has errors.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1296,8 +1411,8 @@ AnalysisErrors
     // Set overlay with different content, with errors.
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
-        a_path: AddContentOverlay('error2'),
-      }).toRequest('0'),
+        aPath: AddContentOverlay('error2'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
     await pumpEventQueue();
     await server.onAnalysisComplete;
@@ -1308,7 +1423,7 @@ AnalysisErrors
 ''');
 
     // Delete file, has the overlay, no notifications.
-    deleteFile(a_path);
+    deleteFile(aPath);
     await pumpEventQueue();
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
@@ -1318,8 +1433,8 @@ AnalysisErrors
     // TODO(scheglov): why not flush?
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
-        a_path: RemoveContentOverlay(),
-      }).toRequest('1'),
+        aPath: RemoveContentOverlay(),
+      }).toRequest('1', clientUriConverter: server.uriConverter),
     );
     await pumpEventQueue();
     await server.onAnalysisComplete;
@@ -1344,7 +1459,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisSetPriorityFilesParams(
         [a.path, c.path],
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     await setRoots(included: [workspaceRootPath], excluded: []);
@@ -1353,6 +1468,9 @@ AnalysisErrors
     // a.dart and c.dart are priority files.
     // So, they are analyzed before b.dart and d.dart
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1375,7 +1493,7 @@ AnalysisErrors
     var response = await handleRequest(
       AnalysisSetPriorityFilesParams(
         ['a.dart'],
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1391,7 +1509,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisSetPriorityFilesParams(
         [convertPath('$testPackageLibPath/a.dart')],
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
   }
 
@@ -1401,7 +1519,7 @@ AnalysisErrors
         [workspaceRootPath],
         ['foo'],
         packageRoots: {},
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1419,7 +1537,7 @@ AnalysisErrors
         [workspaceRootPath],
         [convertPath('/foo/../bar')],
         packageRoots: {},
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1437,7 +1555,7 @@ AnalysisErrors
         ['foo'],
         [],
         packageRoots: {},
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1455,7 +1573,7 @@ AnalysisErrors
         [convertPath('/foo/../bar')],
         [],
         packageRoots: {},
-      ).toRequest('0'),
+      ).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1468,12 +1586,12 @@ AnalysisErrors
   }
 
   Future<void> test_setRoots_includedFile() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    _createFilesWithErrors([a_path, b_path]);
+    _createFilesWithErrors([aPath, bPath]);
 
-    await setRoots(included: [a_path], excluded: []);
+    await setRoots(included: [aPath], excluded: []);
 
     // Only a.dart is included, so b.dart is not analyzed.
     await server.onAnalysisComplete;
@@ -1485,13 +1603,13 @@ AnalysisErrors
   }
 
   Future<void> test_setRoots_includedFile_setRoots() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
-    _createFilesWithErrors([a_path, b_path]);
+    _createFilesWithErrors([aPath, bPath]);
 
     // Include only single file.
-    await setRoots(included: [a_path], excluded: []);
+    await setRoots(included: [aPath], excluded: []);
     await server.onAnalysisComplete;
 
     // So, only a.dart is analyzed, and b.dart is not.
@@ -1509,6 +1627,9 @@ AnalysisErrors
     assertNotificationsText(r'''
 AnalysisFlush
   /home/test/lib/a.dart
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1554,8 +1675,8 @@ AnalysisErrors
   }
 
   Future<void> test_setRoots_includedFolder_analysisOptions_exclude() async {
-    var a_path = '$testPackageLibPath/a.dart';
-    var b_path = '$testPackageLibPath/b.dart';
+    var aPath = '$testPackageLibPath/a.dart';
+    var bPath = '$testPackageLibPath/b.dart';
 
     newAnalysisOptionsYamlFile(testPackageRootPath, '''
 analyzer:
@@ -1563,13 +1684,16 @@ analyzer:
     - "**/b.dart"
 ''');
 
-    _createFilesWithErrors([a_path, b_path]);
+    _createFilesWithErrors([aPath, bPath]);
 
     await setRoots(included: [workspaceRootPath], excluded: []);
 
     // b.dart is excluded using the options file.
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1581,10 +1705,10 @@ AnalysisErrors
 
   @FailingTest(reason: 'Not implemented in ContextLocator')
   Future<void> test_setRoots_includedFolder_excludedFile() async {
-    var a_path = '$testPackageLibPath/a.dart';
+    var aPath = '$testPackageLibPath/a.dart';
     var excluded_path = '$testPackageRootPath/excluded/b.dart';
 
-    _createFilesWithErrors([a_path, excluded_path]);
+    _createFilesWithErrors([aPath, excluded_path]);
 
     await setRoots(
       included: [workspaceRootPath],
@@ -1596,10 +1720,10 @@ AnalysisErrors
   }
 
   Future<void> test_setRoots_includedFolder_excludedFolder() async {
-    var a_path = '$testPackageLibPath/a.dart';
+    var aPath = '$testPackageLibPath/a.dart';
     var excluded_path = '$testPackageRootPath/excluded/b.dart';
 
-    _createFilesWithErrors([a_path, excluded_path]);
+    _createFilesWithErrors([aPath, excluded_path]);
 
     await setRoots(
       included: [workspaceRootPath],
@@ -1609,6 +1733,9 @@ AnalysisErrors
 
     // a.dart is analyzed, but b.dart is in the excluded folder.
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1643,13 +1770,13 @@ AnalysisErrors
 
   Future<void> test_setRoots_notDartFile_analysisOptions_excluded() async {
     deleteTestPackageAnalysisOptionsFile();
-    var a_path = '$testPackageLibPath/a.dart';
-    var options_path = '$testPackageRootPath/analysis_options.yaml';
+    var aPath = '$testPackageLibPath/a.dart';
+    var optionsPath = '$testPackageRootPath/analysis_options.yaml';
 
-    newFile(a_path, 'error');
+    newFile(aPath, 'error');
 
     // 'analysis_options.yaml' that has an error and excludes itself.
-    newFile(options_path, '''
+    newFile(optionsPath, '''
 analyzer:
   exclude:
     - analysis_options.yaml
@@ -1660,6 +1787,9 @@ analyzer:
     await server.onAnalysisComplete;
 
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/lib/a.dart
   errors: notEmpty
@@ -1684,11 +1814,14 @@ analyzer:
     // No touch-screen.
     assertNotificationsText(r'''
 AnalysisErrors
-  file: /home/test/AndroidManifest.xml
-  errors: notEmpty
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
+AnalysisErrors
+  file: /home/test/AndroidManifest.xml
+  errors: notEmpty
 ''');
   }
 
@@ -1701,6 +1834,9 @@ AnalysisErrors
     await setRoots(included: [workspaceRootPath], excluded: []);
 
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1718,6 +1854,9 @@ AnalysisErrors
 
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1734,6 +1873,9 @@ AnalysisErrors
 
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1744,10 +1886,10 @@ AnalysisErrors
 
   Future<void> test_setRoots_notDartFile_pubspec_excluded() async {
     deleteTestPackageAnalysisOptionsFile();
-    var a_path = '$testPackageLibPath/a.dart';
-    var options_path = '$testPackageRootPath/analysis_options.yaml';
+    var aPath = '$testPackageLibPath/a.dart';
+    var optionsPath = '$testPackageRootPath/analysis_options.yaml';
 
-    newFile(a_path, 'error');
+    newFile(aPath, 'error');
 
     writeTestPackagePubspecYamlFile('''
 name:
@@ -1755,7 +1897,7 @@ name:
 ''');
 
     // 'analysis_options.yaml' that excludes pubspec.yaml.
-    newFile(options_path, '''
+    newFile(optionsPath, '''
 analyzer:
   exclude:
     - pubspec.yaml
@@ -1777,9 +1919,9 @@ AnalysisErrors
 
   Future<void> test_setRoots_packageConfigJsonFile() async {
     var aaaRootPath = '/packages/aaa';
-    var a_path = '$aaaRootPath/lib/a.dart';
+    var aPath = '$aaaRootPath/lib/a.dart';
 
-    newFile(a_path, '''
+    newFile(aPath, '''
 class A {}
 ''');
 
@@ -1801,6 +1943,9 @@ void f(A a) {}
     // Errors are not reported for packages.
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1818,6 +1963,9 @@ AnalysisErrors
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
 AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
+AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
 AnalysisErrors
@@ -1829,7 +1977,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay(''),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     // A new errors notification was received, no errors.
@@ -1848,7 +1996,7 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay('var v = 0'),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     await setRoots(included: [workspaceRootPath], excluded: []);
@@ -1856,6 +2004,9 @@ AnalysisErrors
     // The overlay has an error.
     await server.onAnalysisComplete;
     assertNotificationsText(r'''
+AnalysisErrors
+  file: /home/test/pubspec.yaml
+  errors: empty
 AnalysisErrors
   file: /home/test/analysis_options.yaml
   errors: empty
@@ -1870,7 +2021,7 @@ AnalysisErrors
         testFile.path: ChangeContentOverlay([
           SourceEdit(9, 0, ';'),
         ]),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     // A new errors notification was received, no errors.
@@ -1886,7 +2037,7 @@ AnalysisErrors
     var response = await handleRequest(
       AnalysisUpdateContentParams({
         'a.dart': AddContentOverlay(''),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
     expect(response, isResponseFailure('0'));
   }
@@ -1915,13 +2066,13 @@ AnalysisErrors
     await handleSuccessfulRequest(
       AnalysisUpdateContentParams({
         testFile.path: AddContentOverlay(initialContent),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     var response = await handleRequest(
       AnalysisUpdateContentParams({
         testFile.path: ChangeContentOverlay([edit]),
-      }).toRequest('0'),
+      }).toRequest('0', clientUriConverter: server.uriConverter),
     );
 
     expect(
@@ -1954,7 +2105,8 @@ class SetSubscriptionsTest extends PubPackageAnalysisServerTest {
   void processNotification(Notification notification) {
     super.processNotification(notification);
     if (notification.event == ANALYSIS_NOTIFICATION_HIGHLIGHTS) {
-      var params = AnalysisHighlightsParams.fromNotification(notification);
+      var params = AnalysisHighlightsParams.fromNotification(notification,
+          clientUriConverter: server.uriConverter);
       filesHighlights[getFile(params.file)] = params.regions;
       _resultsAvailable.complete();
     }
@@ -1996,11 +2148,10 @@ class SetSubscriptionsTest extends PubPackageAnalysisServerTest {
 library lib_a;
 class A {}
 ''');
-    newPackageConfigJsonFile(
-      '/project',
-      (PackageConfigFileBuilder()
-            ..add(name: 'pkgA', rootPath: '/packages/pkgA'))
-          .toContent(toUriStr: toUriStr),
+    writePackageConfig(
+      convertPath('/project'),
+      config: (PackageConfigFileBuilder()
+        ..add(name: 'pkgA', rootPath: convertPath('/packages/pkgA'))),
     );
     //
     addTestFile('''
@@ -2049,11 +2200,10 @@ void f() {
 library lib_a;
 class A {}
 ''');
-    newPackageConfigJsonFile(
-      '/project',
-      (PackageConfigFileBuilder()
-            ..add(name: 'pkgA', rootPath: '/packages/pkgA'))
-          .toContent(toUriStr: toUriStr),
+    writePackageConfig(
+      convertPath('/project'),
+      config: (PackageConfigFileBuilder()
+        ..add(name: 'pkgA', rootPath: convertPath('/packages/pkgA'))),
     );
     //
     addTestFile('// no "pkgA" reference');
@@ -2111,8 +2261,8 @@ class _AnalysisDomainTest extends PubPackageAnalysisServerTest {
   final List<(String, Object)> notifications = [];
 
   void assertNotificationsText(String expected) {
-    final buffer = StringBuffer();
-    final sink = TreeStringSink(sink: buffer, indent: '');
+    var buffer = StringBuffer();
+    var sink = TreeStringSink(sink: buffer, indent: '');
     _NotificationPrinter(
       configuration: configuration,
       resourceProvider: resourceProvider,
@@ -2120,10 +2270,11 @@ class _AnalysisDomainTest extends PubPackageAnalysisServerTest {
     ).writeNotifications(notifications);
     notifications.clear();
 
-    final actual = buffer.toString();
+    var actual = buffer.toString();
     if (actual != expected) {
       print('-------- Actual --------');
       print('$actual------------------------');
+      TextExpectationsCollector.add(actual);
     }
     expect(actual, expected);
   }
@@ -2131,11 +2282,13 @@ class _AnalysisDomainTest extends PubPackageAnalysisServerTest {
   @override
   void processNotification(Notification notification) {
     if (notification.event == ANALYSIS_NOTIFICATION_FLUSH_RESULTS) {
-      var decoded = AnalysisFlushResultsParams.fromNotification(notification);
+      var decoded = AnalysisFlushResultsParams.fromNotification(notification,
+          clientUriConverter: server.uriConverter);
       notifications.add((notification.event, decoded));
     }
     if (notification.event == ANALYSIS_NOTIFICATION_ERRORS) {
-      var decoded = AnalysisErrorsParams.fromNotification(notification);
+      var decoded = AnalysisErrorsParams.fromNotification(notification,
+          clientUriConverter: server.uriConverter);
       notifications.add((notification.event, decoded));
     }
   }
@@ -2160,7 +2313,7 @@ class _NotificationPrinter {
   });
 
   void writeNotifications(List<(String, Object)> notifications) {
-    for (final entry in notifications) {
+    for (var entry in notifications) {
       _writeNotification(entry.$1, entry.$2);
     }
   }
@@ -2170,7 +2323,7 @@ class _NotificationPrinter {
       if (name != null) {
         sink.write('$name: ');
       }
-      final file = resourceProvider.getFile(path);
+      var file = resourceProvider.getFile(path);
       sink.write(file.posixPath);
     });
   }
@@ -2178,7 +2331,7 @@ class _NotificationPrinter {
   void _writeNotification(String event, Object notification) {
     switch (notification) {
       case AnalysisFlushResultsParams():
-        final files = notification.files.sorted();
+        var files = notification.files.sorted();
         sink.writeElements('AnalysisFlush', files, _writelnFile);
       case AnalysisErrorsParams():
         sink.writelnWithIndent('AnalysisErrors');

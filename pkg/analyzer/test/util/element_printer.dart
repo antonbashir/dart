@@ -7,6 +7,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/member.dart';
+import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/summary2/reference.dart';
 import 'package:test/test.dart';
 
@@ -31,25 +32,25 @@ class ElementPrinter {
     } else if (uri is DirectiveUriWithAugmentation) {
       _sink.writeln('DirectiveUriWithAugmentation');
       _sink.withIndent(() {
-        final uriStr = _stringOfSource(uri.augmentation.source);
+        var uriStr = _stringOfSource(uri.augmentation.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithLibrary) {
       _sink.writeln('DirectiveUriWithLibrary');
       _sink.withIndent(() {
-        final uriStr = _stringOfSource(uri.library.source);
+        var uriStr = _stringOfSource(uri.library.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithUnit) {
       _sink.writeln('DirectiveUriWithUnit');
       _sink.withIndent(() {
-        final uriStr = _stringOfSource(uri.unit.source);
+        var uriStr = _stringOfSource(uri.unit.source);
         _sink.writelnWithIndent('uri: $uriStr');
       });
     } else if (uri is DirectiveUriWithSource) {
       _sink.writeln('DirectiveUriWithSource');
       _sink.withIndent(() {
-        final uriStr = _stringOfSource(uri.source);
+        var uriStr = _stringOfSource(uri.source);
         _sink.writelnWithIndent('source: $uriStr');
       });
     } else if (uri is DirectiveUriWithRelativeUri) {
@@ -84,7 +85,7 @@ class ElementPrinter {
       case PartElement():
         _writePartElement(element);
       default:
-        final referenceStr = _elementToReferenceString(element);
+        var referenceStr = _elementToReferenceString(element);
         _sink.writeln(referenceStr);
     }
   }
@@ -107,7 +108,7 @@ class ElementPrinter {
   }
 
   void writeReference(Reference reference) {
-    final str = _referenceToString(reference);
+    var str = _referenceToString(reference);
     _sink.write(str);
   }
 
@@ -142,7 +143,7 @@ class ElementPrinter {
     if (types != null && types.isNotEmpty) {
       _sink.writelnWithIndent(name);
       _sink.withIndent(() {
-        for (final type in types) {
+        for (var type in types) {
           _sink.writeIndent();
           writeType(type);
         }
@@ -151,15 +152,15 @@ class ElementPrinter {
   }
 
   String _elementToReferenceString(Element element) {
-    final enclosingElement = element.enclosingElement;
-    final reference = (element as ElementImpl).reference;
+    var enclosingElement = element.enclosingElement;
+    var reference = (element as ElementImpl).reference;
     if (reference != null) {
       return _referenceToString(reference);
     } else if (element is ParameterElement &&
         enclosingElement is! GenericFunctionTypeElement) {
       // Positional parameters don't have actual references.
       // But we fabricate one to make the output better.
-      final enclosingStr = enclosingElement != null
+      var enclosingStr = enclosingElement != null
           ? _elementToReferenceString(enclosingElement)
           : 'root';
       return '$enclosingStr::@parameter::${element.name}';
@@ -171,7 +172,7 @@ class ElementPrinter {
         '[',
         element.variables.map(_elementToReferenceString).join(', '),
         ']',
-      ].join('');
+      ].join();
     } else {
       return '${element.name}@${element.nameOffset}';
     }
@@ -217,7 +218,7 @@ class ElementPrinter {
   }
 
   String _typeStr(DartType type) {
-    return type.getDisplayString(withNullability: true);
+    return type.getDisplayString();
   }
 
   void _writeAugmentationImportElement(AugmentationImportElement element) {
@@ -249,19 +250,24 @@ class ElementPrinter {
     _sink.withIndent(() {
       writeNamedElement('base', element.declaration);
 
-      if (element.isLegacy) {
-        _sink.writelnWithIndent('isLegacy: true');
+      void writeSubstitution(String name, MapSubstitution substitution) {
+        var map = substitution.map;
+        if (map.isNotEmpty) {
+          var mapStr = _substitutionMapStr(map);
+          _sink.writelnWithIndent('$name: $mapStr');
+        }
       }
 
-      var map = element.substitution.map;
-      if (map.isNotEmpty) {
-        var mapStr = _substitutionMapStr(map);
-        _sink.writelnWithIndent('substitution: $mapStr');
-      }
+      writeSubstitution(
+        'augmentationSubstitution',
+        element.augmentationSubstitution,
+      );
+
+      writeSubstitution('substitution', element.substitution);
 
       if (_configuration.withRedirectedConstructors) {
         if (element is ConstructorMember) {
-          final redirected = element.redirectedConstructor;
+          var redirected = element.redirectedConstructor;
           writeNamedElement('redirectedConstructor', redirected);
         }
       }

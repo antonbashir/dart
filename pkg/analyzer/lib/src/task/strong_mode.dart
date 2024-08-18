@@ -6,7 +6,6 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
-import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
@@ -34,7 +33,7 @@ class InstanceMemberInferrer {
   /// compilation [unit].
   void inferCompilationUnit(CompilationUnitElementImpl unit) {
     typeSystem = unit.library.typeSystem;
-    isNonNullableByDefault = typeSystem.isNonNullableByDefault;
+    isNonNullableByDefault = true;
     _inferClasses(unit.classes);
     _inferClasses(unit.enums);
     _inferExtensionTypes(unit.extensionTypes);
@@ -141,8 +140,7 @@ class InstanceMemberInferrer {
         name: getterName,
       );
       if (combinedGetter != null) {
-        var returnType = combinedGetter.returnType;
-        return typeSystem.nonNullifyLegacy(returnType);
+        return combinedGetter.returnType;
       }
       return DynamicTypeImpl.instance;
     }
@@ -157,8 +155,7 @@ class InstanceMemberInferrer {
       if (combinedSetter != null) {
         var parameters = combinedSetter.parameters;
         if (parameters.isNotEmpty) {
-          var type = parameters[0].type;
-          return typeSystem.nonNullifyLegacy(type);
+          return parameters[0].type;
         }
       }
       return DynamicTypeImpl.instance;
@@ -287,9 +284,7 @@ class InstanceMemberInferrer {
           var setterType = combinedSetterType();
 
           if (getterType == setterType) {
-            var type = getterType;
-            type = typeSystem.nonNullifyLegacy(type);
-            _setFieldType(field, type);
+            _setFieldType(field, getterType);
           }
           return;
         }
@@ -328,7 +323,7 @@ class InstanceMemberInferrer {
       // Ensure that all of instance members in the supertypes have had types
       // inferred for them.
       //
-      final augmented = classElement.augmentedOfDeclaration;
+      var augmented = classElement.augmented;
       _inferType(classElement.supertype);
       augmented.mixins.forEach(_inferType);
       augmented.interfaces.forEach(_inferType);
@@ -337,25 +332,25 @@ class InstanceMemberInferrer {
       //
       // TODO(scheglov): get other members from the container
       currentInterfaceElement = classElement;
-      for (final container in classElement.withAugmentations) {
-        for (final field in classElement.fields) {
+      for (var container in classElement.withAugmentations) {
+        for (var field in classElement.fields) {
           _inferAccessorOrField(
             field: field,
           );
         }
-        for (final accessor in classElement.accessors) {
+        for (var accessor in classElement.accessors) {
           _inferAccessorOrField(
             accessor: accessor,
           );
         }
-        for (final method in container.methods) {
+        for (var method in container.methods) {
           _inferExecutable(method);
         }
         //
         // Infer initializing formal parameter types. This must happen after
         // field types are inferred.
         //
-        for (final constructor in container.constructors) {
+        for (var constructor in container.constructors) {
           _inferConstructor(constructor);
         }
       }
@@ -366,7 +361,7 @@ class InstanceMemberInferrer {
   }
 
   void _inferClasses(List<InterfaceElementImpl> elements) {
-    for (final element in elements) {
+    for (var element in elements) {
       try {
         _inferClass(element);
       } on _CycleException {
@@ -378,15 +373,15 @@ class InstanceMemberInferrer {
 
   void _inferConstructor(ConstructorElement constructor) {
     constructor as ConstructorElementImpl;
-    for (final parameter in constructor.parameters) {
+    for (var parameter in constructor.parameters) {
       if (parameter.hasImplicitType) {
         if (parameter is FieldFormalParameterElementImpl) {
-          final field = parameter.field;
+          var field = parameter.field;
           if (field != null) {
             parameter.type = field.type;
           }
         } else if (parameter is SuperFormalParameterElementImpl) {
-          final superParameter = parameter.superConstructorParameter;
+          var superParameter = parameter.superConstructorParameter;
           if (superParameter != null) {
             parameter.type = superParameter.type;
           } else {
@@ -396,7 +391,7 @@ class InstanceMemberInferrer {
       }
     }
 
-    final classElement = constructor.enclosingElement;
+    var classElement = constructor.enclosingElement;
     if (classElement is ClassElementImpl && classElement.isMixinApplication) {
       _inferMixinApplicationConstructor(classElement, constructor);
     }
@@ -445,9 +440,7 @@ class InstanceMemberInferrer {
           if (conflict is CandidatesConflict) {
             conflictExplanation = conflict.candidates.map((candidate) {
               var className = candidate.enclosingElement.name;
-              var typeStr = candidate.type.getDisplayString(
-                withNullability: typeSystem.isNonNullableByDefault,
-              );
+              var typeStr = candidate.type.getDisplayString();
               return '$className.${name.name} ($typeStr)';
             }).join(', ');
           }
@@ -465,9 +458,7 @@ class InstanceMemberInferrer {
     //
     if (element.hasImplicitReturnType && element.displayName != '[]=') {
       if (combinedSignatureType != null) {
-        var returnType = combinedSignatureType.returnType;
-        returnType = typeSystem.nonNullifyLegacy(returnType);
-        element.returnType = returnType;
+        element.returnType = combinedSignatureType.returnType;
       } else {
         element.returnType = DynamicTypeImpl.instance;
       }
@@ -492,8 +483,8 @@ class InstanceMemberInferrer {
   }
 
   void _inferExtensionTypes(List<ExtensionTypeElementImpl> extensionTypes) {
-    for (final extensionType in extensionTypes) {
-      for (final constructor in extensionType.constructors) {
+    for (var extensionType in extensionTypes) {
+      for (var constructor in extensionType.constructors) {
         _inferConstructor(constructor);
       }
     }
@@ -529,7 +520,8 @@ class InstanceMemberInferrer {
           constructor.parameters,
           initializer.argumentList.arguments,
           (parameter, argument) {
-            (argument as SimpleIdentifierImpl).staticType = parameter.type;
+            (argument as SimpleIdentifierImpl)
+                .setPseudoExpressionStaticType(parameter.type);
           },
         );
       }
@@ -557,9 +549,7 @@ class InstanceMemberInferrer {
         combinedSignatureType.parameters,
       );
       if (matchingParameter != null) {
-        var type = matchingParameter.type;
-        type = typeSystem.nonNullifyLegacy(type);
-        parameter.type = type;
+        parameter.type = matchingParameter.type;
       } else {
         parameter.type = DynamicTypeImpl.instance;
       }
@@ -572,7 +562,7 @@ class InstanceMemberInferrer {
   /// interface [type].
   void _inferType(InterfaceType? type) {
     if (type != null) {
-      final element = type.element as InterfaceElementImpl;
+      var element = type.element as InterfaceElementImpl;
       _inferClass(element);
     }
   }
@@ -635,9 +625,9 @@ class InstanceMemberInferrer {
       return;
     }
 
-    final supertype = classElement.supertype;
-    final interfaces = classElement.interfaces;
-    final mixins = classElement.mixins;
+    var supertype = classElement.supertype;
+    var interfaces = classElement.interfaces;
+    var mixins = classElement.mixins;
 
     if (mixins.any((type) => type.element.isFinal)) {
       // A sealed declaration is considered 'final' if it has a direct

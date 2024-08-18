@@ -5,9 +5,13 @@
 import 'package:analysis_server/src/utilities/extensions/element.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source.dart';
+import 'package:analyzer/src/dart/ast/token.dart';
+import 'package:analyzer/src/dart/ast/utilities.dart';
 import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer/src/utilities/extensions/ast.dart';
 import 'package:analyzer/src/utilities/extensions/collection.dart';
 
 class ThrowStatement {
@@ -20,10 +24,50 @@ class ThrowStatement {
   });
 }
 
-extension AnnotatedNodeExtensions on AnnotatedNode {
+class _ReferencedUnprefixedNamesCollector extends RecursiveAstVisitor<void> {
+  final Set<String> names = <String>{};
+
+  @override
+  void visitNamedType(NamedType node) {
+    if (node.importPrefix == null) {
+      names.add(node.name2.lexeme);
+    }
+
+    super.visitNamedType(node);
+  }
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (!_isPrefixed(node) && !_isLabelName(node)) {
+      names.add(node.name);
+    }
+  }
+
+  @override
+  visitVariableDeclaration(VariableDeclaration node) {
+    names.add(node.name.lexeme);
+    return super.visitVariableDeclaration(node);
+  }
+
+  static bool _isLabelName(SimpleIdentifier node) {
+    return node.parent is Label;
+  }
+
+  static bool _isPrefixed(SimpleIdentifier node) {
+    var parent = node.parent;
+    return parent is ConstructorName && parent.name == node ||
+        parent is MethodInvocation &&
+            parent.methodName == node &&
+            parent.realTarget != null ||
+        parent is PrefixedIdentifier && parent.identifier == node ||
+        parent is PropertyAccess && parent.target == node;
+  }
+}
+
+extension AnnotatedNodeExtension on AnnotatedNode {
   /// Return the first token in this node that is not a comment.
   Token get firstNonCommentToken {
-    final metadata = this.metadata;
+    var metadata = this.metadata;
     if (metadata.isEmpty) {
       return firstTokenAfterCommentAndMetadata;
     }
@@ -31,10 +75,10 @@ extension AnnotatedNodeExtensions on AnnotatedNode {
   }
 }
 
-extension AstNodeExtensions on AstNode {
+extension AstNodeExtension on AstNode {
   /// Returns [ExtensionElement] declared by an enclosing node.
   ExtensionElement? get enclosingExtensionElement {
-    for (final node in withParents) {
+    for (var node in withParents) {
       if (node is ExtensionDeclaration) {
         return node.declaredElement;
       }
@@ -56,7 +100,7 @@ extension AstNodeExtensions on AstNode {
 
   /// Returns [InterfaceElement] declared by an enclosing node.
   InterfaceElement? get enclosingInterfaceElement {
-    for (final node in withParents) {
+    for (var node in withParents) {
       if (node is ClassDeclaration) {
         return node.declaredElement;
       } else if (node is MixinDeclaration) {
@@ -120,21 +164,37 @@ extension AstNodeExtensions on AstNode {
 
   bool get inWhileLoop => thisOrAncestorOfType<WhileStatement>() != null;
 
-  /// Return this node and all its parents.
-  Iterable<AstNode> get withParents sync* {
-    var current = this;
-    while (true) {
-      yield current;
-      var parent = current.parent;
-      if (parent == null) {
+  /// The [Token]s contained within `this`.
+  List<Token> get tokens {
+    var result = <Token>[];
+    for (var token = beginToken;; token = token.next!) {
+      result.add(token);
+      if (token == endToken) {
         break;
       }
-      current = parent;
     }
+    return result;
+  }
+
+  /// Returns the [ExpressionStatement] associated with `this` if `this` points
+  /// to the identifier for a simple `print`, and `null` otherwise.
+  ExpressionStatement? findSimplePrintInvocation() {
+    var parent = this.parent;
+    var grandparent = parent?.parent;
+    if (this case SimpleIdentifier(:var staticElement)) {
+      if (staticElement is FunctionElement &&
+          staticElement.name == 'print' &&
+          staticElement.library.isDartCore &&
+          parent is MethodInvocation &&
+          grandparent is ExpressionStatement) {
+        return grandparent;
+      }
+    }
+    return null;
   }
 }
 
-extension BinaryExpressionExtensions on BinaryExpression {
+extension BinaryExpressionExtension on BinaryExpression {
   bool get isNotEqNull {
     return operator.type == TokenType.BANG_EQ && rightOperand is NullLiteral;
   }
@@ -152,7 +212,7 @@ extension CompilationUnitExtension on CompilationUnit {
   /// blank line, a directive, a declaration, or a multi-line comment). The list
   /// will never include a documentation comment.
   List<Token> get fileHeader {
-    final lineInfo = this.lineInfo;
+    var lineInfo = this.lineInfo;
     var firstToken = beginToken;
     if (firstToken.type == TokenType.SCRIPT_TAG) {
       firstToken = firstToken.next!;
@@ -186,11 +246,19 @@ extension CompilationUnitExtension on CompilationUnit {
     return header;
   }
 
-  /// Return `true` if library being analyzed is non-nullable by default.
-  ///
-  /// Will return `false` if the AST structure has not been resolved.
-  bool get isNonNullableByDefault =>
-      declaredElement?.library.isNonNullableByDefault ?? false;
+  /// Returns names of elements that might conflict with a new local variable
+  /// declared at [offset].
+  Set<String> findPossibleLocalVariableConflicts(int offset) {
+    var conflicts = <String>{};
+    var enclosingNode = NodeLocator(offset).searchWithin(this)!;
+    var enclosingBlock = enclosingNode.thisOrAncestorOfType<Block>();
+    if (enclosingBlock != null) {
+      var visitor = _ReferencedUnprefixedNamesCollector();
+      enclosingBlock.accept(visitor);
+      return visitor.names;
+    }
+    return conflicts;
+  }
 }
 
 extension DeclaredVariablePatternExtension on DeclaredVariablePattern {
@@ -203,10 +271,10 @@ extension DeclaredVariablePatternExtension on DeclaredVariablePattern {
   }
 }
 
-extension DirectiveExtensions on Directive {
+extension DirectiveExtension on Directive {
   /// If the target imports or exports a [LibraryElement], returns it.
   LibraryElement? get referencedLibrary {
-    final element = this.element;
+    var element = this.element;
     if (element is LibraryExportElement) {
       return element.exportedLibrary;
     } else if (element is LibraryImportElement) {
@@ -218,7 +286,7 @@ extension DirectiveExtensions on Directive {
   /// If [referencedUri] is a [DirectiveUriWithSource], returns the [Source]
   /// from it.
   Source? get referencedSource {
-    final uri = referencedUri;
+    var uri = referencedUri;
     if (uri is DirectiveUriWithSource) {
       return uri.source;
     }
@@ -227,7 +295,7 @@ extension DirectiveExtensions on Directive {
 
   /// Returns the [DirectiveUri] from the element.
   DirectiveUri? get referencedUri {
-    final self = this;
+    var self = this;
     if (self is AugmentationImportDirective) {
       return self.element?.uri;
     } else if (self is ExportDirective) {
@@ -241,7 +309,7 @@ extension DirectiveExtensions on Directive {
   }
 }
 
-extension ExpressionExtensions on Expression {
+extension ExpressionExtension on Expression {
   /// Return `true` if this expression is an invocation of the method `cast`
   /// from either Iterable`, `List`, `Map`, or `Set`.
   bool get isCastMethodInvocation {
@@ -271,9 +339,20 @@ extension ExpressionExtensions on Expression {
     }
     return false;
   }
+
+  /// Whether this [Expression] should be wrapped with parentheses when we want
+  /// to use it as operand of a logical and-expression.
+  bool get shouldWrapParenthesisBeforeAnd {
+    var self = this;
+    if (self is! BinaryExpression) {
+      return false;
+    }
+    var precedence = self.operator.type.precedence;
+    return precedence < TokenClass.LOGICAL_AND_OPERATOR.precedence;
+  }
 }
 
-extension FunctionBodyExtensions on FunctionBody {
+extension FunctionBodyExtension on FunctionBody {
   bool get isEmpty =>
       this is EmptyFunctionBody ||
       (this is BlockFunctionBody && beginToken.isSynthetic);
@@ -281,7 +360,7 @@ extension FunctionBodyExtensions on FunctionBody {
 
 extension MethodDeclarationExtension on MethodDeclaration {
   Token? get propertyKeywordGet {
-    final propertyKeyword = this.propertyKeyword;
+    var propertyKeyword = this.propertyKeyword;
     return propertyKeyword != null && propertyKeyword.keyword == Keyword.GET
         ? propertyKeyword
         : null;
@@ -290,7 +369,7 @@ extension MethodDeclarationExtension on MethodDeclaration {
 
 extension NamedTypeExtension on NamedType {
   String get qualifiedName {
-    final importPrefix = this.importPrefix;
+    var importPrefix = this.importPrefix;
     if (importPrefix != null) {
       return '${importPrefix.name.lexeme}.${name2.lexeme}';
     } else {
@@ -316,11 +395,11 @@ extension NodeListExtension<E extends AstNode> on NodeList<E> {
 
 extension StatementExtension on Statement {
   ThrowStatement? get followingThrow {
-    final block = parent;
+    var block = parent;
     if (block is Block) {
-      final next = block.statements.nextOrNull(this);
+      var next = block.statements.nextOrNull(this);
       if (next is ExpressionStatement) {
-        final throwExpression = next.expression;
+        var throwExpression = next.expression;
         if (throwExpression is ThrowExpression) {
           return ThrowStatement(
             statement: next,
@@ -333,19 +412,19 @@ extension StatementExtension on Statement {
   }
 
   List<Statement> get selfOrBlockStatements {
-    final self = this;
+    var self = this;
     return self is Block ? self.statements : [self];
   }
 }
 
 extension TokenQuestionExtension on Token? {
   Token? get asFinalKeyword {
-    final self = this;
+    var self = this;
     return self != null && self.keyword == Keyword.FINAL ? self : null;
   }
 
   Token? get asVarKeyword {
-    final self = this;
+    var self = this;
     return self != null && self.keyword == Keyword.VAR ? self : null;
   }
 }

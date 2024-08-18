@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/plugin/analysis/occurrences/occurrences_core.dart';
 import 'package:analysis_server/src/protocol_server.dart' as protocol;
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -16,8 +15,7 @@ void addDartOccurrences(OccurrencesCollector collector, CompilationUnit unit) {
   unit.accept(visitor);
   visitor.elementsOffsets.forEach((engineElement, offsets) {
     var length = engineElement.nameLength;
-    var serverElement = protocol.convertElement(engineElement,
-        withNullability: unit.isNonNullableByDefault);
+    var serverElement = protocol.convertElement(engineElement);
     var occurrences = protocol.Occurrences(serverElement, offsets, length);
     collector.addOccurrences(occurrences);
   });
@@ -28,7 +26,7 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitAssignedVariablePattern(AssignedVariablePattern node) {
-    final element = node.element;
+    var element = node.element;
     if (element != null) {
       _addOccurrence(element, node.name.offset);
     }
@@ -45,7 +43,7 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
-    if (node.name case final name?) {
+    if (node.name case var name?) {
       _addOccurrence(node.declaredElement!, name.offset);
     }
 
@@ -89,9 +87,9 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitFieldFormalParameter(FieldFormalParameter node) {
-    final declaredElement = node.declaredElement;
+    var declaredElement = node.declaredElement;
     if (declaredElement is FieldFormalParameterElement) {
-      final field = declaredElement.field;
+      var field = declaredElement.field;
       if (field != null) {
         _addOccurrence(field, node.name.offset);
       }
@@ -131,10 +129,10 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitPatternField(PatternField node) {
-    final element = node.element;
-    final pattern = node.pattern;
+    var element = node.element;
+    var pattern = node.pattern;
     // If no explicit field name, use the variables name.
-    final name = node.name?.name == null && pattern is VariablePattern
+    var name = node.name?.name == null && pattern is VariablePattern
         ? pattern.name
         : node.name?.name;
     if (element != null && name != null) {
@@ -145,7 +143,7 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitRepresentationDeclaration(RepresentationDeclaration node) {
-    if (node.constructorName case final constructorName?) {
+    if (node.constructorName case var constructorName?) {
       _addOccurrence(node.constructorElement!, constructorName.name.offset);
     }
 
@@ -154,7 +152,7 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    final nameToken = node.name;
+    var nameToken = node.name;
     if (nameToken != null) {
       _addOccurrence(node.declaredElement!, nameToken.offset);
     }
@@ -201,7 +199,7 @@ class _DartUnitOccurrencesComputerVisitor extends RecursiveAstVisitor<void> {
     if (canonicalElement is FieldFormalParameterElement) {
       canonicalElement = canonicalElement.field;
     } else if (canonicalElement is PropertyAccessorElement) {
-      canonicalElement = canonicalElement.variable;
+      canonicalElement = canonicalElement.variable2;
     }
     return canonicalElement?.declaration;
   }

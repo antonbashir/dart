@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -14,6 +13,7 @@ import 'common/service_test_common.dart';
 import 'common/test_helper.dart';
 
 void test() {
+  debugger();
   print('start');
   debugger();
   print('stdout');
@@ -26,22 +26,30 @@ void test() {
 }
 
 var tests = <IsolateTest>[
+  // The testeee will print the VM service is listening message
+  // which could race with the regular stdio prints from the testee
+  // The first debugger stop ensures we have these VM service
+  // messages outputed before the testee writes anything to stdout.
+  hasStoppedAtBreakpoint,
+  (VmService service, IsolateRef isolateRef) async {
+    await service.resume(isolateRef.id!);
+  },
   hasStoppedAtBreakpoint,
   (VmService service, IsolateRef isolateRef) async {
     final completer = Completer<void>();
     late StreamSubscription stdoutSub;
     bool started = false;
     stdoutSub = service.onStdoutEvent.listen((event) async {
-      final output = utf8.decode(base64Decode(event.bytes!));
+      final output = decodeBase64(event.bytes!);
       // DDS buffers log history and sends each entry as an event upon the
       // initial stream subscription. Wait for the initial sentinel before
       // executing test logic.
       if (!started) {
-        started = output == 'start';
+        started = output == 'start\n';
         return;
       }
       expect(event.kind, EventKind.kWriteEvent);
-      expect(output, 'stdout');
+      expect(output, 'stdout\n');
       await stdoutSub.cancel();
       await service.streamCancel(EventStreams.kStdout);
       completer.complete();
@@ -56,8 +64,8 @@ var tests = <IsolateTest>[
     late StreamSubscription stdoutSub;
     stdoutSub = service.onStdoutEvent.listen((event) async {
       expect(event.kind, EventKind.kWriteEvent);
-      final decoded = utf8.decode(base64Decode(event.bytes!));
-      expect(decoded, 'print');
+      final decoded = decodeBase64(event.bytes!);
+      expect(decoded, 'print\n');
       await service.streamCancel(EventStreams.kStdout);
       await stdoutSub.cancel();
       completer.complete();
@@ -79,7 +87,7 @@ var tests = <IsolateTest>[
       // If this test starts failing, the VM service or dartdev has started
       // writing to stderr and this test should be updated.
       expect(event.kind, EventKind.kWriteEvent);
-      expect(utf8.decode(base64Decode(event.bytes!)), 'stderr');
+      expect(decodeBase64(event.bytes!), 'stderr');
       await service.streamCancel(EventStreams.kStderr);
       await stderrSub.cancel();
       completer.complete();

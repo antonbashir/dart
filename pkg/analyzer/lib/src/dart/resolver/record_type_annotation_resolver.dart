@@ -51,21 +51,26 @@ class RecordTypeAnnotationResolver {
       if (nameToken != null) {
         var name = nameToken.lexeme;
         if (name.startsWith('_')) {
-          errorReporter.reportErrorForToken(
-              CompileTimeErrorCode.INVALID_FIELD_NAME_PRIVATE, nameToken);
+          errorReporter.atToken(
+            nameToken,
+            CompileTimeErrorCode.INVALID_FIELD_NAME_PRIVATE,
+          );
         } else {
-          final index = RecordTypeExtension.positionalFieldIndex(name);
+          var index = RecordTypeExtension.positionalFieldIndex(name);
           if (index != null) {
             if (index < positionalCount &&
                 positionalFields.indexOf(field) != index) {
-              errorReporter.reportErrorForToken(
-                  CompileTimeErrorCode.INVALID_FIELD_NAME_POSITIONAL,
-                  nameToken);
+              errorReporter.atToken(
+                nameToken,
+                CompileTimeErrorCode.INVALID_FIELD_NAME_POSITIONAL,
+              );
             }
           } else if (RecordLiteralResolver.isForbiddenNameForRecordField(
               name)) {
-            errorReporter.reportErrorForToken(
-                CompileTimeErrorCode.INVALID_FIELD_NAME_FROM_OBJECT, nameToken);
+            errorReporter.atToken(
+              nameToken,
+              CompileTimeErrorCode.INVALID_FIELD_NAME_FROM_OBJECT,
+            );
           }
         }
       }
@@ -79,13 +84,13 @@ class RecordTypeAnnotationResolver {
   }
 
   void _buildType(RecordTypeAnnotationImpl node) {
-    final positionalFields = node.positionalFields.map((field) {
+    var positionalFields = node.positionalFields.map((field) {
       return RecordTypePositionalFieldImpl(
         type: field.type.typeOrThrow,
       );
     }).toList();
 
-    final namedFields = node.namedFields?.fields.map((field) {
+    var namedFields = node.namedFields?.fields.map((field) {
       return RecordTypeNamedFieldImpl(
         name: field.name.lexeme,
         type: field.type.typeOrThrow,

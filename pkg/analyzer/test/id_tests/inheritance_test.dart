@@ -19,19 +19,14 @@ import '../util/id_testing_helper.dart';
 main(List<String> args) async {
   Directory dataDir = Directory.fromUri(Platform.script
       .resolve('../../../_fe_analyzer_shared/test/inheritance/data'));
-  return runTests<String>(dataDir,
-      args: args,
-      createUriForFileName: createUriForFileName,
-      onFailure: onFailure,
-      runTest:
-          runTestFor(const _InheritanceDataComputer(), [analyzerDefaultConfig]),
-      skipMap: {
-        analyzerMarker: [
-          // These are CFE-centric tests for an opt-in/opt-out sdk.
-          'object_opt_in',
-          'object_opt_out',
-        ]
-      });
+  return runTests<String>(
+    dataDir,
+    args: args,
+    createUriForFileName: createUriForFileName,
+    onFailure: onFailure,
+    runTest:
+        runTestFor(const _InheritanceDataComputer(), [analyzerDefaultConfig]),
+  );
 }
 
 String supertypeToString(InterfaceType type) {
@@ -42,7 +37,7 @@ String supertypeToString(InterfaceType type) {
     var comma = '';
     for (var typeArgument in type.typeArguments) {
       sb.write(comma);
-      sb.write(typeArgument.getDisplayString(withNullability: true));
+      sb.write(typeArgument.getDisplayString());
       comma = ', ';
     }
     sb.write('>');
@@ -80,9 +75,6 @@ class _InheritanceDataExtractor extends AstDataExtractor<String> {
 
   @override
   String? computeElementValue(Id id, Element element) {
-    if (element is LibraryElement) {
-      return 'nnbd=${element.isNonNullableByDefault}';
-    }
     return null;
   }
 
@@ -94,8 +86,7 @@ class _InheritanceDataExtractor extends AstDataExtractor<String> {
 
       void registerMember(
           MemberId id, int offset, Object object, DartType type) {
-        registerValue(uri, offset, id,
-            type.getDisplayString(withNullability: true), object);
+        registerValue(uri, offset, id, type.getDisplayString(), object);
       }
 
       var interface = inheritance.getInterface(element);

@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:analysis_server/protocol/protocol.dart';
 import 'package:analysis_server/protocol/protocol_constants.dart';
 import 'package:analysis_server/protocol/protocol_generated.dart';
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
@@ -26,12 +25,6 @@ void main() {
 
 @reflectiveTest
 class AnalysisNotificationHighlightsTest extends HighlightsTestSupport {
-  @override
-  List<String> get experiments => [
-        Feature.inline_class.enableString,
-        ...super.experiments,
-      ];
-
   void assertHighlightText(TestCode testCode, int index, String expected) {
     var actual = _getHighlightText(testCode, index);
     if (actual != expected) {
@@ -116,6 +109,146 @@ void f() {
     assertHasStringRegion(HighlightRegionType.BUILT_IN, 'async');
     assertHasStringRegion(HighlightRegionType.BUILT_IN, 'async*');
     assertNoRegion(HighlightRegionType.BUILT_IN, 'async = false');
+  }
+
+  Future<void> test_BUILT_IN_augment_onClass() async {
+    var testCode = TestCode.parse(r'''
+augment class A {}
+''');
+    addTestFile(testCode.code);
+    await prepareHighlights();
+    assertHighlightText(testCode, -1, r'''
+0 + 7 |augment| BUILT_IN
+8 + 5 |class| KEYWORD
+14 + 1 |A| CLASS
+''');
+  }
+
+  Future<void> test_BUILT_IN_augment_onConstructor() async {
+    addTestFile('''
+class C {
+  augment C() {}
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  @SkippedTest(reason: 'The token is not supported')
+  Future<void> test_BUILT_IN_augment_onEnum() async {
+    addTestFile('''
+augment enum E {a, b}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onImport() async {
+    addTestFile('''
+import augment 'a.dart';
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'import');
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onInstanceGetter() async {
+    addTestFile('''
+class C {
+  augment int get g => 0;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onInstanceMethod() async {
+    addTestFile('''
+class C {
+  augment int m() => 0;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onInstanceSetter() async {
+    addTestFile('''
+class C {
+  augment set s(int x) {}
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onLibrary() async {
+    addTestFile('''
+augment library 'a.dart';
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'library');
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onMixin() async {
+    addTestFile('''
+augment mixin M {}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onOperator() async {
+    addTestFile('''
+class C {
+  augment int operator -() => 0;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onStaticMethod() async {
+    addTestFile('''
+class C {
+  augment static int m() => 0;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onTopLevelFunction() async {
+    addTestFile('''
+augment int f(int x) => 0;
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onTopLevelGetter() async {
+    addTestFile('''
+augment int get g => 0;
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onTopLevelSetter() async {
+    addTestFile('''
+augment set s(int x) {}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
+  }
+
+  Future<void> test_BUILT_IN_augment_onTopLevelVariable() async {
+    addTestFile('''
+augment int v = 0;
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.BUILT_IN, 'augment');
   }
 
   Future<void> test_BUILT_IN_await() async {
@@ -569,19 +702,6 @@ Never nnn() => throw '';
     assertHasRegion(HighlightRegionType.CLASS, 'Never nnn');
   }
 
-  Future<void> test_class_augmentKeyword() async {
-    final testCode = TestCode.parse(r'''
-augment class A {}
-''');
-    addTestFile(testCode.code);
-    await prepareHighlights();
-    assertHighlightText(testCode, -1, r'''
-0 + 7 |augment| BUILT_IN
-8 + 5 |class| KEYWORD
-14 + 1 |A| CLASS
-''');
-  }
-
   Future<void> test_class_constructor_fieldFormalParameter() async {
     var testCode = TestCode.parse(r'''
 class A {
@@ -604,7 +724,7 @@ class A {
   }
 
   Future<void> test_class_macroKeyword() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 macro class A {}
 ''');
     addTestFile(testCode.code);
@@ -1125,8 +1245,36 @@ void f() {
     assertHasRegion(HighlightRegionType.EXTENSION, 'E.bar()');
   }
 
+  Future<void> test_extension_augment() async {
+    var testCode = TestCode.parse(r'''
+augment extension E {}
+''');
+    addTestFile(testCode.code);
+    await prepareHighlights();
+    assertHighlightText(testCode, -1, r'''
+0 + 7 |augment| BUILT_IN
+8 + 9 |extension| KEYWORD
+18 + 1 |E| EXTENSION
+''');
+  }
+
+  Future<void> test_extension_augment_hasOnClause() async {
+    var testCode = TestCode.parse(r'''
+augment extension E on int {}
+''');
+    addTestFile(testCode.code);
+    await prepareHighlights();
+    assertHighlightText(testCode, -1, r'''
+0 + 7 |augment| BUILT_IN
+8 + 9 |extension| KEYWORD
+18 + 1 |E| EXTENSION
+20 + 2 |on| BUILT_IN
+23 + 3 |int| CLASS
+''');
+  }
+
   Future<void> test_extensionType() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 extension type const A<T>.named(int it) implements num {}
 ''');
     addTestFile(testCode.code);
@@ -1256,6 +1404,28 @@ void f() {
     assertHasRegion(HighlightRegionType.IMPORT_PREFIX, 'ma.max');
   }
 
+  Future<void> test_IMPORT_PREFIX_methodInvocation() async {
+    addTestFile('''
+import 'dart:math' as ma;
+void f() {
+  ma.max(1, 2);
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.IMPORT_PREFIX, 'ma;');
+    assertHasRegion(HighlightRegionType.IMPORT_PREFIX, 'ma.max');
+  }
+
+  Future<void> test_IMPORT_PREFIX_namedType() async {
+    addTestFile('''
+import 'dart:math' as math;
+void f(math.Random r) {}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.IMPORT_PREFIX, 'math;');
+    assertHasRegion(HighlightRegionType.IMPORT_PREFIX, 'math.Random');
+  }
+
   Future<void> test_INSTANCE_FIELD() async {
     addTestFile('''
 class A {
@@ -1289,7 +1459,7 @@ class A {
   }
 
   Future<void> test_instanceCreation_class() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 class A {
   A.named(int it);
 }
@@ -1307,7 +1477,7 @@ void f() {
   }
 
   Future<void> test_instanceCreation_extensionType() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 extension type A.named(T it) {}
 void f() {
   [!A.named(0)!];
@@ -1385,6 +1555,70 @@ class C = Object with A;
     assertHasRegion(HighlightRegionType.KEYWORD, 'while (true) {}');
     assertHasRegion(HighlightRegionType.KEYWORD, 'while (true);');
     assertHasRegion(HighlightRegionType.KEYWORD, 'with A;');
+  }
+
+  Future<void> test_KEYWORD_augmented_onInstanceGetter() async {
+    addTestFile('''
+class C {
+  augment int get g => augmented;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onInstanceMethod() async {
+    addTestFile('''
+class C {
+  augment int m() => augmented();
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onInstanceSetter() async {
+    addTestFile('''
+class C {
+  augment set s(int x) { augmented = x; }
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onStaticMethod() async {
+    addTestFile('''
+class C {
+  augment static int m() => augmented();
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onTopLevelFunction() async {
+    addTestFile('''
+augment int f(int x) => augmented(x);
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onTopLevelGetter() async {
+    addTestFile('''
+augment int get g => augmented;
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
+  }
+
+  Future<void> test_KEYWORD_augmented_onTopLevelSetter() async {
+    addTestFile('''
+augment set s(int x) { augmented = x; }
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.KEYWORD, 'augmented');
   }
 
   Future<void> test_KEYWORD_const_constructor() async {
@@ -1698,7 +1932,7 @@ void g() {
   }
 
   Future<void> test_namedType_extensionType() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 extension type A<T>(T it) {}
 void f([!A<int>!] a) {}
 ''');
@@ -1819,7 +2053,7 @@ void f(Object o) {
   }
 
   Future<void> test_propertyAccess_extensionTypeName() async {
-    final testCode = TestCode.parse(r'''
+    var testCode = TestCode.parse(r'''
 extension type A.named(T it) {
   static const V = 0;
 }
@@ -1833,6 +2067,25 @@ void f() {
 68 + 1 |A| EXTENSION_TYPE
 70 + 1 |V| STATIC_GETTER_REFERENCE
 ''');
+  }
+
+  Future<void> test_record_field() async {
+    addTestFile(r'''
+void f((int, {int field1}) record) {
+  record.$1; // 1
+  record.field1; // 2
+  (1,).$1; // 3
+  (field1: 1).field1; // 4
+  (1,).notResolved;
+}
+''');
+    await prepareHighlights();
+    assertHasRegion(HighlightRegionType.INSTANCE_FIELD_REFERENCE, r'$1; // 1');
+    assertHasRegion(
+        HighlightRegionType.INSTANCE_FIELD_REFERENCE, 'field1; // 2');
+    assertHasRegion(HighlightRegionType.INSTANCE_FIELD_REFERENCE, r'$1; // 3');
+    assertHasRegion(HighlightRegionType.UNRESOLVED_INSTANCE_MEMBER_REFERENCE,
+        'notResolved');
   }
 
   Future<void> test_recordTypeAnnotation_named() async {
@@ -1857,7 +2110,7 @@ void f() {
   }
 
   Future<void> test_recordTypeLiteral_named() async {
-    final code = '(0, f1: 1, f2: 2)';
+    var code = '(0, f1: 1, f2: 2)';
     addTestFile('''
 final r = $code;
 ''');
@@ -2301,7 +2554,8 @@ class HighlightsTestSupport extends PubPackageAnalysisServerTest {
         }
         if (!(c >= 'a'.codeUnitAt(0) && c <= 'z'.codeUnitAt(0) ||
             c >= 'A'.codeUnitAt(0) && c <= 'Z'.codeUnitAt(0) ||
-            c >= '0'.codeUnitAt(0) && c <= '9'.codeUnitAt(0))) {
+            c >= '0'.codeUnitAt(0) && c <= '9'.codeUnitAt(0) ||
+            c == r'$'.codeUnitAt(0))) {
           break;
         }
         length++;
@@ -2323,7 +2577,8 @@ class HighlightsTestSupport extends PubPackageAnalysisServerTest {
       fail('SERVER_NOTIFICATION_ERROR');
     }
     if (notification.event == ANALYSIS_NOTIFICATION_HIGHLIGHTS) {
-      var params = AnalysisHighlightsParams.fromNotification(notification);
+      var params = AnalysisHighlightsParams.fromNotification(notification,
+          clientUriConverter: server.uriConverter);
       if (params.file == testFile.path) {
         regions = params.regions;
         _resultsAvailable.complete();

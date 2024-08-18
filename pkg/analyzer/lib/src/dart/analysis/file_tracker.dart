@@ -49,19 +49,12 @@ class FileTracker {
 
   FileTracker(this._logger, this._fsState, this._fileContentStrategy);
 
-  /// Returns the path to exactly one that needs analysis.  Throws a
-  /// [StateError] if no files need analysis.
-  String get anyPendingFile {
-    if (_pendingChangedFiles.isNotEmpty) {
-      return _pendingChangedFiles.first;
-    }
-    if (_pendingImportFiles.isNotEmpty) {
-      return _pendingImportFiles.first;
-    }
-    if (_pendingErrorFiles.isNotEmpty) {
-      return _pendingErrorFiles.first;
-    }
-    return _pendingFiles.first;
+  /// Returns the path to exactly one that needs analysis.
+  String? get anyPendingFile {
+    return _pendingChangedFiles.firstOrNull ??
+        _pendingImportFiles.firstOrNull ??
+        _pendingErrorFiles.firstOrNull ??
+        _pendingFiles.firstOrNull;
   }
 
   /// Returns a boolean indicating whether there are any files that have
@@ -185,9 +178,9 @@ class FileTracker {
       }
 
       // Add files that directly import the changed file.
-      for (final addedPath in addedFiles) {
-        final addedFile = _fsState.getFileForPath(addedPath);
-        final addedKind = addedFile.kind;
+      for (var addedPath in addedFiles) {
+        var addedFile = _fsState.getFileForPath(addedPath);
+        var addedKind = addedFile.kind;
         if (addedKind is LibraryOrAugmentationFileKind) {
           if (addedKind.importsFile(file)) {
             pendingImportFiles.add(addedPath);

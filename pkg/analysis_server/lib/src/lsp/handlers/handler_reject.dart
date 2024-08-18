@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/lsp_protocol/protocol.dart';
+import 'package:analysis_server/src/lsp/error_or.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
 
 /// A [MessageHandler] that rejects specific types of messages with a given
@@ -17,11 +18,11 @@ class RejectMessageHandler extends SharedMessageHandler<Object?, void> {
       super.server, this.handlesMessage, this.errorCode, this.errorMessage);
 
   @override
-  LspJsonHandler<void> get jsonHandler => NullJsonHandler;
+  LspJsonHandler<void> get jsonHandler => nullJsonHandler;
 
   @override
   ErrorOr<void> handle(
       Object? params, MessageInfo message, CancellationToken token) {
-    return error(errorCode, errorMessage, null);
+    return error(errorCode, errorMessage);
   }
 }

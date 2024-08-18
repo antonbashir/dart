@@ -26,6 +26,7 @@
 #include "vm/longjump.h"
 #include "vm/object_store.h"
 #include "vm/parser.h"
+#include "vm/pointer_tagging.h"
 #include "vm/raw_object.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
@@ -70,6 +71,11 @@ DECLARE_FLAG(int, stacktrace_every);
 DECLARE_FLAG(charp, stacktrace_filter);
 DECLARE_FLAG(int, gc_every);
 DECLARE_FLAG(bool, trace_compiler);
+
+DEFINE_FLAG(bool,
+            align_all_loops,
+            false,
+            "Align all loop headers to 32 byte boundary");
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
 compiler::LRState ComputeInnerLRState(const FlowGraph& flow_graph) {
@@ -142,7 +148,7 @@ FlowGraphCompiler::FlowGraphCompiler(
       assembler_(assembler),
       parsed_function_(parsed_function),
       flow_graph_(*flow_graph),
-      block_order_(*flow_graph->CodegenBlockOrder(is_optimizing)),
+      block_order_(*flow_graph->CodegenBlockOrder()),
       current_block_(nullptr),
       exception_handlers_list_(nullptr),
       pc_descriptors_list_(nullptr),
@@ -429,22 +435,18 @@ void FlowGraphCompiler::RecordCatchEntryMoves(Environment* env) {
         catch_block->initial_definitions();
     catch_entry_moves_maps_builder_->NewMapping(assembler()->CodeSize());
 
-    const intptr_t num_direct_parameters = flow_graph().num_direct_parameters();
-    const intptr_t ex_idx =
-        catch_block->raw_exception_var() != nullptr
-            ? flow_graph().EnvIndex(catch_block->raw_exception_var())
-            : -1;
-    const intptr_t st_idx =
-        catch_block->raw_stacktrace_var() != nullptr
-            ? flow_graph().EnvIndex(catch_block->raw_stacktrace_var())
-            : -1;
     for (intptr_t i = 0; i < flow_graph().variable_count(); ++i) {
       // Don't sync captured parameters. They are not in the environment.
       if (flow_graph().captured_parameters()->Contains(i)) continue;
-      // Don't sync exception or stack trace variables.
-      if (i == ex_idx || i == st_idx) continue;
+      auto param = (*idefs)[i]->AsParameter();
+
       // Don't sync values that have been replaced with constants.
-      if ((*idefs)[i]->IsConstant()) continue;
+      if (param == nullptr) continue;
+      RELEASE_ASSERT(param->env_index() == i);
+      Location dst = param->location();
+
+      // Don't sync exception or stack trace variables.
+      if (dst.IsRegister()) continue;
 
       Location src = env->LocationAt(i);
       // Can only occur if AllocationSinking is enabled - and it is disabled
@@ -452,9 +454,8 @@ void FlowGraphCompiler::RecordCatchEntryMoves(Environment* env) {
       ASSERT(!src.IsInvalid());
       const Representation src_type =
           env->ValueAt(i)->definition()->representation();
-      intptr_t dest_index = i - num_direct_parameters;
-      const auto move =
-          CatchEntryMoveFor(assembler(), src_type, src, dest_index);
+      const auto move = CatchEntryMoveFor(assembler(), src_type, src,
+                                          LocationToStackIndex(dst));
       if (!move.IsRedundant()) {
         catch_entry_moves_maps_builder_->Append(move);
       }
@@ -655,6 +656,17 @@ void FlowGraphCompiler::CompileGraph() {
   }
 }
 
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
+// Returns true if function is marked with vm:align-loops pragma.
+static bool IsMarkedWithAlignLoops(const Function& function) {
+  Object& options = Object::Handle();
+  return Library::FindPragma(dart::Thread::Current(),
+                             /*only_core=*/false, function,
+                             Symbols::vm_align_loops(),
+                             /*multiple=*/false, &options);
+}
+#endif  // defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
+
 void FlowGraphCompiler::VisitBlocks() {
   CompactBlocks();
   if (compiler::Assembler::EmittingComments()) {
@@ -672,6 +684,11 @@ void FlowGraphCompiler::VisitBlocks() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   const auto inner_lr_state = ComputeInnerLRState(flow_graph());
 #endif  // defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
+  const bool should_align_loops =
+      FLAG_align_all_loops || IsMarkedWithAlignLoops(function());
+#endif  // defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
 
   for (intptr_t i = 0; i < block_order().length(); ++i) {
     // Compile the block entry.
@@ -703,7 +720,20 @@ void FlowGraphCompiler::VisitBlocks() {
       for (LoopInfo* l = entry->loop_info(); l != nullptr; l = l->outer()) {
         assembler()->Comment("  Loop %" Pd "", l->id());
       }
+      if (entry->IsLoopHeader()) {
+        assembler()->Comment("  Loop Header");
+      }
     }
+
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
+    if (should_align_loops && entry->IsLoopHeader() &&
+        kPreferredLoopAlignment > 1) {
+      assembler()->mark_should_be_aligned();
+      assembler()->Align(kPreferredLoopAlignment, 0);
+    }
+#else
+    static_assert(kPreferredLoopAlignment == 1);
+#endif  // defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64)
 
     BeginCodeSourceRange(entry->source());
     ASSERT(pending_deoptimization_env_ == nullptr);
@@ -1043,6 +1073,9 @@ void FlowGraphCompiler::RecordSafepoint(LocationSummary* locs,
       const auto move_arg =
           instr->ArgumentValueAt(i)->instruction()->AsMoveArgument();
       const auto rep = move_arg->representation();
+      if (move_arg->is_register_move()) {
+        continue;
+      }
 
       ASSERT(rep == kTagged || rep == kUnboxedInt64 || rep == kUnboxedDouble);
       static_assert(compiler::target::kIntSpillFactor ==
@@ -1410,28 +1443,6 @@ bool FlowGraphCompiler::TryIntrinsifyHelper() {
   compiler::Label exit;
   set_intrinsic_slow_path_label(&exit);
 
-  if (FLAG_intrinsify) {
-    const auto& function = parsed_function().function();
-    if (function.IsMethodExtractor()) {
-#if !defined(TARGET_ARCH_IA32)
-      auto& extracted_method =
-          Function::ZoneHandle(function.extracted_method_closure());
-      auto& klass = Class::Handle(extracted_method.Owner());
-      const intptr_t type_arguments_field_offset =
-          compiler::target::Class::HasTypeArgumentsField(klass)
-              ? (compiler::target::Class::TypeArgumentsFieldOffset(klass) -
-                 kHeapObjectTag)
-              : 0;
-
-      SpecialStatsBegin(CombinedCodeStatistics::kTagIntrinsics);
-      GenerateMethodExtractorIntrinsic(extracted_method,
-                                       type_arguments_field_offset);
-      SpecialStatsEnd(CombinedCodeStatistics::kTagIntrinsics);
-      return true;
-#endif  // !defined(TARGET_ARCH_IA32)
-    }
-  }
-
   EnterIntrinsicMode();
 
   SpecialStatsBegin(CombinedCodeStatistics::kTagIntrinsics);
@@ -1593,8 +1604,6 @@ void FlowGraphCompiler::GenerateStringTypeCheck(
   GrowableArray<intptr_t> args;
   args.Add(kOneByteStringCid);
   args.Add(kTwoByteStringCid);
-  args.Add(kExternalOneByteStringCid);
-  args.Add(kExternalTwoByteStringCid);
   CheckClassIds(class_id_reg, args, is_instance_lbl, is_not_instance_lbl);
 }
 
@@ -1855,7 +1864,6 @@ void FlowGraphCompiler::AllocateRegistersLocally(Instruction* instr) {
   }
 }
 
-
 const ICData* FlowGraphCompiler::GetOrAddInstanceCallICData(
     intptr_t deopt_id,
     const String& target_name,
@@ -2031,10 +2039,9 @@ bool FlowGraphCompiler::LookupMethodFor(int class_id,
   if (class_is_abstract_return != nullptr) {
     *class_is_abstract_return = cls.is_abstract();
   }
-  const bool allow_add = false;
   Function& target_function =
       Function::Handle(zone, Resolver::ResolveDynamicForReceiverClass(
-                                 cls, name, args_desc, allow_add));
+                                 cls, name, args_desc, /*allow_add=*/false));
   if (target_function.IsNull()) return false;
   *fn_return = target_function.ptr();
   return true;
@@ -2051,16 +2058,31 @@ void FlowGraphCompiler::EmitPolymorphicInstanceCall(
     intptr_t total_ic_calls,
     bool receiver_can_be_smi) {
   ASSERT(call != nullptr);
-  if (FLAG_polymorphic_with_deopt) {
-    compiler::Label* deopt =
-        AddDeoptStub(deopt_id, ICData::kDeoptPolymorphicInstanceCallTestFail);
-    compiler::Label ok;
-    EmitTestAndCall(targets, call->function_name(), args_info,
-                    deopt,  // No cid match.
-                    &ok,    // Found cid.
-                    deopt_id, source, locs, complete, total_ic_calls,
-                    call->entry_kind());
-    assembler()->Bind(&ok);
+  if (!FLAG_precompiled_mode) {
+    if (FLAG_polymorphic_with_deopt) {
+      compiler::Label* deopt =
+          AddDeoptStub(deopt_id, ICData::kDeoptPolymorphicInstanceCallTestFail);
+      compiler::Label ok;
+      EmitTestAndCall(targets, call->function_name(), args_info,
+                      deopt,  // No cid match.
+                      &ok,    // Found cid.
+                      deopt_id, source, locs, complete, total_ic_calls,
+                      call->entry_kind());
+      assembler()->Bind(&ok);
+    } else {
+      compiler::Label megamorphic, ok;
+      EmitTestAndCall(targets, call->function_name(), args_info,
+                      &megamorphic,  // No cid match.
+                      &ok,           // Found cid.
+                      deopt_id, source, locs, complete, total_ic_calls,
+                      call->entry_kind());
+      assembler()->Jump(&ok);
+      assembler()->Bind(&megamorphic);
+      // Instead of deoptimizing, do a megamorphic call when no matching
+      // cid found.
+      EmitMegamorphicInstanceCall(*call->ic_data(), deopt_id, source, locs);
+      assembler()->Bind(&ok);
+    }
   } else {
     if (complete) {
       compiler::Label ok;
@@ -2715,10 +2737,7 @@ void FlowGraphCompiler::GenerateInstanceOf(const InstructionSource& source,
     // See NullIsInstanceOf().
     __ CompareObject(TypeTestABI::kInstanceReg, Object::null_object());
     __ BranchIf(EQUAL,
-                (unwrapped_type.IsNullable() ||
-                 (unwrapped_type.IsLegacy() && unwrapped_type.IsNeverType()))
-                    ? &is_instance
-                    : &is_not_instance);
+                unwrapped_type.IsNullable() ? &is_instance : &is_not_instance);
   }
 
   // Generate inline instanceof test.
@@ -2926,8 +2945,7 @@ void FlowGraphCompiler::GenerateCallerChecksForAssertAssignable(
 
   if (dst_type.IsObjectType()) {
     // Special case: non-nullable Object.
-    ASSERT(dst_type.IsNonNullable() &&
-           isolate_group()->use_strict_null_safety_checks());
+    ASSERT(dst_type.IsNonNullable());
     __ CompareObject(TypeTestABI::kInstanceReg, Object::null_object());
     __ BranchIf(NOT_EQUAL, done);
     // Fall back to type testing stub in caller to throw the exception.
@@ -2949,8 +2967,7 @@ void FlowGraphCompiler::GenerateCallerChecksForAssertAssignable(
     // Special case: Instantiate the type parameter on the caller side, invoking
     // the TTS of the corresponding type parameter in the caller.
     const TypeParameter& type_param = TypeParameter::Cast(dst_type);
-    if (isolate_group()->use_strict_null_safety_checks() &&
-        !type_param.IsNonNullable()) {
+    if (!type_param.IsNonNullable()) {
       // If the type parameter is nullable when running in strong mode, we need
       // to handle null before calling the TTS because the type parameter may be
       // instantiated with a non-nullable type, where the TTS rejects null.
@@ -3085,10 +3102,25 @@ void ThrowErrorSlowPathCode::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ Bind(entry_label());
   EmitCodeAtSlowPathEntry(compiler);
   LocationSummary* locs = instruction()->locs();
-  // Save registers as they are needed for lazy deopt / exception handling.
+  const bool has_frame = compiler->flow_graph().graph_entry()->NeedsFrame();
   if (use_shared_stub) {
+    if (!has_frame) {
+#if !defined(TARGET_ARCH_IA32)
+      ASSERT(__ constant_pool_allowed());
+      __ set_constant_pool_allowed(false);
+#endif
+      __ EnterDartFrame(0);
+    }
     EmitSharedStubCall(compiler, live_fpu_registers);
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+    if (!has_frame) {
+      // Undo EnterDartFrame for the code generated after this slow path.
+      RESTORES_LR_FROM_FRAME({});
+    }
+#endif
   } else {
+    ASSERT(has_frame);
+    // Save registers as they are needed for lazy deopt / exception handling.
     compiler->SaveLiveRegisters(locs);
     PushArgumentsForRuntimeCall(compiler);
     __ CallRuntime(runtime_entry_, num_args);
@@ -3182,8 +3214,21 @@ void NullErrorSlowPath::EmitSharedStubCall(FlowGraphCompiler* compiler,
 void RangeErrorSlowPath::PushArgumentsForRuntimeCall(
     FlowGraphCompiler* compiler) {
   LocationSummary* locs = instruction()->locs();
-  __ PushRegisterPair(locs->in(CheckBoundBaseInstr::kIndexPos).reg(),
-                      locs->in(CheckBoundBaseInstr::kLengthPos).reg());
+  if (GenericCheckBoundInstr::UseUnboxedRepresentation()) {
+    // Can't pass unboxed int64 value directly to runtime call, as all
+    // arguments are expected to be tagged (boxed).
+    // The unboxed int64 argument is passed through a dedicated slot in Thread.
+    // TODO(dartbug.com/33549): Clean this up when unboxed values
+    // could be passed as arguments.
+    __ StoreToOffset(locs->in(CheckBoundBaseInstr::kLengthPos).reg(), THR,
+                     compiler::target::Thread::unboxed_runtime_arg_offset());
+    __ StoreToOffset(
+        locs->in(CheckBoundBaseInstr::kIndexPos).reg(), THR,
+        compiler::target::Thread::unboxed_runtime_arg_offset() + kInt64Size);
+  } else {
+    __ PushRegisterPair(locs->in(CheckBoundBaseInstr::kIndexPos).reg(),
+                        locs->in(CheckBoundBaseInstr::kLengthPos).reg());
+  }
 }
 
 void RangeErrorSlowPath::EmitSharedStubCall(FlowGraphCompiler* compiler,
@@ -3199,6 +3244,14 @@ void RangeErrorSlowPath::EmitSharedStubCall(FlowGraphCompiler* compiler,
           : object_store->range_error_stub_without_fpu_regs_stub());
   compiler->EmitCallToStub(stub);
 #endif
+}
+
+void WriteErrorSlowPath::PushArgumentsForRuntimeCall(
+    FlowGraphCompiler* compiler) {
+  LocationSummary* locs = instruction()->locs();
+  __ PushRegister(locs->in(CheckWritableInstr::kReceiver).reg());
+  __ PushImmediate(
+      compiler::target::ToRawSmi(instruction()->AsCheckWritable()->kind()));
 }
 
 void WriteErrorSlowPath::EmitSharedStubCall(FlowGraphCompiler* compiler,
@@ -3462,8 +3515,7 @@ void FlowGraphCompiler::EmitMoveConst(const compiler::ffi::NativeLocation& dst,
     if (src.IsPairLocation()) {
       for (intptr_t i : {0, 1}) {
         const Representation src_type_split =
-            compiler::ffi::NativeType::FromUnboxedRepresentation(zone_,
-                                                                 src_type)
+            compiler::ffi::NativeType::FromRepresentation(zone_, src_type)
                 .Split(zone_, i)
                 .AsRepresentation();
         const auto& intermediate_native =
