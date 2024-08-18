@@ -12708,7 +12708,7 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t stack,
                           uint32_t size,
-                          const Function& launcher);
+                          uword entry);
 
   static intptr_t stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);

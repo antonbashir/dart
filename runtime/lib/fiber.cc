@@ -9,10 +9,20 @@
 #include "vm/native_entry.h"
 
 namespace dart {
-DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
+DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 4) {
   GET_NON_NULL_NATIVE_ARGUMENT(Pointer, stack, arguments->NativeArgAt(1));
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(2));
-  GET_NON_NULL_NATIVE_ARGUMENT(Function, entry, arguments->NativeArgAt(3));
-  return Coroutine::New(stack.NativeAddress(), size.AsTruncatedUint32Value(), entry);
+  GET_NON_NULL_NATIVE_ARGUMENT(Instance, entry_instance,
+                               arguments->NativeArgAt(3));
+  uword entry;
+  if (entry_instance.IsClosure()) {
+    entry = Function::Handle(zone, Closure::Cast(entry_instance).function())
+                .entry_point();
+  }
+  if (entry_instance.IsFunction()) {
+    entry = Function::Cast(entry_instance).entry_point();
+  }
+  return Coroutine::New(stack.NativeAddress(), size.AsTruncatedUint32Value(),
+                        entry);
 }
 }  // namespace dart

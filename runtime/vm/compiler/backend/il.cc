@@ -8521,9 +8521,21 @@ LocationSummary* Call1ArgStubInstr::MakeLocationSummary(Zone* zone,
       locs->set_in(
           0, Location::RegisterLocation(FfiAsyncCallbackSendStubABI::kArgsReg));
       break;
+  }
+  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  return locs;
+}
+
+LocationSummary* Call2ArgStubInstr::MakeLocationSummary(Zone* zone,
+                                                        bool opt) const {
+  const intptr_t kNumInputs = 2;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  switch (stub_id_) {
     case StubId::kCoroutineTransfer:
-      locs->set_in(
-          0, Location::RegisterLocation(CallingConventions::kArg1Reg));
+      locs->set_in(0, Location::RegisterLocation(CallingConventions::kArg1Reg));
+      locs->set_in(1, Location::RegisterLocation(CallingConventions::kArg2Reg));
       break;
   }
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
@@ -8549,6 +8561,15 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
     case StubId::kFfiAsyncCallbackSend:
       stub = object_store->ffi_async_callback_send_stub();
       break;
+  }
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
+                             locs(), deopt_id(), env());
+}
+
+void Call2ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  switch (stub_id_) {
     case StubId::kCoroutineTransfer:
       stub = object_store->coroutine_transfer_stub();
       break;

@@ -414,6 +414,10 @@ class FlowGraphBuilder : public BaseFlowGraphBuilder {
   // Generates Call1ArgStub instruction.
   Fragment Call1ArgStub(TokenPosition position,
                         Call1ArgStubInstr::StubId stub_id);
+  
+  // Generates Call2ArgStub instruction.
+  Fragment Call2ArgStub(TokenPosition position,
+                        Call2ArgStubInstr::StubId stub_id);
 
   // Generates Suspend instruction.
   Fragment Suspend(TokenPosition position, SuspendInstr::StubId stub_id);

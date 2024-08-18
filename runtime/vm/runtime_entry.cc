@@ -3759,10 +3759,9 @@ DEFINE_RUNTIME_ENTRY(ResumeFrame, 2) {
   }
 }
 
-DEFINE_RUNTIME_ENTRY(CoroutineTransfer, 1) {  
+DEFINE_RUNTIME_ENTRY(CoroutineTransfer, 2) {  
   const Object& input = Object::Handle(zone, arguments.ArgAt(0));
   OS::Print("%s\n", input.ToCString());
-  arguments.SetReturn(Object::Handle(zone, Double::New(0.0, SpaceForRuntimeAllocation())));
 }
 
 void OnEveryRuntimeEntryCall(Thread* thread,

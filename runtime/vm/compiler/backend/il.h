@@ -545,6 +545,7 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
+  M(Call2ArgStub, _)                                                           \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11433,7 +11434,6 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
     kInitAsyncStar,
     kInitSyncStar,
     kFfiAsyncCallbackSend,
-    kCoroutineTransfer,
   };
 
   Call1ArgStubInstr(const InstructionSource& source,
@@ -11472,6 +11472,54 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
+};
+
+// Generic instruction to call 2-argument stubs specified using [StubId].
+class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
+ public:
+  enum class StubId {
+    kCoroutineTransfer,
+  };
+
+  Call2ArgStubInstr(const InstructionSource& source,
+                    StubId stub_id,
+                    Value* first_operand,
+                    Value* second_operand,
+                    intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id),
+        stub_id_(stub_id),
+        token_pos_(source.token_pos) {
+    SetInputAt(0, first_operand);
+    SetInputAt(1, first_operand);
+  }
+
+  Value* first_operand() const { return inputs_[0]; }
+  Value* second_operand() const { return inputs_[1]; }
+  StubId stub_id() const { return stub_id_; }
+  virtual TokenPosition token_pos() const { return token_pos_; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(Call2ArgStub);
+  PRINT_OPERANDS_TO_SUPPORT
+
+#define FIELD_LIST(F)                                                          \
+  F(const StubId, stub_id_)                                                    \
+  F(const TokenPosition, token_pos_)
+
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(Call2ArgStubInstr,
+                                          TemplateDefinition,
+                                          FIELD_LIST)
+#undef FIELD_LIST
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(Call2ArgStubInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].

@@ -1277,10 +1277,11 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       break;
     }
     case MethodRecognizer::kCoroutine_transfer: {
-      ASSERT_EQUAL(function.NumParameters(), 1);
+      ASSERT_EQUAL(function.NumParameters(), 2);
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += Call1ArgStub(TokenPosition::kNoSource,
-                           Call1ArgStubInstr::StubId::kCoroutineTransfer);
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += Call2ArgStub(TokenPosition::kNoSource,
+                           Call2ArgStubInstr::StubId::kCoroutineTransfer);
       break;
     }
     case MethodRecognizer::kTypedList_GetInt8:
@@ -4745,6 +4746,14 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
                                         Call1ArgStubInstr::StubId stub_id) {
   Call1ArgStubInstr* instr = new (Z) Call1ArgStubInstr(
       InstructionSource(position), stub_id, Pop(), GetNextDeoptId());
+  Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::Call2ArgStub(TokenPosition position,
+                                        Call2ArgStubInstr::StubId stub_id) {
+  Call2ArgStubInstr* instr = new (Z) Call2ArgStubInstr(
+      InstructionSource(position), stub_id, Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

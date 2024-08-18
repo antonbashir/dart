@@ -2213,9 +2213,9 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ EnterStubFrame();
   __ PushObject(NullObject());  // Make space on stack for the return value.
-  __ PushRegister(CallingConventions::kArg1Reg);
-  __ CallRuntime(kCoroutineTransferRuntimeEntry, 1);
-  __ Drop(1);                                      // Drop argument
+  __ PushRegistersInOrder({CallingConventions::kArg1Reg, CallingConventions::kArg2Reg});
+  __ CallRuntime(kCoroutineTransferRuntimeEntry, 2);
+  __ Drop(2);                                      // Drop argument
   __ PopRegister(CallingConventions::kReturnReg);  // Get result.
   __ LeaveStubFrame();
   __ Ret();

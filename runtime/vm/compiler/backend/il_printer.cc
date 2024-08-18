@@ -1570,12 +1570,21 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
     case StubId::kFfiAsyncCallbackSend:
       name = "FfiAsyncCallbackSend";
       break;
-    case StubId::kCoroutineTransfer:
-      name = "CoroutineTransfer";
-      break;
   }
   f->Printf("%s(", name);
   operand()->PrintTo(f);
+  f->AddString(")");
+}
+void Call2ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "";
+  switch (stub_id_) {
+    case StubId::kCoroutineTransfer:
+      name = "Coroutine transfer";
+      break;
+  }
+  f->Printf("%s(", name);
+  first_operand()->PrintTo(f);
+  second_operand()->PrintTo(f);
   f->AddString(")");
 }
 
