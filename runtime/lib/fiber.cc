@@ -4,13 +4,15 @@
 
 #include "vm/bootstrap_natives.h"
 
+#include "vm/compiler/method_recognizer.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/native_entry.h"
 
 namespace dart {
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
-  ASSERT(
-      TypeArguments::CheckedHandle(zone, arguments->NativeArgAt(0)).IsNull());
-  GET_NON_NULL_NATIVE_ARGUMENT(Smi, stack_size, arguments->NativeArgAt(1));
-  return Coroutine::New(stack_size.AsInt64Value());
+  GET_NON_NULL_NATIVE_ARGUMENT(Pointer, stack, arguments->NativeArgAt(1));
+  GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(2));
+  GET_NON_NULL_NATIVE_ARGUMENT(Function, entry, arguments->NativeArgAt(3));
+  return Coroutine::New(stack.NativeAddress(), size.AsTruncatedUint32Value(), entry);
 }
 }  // namespace dart

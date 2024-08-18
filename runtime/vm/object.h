@@ -12706,10 +12706,16 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uint32_t stack_size, Heap::Space space = Heap::kNew);
+  static CoroutinePtr New(uintptr_t stack,
+                          uint32_t size,
+                          const Function& launcher);
 
-  static intptr_t stack_size_offset() {
-    return OFFSET_OF(UntaggedCoroutine, stack_size_);
+  static intptr_t stack_pointer_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
+  }
+
+  static intptr_t entry_point_offset() {
+    return OFFSET_OF(UntaggedCoroutine, entry_point_);
   }
 
  private:
