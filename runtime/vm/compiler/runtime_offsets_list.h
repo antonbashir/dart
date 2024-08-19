@@ -402,6 +402,7 @@
   FIELD(Coroutine, stack_pointer_offset)                                       \
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, initialize_offset)                                          \
+  FIELD(Coroutine, program_counter_offset)                                     \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \

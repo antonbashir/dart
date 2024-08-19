@@ -12711,16 +12711,20 @@ class Coroutine : public Instance {
                           uword entry,
                           uword initialize);
 
-  static intptr_t stack_pointer_offset() {
+  static uword stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
   }
 
-  static intptr_t entry_offset() {
+  static uword entry_offset() {
     return OFFSET_OF(UntaggedCoroutine, entry_);
   }
 
-  static intptr_t initialize_offset() {
+  static uword initialize_offset() {
     return OFFSET_OF(UntaggedCoroutine, initialize_);
+  }
+
+  static word program_counter_offset() {
+    return OFFSET_OF(UntaggedCoroutine, program_counter_);
   }
 
  private:

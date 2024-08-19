@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include <initializer_list>
+#include "platform/globals.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
 #include "vm/flags.h"
@@ -2212,60 +2213,92 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 }
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
-  const Register kFromCoroutine = CallingConventions::kArg1Reg;
-  const Register kToCoroutine = CallingConventions::kArg2Reg;
-  const Register kFromStackPointer = CallingConventions::kArg3Reg;
-  const Register kToStackPointer = CallingConventions::kArg4Reg;
-  const Register kTemp = CallingConventions::kArg4Reg;
-  __ EnterDartFrame(0);
-  __ LoadFieldFromOffset(kFromStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());  
-  __ LoadFieldFromOffset(kToStackPointer, kToCoroutine, target::Coroutine::stack_pointer_offset());
-  __ Breakpoint();
-  if (!FLAG_precompiled_mode) {
-    // __ MoveRegister(kTemp, kSuspendState);
-    // __ AddRegisters(kTemp, kFrameSize);
-    // __ LoadFromOffset(CODE_REG, kTemp, target::SuspendState::payload_offset() - kHeapObjectTag + target::frame_layout.code_from_fp * target::kWordSize);
-    // __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
-    // __ LoadPoolPointer(PP);
-  }
-  // __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
-  // __ SubRegisters(SPREG, kFrameSize);
-  __ Comment("Copy frame from SuspendState");
-  //intptr_t num_saved_regs = 0;
-  for (Register reg : DartCallingConvention::kCpuRegistersForArgs) {
-    __ PushRegister(reg);
-  }
-  __ StoreMemoryValue(SPREG, kFromStackPointer, 0);
-  __ StoreMemoryValue(kToStackPointer, SPREG, 0);
-  for (Register reg : DartCallingConvention::kCpuRegistersForArgs) {
-    __ PopRegister(reg);
-  }
-  // if (kSrcFrame == THR) {
-  //   __ PushRegister(THR);
-  //   ++num_saved_regs;
-  // }
-  // if (kDstFrame == CODE_REG) {
-  //   __ PushRegister(CODE_REG);
-  //   ++num_saved_regs;
-  // }
-  // __ AddImmediate(kSrcFrame, kSuspendState, target::SuspendState::payload_offset() - kHeapObjectTag);
-  // __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
-  // __ CopyMemoryWords(kSrcFrame, kDstFrame, kFrameSize, kTemp);
-  // if (kDstFrame == CODE_REG) {
-  //   __ PopRegister(CODE_REG);
-  // }
-  // if (kSrcFrame == THR) {
-  //   __ PopRegister(THR);
-  // }
-  __ Comment("Transfer control");
-  // __ LoadFieldFromOffset(kResumePc, kSuspendState, target::SuspendState::pc_offset());
-  // __ StoreZero(FieldAddress(kSuspendState, target::SuspendState::pc_offset()), kTemp);
-#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-//  __ AddImmediate(ResumeStubABI::kResumePcReg, SuspendStubABI::kResumePcDistance);
+  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineStateReg;
+  const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineStateReg;
+  const Register kTemp = CoroutineTransferStubABI::kTempReg;
+  const Register kFrameSize = CoroutineTransferStubABI::kFrameSizeReg;
+  const Register kFromCoroutineStackPointer = CoroutineTransferStubABI::kFromCoroutineStackPointer;
+  const Register kToCoroutineStackPointer = CoroutineTransferStubABI::kToCoroutineStackPointer;
+  const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
+  const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
+  const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
-  __ PopRegister(kTemp);
-  __ AddImmediate(kTemp, SuspendStubABI::kResumePcDistance);
-  __ Jump(kTemp);
+  __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
+  __ SubRegisters(kFrameSize, SPREG);
+
+  __ EnterStubFrame();
+
+  __ LoadFromOffset(kTemp, kFromCoroutine, target::Coroutine::stack_pointer_offset());
+  __ Breakpoint();
+  __ MoveRegister(kFromCoroutineStackPointer, kTemp);
+  __ LoadFromOffset(kTemp, kToCoroutine, target::Coroutine::stack_pointer_offset());
+  __ Breakpoint();
+  __ MoveRegister(kToCoroutineStackPointer, kTemp);
+  __ Breakpoint();
+
+  if (kSrcFrame == THR) {
+    __ PushRegister(THR);
+  }
+  
+  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
+  __ Breakpoint();
+  if (kSrcFrame == THR) {
+    __ PopRegister(THR);
+  }
+
+  __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
+  __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize);
+
+  __ Breakpoint();
+  __ LeaveStubFrame();
+
+  __ EnterDartFrame(0);
+
+  __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
+  __ SubRegisters(SPREG, kFrameSize);
+
+  intptr_t num_saved_regs = 0;
+  if (kSrcFrame == THR) {
+    __ PushRegister(THR);
+    ++num_saved_regs;
+  }
+  if (kDstFrame == CODE_REG) {
+    __ PushRegister(CODE_REG);
+    ++num_saved_regs;
+  }
+
+  __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
+  __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kFrameSize, kTemp);
+
+  if (kDstFrame == CODE_REG) {
+    __ PopRegister(CODE_REG);
+  }
+  if (kSrcFrame == THR) {
+    __ PopRegister(THR);
+  }
+
+#if defined(TARGET_ARCH_X64)
+  if (!FLAG_precompiled_mode) {
+    __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
+  }
+#endif
+
+  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize + kSavedCallerPcSlotFromFp * target::kWordSize);
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
+  __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
+#endif
+
+  __ Jump(kResumePc);
+
+  if (FLAG_precompiled_mode) {
+    __ Breakpoint();
+  } else {
+    __ Ret();
+  }
 }
 
 void StubCodeCompiler::GenerateResumeStub() {

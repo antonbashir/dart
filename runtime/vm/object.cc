@@ -4,6 +4,7 @@
 
 #include "vm/object.h"
 
+#include <cstdlib>
 #include <memory>
 
 #include "compiler/method_recognizer.h"
@@ -11,6 +12,7 @@
 #include "lib/integers.h"
 #include "lib/stacktrace.h"
 #include "platform/assert.h"
+#include "platform/globals.h"
 #include "platform/text_buffer.h"
 #include "platform/unaligned.h"
 #include "platform/unicode.h"
@@ -26632,12 +26634,14 @@ CoroutinePtr Coroutine::New(uintptr_t stack,
                             uword initialize) {
   const auto& result =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
-  void** stack_pointer = (void**)(size + (char*)stack);
-  if (stack != 0) {
-    *--stack_pointer = (void*)0;
-    *--stack_pointer = (void*)initialize;
-    stack_pointer -= 6;
-    memset(stack_pointer, 0, sizeof(*stack_pointer) * 6);
+  void** stack_pointer = (void**)(stack);
+  if (stack == 0) {
+    stack = (uintptr_t)malloc(1024 * 1024);
+    stack_pointer = (void**)(stack);
+    stack_pointer[0] = (void*)123;
+  } else {
+    *(stack_pointer) = (void*)0;
+    *(stack_pointer++) = (void*)initialize;
   }
   result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
   result.StoreNonPointer(&result.untag()->entry_, entry);

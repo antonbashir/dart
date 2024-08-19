@@ -3781,6 +3781,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword entry_;
   uword initialize_;
   uword transfer_;
+  word program_counter_;
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD
