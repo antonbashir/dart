@@ -76,7 +76,6 @@ class VmTarget extends Target {
         'dart:async',
         'dart:collection',
         'dart:convert',
-        'dart:fiber',
         'dart:developer',
         'dart:ffi',
         'dart:_internal',

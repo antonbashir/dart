@@ -77,7 +77,6 @@ class DevCompilerTarget extends Target {
         'dart:collection',
         'dart:convert',
         'dart:developer',
-        'dart:fiber',
         'dart:io',
         'dart:isolate',
         'dart:js',
@@ -98,7 +97,6 @@ class DevCompilerTarget extends Target {
   @override
   List<String> get extraIndexedLibraries => const [
         'dart:async',
-        'dart:fiber',
         'dart:collection',
         'dart:html',
         'dart:indexed_db',

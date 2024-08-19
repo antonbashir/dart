@@ -103,11 +103,6 @@ void Bootstrap::SetupNativeResolver() {
   library.set_native_entry_resolver(resolver);
   library.set_native_entry_symbol_resolver(symbol_resolver);
 
-  library = Library::FiberLibrary();
-  ASSERT(!library.IsNull());
-  library.set_native_entry_resolver(resolver);
-  library.set_native_entry_symbol_resolver(symbol_resolver);
-
   library = Library::CollectionLibrary();
   ASSERT(!library.IsNull());
   library.set_native_entry_resolver(resolver);

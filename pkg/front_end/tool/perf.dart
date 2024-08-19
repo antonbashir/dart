@@ -182,7 +182,6 @@ Set<Source> scanReachableFiles(Uri entryUri) {
     'dart:async',
     'dart:collection',
     'dart:convert',
-    'dart:fiber',
     'dart:core',
     'dart:developer',
     'dart:_internal',

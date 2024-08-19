@@ -28,8 +28,7 @@ class ObjectPointerVisitor;
   M(Math, math)                                                                \
   M(Mirrors, mirrors)                                                          \
   M(TypedData, typed_data)                                                     \
-  M(VMService, _vmservice)                                                     \
-  M(Fiber, fiber)
+  M(VMService, _vmservice)
 
 // R_ - needs getter only
 // RW - needs getter and setter
@@ -140,7 +139,6 @@ class ObjectPointerVisitor;
   RW(Array, canonical_type_arguments)                                          \
   RW(Library, async_library)                                                   \
   RW(Library, core_library)                                                    \
-  RW(Library, fiber_library)                                                   \
   RW(Library, collection_library)                                              \
   RW(Library, convert_library)                                                 \
   RW(Library, developer_library)                                               \

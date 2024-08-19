@@ -314,7 +314,6 @@ void main() async {
   await visitLibraryAtUri(session, 'dart:cli');
   await visitLibraryAtUri(session, 'dart:collection');
   await visitLibraryAtUri(session, 'dart:convert');
-  await visitLibraryAtUri(session, 'dart:fiber');
   await visitLibraryAtUri(session, 'dart:core');
   await visitLibraryAtUri(session, 'dart:io');
   await visitLibraryAtUri(session, 'dart:isolate');

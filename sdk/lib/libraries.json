@@ -21,12 +21,6 @@
           "_internal/vm/lib/async_patch.dart"
         ]
       },
-      "fiber": {
-        "uri": "fiber/fiber.dart",
-        "patches": [
-          "_internal/vm/lib/fiber_patch.dart"
-        ]
-      },
       "collection": {
         "uri": "collection/collection.dart",
         "patches": [
@@ -285,12 +279,6 @@
           "_internal/wasm/lib/async_patch.dart"
         ]
       },
-      "fiber": {
-        "uri": "fiber/fiber.dart",
-        "patches": [
-          "_internal/wasm/lib/fiber_patch.dart"
-        ]
-      },
       "collection": {
         "uri": "collection/collection.dart",
         "patches": [
@@ -403,12 +391,6 @@
       "async": {
         "uri": "async/async.dart",
         "patches": "_internal/js_runtime/lib/async_patch.dart"
-      },
-      "fiber": {
-        "uri": "fiber/fiber.dart",
-        "patches": [
-          "_internal/js_runtime/lib/fiber_patch.dart"
-        ]
       },
       "collection": {
         "uri": "collection/collection.dart",
@@ -592,12 +574,6 @@
       "async": {
         "uri": "async/async.dart",
         "patches": "_internal/js_dev_runtime/patch/async_patch.dart"
-      },
-      "fiber": {
-        "uri": "fiber/fiber.dart",
-        "patches": [
-          "_internal/js_dev_runtime/patch/fiber_patch.dart"
-        ]
       },
       "collection": {
         "uri": "collection/collection.dart",

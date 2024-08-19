@@ -24,7 +24,6 @@ class FlutterTarget extends VmTarget {
         'dart:async',
         'dart:collection',
         'dart:convert',
-        'dart:fiber',
         'dart:developer',
         'dart:ffi',
         'dart:_internal',
