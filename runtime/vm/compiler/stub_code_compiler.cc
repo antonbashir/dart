@@ -2240,15 +2240,16 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
     __ PopRegister(THR);
   }
 
+  __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
+  __ StoreMemoryValue(kTemp, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
+
   __ LeaveDartFrame();
    if (!FLAG_precompiled_mode) {
     __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
   }
  __ EnterStubFrame();
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
-  __ Breakpoint();
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
-  __ Breakpoint();
   __ LeaveStubFrame();
   __ Ret();
 }
@@ -2287,10 +2288,17 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
-  __ Breakpoint();
-
   __ EnterDartFrame(0);
 
+  if (!FLAG_precompiled_mode) {
+    __ MoveRegister(kTemp, kToCoroutine);
+    __ AddRegisters(kTemp, kFrameSize);
+    __ LoadFromOffset(CODE_REG, kTemp, target::Coroutine::stack_pointer_offset() - kHeapObjectTag + target::frame_layout.code_from_fp * target::kWordSize);
+    __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
+#if !defined(TARGET_ARCH_IA32)
+    __ LoadPoolPointer(PP);
+#endif
+  }
   __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
   __ SubRegisters(SPREG, kFrameSize);
 
@@ -2303,9 +2311,10 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PushRegister(CODE_REG);
     ++num_saved_regs;
   }
-
+  
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kFrameSize, kTemp);
+  __ Breakpoint();
 
   if (kDstFrame == CODE_REG) {
     __ PopRegister(CODE_REG);
