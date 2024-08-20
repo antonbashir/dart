@@ -393,7 +393,8 @@ struct CoroutineTransferStubABI {
   static constexpr Register kToCoroutineReg = RDI;
   static constexpr Register kFromCoroutineStackPointer = RBX;
   static constexpr Register kToCoroutineStackPointer = RCX;
-  static constexpr Register kFrameSizeReg = R8;
+  static constexpr Register kSuspendFrameSizeReg = R8;
+  static constexpr Register kResumeFrameSizeReg = R9;
   static constexpr Register kSrcFrameReg = RSI;
   static constexpr Register kDstFrameReg = RDI;
   static constexpr Register kTempReg = RAX;
