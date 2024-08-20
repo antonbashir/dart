@@ -26644,8 +26644,6 @@ CoroutinePtr Coroutine::New(uintptr_t stack,
     *(stack_pointer++) = (void*)initialize;
   }
   result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
-  result.StoreNonPointer(&result.untag()->entry_, entry);
-  result.StoreNonPointer(&result.untag()->initialize_, initialize);
   return result.ptr();
 }
 

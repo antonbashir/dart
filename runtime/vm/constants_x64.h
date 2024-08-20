@@ -389,14 +389,14 @@ struct SuspendStubABI {
 };
 
 struct CoroutineTransferStubABI {
-  static constexpr Register kTempReg = RAX;
-  static constexpr Register kFrameSizeReg = R8;
-  static constexpr Register kFromCoroutineStateReg = RBX;
-  static constexpr Register kToCoroutineStateReg = RCX;
+  static constexpr Register kFromCoroutineStateReg = RSI;
+  static constexpr Register kToCoroutineStateReg = RDI;
   static constexpr Register kFromCoroutineStackPointer = RBX;
   static constexpr Register kToCoroutineStackPointer = RCX;
+  static constexpr Register kFrameSizeReg = R8;
   static constexpr Register kSrcFrameReg = RSI;
   static constexpr Register kDstFrameReg = RDI;
+  static constexpr Register kTempReg = RAX;
   static constexpr Register kResumePcReg = RCX;
 
   // Number of bytes to skip after

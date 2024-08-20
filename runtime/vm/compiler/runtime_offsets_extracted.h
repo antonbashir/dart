@@ -618,10 +618,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -1344,11 +1340,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -2063,10 +2054,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -2788,11 +2775,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -3514,11 +3496,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -4238,11 +4215,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -4959,10 +4931,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -5686,11 +5654,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -6398,10 +6361,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -7116,11 +7075,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -7827,10 +7781,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -8544,11 +8494,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -9262,11 +9207,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -9978,11 +9918,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -10691,10 +10626,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x14;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -11410,11 +11341,6 @@ static constexpr dart::compiler::target::word
     WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_stack_pointer_offset =
     0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_program_counter_offset =
-    0x28;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -12190,11 +12116,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0xc;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -12991,11 +12912,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -13799,11 +13715,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -14605,11 +14516,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -15409,11 +15315,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -16213,11 +16114,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0xc;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -17015,11 +16911,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -17809,11 +17700,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0xc;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -18601,11 +18487,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -19400,11 +19281,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -20197,11 +20073,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -20992,11 +20863,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
@@ -21787,11 +21653,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0xc;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
@@ -22580,11 +22441,6 @@ static constexpr dart::compiler::target::word
     AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_stack_pointer_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_initialize_offset =
-    0x18;
-static constexpr dart::compiler::target::word
-    AOT_Coroutine_program_counter_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {
     0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word

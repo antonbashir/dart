@@ -1987,8 +1987,7 @@ void StubCodeCompiler::GenerateSuspendStub(
     __ PushRegister(THR);
   }
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ AddImmediate(kDstFrame, kSuspendState,
-                  target::SuspendState::payload_offset() - kHeapObjectTag);
+  __ AddImmediate(kDstFrame, kSuspendState, target::SuspendState::payload_offset() - kHeapObjectTag);
   __ CopyMemoryWords(kSrcFrame, kDstFrame, kFrameSize, kTemp);
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
@@ -2231,12 +2230,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ EnterStubFrame();
 
-  __ LoadFromOffset(kTemp, kFromCoroutine, target::Coroutine::stack_pointer_offset());
-  __ Breakpoint();
-  __ MoveRegister(kFromCoroutineStackPointer, kTemp);
-  __ LoadFromOffset(kTemp, kToCoroutine, target::Coroutine::stack_pointer_offset());
-  __ Breakpoint();
-  __ MoveRegister(kToCoroutineStackPointer, kTemp);
+  __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
+  __ LoadFieldFromOffset(kToCoroutineStackPointer, kToCoroutine, target::Coroutine::stack_pointer_offset());
   __ Breakpoint();
 
   if (kSrcFrame == THR) {
@@ -2246,6 +2241,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
   __ Breakpoint();
+  
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
   }

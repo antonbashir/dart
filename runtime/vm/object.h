@@ -12715,18 +12715,6 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
   }
 
-  static uword entry_offset() {
-    return OFFSET_OF(UntaggedCoroutine, entry_);
-  }
-
-  static uword initialize_offset() {
-    return OFFSET_OF(UntaggedCoroutine, initialize_);
-  }
-
-  static word program_counter_offset() {
-    return OFFSET_OF(UntaggedCoroutine, program_counter_);
-  }
-
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);
   friend class Class;
