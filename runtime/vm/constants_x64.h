@@ -397,7 +397,7 @@ struct CoroutineTransferStubABI {
   static constexpr Register kSrcFrameReg = RSI;
   static constexpr Register kDstFrameReg = RDI;
   static constexpr Register kTempReg = RAX;
-  static constexpr Register kResumePcReg = RCX;
+  static constexpr Register kResumePcReg = R9;
 
   // Number of bytes to skip after
   // coroutine transfer stub return address in order to resume.

@@ -2223,6 +2223,8 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
+  __ EnterDartFrame(0);
+
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2234,6 +2236,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   }
   
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ Breakpoint();
   __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
 
   if (kSrcFrame == THR) {
@@ -2268,6 +2271,10 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
+  __ EnterDartFrame(0);
+
+  //const intptr_t param_offset = target::frame_layout.param_end_from_fp * target::kWordSize;
+
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2279,8 +2286,10 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   }
   
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ MoveRegister(kDstFrame, kFrameSize);
   __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
-  
+  __ MoveRegister(kFrameSize, kDstFrame);
+
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
   }
@@ -2288,18 +2297,15 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
-  __ EnterDartFrame(0);
-
   if (!FLAG_precompiled_mode) {
-    __ MoveRegister(kTemp, kToCoroutine);
-    __ AddRegisters(kTemp, kFrameSize);
-    __ LoadFromOffset(CODE_REG, kTemp, target::Coroutine::stack_pointer_offset() - kHeapObjectTag + target::frame_layout.code_from_fp * target::kWordSize);
+    __ LoadFromOffset(CODE_REG, kTemp, kFromCoroutineStackPointer + target::frame_layout.code_from_fp * target::kWordSize);
     __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
 #endif
   }
   __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
+  __ Breakpoint();
   __ SubRegisters(SPREG, kFrameSize);
 
   intptr_t num_saved_regs = 0;
@@ -2312,9 +2318,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     ++num_saved_regs;
   }
   
+  __ Breakpoint();
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kFrameSize, kTemp);
-  __ Breakpoint();
 
   if (kDstFrame == CODE_REG) {
     __ PopRegister(CODE_REG);
@@ -2329,7 +2335,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   }
 #endif
 
-  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize + kSavedCallerPcSlotFromFp * target::kWordSize);
+  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize);
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
 #endif
@@ -2402,12 +2408,8 @@ void StubCodeCompiler::GenerateResumeStub() {
     // and restore pool pointer.
     __ MoveRegister(kTemp, kSuspendState);
     __ AddRegisters(kTemp, kFrameSize);
-    __ LoadFromOffset(
-        CODE_REG, kTemp,
-        target::SuspendState::payload_offset() - kHeapObjectTag +
-            target::frame_layout.code_from_fp * target::kWordSize);
-    __ StoreToOffset(CODE_REG, FPREG,
-                     target::frame_layout.code_from_fp * target::kWordSize);
+    __ LoadFromOffset(CODE_REG, kTemp, target::SuspendState::payload_offset() - kHeapObjectTag + target::frame_layout.code_from_fp * target::kWordSize);
+    __ StoreToOffset(CODE_REG, FPREG,target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
 #endif
