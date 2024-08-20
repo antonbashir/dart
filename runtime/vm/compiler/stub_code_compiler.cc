@@ -2321,7 +2321,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   if (!FLAG_precompiled_mode) {
     __ MoveRegister(kTemp, kFromCoroutine);
     __ AddRegisters(kTemp, kFrameSize);
-    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp - target::frame_layout.code_from_fp * target::kWordSize);
+    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp - target::frame_layout.code_from_fp * target::kWordSize); // Magic 1
     __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
@@ -2358,11 +2358,12 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   }
 #endif
 
-  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize);
+  __ Breakpoint();
+  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize); // Magic 2
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
 #endif
-
+  __ Breakpoint();
   __ Jump(kResumePc);
 
   if (FLAG_precompiled_mode) {
