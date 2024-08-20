@@ -2316,11 +2316,12 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
-  __ Breakpoint();
   __ EnterDartFrame(0);
 
   if (!FLAG_precompiled_mode) {
-    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, target::frame_layout.code_from_fp * target::kWordSize);
+    __ MoveRegister(kTemp, kFromCoroutine);
+    __ AddRegisters(kTemp, kFrameSize);
+    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp - target::frame_layout.code_from_fp * target::kWordSize);
     __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
