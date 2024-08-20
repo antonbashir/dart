@@ -2237,7 +2237,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   }
   
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ Breakpoint();
   __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
 
   if (kSrcFrame == THR) {
@@ -2357,6 +2356,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #endif
   __ Breakpoint();
   __ Jump(kResumePc);
+  __ Breakpoint();
+  __ SetReturnAddress(kResumePc);
   __ Breakpoint();
 
   if (FLAG_precompiled_mode) {
