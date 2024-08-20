@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_OBJECT_H_
 #define RUNTIME_VM_OBJECT_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -12706,13 +12707,13 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t stack,
-                          uint32_t size,
-                          uword entry,
-                          uword initialize);
+  static CoroutinePtr New(uintptr_t stack, ClosurePtr entry);
 
   static uword stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
+  }
+  static uword entry_offset() {
+    return OFFSET_OF(UntaggedCoroutine, entry_);
   }
 
  private:

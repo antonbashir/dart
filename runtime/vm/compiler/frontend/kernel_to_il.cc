@@ -1140,6 +1140,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
     case MethodRecognizer::kCoroutine_transfer:
+    case MethodRecognizer::kCoroutine_initialize:
       return true;
     default:
       return false;
@@ -1274,6 +1275,14 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
           Code::ZoneHandle(Z, IG->object_store()->resume_stub());
       body += NullConstant();
       body += TailCall(resume_stub);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_initialize: {
+      ASSERT_EQUAL(function.NumParameters(), 2);
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += Call2ArgStub(TokenPosition::kNoSource,
+                           Call2ArgStubInstr::StubId::kCoroutineInitialize);
       break;
     }
     case MethodRecognizer::kCoroutine_transfer: {

@@ -67,6 +67,7 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -26628,22 +26629,15 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t stack,
-                            uint32_t size,
-                            uword entry,
-                            uword initialize) {
+CoroutinePtr Coroutine::New(uintptr_t stack, ClosurePtr entry) {
   const auto& result =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
   void** stack_pointer = (void**)(stack);
-  if (stack == 0) {
-    stack = (uintptr_t)malloc(1024 * 1024);
-    stack_pointer = (void**)(stack);
-    stack_pointer[0] = (void*)123;
-  } else {
-    *(stack_pointer) = (void*)0;
-    *(stack_pointer++) = (void*)initialize;
+  if (stack_pointer == 0) {
+    stack_pointer = (void**)malloc(1024 * 1024);
   }
   result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
+  result.StoreNonPointer(&result.untag()->entry_, entry);
   return result.ptr();
 }
 

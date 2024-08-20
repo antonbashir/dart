@@ -8533,6 +8533,10 @@ LocationSummary* Call2ArgStubInstr::MakeLocationSummary(Zone* zone,
   LocationSummary* locs = new (zone)
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   switch (stub_id_) {
+    case StubId::kCoroutineInitialize:
+      locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineStateReg));
+      locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineStateReg));
+      break;
     case StubId::kCoroutineTransfer:
       locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineStateReg));
       locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineStateReg));
@@ -8570,6 +8574,9 @@ void Call2ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   switch (stub_id_) {
+    case StubId::kCoroutineInitialize:
+      stub = object_store->coroutine_initialize_stub();
+      break;
     case StubId::kCoroutineTransfer:
       stub = object_store->coroutine_transfer_stub();
       break;

@@ -185,6 +185,7 @@ class ObjectPointerVisitor;
   RW(Function, suspend_state_init_sync_star)                                   \
   RW(Function, suspend_state_suspend_sync_star_at_start)                       \
   RW(Function, suspend_state_handle_exception)                                 \
+  RW(Function, coroutine_create)                                               \
   RW(Class, async_star_stream_controller)                                      \
   RW(Class, stream_class)                                                      \
   RW(Class, sync_star_iterator_class)                                          \
@@ -288,6 +289,7 @@ class ObjectPointerVisitor;
   RW(Code, suspend_sync_star_at_start_stub)                                    \
   RW(Code, suspend_sync_star_at_yield_stub)                                    \
   RW(Code, coroutine_transfer_stub)                                            \
+  RW(Code, coroutine_initialize_stub)                                          \
   RW(Array, dispatch_table_code_entries)                                       \
   RW(GrowableObjectArray, instructions_tables)                                 \
   RW(Array, obfuscation_map)                                                   \
@@ -390,6 +392,7 @@ class ObjectPointerVisitor;
   DO(suspend_sync_star_at_start_stub, SuspendSyncStarAtStart)                  \
   DO(suspend_sync_star_at_yield_stub, SuspendSyncStarAtYield)                  \
   DO(coroutine_transfer_stub, CoroutineTransfer)                               \
+  DO(coroutine_initialize_stub, CoroutineInitialize)                           \
   DO(instance_of_stub, InstanceOf)
 
 #define ISOLATE_OBJECT_STORE_FIELD_LIST(R_, RW)                                \

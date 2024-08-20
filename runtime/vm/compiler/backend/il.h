@@ -11478,6 +11478,7 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
  public:
   enum class StubId {
+    kCoroutineInitialize,
     kCoroutineTransfer,
   };
 

@@ -2211,6 +2211,48 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
       target::ObjectStore::suspend_state_init_sync_star_offset());
 }
 
+void StubCodeCompiler::GenerateCoroutineInitializeStub() {
+  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineStateReg;
+  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineStateReg;
+  const Register kTemp = CoroutineInitializeStubABI::kTempReg;
+  const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
+  const Register kFromCoroutineStackPointer = CoroutineInitializeStubABI::kFromCoroutineStackPointer;
+  const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
+  const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
+#endif
+  __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
+  __ SubRegisters(kFrameSize, SPREG);
+
+  __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
+  __ LoadCompressedFieldFromOffset(kEntry, kToCoroutine, target::Coroutine::entry_offset());
+
+  if (kSrcFrame == THR) {
+    __ PushRegister(THR);
+  }
+  
+  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
+
+  if (kSrcFrame == THR) {
+    __ PopRegister(THR);
+  }
+
+  __ LeaveDartFrame();
+   if (!FLAG_precompiled_mode) {
+    __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
+  }
+ __ EnterStubFrame();
+  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
+  __ Breakpoint();
+  CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
+  __ Breakpoint();
+  __ LeaveStubFrame();
+  __ Ret();
+}
+
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineStateReg;
   const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineStateReg;
@@ -2228,11 +2270,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
-  __ EnterStubFrame();
-
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
   __ LoadFieldFromOffset(kToCoroutineStackPointer, kToCoroutine, target::Coroutine::stack_pointer_offset());
-  __ Breakpoint();
 
   if (kSrcFrame == THR) {
     __ PushRegister(THR);
@@ -2240,17 +2279,15 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
-  __ Breakpoint();
   
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
   }
 
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize);
+  __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
   __ Breakpoint();
-  __ LeaveStubFrame();
 
   __ EnterDartFrame(0);
 

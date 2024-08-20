@@ -3759,11 +3759,6 @@ DEFINE_RUNTIME_ENTRY(ResumeFrame, 2) {
   }
 }
 
-DEFINE_RUNTIME_ENTRY(CoroutineTransfer, 2) {  
-  const Object& input = Object::Handle(zone, arguments.ArgAt(0));
-  OS::Print("%s\n", input.ToCString());
-}
-
 void OnEveryRuntimeEntryCall(Thread* thread,
                              const char* runtime_call_name,
                              bool can_lazy_deopt) {

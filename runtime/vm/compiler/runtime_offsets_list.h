@@ -210,6 +210,7 @@
   FIELD(ObjectStore, suspend_state_return_async_star_offset)                   \
   FIELD(ObjectStore, suspend_state_suspend_sync_star_at_start_offset)          \
   FIELD(ObjectStore, suspend_state_yield_async_star_offset)                    \
+  FIELD(ObjectStore, coroutine_create_offset)                              \
   FIELD(OneByteString, data_offset)                                            \
   FIELD(PersistentHandle, ptr_offset)                                          \
   FIELD(PointerBase, data_offset)                                              \
@@ -251,6 +252,7 @@
   FIELD(Thread, allocate_object_slow_stub_offset)                              \
   FIELD(Thread, api_top_scope_offset)                                          \
   FIELD(Thread, async_exception_handler_stub_offset)                           \
+  FIELD(Thread, coroutine_initialize_stub_offset)                           \
   FIELD(Thread, auto_scope_native_wrapper_entry_point_offset)                  \
   FIELD(Thread, bool_false_offset)                                             \
   FIELD(Thread, bool_true_offset)                                              \
@@ -338,6 +340,7 @@
   FIELD(Thread, suspend_state_init_sync_star_entry_point_offset)               \
   FIELD(Thread, suspend_state_suspend_sync_star_at_start_entry_point_offset)   \
   FIELD(Thread, suspend_state_handle_exception_entry_point_offset)             \
+  FIELD(Thread, coroutine_create_entry_point_offset)                       \
   FIELD(Thread, top_exit_frame_info_offset)                                    \
   FIELD(Thread, top_offset)                                                    \
   FIELD(Thread, top_resource_offset)                                           \
@@ -400,6 +403,7 @@
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
   FIELD(Coroutine, stack_pointer_offset)                                       \
+  FIELD(Coroutine, entry_offset)                                               \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \

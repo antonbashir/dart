@@ -1578,8 +1578,11 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 void Call2ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "";
   switch (stub_id_) {
+    case StubId::kCoroutineInitialize:
+      name = "CoroutineInitialize";
+      break;
     case StubId::kCoroutineTransfer:
-      name = "Coroutine transfer";
+      name = "CoroutineTransfer";
       break;
   }
   f->Printf("%s(", name);

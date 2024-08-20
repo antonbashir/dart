@@ -169,7 +169,9 @@ class Thread;
   V(CodePtr, exit_safepoint_ignore_unwind_in_progress_stub_,                   \
     StubCode::ExitSafepointIgnoreUnwindInProgress().ptr(), nullptr)            \
   V(CodePtr, call_native_through_safepoint_stub_,                              \
-    StubCode::CallNativeThroughSafepoint().ptr(), nullptr)
+    StubCode::CallNativeThroughSafepoint().ptr(), nullptr)                     \
+  V(CodePtr, coroutine_initialize_stub_,                                       \
+    StubCode::CoroutineInitialize().ptr(), nullptr)
 
 #define CACHED_NON_VM_STUB_LIST(V)                                             \
   V(ObjectPtr, object_null_, Object::null(), nullptr)                          \
@@ -197,7 +199,8 @@ class Thread;
   V(suspend_state_return_async_star)                                           \
   V(suspend_state_init_sync_star)                                              \
   V(suspend_state_suspend_sync_star_at_start)                                  \
-  V(suspend_state_handle_exception)
+  V(suspend_state_handle_exception)                                            \
+  V(coroutine_create)
 
 // This assertion marks places which assume that boolean false immediate
 // follows bool true in the CACHED_VM_OBJECTS_LIST

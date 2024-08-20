@@ -6,12 +6,20 @@ import "dart:ffi";
 @pragma("vm:never-inline")
 external void _coroutineTransfer(dynamic from, dynamic to);
 
+@pragma("vm:recognized", "other")
+@pragma("vm:never-inline")
+external void _coroutineInitialize(dynamic from, dynamic to);
+
 @pragma("vm:entry-point")
-void _coroutineInitialize(dynamic coroutine, dynamic entry) {
+@pragma("vm:never-inline")
+void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
   print("_coroutineInitialize");
-  if (coroutine is _Coroutine && entry is Function) {
+  print(from.runtimeType);
+  print(to.runtimeType);
+  print(entry.runtimeType);
+  if (to is _Coroutine && entry is Function) {
     print("_coroutineInitialize -> _coroutineTransfer 1");
-    _coroutineTransfer(coroutine, Fiber._defaultCoroutine);
+    _coroutineTransfer(to, from);
     print("_coroutineInitialize -> _coroutineTransfer 2");
     print("_coroutineInitialize -> entry 1");
     entry();
@@ -24,30 +32,26 @@ class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(
     Pointer<Void> stack,
-    int size,
     dynamic entry,
-    dynamic initialize,
   );
 }
 
 @patch
 class Fiber {
   final _Coroutine _coroutine;
-  static late final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, 0, null, _coroutineInitialize);
+  static late final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, null);
 
   @patch
   Fiber({required FiberStack stack, required void Function() entry})
       : _coroutine = _Coroutine._(
           stack.pointer,
-          stack.size,
           entry,
-          _coroutineInitialize,
         );
 
   @patch
   void _run() {
     print("before _coroutineTransfer");
-    _coroutineTransfer(_defaultCoroutine, _coroutine);
+    _coroutineInitialize(_defaultCoroutine, _coroutine);
     print("after _coroutineTransfer");
   }
 }

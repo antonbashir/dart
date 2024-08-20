@@ -405,6 +405,16 @@ struct CoroutineTransferStubABI {
   static constexpr intptr_t kResumePcDistance = 5;
 };
 
+struct CoroutineInitializeStubABI {
+  static constexpr Register kFromCoroutineStateReg = RSI;
+  static constexpr Register kToCoroutineStateReg = RDI;
+  static constexpr Register kFromCoroutineStackPointer = RBX;
+  static constexpr Register kEntryReg = RCX;
+  static constexpr Register kFrameSizeReg = R8;
+  static constexpr Register kSrcFrameReg = R9;
+  static constexpr Register kTempReg = RAX;
+};
+
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,
 // InitSyncStarStub).
 struct InitSuspendableFunctionStubABI {
