@@ -26629,7 +26629,7 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t stack, ClosurePtr entry) {
+CoroutinePtr Coroutine::New(uintptr_t stack, ObjectPtr entry) {
   const auto& result =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
   void** stack_pointer = (void**)(stack);
@@ -26637,7 +26637,7 @@ CoroutinePtr Coroutine::New(uintptr_t stack, ClosurePtr entry) {
     stack_pointer = (void**)malloc(1024 * 1024);
   }
   result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
-  result.StoreNonPointer(&result.untag()->entry_, entry);
+  result.StoreCompressedPointer(&result.untag()->entry_, entry);
   return result.ptr();
 }
 

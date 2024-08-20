@@ -12707,7 +12707,7 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t stack, ClosurePtr entry);
+  static CoroutinePtr New(uintptr_t stack, ObjectPtr entry);
 
   static uword stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
