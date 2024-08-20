@@ -2341,7 +2341,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     ++num_saved_regs;
   }
   
-  __ Breakpoint();
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kFrameSize, kTemp);
 
@@ -2352,19 +2351,13 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PopRegister(THR);
   }
 
-#if defined(TARGET_ARCH_X64)
-  if (!FLAG_precompiled_mode) {
-    __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
-  }
-#endif
-
-  __ Breakpoint();
   __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize + target::kWordSize); // Magic 2
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
 #endif
   __ Breakpoint();
   __ Jump(kResumePc);
+  __ Breakpoint();
 
   if (FLAG_precompiled_mode) {
     __ Breakpoint();
