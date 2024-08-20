@@ -2359,7 +2359,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #endif
 
   __ Breakpoint();
-  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize); // Magic 2
+  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, kFrameSize + target::kWordSize); // Magic 2
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
 #endif
