@@ -2212,8 +2212,8 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 }
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
-  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineStateReg;
-  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineStateReg;
+  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineReg;
   const Register kTemp = CoroutineInitializeStubABI::kTempReg;
   const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
   const Register kFromCoroutineStackPointer = CoroutineInitializeStubABI::kFromCoroutineStackPointer;
@@ -2223,10 +2223,11 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
-  __ EnterDartFrame(0);
 
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
+
+  __ EnterStubFrame();
 
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
   __ LoadCompressedFieldFromOffset(kEntry, kToCoroutine, target::Coroutine::entry_offset());
@@ -2246,20 +2247,27 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreMemoryValue(kTemp, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
-  __ LeaveDartFrame();
    if (!FLAG_precompiled_mode) {
     __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
   }
- __ EnterStubFrame();
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
   __ LeaveStubFrame();
+
+#if !defined(TARGET_ARCH_X64) && !defined(TARGET_ARCH_IA32)
+  __ LeaveDartFrame();
+#elif defined(TARGET_ARCH_X64)
+  if (!FLAG_precompiled_mode) {
+    __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
+  }
+#endif
+
   __ Ret();
 }
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
-  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineStateReg;
-  const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineStateReg;
+  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
   const Register kTemp = CoroutineTransferStubABI::kTempReg;
   const Register kFrameSize = CoroutineTransferStubABI::kFrameSizeReg;
   const Register kFromCoroutineStackPointer = CoroutineTransferStubABI::kFromCoroutineStackPointer;
@@ -2271,12 +2279,13 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
-  __ EnterDartFrame(0);
 
   //const intptr_t param_offset = target::frame_layout.param_end_from_fp * target::kWordSize;
 
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
+
+  __ EnterStubFrame();
 
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
   __ LoadFieldFromOffset(kToCoroutineStackPointer, kToCoroutine, target::Coroutine::stack_pointer_offset());
@@ -2294,18 +2303,31 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PopRegister(THR);
   }
 
+  __ LeaveStubFrame();
+
+#if !defined(TARGET_ARCH_X64) && !defined(TARGET_ARCH_IA32)
+  __ LeaveDartFrame();
+#elif defined(TARGET_ARCH_X64)
+  if (!FLAG_precompiled_mode) {
+    __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
+  }
+#endif
+
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreMemoryValue(kResumePc, kFromCoroutineStackPointer, kFrameSize + target::kWordSize);
 
+  __ Breakpoint();
+  __ EnterDartFrame(0);
+
   if (!FLAG_precompiled_mode) {
-    __ LoadFromOffset(CODE_REG, kTemp, kFromCoroutineStackPointer + target::frame_layout.code_from_fp * target::kWordSize);
+    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, target::frame_layout.code_from_fp * target::kWordSize);
     __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
 #endif
   }
+
   __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
-  __ Breakpoint();
   __ SubRegisters(SPREG, kFrameSize);
 
   intptr_t num_saved_regs = 0;

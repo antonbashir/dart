@@ -8534,12 +8534,12 @@ LocationSummary* Call2ArgStubInstr::MakeLocationSummary(Zone* zone,
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   switch (stub_id_) {
     case StubId::kCoroutineInitialize:
-      locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineStateReg));
-      locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineStateReg));
+      locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
+      locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
       break;
     case StubId::kCoroutineTransfer:
-      locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineStateReg));
-      locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineStateReg));
+      locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
+      locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
       break;
   }
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));

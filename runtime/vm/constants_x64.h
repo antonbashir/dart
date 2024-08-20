@@ -389,8 +389,8 @@ struct SuspendStubABI {
 };
 
 struct CoroutineTransferStubABI {
-  static constexpr Register kFromCoroutineStateReg = RSI;
-  static constexpr Register kToCoroutineStateReg = RDI;
+  static constexpr Register kFromCoroutineReg = RSI;
+  static constexpr Register kToCoroutineReg = RDI;
   static constexpr Register kFromCoroutineStackPointer = RBX;
   static constexpr Register kToCoroutineStackPointer = RCX;
   static constexpr Register kFrameSizeReg = R8;
@@ -406,8 +406,8 @@ struct CoroutineTransferStubABI {
 };
 
 struct CoroutineInitializeStubABI {
-  static constexpr Register kFromCoroutineStateReg = RSI;
-  static constexpr Register kToCoroutineStateReg = RDI;
+  static constexpr Register kFromCoroutineReg = RSI;
+  static constexpr Register kToCoroutineReg = RDI;
   static constexpr Register kFromCoroutineStackPointer = RBX;
   static constexpr Register kEntryReg = RCX;
   static constexpr Register kFrameSizeReg = R8;
