@@ -2319,9 +2319,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ EnterDartFrame(0);
 
   if (!FLAG_precompiled_mode) {
-    __ MoveRegister(kTemp, kFromCoroutine);
+    __ AddImmediate(kTemp, target::frame_layout.code_from_fp * target::kWordSize);
     __ AddRegisters(kTemp, kFrameSize);
-    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp - target::frame_layout.code_from_fp * target::kWordSize); // Magic 1
+    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp);
     __ StoreToOffset(CODE_REG, FPREG, target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
@@ -2427,6 +2427,7 @@ void StubCodeCompiler::GenerateResumeStub() {
     __ Bind(&okay);
   }
 #endif
+
   if (!FLAG_precompiled_mode) {
     // Copy Code object (part of the fixed frame which is not copied below)
     // and restore pool pointer.
