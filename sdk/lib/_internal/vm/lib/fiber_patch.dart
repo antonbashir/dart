@@ -50,5 +50,6 @@ class Fiber {
     print("before _coroutineTransfer");
     _coroutineInitialize(_defaultCoroutine, _coroutine);
     print("after _coroutineTransfer");
+    print("after _coroutineTransfer");
   }
 }

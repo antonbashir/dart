@@ -2223,7 +2223,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
-  __ Breakpoint();
 
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
@@ -2246,7 +2245,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 
   __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kTemp, kFromCoroutineStackPointer, target::kWordSize);
-  __ Breakpoint();
 
    if (!FLAG_precompiled_mode) {
     __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
@@ -2303,7 +2301,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
   }
-
 
   __ LeaveStubFrame();
 
@@ -2362,7 +2359,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     
   }
 
-  __ Breakpoint();
   __ Jump(kResumePc);
   // __ Breakpoint();
   // __ SetReturnAddress(kResumePc);
