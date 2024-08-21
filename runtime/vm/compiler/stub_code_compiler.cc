@@ -2224,7 +2224,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
-  __ Breakpoint();
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2252,6 +2251,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   }
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
+  __ Breakpoint();
 
   __ LeaveStubFrame();
 
