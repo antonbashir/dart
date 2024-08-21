@@ -2356,7 +2356,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   }
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
-    
   }
 
   __ Jump(kResumePc);
