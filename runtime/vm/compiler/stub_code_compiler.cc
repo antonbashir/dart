@@ -2220,12 +2220,14 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
   const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
 
+  __ Breakpoint();
+
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
   __ EnterStubFrame();
   
-  __ StoreFieldToOffset(kFromCoroutine, kFrameSize, target::Coroutine::frame_size_offset());
+  __ StoreFieldToOffset(kFrameSize, kFromCoroutine, target::Coroutine::frame_size_offset());
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
   __ LoadCompressedFieldFromOffset(kEntry, kToCoroutine, target::Coroutine::entry_offset());
 
@@ -2277,7 +2279,7 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   __ SubRegisters(kFrameSize, SPREG);
   __ EnterStubFrame();
 
-  __ StoreFieldToOffset(kFromCoroutine, kFrameSize, target::Coroutine::frame_size_offset());
+  __ StoreFieldToOffset(kFrameSize, kFromCoroutine, target::Coroutine::frame_size_offset());
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
 
   if (kSrcFrame == THR) {
