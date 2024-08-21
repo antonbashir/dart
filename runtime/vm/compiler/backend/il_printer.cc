@@ -1575,19 +1575,19 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   operand()->PrintTo(f);
   f->AddString(")");
 }
-void Call2ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  const char* name = "";
-  switch (stub_id_) {
-    case StubId::kCoroutineInitialize:
-      name = "CoroutineInitialize";
-      break;
-    case StubId::kCoroutineTransfer:
-      name = "CoroutineTransfer";
-      break;
-  }
+
+void CoroutineInitializeStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineInitialize";
   f->Printf("%s(", name);
   first_operand()->PrintTo(f);
   second_operand()->PrintTo(f);
+  f->AddString(")");
+}
+
+void CoroutineSuspendStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineSuspend";
+  f->Printf("%s(", name);
+  operand()->PrintTo(f);
   f->AddString(")");
 }
 

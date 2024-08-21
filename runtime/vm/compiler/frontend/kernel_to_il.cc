@@ -39,6 +39,7 @@
 #include "vm/scopes.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
+#include "vm/token_position.h"
 
 namespace dart {
 
@@ -1139,7 +1140,8 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
-    case MethodRecognizer::kCoroutine_transfer:
+    case MethodRecognizer::kCoroutine_resume:
+    case MethodRecognizer::kCoroutine_suspend:
     case MethodRecognizer::kCoroutine_initialize:
       return true;
     default:
@@ -1281,16 +1283,20 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       ASSERT_EQUAL(function.NumParameters(), 2);
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
-      body += Call2ArgStub(TokenPosition::kNoSource,
-                           Call2ArgStubInstr::StubId::kCoroutineInitialize);
+      body += CoroutineInitializeStub(TokenPosition::kNoSource);
       break;
     }
-    case MethodRecognizer::kCoroutine_transfer: {
-      ASSERT_EQUAL(function.NumParameters(), 2);
+    case MethodRecognizer::kCoroutine_suspend: {
+      ASSERT_EQUAL(function.NumParameters(), 1);
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadLocal(parsed_function_->RawParameterVariable(1));
-      body += Call2ArgStub(TokenPosition::kNoSource,
-                           Call2ArgStubInstr::StubId::kCoroutineTransfer);
+      body += CoroutineSuspendStub(TokenPosition::kNoSource);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_resume: {
+      const Code& stub =
+          Code::ZoneHandle(Z, IG->object_store()->coroutine_resume_stub());
+      body += NullConstant();
+      body += TailCall(stub);
       break;
     }
     case MethodRecognizer::kTypedList_GetInt8:
@@ -4759,10 +4765,16 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::Call2ArgStub(TokenPosition position,
-                                        Call2ArgStubInstr::StubId stub_id) {
-  Call2ArgStubInstr* instr = new (Z) Call2ArgStubInstr(
-      InstructionSource(position), stub_id, Pop(), Pop(), GetNextDeoptId());
+Fragment FlowGraphBuilder::CoroutineInitializeStub(TokenPosition position) {
+  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
+      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineSuspendStub(TokenPosition position) {
+  CoroutineSuspendStubInstr* instr = new (Z) CoroutineSuspendStubInstr(
+      InstructionSource(position), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

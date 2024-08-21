@@ -12712,6 +12712,9 @@ class Coroutine : public Instance {
   static uword stack_pointer_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
   }
+  static uword frame_size_offset() {
+    return OFFSET_OF(UntaggedCoroutine, frame_size_);
+  }
   static uword entry_offset() {
     return OFFSET_OF(UntaggedCoroutine, entry_);
   }

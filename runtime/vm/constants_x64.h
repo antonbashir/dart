@@ -388,13 +388,10 @@ struct SuspendStubABI {
   static constexpr intptr_t kResumePcDistance = 5;
 };
 
-struct CoroutineTransferStubABI {
+struct CoroutineSuspendStubABI {
   static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kToCoroutineReg = RDI;
   static constexpr Register kFromCoroutineStackPointer = RBX;
-  static constexpr Register kToCoroutineStackPointer = RCX;
-  static constexpr Register kSuspendFrameSizeReg = R8;
-  static constexpr Register kResumeFrameSizeReg = R9;
+  static constexpr Register kFrameSizeReg = R8;
   static constexpr Register kSrcFrameReg = RSI;
   static constexpr Register kDstFrameReg = RDI;
   static constexpr Register kTempReg = RAX;
@@ -404,6 +401,18 @@ struct CoroutineTransferStubABI {
   // coroutine transfer stub return address in order to resume.
   // X64: mov rsp, rbp; pop rbp; ret
   static constexpr intptr_t kResumePcDistance = 5;
+};
+
+struct CoroutineResumeStubABI {
+  static constexpr Register kToCoroutineReg = RDI;
+  static constexpr Register kFromCoroutineStackPointer = RBX;
+  static constexpr Register kToCoroutineStackPointer = RCX;
+  static constexpr Register kSuspendFrameSizeReg = R8;
+  static constexpr Register kResumeFrameSizeReg = R9;
+  static constexpr Register kSrcFrameReg = RSI;
+  static constexpr Register kDstFrameReg = RDI;
+  static constexpr Register kTempReg = RAX;
+  static constexpr Register kResumePcReg = R10;
 };
 
 struct CoroutineInitializeStubABI {

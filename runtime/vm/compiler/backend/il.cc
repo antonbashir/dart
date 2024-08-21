@@ -8526,26 +8526,30 @@ LocationSummary* Call1ArgStubInstr::MakeLocationSummary(Zone* zone,
   return locs;
 }
 
-LocationSummary* Call2ArgStubInstr::MakeLocationSummary(Zone* zone,
-                                                        bool opt) const {
+LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone)
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  switch (stub_id_) {
-    case StubId::kCoroutineInitialize:
-      locs->set_in(0, Location::RegisterLocation(
-                          CoroutineInitializeStubABI::kFromCoroutineReg));
-      locs->set_in(1, Location::RegisterLocation(
-                          CoroutineInitializeStubABI::kToCoroutineReg));
-      break;
-    case StubId::kCoroutineTransfer:
-      locs->set_in(0, Location::RegisterLocation(
-                          CoroutineTransferStubABI::kFromCoroutineReg));
-      locs->set_in(1, Location::RegisterLocation(
-                          CoroutineTransferStubABI::kToCoroutineReg));
-      break;
-  }
+  locs->set_in(0, Location::RegisterLocation(
+                      CoroutineInitializeStubABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(
+                      CoroutineInitializeStubABI::kToCoroutineReg));
+  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  return locs;
+}
+
+LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 1;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation(
+                      CoroutineSuspendStubABI::kFromCoroutineReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
   return locs;
 }
@@ -8574,17 +8578,10 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
-void Call2ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
-  switch (stub_id_) {
-    case StubId::kCoroutineInitialize:
-      stub = object_store->coroutine_initialize_stub();
-      break;
-    case StubId::kCoroutineTransfer:
-      stub = object_store->coroutine_transfer_stub();
-      break;
-  }
+  stub = object_store->coroutine_initialize_stub();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
@@ -8596,7 +8593,28 @@ void Call2ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   const intptr_t start = compiler->assembler()->CodeSize();
   __ LeaveFrame();
   __ ret();
-  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start == CoroutineTransferStubABI::kResumePcDistance);
+  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
+                 CoroutineSuspendStubABI::kResumePcDistance);
+#endif
+}
+
+void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  stub = object_store->coroutine_suspend_stub();
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
+                             locs(), deopt_id(), env());
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
+  // On x86 (X64 and IA32) mismatch between calls and returns
+  // significantly regresses performance. So suspend stub
+  // does not return directly to the caller. Instead, a small
+  // epilogue is generated right after the call to suspend stub,
+  // and resume stub adjusts resume PC to skip this epilogue.
+  const intptr_t start = compiler->assembler()->CodeSize();
+  __ LeaveFrame();
+  __ ret();
+  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
+                 CoroutineSuspendStubABI::kResumePcDistance);
 #endif
 }
 

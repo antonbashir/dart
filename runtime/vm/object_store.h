@@ -288,7 +288,8 @@ class ObjectPointerVisitor;
   RW(Code, init_sync_star_stub)                                                \
   RW(Code, suspend_sync_star_at_start_stub)                                    \
   RW(Code, suspend_sync_star_at_yield_stub)                                    \
-  RW(Code, coroutine_transfer_stub)                                            \
+  RW(Code, coroutine_suspend_stub)                                             \
+  RW(Code, coroutine_resume_stub)                                              \
   RW(Code, coroutine_initialize_stub)                                          \
   RW(Array, dispatch_table_code_entries)                                       \
   RW(GrowableObjectArray, instructions_tables)                                 \
@@ -391,7 +392,8 @@ class ObjectPointerVisitor;
   DO(init_sync_star_stub, InitSyncStar)                                        \
   DO(suspend_sync_star_at_start_stub, SuspendSyncStarAtStart)                  \
   DO(suspend_sync_star_at_yield_stub, SuspendSyncStarAtYield)                  \
-  DO(coroutine_transfer_stub, CoroutineTransfer)                               \
+  DO(coroutine_suspend_stub, CoroutineSuspend)                                 \
+  DO(coroutine_resume_stub, CoroutineResume)                                   \
   DO(coroutine_initialize_stub, CoroutineInitialize)                           \
   DO(instance_of_stub, InstanceOf)
 

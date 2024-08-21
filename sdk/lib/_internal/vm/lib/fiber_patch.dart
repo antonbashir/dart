@@ -4,7 +4,11 @@ import "dart:ffi";
 
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
-external void _coroutineTransfer(dynamic from, dynamic to);
+external void _coroutineSuspend(dynamic to);
+
+@pragma("vm:recognized", "other")
+@pragma("vm:never-inline")
+external void _coroutineResume(dynamic to);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
@@ -15,9 +19,11 @@ external void _coroutineInitialize(dynamic from, dynamic to);
 void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
   print("_coroutineCreate");
   if (to is _Coroutine && entry is Function) {
-    print("_coroutineCreate -> _coroutineTransfer 1");
-    _coroutineTransfer(to, from);
-    print("_coroutineCreate -> _coroutineTransfer 2");
+    print("_coroutineCreate -> _coroutineSuspend");
+    _coroutineSuspend(to);
+    print("_coroutineCreate -> _coroutineResume start");
+    _coroutineResume(from);
+    print("_coroutineCreate -> _coroutineResume end");
     print("_coroutineCreate -> entry 1");
     entry();
     print("_coroutineCreate -> entry 2");

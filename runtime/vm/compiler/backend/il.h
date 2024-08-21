@@ -545,7 +545,8 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
-  M(Call2ArgStub, _)                                                           \
+  M(CoroutineInitializeStub, _)                                                           \
+  M(CoroutineSuspendStub, _)                                                           \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11475,20 +11476,14 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 };
 
 // Generic instruction to call 2-argument stubs specified using [StubId].
-class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
+class CoroutineInitializeStubInstr : public TemplateDefinition<2, Throws> {
  public:
-  enum class StubId {
-    kCoroutineInitialize,
-    kCoroutineTransfer,
-  };
 
-  Call2ArgStubInstr(const InstructionSource& source,
-                    StubId stub_id,
+  CoroutineInitializeStubInstr(const InstructionSource& source,
                     Value* first_operand,
                     Value* second_operand,
                     intptr_t deopt_id)
       : TemplateDefinition(source, deopt_id),
-        stub_id_(stub_id),
         token_pos_(source.token_pos) {
     SetInputAt(0, first_operand);
     SetInputAt(1, second_operand);
@@ -11496,7 +11491,6 @@ class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
 
   Value* first_operand() const { return inputs_[0]; }
   Value* second_operand() const { return inputs_[1]; }
-  StubId stub_id() const { return stub_id_; }
   virtual TokenPosition token_pos() const { return token_pos_; }
 
   virtual bool CanCallDart() const { return true; }
@@ -11507,20 +11501,55 @@ class Call2ArgStubInstr : public TemplateDefinition<2, Throws> {
     return InputCount();
   }
 
-  DECLARE_INSTRUCTION(Call2ArgStub);
+  DECLARE_INSTRUCTION(CoroutineInitializeStub);
   PRINT_OPERANDS_TO_SUPPORT
 
 #define FIELD_LIST(F)                                                          \
-  F(const StubId, stub_id_)                                                    \
   F(const TokenPosition, token_pos_)
 
-  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(Call2ArgStubInstr,
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineInitializeStubInstr,
                                           TemplateDefinition,
                                           FIELD_LIST)
 #undef FIELD_LIST
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(Call2ArgStubInstr);
+  DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeStubInstr);
+};
+
+class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
+ public:
+  CoroutineSuspendStubInstr(const InstructionSource& source,
+                    Value* operand,
+                    intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id),
+        token_pos_(source.token_pos) {
+    SetInputAt(0, operand);
+  }
+
+  Value* operand() const { return inputs_[0]; }
+  virtual TokenPosition token_pos() const { return token_pos_; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineSuspendStub);
+  PRINT_OPERANDS_TO_SUPPORT
+
+#define FIELD_LIST(F)                                                          \
+  F(const TokenPosition, token_pos_)
+
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineSuspendStubInstr,
+                                          TemplateDefinition,
+                                          FIELD_LIST)
+#undef FIELD_LIST
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineSuspendStubInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].
