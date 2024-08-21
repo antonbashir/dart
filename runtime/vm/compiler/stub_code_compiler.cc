@@ -2245,13 +2245,13 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 
   __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kTemp, kFromCoroutineStackPointer, target::kWordSize);
-  __ Breakpoint();
-//140737328085653
+
    if (!FLAG_precompiled_mode) {
     __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
   }
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
+
   __ LeaveStubFrame();
 
 #if !defined(TARGET_ARCH_X64) && !defined(TARGET_ARCH_IA32)
@@ -2337,7 +2337,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ AddRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
   __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, target::kWordSize);
   __ SubRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
-  __ Breakpoint();
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
+  __ AddImmediate(kResumePc, CoroutineTransferStubABI::kResumePcDistance);
+#endif
 
   intptr_t num_saved_regs = 0;
   if (kSrcFrame == THR) {
@@ -2351,7 +2353,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kResumeFrameSize, kTemp);
-  __ Breakpoint();
 
   if (kDstFrame == CODE_REG) {
     __ PopRegister(CODE_REG);
@@ -2361,20 +2362,16 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     
   }
 
-#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-  __ AddImmediate(kResumePc, SuspendStubABI::kResumePcDistance);
-#endif
-  __ Breakpoint();
   __ Jump(kResumePc);
-  __ Breakpoint();
-  __ SetReturnAddress(kResumePc);
-  __ Breakpoint();
+  // __ Breakpoint();
+  // __ SetReturnAddress(kResumePc);
+  // __ Breakpoint();
 
-  if (FLAG_precompiled_mode) {
-    __ Breakpoint();
-  } else {
-    __ Ret();
-  }
+  // if (FLAG_precompiled_mode) {
+  //   __ Breakpoint();
+  // } else {
+  //   __ Ret();
+  // }
 }
 
 void StubCodeCompiler::GenerateResumeStub() {
