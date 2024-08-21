@@ -2251,7 +2251,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   }
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
-  __ Breakpoint();
 
   __ LeaveStubFrame();
 

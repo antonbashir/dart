@@ -14,9 +14,6 @@ external void _coroutineInitialize(dynamic from, dynamic to);
 @pragma("vm:never-inline")
 void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
   print("_coroutineInitialize");
-  print(from.runtimeType);
-  print(to.runtimeType);
-  print(entry.runtimeType);
   if (to is _Coroutine && entry is Function) {
     print("_coroutineInitialize -> _coroutineTransfer 1");
     _coroutineTransfer(to, from);
@@ -53,5 +50,6 @@ class Fiber {
     print("before _coroutineTransfer");
     _coroutineInitialize(_defaultCoroutine, _coroutine);
     print("after _coroutineTransfer");
+    _coroutineTransfer(_defaultCoroutine, _coroutine);
   }
 }
