@@ -8590,11 +8590,11 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   // does not return directly to the caller. Instead, a small
   // epilogue is generated right after the call to suspend stub,
   // and resume stub adjusts resume PC to skip this epilogue.
-  const intptr_t start = compiler->assembler()->CodeSize();
-  __ LeaveFrame();
-  __ ret();
-  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
-                 CoroutineSuspendStubABI::kResumePcDistance);
+  // const intptr_t start = compiler->assembler()->CodeSize();
+  // __ LeaveFrame();
+  // __ ret();
+  // RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
+  //                CoroutineSuspendStubABI::kResumePcDistance);
 #endif
 }
 
@@ -8610,11 +8610,11 @@ void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   // does not return directly to the caller. Instead, a small
   // epilogue is generated right after the call to suspend stub,
   // and resume stub adjusts resume PC to skip this epilogue.
-  const intptr_t start = compiler->assembler()->CodeSize();
-  __ LeaveFrame();
-  __ ret();
-  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
-                 CoroutineSuspendStubABI::kResumePcDistance);
+  // const intptr_t start = compiler->assembler()->CodeSize();
+  // __ LeaveFrame();
+  // __ ret();
+  // RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
+  //                CoroutineSuspendStubABI::kResumePcDistance);
 #endif
 }
 

@@ -2220,8 +2220,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
   const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
 
-  __ Breakpoint();
-
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2259,7 +2257,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
     __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
   }
 #endif
-
   __ Ret();
 }
 
@@ -2274,6 +2271,7 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
+
 
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
@@ -2344,7 +2342,7 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
   __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, target::kWordSize);
   __ SubRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-__ AddImmediate(kResumePc, CoroutineSuspendStubABI::kResumePcDistance);
+//__ AddImmediate(kResumePc, CoroutineSuspendStubABI::kResumePcDistance);
 #endif
 
   intptr_t num_saved_regs = 0;
@@ -2357,7 +2355,6 @@ __ AddImmediate(kResumePc, CoroutineSuspendStubABI::kResumePcDistance);
     ++num_saved_regs;
   }
   
-  __ Breakpoint();
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kResumeFrameSize, kTemp);
 
