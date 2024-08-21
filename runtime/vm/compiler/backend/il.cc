@@ -8534,12 +8534,16 @@ LocationSummary* Call2ArgStubInstr::MakeLocationSummary(Zone* zone,
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   switch (stub_id_) {
     case StubId::kCoroutineInitialize:
-      locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
-      locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
+      locs->set_in(0, Location::RegisterLocation(
+                          CoroutineInitializeStubABI::kFromCoroutineReg));
+      locs->set_in(1, Location::RegisterLocation(
+                          CoroutineInitializeStubABI::kToCoroutineReg));
       break;
     case StubId::kCoroutineTransfer:
-      locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
-      locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
+      locs->set_in(0, Location::RegisterLocation(
+                          CoroutineTransferStubABI::kFromCoroutineReg));
+      locs->set_in(1, Location::RegisterLocation(
+                          CoroutineTransferStubABI::kToCoroutineReg));
       break;
   }
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
@@ -8583,6 +8587,17 @@ void Call2ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
+  // On x86 (X64 and IA32) mismatch between calls and returns
+  // significantly regresses performance. So suspend stub
+  // does not return directly to the caller. Instead, a small
+  // epilogue is generated right after the call to suspend stub,
+  // and resume stub adjusts resume PC to skip this epilogue.
+  const intptr_t start = compiler->assembler()->CodeSize();
+  __ LeaveFrame();
+  __ ret();
+  RELEASE_ASSERT(compiler->assembler()->CodeSize() - start == CoroutineTransferStubABI::kResumePcDistance);
+#endif
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
