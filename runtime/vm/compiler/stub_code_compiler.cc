@@ -2272,7 +2272,6 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   SPILLS_LR_TO_FRAME({});
 #endif
 
-
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
   __ EnterStubFrame();

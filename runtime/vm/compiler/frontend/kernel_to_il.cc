@@ -1281,15 +1281,19 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     }
     case MethodRecognizer::kCoroutine_initialize: {
       ASSERT_EQUAL(function.NumParameters(), 2);
+      body += NullConstant();
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
       body += CoroutineInitializeStub(TokenPosition::kNoSource);
+      body += Drop();
       break;
     }
     case MethodRecognizer::kCoroutine_suspend: {
       ASSERT_EQUAL(function.NumParameters(), 1);
+      body += NullConstant();
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += CoroutineSuspendStub(TokenPosition::kNoSource);
+      body += Drop();
       break;
     }
     case MethodRecognizer::kCoroutine_resume: {

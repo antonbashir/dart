@@ -42,20 +42,23 @@ class _Coroutine {
 @patch
 class Fiber {
   final _Coroutine _coroutine;
+  final void Function() _entry;
   static late final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, null);
 
   @patch
   Fiber({required FiberStack stack, required void Function() entry})
-      : _coroutine = _Coroutine._(
+      : _entry = entry,
+        _coroutine = _Coroutine._(
           stack.pointer,
           entry,
         );
 
   @patch
   void _run() {
-    print("before _coroutineTransfer");
-    _coroutineInitialize(_defaultCoroutine, _coroutine);
-    print("after _coroutineTransfer");
-    print("after _coroutineTransfer");
+    print("before _coroutineSuspend");
+    _coroutineSuspend(_defaultCoroutine);
+    print("after _coroutineSuspend");
+    _coroutineCreate(_defaultCoroutine, _coroutine, _entry);
+    print("after _coroutineCreate");
   }
 }
