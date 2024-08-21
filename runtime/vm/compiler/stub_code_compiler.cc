@@ -2224,6 +2224,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
+  __ Breakpoint();
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2281,8 +2282,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   SPILLS_LR_TO_FRAME({});  // Simulate entering the caller (Dart) frame.
 #endif
 
-  //const intptr_t param_offset = target::frame_layout.param_end_from_fp * target::kWordSize;
-
   __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kSuspendFrameSize, SPREG);
 
@@ -2338,7 +2337,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, target::kWordSize);
   __ SubRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-  __ AddImmediate(kResumePc, CoroutineTransferStubABI::kResumePcDistance);
+//  __ AddImmediate(kResumePc, CoroutineTransferStubABI::kResumePcDistance);
 #endif
 
   intptr_t num_saved_regs = 0;
