@@ -60,5 +60,6 @@ class Fiber {
     print("after _coroutineSuspend");
     _coroutineCreate(_defaultCoroutine, _coroutine, _entry);
     print("after _coroutineCreate");
+    _coroutineResume(_coroutine);
   }
 }
