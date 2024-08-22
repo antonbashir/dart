@@ -32,6 +32,7 @@
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
+#include "vm/constants_x86.h"
 #include "vm/cpu.h"
 #include "vm/dart_entry.h"
 #include "vm/object.h"
@@ -8584,6 +8585,7 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_initialize_stub();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
+  //__ Breakpoint();
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   // On x86 (X64 and IA32) mismatch between calls and returns
   // significantly regresses performance. So suspend stub
@@ -8604,6 +8606,17 @@ void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_suspend_stub();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
+
+  compiler::Label skip;
+  __ CallRuntime(compiler::kNullCastErrorRuntimeEntry, /*argument_count=*/0);
+  __ PopRegister(RAX);
+  __ CompareObject(RAX, Object::null_object());
+  __ BranchIf(NOT_EQUAL, &skip);
+  
+  __ LeaveFrame();
+
+  __ Bind(&skip);
+
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   // On x86 (X64 and IA32) mismatch between calls and returns
   // significantly regresses performance. So suspend stub

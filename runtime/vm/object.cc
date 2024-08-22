@@ -26636,6 +26636,7 @@ CoroutinePtr Coroutine::New(uintptr_t stack, ObjectPtr entry) {
   if (stack_pointer == 0) {
     stack_pointer = (void**)malloc(1024 * 1024);
   }
+  NoSafepointScope no_safepoint;
   result.StoreNonPointer(&result.untag()->stack_pointer_, stack_pointer);
   result.StoreCompressedPointer(&result.untag()->entry_, entry);
   return result.ptr();

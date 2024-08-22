@@ -20,7 +20,7 @@ void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
   print("_coroutineCreate");
   if (to is _Coroutine && entry is Function) {
     print("_coroutineCreate -> _coroutineSuspend");
-    _coroutineSuspend(to);
+    //_coroutineSuspend(to);
     print("_coroutineCreate -> _coroutineResume start");
     _coroutineResume(from);
     print("_coroutineCreate -> _coroutineResume end");

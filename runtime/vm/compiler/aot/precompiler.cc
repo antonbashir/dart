@@ -615,6 +615,7 @@ void Precompiler::DoCompileAll() {
         IG->object_store()->set_pragma_name(null_field);
         IG->object_store()->set_pragma_options(null_field);
         IG->object_store()->set_compiletime_error_class(null_class);
+        IG->object_store()->set_coroutine_create(null_function);
         IG->object_store()->set_growable_list_factory(null_function);
         IG->object_store()->set_simple_instance_of_function(null_function);
         IG->object_store()->set_simple_instance_of_true_function(null_function);

@@ -2291,8 +2291,8 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   }
 
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreToOffset(kResumePc, kFromCoroutineStackPointer, target::kWordSize);
-
+  __ StoreToOffset(kResumePc, kFromCoroutineStackPointer, 0);
+  
 #if !defined(TARGET_ARCH_X64) && !defined(TARGET_ARCH_IA32)
   __ LeaveDartFrame();
 #elif defined(TARGET_ARCH_X64)
@@ -2338,7 +2338,7 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
   __ SubRegisters(SPREG, kResumeFrameSize);
 
   __ AddRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
-  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, target::kWordSize);
+  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, 0);
   __ SubRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
 //__ AddImmediate(kResumePc, CoroutineSuspendStubABI::kResumePcDistance);
@@ -2364,7 +2364,6 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
     __ PopRegister(THR);
   }
 
-  __ Breakpoint();
   __ Jump(kResumePc);
 }
 

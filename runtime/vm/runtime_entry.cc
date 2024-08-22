@@ -13,6 +13,7 @@
 #include "vm/compiler/api/deopt_id.h"
 #include "vm/compiler/api/type_check_mode.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -320,8 +321,15 @@ DEFINE_RUNTIME_ENTRY(NullErrorWithSelector, 1) {
   NullErrorHelper(zone, selector);
 }
 
+int calls = 0;
+
 DEFINE_RUNTIME_ENTRY(NullCastError, 0) {
-  NullErrorHelper(zone, String::null_string());
+
+  OS::Print("FUCK\n");
+  calls++;
+  if (calls == 2) arguments.SetReturn(Object::null_object());
+  else arguments.SetReturn(Object::empty_array());
+  //NullErrorHelper(zone, String::null_string());
 }
 
 DEFINE_RUNTIME_ENTRY(ArgumentNullError, 0) {

@@ -27,6 +27,7 @@
 #include "vm/compiler/frontend/prologue_builder.h"
 #include "vm/compiler/jit/compiler.h"
 #include "vm/compiler/runtime_api.h"
+#include "vm/debugger.h"
 #include "vm/kernel_isolate.h"
 #include "vm/kernel_loader.h"
 #include "vm/log.h"
@@ -1281,19 +1282,15 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     }
     case MethodRecognizer::kCoroutine_initialize: {
       ASSERT_EQUAL(function.NumParameters(), 2);
-      body += NullConstant();
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
       body += CoroutineInitializeStub(TokenPosition::kNoSource);
-      body += Drop();
       break;
     }
     case MethodRecognizer::kCoroutine_suspend: {
       ASSERT_EQUAL(function.NumParameters(), 1);
-      body += NullConstant();
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += CoroutineSuspendStub(TokenPosition::kNoSource);
-      body += Drop();
       break;
     }
     case MethodRecognizer::kCoroutine_resume: {
