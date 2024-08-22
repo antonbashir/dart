@@ -327,8 +327,10 @@ DEFINE_RUNTIME_ENTRY(NullCastError, 0) {
 
   OS::Print("FUCK\n");
   calls++;
-  if (calls == 2) arguments.SetReturn(Object::null_object());
-  else arguments.SetReturn(Object::empty_array());
+  if (calls == 1) {arguments.SetReturn(Object::empty_array());return;}
+  if (calls == 2) {arguments.SetReturn(Object::empty_array());return;}
+  if (calls == 3) {arguments.SetReturn(Object::null_object());return;}
+  if (calls == 4) {arguments.SetReturn(Object::empty_array());return;}
   //NullErrorHelper(zone, String::null_string());
 }
 

@@ -8607,15 +8607,15 @@ void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
 
-  compiler::Label skip;
-  __ CallRuntime(compiler::kNullCastErrorRuntimeEntry, /*argument_count=*/0);
-  __ PopRegister(RAX);
-  __ CompareObject(RAX, Object::null_object());
-  __ BranchIf(NOT_EQUAL, &skip);
+  // compiler::Label skip;
+  // __ CallRuntime(compiler::kNullCastErrorRuntimeEntry, /*argument_count=*/0);
+  // __ PopRegister(RAX);
+  // __ CompareObject(RAX, Object::null_object());
+  // __ BranchIf(NOT_EQUAL, &skip);
   
-  __ LeaveFrame();
+  // //__ LeaveFrame();
 
-  __ Bind(&skip);
+  // __ Bind(&skip);
 
 #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
   // On x86 (X64 and IA32) mismatch between calls and returns
@@ -8624,8 +8624,8 @@ void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   // epilogue is generated right after the call to suspend stub,
   // and resume stub adjusts resume PC to skip this epilogue.
   // const intptr_t start = compiler->assembler()->CodeSize();
-  // __ LeaveFrame();
-  // __ ret();
+   __ LeaveFrame();
+   __ ret();
   // RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
   //                CoroutineSuspendStubABI::kResumePcDistance);
 #endif
