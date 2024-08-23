@@ -21,9 +21,9 @@ void main() {
 
 void mainEntry() {
   print("entry");
-  print("main transfer");
-  mainFiber.transfer(childFiber);
-  print("child transfer finished");
+  print("fork");
+  mainFiber.fork(childFiber);
+  print("forked");
 }
 
 void childEntry() {

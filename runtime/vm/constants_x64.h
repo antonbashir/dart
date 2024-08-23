@@ -390,34 +390,33 @@ struct SuspendStubABI {
 
 struct CoroutineSuspendStubABI {
   static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kFromCoroutineStackPointer = RBX;
+  static constexpr Register kFromCoroutineStackPointer = RAX;
+  static constexpr Register kTempReg = RBX;
   static constexpr Register kFrameSizeReg = R8;
-  static constexpr Register kSrcFrameReg = RSI;
-  static constexpr Register kTempReg = RAX;
-  static constexpr Register kResumePcReg = R10;
-};
-struct CoroutineTransferStubABI {
-  static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kFromCoroutineStackPointer = RBX;
-  static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kToCoroutineStackPointer = RCX;
-  static constexpr Register kSuspendFrameSizeReg = R8;
-  static constexpr Register kResumeFrameSizeReg = R9;
-  static constexpr Register kSrcFrameReg = RSI;
-  static constexpr Register kDstFrameReg = RDI;
-  static constexpr Register kTempReg = RAX;
+  static constexpr Register kSrcFrameReg = RDI;
   static constexpr Register kResumePcReg = R10;
 };
 
 struct CoroutineResumeStubABI {
-  static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kFromCoroutineStackPointer = RBX;
-  static constexpr Register kToCoroutineStackPointer = RCX;
+  static constexpr Register kToCoroutineReg = RSI;
+  static constexpr Register kToCoroutineStackPointer = RAX;
+  static constexpr Register kTempReg = RBX;
   static constexpr Register kSuspendFrameSizeReg = R8;
   static constexpr Register kResumeFrameSizeReg = R9;
-  static constexpr Register kSrcFrameReg = RSI;
   static constexpr Register kDstFrameReg = RDI;
-  static constexpr Register kTempReg = RAX;
+  static constexpr Register kResumePcReg = R10;
+};
+
+struct CoroutineTransferStubABI {
+  static constexpr Register kFromCoroutineReg = RSI;
+  static constexpr Register kFromCoroutineStackPointer = RAX;
+  static constexpr Register kToCoroutineReg = RSI;
+  static constexpr Register kToCoroutineStackPointer = RAX;
+  static constexpr Register kTempReg = RBX;
+  static constexpr Register kSuspendFrameSizeReg = R8;
+  static constexpr Register kResumeFrameSizeReg = R9;
+  static constexpr Register kSrcFrameReg = RCX;
+  static constexpr Register kDstFrameReg = RDX;
   static constexpr Register kResumePcReg = R10;
 };
 

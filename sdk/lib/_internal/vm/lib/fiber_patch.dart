@@ -40,9 +40,18 @@ class Fiber {
   void start() {
     if (_state == FiberState.running) return;
     _construct(_coroutine, _entry);
+    _coroutineResume(_coroutine);
+  }
+  
+  @patch
+  void fork(Fiber child) {
+    if (_state != FiberState.running) return;
+    if (child._state == FiberState.running) return;
+    child._construct(child._coroutine, child._entry);
+    _coroutineTransfer(_coroutine, child._coroutine);
   }
 
-  @patch 
+  @patch
   void transfer(Fiber to) {
     _coroutineTransfer(_coroutine, to._coroutine);
   }

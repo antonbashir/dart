@@ -8590,8 +8590,8 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ LeaveFrame();
-  __ ret();
+  // __ LeaveFrame();
+  // __ Ret();
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
