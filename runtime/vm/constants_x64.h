@@ -396,11 +396,6 @@ struct CoroutineSuspendStubABI {
   static constexpr Register kDstFrameReg = RDI;
   static constexpr Register kTempReg = RAX;
   static constexpr Register kResumePcReg = R10;
-
-  // Number of bytes to skip after
-  // coroutine transfer stub return address in order to resume.
-  // X64: mov rsp, rbp; pop rbp; ret
-  static constexpr intptr_t kResumePcDistance = 6;
 };
 
 struct CoroutineResumeStubABI {
@@ -413,16 +408,6 @@ struct CoroutineResumeStubABI {
   static constexpr Register kDstFrameReg = RDI;
   static constexpr Register kTempReg = RAX;
   static constexpr Register kResumePcReg = R10;
-};
-
-struct CoroutineInitializeStubABI {
-  static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kFromCoroutineStackPointer = RBX;
-  static constexpr Register kEntryReg = RCX;
-  static constexpr Register kFrameSizeReg = R8;
-  static constexpr Register kSrcFrameReg = R9;
-  static constexpr Register kTempReg = RAX;
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,

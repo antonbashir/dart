@@ -382,7 +382,6 @@ namespace dart {
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
   V(::, _coroutineResume, Coroutine_resume, 0xa36ca808)                        \
-  V(::, _coroutineInitialize, Coroutine_initialize, 0x73453aeb)                \
   V(::, _coroutineSuspend, CoroutineSuspend, 0x9cda60eb)                       \
 
 // List of intrinsics:

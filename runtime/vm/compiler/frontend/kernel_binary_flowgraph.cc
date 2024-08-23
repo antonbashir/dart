@@ -6020,7 +6020,7 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineSuspend() {
   Fragment instructions;
   Array& argument_names = Array::ZoneHandle(Z);
   instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-  instructions += B->CoroutineSuspendStub(TokenPosition::kNoSource);
+  instructions += B->CoroutineSuspend(TokenPosition::kNoSource);
   instructions += NullConstant();
   return instructions;
 }

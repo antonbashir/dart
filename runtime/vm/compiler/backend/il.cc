@@ -8527,20 +8527,6 @@ LocationSummary* Call1ArgStubInstr::MakeLocationSummary(Zone* zone,
   return locs;
 }
 
-LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
-  const intptr_t kNumInputs = 2;
-  const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone)
-      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(
-                      CoroutineInitializeStubABI::kFromCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation(
-                      CoroutineInitializeStubABI::kToCoroutineReg));
-  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
-  return locs;
-}
 
 LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
     Zone* zone,
@@ -8551,19 +8537,6 @@ LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(0, Location::RegisterLocation(
                       CoroutineSuspendStubABI::kFromCoroutineReg));
-  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
-  return locs;
-}
-
-LocationSummary* CoroutineResumeStubInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
-  const intptr_t kNumInputs = 1;
-  const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone)
-      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(
-                      CoroutineResumeStubABI::kToCoroutineReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
   return locs;
 }
@@ -8592,106 +8565,11 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
-void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  ObjectStore* object_store = compiler->isolate_group()->object_store();
-  Code& stub = Code::ZoneHandle(compiler->zone());
-  stub = object_store->coroutine_initialize_stub();
-  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
-                             locs(), deopt_id(), env());
-  //__ Breakpoint();
-#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-  // On x86 (X64 and IA32) mismatch between calls and returns
-  // significantly regresses performance. So suspend stub
-  // does not return directly to the caller. Instead, a small
-  // epilogue is generated right after the call to suspend stub,
-  // and resume stub adjusts resume PC to skip this epilogue.
-  // const intptr_t start = compiler->assembler()->CodeSize();
-  // __ LeaveFrame();
-  // __ ret();
-  // RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
-  //                CoroutineSuspendStubABI::kResumePcDistance);
-#endif
-}
-
 void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_suspend_stub();
-  // __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  // __ Breakpoint();
- #if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-   // On x86 (X64 and IA32) mismatch between calls and returns
-   // significantly regresses performance. So suspend stub
-   // does not return directly to the caller. Instead, a small
-   // epilogue is generated right after the call to suspend stub,
-   // and resume stub adjusts resume PC to skip this epilogue.
-   // const intptr_t start = compiler->assembler()->CodeSize();
-  //  __ LeaveFrame();
-  //  __ Ret();
-   // RELEASE_ASSERT(compiler->assembler()->CodeSize() - start ==
-   //                CoroutineSuspendStubABI::kResumePcDistance);
- #endif
-}
-
-void CoroutineResumeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  const Register kToCoroutine = CoroutineResumeStubABI::kToCoroutineReg;
-  const Register kTemp = CoroutineResumeStubABI::kTempReg;
-  const Register kSuspendFrameSize = CoroutineResumeStubABI::kSuspendFrameSizeReg;
-  const Register kResumeFrameSize = CoroutineResumeStubABI::kResumeFrameSizeReg;
-  const Register kToCoroutineStackPointer = CoroutineResumeStubABI::kToCoroutineStackPointer;
-  const Register kSrcFrame = CoroutineResumeStubABI::kSrcFrameReg;
-  const Register kDstFrame = CoroutineResumeStubABI::kDstFrameReg;
-  const Register kResumePc = CoroutineResumeStubABI::kResumePcReg;
-
-  const intptr_t param_offset = compiler::target::frame_layout.param_end_from_fp * compiler::target::kWordSize;
-
-  __ LoadFromOffset(kToCoroutine, FPREG, param_offset + 1 * compiler::target::kWordSize);
-  __ LoadFieldFromOffset(kToCoroutineStackPointer, kToCoroutine, compiler::target::Coroutine::stack_pointer_offset());
-  __ LoadFieldFromOffset(kSuspendFrameSize, kToCoroutine, compiler::target::Coroutine::frame_size_offset());
-
-  if (!FLAG_precompiled_mode) {
-    __ AddImmediate(kTemp, compiler::target::frame_layout.code_from_fp * compiler::target::kWordSize);
-    __ AddRegisters(kTemp, kSuspendFrameSize);
-    __ LoadFromOffset(CODE_REG, kToCoroutineStackPointer, kTemp);
-    __ StoreToOffset(CODE_REG, FPREG, compiler::target::frame_layout.code_from_fp * compiler::target::kWordSize);
-#if !defined(TARGET_ARCH_IA32)
-    __ LoadPoolPointer(PP);
-#endif
-  }
-
-  __ MoveRegister(kResumeFrameSize, kSuspendFrameSize);
-  __ AddImmediate(kResumeFrameSize, (compiler::target::frame_layout.first_local_from_fp + 1) * compiler::target::kWordSize);
-  __ SubRegisters(SPREG, kResumeFrameSize);
-
-  __ AddRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
-  __ LoadFromOffset(kResumePc, kToCoroutineStackPointer, compiler::target::kWordSize);
-  __ SubRegisters(kToCoroutineStackPointer, kSuspendFrameSize);
-#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_IA32)
-__ AddImmediate(kResumePc, CoroutineSuspendStubABI::kResumePcDistance);
-#endif
-
-  intptr_t num_saved_regs = 0;
-  if (kSrcFrame == THR) {
-    __ PushRegister(THR);
-    ++num_saved_regs;
-  }
-  if (kDstFrame == CODE_REG) {
-    __ PushRegister(CODE_REG);
-    ++num_saved_regs;
-  }
-  
-  __ AddImmediate(kDstFrame, SPREG, num_saved_regs * compiler::target::kWordSize);
-  __ CopyMemoryWords(kToCoroutineStackPointer, kDstFrame, kResumeFrameSize, kTemp);
-
-  if (kDstFrame == CODE_REG) {
-    __ PopRegister(CODE_REG);
-  }
-  if (kSrcFrame == THR) {
-    __ PopRegister(THR);
-  }
-
-  __ Jump(kResumePc);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

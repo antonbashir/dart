@@ -2211,55 +2211,6 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
       target::ObjectStore::suspend_state_init_sync_star_offset());
 }
 
-void StubCodeCompiler::GenerateCoroutineInitializeStub() {
-  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
-  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineReg;
-  const Register kTemp = CoroutineInitializeStubABI::kTempReg;
-  const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
-  const Register kFromCoroutineStackPointer = CoroutineInitializeStubABI::kFromCoroutineStackPointer;
-  const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
-  const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
-
-  __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
-  __ SubRegisters(kFrameSize, SPREG);
-
-  __ EnterStubFrame();
-  
-  __ StoreFieldToOffset(kFrameSize, kFromCoroutine, target::Coroutine::frame_size_offset());
-  __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
-  __ LoadCompressedFieldFromOffset(kEntry, kToCoroutine, target::Coroutine::entry_offset());
-
-  if (kSrcFrame == THR) {
-    __ PushRegister(THR);
-  }
-  
-  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ CopyMemoryWords(kSrcFrame, kFromCoroutineStackPointer, kFrameSize, kTemp);
-
-  if (kSrcFrame == THR) {
-    __ PopRegister(THR);
-  }
-
-  __ LoadFromOffset(kTemp, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreToOffset(kTemp, kFromCoroutineStackPointer, target::kWordSize);
-
-   if (!FLAG_precompiled_mode) {
-    __ LoadFromOffset(CODE_REG, THR, target::Thread::coroutine_initialize_stub_offset());
-  }
-  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
-  CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_create_entry_point_offset(), target::ObjectStore::coroutine_create_offset());
-  __ LeaveStubFrame();
-
-#if !defined(TARGET_ARCH_X64) && !defined(TARGET_ARCH_IA32)
-  __ LeaveDartFrame();
-#elif defined(TARGET_ARCH_X64)
-  if (!FLAG_precompiled_mode) {
-    __ LoadFromOffset(PP, FPREG, target::frame_layout.saved_caller_pp_from_fp * target::kWordSize);
-  }
-#endif
-  __ Ret();
-}
-
 void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   const Register kFromCoroutine = CoroutineSuspendStubABI::kFromCoroutineReg;
   const Register kTemp = CoroutineSuspendStubABI::kTempReg;

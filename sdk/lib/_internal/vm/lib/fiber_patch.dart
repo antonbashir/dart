@@ -10,10 +10,6 @@ external void _coroutineSuspend(dynamic to);
 @pragma("vm:never-inline")
 external void _coroutineResume(dynamic to);
 
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
-external void _coroutineInitialize(dynamic from, dynamic to);
-
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
@@ -35,7 +31,7 @@ class Fiber {
       _coroutineSuspend(to);
       if (_initialized) {
         entry();
-        return ;
+        return;
       }
       _initialized = true;
       _coroutineResume(from);

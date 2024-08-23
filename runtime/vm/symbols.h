@@ -447,8 +447,6 @@ class ObjectPointerVisitor;
   V(_initSyncStar, "_initSyncStar")                                            \
   V(_coroutineSuspend, "_coroutineSuspend")                                  \
   V(_coroutineResume, "_coroutineResume")                                  \
-  V(_coroutineInitialize, "_coroutineInitialize")                              \
-  V(_coroutineCreate, "_coroutineCreate")                                      \
   V(_instanceOf, "_instanceOf")                                                \
   V(_listGetAt, "_listGetAt")                                                  \
   V(_listLength, "_listLength")                                                \

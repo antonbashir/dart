@@ -170,8 +170,6 @@ class Thread;
     StubCode::ExitSafepointIgnoreUnwindInProgress().ptr(), nullptr)            \
   V(CodePtr, call_native_through_safepoint_stub_,                              \
     StubCode::CallNativeThroughSafepoint().ptr(), nullptr)                     \
-  V(CodePtr, coroutine_initialize_stub_,                                       \
-    StubCode::CoroutineInitialize().ptr(), nullptr)
 
 #define CACHED_NON_VM_STUB_LIST(V)                                             \
   V(ObjectPtr, object_null_, Object::null(), nullptr)                          \

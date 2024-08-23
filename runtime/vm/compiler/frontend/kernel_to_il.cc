@@ -1143,7 +1143,6 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
     case MethodRecognizer::kCoroutine_resume:
-    case MethodRecognizer::kCoroutine_initialize:
       return true;
     default:
       return false;
@@ -1278,13 +1277,6 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
           Code::ZoneHandle(Z, IG->object_store()->resume_stub());
       body += NullConstant();
       body += TailCall(resume_stub);
-      break;
-    }
-    case MethodRecognizer::kCoroutine_initialize: {
-      ASSERT_EQUAL(function.NumParameters(), 2);
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadLocal(parsed_function_->RawParameterVariable(1));
-      body += CoroutineInitializeStub(TokenPosition::kNoSource);
       break;
     }
     case MethodRecognizer::kCoroutine_resume: {
@@ -4760,22 +4752,8 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineInitializeStub(TokenPosition position) {
-  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
-  Push(instr);
-  return Fragment(instr);
-}
-
-Fragment FlowGraphBuilder::CoroutineSuspendStub(TokenPosition position) {
+Fragment FlowGraphBuilder::CoroutineSuspend(TokenPosition position) {
   CoroutineSuspendStubInstr* instr = new (Z) CoroutineSuspendStubInstr(
-      InstructionSource(position), Pop(), GetNextDeoptId());
-  Push(instr);
-  return Fragment(instr);
-}
-
-Fragment FlowGraphBuilder::CoroutineResumeStub(TokenPosition position) {
-  CoroutineResumeStubInstr* instr = new (Z) CoroutineResumeStubInstr(
       InstructionSource(position), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
