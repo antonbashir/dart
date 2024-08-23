@@ -26,6 +26,7 @@
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 #include "vm/compiler/frontend/prologue_builder.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/debugger.h"
 #include "vm/kernel_isolate.h"
@@ -1142,7 +1143,6 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
     case MethodRecognizer::kCoroutine_resume:
-    case MethodRecognizer::kCoroutine_suspend:
     case MethodRecognizer::kCoroutine_initialize:
       return true;
     default:
@@ -1287,17 +1287,11 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += CoroutineInitializeStub(TokenPosition::kNoSource);
       break;
     }
-    case MethodRecognizer::kCoroutine_suspend: {
-      ASSERT_EQUAL(function.NumParameters(), 1);
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += CoroutineSuspendStub(TokenPosition::kNoSource);
-      break;
-    }
     case MethodRecognizer::kCoroutine_resume: {
-      const Code& stub =
+      const Code& resume_stub =
           Code::ZoneHandle(Z, IG->object_store()->coroutine_resume_stub());
       body += NullConstant();
-      body += TailCall(stub);
+      body += TailCall(resume_stub);
       break;
     }
     case MethodRecognizer::kTypedList_GetInt8:
@@ -4775,6 +4769,13 @@ Fragment FlowGraphBuilder::CoroutineInitializeStub(TokenPosition position) {
 
 Fragment FlowGraphBuilder::CoroutineSuspendStub(TokenPosition position) {
   CoroutineSuspendStubInstr* instr = new (Z) CoroutineSuspendStubInstr(
+      InstructionSource(position), Pop(), GetNextDeoptId());
+  Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineResumeStub(TokenPosition position) {
+  CoroutineResumeStubInstr* instr = new (Z) CoroutineResumeStubInstr(
       InstructionSource(position), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);

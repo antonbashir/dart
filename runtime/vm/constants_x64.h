@@ -400,7 +400,7 @@ struct CoroutineSuspendStubABI {
   // Number of bytes to skip after
   // coroutine transfer stub return address in order to resume.
   // X64: mov rsp, rbp; pop rbp; ret
-  static constexpr intptr_t kResumePcDistance = 5;
+  static constexpr intptr_t kResumePcDistance = 6;
 };
 
 struct CoroutineResumeStubABI {

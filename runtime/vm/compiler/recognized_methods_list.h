@@ -381,7 +381,6 @@ namespace dart {
   V(::, _memCopy, MemCopy, 0x51939aa6)                                         \
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
-  V(::, _coroutineSuspend, Coroutine_suspend, 0x9cda60eb)                      \
   V(::, _coroutineResume, Coroutine_resume, 0xa36ca808)                        \
   V(::, _coroutineInitialize, Coroutine_initialize, 0x73453aeb)                \
 

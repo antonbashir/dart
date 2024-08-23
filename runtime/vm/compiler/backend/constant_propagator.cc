@@ -1573,6 +1573,10 @@ void ConstantPropagator::VisitCoroutineSuspendStub(CoroutineSuspendStubInstr* in
   SetValue(instr, non_constant_);
 }
 
+void ConstantPropagator::VisitCoroutineResumeStub(CoroutineResumeStubInstr* instr) {
+  SetValue(instr, non_constant_);
+}
+
 void ConstantPropagator::VisitSuspend(SuspendInstr* instr) {
   SetValue(instr, non_constant_);
 }

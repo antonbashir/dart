@@ -2,8 +2,6 @@ import "dart:_internal" show patch;
 import "dart:fiber";
 import "dart:ffi";
 
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
 external void _coroutineSuspend(dynamic to);
 
 @pragma("vm:recognized", "other")
@@ -15,52 +13,48 @@ external void _coroutineResume(dynamic to);
 external void _coroutineInitialize(dynamic from, dynamic to);
 
 @pragma("vm:entry-point")
-@pragma("vm:never-inline")
-void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
-  print("_coroutineCreate");
-  if (to is _Coroutine && entry is Function) {
-    print("_coroutineCreate -> _coroutineSuspend");
-    _coroutineSuspend(to);
-    print("_coroutineCreate -> _coroutineResume start");
-    _coroutineResume(from);
-    print("_coroutineCreate -> _coroutineResume end");
-    print("_coroutineCreate -> entry 1");
-    entry();
-    print("_coroutineCreate -> entry 2");
-  }
-}
-
-@pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(
-    Pointer<Void> stack,
-    dynamic entry,
-  );
+  external factory _Coroutine._(Pointer<Void> stack, dynamic entry);
 }
 
 @patch
 class Fiber {
   final _Coroutine _coroutine;
   final void Function() _entry;
-  static late final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, null);
+  final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, null);
+  var _initialized = false;
 
   @patch
-  Fiber({required FiberStack stack, required void Function() entry})
-      : _entry = entry,
-        _coroutine = _Coroutine._(
-          stack.pointer,
-          entry,
-        );
+  Fiber({required FiberStack stack, required void Function() entry}) : _entry = entry, _coroutine = _Coroutine._(stack.pointer, entry);
+
+  void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
+    if (to is _Coroutine && entry is Function) {
+      _coroutineSuspend(to);
+      if (_initialized) {
+        entry();
+        return ;
+      }
+      _initialized = true;
+      _coroutineResume(from);
+    }
+  }
+
+  @patch _suspend() {
+    _coroutineSuspend(_coroutine);
+  }
+
+  @patch _resume() {
+    _coroutineResume(_coroutine);
+  }
 
   @patch
   void _run() {
-    print("before _coroutineSuspend");
     _coroutineSuspend(_defaultCoroutine);
-    print("after _coroutineSuspend");
+    if (_initialized) {
+      _coroutineResume(_coroutine);
+      return;
+    }
     _coroutineCreate(_defaultCoroutine, _coroutine, _entry);
-    print("after _coroutineCreate");
-    _coroutineResume(_coroutine);
-    print("after _coroutineResume");
   }
 }

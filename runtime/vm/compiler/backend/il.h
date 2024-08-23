@@ -545,8 +545,9 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
-  M(CoroutineInitializeStub, _)                                                           \
-  M(CoroutineSuspendStub, _)                                                           \
+  M(CoroutineInitializeStub, _)                                                \
+  M(CoroutineSuspendStub, _)                                                   \
+  M(CoroutineResumeStub, _)                                                    \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11478,13 +11479,11 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 // Generic instruction to call 2-argument stubs specified using [StubId].
 class CoroutineInitializeStubInstr : public TemplateDefinition<2, Throws> {
  public:
-
   CoroutineInitializeStubInstr(const InstructionSource& source,
-                    Value* first_operand,
-                    Value* second_operand,
-                    intptr_t deopt_id)
-      : TemplateDefinition(source, deopt_id),
-        token_pos_(source.token_pos) {
+                               Value* first_operand,
+                               Value* second_operand,
+                               intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
     SetInputAt(0, first_operand);
     SetInputAt(1, second_operand);
   }
@@ -11504,8 +11503,7 @@ class CoroutineInitializeStubInstr : public TemplateDefinition<2, Throws> {
   DECLARE_INSTRUCTION(CoroutineInitializeStub);
   PRINT_OPERANDS_TO_SUPPORT
 
-#define FIELD_LIST(F)                                                          \
-  F(const TokenPosition, token_pos_)
+#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
 
   DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineInitializeStubInstr,
                                           TemplateDefinition,
@@ -11519,10 +11517,9 @@ class CoroutineInitializeStubInstr : public TemplateDefinition<2, Throws> {
 class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
  public:
   CoroutineSuspendStubInstr(const InstructionSource& source,
-                    Value* operand,
-                    intptr_t deopt_id)
-      : TemplateDefinition(source, deopt_id),
-        token_pos_(source.token_pos) {
+                            Value* operand,
+                            intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
     SetInputAt(0, operand);
   }
 
@@ -11540,8 +11537,7 @@ class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
   DECLARE_INSTRUCTION(CoroutineSuspendStub);
   PRINT_OPERANDS_TO_SUPPORT
 
-#define FIELD_LIST(F)                                                          \
-  F(const TokenPosition, token_pos_)
+#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
 
   DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineSuspendStubInstr,
                                           TemplateDefinition,
@@ -11550,6 +11546,40 @@ class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineSuspendStubInstr);
+};
+
+class CoroutineResumeStubInstr : public TemplateDefinition<1, Throws> {
+ public:
+  CoroutineResumeStubInstr(const InstructionSource& source,
+                           Value* operand,
+                           intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
+    SetInputAt(0, operand);
+  }
+
+  Value* operand() const { return inputs_[0]; }
+  virtual TokenPosition token_pos() const { return token_pos_; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineResumeStub);
+  PRINT_OPERANDS_TO_SUPPORT
+
+#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
+
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineResumeStubInstr,
+                                          TemplateDefinition,
+                                          FIELD_LIST)
+#undef FIELD_LIST
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineResumeStubInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].

@@ -19,6 +19,10 @@ class Fiber {
 
   external Fiber({required FiberStack stack, required void Function() entry});
 
+  void suspend() => _suspend();
+  
+  void resume() => _resume();
+
   void run() {
     if (_state == FiberState.created) {
       _state = FiberState.running;
@@ -27,4 +31,6 @@ class Fiber {
   }
 
   external void _run();
+  external void _resume();
+  external void _suspend();
 }

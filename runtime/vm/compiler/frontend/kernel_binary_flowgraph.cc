@@ -15,6 +15,7 @@
 #include "vm/object_store.h"
 #include "vm/resolver.h"
 #include "vm/stack_frame.h"
+#include "vm/token_position.h"
 
 namespace dart {
 namespace kernel {
@@ -3340,6 +3341,16 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
   const Function& target =
       Function::ZoneHandle(Z, H.LookupStaticMethodByKernelProcedure(
                                   procedure_reference, /*required=*/false));
+
+  if (String::Handle(target.UserVisibleName()).Equals("_coroutineSuspend")) {
+    OS::Print("%s\n", String::Handle(target.UserVisibleName()).ToCString());
+    Fragment instructions;
+    Array& argument_names = Array::ZoneHandle(Z);
+    instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+    instructions += B->CoroutineSuspendStub(TokenPosition::kNoSource);
+    instructions += NullConstant();
+    return instructions;
+  }
 
   if (target.IsNull()) {
     Fragment instructions;
