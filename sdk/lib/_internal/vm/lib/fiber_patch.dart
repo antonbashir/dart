@@ -57,13 +57,20 @@ class Fiber {
   }
 
   void _construct(_Coroutine _coroutine, void Function() entry) {
+    print("_construct:_coroutineSuspend");
     _coroutineSuspend(_constructor);
-    if (_state == FiberState.launched) return;
+    print("_construct:_coroutineSuspend after");
+    if (_state == FiberState.launched) {
+      print("_construct return");
+      return;
+    }
     _create(_constructor, _coroutine, entry);
   }
 
   void _create(_Coroutine from, _Coroutine to, void Function() entry) {
+    print("_create:_coroutineSuspend");
     _coroutineSuspend(to);
+    print("_create:_coroutineSuspend after");
     if (_state == FiberState.launched) {
       _state = FiberState.running;
       entry();
@@ -71,6 +78,8 @@ class Fiber {
       return;
     }
     _state = FiberState.launched;
+    print("_create:_coroutineResume");
     _coroutineResume(from);
+    print("_create:_coroutineResume after");
   }
 }
