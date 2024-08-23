@@ -12,30 +12,12 @@ enum FiberState {
   created,
   launched,
   running,
+  finished,
 }
 
 class Fiber {
-  var _state = FiberState.created;
-  FiberState get state => _state;
-
+  external FiberState get state;
   external Fiber({required FiberStack stack, required void Function() entry});
-
-  void suspend() => _suspend();
-  
-  void resume() => _resume();
-  
-  void transfer(Fiber to) => _transfer(to);
-
-  void run() {
-    if (_state == FiberState.created) {
-      _state = FiberState.launched;
-      _run();
-      _state = FiberState.running;
-    }
-  }
-
-  external void _run();
-  external void _resume();
-  external void _suspend();
-  external void _transfer(Fiber to);
+  external void start();
+  external void transfer(Fiber to);
 }

@@ -4,63 +4,64 @@ import "dart:ffi";
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineSuspend")
-external void _coroutineSuspend(dynamic to);
-
-@pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineTransfer")
-external void _coroutineTransfer(dynamic from, dynamic to);
+external void _coroutineSuspend(_Coroutine to);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
-external void _coroutineResume(dynamic to);
+external void _coroutineResume(_Coroutine to);
+
+@pragma("vm:recognized", "other")
+@pragma("vm:external-name", "Fiber_coroutineTransfer")
+external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(Pointer<Void> stack, dynamic entry);
+  external factory _Coroutine._(Pointer<Void> stack);
 }
 
 @patch
 class Fiber {
   final _Coroutine _coroutine;
   final void Function() _entry;
-  final _Coroutine _defaultCoroutine = _Coroutine._(nullptr, null);
-  var _launched = false;
+  final _Coroutine _constructor = _Coroutine._(nullptr);
+  
+  var _state = FiberState.created;
+  
+  @patch
+  FiberState get state => _state;
 
   @patch
-  Fiber({required FiberStack stack, required void Function() entry}) : _entry = entry, _coroutine = _Coroutine._(stack.pointer, entry);
+  Fiber({required FiberStack stack, required void Function() entry}): 
+    _entry = entry,
+    _coroutine = _Coroutine._(stack.pointer);
 
-  void _coroutineCreate(dynamic from, dynamic to, dynamic entry) {
-    _coroutineSuspend(to);
-    if (_launched) {
-      entry();
-      return;
-    }
-    _launched = true;
-    _coroutineResume(from);
+  @patch 
+  void start() {
+    if (_state == FiberState.running) return;
+    _construct(_coroutine, _entry);
   }
 
   @patch 
-  void _suspend() {
-    _coroutineSuspend(_coroutine);
-  }
-
-  @patch 
-  void _resume() {
-    _coroutineResume(_coroutine);
-  }
-
-  @patch 
-  void _transfer(Fiber to) {
+  void transfer(Fiber to) {
     _coroutineTransfer(_coroutine, to._coroutine);
   }
 
-  @patch
-  void _run() {
-    _coroutineSuspend(_defaultCoroutine);
-    if (_launched) {
+  void _construct(_Coroutine _coroutine, void Function() entry) {
+    _coroutineSuspend(_constructor);
+    if (_state == FiberState.launched) return;
+    _create(_constructor, _coroutine, entry);
+  }
+
+  void _create(_Coroutine from, _Coroutine to, void Function() entry) {
+    _coroutineSuspend(to);
+    if (_state == FiberState.launched) {
+      _state = FiberState.running;
+      entry();
+      _state = FiberState.finished;
       return;
     }
-    _coroutineCreate(_defaultCoroutine, _coroutine, _entry);
+    _state = FiberState.launched;
+    _coroutineResume(from);
   }
 }

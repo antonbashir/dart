@@ -14,15 +14,13 @@ final childFiber = Fiber(
 var _transferred = false;
 
 void main() {
-  print("before run");
-  mainFiber.run();
-  print("after run");
-  mainFiber.resume();
+  print("before start");
+  mainFiber.start();
+  print("after start");
 }
 
 void mainEntry() {
   print("entry");
-  childFiber.run();
   print("main transfer");
   mainFiber.transfer(childFiber);
   print("child transfer finished");

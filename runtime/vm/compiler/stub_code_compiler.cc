@@ -2219,6 +2219,9 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   const Register kSrcFrame = CoroutineSuspendStubABI::kSrcFrameReg;
   const Register kResumePc = CoroutineSuspendStubABI::kResumePcReg;
 
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
 
@@ -2307,6 +2310,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
   const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
 
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
   __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kSuspendFrameSize, SPREG);
 
@@ -2360,6 +2366,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PopRegister(THR);
   }
 
+  __ AddImmediate(kResumePc, 5);
   __ Jump(kResumePc);
 }
 
