@@ -3373,6 +3373,8 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
   switch (recognized_kind) {
     case MethodRecognizer::kCoroutineSuspend:
       return BuildCoroutineSuspend();
+    case MethodRecognizer::kCoroutineTransfer:
+      return BuildCoroutineTransfer();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6021,6 +6023,15 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineSuspend() {
   Array& argument_names = Array::ZoneHandle(Z);
   instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
   instructions += B->CoroutineSuspend(TokenPosition::kNoSource);
+  instructions += NullConstant();
+  return instructions;
+}
+
+Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
+  Fragment instructions;
+  Array& argument_names = Array::ZoneHandle(Z);
+  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
   instructions += NullConstant();
   return instructions;
 }

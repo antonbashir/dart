@@ -377,6 +377,8 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   Fragment BuildNativeEffect();
 
   Fragment BuildCoroutineSuspend();
+  
+  Fragment BuildCoroutineTransfer();
 
   // Build the call-site manually, to avoid doing initialization checks
   // for late fields.

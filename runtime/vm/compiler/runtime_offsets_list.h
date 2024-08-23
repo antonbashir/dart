@@ -400,6 +400,8 @@
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
   FIELD(Coroutine, stack_pointer_offset)                                       \
+  FIELD(Coroutine, code_object_offset)                                         \
+  FIELD(Coroutine, pp_offset)                                         \
   FIELD(Coroutine, frame_size_offset)                                          \
   FIELD(Coroutine, entry_offset)                                               \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \

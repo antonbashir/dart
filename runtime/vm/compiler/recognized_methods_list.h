@@ -383,6 +383,7 @@ namespace dart {
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
   V(::, _coroutineResume, Coroutine_resume, 0xa36ca808)                        \
   V(::, _coroutineSuspend, CoroutineSuspend, 0x9cda60eb)                       \
+  V(::, _coroutineTransfer, CoroutineTransfer, 0x7b0e0c18)                     \
 
 // List of intrinsics:
 // (class-name, function-name, intrinsification method, fingerprint).

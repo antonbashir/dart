@@ -1579,7 +1579,15 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
 void CoroutineSuspendStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "CoroutineSuspend";
   f->Printf("%s(", name);
-  operand()->PrintTo(f);
+  coroutine()->PrintTo(f);
+  f->AddString(")");
+}
+
+void CoroutineTransferStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineTransfer";
+  f->Printf("%s(", name);
+  from()->PrintTo(f);
+  to()->PrintTo(f);
   f->AddString(")");
 }
 

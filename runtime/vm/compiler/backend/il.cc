@@ -8527,20 +8527,6 @@ LocationSummary* Call1ArgStubInstr::MakeLocationSummary(Zone* zone,
   return locs;
 }
 
-
-LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
-  const intptr_t kNumInputs = 1;
-  const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone)
-      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(
-                      CoroutineSuspendStubABI::kFromCoroutineReg));
-  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
-  return locs;
-}
-
 void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
@@ -8565,10 +8551,44 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
+LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 1;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation(
+                      CoroutineSuspendStubABI::kFromCoroutineReg));
+  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  return locs;
+}
+
 void CoroutineSuspendStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_suspend_stub();
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
+                             locs(), deopt_id(), env());
+}
+
+LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 2;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation( CoroutineTransferStubABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation( CoroutineTransferStubABI::kToCoroutineReg));
+  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  return locs;
+}
+
+void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  stub = object_store->coroutine_transfer_stub();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
 }
 

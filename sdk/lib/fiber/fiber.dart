@@ -10,6 +10,7 @@ extension type FiberStack(({Pointer<Void> pointer, int size}) _stack) {
 
 enum FiberState {
   created,
+  launched,
   running,
 }
 
@@ -22,15 +23,19 @@ class Fiber {
   void suspend() => _suspend();
   
   void resume() => _resume();
+  
+  void transfer(Fiber to) => _transfer(to);
 
   void run() {
     if (_state == FiberState.created) {
-      _state = FiberState.running;
+      _state = FiberState.launched;
       _run();
+      _state = FiberState.running;
     }
   }
 
   external void _run();
   external void _resume();
   external void _suspend();
+  external void _transfer(Fiber to);
 }

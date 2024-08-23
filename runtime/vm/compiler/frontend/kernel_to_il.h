@@ -417,6 +417,8 @@ class FlowGraphBuilder : public BaseFlowGraphBuilder {
   
   Fragment CoroutineSuspend(TokenPosition position);
   
+  Fragment CoroutineTransfer(TokenPosition position);
+  
   // Generates Suspend instruction.
   Fragment Suspend(TokenPosition position, SuspendInstr::StubId stub_id);
 
