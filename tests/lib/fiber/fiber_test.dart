@@ -1,8 +1,6 @@
-import 'dart:developer';
-import 'dart:fiber';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
-import 'package:expect/expect.dart';
+import 'dart:fiber';
 
 final firstFiber = Fiber(
   stack: FiberStack((pointer: calloc<Uint8>(1024 * 1024).cast(), size: 1024 * 1024)),
@@ -34,6 +32,7 @@ void secondEntry() {
 void first() {
   print("hello, first fiber");
   firstFiber.suspend();
+  print(sw.elapsedMicroseconds);
   if (_firstLaunched) {
     print("hello, first resumed fiber");
     secondFiber.resume();
@@ -53,5 +52,6 @@ void second() {
   }
   _secondLaunched = true;
   print("hello, second suspended fiber");
+  sw.start();
   firstFiber.resume();
 }

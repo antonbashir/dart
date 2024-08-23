@@ -2,6 +2,8 @@ import "dart:_internal" show patch;
 import "dart:fiber";
 import "dart:ffi";
 
+@pragma("vm:recognized", "other")
+@pragma("vm:external-name", "Fiber_coroutineSuspend")
 external void _coroutineSuspend(dynamic to);
 
 @pragma("vm:recognized", "other")

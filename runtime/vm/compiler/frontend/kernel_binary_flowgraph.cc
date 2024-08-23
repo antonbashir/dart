@@ -3342,16 +3342,6 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
       Function::ZoneHandle(Z, H.LookupStaticMethodByKernelProcedure(
                                   procedure_reference, /*required=*/false));
 
-  if (String::Handle(target.UserVisibleName()).Equals("_coroutineSuspend")) {
-    OS::Print("%s\n", String::Handle(target.UserVisibleName()).ToCString());
-    Fragment instructions;
-    Array& argument_names = Array::ZoneHandle(Z);
-    instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-    instructions += B->CoroutineSuspendStub(TokenPosition::kNoSource);
-    instructions += NullConstant();
-    return instructions;
-  }
-
   if (target.IsNull()) {
     Fragment instructions;
     Array& argument_names = Array::ZoneHandle(Z);
@@ -3381,6 +3371,8 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
 
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
+    case MethodRecognizer::kCoroutineSuspend:
+      return BuildCoroutineSuspend();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6022,6 +6014,15 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
   Fragment code;
   code += NullConstant();  // Return type is void.
   return code;
+}
+
+Fragment StreamingFlowGraphBuilder::BuildCoroutineSuspend() {
+  Fragment instructions;
+  Array& argument_names = Array::ZoneHandle(Z);
+  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  instructions += B->CoroutineSuspendStub(TokenPosition::kNoSource);
+  instructions += NullConstant();
+  return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
