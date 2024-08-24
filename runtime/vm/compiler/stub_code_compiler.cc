@@ -2305,12 +2305,10 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
  
   __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
-  __ Breakpoint();
   __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ SubRegisters(kToContext, kSuspendFrameSize);
   __ MoveRegister(kSaved, kToContext);
-  __ Breakpoint();
 
   __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
   __ SubRegisters(SPREG, kSuspendFrameSize);
