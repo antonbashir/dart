@@ -2228,6 +2228,7 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   __ EnterStubFrame();
 
   __ StoreFieldToOffset(kFrameSize, kFromCoroutine, target::Coroutine::frame_size_offset());
+  __ StoreFieldToOffset(FPREG, kFromCoroutine, target::Coroutine::pp_offset());
   __ LoadFieldFromOffset(kFromCoroutineStackPointer, kFromCoroutine, target::Coroutine::stack_pointer_offset());
 
   if (kSrcFrame == THR) {
@@ -2365,7 +2366,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PopRegister(THR);
   }
 
-//  __ AddImmediate(kResumePc, 5);
   __ Jump(kResumePc);
 }
 

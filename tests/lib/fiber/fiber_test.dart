@@ -13,21 +13,31 @@ final childFiber = Fiber(
 
 var _transferred = false;
 
+var target = 0;
+
 void main() {
   print("before start");
   mainFiber.start();
   print("after start");
+  mainFiber.launch();
+  print("after launch");
 }
 
+@pragma("vm:never-inline")
 void mainEntry() {
-  print("entry");
+  print("entry");  
+  childFiber.start();
   print("fork");
-  mainFiber.fork(childFiber);
-  print("forked");
-}
+  var target = 3;
+  mainFiber.transfer(childFiber);
+  target += 3;
+  print(target);
+  print("main");
+} 
 
+@pragma("vm:never-inline")
 void childEntry() {
   print("child entry");
   childFiber.transfer(mainFiber);
-  print("child transfer");
+  print("child");
 }

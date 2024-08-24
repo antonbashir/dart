@@ -8589,7 +8589,9 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
+  __ StoreFieldToOffset(FPREG, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::pp_offset());
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+  __ LoadFieldFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::pp_offset());
   // __ LeaveFrame();
   // __ Ret();
 }

@@ -36,41 +36,37 @@ class Fiber {
     _entry = entry,
     _coroutine = _Coroutine._(stack.pointer);
 
-  @patch 
+  @patch
+  @pragma("vm:prefer-inline")
   void start() {
     if (_state == FiberState.running) return;
     _construct(_coroutine, _entry);
-    _coroutineResume(_coroutine);
-  }
-  
-  @patch
-  void fork(Fiber child) {
-    if (_state != FiberState.running) return;
-    if (child._state == FiberState.running) return;
-    child._construct(child._coroutine, child._entry);
-    _coroutineTransfer(_coroutine, child._coroutine);
   }
 
   @patch
+  @pragma("vm:prefer-inline")
+  void launch() {
+    _coroutineResume(_coroutine);
+  }
+
+  @patch
+  @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
     _coroutineTransfer(_coroutine, to._coroutine);
   }
 
+  @pragma("vm:never-inline")
   void _construct(_Coroutine _coroutine, void Function() entry) {
-    print("_construct:_coroutineSuspend");
     _coroutineSuspend(_constructor);
-    print("_construct:_coroutineSuspend after");
     if (_state == FiberState.launched) {
-      print("_construct return");
       return;
     }
     _create(_constructor, _coroutine, entry);
   }
 
+  @pragma("vm:never-inline")
   void _create(_Coroutine from, _Coroutine to, void Function() entry) {
-    print("_create:_coroutineSuspend");
     _coroutineSuspend(to);
-    print("_create:_coroutineSuspend after");
     if (_state == FiberState.launched) {
       _state = FiberState.running;
       entry();
@@ -78,8 +74,6 @@ class Fiber {
       return;
     }
     _state = FiberState.launched;
-    print("_create:_coroutineResume");
     _coroutineResume(from);
-    print("_create:_coroutineResume after");
   }
 }

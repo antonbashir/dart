@@ -19,6 +19,6 @@ class Fiber {
   external FiberState get state;
   external Fiber({required FiberStack stack, required void Function() entry});
   external void start();
-  external void fork(Fiber child);
+  external void launch();
   external void transfer(Fiber to);
 }
