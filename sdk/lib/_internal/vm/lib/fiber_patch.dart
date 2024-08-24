@@ -16,8 +16,8 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 @pragma("vm:entry-point", "call")
 @pragma("vm:invisible")
 void _coroutineLaunch(_Coroutine from, _Coroutine to, void Function() entry) {
-  _coroutineTransfer(to, from);
-  entry();
+  // _coroutineTransfer(to, from);
+  // entry();
 }
 
 @pragma("vm:entry-point")
@@ -38,24 +38,24 @@ class Fiber {
 
   @patch
   Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
-    _coroutineInitialize(_root, _current, entry);
-    _state = FiberState.initialized;
+    // _coroutineInitialize(_root, _current, entry);
+    // _state = FiberState.initialized;
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void start() {
-    if (state == FiberState.initialized) {
-      _state = FiberState.running;
-      _coroutineTransfer(_root, _current);
-      _state = FiberState.finished;
-    }
+    // if (state == FiberState.initialized) {
+    //   _state = FiberState.running;
+    //   _coroutineTransfer(_root, _current);
+    //   _state = FiberState.finished;
+    // }
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
-    _coroutineTransfer(_current, to._current);
+//    _coroutineTransfer(_current, to._current);
   }
 
 }
