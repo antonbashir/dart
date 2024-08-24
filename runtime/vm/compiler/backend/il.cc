@@ -8596,6 +8596,7 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ Breakpoint();
   __ LoadIsolate(FPREG);
   __ LoadFromOffset(FPREG, FPREG, compiler::target::IsolateGroup::object_store_offset());
+  __ LoadFromOffset(FPREG, FPREG, compiler::target::ObjectStore::current_coroutine_offset());
   __ LoadFromOffset(FPREG, FPREG, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
 }
 
