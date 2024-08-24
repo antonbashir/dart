@@ -8559,6 +8559,7 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
+  locs->set_in(2, Location::RegisterLocation(CoroutineInitializeStubABI::kEntryReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
   return locs;
 }

@@ -4744,7 +4744,7 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
 }
 
 Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
-  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(InstructionSource(position), Pop(), Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

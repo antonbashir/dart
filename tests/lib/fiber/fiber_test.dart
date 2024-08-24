@@ -18,26 +18,23 @@ void main() {
   print("before start");
   mainFiber.start();
   print("after start");
-  mainFiber.launch();
-  print("after launch");
 }
 
 @pragma("vm:never-inline")
 void mainEntry() {
-  print("entry");  
+  print("main: entry");  
   childFiber.start();
-  print("fork");
-  var target = 3;
+  print("main: child start");
+  print("main: transfer");
   mainFiber.transfer(childFiber);
-  target += 3;
-  print(target);
-  print("main");
+  print("main: after first transfer");
   mainFiber.transfer(childFiber);
+  print("main: after second transfer");
 } 
 
 @pragma("vm:never-inline")
 void childEntry() {
-  print("child entry");
+  print("child: entry");
   childFiber.transfer(mainFiber);
-  print("child");
+  print("child: transfer");
 }
