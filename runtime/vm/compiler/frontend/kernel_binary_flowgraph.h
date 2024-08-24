@@ -376,7 +376,7 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   // Build flow graph for '_nativeEffect'.
   Fragment BuildNativeEffect();
 
-  Fragment BuildCoroutineSuspend();
+  Fragment BuildCoroutineInitialize();
   
   Fragment BuildCoroutineTransfer();
 

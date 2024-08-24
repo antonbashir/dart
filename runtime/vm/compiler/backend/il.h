@@ -545,7 +545,7 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
-  M(CoroutineSuspendStub, _)                                                   \
+  M(CoroutineInitializeStub, _)                                                \
   M(CoroutineTransferStub, _)                                                  \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
@@ -11475,13 +11475,17 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
 };
 
-class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
+class CoroutineInitializeStubInstr : public TemplateDefinition<3, Throws> {
  public:
-  CoroutineSuspendStubInstr(const InstructionSource& source,
-                            Value* coroutine,
+  CoroutineInitializeStubInstr(const InstructionSource& source,
+                            Value* from,
+                            Value* to,
+                            Value* entry,
                             intptr_t deopt_id)
       : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
-    SetInputAt(0, coroutine);
+    SetInputAt(0, from);
+    SetInputAt(1, to);
+    SetInputAt(2, entry);
   }
 
   Value* coroutine() const { return inputs_[0]; }
@@ -11495,18 +11499,18 @@ class CoroutineSuspendStubInstr : public TemplateDefinition<1, Throws> {
     return InputCount();
   }
 
-  DECLARE_INSTRUCTION(CoroutineSuspendStub);
+  DECLARE_INSTRUCTION(CoroutineInitializeStub);
   PRINT_OPERANDS_TO_SUPPORT
 
 #define FIELD_LIST(F) F(const TokenPosition, token_pos_)
 
-  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineSuspendStubInstr,
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineInitializeStubInstr,
                                           TemplateDefinition,
                                           FIELD_LIST)
 #undef FIELD_LIST
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(CoroutineSuspendStubInstr);
+  DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeStubInstr);
 };
 
 class CoroutineTransferStubInstr : public TemplateDefinition<2, Throws> {

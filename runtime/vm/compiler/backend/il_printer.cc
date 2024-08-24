@@ -1576,10 +1576,12 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->AddString(")");
 }
 
-void CoroutineSuspendStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  const char* name = "CoroutineSuspend";
+void CoroutineInitializeStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineInitialize";
   f->Printf("%s(", name);
-  coroutine()->PrintTo(f);
+  from()->PrintTo(f);
+  to()->PrintTo(f);
+  entry()->PrintTo(f);
   f->AddString(")");
 }
 

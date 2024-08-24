@@ -1565,7 +1565,7 @@ void ConstantPropagator::VisitCall1ArgStub(Call1ArgStubInstr* instr) {
   SetValue(instr, non_constant_);
 }
 
-void ConstantPropagator::VisitCoroutineSuspendStub(CoroutineSuspendStubInstr* instr) {
+void ConstantPropagator::VisitCoroutineInitializeStub(CoroutineInitializeStubInstr* instr) {
   SetValue(instr, non_constant_);
 }
 

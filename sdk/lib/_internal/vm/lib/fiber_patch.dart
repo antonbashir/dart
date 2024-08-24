@@ -3,8 +3,8 @@ import "dart:fiber";
 import "dart:ffi";
 
 @pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineSuspend")
-external void _coroutineSuspend(_Coroutine to);
+@pragma("vm:external-name", "Fiber_coroutineInitialize")
+external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entry);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
@@ -42,7 +42,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void start() {
     if (_state == FiberState.running) return;
-    _construct(_coroutine, _entry);
+    _initialize(_coroutine, _entry);
   }
 
   @patch
@@ -58,24 +58,7 @@ class Fiber {
   }
 
   @pragma("vm:never-inline")
-  void _construct(_Coroutine _coroutine, void Function() entry) {
-    _coroutineSuspend(_constructor);
-    if (_state == FiberState.launched) {
-      return;
-    }
-    _create(_constructor, _coroutine, entry);
-  }
-
-  @pragma("vm:never-inline")
-  void _create(_Coroutine from, _Coroutine to, void Function() entry) {
-    _coroutineSuspend(to);
-    if (_state == FiberState.launched) {
-      _state = FiberState.running;
-      entry();
-      _state = FiberState.finished;
-      return;
-    }
-    _state = FiberState.launched;
-    _coroutineResume(from);
+  void _initialize(_Coroutine _coroutine, void Function() entry) {
+    _coroutineInitialize(_constructor, _coroutine, entry);
   }
 }

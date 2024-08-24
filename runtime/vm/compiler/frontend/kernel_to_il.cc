@@ -1142,8 +1142,6 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
-    case MethodRecognizer::kCoroutine_resume:
-      return true;
     default:
       return false;
   }
@@ -1275,13 +1273,6 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     case MethodRecognizer::kSuspendState_resume: {
       const Code& resume_stub =
           Code::ZoneHandle(Z, IG->object_store()->resume_stub());
-      body += NullConstant();
-      body += TailCall(resume_stub);
-      break;
-    }
-    case MethodRecognizer::kCoroutine_resume: {
-      const Code& resume_stub =
-          Code::ZoneHandle(Z, IG->object_store()->coroutine_resume_stub());
       body += NullConstant();
       body += TailCall(resume_stub);
       break;
@@ -4752,9 +4743,9 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineSuspend(TokenPosition position) {
-  CoroutineSuspendStubInstr* instr = new (Z) CoroutineSuspendStubInstr(
-      InstructionSource(position), Pop(), GetNextDeoptId());
+Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
+  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
+      InstructionSource(position), Pop(), Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

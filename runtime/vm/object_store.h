@@ -288,9 +288,8 @@ class ObjectPointerVisitor;
   RW(Code, init_sync_star_stub)                                                \
   RW(Code, suspend_sync_star_at_start_stub)                                    \
   RW(Code, suspend_sync_star_at_yield_stub)                                    \
-  RW(Code, coroutine_suspend_stub)                                             \
-  RW(Code, coroutine_resume_stub)                                              \
-  RW(Code, coroutine_transfer_stub)                                              \
+  RW(Code, coroutine_initialize_stub)                                          \
+  RW(Code, coroutine_transfer_stub)                                            \
   RW(Array, dispatch_table_code_entries)                                       \
   RW(GrowableObjectArray, instructions_tables)                                 \
   RW(Array, obfuscation_map)                                                   \
@@ -392,9 +391,8 @@ class ObjectPointerVisitor;
   DO(init_sync_star_stub, InitSyncStar)                                        \
   DO(suspend_sync_star_at_start_stub, SuspendSyncStarAtStart)                  \
   DO(suspend_sync_star_at_yield_stub, SuspendSyncStarAtYield)                  \
-  DO(coroutine_suspend_stub, CoroutineSuspend)                                 \
+  DO(coroutine_initialize_stub, CoroutineInitialize)                           \
   DO(coroutine_transfer_stub, CoroutineTransfer)                               \
-  DO(coroutine_resume_stub, CoroutineResume)                                   \
   DO(instance_of_stub, InstanceOf)
 
 #define ISOLATE_OBJECT_STORE_FIELD_LIST(R_, RW)                                \

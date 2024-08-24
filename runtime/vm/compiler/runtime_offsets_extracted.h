@@ -13208,4 +13208,3 @@ static constexpr dart::compiler::target::word AOT_WeakSerializationReference_Ins
 
 
 #endif  // RUNTIME_VM_COMPILER_RUNTIME_OFFSETS_EXTRACTED_H_
-
