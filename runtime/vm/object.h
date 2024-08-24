@@ -12707,19 +12707,10 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t stack);
+  static CoroutinePtr New(uintptr_t size);
 
-  static uword stack_pointer_offset() {
-    return OFFSET_OF(UntaggedCoroutine, stack_pointer_);
-  }
-  static uword frame_size_offset() {
-    return OFFSET_OF(UntaggedCoroutine, frame_size_);
-  }
-  static uword code_object_offset() {
-    return OFFSET_OF(UntaggedCoroutine, code_object_);
-  }
-  static uword pp_offset() {
-    return OFFSET_OF(UntaggedCoroutine, pp_);
+  static uword context_offset() {
+    return OFFSET_OF(UntaggedCoroutine, context_);
   }
 
  private:

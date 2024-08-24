@@ -1,14 +1,13 @@
 import "dart:_internal" show patch;
 import "dart:fiber";
+import "dart:async";
 import "dart:ffi";
+
+const _kRootContextSize = 4096;
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineInitialize")
-external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entry);
-
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
-external void _coroutineResume(_Coroutine to);
+external void _coroutineInitialize(_Coroutine from, _Coroutine to);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
@@ -16,39 +15,29 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
 @pragma("vm:entry-point")
 class _Coroutine {
-  @pragma("vm:entry-point")
-  static int? _current;
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(Pointer<Void> stack);
+  external factory _Coroutine._(int size);
 }
 
 @patch
 class Fiber {
-  final _Coroutine _coroutine;
+  final _Coroutine _current;
+  final _Coroutine _root = _Coroutine._(_kRootContextSize);
   final void Function() _entry;
-  final _Coroutine _constructor = _Coroutine._(nullptr);
-  
-  var _state = FiberState.created;
   
   @patch
   FiberState get state => _state;
+  var _state = FiberState.created;
 
   @patch
-  Fiber({required FiberStack stack, required void Function() entry}): 
-    _entry = entry,
-    _coroutine = _Coroutine._(stack.pointer);
-
-  @patch
-  @pragma("vm:prefer-inline")
-  void start() {
-    if (_state == FiberState.running) return;
-    _initialize(_coroutine, _entry);
+  Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
+    _coroutineInitialize(_root, _current);
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void launch() {
-    _coroutineResume(_coroutine);
+    _coroutineTransfer(_root, _coroutine);
   }
 
   @patch
@@ -57,8 +46,13 @@ class Fiber {
     _coroutineTransfer(_coroutine, to._coroutine);
   }
 
+  @pragma("vm:entry-point")
   @pragma("vm:never-inline")
-  void _initialize(_Coroutine _coroutine, void Function() entry) {
-    _coroutineInitialize(_constructor, _coroutine, entry);
+  void _initialize() {
+    _state = Fiber.initialized;
+    _coroutineTransfer(_current, _root);
+    _state = Fiber.running;
+    _entry();
+    _state = Fiber.finished;
   }
 }

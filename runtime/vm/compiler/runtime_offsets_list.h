@@ -210,7 +210,7 @@
   FIELD(ObjectStore, suspend_state_return_async_star_offset)                   \
   FIELD(ObjectStore, suspend_state_suspend_sync_star_at_start_offset)          \
   FIELD(ObjectStore, suspend_state_yield_async_star_offset)                    \
-  FIELD(ObjectStore, current_coroutine_offset)                                 \
+  FIELD(ObjectStore, fiber_initialize_offset)                                  \
   FIELD(OneByteString, data_offset)                                            \
   FIELD(PersistentHandle, ptr_offset)                                          \
   FIELD(PointerBase, data_offset)                                              \
@@ -339,6 +339,7 @@
   FIELD(Thread, suspend_state_init_sync_star_entry_point_offset)               \
   FIELD(Thread, suspend_state_suspend_sync_star_at_start_entry_point_offset)   \
   FIELD(Thread, suspend_state_handle_exception_entry_point_offset)             \
+  FIELD(Thread, fiber_initialize_entry_point_offset)                           \
   FIELD(Thread, top_exit_frame_info_offset)                                    \
   FIELD(Thread, top_offset)                                                    \
   FIELD(Thread, top_resource_offset)                                           \
@@ -400,10 +401,7 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
-  FIELD(Coroutine, stack_pointer_offset)                                       \
-  FIELD(Coroutine, code_object_offset)                                         \
-  FIELD(Coroutine, pp_offset)                                         \
-  FIELD(Coroutine, frame_size_offset)                                          \
+  FIELD(Coroutine, context_offset)                                             \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \

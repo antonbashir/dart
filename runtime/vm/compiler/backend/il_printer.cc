@@ -1581,7 +1581,6 @@ void CoroutineInitializeStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->Printf("%s(", name);
   from()->PrintTo(f);
   to()->PrintTo(f);
-  entry()->PrintTo(f);
   f->AddString(")");
 }
 

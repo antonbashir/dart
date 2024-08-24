@@ -11475,20 +11475,19 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
 };
 
-class CoroutineInitializeStubInstr : public TemplateDefinition<3, Throws> {
+class CoroutineInitializeStubInstr : public TemplateDefinition<2, Throws> {
  public:
   CoroutineInitializeStubInstr(const InstructionSource& source,
                             Value* from,
                             Value* to,
-                            Value* entry,
                             intptr_t deopt_id)
       : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
     SetInputAt(0, from);
     SetInputAt(1, to);
-    SetInputAt(2, entry);
   }
 
-  Value* coroutine() const { return inputs_[0]; }
+  Value* from() const { return inputs_[0]; }
+  Value* to() const { return inputs_[1]; }
   virtual TokenPosition token_pos() const { return token_pos_; }
 
   virtual bool CanCallDart() const { return true; }

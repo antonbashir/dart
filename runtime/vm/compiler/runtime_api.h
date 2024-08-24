@@ -1036,10 +1036,7 @@ class SuspendState : public AllStatic {
 
 class Coroutine : public AllStatic {
  public:
-  static word stack_pointer_offset();
-  static word frame_size_offset();
-  static word code_object_offset();
-  static word pp_offset();
+  static word context_offset();
 
   static word InstanceSize();
   FINAL_CLASS();
@@ -1296,6 +1293,8 @@ class Thread : public AllStatic {
   static word suspend_state_suspend_sync_star_at_start_entry_point_offset();
 
   static word suspend_state_handle_exception_entry_point_offset();
+  
+  static word fiber_initialize_entry_point_offset();
 
   static word OffsetFromThread(const dart::Object& object);
   static intptr_t OffsetFromThread(const dart::RuntimeEntry* runtime_entry);
@@ -1336,7 +1335,8 @@ class ObjectStore : public AllStatic {
   static word suspend_state_return_async_star_offset();
   static word suspend_state_suspend_sync_star_at_start_offset();
   static word suspend_state_yield_async_star_offset();
-  static word current_coroutine_offset();
+  
+  static word fiber_initialize_offset();
 };
 
 class Isolate : public AllStatic {

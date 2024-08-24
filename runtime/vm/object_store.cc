@@ -345,9 +345,13 @@ void ObjectStore::InitKnownObjects() {
   cls = fiber_lib.LookupClassAllowPrivate(Symbols::_Coroutine());
   ASSERT(!cls.IsNull());
   ASSERT(cls.EnsureIsFinalized(thread) == Error::null());
-  field = cls.LookupStaticFieldAllowPrivate(Symbols::_current());
-  ASSERT(!field.IsNull());
-  set_current_coroutine(field);
+
+  cls = fiber_lib.LookupClassAllowPrivate(Symbols::Fiber());
+  ASSERT(!cls.IsNull());
+  ASSERT(cls.EnsureIsFinalized(thread) == Error::null());
+  function = cls.LookupFunctionAllowPrivate(Symbols::_initialize());
+  ASSERT(!function.IsNull());
+  set_fiber_initialize(function);
 
   const Library& core_lib = Library::Handle(zone, core_library());
   cls = core_lib.LookupClassAllowPrivate(Symbols::_CompileTimeError());

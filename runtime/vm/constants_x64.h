@@ -390,35 +390,32 @@ struct SuspendStubABI {
 
 struct CoroutineInitializeStubABI {
   static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kFromCoroutineStackReg = RAX;
+  static constexpr Register kFromContextReg = RAX;
   static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kToCoroutineStackReg = RAX;
-  static constexpr Register kEntryReg = R9;
+  static constexpr Register kToContextReg = RAX;
   static constexpr Register kTempReg = RBX;
-  static constexpr Register kSuspendFrameSizeReg = R8;
   static constexpr Register kSavedReg = R9;
   static constexpr Register kSrcFrameReg = RCX;
-  static constexpr Register kDstFrameReg = RDX;
   static constexpr Register kResumePcReg = R10;
-  static constexpr intptr_t kCoroutineStackBeginFpOffset = 0;
-  static constexpr intptr_t kCoroutineStackEndResumePcOffset = 0;
-  static constexpr intptr_t kCoroutineStackEndFrameSizeOffset = 1;
+  static constexpr intptr_t kContextFpOffset = 0;
+  static constexpr intptr_t kContextResumePcOffset = 0;
+  static constexpr intptr_t kContextFrameSizeOffset = 1;
 };
 
 struct CoroutineTransferStubABI {
   static constexpr Register kFromCoroutineReg = RSI;
-  static constexpr Register kFromCoroutineStackReg = RAX;
+  static constexpr Register kFromContextReg = RAX;
   static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kToCoroutineStackReg = RAX;
+  static constexpr Register kToContextReg = RAX;
   static constexpr Register kTempReg = RBX;
   static constexpr Register kSuspendFrameSizeReg = R8;
   static constexpr Register kSavedReg = R9;
   static constexpr Register kSrcFrameReg = RCX;
   static constexpr Register kDstFrameReg = RDX;
   static constexpr Register kResumePcReg = R10;
-  static constexpr intptr_t kCoroutineStackBeginFpOffset = 0;
-  static constexpr intptr_t kCoroutineStackEndResumePcOffset = 0;
-  static constexpr intptr_t kCoroutineStackEndFrameSizeOffset = 1;
+  static constexpr intptr_t kContextFpOffset = 0;
+  static constexpr intptr_t kContextResumePcOffset = 0;
+  static constexpr intptr_t kContextFrameSizeOffset = 1;
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,
