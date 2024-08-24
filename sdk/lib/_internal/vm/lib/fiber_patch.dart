@@ -7,7 +7,7 @@ const _kRootContextSize = 4096;
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineInitialize")
-external void _coroutineInitialize(_Coroutine from, _Coroutine to);
+external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entry);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
@@ -31,7 +31,7 @@ class Fiber {
 
   @patch
   Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
-    _coroutineInitialize(_root, _current);
+    _coroutineInitialize(_root, _current, entry);
   }
 
   @patch
@@ -48,11 +48,11 @@ class Fiber {
 
   @pragma("vm:entry-point")
   @pragma("vm:never-inline")
-  void _initialize() {
+  static void _initialize(_Coroutine from, _Coroutine to, Function entry) {
     _state = FiberState.initialized;
-    _coroutineTransfer(_current, _root);
+    _coroutineTransfer(to, from);
     _state = FiberState.running;
-    _entry();
+    entry();
     _state = FiberState.finished;
   }
 }

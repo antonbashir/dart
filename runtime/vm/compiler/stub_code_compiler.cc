@@ -2216,13 +2216,15 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
                                                                       
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
-  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
-  const Register kFromContext = CoroutineTransferStubABI::kFromContextReg;
-  const Register kTemp = CoroutineTransferStubABI::kTempReg;
-  const Register kFrameSize = CoroutineTransferStubABI::kSuspendFrameSizeReg;
-  const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
-  const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
-  const Register kSaved = CoroutineTransferStubABI::kSavedReg;
+  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
+  const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
+  const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
+  const Register kTemp = CoroutineInitializeStubABI::kTempReg;
+  const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
+  const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
+  const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
+  const Register kSaved = CoroutineInitializeStubABI::kSavedReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -2251,7 +2253,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-
+  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::fiber_initialize_entry_point_offset(), target::ObjectStore::fiber_initialize_offset());
   __ LeaveStubFrame();
   __ Ret();
