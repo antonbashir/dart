@@ -2294,7 +2294,6 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
     __ PopRegister(THR);
   }
 
-  __ Breakpoint();
   __ Jump(kResumePc);
 }
 
@@ -2320,7 +2319,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromCoroutineStack, kFromCoroutine, target::Coroutine::stack_pointer_offset());
-  __ StoreToOffset(kSuspendFrameSize, kFromCoroutineStack, kSuspendFrameSize);
 
   if (kSrcFrame == THR) {
     __ PushRegister(THR);
