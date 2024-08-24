@@ -8593,11 +8593,14 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
   __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+  __ LoadIsolateGroup(FPREG);
   __ Breakpoint();
-  __ LoadIsolate(FPREG);
   __ LoadFromOffset(FPREG, FPREG, compiler::target::IsolateGroup::object_store_offset());
+  __ Breakpoint();
   __ LoadFromOffset(FPREG, FPREG, compiler::target::ObjectStore::current_coroutine_offset());
+  __ Breakpoint();
   __ LoadFromOffset(FPREG, FPREG, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
+  __ Breakpoint();
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
