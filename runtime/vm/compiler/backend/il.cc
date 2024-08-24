@@ -8570,10 +8570,12 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_initialize_stub();
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ Breakpoint();
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ Breakpoint();
   __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
   __ LoadFromOffset(FPREG, FPREG, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ Breakpoint();
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8592,12 +8594,12 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
-  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextFpOffset * compiler::target::kWordSize);
   __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ LoadFieldFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ LoadFromOffset(FPREG, FPREG, CoroutineTransferStubABI::kContextFpOffset * compiler::target::kWordSize);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

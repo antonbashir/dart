@@ -2292,7 +2292,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PushRegister(THR);
   }
   
-  __ Breakpoint();
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
 
