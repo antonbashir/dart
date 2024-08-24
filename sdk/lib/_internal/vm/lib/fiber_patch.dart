@@ -49,10 +49,10 @@ class Fiber {
   @pragma("vm:entry-point")
   @pragma("vm:never-inline")
   void _initialize() {
-    _state = Fiber.initialized;
+    _state = FiberState.initialized;
     _coroutineTransfer(_current, _root);
-    _state = Fiber.running;
+    _state = FiberState.running;
     _entry();
-    _state = Fiber.finished;
+    _state = FiberState.finished;
   }
 }

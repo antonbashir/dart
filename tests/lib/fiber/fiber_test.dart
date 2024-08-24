@@ -1,13 +1,12 @@
 import 'dart:ffi';
-import 'package:ffi/ffi.dart';
 import 'dart:fiber';
 
 final mainFiber = Fiber(
-  stack: FiberStack((pointer: calloc<Uint8>(1024 * 1024).cast(), size: 1024 * 1024)),
+  size: 1024 * 1024,
   entry: mainEntry,
 );
 final childFiber = Fiber(
-  stack: FiberStack((pointer: calloc<Uint8>(1024 * 1024).cast(), size: 1024 * 1024)),
+  size: 1024 * 1024,
   entry: childEntry,
 );
 
