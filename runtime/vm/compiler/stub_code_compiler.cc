@@ -2211,6 +2211,9 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
       target::ObjectStore::suspend_state_init_sync_star_offset());
 }
 
+// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
+                                                                      
 void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   const Register kCoroutine = CoroutineSuspendStubABI::kCoroutineReg;
   const Register kTemp = CoroutineSuspendStubABI::kTempReg;
@@ -2230,6 +2233,7 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   __ EnterStubFrame();
 
   __ LoadFieldFromOffset(kCoroutineStack, kCoroutine, target::Coroutine::stack_pointer_offset());
+  __ AddImmediate(kCoroutineStack, target::kWordSize);
 
   if (kSrcFrame == THR) {
     __ PushRegister(THR);
@@ -2251,10 +2255,14 @@ void StubCodeCompiler::GenerateCoroutineSuspendStub() {
   __ Ret();
 }
 
+// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
+
 void StubCodeCompiler::GenerateCoroutineResumeStub() {
   const Register kCoroutine = CoroutineResumeStubABI::kCoroutineReg;
   const Register kTemp = CoroutineResumeStubABI::kTempReg;
-  const Register kSuspendFrameSize = CoroutineResumeStubABI::kSuspendFrameSizeReg;
+  const Register kFrameSize = CoroutineResumeStubABI::kFrameSizeReg;
+  const Register kSavedCoroutineStack = CoroutineResumeStubABI::kSavedCoroutineStackReg;
   const Register kCoroutineStack = CoroutineResumeStubABI::kCoroutineStackReg;
   const Register kSrcFrame = CoroutineSuspendStubABI::kSrcFrameReg;
   const Register kDstFrame = CoroutineResumeStubABI::kDstFrameReg;
@@ -2266,13 +2274,13 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
 
   __ LoadFromOffset(kCoroutine, FPREG, param_offset + 1 * target::kWordSize);
   __ LoadFieldFromOffset(kCoroutineStack, kCoroutine, target::Coroutine::stack_pointer_offset());
-  __ LoadFromOffset(kSuspendFrameSize, kCoroutineStack, CoroutineResumeStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
   __ LoadFromOffset(kResumePc, kCoroutineStack, CoroutineResumeStubABI::kCoroutineStackEndResumePcOffset * target::kWordSize);
-  __ SubRegisters(kCoroutineStack, kSuspendFrameSize);
-  __ StoreFieldToOffset(kCoroutineStack, kCoroutine, target::Coroutine::stack_pointer_offset());
+  __ LoadFromOffset(kFrameSize, kCoroutineStack, CoroutineResumeStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
+  __ SubRegisters(kCoroutineStack, kFrameSize);
+  __ MoveRegister(kSavedCoroutineStack, kCoroutineStack);
   
-  __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
-  __ SubRegisters(SPREG, kSuspendFrameSize);
+  __ AddImmediate(kFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
+  __ SubRegisters(SPREG, kFrameSize);
 
   intptr_t num_saved_regs = 0;
   if (kSrcFrame == THR) {
@@ -2285,8 +2293,10 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
   }
 
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
-  __ CopyMemoryWords(kCoroutineStack, kDstFrame, kSuspendFrameSize, kTemp);
-
+  __ CopyMemoryWords(kCoroutineStack, kDstFrame, kFrameSize, kTemp);
+  __ AddImmediate(kSavedCoroutineStack, -target::kWordSize);
+  __ StoreFieldToOffset(kSavedCoroutineStack, kCoroutine, target::Coroutine::stack_pointer_offset());
+  
   if (kDstFrame == CODE_REG) {
     __ PopRegister(CODE_REG);
   }
@@ -2296,6 +2306,9 @@ void StubCodeCompiler::GenerateCoroutineResumeStub() {
 
   __ Jump(kResumePc);
 }
+
+// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
@@ -2307,18 +2320,19 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
   const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
   const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
-  const Register kSavedSuspendFrameSize = CoroutineTransferStubABI::kSavedSuspendFrameSizeReg;
+  const Register kSaved = CoroutineTransferStubABI::kSavedReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
   __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kSuspendFrameSize, SPREG);
-  __ MoveRegister(kSavedSuspendFrameSize, kSuspendFrameSize);
+  __ MoveRegister(kSaved, kSuspendFrameSize);
 
   __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromCoroutineStack, kFromCoroutine, target::Coroutine::stack_pointer_offset());
+  __ AddImmediate(kFromCoroutineStack, target::kWordSize);
 
   if (kSrcFrame == THR) {
     __ PushRegister(THR);
@@ -2333,14 +2347,14 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromCoroutineStack, CoroutineSuspendStubABI::kCoroutineStackEndResumePcOffset * target::kWordSize);
-  __ StoreToOffset(kSavedSuspendFrameSize, kFromCoroutineStack, CoroutineSuspendStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
+  __ StoreToOffset(kSaved, kFromCoroutineStack, CoroutineSuspendStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromCoroutineStack, kFromCoroutine, target::Coroutine::stack_pointer_offset());
  
   __ LoadFieldFromOffset(kToCoroutineStack, kToCoroutine, target::Coroutine::stack_pointer_offset());
-  __ LoadFromOffset(kSuspendFrameSize, kToCoroutineStack, CoroutineTransferStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
   __ LoadFromOffset(kResumePc, kToCoroutineStack, CoroutineTransferStubABI::kCoroutineStackEndResumePcOffset * target::kWordSize);
+  __ LoadFromOffset(kSuspendFrameSize, kToCoroutineStack, CoroutineTransferStubABI::kCoroutineStackEndFrameSizeOffset * target::kWordSize);
   __ SubRegisters(kToCoroutineStack, kSuspendFrameSize);
-  __ StoreFieldToOffset(kToCoroutineStack, kToCoroutine, target::Coroutine::stack_pointer_offset());
+  __ MoveRegister(kSaved, kToCoroutineStack);
 
   __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
   __ SubRegisters(SPREG, kSuspendFrameSize);
@@ -2356,6 +2370,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   }
   __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
   __ CopyMemoryWords(kToCoroutineStack, kDstFrame, kSuspendFrameSize, kTemp);
+  __ AddImmediate(kSaved, -target::kWordSize);
+  __ StoreFieldToOffset(kSaved, kToCoroutine, target::Coroutine::stack_pointer_offset());
 
   if (kDstFrame == CODE_REG) {
     __ PopRegister(CODE_REG);

@@ -33,6 +33,7 @@ void mainEntry() {
   target += 3;
   print(target);
   print("main");
+  mainFiber.transfer(childFiber);
 } 
 
 @pragma("vm:never-inline")
