@@ -2217,7 +2217,7 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
-  const Register kToCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineReg;
   const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
   const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
   const Register kTemp = CoroutineInitializeStubABI::kTempReg;
@@ -2233,7 +2233,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ SubRegisters(kFrameSize, SPREG);
   __ MoveRegister(kSaved, kFrameSize);
 
-  __ EnterStubFrame();
+  __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   __ AddImmediate(kFromContext, target::kWordSize);
@@ -2254,6 +2254,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
+  __ EnterStubFrame();
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_launch_entry_point_offset(), target::ObjectStore::coroutine_launch_offset());
   __ LeaveStubFrame();
@@ -2291,6 +2292,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
     __ PushRegister(THR);
   }
   
+  __ Breakpoint();
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
 

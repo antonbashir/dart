@@ -8556,7 +8556,7 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 3;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   locs->set_in(2, Location::RegisterLocation(CoroutineInitializeStubABI::kEntryReg));
@@ -8571,8 +8571,9 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ Breakpoint();
+  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ LoadFromOffset(FPREG, FPREG, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8580,7 +8581,7 @@ LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
   locs->set_in(0, Location::RegisterLocation( CoroutineTransferStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation( CoroutineTransferStubABI::kToCoroutineReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
@@ -8593,8 +8594,9 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_transfer_stub();
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
   __ LoadFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
 }
 

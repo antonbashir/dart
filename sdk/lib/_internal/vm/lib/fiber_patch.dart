@@ -40,10 +40,15 @@ class Fiber {
 
   @patch
   Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
-    print("fiber.constructor");
-    _coroutineInitialize(_root, _current, entry);
-    print("fiber.constructor -> _coroutineInitialize");
+    _construct();
+  }
+
+  @pragma("vm:never-inline")
+  void _construct() {
+    print("fiber._construct");
+    _coroutineInitialize(_root, _current, _entry);
     _state = FiberState.initialized;
+    print("fiber._construct -> _coroutineInitialize");
   }
 
   @patch
