@@ -13,6 +13,8 @@ external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entr
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
+late void Function() _currentEntry;
+
 @pragma("vm:entry-point")
 void _coroutineLaunch(_Coroutine from, _Coroutine to, void Function() entry) {
   print("_coroutineLaunch");
@@ -20,6 +22,7 @@ void _coroutineLaunch(_Coroutine from, _Coroutine to, void Function() entry) {
 //  print("_coroutineLaunch -> _coroutineTransfer");
 //  print(entry?.runtimeType);
 //  print("_coroutineLaunch -> entry");
+_currentEntry();
 }
 
 @pragma("vm:entry-point")
@@ -45,6 +48,7 @@ class Fiber {
 
   @pragma("vm:never-inline")
   void _construct() {
+    _currentEntry = _entry;
     print("fiber._construct");
     _coroutineInitialize(_root, _current, _entry);
     _state = FiberState.initialized;
