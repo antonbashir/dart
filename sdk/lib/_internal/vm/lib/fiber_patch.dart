@@ -32,12 +32,17 @@ class Fiber {
   @patch
   Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
     _coroutineInitialize(_root, _current, entry);
+    _state = FiberState.initialized;
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void start() {
-    _coroutineTransfer(_root, _current);
+    if (state == FiberState.initialized) {
+      _state = FiberState.running;
+      _coroutineTransfer(_root, _current);
+      _state = FiberState.finished;
+    }
   }
 
   @patch
@@ -49,10 +54,7 @@ class Fiber {
   @pragma("vm:entry-point")
   @pragma("vm:never-inline")
   static void _initialize(_Coroutine from, _Coroutine to, Function entry) {
-    _state = FiberState.initialized;
     _coroutineTransfer(to, from);
-    _state = FiberState.running;
     entry();
-    _state = FiberState.finished;
   }
 }
