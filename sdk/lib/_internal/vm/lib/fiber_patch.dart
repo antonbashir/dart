@@ -36,14 +36,14 @@ class Fiber {
 
   @patch
   @pragma("vm:prefer-inline")
-  void launch() {
-    _coroutineTransfer(_root, _coroutine);
+  void start() {
+    _coroutineTransfer(_root, _current);
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
-    _coroutineTransfer(_coroutine, to._coroutine);
+    _coroutineTransfer(_current, to._current);
   }
 
   @pragma("vm:entry-point")
