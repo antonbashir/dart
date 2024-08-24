@@ -8551,15 +8551,16 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
-LocationSummary* CoroutineInitializetubInstr::MakeLocationSummary(
+LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
     Zone* zone,
     bool opt) const {
   const intptr_t kNumInputs = 1;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone)
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(
-                      CoroutineInitializeStubABI::kCoroutineReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
+  locs->set_in(2, Location::RegisterLocation(CoroutineInitializeStubABI::kEntryReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
   return locs;
 }
@@ -8567,9 +8568,9 @@ LocationSummary* CoroutineInitializetubInstr::MakeLocationSummary(
 void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
-  stub = object_store->coroutine_suspend_stub();
-  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kCoroutineStackReg, CoroutineInitializeStubABI::kCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
-  __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kCoroutineStackReg, CoroutineInitializeStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
+  stub = object_store->coroutine_initialize_stub();
+  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromCoroutineStackReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
+  __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromCoroutineStackReg, CoroutineInitializeStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ LoadIsolateGroup(FPREG);
   __ LoadFromOffset(FPREG, FPREG, compiler::target::IsolateGroup::object_store_offset());

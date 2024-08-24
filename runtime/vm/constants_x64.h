@@ -393,6 +393,7 @@ struct CoroutineInitializeStubABI {
   static constexpr Register kFromCoroutineStackReg = RAX;
   static constexpr Register kToCoroutineReg = RDI;
   static constexpr Register kToCoroutineStackReg = RAX;
+  static constexpr Register kEntryReg = R9;
   static constexpr Register kTempReg = RBX;
   static constexpr Register kSuspendFrameSizeReg = R8;
   static constexpr Register kSavedReg = R9;
