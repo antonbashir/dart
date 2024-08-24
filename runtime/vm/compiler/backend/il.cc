@@ -8559,7 +8559,7 @@ LocationSummary* CoroutineSuspendStubInstr::MakeLocationSummary(
   LocationSummary* locs = new (zone)
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(0, Location::RegisterLocation(
-                      CoroutineSuspendStubABI::kFromCoroutineReg));
+                      CoroutineSuspendStubABI::kCoroutineReg));
   locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
   return locs;
 }
@@ -8589,11 +8589,11 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
-  __ StoreFieldToOffset(FPREG, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::pp_offset());
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
+  __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset);
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ LoadFieldFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::pp_offset());
-  // __ LeaveFrame();
-  // __ Ret();
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kToCoroutineStackReg, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
+  __ LoadFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineStackReg, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
