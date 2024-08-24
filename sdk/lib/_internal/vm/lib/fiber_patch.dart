@@ -49,7 +49,7 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void start() {
-    print("fiber.start")
+    print("fiber.start");
     if (state == FiberState.initialized) {
       _state = FiberState.running;
       _coroutineTransfer(_root, _current);
