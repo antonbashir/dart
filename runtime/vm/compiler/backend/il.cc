@@ -8591,10 +8591,12 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_transfer_stub();
   __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
   __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
-  __ Breakpoint();
+  __ AddImmediate(CoroutineTransferStubABI::kFromCoroutineStackReg, compiler::target::kWordSize);
+  __ StoreFieldToOffset(CoroutineTransferStubABI::kFromCoroutineStackReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ Breakpoint();
   __ LoadFieldFromOffset(CoroutineTransferStubABI::kToCoroutineStackReg, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
+  __ AddImmediate(CoroutineTransferStubABI::kToCoroutineStackReg, -compiler::target::kWordSize);
+  __ StoreFieldToOffset(CoroutineTransferStubABI::kToCoroutineStackReg, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::stack_pointer_offset());
   __ LoadFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineStackReg, CoroutineTransferStubABI::kCoroutineStackBeginFpOffset * compiler::target::kWordSize);
 }
 
