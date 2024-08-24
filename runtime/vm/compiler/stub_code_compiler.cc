@@ -2249,9 +2249,9 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
     __ PopRegister(THR);
   }
 
+  __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
-  __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
   __ EnterStubFrame();
@@ -2305,10 +2305,12 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
  
   __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
+  __ Breakpoint();
   __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ SubRegisters(kToContext, kSuspendFrameSize);
   __ MoveRegister(kSaved, kToContext);
+  __ Breakpoint();
 
   __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
   __ SubRegisters(SPREG, kSuspendFrameSize);
