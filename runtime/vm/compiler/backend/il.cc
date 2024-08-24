@@ -8554,7 +8554,7 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
     Zone* zone,
     bool opt) const {
-  const intptr_t kNumInputs = 2;
+  const intptr_t kNumInputs = 3;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
@@ -8572,7 +8572,7 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ LoadFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8595,7 +8595,7 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ LoadFromOffset(FPREG, CoroutineInitializeStubABI::kToContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

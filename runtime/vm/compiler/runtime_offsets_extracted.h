@@ -181,7 +181,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -327,7 +327,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x348;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x34c;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x350;
+    Thread_coroutine_launch_entry_point_offset = 0x350;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x364;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -642,7 +642,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -788,7 +788,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6a8;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6b8;
+    Thread_coroutine_launch_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x6e0;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -1103,7 +1103,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -1239,7 +1239,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x33c;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x340;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x344;
+    Thread_coroutine_launch_entry_point_offset = 0x344;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x358;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -1552,7 +1552,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -1698,7 +1698,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x700;
+    Thread_coroutine_launch_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x728;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -2013,7 +2013,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -2159,7 +2159,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6c0;
+    Thread_coroutine_launch_entry_point_offset = 0x6c0;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x6e8;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x50;
@@ -2475,7 +2475,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -2621,7 +2621,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x708;
+    Thread_coroutine_launch_entry_point_offset = 0x708;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x730;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x50;
@@ -2937,7 +2937,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -3083,7 +3083,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x370;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x374;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x378;
+    Thread_coroutine_launch_entry_point_offset = 0x378;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x38c;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -3398,7 +3398,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -3544,7 +3544,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6e0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6e8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6f0;
+    Thread_coroutine_launch_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x718;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -3854,7 +3854,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -4000,7 +4000,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x348;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x34c;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x350;
+    Thread_coroutine_launch_entry_point_offset = 0x350;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x364;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -4310,7 +4310,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -4456,7 +4456,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6a8;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6b8;
+    Thread_coroutine_launch_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x6e0;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -4766,7 +4766,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -4902,7 +4902,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x33c;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x340;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x344;
+    Thread_coroutine_launch_entry_point_offset = 0x344;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x358;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -5210,7 +5210,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -5356,7 +5356,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x700;
+    Thread_coroutine_launch_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x728;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -5666,7 +5666,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -5812,7 +5812,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6c0;
+    Thread_coroutine_launch_entry_point_offset = 0x6c0;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x6e8;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x50;
@@ -6123,7 +6123,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -6269,7 +6269,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x708;
+    Thread_coroutine_launch_entry_point_offset = 0x708;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x730;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x50;
@@ -6580,7 +6580,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x23c;
+    ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -6726,7 +6726,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x370;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x374;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x378;
+    Thread_coroutine_launch_entry_point_offset = 0x378;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x38c;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x24;
@@ -7036,7 +7036,7 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    ObjectStore_fiber_initialize_offset = 0x478;
+    ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -7182,7 +7182,7 @@ static constexpr dart::compiler::target::word Thread_suspend_state_init_sync_sta
 static constexpr dart::compiler::target::word Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6e0;
 static constexpr dart::compiler::target::word Thread_suspend_state_handle_exception_entry_point_offset = 0x6e8;
 static constexpr dart::compiler::target::word
-    Thread_fiber_initialize_entry_point_offset = 0x6f0;
+    Thread_coroutine_launch_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word
     Thread_top_exit_frame_info_offset = 0x718;
 static constexpr dart::compiler::target::word Thread_top_offset = 0x48;
@@ -7494,7 +7494,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x23c;
+    AOT_ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -7642,7 +7642,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x348;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x34c;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x350;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x350;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x364;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x24;
@@ -7956,7 +7956,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -8104,7 +8104,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6a8;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6b8;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x6e0;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;
@@ -8423,7 +8423,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -8571,7 +8571,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x700;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x728;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;
@@ -8885,7 +8885,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -9033,7 +9033,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6c0;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6c0;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x6e8;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x50;
@@ -9348,7 +9348,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -9496,7 +9496,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x708;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x708;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x730;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x50;
@@ -9811,7 +9811,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x23c;
+    AOT_ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -9959,7 +9959,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x370;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x374;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x378;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x378;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x38c;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x24;
@@ -10273,7 +10273,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -10421,7 +10421,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6e0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6e8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6f0;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x718;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;
@@ -10730,7 +10730,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x23c;
+    AOT_ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -10878,7 +10878,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x348;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x34c;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x350;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x350;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x364;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x24;
@@ -11187,7 +11187,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -11335,7 +11335,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6a8;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6b8;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x6e0;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;
@@ -11649,7 +11649,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -11797,7 +11797,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x700;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x728;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;
@@ -12106,7 +12106,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -12254,7 +12254,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6b0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6b8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6c0;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6c0;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x6e8;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x50;
@@ -12564,7 +12564,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -12712,7 +12712,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6f8;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x700;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x708;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x708;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x730;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x50;
@@ -13022,7 +13022,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x23c;
+    AOT_ObjectStore_coroutine_launch_offset = 0x23c;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -13170,7 +13170,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x370;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x374;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x378;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x378;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x38c;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x24;
@@ -13479,7 +13479,7 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
 static constexpr dart::compiler::target::word
-    AOT_ObjectStore_fiber_initialize_offset = 0x478;
+    AOT_ObjectStore_coroutine_launch_offset = 0x478;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -13627,7 +13627,7 @@ static constexpr dart::compiler::target::word AOT_Thread_suspend_state_init_sync
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_suspend_sync_star_at_start_entry_point_offset = 0x6e0;
 static constexpr dart::compiler::target::word AOT_Thread_suspend_state_handle_exception_entry_point_offset = 0x6e8;
 static constexpr dart::compiler::target::word
-    AOT_Thread_fiber_initialize_entry_point_offset = 0x6f0;
+    AOT_Thread_coroutine_launch_entry_point_offset = 0x6f0;
 static constexpr dart::compiler::target::word
     AOT_Thread_top_exit_frame_info_offset = 0x718;
 static constexpr dart::compiler::target::word AOT_Thread_top_offset = 0x48;

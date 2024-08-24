@@ -2253,8 +2253,9 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
-  CallDartCoreLibraryFunction(assembler, target::Thread::fiber_initialize_entry_point_offset(), target::ObjectStore::fiber_initialize_offset());
+  CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_launch_entry_point_offset(), target::ObjectStore::coroutine_launch_offset());
   __ LeaveStubFrame();
   __ Ret();
 }

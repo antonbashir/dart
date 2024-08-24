@@ -185,7 +185,7 @@ class ObjectPointerVisitor;
   RW(Function, suspend_state_init_sync_star)                                   \
   RW(Function, suspend_state_suspend_sync_star_at_start)                       \
   RW(Function, suspend_state_handle_exception)                                 \
-  RW(Function, fiber_initialize)                                               \
+  RW(Function, coroutine_launch)                                               \
   RW(Class, async_star_stream_controller)                                      \
   RW(Class, stream_class)                                                      \
   RW(Class, sync_star_iterator_class)                                          \

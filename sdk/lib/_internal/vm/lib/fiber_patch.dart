@@ -13,6 +13,13 @@ external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entr
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
+@pragma("vm:entry-point", "call")
+@pragma("vm:invisible")
+void _coroutineLaunch(_Coroutine from, _Coroutine to, void Function() entry) {
+  _coroutineTransfer(to, from);
+  entry();
+}
+
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
@@ -51,10 +58,4 @@ class Fiber {
     _coroutineTransfer(_current, to._current);
   }
 
-  @pragma("vm:entry-point")
-  @pragma("vm:never-inline")
-  static void _initialize(_Coroutine from, _Coroutine to, Function entry) {
-    _coroutineTransfer(to, from);
-    entry();
-  }
 }

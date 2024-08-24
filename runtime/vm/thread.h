@@ -198,7 +198,7 @@ class Thread;
   V(suspend_state_init_sync_star)                                              \
   V(suspend_state_suspend_sync_star_at_start)                                  \
   V(suspend_state_handle_exception)                                            \
-  V(fiber_initialize)
+  V(coroutine_launch)
 
 // This assertion marks places which assume that boolean false immediate
 // follows bool true in the CACHED_VM_OBJECTS_LIST
