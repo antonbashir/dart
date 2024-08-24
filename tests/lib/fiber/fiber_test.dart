@@ -1,18 +1,8 @@
 import 'dart:ffi';
 import 'dart:fiber';
 
-final mainFiber = Fiber(
-  size: 1024 * 1024,
-  entry: mainEntry,
-);
-final childFiber = Fiber(
-  size: 1024 * 1024,
-  entry: childEntry,
-);
-
-var _transferred = false;
-
-var target = 0;
+final mainFiber = Fiber(size: 1024 * 1024, entry: mainEntry);
+final childFiber = Fiber(size: 1024 * 1024, entry: childEntry);
 
 void main() {
   print("before start");

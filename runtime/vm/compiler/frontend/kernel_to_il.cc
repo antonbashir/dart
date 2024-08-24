@@ -4750,8 +4750,7 @@ Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
 }
 
 Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
-  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
