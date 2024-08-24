@@ -167,7 +167,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -179,6 +180,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -607,7 +610,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -619,6 +623,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -1047,7 +1053,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -1059,6 +1066,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -1487,7 +1496,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -1499,6 +1509,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -1927,7 +1939,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -1939,6 +1952,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -2368,7 +2383,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -2380,6 +2396,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -2809,7 +2827,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -2821,6 +2840,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -3249,7 +3270,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -3261,6 +3283,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -3684,7 +3708,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -3696,6 +3721,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -4119,7 +4146,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -4131,6 +4159,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -4554,7 +4584,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -4566,6 +4597,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -4989,7 +5022,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -5001,6 +5035,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -5424,7 +5460,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -5436,6 +5473,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -5860,7 +5899,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -5872,6 +5912,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -6296,7 +6338,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x98
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -6308,6 +6351,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x4;
@@ -6731,7 +6776,8 @@ static constexpr dart::compiler::target::word ObjectStore_int_type_offset = 0x13
 static constexpr dart::compiler::target::word ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -6743,6 +6789,8 @@ static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_a
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word PointerBase_data_offset = 0x8;
@@ -7168,7 +7216,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -7180,6 +7229,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -7605,7 +7656,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -7617,6 +7669,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -8047,7 +8101,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -8059,6 +8114,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -8484,7 +8541,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -8496,6 +8554,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -8922,7 +8982,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -8934,6 +8995,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -9360,7 +9423,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -9372,6 +9436,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -9797,7 +9863,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -9809,6 +9876,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -10229,7 +10298,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -10241,6 +10311,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -10661,7 +10733,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -10673,6 +10746,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -11098,7 +11173,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -11110,6 +11186,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -11530,7 +11608,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -11542,6 +11621,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -11963,7 +12044,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -11975,6 +12057,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;
@@ -12396,7 +12480,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x1ec;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0xd4;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x84;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x268;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x26c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x214;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x218;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x238;
@@ -12408,6 +12493,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x22c;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x234;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x228;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x258;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x4;
@@ -12828,7 +12915,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_int_type_offset = 
 static constexpr dart::compiler::target::word AOT_ObjectStore_record_field_names_offset = 0x3d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_string_type_offset = 0x1a8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_type_type_offset = 0x108;
-static constexpr dart::compiler::target::word AOT_ObjectStore_ffi_callback_code_offset = 0x4d0;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_ffi_callback_code_offset = 0x4d8;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_offset = 0x428;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_await_with_type_check_offset = 0x430;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_handle_exception_offset = 0x470;
@@ -12840,6 +12928,8 @@ static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_retu
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_return_async_star_offset = 0x458;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_suspend_sync_star_at_start_offset = 0x468;
 static constexpr dart::compiler::target::word AOT_ObjectStore_suspend_state_yield_async_star_offset = 0x450;
+static constexpr dart::compiler::target::word
+    AOT_ObjectStore_current_coroutine_offset = 0x4b0;
 static constexpr dart::compiler::target::word AOT_OneByteString_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_PersistentHandle_ptr_offset = 0x0;
 static constexpr dart::compiler::target::word AOT_PointerBase_data_offset = 0x8;

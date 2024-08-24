@@ -192,6 +192,7 @@ class ObjectPointerVisitor;
   RW(Field, sync_star_iterator_current)                                        \
   RW(Field, sync_star_iterator_state)                                          \
   RW(Field, sync_star_iterator_yield_star_iterable)                            \
+  RW(Field, current_coroutine)                                                 \
   RW(CompressedStackMaps, canonicalized_stack_map_entries)                     \
   RW(ObjectPool, global_object_pool)                                           \
   RW(Array, unique_dynamic_targets)                                            \

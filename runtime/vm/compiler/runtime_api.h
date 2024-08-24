@@ -1336,6 +1336,7 @@ class ObjectStore : public AllStatic {
   static word suspend_state_return_async_star_offset();
   static word suspend_state_suspend_sync_star_at_start_offset();
   static word suspend_state_yield_async_star_offset();
+  static word current_coroutine_offset();
 };
 
 class Isolate : public AllStatic {

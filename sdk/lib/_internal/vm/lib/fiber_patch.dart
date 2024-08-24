@@ -16,6 +16,8 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
 @pragma("vm:entry-point")
 class _Coroutine {
+  @pragma("vm:entry-point")
+  static int? _stack;
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(Pointer<Void> stack);
 }
