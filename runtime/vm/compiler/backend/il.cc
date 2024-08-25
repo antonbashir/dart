@@ -8582,7 +8582,7 @@ LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCallCalleeSafe);
   locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
   return locs;
@@ -8594,15 +8594,16 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_transfer_stub();
   RegisterSet all_registers;
   all_registers.AddAllGeneralRegisters();
+  __ Breakpoint();
   __ PushRegister(FPREG);
   __ PushRegisters(all_registers);
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(SPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextSpOffset);
-  __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ Breakpoint();
   __ PopRegisters(all_registers);
   __ PopRegister(FPREG);
+  __ Breakpoint();
 }
 
 LocationSummary* CoroutineExitStubInstr::MakeLocationSummary(
