@@ -2256,14 +2256,11 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
-  __ LeaveDartFrame();
-
-  __ EnterStubFrame();
   __ PushRegistersInOrder({kFromCoroutine, kToCoroutine});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_launch_entry_point_offset(), target::ObjectStore::coroutine_launch_offset());
   __ Breakpoint();
-  __ LeaveStubFrame();
   
+  __ LeaveDartFrame();
   __ LeaveDartFrame();
   __ Ret();
 }
@@ -2286,6 +2283,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
+  
   __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kSuspendFrameSize, SPREG);
   __ MoveRegister(kSaved, kSuspendFrameSize);
@@ -2310,14 +2308,14 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ StoreToOffset(kResumePc, kFromContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreToOffset(kSaved, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
- 
+
   __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
   __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ SubRegisters(kToContext, kSuspendFrameSize);
   __ MoveRegister(kSaved, kToContext);
 
-  __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
+  __ LoadFromOffset(SPREG, kToContext, CoroutineTransferStubABI::kContextSpOffset);
   __ SubRegisters(SPREG, kSuspendFrameSize);
 
   intptr_t num_saved_regs = 0;

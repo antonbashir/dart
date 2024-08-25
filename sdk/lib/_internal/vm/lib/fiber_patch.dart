@@ -19,19 +19,23 @@ external void _coroutineExit();
 
 @pragma("vm:entry-point")
 void _coroutineLaunch(_Coroutine from, _Coroutine to) {
-  // print("_coroutineLaunch");
-  // final entry = to._entry;
-  // _coroutineTransfer(to, from);
-  // print("_coroutineLaunch -> _coroutineTransfer");
-  // entry();
-  // print("_coroutineLaunch -> _currentEntry");
+  print("_coroutineLaunch");
+  final entry = to._entry;
+  print(entry);
+  _coroutineTransfer(to, from);
+//  print("_coroutineLaunch -> _coroutineTransfer");
+  print(from);
+  print(to);
+  print(entry);
+  entry();
+  print("_coroutineLaunch -> _currentEntry");
   // _coroutineTransfer(from, to);
 }
 
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, dynamic entry);
+  external factory _Coroutine._(int size, void Function()? entry);
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external void Function() get _entry;

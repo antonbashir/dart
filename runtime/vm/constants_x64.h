@@ -397,7 +397,7 @@ struct CoroutineInitializeStubABI {
   static constexpr Register kSavedReg = R10;
   static constexpr Register kSrcFrameReg = R9;
   static constexpr Register kResumePcReg = R10;
-  static constexpr intptr_t kContextFpOffset = 0;
+  static constexpr intptr_t kContextSpOffset = 0;
   static constexpr intptr_t kContextResumePcOffset = 0;
   static constexpr intptr_t kContextFrameSizeOffset = 1;
 };
@@ -413,7 +413,7 @@ struct CoroutineTransferStubABI {
   static constexpr Register kSrcFrameReg = RCX;
   static constexpr Register kDstFrameReg = RDX;
   static constexpr Register kResumePcReg = R10;
-  static constexpr intptr_t kContextFpOffset = 0;
+  static constexpr intptr_t kContextSpOffset = 0;
   static constexpr intptr_t kContextResumePcOffset = 0;
   static constexpr intptr_t kContextFrameSizeOffset = 1;
 };

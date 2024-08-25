@@ -13,7 +13,7 @@ void main() {
 
 @pragma("vm:never-inline")
 void mainEntry() {
-  // print("main: entry");  
+  print("main: entry");  
   // childFiber.construct();
   // print("main: transfer");
   // mainFiber.transfer(childFiber);

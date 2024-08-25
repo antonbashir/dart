@@ -8556,7 +8556,7 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCallCalleeSafe);
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   return locs;
@@ -8566,12 +8566,18 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_initialize_stub();
+  RegisterSet all_registers;
+  all_registers.AddAllGeneralRegisters();
+  __ PushRegister(SPREG);
+  __ PushRegister(FPREG);
+  __ PushRegisters(all_registers);
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ StoreToOffset(FPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ StoreToOffset(SPREG, CoroutineInitializeStubABI::kFromCoroutineReg, CoroutineInitializeStubABI::kContextSpOffset);
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ Breakpoint();
-  __ LoadFieldFromOffset(FPREG, CoroutineInitializeStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFromOffset(FPREG, FPREG, CoroutineInitializeStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ PopRegisters(all_registers);
+  __ PopRegister(FPREG);
+  __ PopRegister(SPREG);
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8579,7 +8585,7 @@ LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
   return locs;
@@ -8589,12 +8595,18 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
-  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextFpOffset * compiler::target::kWordSize);
+  RegisterSet all_registers;
+  all_registers.AddAllGeneralRegisters();
+  __ PushRegister(SPREG);
+  __ PushRegister(FPREG);
+  __ PushRegisters(all_registers);
+  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ StoreToOffset(SPREG, CoroutineInitializeStubABI::kFromCoroutineReg, CoroutineInitializeStubABI::kContextSpOffset);
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ Breakpoint();
-  __ LoadFieldFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ LoadFromOffset(FPREG, FPREG, CoroutineTransferStubABI::kContextFpOffset * compiler::target::kWordSize);
+  __ PopRegisters(all_registers);
+  __ PopRegister(FPREG);
+  __ PopRegister(SPREG);
 }
 
 LocationSummary* CoroutineExitStubInstr::MakeLocationSummary(
