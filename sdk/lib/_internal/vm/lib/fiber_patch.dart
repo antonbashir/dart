@@ -46,10 +46,25 @@ class Fiber {
     if (_state != FiberState.initialized) {
       print("$name: fiber._construct -> _coroutineInitialize");
       _state = FiberState.initialized;
-      _coroutineLaunch(_root, _current);
+      _launch(_root, _current);
     }
   }
 
+  @pragma("vm:never-inline")
+  void _launch(_Coroutine from, _Coroutine to) {
+    print("_coroutineLaunch");
+    final entry = to._entry;
+    print(from);
+    print(to);
+    print(entry);
+    _coroutineTransfer(to, from);
+    print(from);
+    print(to);
+    print(entry);
+    entry();
+    print("_coroutineLaunch -> _currentEntry");
+  }
+  
   @patch
   @pragma("vm:prefer-inline")
   void start() {
@@ -70,18 +85,4 @@ class Fiber {
       print("$name: fiber.transfer -> _coroutineTransfer");
   }
   
-  @pragma("vm:never-inline")
-  void _coroutineLaunch(_Coroutine from, _Coroutine to) {
-    print("_coroutineLaunch");
-    final entry = to._entry;
-    print(from);
-    print(to);
-    print(entry);
-    _coroutineTransfer(to, from);
-    print(from);
-    print(to);
-    print(entry);
-    entry();
-    print("_coroutineLaunch -> _currentEntry");
-  }
 }
