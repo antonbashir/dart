@@ -16,16 +16,20 @@ void mainEntry() {
   print("main: entry");  
   childFiber.construct();
   print("main: transfer");
-  mainFiber.transfer(childFiber);
+  var s = str("abc,");
+  print(s);
   print("main: after first transfer");
+}
+
+@pragma("vm:prefer-inline")
+String str(String v) {
   mainFiber.transfer(childFiber);
-  print("main: after second transfer");
-} 
+  return v + "-test";
+}
 
 @pragma("vm:never-inline")
 void childEntry() {
   print("child: entry");
   childFiber.transfer(mainFiber);
   print("child: after transfer");
-  childFiber.transfer(mainFiber);
 }
