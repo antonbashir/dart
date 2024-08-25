@@ -8556,7 +8556,7 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCallCalleeSafe);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   return locs;
@@ -8582,7 +8582,7 @@ LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCallCalleeSafe);
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
   locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
   return locs;

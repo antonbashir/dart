@@ -2311,11 +2311,13 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
   __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
-  __ SubRegisters(kToContext, kSuspendFrameSize);
   __ MoveRegister(kSaved, kToContext);
+  __ SubRegisters(kSaved, kSuspendFrameSize);
   __ AddImmediate(kSaved, -target::kWordSize);
   __ LoadFromOffset(SPREG, kSaved, CoroutineTransferStubABI::kContextSpOffset);
   __ StoreFieldToOffset(kSaved, kToCoroutine, target::Coroutine::context_offset());
+  __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
+  __ SubRegisters(kToContext, kSuspendFrameSize);
 
   intptr_t num_saved_regs = 0;
   if (kSrcFrame == THR) {
