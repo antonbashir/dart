@@ -21,15 +21,15 @@ external void _coroutineExit();
 void _coroutineLaunch(_Coroutine from, _Coroutine to) {
   print("_coroutineLaunch");
   final entry = to._entry;
+  print(from);
+  print(to);
   print(entry);
   _coroutineTransfer(to, from);
-//  print("_coroutineLaunch -> _coroutineTransfer");
   print(from);
   print(to);
   print(entry);
   entry();
   print("_coroutineLaunch -> _currentEntry");
-  // _coroutineTransfer(from, to);
 }
 
 @pragma("vm:entry-point")
