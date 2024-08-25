@@ -27,4 +27,5 @@ void childEntry() {
   print("child: entry");
   childFiber.transfer(mainFiber);
   print("child: after transfer");
+  childFiber.transfer(mainFiber);
 }

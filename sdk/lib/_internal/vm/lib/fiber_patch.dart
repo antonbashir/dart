@@ -63,6 +63,7 @@ class Fiber {
     print(entry);
     entry();
     print("_coroutineLaunch -> _currentEntry");
+    _coroutineTransfer(_current, _root);
   }
   
   @patch
