@@ -18,21 +18,6 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 external void _coroutineExit();
 
 @pragma("vm:entry-point")
-void _coroutineLaunch(_Coroutine from, _Coroutine to) {
-  print("_coroutineLaunch");
-  final entry = to._entry;
-  print(from);
-  print(to);
-  print(entry);
-  _coroutineTransfer(to, from);
-  print(from);
-  print(to);
-  print(entry);
-  entry();
-  print("_coroutineLaunch -> _currentEntry");
-}
-
-@pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(int size, void Function()? entry);
@@ -58,8 +43,11 @@ class Fiber {
   void construct() {
     print("$name: fiber._construct");
     _coroutineInitialize(_root, _current);
-    print("$name: fiber._construct -> _coroutineInitialize");
-    _state = FiberState.initialized;
+    if (_state != FiberState.initialized) {
+      print("$name: fiber._construct -> _coroutineInitialize");
+      _state = FiberState.initialized;
+      _coroutineLaunch(_root, _current);
+    }
   }
 
   @patch
@@ -81,5 +69,19 @@ class Fiber {
     _coroutineTransfer(_current, to._current);
       print("$name: fiber.transfer -> _coroutineTransfer");
   }
-
+  
+  @pragma("vm:never-inline")
+  void _coroutineLaunch(_Coroutine from, _Coroutine to) {
+    print("_coroutineLaunch");
+    final entry = to._entry;
+    print(from);
+    print(to);
+    print(entry);
+    _coroutineTransfer(to, from);
+    print(from);
+    print(to);
+    print(entry);
+    entry();
+    print("_coroutineLaunch -> _currentEntry");
+  }
 }

@@ -8594,16 +8594,13 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   stub = object_store->coroutine_transfer_stub();
   RegisterSet all_registers;
   all_registers.AddAllGeneralRegisters();
-  __ Breakpoint();
   __ PushRegister(FPREG);
   __ PushRegisters(all_registers);
   __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(SPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextSpOffset);
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ Breakpoint();
   __ PopRegisters(all_registers);
   __ PopRegister(FPREG);
-  __ Breakpoint();
 }
 
 LocationSummary* CoroutineExitStubInstr::MakeLocationSummary(

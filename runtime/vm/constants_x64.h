@@ -389,12 +389,13 @@ struct SuspendStubABI {
 };
 
 struct CoroutineInitializeStubABI {
-  static constexpr Register kFromCoroutineReg = RSI;
+  static constexpr Register kFromCoroutineReg = RDI;
   static constexpr Register kFromContextReg = RAX;
-  static constexpr Register kToCoroutineReg = RDI;
+  static constexpr Register kToCoroutineReg = RSI;
   static constexpr Register kTempReg = RBX;
   static constexpr Register kFrameSizeReg = RCX;
-  static constexpr Register kSavedReg = R10;
+  static constexpr Register kSaved1Reg = R10;
+  static constexpr Register kSaved2Reg = R8;
   static constexpr Register kSrcFrameReg = R9;
   static constexpr Register kResumePcReg = R10;
   static constexpr intptr_t kContextSpOffset = 0;
@@ -403,9 +404,9 @@ struct CoroutineInitializeStubABI {
 };
 
 struct CoroutineTransferStubABI {
-  static constexpr Register kFromCoroutineReg = RSI;
+  static constexpr Register kFromCoroutineReg = RDI;
   static constexpr Register kFromContextReg = RAX;
-  static constexpr Register kToCoroutineReg = RDI;
+  static constexpr Register kToCoroutineReg = RSI;
   static constexpr Register kToContextReg = RAX;
   static constexpr Register kTempReg = RBX;
   static constexpr Register kSuspendFrameSizeReg = R8;

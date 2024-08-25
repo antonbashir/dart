@@ -2220,24 +2220,25 @@ void StubCodeCompiler::GenerateCoroutineExitStub() {
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
-  const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineReg;
   const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
   const Register kTemp = CoroutineInitializeStubABI::kTempReg;
   const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
   const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
   const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
-  const Register kSaved = CoroutineInitializeStubABI::kSavedReg;
+  const Register kSaved1 = CoroutineInitializeStubABI::kSaved1Reg;
+  const Register kSaved2 = CoroutineInitializeStubABI::kSaved2Reg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
-  __ MoveRegister(kSaved, kFrameSize);
+  __ MoveRegister(kSaved1, kFrameSize);
 
   __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  __ LoadFromOffset(kSaved2, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
   __ AddImmediate(kFromContext, target::kWordSize);
 
   if (kSrcFrame == THR) {
@@ -2251,22 +2252,18 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
     __ PopRegister(THR);
   }
 
-  __ StoreToOffset(kSaved, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ StoreToOffset(kSaved1, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
-  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine});
-  CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_launch_entry_point_offset(), target::ObjectStore::coroutine_launch_offset());
-  __ Breakpoint();
-  
   __ LeaveDartFrame();
-  __ LeaveDartFrame();
-  __ Ret();
+  __ MoveRegister(SPREG, kSaved2);
+  __ Jump(kResumePc);
 }
 
-// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
-// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
+// Coroutine Stack on suspend: {([Saved SP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved SP] [Saved Frame] ([Resume PC]) [Frame Size]}
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;

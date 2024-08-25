@@ -14,16 +14,16 @@ void main() {
 @pragma("vm:never-inline")
 void mainEntry() {
   print("main: entry");  
-  // childFiber.construct();
-  // print("main: transfer");
-  // mainFiber.transfer(childFiber);
-  // print("main: after first transfer");
-  // mainFiber.transfer(childFiber);
-  //print("main: after second transfer");
+  childFiber.construct();
+  print("main: transfer");
+  mainFiber.transfer(childFiber);
+  print("main: after first transfer");
+  mainFiber.transfer(childFiber);
+  print("main: after second transfer");
 } 
 
 @pragma("vm:never-inline")
 void childEntry() {
-  // print("child: entry");
-  // childFiber.transfer(mainFiber);
+  print("child: entry");
+  childFiber.transfer(mainFiber);
 }
