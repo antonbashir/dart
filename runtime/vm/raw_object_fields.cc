@@ -231,7 +231,9 @@ namespace dart {
   F(TypedDataView, length_)                                                    \
   F(TypedDataView, typed_data_)                                                \
   F(TypedDataView, offset_in_bytes_)                                           \
-  F(FutureOr, type_arguments_)
+  F(FutureOr, type_arguments_)                                                 \
+  F(Coroutine, entry_)                                                         \
+  F(Coroutine, context_)
 
 #define AOT_CLASSES_AND_FIELDS(F)
 

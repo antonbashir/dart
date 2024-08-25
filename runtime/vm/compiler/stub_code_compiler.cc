@@ -2213,12 +2213,14 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 
 // Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
 // Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
-                                                                      
+
+void StubCodeCompiler::GenerateCoroutineExitStub() {
+  __ Breakpoint();
+}
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
   const Register kToCoroutine = CoroutineInitializeStubABI::kToCoroutineReg;
-  const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
   const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
   const Register kTemp = CoroutineInitializeStubABI::kTempReg;
   const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
@@ -2254,10 +2256,15 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
+  __ LeaveDartFrame();
+
   __ EnterStubFrame();
-  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine, kEntry});
+  __ PushRegistersInOrder({kFromCoroutine, kToCoroutine});
   CallDartCoreLibraryFunction(assembler, target::Thread::coroutine_launch_entry_point_offset(), target::ObjectStore::coroutine_launch_offset());
+  __ Breakpoint();
   __ LeaveStubFrame();
+  
+  __ LeaveDartFrame();
   __ Ret();
 }
 

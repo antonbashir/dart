@@ -12707,11 +12707,16 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t size);
-
+  static CoroutinePtr New(uintptr_t size, ClosurePtr entry);
+  
+  static uword entry_offset() {
+    return OFFSET_OF(UntaggedCoroutine, entry_);
+  }
   static uword context_offset() {
     return OFFSET_OF(UntaggedCoroutine, context_);
   }
+
+  ClosurePtr entry() const { return untag()->entry(); }
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

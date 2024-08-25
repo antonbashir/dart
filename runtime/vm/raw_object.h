@@ -3776,7 +3776,10 @@ class UntaggedFutureOr : public UntaggedInstance {
 
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
-  VISIT_NOTHING();
+  
+  COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
+  VISIT_FROM(entry)
+  VISIT_TO(entry)
   void** context_;
 };
 

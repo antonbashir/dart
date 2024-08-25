@@ -181,6 +181,7 @@ namespace dart {
   V(UnknownDartCode)                                                           \
   V(CoroutineInitialize)                                                       \
   V(CoroutineTransfer)                                                         \
+  V(CoroutineExit)                                                             \
 
 }  // namespace dart
 

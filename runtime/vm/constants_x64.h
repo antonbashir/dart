@@ -392,7 +392,6 @@ struct CoroutineInitializeStubABI {
   static constexpr Register kFromCoroutineReg = RSI;
   static constexpr Register kFromContextReg = RAX;
   static constexpr Register kToCoroutineReg = RDI;
-  static constexpr Register kEntryReg = RDX;
   static constexpr Register kTempReg = RBX;
   static constexpr Register kFrameSizeReg = RCX;
   static constexpr Register kSavedReg = R10;
@@ -417,6 +416,10 @@ struct CoroutineTransferStubABI {
   static constexpr intptr_t kContextFpOffset = 0;
   static constexpr intptr_t kContextResumePcOffset = 0;
   static constexpr intptr_t kContextFrameSizeOffset = 1;
+};
+
+struct CoroutineExitStubABI {
+
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,

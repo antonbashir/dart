@@ -33,6 +33,7 @@
 #include "vm/service_isolate.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/thread.h"
 #include "vm/type_testing_stubs.h"
 #include "vm/zone_text_buffer.h"

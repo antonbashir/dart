@@ -7,63 +7,65 @@ const _kRootContextSize = 4096;
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineInitialize")
-external void _coroutineInitialize(_Coroutine from, _Coroutine to, Function entry);
+external void _coroutineInitialize(_Coroutine from, _Coroutine to);
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
-late void Function() _currentEntry;
+@pragma("vm:recognized", "other")
+@pragma("vm:external-name", "Fiber_coroutineExit")
+external void _coroutineExit();
 
 @pragma("vm:entry-point")
-void _coroutineLaunch(_Coroutine from, _Coroutine to, void Function() entry) {
-  print("_coroutineLaunch");
-  _coroutineTransfer(to, from);
-//  print("_coroutineLaunch -> _coroutineTransfer");
-//  print(entry?.runtimeType);
-//  print("_coroutineLaunch -> entry");
-_currentEntry();
+void _coroutineLaunch(_Coroutine from, _Coroutine to) {
+  // print("_coroutineLaunch");
+  // final entry = to._entry;
+  // _coroutineTransfer(to, from);
+  // print("_coroutineLaunch -> _coroutineTransfer");
+  // entry();
+  // print("_coroutineLaunch -> _currentEntry");
+  // _coroutineTransfer(from, to);
 }
 
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size);
+  external factory _Coroutine._(int size, dynamic entry);
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external void Function() get _entry;
 }
 
 @patch
 class Fiber {
   final _Coroutine _current;
-  final _Coroutine _root = _Coroutine._(_kRootContextSize);
-  final void Function() _entry;
+  final _Coroutine _root = _Coroutine._(_kRootContextSize, null);
   
   @patch
   FiberState get state => _state;
   var _state = FiberState.created;
 
   @patch
-  Fiber({required int size, required void Function() entry}): _entry = entry, _current = _Coroutine._(size) {
-    _construct();
-  }
+  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _current = _Coroutine._(size, entry);
 
+  @patch
   @pragma("vm:never-inline")
-  void _construct() {
-    _currentEntry = _entry;
-    print("fiber._construct");
-    _coroutineInitialize(_root, _current, _entry);
+  void construct() {
+    print("$name: fiber._construct");
+    _coroutineInitialize(_root, _current);
+    print("$name: fiber._construct -> _coroutineInitialize");
     _state = FiberState.initialized;
-    print(_state);
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void start() {
-    print("fiber.start");
-    print(_state);
+    print("$name: fiber.start");
     if (_state == FiberState.initialized) {
       _state = FiberState.running;
       _coroutineTransfer(_root, _current);
-      print("fiber.start -> _coroutineTransfer");
+      print("$name: fiber.start -> _coroutineTransfer");
       _state = FiberState.finished;
     }
   }
@@ -71,9 +73,9 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
-    print("fiber.transfer");
+      print("$name: fiber.transfer");
     _coroutineTransfer(_current, to._current);
-    print("fiber.transfer -> _coroutineTransfer");
+      print("$name: fiber.transfer -> _coroutineTransfer");
   }
 
 }

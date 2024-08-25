@@ -547,6 +547,7 @@ struct InstrAttrs {
   M(Call1ArgStub, _)                                                           \
   M(CoroutineInitializeStub, _)                                                \
   M(CoroutineTransferStub, _)                                                  \
+  M(CoroutineExitStub, _)                                                      \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11475,22 +11476,19 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
 };
 
-class CoroutineInitializeStubInstr : public TemplateDefinition<3, Throws> {
+class CoroutineInitializeStubInstr : public TemplateDefinition<2, NoThrow> {
  public:
   CoroutineInitializeStubInstr(const InstructionSource& source,
                             Value* from,
                             Value* to,
-                            Value* entry,
                             intptr_t deopt_id)
       : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
     SetInputAt(0, from);
     SetInputAt(1, to);
-    SetInputAt(2, entry);
   }
 
   Value* from() const { return inputs_[0]; }
   Value* to() const { return inputs_[1]; }
-  Value* entry() const { return inputs_[2]; }
   virtual TokenPosition token_pos() const { return token_pos_; }
 
   virtual bool CanCallDart() const { return true; }
@@ -11515,7 +11513,7 @@ class CoroutineInitializeStubInstr : public TemplateDefinition<3, Throws> {
   DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeStubInstr);
 };
 
-class CoroutineTransferStubInstr : public TemplateDefinition<2, Throws> {
+class CoroutineTransferStubInstr : public TemplateDefinition<2, NoThrow> {
  public:
   CoroutineTransferStubInstr(const InstructionSource& source,
                              Value* from,
@@ -11550,6 +11548,37 @@ class CoroutineTransferStubInstr : public TemplateDefinition<2, Throws> {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineTransferStubInstr);
+};
+
+class CoroutineExitStubInstr : public TemplateDefinition<0, NoThrow> {
+ public:
+  CoroutineExitStubInstr(const InstructionSource& source,
+                             intptr_t deopt_id)
+      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
+  }
+
+  virtual TokenPosition token_pos() const { return token_pos_; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineExitStub);
+  PRINT_OPERANDS_TO_SUPPORT
+
+#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
+
+  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineExitStubInstr,
+                                          TemplateDefinition,
+                                          FIELD_LIST)
+#undef FIELD_LIST
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineExitStubInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].
