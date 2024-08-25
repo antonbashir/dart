@@ -8560,7 +8560,12 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
   locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
   locs->set_in(1, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   locs->set_in(2, Location::RegisterLocation(CoroutineInitializeStubABI::kEntryReg));
-  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  locs->set_temp(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromContextReg));
+  locs->set_temp(1, Location::RegisterLocation(CoroutineInitializeStubABI::kFrameSizeReg));
+  locs->set_temp(2, Location::RegisterLocation(CoroutineInitializeStubABI::kTempReg));
+  locs->set_temp(3, Location::RegisterLocation(CoroutineInitializeStubABI::kSrcFrameReg));
+  locs->set_temp(4, Location::RegisterLocation(CoroutineInitializeStubABI::kResumePcReg));
+  locs->set_out(0, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   return locs;
 }
 
@@ -8581,19 +8586,26 @@ LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation( CoroutineTransferStubABI::kFromCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation( CoroutineTransferStubABI::kToCoroutineReg));
-  locs->set_out(0, Location::RegisterLocation(CallingConventions::kReturnReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
+  locs->set_temp(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromContextReg));
+  locs->set_temp(1, Location::RegisterLocation(CoroutineTransferStubABI::kTempReg));
+  locs->set_temp(2, Location::RegisterLocation(CoroutineTransferStubABI::kSuspendFrameSizeReg));
+  locs->set_temp(3, Location::RegisterLocation(CoroutineTransferStubABI::kSavedReg));
+  locs->set_temp(4, Location::RegisterLocation(CoroutineTransferStubABI::kSrcFrameReg));
+  locs->set_temp(5, Location::RegisterLocation(CoroutineTransferStubABI::kDstFrameReg));
+  locs->set_temp(6, Location::RegisterLocation(CoroutineTransferStubABI::kResumePcReg));
+  locs->set_out(0, Location::RegisterLocation(CoroutineInitializeStubABI::kToCoroutineReg));
   return locs;
 }
 
 void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  __ Breakpoint();
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
   __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(FPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextFpOffset * compiler::target::kWordSize);
-  __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ Breakpoint();
   __ LoadFieldFromOffset(FPREG, CoroutineTransferStubABI::kToCoroutineReg, compiler::target::Coroutine::context_offset());
