@@ -8566,13 +8566,18 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_initialize_stub();
-  const RegisterSet registers(kDartAvailableCpuRegs, 0);
   __ PushRegister(FPREG);
-  __ PushRegisters(registers);
-  __ LoadFieldFromOffset(CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ StoreToOffset(SPREG, CoroutineInitializeStubABI::kFromContextReg, CoroutineInitializeStubABI::kContextSpOffset);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ StoreToOffset(SPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextSpOffset);
     compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ PopRegisters(registers);
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
   __ PopRegister(FPREG);
 }
 
@@ -8592,11 +8597,17 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
   __ PushRegister(FPREG);
-  compiler->SaveLiveRegisters(locs());
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
   __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   __ StoreToOffset(SPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextSpOffset);
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  compiler->RestoreLiveRegisters(locs());
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
   __ PopRegister(FPREG);
 }
 
