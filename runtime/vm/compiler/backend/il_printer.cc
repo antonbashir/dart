@@ -1591,11 +1591,6 @@ void CoroutineTransferStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   to()->PrintTo(f);
   f->AddString(")");
 }
-void CoroutineExitStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
-  const char* name = "CoroutineExit";
-  f->Printf("%s(", name);
-  f->AddString(")");
-}
 
 void SuspendInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "";

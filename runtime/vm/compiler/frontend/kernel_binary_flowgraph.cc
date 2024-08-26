@@ -3371,8 +3371,6 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
 
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
-    case MethodRecognizer::kCoroutineExit:
-      return BuildCoroutineExit();
     case MethodRecognizer::kCoroutineInitialize:
       return BuildCoroutineInitialize();
     case MethodRecognizer::kCoroutineTransfer:
@@ -6038,14 +6036,6 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   return instructions;
 }
 
-Fragment StreamingFlowGraphBuilder::BuildCoroutineExit() {
-  Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-  instructions += B->CoroutineExit(TokenPosition::kNoSource);
-  instructions += NullConstant();
-  return instructions;
-}
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
   const intptr_t argc = ReadUInt();               // Read argument count.

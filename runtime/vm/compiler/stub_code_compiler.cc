@@ -2214,10 +2214,6 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 // Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
 // Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
 
-void StubCodeCompiler::GenerateCoroutineExitStub() {
-  __ Breakpoint();
-}
-
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
   const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
@@ -2225,40 +2221,30 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
   const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
   const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
-  const Register kSaved1 = CoroutineInitializeStubABI::kSaved1Reg;
-  const Register kSaved2 = CoroutineInitializeStubABI::kSaved2Reg;
+  const Register kSavedSp = CoroutineInitializeStubABI::kSavedSpReg;
+  const Register kSavedFrameSize = CoroutineInitializeStubABI::kSavedFrameSizeReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
   __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kFrameSize, SPREG);
-  __ MoveRegister(kSaved1, kFrameSize);
+  __ MoveRegister(kSavedFrameSize, kFrameSize);
 
   __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-  __ LoadFromOffset(kSaved2, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
+  __ LoadFromOffset(kSavedSp, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
   __ AddImmediate(kFromContext, target::kWordSize);
-
-  if (kSrcFrame == THR) {
-    __ PushRegister(THR);
-  }
-  
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kFrameSize, kTemp);
-
-  if (kSrcFrame == THR) {
-    __ PopRegister(THR);
-  }
-
-  __ StoreToOffset(kSaved1, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ StoreToOffset(kSavedFrameSize, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   
   __ LeaveDartFrame();
-  __ MoveRegister(SPREG, kSaved2);
+  __ MoveRegister(SPREG, kSavedSp);
   __ Jump(kResumePc);
 }
 
@@ -2289,18 +2275,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   __ AddImmediate(kFromContext, target::kWordSize);
-
-  if (kSrcFrame == THR) {
-    __ PushRegister(THR);
-  }
-  
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
-
-  if (kSrcFrame == THR) {
-    __ PopRegister(THR);
-  }
-
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreToOffset(kSaved, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
@@ -2316,27 +2292,10 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ AddImmediate(kSaved, -target::kWordSize);
   __ LoadFromOffset(SPREG, kSaved, CoroutineTransferStubABI::kContextSpOffset);
   __ StoreFieldToOffset(kSaved, kToCoroutine, target::Coroutine::context_offset());
-//  __ AddImmediate(kSuspendFrameSize, (target::frame_layout.first_local_from_fp + 1) * target::kWordSize);
   __ SubRegisters(kToContext, kSuspendFrameSize);
 
-  intptr_t num_saved_regs = 0;
-  if (kSrcFrame == THR) {
-    __ PushRegister(THR);
-    ++num_saved_regs;
-  }
-  if (kDstFrame == CODE_REG) {
-    __ PushRegister(CODE_REG);
-    ++num_saved_regs;
-  }
-  __ AddImmediate(kDstFrame, SPREG, num_saved_regs * target::kWordSize);
+  __ MoveRegister(kDstFrame, SPREG);
   __ CopyMemoryWords(kToContext, kDstFrame, kSuspendFrameSize, kTemp);
-
-  if (kDstFrame == CODE_REG) {
-    __ PopRegister(CODE_REG);
-  }
-  if (kSrcFrame == THR) {
-    __ PopRegister(THR);
-  }
 
   __ Jump(kResumePc);
 }

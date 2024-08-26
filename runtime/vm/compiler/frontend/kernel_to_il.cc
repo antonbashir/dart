@@ -4758,13 +4758,6 @@ Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineExit(TokenPosition position) {
-  CoroutineExitStubInstr* instr = new (Z)
-      CoroutineExitStubInstr(InstructionSource(position), GetNextDeoptId());
-  Push(instr);
-  return Fragment(instr);
-}
-
 Fragment FlowGraphBuilder::Suspend(TokenPosition position,
                                    SuspendInstr::StubId stub_id) {
   Value* type_args =

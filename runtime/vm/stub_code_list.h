@@ -180,8 +180,7 @@ namespace dart {
   V(FfiAsyncCallbackSend)                                                      \
   V(UnknownDartCode)                                                           \
   V(CoroutineInitialize)                                                       \
-  V(CoroutineTransfer)                                                         \
-  V(CoroutineExit)                                                             \
+  V(CoroutineTransfer)
 
 }  // namespace dart
 

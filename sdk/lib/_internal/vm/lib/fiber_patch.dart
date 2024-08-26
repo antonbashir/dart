@@ -13,22 +13,16 @@ external void _coroutineInitialize(_Coroutine from, _Coroutine to);
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
-@pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineExit")
-external void _coroutineExit();
-
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(int size, void Function()? entry);
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external void Function() get _entry;
 }
 
 @patch
 class Fiber {
   final _root = _Coroutine._(_kRootContextSize, null);
+  final void Function() _entry;
   _Coroutine _current;
   
   @patch
@@ -37,7 +31,7 @@ class Fiber {
 
   @patch
   @pragma("vm:never-inline")
-  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _current = _Coroutine._(size, entry) {
+  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _entry = entry, _current = _Coroutine._(size, entry) {
     _coroutineInitialize(_root, _current);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
@@ -47,9 +41,8 @@ class Fiber {
 
   @pragma("vm:never-inline")
   void _launch() {
-    final entry = _current._entry;
     _coroutineTransfer(_current, _root);
-    entry();
+    _entry();
     _coroutineTransfer(_current, _root);
   }
   

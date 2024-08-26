@@ -383,7 +383,6 @@ namespace dart {
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
   V(::, _coroutineInitialize, CoroutineInitialize, 0x7a534c55)                 \
   V(::, _coroutineTransfer, CoroutineTransfer, 0x821c1d82)                     \
-  V(::, _coroutineExit, CoroutineExit, 0x6fbf3314)                             \
   V(_Coroutine, get:_entry, Coroutine_getEntry,                                \
     0xc825e577)                                                                \
   

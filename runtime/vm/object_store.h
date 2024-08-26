@@ -394,7 +394,6 @@ class ObjectPointerVisitor;
   DO(suspend_sync_star_at_yield_stub, SuspendSyncStarAtYield)                  \
   DO(coroutine_initialize_stub, CoroutineInitialize)                           \
   DO(coroutine_transfer_stub, CoroutineTransfer)                               \
-  DO(coroutine_exit_stub, CoroutineExit)                                       \
   DO(instance_of_stub, InstanceOf)
 
 #define ISOLATE_OBJECT_STORE_FIELD_LIST(R_, RW)                                \

@@ -8611,24 +8611,6 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(FPREG);
 }
 
-LocationSummary* CoroutineExitStubInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
-  const intptr_t kNumInputs = 0;
-  const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  return locs;
-}
-
-void CoroutineExitStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  ObjectStore* object_store = compiler->isolate_group()->object_store();
-  Code& stub = Code::ZoneHandle(compiler->zone());
-  stub = object_store->coroutine_exit_stub();
-  __ Breakpoint();
-  __ LeaveFrame();
-  __ Ret();
-}
-
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
   if (stub_id() == StubId::kAwaitWithTypeCheck &&
       !operand()->Type()->CanBeFuture()) {

@@ -263,7 +263,6 @@ namespace dart {
   V(Internal_unsafeCast, 1)                                                    \
   V(Internal_nativeEffect, 1)                                                  \
   V(Fiber_coroutineInitialize, 2)                                              \
-  V(Fiber_coroutineExit, 0)                                                    \
   V(Fiber_coroutineTransfer, 2)                                                \
   V(Internal_collectAllGarbage, 0)                                             \
   V(Internal_makeListFixedLength, 1)                                           \
