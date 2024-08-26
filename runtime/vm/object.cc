@@ -26616,7 +26616,7 @@ CodePtr SuspendState::GetCodeObject() const {
   ASSERT(pc() != 0);
 #if defined(DART_PRECOMPILED_RUNTIME)
   NoSafepointScope no_safepoint;
-  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),f
+  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),
                                    /*is_return_address=*/true);
   ASSERT(code != Code::null());
   return code;
