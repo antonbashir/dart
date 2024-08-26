@@ -11,10 +11,8 @@
 
 namespace dart {
 
-DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
+DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, stack, arguments->NativeArgAt(1));
-  const auto& entry = arguments->NativeArgAt(2);
-  if (entry.IsRawNull()) return Coroutine::New(stack.Value(), Closure::null());
-  return Coroutine::New(stack.Value(), Closure::Cast(Object::Handle(entry)).ptr());
+  return Coroutine::New(stack.Value());
 }
 }  // namespace dart

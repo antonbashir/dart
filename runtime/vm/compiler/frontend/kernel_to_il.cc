@@ -933,7 +933,6 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(WeakProperty_getKey, WeakProperty_key)                                     \
   V(WeakProperty_getValue, WeakProperty_value)                                 \
   V(WeakReference_getTarget, WeakReference_target)                             \
-  V(Coroutine_getEntry, Coroutine_entry)
 
 #define STORE_NATIVE_FIELD(V)                                                  \
   V(Finalizer_setCallback, Finalizer_callback)                                 \

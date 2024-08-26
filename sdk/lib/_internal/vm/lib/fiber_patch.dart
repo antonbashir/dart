@@ -16,7 +16,7 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, void Function()? entry);
+  external factory _Coroutine._(int size);
 }
 
 @patch
@@ -31,7 +31,7 @@ class Fiber {
 
   @patch
   @pragma("vm:never-inline")
-  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _entry = entry, _current = _Coroutine._(size, entry) {
+  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _entry = entry, _current = _Coroutine._(size) {
     _coroutineInitialize(_root, _current);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
