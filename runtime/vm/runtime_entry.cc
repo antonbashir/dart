@@ -322,17 +322,8 @@ DEFINE_RUNTIME_ENTRY(NullErrorWithSelector, 1) {
   NullErrorHelper(zone, selector);
 }
 
-int calls = 0;
-
 DEFINE_RUNTIME_ENTRY(NullCastError, 0) {
-
-  OS::Print("FUCK\n");
-  calls++;
-  if (calls == 1) {arguments.SetReturn(Object::empty_array());return;}
-  if (calls == 2) {arguments.SetReturn(Object::empty_array());return;}
-  if (calls == 3) {arguments.SetReturn(Object::null_object());return;}
-  if (calls == 4) {arguments.SetReturn(Object::empty_array());return;}
-  //NullErrorHelper(zone, String::null_string());
+  NullErrorHelper(zone, String::null_string());
 }
 
 DEFINE_RUNTIME_ENTRY(ArgumentNullError, 0) {

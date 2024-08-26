@@ -4,7 +4,6 @@
 
 #include "vm/object.h"
 
-#include <cstdlib>
 #include <memory>
 
 #include "compiler/method_recognizer.h"
@@ -26617,7 +26616,7 @@ CodePtr SuspendState::GetCodeObject() const {
   ASSERT(pc() != 0);
 #if defined(DART_PRECOMPILED_RUNTIME)
   NoSafepointScope no_safepoint;
-  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),
+  CodePtr code = ReversePc::Lookup(IsolateGroup::Current(), pc(),f
                                    /*is_return_address=*/true);
   ASSERT(code != Code::null());
   return code;
