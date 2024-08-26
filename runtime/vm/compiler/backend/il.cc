@@ -32,6 +32,7 @@
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
+#include "vm/constants_x86.h"
 #include "vm/cpu.h"
 #include "vm/dart_entry.h"
 #include "vm/object.h"
@@ -8548,6 +8549,65 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
+}
+
+LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 1;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
+  return locs;
+}
+
+void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  stub = object_store->coroutine_initialize_stub();
+  __ PushRegister(FPREG);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ StoreToOffset(SPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextSpOffset);
+    compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
+  __ PopRegister(FPREG);
+}
+
+LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 2;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
+  return locs;
+}
+
+void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  stub = object_store->coroutine_transfer_stub();
+  __ PushRegister(FPREG);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
+  __ LoadFieldFromOffset(CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
+  __ StoreToOffset(SPREG, CoroutineTransferStubABI::kFromContextReg, CoroutineTransferStubABI::kContextSpOffset);
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
+  __ PopRegister(FPREG);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

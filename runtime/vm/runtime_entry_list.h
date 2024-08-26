@@ -72,7 +72,7 @@ namespace dart {
   V(ResumeFrame)                                                               \
   V(SwitchableCallMiss)                                                        \
   V(NotLoaded)                                                                 \
-  V(FfiAsyncCallbackSend)
+  V(FfiAsyncCallbackSend)                                                      \
 
 // Note: Leaf runtime function have C linkage, so they cannot pass C++ struct
 // values like ObjectPtr.

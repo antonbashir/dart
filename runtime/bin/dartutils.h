@@ -289,6 +289,7 @@ class DartUtils {
 
   static constexpr const char* kDartScheme = "dart:";
   static constexpr const char* kAsyncLibURL = "dart:async";
+  static constexpr const char* kFiberLibURL = "dart:fiber";
   static constexpr const char* kBuiltinLibURL = "dart:_builtin";
   static constexpr const char* kCoreLibURL = "dart:core";
   static constexpr const char* kInternalLibURL = "dart:_internal";
@@ -319,6 +320,7 @@ class DartUtils {
   static Dart_Handle PrepareIOLibrary(Dart_Handle io_lib);
   static Dart_Handle PrepareIsolateLibrary(Dart_Handle isolate_lib);
   static Dart_Handle PrepareCLILibrary(Dart_Handle cli_lib);
+  static Dart_Handle PrepareFiberLibrary(Dart_Handle fiber_lib);
 
   static dart::SimpleHashMap* environment_;
 

@@ -15,6 +15,7 @@
 #include "vm/object_store.h"
 #include "vm/resolver.h"
 #include "vm/stack_frame.h"
+#include "vm/token_position.h"
 
 namespace dart {
 namespace kernel {
@@ -3370,6 +3371,10 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
 
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
+    case MethodRecognizer::kCoroutineInitialize:
+      return BuildCoroutineInitialize();
+    case MethodRecognizer::kCoroutineTransfer:
+      return BuildCoroutineTransfer();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6012,6 +6017,25 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
   code += NullConstant();  // Return type is void.
   return code;
 }
+
+Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
+  Fragment instructions;
+  Array& argument_names = Array::ZoneHandle(Z);
+  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
+  instructions += NullConstant();
+  return instructions;
+}
+
+Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
+  Fragment instructions;
+  Array& argument_names = Array::ZoneHandle(Z);
+  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
+  instructions += NullConstant();
+  return instructions;
+}
+
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
   const intptr_t argc = ReadUInt();               // Read argument count.

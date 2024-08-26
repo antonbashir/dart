@@ -11,6 +11,7 @@
 #include "lib/integers.h"
 #include "lib/stacktrace.h"
 #include "platform/assert.h"
+#include "platform/globals.h"
 #include "platform/text_buffer.h"
 #include "platform/unaligned.h"
 #include "platform/unicode.h"
@@ -65,6 +66,7 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -828,9 +830,7 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  {
-    *sentinel_ ^= Sentinel::New();
-  }
+  { *sentinel_ ^= Sentinel::New(); }
 
   // Allocate and initialize optimizing compiler constants.
   {
@@ -2055,6 +2055,20 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     RegisterPrivateClass(cls, Symbols::_ConstSet(), lib);
     pending_classes.Add(cls);
 
+    lib = Library::LookupLibrary(thread, Symbols::DartFiber());
+    if (lib.IsNull()) {
+      lib = Library::NewLibraryHelper(Symbols::DartFiber(), true);
+      lib.SetLoadRequested();
+      lib.Register(thread);
+    }
+    object_store->set_bootstrap_library(ObjectStore::kFiber, lib);
+    ASSERT(!lib.IsNull());
+    ASSERT(lib.ptr() == Library::FiberLibrary());
+
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
+    RegisterPrivateClass(cls, Symbols::_Coroutine(), lib);
+    pending_classes.Add(cls);
+
     // Pre-register the async library so we can place the vm class
     // FutureOr there rather than the core library.
     lib = Library::LookupLibrary(thread, Symbols::DartAsync());
@@ -2588,6 +2602,7 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::New<SendPort, RTN::SendPort>(isolate_group);
     cls = Class::New<StackTrace, RTN::StackTrace>(isolate_group);
     cls = Class::New<SuspendState, RTN::SuspendState>(isolate_group);
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
     cls = Class::New<RegExp, RTN::RegExp>(isolate_group);
     cls = Class::New<Number, RTN::Number>(isolate_group);
 
@@ -14781,6 +14796,10 @@ LibraryPtr Library::AsyncLibrary() {
   return IsolateGroup::Current()->object_store()->async_library();
 }
 
+LibraryPtr Library::FiberLibrary() {
+  return IsolateGroup::Current()->object_store()->fiber_library();
+}
+
 LibraryPtr Library::ConvertLibrary() {
   return IsolateGroup::Current()->object_store()->convert_library();
 }
@@ -15394,6 +15413,7 @@ void Library::CheckFunctionFingerprints() {
   GRAPH_CORE_INTRINSICS_LIST(CHECK_FINGERPRINTS_GRAPH_INTRINSIC);
 
   all_libs.Add(&Library::ZoneHandle(Library::AsyncLibrary()));
+  all_libs.Add(&Library::ZoneHandle(Library::FiberLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::MathLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::TypedDataLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::CollectionLibrary()));
@@ -26606,6 +26626,18 @@ CodePtr SuspendState::GetCodeObject() const {
       runtime_frame_layout.code_from_fp * kWordSize));
   return Code::RawCast(code);
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
+}
+
+CoroutinePtr Coroutine::New(uintptr_t size) {
+  const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  void** context = (void**)(calloc(size, sizeof(word)));
+  NoSafepointScope no_safepoint;
+  result.StoreNonPointer(&result.untag()->context_, context);
+  return result.ptr();
+}
+
+const char* Coroutine::ToCString() const {
+  return "Coroutine";
 }
 
 void RegExp::set_pattern(const String& pattern) const {

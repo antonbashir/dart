@@ -161,6 +161,7 @@ class StackFrame : public ValueObject {
   friend class StackFrameIterator;
   // UntaggedSuspendState::VisitSuspendStatePointers creates a temporary
   // StackFrame objects for the copied frames of the suspended functions.
+  friend class UntaggedCoroutine;
   friend class UntaggedSuspendState;
   friend class ProfilerDartStackWalker;
   DISALLOW_COPY_AND_ASSIGN(StackFrame);

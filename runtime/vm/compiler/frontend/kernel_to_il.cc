@@ -26,7 +26,9 @@
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 #include "vm/compiler/frontend/prologue_builder.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
+#include "vm/debugger.h"
 #include "vm/kernel_isolate.h"
 #include "vm/kernel_loader.h"
 #include "vm/log.h"
@@ -39,6 +41,7 @@
 #include "vm/scopes.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
+#include "vm/token_position.h"
 
 namespace dart {
 
@@ -1139,7 +1142,6 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
-      return true;
     default:
       return false;
   }
@@ -4737,6 +4739,20 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
                                         Call1ArgStubInstr::StubId stub_id) {
   Call1ArgStubInstr* instr = new (Z) Call1ArgStubInstr(
       InstructionSource(position), stub_id, Pop(), GetNextDeoptId());
+  Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
+  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
+      InstructionSource(position), Pop(), GetNextDeoptId());
+  Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
+  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(
+      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

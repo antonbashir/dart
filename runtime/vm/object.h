@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_OBJECT_H_
 #define RUNTIME_VM_OBJECT_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -5348,6 +5349,7 @@ class Library : public Object {
   static LibraryPtr NativeWrappersLibrary();
   static LibraryPtr TypedDataLibrary();
   static LibraryPtr VMServiceLibrary();
+  static LibraryPtr FiberLibrary();
 
   // Eagerly compile all classes and functions in the library.
   static ErrorPtr CompileAll(bool ignore_error = false);
@@ -7037,11 +7039,9 @@ class Code : public Object {
     explicit Comments(const Array& comments);
 
     // Layout of entries describing comments.
-    enum {
-      kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
-      kCommentEntry,       // Comment text as a String.
-      kNumberOfEntries
-    };
+    enum {kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
+          kCommentEntry,       // Comment text as a String.
+          kNumberOfEntries};
 
     const Array& comments_;
     String& string_;
@@ -12696,6 +12696,25 @@ class SuspendState : public Instance {
   uint8_t* payload() const { return untag()->payload(); }
 
   FINAL_HEAP_OBJECT_IMPLEMENTATION(SuspendState, Instance);
+  friend class Class;
+};
+
+class Coroutine : public Instance {
+ public:
+  static intptr_t HeaderSize() { return sizeof(UntaggedCoroutine); }
+
+  static intptr_t InstanceSize() {
+    return RoundedAllocationSize(sizeof(UntaggedCoroutine));
+  }
+
+  static CoroutinePtr New(uintptr_t size);
+  
+  static uword context_offset() {
+    return OFFSET_OF(UntaggedCoroutine, context_);
+  }
+
+ private:
+  FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);
   friend class Class;
 };
 

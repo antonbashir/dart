@@ -2,7 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+#include <initializer_list>
+#include "platform/globals.h"
 #include "vm/compiler/runtime_api.h"
+#include "vm/constants.h"
 #include "vm/flags.h"
 #include "vm/globals.h"
 
@@ -1700,9 +1703,9 @@ EMIT_BOX_ALLOCATION(Int32x4)
 static void GenerateBoxFpuValueStub(Assembler* assembler,
                                     const dart::Class& cls,
                                     const RuntimeEntry& runtime_entry,
-                                    void (Assembler::* store_value)(FpuRegister,
-                                                                    Register,
-                                                                    int32_t)) {
+                                    void (Assembler::*store_value)(FpuRegister,
+                                                                   Register,
+                                                                   int32_t)) {
   Label call_runtime;
   if (!FLAG_use_slow_path && FLAG_inline_alloc) {
     __ TryAllocate(cls, &call_runtime, compiler::Assembler::kFarJump,
@@ -1984,8 +1987,7 @@ void StubCodeCompiler::GenerateSuspendStub(
     __ PushRegister(THR);
   }
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ AddImmediate(kDstFrame, kSuspendState,
-                  target::SuspendState::payload_offset() - kHeapObjectTag);
+  __ AddImmediate(kDstFrame, kSuspendState, target::SuspendState::payload_offset() - kHeapObjectTag);
   __ CopyMemoryWords(kSrcFrame, kDstFrame, kFrameSize, kTemp);
   if (kSrcFrame == THR) {
     __ PopRegister(THR);
@@ -2209,6 +2211,95 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
       target::ObjectStore::suspend_state_init_sync_star_offset());
 }
 
+// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
+
+void StubCodeCompiler::GenerateCoroutineInitializeStub() {
+  const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
+  const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
+  const Register kTemp = CoroutineInitializeStubABI::kTempReg;
+  const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
+  const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
+  const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
+  const Register kSavedSp = CoroutineInitializeStubABI::kSavedSpReg;
+  const Register kSavedFrameSize = CoroutineInitializeStubABI::kSavedFrameSizeReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
+  __ SubRegisters(kFrameSize, SPREG);
+  __ MoveRegister(kSavedFrameSize, kFrameSize);
+
+  __ EnterDartFrame(0);
+
+  __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  __ LoadFromOffset(kSavedSp, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
+  __ AddImmediate(kFromContext, CoroutineInitializeStubABI::kContextPayloadOffset * target::kWordSize);
+  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ CopyMemoryWords(kSrcFrame, kFromContext, kFrameSize, kTemp);
+  __ StoreToOffset(kSavedFrameSize, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
+  __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
+  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  
+  __ LeaveDartFrame();
+  __ MoveRegister(SPREG, kSavedSp);
+  __ Jump(kResumePc);
+}
+
+// Coroutine Stack on suspend: {([Saved SP]) [Saved Frame] [Resume PC] [Frame Size]}
+// Coroutine Stack on resume: {[Saved SP] [Saved Frame] ([Resume PC]) [Frame Size]}
+
+void StubCodeCompiler::GenerateCoroutineTransferStub() {
+  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
+  const Register kFromContext = CoroutineTransferStubABI::kFromContextReg;
+  const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
+  const Register kToContext = CoroutineTransferStubABI::kToContextReg;
+  const Register kTemp = CoroutineTransferStubABI::kTempReg;
+  const Register kSuspendFrameSize = CoroutineTransferStubABI::kSuspendFrameSizeReg;
+  const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
+  const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
+  const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
+  const Register kSavedContext = CoroutineTransferStubABI::kSavedContextReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  
+  __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
+  __ SubRegisters(kSuspendFrameSize, SPREG);
+  __ MoveRegister(kSavedContext, kSuspendFrameSize);
+
+  __ EnterDartFrame(0);
+
+  __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  __ AddImmediate(kFromContext, CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
+  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
+  __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
+  __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
+  __ StoreToOffset(kResumePc, kFromContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
+  __ StoreToOffset(kSavedContext, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+
+  __ LeaveDartFrame();
+
+  __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
+  __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
+  __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ MoveRegister(kSavedContext, kToContext);
+  __ SubRegisters(kSavedContext, kSuspendFrameSize);
+  __ AddImmediate(kSavedContext, -CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
+  __ LoadFromOffset(SPREG, kSavedContext, CoroutineTransferStubABI::kContextSpOffset);
+  __ StoreFieldToOffset(kSavedContext, kToCoroutine, target::Coroutine::context_offset());
+  __ SubRegisters(kToContext, kSuspendFrameSize);
+
+  __ MoveRegister(kDstFrame, SPREG);
+  __ CopyMemoryWords(kToContext, kDstFrame, kSuspendFrameSize, kTemp);
+
+  __ Jump(kResumePc);
+}
+
 void StubCodeCompiler::GenerateResumeStub() {
   const Register kSuspendState = ResumeStubABI::kSuspendStateReg;
   const Register kTemp = ResumeStubABI::kTempReg;
@@ -2263,17 +2354,14 @@ void StubCodeCompiler::GenerateResumeStub() {
     __ Bind(&okay);
   }
 #endif
+
   if (!FLAG_precompiled_mode) {
     // Copy Code object (part of the fixed frame which is not copied below)
     // and restore pool pointer.
     __ MoveRegister(kTemp, kSuspendState);
     __ AddRegisters(kTemp, kFrameSize);
-    __ LoadFromOffset(
-        CODE_REG, kTemp,
-        target::SuspendState::payload_offset() - kHeapObjectTag +
-            target::frame_layout.code_from_fp * target::kWordSize);
-    __ StoreToOffset(CODE_REG, FPREG,
-                     target::frame_layout.code_from_fp * target::kWordSize);
+    __ LoadFromOffset(CODE_REG, kTemp, target::SuspendState::payload_offset() - kHeapObjectTag + target::frame_layout.code_from_fp * target::kWordSize);
+    __ StoreToOffset(CODE_REG, FPREG,target::frame_layout.code_from_fp * target::kWordSize);
 #if !defined(TARGET_ARCH_IA32)
     __ LoadPoolPointer(PP);
 #endif

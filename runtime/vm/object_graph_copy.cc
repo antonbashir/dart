@@ -89,7 +89,8 @@
   V(UnwindError)                                                               \
   V(UserTag)                                                                   \
   V(WeakArray)                                                                 \
-  V(WeakSerializationReference)
+  V(WeakSerializationReference)                                                \
+  V(Coroutine)
 
 namespace dart {
 
@@ -874,6 +875,7 @@ class ObjectCopyBase {
       HANDLE_ILLEGAL_CASE(Pointer)
       HANDLE_ILLEGAL_CASE(ReceivePort)
       HANDLE_ILLEGAL_CASE(SuspendState)
+      HANDLE_ILLEGAL_CASE(Coroutine)
       HANDLE_ILLEGAL_CASE(UserTag)
       default:
         return true;
@@ -1058,6 +1060,7 @@ class RetainingPath {
             case kRegExpCid:
             case kStackTraceCid:
             case kSuspendStateCid:
+            case kCoroutineCid:
             case kUserTagCid:
             case kWeakPropertyCid:
             case kWeakReferenceCid:

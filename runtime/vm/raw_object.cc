@@ -236,6 +236,10 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
       instance_size = WeakSerializationReference::InstanceSize();
       break;
     }
+    case kCoroutineCid: {
+      instance_size = Coroutine::InstanceSize();
+      break;
+    }
     default: {
       // Get the (constant) instance size out of the class object.
       // TODO(koda): Add Size(ClassTable*) interface to allow caching in loops.
@@ -575,6 +579,7 @@ NULL_VISITOR(Float64x2)
 NULL_VISITOR(Bool)
 NULL_VISITOR(Capability)
 NULL_VISITOR(SendPort)
+NULL_VISITOR(Coroutine)
 NULL_VISITOR(TransferableTypedData)
 COMPRESSED_VISITOR(Pointer)
 NULL_VISITOR(DynamicLibrary)
