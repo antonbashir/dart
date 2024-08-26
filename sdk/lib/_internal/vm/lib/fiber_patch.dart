@@ -1,7 +1,5 @@
 import "dart:_internal" show patch;
 import "dart:fiber";
-import "dart:async";
-import "dart:ffi";
 
 const _kRootContextSize = 4096;
 

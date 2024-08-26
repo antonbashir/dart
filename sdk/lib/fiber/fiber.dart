@@ -1,7 +1,5 @@
 library dart.fiber;
 
-import 'dart:ffi';
-
 enum FiberState {
   created,
   initialized,
