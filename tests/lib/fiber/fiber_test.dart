@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:fiber';
 
 final mainFiber = Fiber(size: 1024 * 1024, entry: mainEntry, name: "main");
