@@ -723,6 +723,7 @@ DART_FORCE_INLINE D bit_copy(const S& source) {
 #define FORCE_INCLUDE_DISASSEMBLER 1
 #endif
 #endif
+
 // Include HeapSnapshotWriter functionality if not in PRODUCT.
 #if !defined(DART_ENABLE_HEAP_SNAPSHOT_WRITER) && !defined(PRODUCT)
 #define DART_ENABLE_HEAP_SNAPSHOT_WRITER 1
