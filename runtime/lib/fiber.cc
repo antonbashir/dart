@@ -10,7 +10,6 @@
 #include "vm/tagged_pointer.h"
 
 namespace dart {
-
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, stack, arguments->NativeArgAt(1));
   return Coroutine::New(stack.Value());

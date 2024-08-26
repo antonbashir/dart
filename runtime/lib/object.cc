@@ -318,7 +318,7 @@ DEFINE_NATIVE_ENTRY(Internal_nativeEffect, 0, 1) {
   UNREACHABLE();
 }
 
-DEFINE_NATIVE_ENTRY(Fiber_coroutineInitialize, 0, 2) {
+DEFINE_NATIVE_ENTRY(Fiber_coroutineInitialize, 0, 1) {
   UNREACHABLE();
 }
 
