@@ -15,4 +15,5 @@ class Fiber {
   external Fiber({required int size, required void Function() entry, required String name});
   external void start();
   external void transfer(Fiber to);
+  external void fork(Fiber to);
 }

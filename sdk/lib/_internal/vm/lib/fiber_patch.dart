@@ -21,8 +21,8 @@ class _Coroutine {
 
 @patch
 class Fiber {
-  final _root = _Coroutine._(_kRootContextSize);
   final void Function() _entry;
+  _Coroutine _root = _Coroutine._(_kRootContextSize);
   _Coroutine _current;
   
   @patch
@@ -45,7 +45,9 @@ class Fiber {
   @pragma("vm:never-inline")
   void _launch() {
     _coroutineTransfer(_current, _root);
+    _state = FiberState.running;
     _entry();
+    _state = FiberState.finished;
     _coroutineTransfer(_current, _root);
   }
   
@@ -53,9 +55,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void start() {
     if (_state == FiberState.initialized) {
-      _state = FiberState.running;
       _coroutineTransfer(_root, _current);
-      _state = FiberState.finished;
     }
   }
 
@@ -63,5 +63,14 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
     _coroutineTransfer(_current, to._current);
+  }
+
+  @patch
+  @pragma("vm:prefer-inline")
+  void fork(Fiber to) {
+    if (to._state == FiberState.initialized) {
+      to._root = _current;
+      to.start();
+    }
   }
 }

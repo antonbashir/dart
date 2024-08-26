@@ -13,8 +13,9 @@ void main() {
 @pragma("vm:never-inline")
 void mainEntry() {
   print("main: entry");
-  mainFiber.transfer(childFiber);
+  mainFiber.fork(childFiber);
   print("main: after first transfer");
+  mainFiber.transfer(childFiber);
 }
 
 @pragma("vm:never-inline")
