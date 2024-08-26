@@ -2235,7 +2235,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
   __ LoadFromOffset(kSavedSp, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
-  __ AddImmediate(kFromContext, target::kWordSize);
+  __ AddImmediate(kFromContext, CoroutineInitializeStubABI::kContextPayloadOffset * target::kWordSize);
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kFrameSize, kTemp);
   __ StoreToOffset(kSavedFrameSize, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
@@ -2261,7 +2261,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
   const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
   const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
-  const Register kSaved = CoroutineTransferStubABI::kSavedReg;
+  const Register kSavedContext = CoroutineTransferStubABI::kSavedContextReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -2269,17 +2269,17 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   
   __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
   __ SubRegisters(kSuspendFrameSize, SPREG);
-  __ MoveRegister(kSaved, kSuspendFrameSize);
+  __ MoveRegister(kSavedContext, kSuspendFrameSize);
 
   __ EnterDartFrame(0);
 
   __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-  __ AddImmediate(kFromContext, target::kWordSize);
+  __ AddImmediate(kFromContext, CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
   __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
   __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
-  __ StoreToOffset(kSaved, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
+  __ StoreToOffset(kSavedContext, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
 
   __ LeaveDartFrame();
@@ -2287,11 +2287,11 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
   __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
   __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
-  __ MoveRegister(kSaved, kToContext);
-  __ SubRegisters(kSaved, kSuspendFrameSize);
-  __ AddImmediate(kSaved, -target::kWordSize);
-  __ LoadFromOffset(SPREG, kSaved, CoroutineTransferStubABI::kContextSpOffset);
-  __ StoreFieldToOffset(kSaved, kToCoroutine, target::Coroutine::context_offset());
+  __ MoveRegister(kSavedContext, kToContext);
+  __ SubRegisters(kSavedContext, kSuspendFrameSize);
+  __ AddImmediate(kSavedContext, -CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
+  __ LoadFromOffset(SPREG, kSavedContext, CoroutineTransferStubABI::kContextSpOffset);
+  __ StoreFieldToOffset(kSavedContext, kToCoroutine, target::Coroutine::context_offset());
   __ SubRegisters(kToContext, kSuspendFrameSize);
 
   __ MoveRegister(kDstFrame, SPREG);

@@ -932,7 +932,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(TypedListBaseLength, TypedDataBase_length)                                 \
   V(WeakProperty_getKey, WeakProperty_key)                                     \
   V(WeakProperty_getValue, WeakProperty_value)                                 \
-  V(WeakReference_getTarget, WeakReference_target)                             \
+  V(WeakReference_getTarget, WeakReference_target)
 
 #define STORE_NATIVE_FIELD(V)                                                  \
   V(Finalizer_setCallback, Finalizer_callback)                                 \
@@ -948,7 +948,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(SuspendState_setErrorCallback, SuspendState_error_callback)                \
   V(WeakProperty_setKey, WeakProperty_key)                                     \
   V(WeakProperty_setValue, WeakProperty_value)                                 \
-  V(WeakReference_setTarget, WeakReference_target) \
+  V(WeakReference_setTarget, WeakReference_target)
 
 #define STORE_NATIVE_FIELD_NO_BARRIER(V)                                       \
   V(LinkedHashBase_setDeletedKeys, LinkedHashBase_deleted_keys)                \
@@ -4745,7 +4745,7 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
 
 Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
   CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+      InstructionSource(position), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
