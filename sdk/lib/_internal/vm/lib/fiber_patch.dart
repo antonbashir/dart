@@ -28,52 +28,37 @@ class _Coroutine {
 
 @patch
 class Fiber {
-  final _Coroutine _current;
-  final _Coroutine _root = _Coroutine._(_kRootContextSize, null);
+  final _root = _Coroutine._(_kRootContextSize, null);
+  _Coroutine _current;
   
   @patch
   FiberState get state => _state;
   var _state = FiberState.created;
 
   @patch
-  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _current = _Coroutine._(size, entry);
-
-  @patch
   @pragma("vm:never-inline")
-  void construct() {
-    print("$name: fiber._construct");
+  Fiber({required int size, required void Function() entry, required String name}): this.name = name, _current = _Coroutine._(size, entry) {
     _coroutineInitialize(_root, _current);
-    if (_state != FiberState.initialized) {
-      print("$name: fiber._construct -> _coroutineInitialize");
+    if (_state == FiberState.created) {
       _state = FiberState.initialized;
-      _launch(_root, _current);
+      _launch();
     }
   }
 
   @pragma("vm:never-inline")
-  void _launch(_Coroutine from, _Coroutine to) {
-    print("_coroutineLaunch");
-    final entry = to._entry;
-    print(from);
-    print(to);
-    print(entry);
-    _coroutineTransfer(to, from);
-    print(from);
-    print(to);
-    print(entry);
+  void _launch() {
+    final entry = _current._entry;
+    _coroutineTransfer(_current, _root);
     entry();
-    print("_coroutineLaunch -> _currentEntry");
     _coroutineTransfer(_current, _root);
   }
   
   @patch
   @pragma("vm:prefer-inline")
   void start() {
-    print("$name: fiber.start");
     if (_state == FiberState.initialized) {
       _state = FiberState.running;
       _coroutineTransfer(_root, _current);
-      print("$name: fiber.start -> _coroutineTransfer");
       _state = FiberState.finished;
     }
   }
@@ -81,9 +66,7 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
-      print("$name: fiber.transfer");
     _coroutineTransfer(_current, to._current);
-      print("$name: fiber.transfer -> _coroutineTransfer");
   }
   
 }
