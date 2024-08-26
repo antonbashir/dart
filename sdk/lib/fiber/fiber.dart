@@ -1,4 +1,5 @@
 library dart.fiber;
+import "dart:async" show FutureOr;
 
 enum FiberState {
   created,

@@ -1,5 +1,6 @@
 import "dart:_internal" show patch;
 import "dart:fiber";
+import "dart:async" show FutureOr;
 
 const _kRootContextSize = 4096;
 
@@ -22,17 +23,17 @@ class Fiber {
   final void Function() _entry;
   _Coroutine _root = _Coroutine._(_kRootContextSize);
   _Coroutine _current;
-  
+
   @patch
   FiberState get state => _state;
   var _state = FiberState.created;
 
   @patch
   @pragma("vm:never-inline")
-  Fiber({required int size, required void Function() entry, required String name}): 
-    this.name = name, 
-    _entry = entry, 
-    _current = _Coroutine._(size) {
+  Fiber({required int size, required void Function() entry, required String name})
+      : this.name = name,
+        _entry = entry,
+        _current = _Coroutine._(size) {
     _coroutineInitialize(_root);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
@@ -48,7 +49,7 @@ class Fiber {
     _state = FiberState.finished;
     _coroutineTransfer(_current, _root);
   }
-  
+
   @patch
   @pragma("vm:prefer-inline")
   void start() {

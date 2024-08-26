@@ -10,7 +10,6 @@ void main() {
   print("after start");
 }
 
-@pragma("vm:never-inline")
 void mainEntry() {
   print("main: entry");
   mainFiber.fork(childFiber);
@@ -18,7 +17,6 @@ void mainEntry() {
   mainFiber.transfer(childFiber);
 }
 
-@pragma("vm:never-inline")
 void childEntry() {
   print("child: entry");
   childFiber.transfer(mainFiber);
