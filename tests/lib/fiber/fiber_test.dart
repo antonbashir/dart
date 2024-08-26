@@ -20,5 +20,5 @@ void mainEntry() {
 @pragma("vm:never-inline")
 void childEntry() {
   print("child: entry");
-  childFiber.transfer(mainFiber);
+  mainFiber.transfer(childFiber);
 }
