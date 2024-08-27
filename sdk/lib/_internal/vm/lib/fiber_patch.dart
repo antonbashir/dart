@@ -31,12 +31,14 @@ class Fiber {
   FiberState get state => _state;
   var _state = FiberState.created;
 
-  @patch
-  @pragma("vm:never-inline")
-  Fiber({required int size, required void Function() entry, required String name})
+  @pragma("vm:prefer-inline")
+  Fiber._({required int size, required void Function() entry, required String name})
       : this.name = name,
         _entry = entry,
-        _current = _Coroutine._(size) {
+        _current = _Coroutine._(size) {}
+
+  @pragma("vm:prefer-inline")
+  void _construct() {
     _coroutineInitialize(_root);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
@@ -44,15 +46,24 @@ class Fiber {
     }
   }
 
+  @patch
+  @pragma("vm:never-inline")
+  factory Fiber.main({required int size, required void Function() entry}) {
+    Fiber._main = Fiber._(size: size, entry: entry, name: "main").._construct();
+    return Fiber._main;
+  }
+
+  @patch
+  @pragma("vm:never-inline")
+  factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name).._construct();
+
   @pragma("vm:never-inline")
   void _launch() {
     _coroutineTransfer(_current, _root);
     _state = FiberState.running;
     _entry();
-    print("after entry");
     _state = FiberState.finished;
-    print("after entry");
-    _coroutineTransfer(_current, _current._caller);
+    _coroutineTransfer(_current, Fiber._main == this ? _root : _current._caller);
   }
 
   @patch

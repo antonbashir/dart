@@ -1,7 +1,7 @@
 import 'dart:fiber';
 
 final mainFiber = Fiber.main(size: 1024 * 1024, entry: mainEntry);
-final childFiber = Fiber(size: 1024 * 1024, entry: childEntry, name: "child");
+final childFiber = Fiber.child(size: 1024 * 1024, entry: childEntry, name: "child");
 
 var commonState = "";
 
