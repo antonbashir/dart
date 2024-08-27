@@ -2242,7 +2242,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-  
+
   __ LeaveDartFrame();
   __ MoveRegister(SPREG, kSavedSp);
   __ Jump(kResumePc);
@@ -2296,6 +2296,8 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ MoveRegister(kDstFrame, SPREG);
   __ CopyMemoryWords(kToContext, kDstFrame, kSuspendFrameSize, kTemp);
+
+  __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
   __ Jump(kResumePc);
 }

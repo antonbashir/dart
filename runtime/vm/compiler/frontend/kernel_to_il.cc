@@ -925,6 +925,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(ObjectArrayLength, Array_length)                                           \
   V(Record_shape, Record_shape)                                                \
   V(SuspendState_getFunctionData, SuspendState_function_data)                  \
+  V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \

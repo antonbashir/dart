@@ -399,6 +399,7 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
+  FIELD(Coroutine, caller_offset)                                             \
   FIELD(Coroutine, context_offset)                                             \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \

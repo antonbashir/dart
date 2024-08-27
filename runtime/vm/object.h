@@ -12709,9 +12709,14 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size);
   
+  static uword caller_offset() {
+    return OFFSET_OF(UntaggedCoroutine, caller_);
+  }
   static uword context_offset() {
     return OFFSET_OF(UntaggedCoroutine, context_);
   }
+
+  CoroutinePtr caller() const { return untag()->caller(); }
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

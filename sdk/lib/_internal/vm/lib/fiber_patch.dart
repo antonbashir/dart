@@ -16,6 +16,9 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
   external factory _Coroutine._(int size);
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external _Coroutine get _caller;
 }
 
 @patch
@@ -46,8 +49,10 @@ class Fiber {
     _coroutineTransfer(_current, _root);
     _state = FiberState.running;
     _entry();
+    print("after entry");
     _state = FiberState.finished;
-    _coroutineTransfer(_current, _root);
+    print("after entry");
+    _coroutineTransfer(_current, _current._caller);
   }
 
   @patch

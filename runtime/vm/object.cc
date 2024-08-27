@@ -26633,6 +26633,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   void** context = (void**)(calloc(size, sizeof(word)));
   NoSafepointScope no_safepoint;
   result.StoreNonPointer(&result.untag()->context_, context);
+  result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
   return result.ptr();
 }
 
