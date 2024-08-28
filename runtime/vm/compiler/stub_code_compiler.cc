@@ -2244,7 +2244,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
-  const Register kFromContext = CoroutineTransferStubABI::kFromContextReg;
   const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
   const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
 
@@ -2253,14 +2252,14 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #endif
 
   __ LoadFromOffset(kResumePc, SPREG, 0);
-  __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ Drop(1, RBX);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
   __ PushRegister(kResumePc);
-  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
+  __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::context_offset());
   __ PopRegister(kResumePc);
@@ -2272,6 +2271,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
+  __ Breakpoint();
   __ Jump(kResumePc);
 }
 

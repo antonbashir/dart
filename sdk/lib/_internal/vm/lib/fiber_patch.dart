@@ -42,7 +42,11 @@ class Fiber {
     _coroutineInitialize(_root);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
-      _launch();
+      _coroutineTransfer(_current, _root);
+      _state = FiberState.running;
+      _entry();
+      _state = FiberState.finished;
+      _coroutineTransfer(_current, Fiber._main == this ? _root : _current._caller);
     }
   }
 
@@ -56,17 +60,6 @@ class Fiber {
   @patch
   @pragma("vm:never-inline")
   factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name).._construct();
-
-  @pragma("vm:never-inline")
-  void _launch() {
-    print("_launch");
-    _coroutineTransfer(_current, _root);
-    print("_coroutineTransfer");
-    _state = FiberState.running;
-    _entry();
-    _state = FiberState.finished;
-    _coroutineTransfer(_current, Fiber._main == this ? _root : _current._caller);
-  }
 
   @patch
   @pragma("vm:prefer-inline")
