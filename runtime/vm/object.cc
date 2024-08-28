@@ -26631,8 +26631,11 @@ CodePtr SuspendState::GetCodeObject() const {
 CoroutinePtr Coroutine::New(uintptr_t size) {
   const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
   void** context = (void**)(calloc(size, sizeof(word)));
+  void** stack = context;
+  // *stack-- = (void*)0;
+  // stack -= 6;
   NoSafepointScope no_safepoint;
-  result.StoreNonPointer(&result.untag()->context_, context);
+  result.StoreNonPointer(&result.untag()->context_, stack);
   result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
   return result.ptr();
 }

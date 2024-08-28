@@ -2216,35 +2216,23 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
-  const Register kFromContext = CoroutineInitializeStubABI::kFromContextReg;
-  const Register kTemp = CoroutineInitializeStubABI::kTempReg;
-  const Register kFrameSize = CoroutineInitializeStubABI::kFrameSizeReg;
-  const Register kSrcFrame = CoroutineInitializeStubABI::kSrcFrameReg;
   const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
-  const Register kSavedSp = CoroutineInitializeStubABI::kSavedSpReg;
-  const Register kSavedFrameSize = CoroutineInitializeStubABI::kSavedFrameSizeReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ AddImmediate(kFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
-  __ SubRegisters(kFrameSize, SPREG);
-  __ MoveRegister(kSavedFrameSize, kFrameSize);
-
-  __ EnterDartFrame(0);
-
-  __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-  __ LoadFromOffset(kSavedSp, kFromContext, CoroutineInitializeStubABI::kContextSpOffset);
-  __ AddImmediate(kFromContext, CoroutineInitializeStubABI::kContextPayloadOffset * target::kWordSize);
-  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ CopyMemoryWords(kSrcFrame, kFromContext, kFrameSize, kTemp);
-  __ StoreToOffset(kSavedFrameSize, kFromContext, CoroutineInitializeStubABI::kContextFrameSizeOffset * target::kWordSize);
-  __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreToOffset(kResumePc, kFromContext, CoroutineInitializeStubABI::kContextResumePcOffset * target::kWordSize);
-  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-
-  __ LeaveDartFrame();
-  __ MoveRegister(SPREG, kSavedSp);
+  __ LoadFromOffset(kResumePc, SPREG, 0);
+  __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ Breakpoint();
+  __ PushRegister(FPREG);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
+  __ PushRegister(kResumePc);
+  __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ PopRegister(kResumePc);
+  __ Breakpoint();
   __ Jump(kResumePc);
 }
 
@@ -2255,50 +2243,27 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
   const Register kFromContext = CoroutineTransferStubABI::kFromContextReg;
   const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
-  const Register kToContext = CoroutineTransferStubABI::kToContextReg;
-  const Register kTemp = CoroutineTransferStubABI::kTempReg;
-  const Register kSuspendFrameSize = CoroutineTransferStubABI::kSuspendFrameSizeReg;
-  const Register kSrcFrame = CoroutineTransferStubABI::kSrcFrameReg;
-  const Register kDstFrame = CoroutineTransferStubABI::kDstFrameReg;
   const Register kResumePc = CoroutineTransferStubABI::kResumePcReg;
-  const Register kSavedContext = CoroutineTransferStubABI::kSavedContextReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  
-  __ AddImmediate(kSuspendFrameSize, FPREG, -target::frame_layout.last_param_from_entry_sp * target::kWordSize);
-  __ SubRegisters(kSuspendFrameSize, SPREG);
-  __ MoveRegister(kSavedContext, kSuspendFrameSize);
+  __ Breakpoint();
 
   __ EnterDartFrame(0);
-
-  __ LoadFieldFromOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-  __ AddImmediate(kFromContext, CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
-  __ AddImmediate(kSrcFrame, FPREG, kCallerSpSlotFromFp * target::kWordSize);
-  __ CopyMemoryWords(kSrcFrame, kFromContext, kSuspendFrameSize, kTemp);
-  __ LoadFromOffset(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ StoreToOffset(kResumePc, kFromContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
-  __ StoreToOffset(kSavedContext, kFromContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
-  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
-
+  __ AddImmediate(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
   __ LeaveDartFrame();
 
-  __ LoadFieldFromOffset(kToContext, kToCoroutine, target::Coroutine::context_offset());
-  __ LoadFromOffset(kResumePc, kToContext, CoroutineTransferStubABI::kContextResumePcOffset * target::kWordSize);
-  __ LoadFromOffset(kSuspendFrameSize, kToContext, CoroutineTransferStubABI::kContextFrameSizeOffset * target::kWordSize);
-  __ MoveRegister(kSavedContext, kToContext);
-  __ SubRegisters(kSavedContext, kSuspendFrameSize);
-  __ AddImmediate(kSavedContext, -CoroutineTransferStubABI::kContextPayloadOffset * target::kWordSize);
-  __ LoadFromOffset(SPREG, kSavedContext, CoroutineTransferStubABI::kContextSpOffset);
-  __ StoreFieldToOffset(kSavedContext, kToCoroutine, target::Coroutine::context_offset());
-  __ SubRegisters(kToContext, kSuspendFrameSize);
+  __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ PushRegister(kResumePc);
+  __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
 
-  __ MoveRegister(kDstFrame, SPREG);
-  __ CopyMemoryWords(kToContext, kDstFrame, kSuspendFrameSize, kTemp);
+  __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::context_offset());
+  __ PopRegister(kResumePc);
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
+  __ Breakpoint();
   __ Jump(kResumePc);
 }
 

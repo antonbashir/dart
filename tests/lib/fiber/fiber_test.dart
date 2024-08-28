@@ -17,13 +17,24 @@ void mainEntry() {
   mainFiber.fork(childFiber);
   commonState += "main -> ";
   print("main: after child transfer");
-  mainFiber.transfer(childFiber);
+  notinlfunc();
   print(commonState);
+}
+
+@pragma("vm:never-inline")
+void notinlfunc() {
+  mainFiber.transfer(childFiber);
+}
+
+@pragma("vm:prefer-inline")
+void inlfunc() {
+  mainFiber.transfer(childFiber);
 }
 
 void childEntry() {
   print("child: entry");
   commonState += "child -> ";
   childFiber.transfer(mainFiber);
+  print("child: after main transfer");
   commonState += "child";
 }

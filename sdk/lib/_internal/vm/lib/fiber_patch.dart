@@ -2,7 +2,7 @@ import "dart:_internal" show patch;
 import "dart:fiber";
 import "dart:async" show FutureOr;
 
-const _kRootContextSize = 4096;
+const _kRootContextSize = 1024 * 1024;
 
 @pragma("vm:recognized", "other")
 @pragma("vm:external-name", "Fiber_coroutineInitialize")
@@ -40,6 +40,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void _construct() {
     _coroutineInitialize(_root);
+    print("_coroutineInitialize");
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
       _launch();
