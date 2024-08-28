@@ -2250,6 +2250,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   SPILLS_LR_TO_FRAME({});
 #endif
 
+  __ PopRegister(kResumePc);
+  __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ PushRegister(kResumePc);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
