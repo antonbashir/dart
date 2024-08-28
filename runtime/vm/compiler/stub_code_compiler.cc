@@ -2221,7 +2221,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ Breakpoint();
   __ LoadFromOffset(kResumePc, SPREG, 0);
   __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
   __ PushRegister(FPREG);
@@ -2232,6 +2231,11 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushRegister(kResumePc);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
   __ PopRegister(kResumePc);
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
+  __ PopRegister(FPREG);
   __ Jump(kResumePc);
 }
 
@@ -2247,22 +2251,27 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ Breakpoint();
 
-  __ EnterDartFrame(0);
-  __ AddImmediate(kResumePc, FPREG, kSavedCallerPcSlotFromFp * target::kWordSize);
-  __ LeaveDartFrame();
-
+  __ LoadFromOffset(kResumePc, SPREG, 0);
   __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ PushRegister(FPREG);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
   __ PushRegister(kResumePc);
   __ StoreFieldToOffset(kFromContext, kFromCoroutine, target::Coroutine::context_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::context_offset());
   __ PopRegister(kResumePc);
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
+  __ PopRegister(FPREG);
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
-  __ Breakpoint();
   __ Jump(kResumePc);
 }
 

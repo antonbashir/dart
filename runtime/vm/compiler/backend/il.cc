@@ -8565,14 +8565,7 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_initialize_stub();
-  __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());  
-  __ Breakpoint();
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(TMP);
-  __ PopRegister(THR);
-  __ PopRegister(FPREG);
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8590,20 +8583,7 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_transfer_stub();
-  __ Breakpoint();
-  __ LoadFieldFromOffset(SPREG, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
-  __ PushRegister(FPREG);
-  __ PushRegister(THR);
-  __ PushRegister(TMP);
-  __ PushRegister(PP);
-  __ PushRegister(CODE_REG);
-  __ StoreFieldToOffset(SPREG, CoroutineTransferStubABI::kFromCoroutineReg, compiler::target::Coroutine::context_offset());
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(TMP);
-  __ PopRegister(THR);
-  __ PopRegister(FPREG);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
