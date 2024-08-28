@@ -26633,7 +26633,8 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
   void** context = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
   *context-- = (void*)0;
-  context -= 6;
+  *context-- = (void*)0;
+  context -= 5;
   NoSafepointScope no_safepoint;
   result.StoreNonPointer(&result.untag()->context_, context);
   result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());

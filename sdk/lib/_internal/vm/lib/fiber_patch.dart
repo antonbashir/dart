@@ -40,9 +40,12 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void _construct() {
     _coroutineInitialize(_root);
+    print("$name: _construct");
+    print(_state);
     if (_state == FiberState.created) {
       _state = FiberState.initialized;
       _coroutineTransfer(_current, _root);
+      print("_coroutineTransfer");
       _state = FiberState.running;
       _entry();
       _state = FiberState.finished;
@@ -65,6 +68,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void start() {
     if (_state == FiberState.initialized) {
+      print("$name: start");
       _coroutineTransfer(_root, _current);
     }
   }

@@ -2217,26 +2217,25 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kFromCoroutine = CoroutineInitializeStubABI::kFromCoroutineReg;
   const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
+  const Register kSavedSp = CoroutineInitializeStubABI::kSavedSpReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ LoadFromOffset(kResumePc, SPREG, 0);
+  
+  __ MoveRegister(kSavedSp, SPREG);
+  __ PopRegister(kResumePc);
   __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
+  __ PushRegister(kResumePc);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
-  __ PushRegister(kResumePc);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
-  __ PopRegister(kResumePc);
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(TMP);
-  __ PopRegister(THR);
-  __ PopRegister(FPREG);
-  __ Jump(kResumePc);
+  __ MoveRegister(SPREG, kSavedSp);
+  __ PushRegister(kResumePc);
+  __ Ret();
 }
 
 // Coroutine Stack on suspend: {([Saved SP]) [Saved Frame] [Resume PC] [Frame Size]}
@@ -2251,23 +2250,20 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   SPILLS_LR_TO_FRAME({});
 #endif
 
-  __ LoadFromOffset(kResumePc, SPREG, 0);
-  __ Drop(1, RBX);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
-  __ PushRegister(kResumePc);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::context_offset());
-  __ PopRegister(kResumePc);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(TMP);
   __ PopRegister(THR);
   __ PopRegister(FPREG);
+  __ PopRegister(kResumePc);
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
