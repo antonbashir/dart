@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/object.h"
+#include <sys/mman.h>
 
 #include <memory>
 
@@ -26630,12 +26631,11 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(uintptr_t size) {
   const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  void** context = (void**)(calloc(size, sizeof(word)));
-  void** stack = context;
-  // *stack-- = (void*)0;
-  // stack -= 6;
+  void** context = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
+  *context-- = (void*)0;
+  context -= 6;
   NoSafepointScope no_safepoint;
-  result.StoreNonPointer(&result.untag()->context_, stack);
+  result.StoreNonPointer(&result.untag()->context_, context);
   result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
   return result.ptr();
 }

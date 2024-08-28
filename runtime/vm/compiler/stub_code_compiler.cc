@@ -2221,9 +2221,9 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
+  __ Breakpoint();
   __ LoadFromOffset(kResumePc, SPREG, 0);
   __ LoadFieldFromOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
-  __ Breakpoint();
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
@@ -2232,7 +2232,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushRegister(kResumePc);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
   __ PopRegister(kResumePc);
-  __ Breakpoint();
   __ Jump(kResumePc);
 }
 
