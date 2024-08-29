@@ -57,7 +57,7 @@ class Fiber {
   }
 
   @patch
-  @pragma("vm:never-inline")
+  @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
     _coroutineTransfer(_current, to._current);
   }
