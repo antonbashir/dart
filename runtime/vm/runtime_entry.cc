@@ -3145,7 +3145,6 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
     stack_pos = thread->saved_stack_limit();
   }
 #else
-  OS::Print("InterruptOrStackOverflow\n");
   uword stack_pos = OSThread::GetCurrentStackPointer();
 #endif
   // Always clear the stack overflow flags.  They are meant for this
