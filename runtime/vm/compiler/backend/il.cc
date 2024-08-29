@@ -8587,6 +8587,24 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
 }
 
+LocationSummary* CoroutineForkStubInstr::MakeLocationSummary(
+    Zone* zone,
+    bool opt) const {
+  const intptr_t kNumInputs = 2;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(0, Location::RegisterLocation(CoroutineForkStubABI::kCallerCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineForkStubABI::kForkedCoroutineReg));
+  return locs;
+}
+
+void CoroutineForkStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  ObjectStore* object_store = compiler->isolate_group()->object_store();
+  Code& stub = Code::ZoneHandle(compiler->zone());
+  stub = object_store->coroutine_fork_stub();
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+}
+
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
   if (stub_id() == StubId::kAwaitWithTypeCheck &&
       !operand()->Type()->CanBeFuture()) {

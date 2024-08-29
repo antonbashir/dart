@@ -6037,6 +6037,16 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
 }
 
 
+Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
+  Fragment instructions;
+  Array& argument_names = Array::ZoneHandle(Z);
+  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  instructions += B->CoroutineFork(TokenPosition::kNoSource);
+  instructions += NullConstant();
+  return instructions;
+}
+
+
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
   const intptr_t argc = ReadUInt();               // Read argument count.
   ASSERT(argc == 1);                              // LoadField, can be late.

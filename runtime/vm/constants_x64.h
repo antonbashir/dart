@@ -391,15 +391,16 @@ struct SuspendStubABI {
 struct CoroutineInitializeStubABI {
   static constexpr Register kCoroutineReg = RDI;
   static constexpr Register kSizeReg = RAX;
-  static constexpr Register kStackReg = RBX;
+  static constexpr Register kStackLimitReg = RBX;
   static constexpr Register kEntryReg = RCX;
-  static constexpr Register kResumePcReg = RDX;
+};
 
-  static constexpr intptr_t kContextSpOffset = 0;
-  static constexpr intptr_t kContextResumePcOffset = 0;
-  static constexpr intptr_t kContextFrameSizeOffset = 1;
-
-  static constexpr intptr_t kContextPayloadOffset = 1;
+struct CoroutineForkStubABI {
+  static constexpr Register kCallerCoroutineReg = RDI;
+  static constexpr Register kForkedCoroutineReg = RSI;
+  static constexpr Register kForkedStackLimitReg = RBX;
+  static constexpr Register kForkedStackSizeReg = RAX;
+  static constexpr Register kForkedEntryReg = RCX;
 };
 
 struct CoroutineTransferStubABI {
@@ -407,12 +408,6 @@ struct CoroutineTransferStubABI {
   static constexpr Register kToCoroutineReg = RSI;
   static constexpr Register kToStackLimitReg = RBX;
   static constexpr Register kToStackSizeReg = RAX;
-
-  static constexpr intptr_t kContextSpOffset = 0;
-  static constexpr intptr_t kContextResumePcOffset = 0;
-  static constexpr intptr_t kContextFrameSizeOffset = 1;
-
-  static constexpr intptr_t kContextPayloadOffset = 1;
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,

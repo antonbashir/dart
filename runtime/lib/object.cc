@@ -326,6 +326,10 @@ DEFINE_NATIVE_ENTRY(Fiber_coroutineTransfer, 0, 2) {
   UNREACHABLE();
 }
 
+DEFINE_NATIVE_ENTRY(Fiber_coroutineFork, 0, 2) {
+  UNREACHABLE();
+}
+
 
 DEFINE_NATIVE_ENTRY(Internal_collectAllGarbage, 0, 0) {
   isolate->group()->heap()->CollectAllGarbage(GCReason::kDebugging,

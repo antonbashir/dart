@@ -12,6 +12,10 @@ external void _coroutineInitialize(_Coroutine root);
 @pragma("vm:external-name", "Fiber_coroutineTransfer")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
+@pragma("vm:recognized", "other")
+@pragma("vm:external-name", "Fiber_coroutineFork")
+external void _coroutineFork(_Coroutine from, _Coroutine to);
+
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
@@ -59,8 +63,8 @@ class Fiber {
   }
 
   @patch
-  @pragma("vm:prefer-inline")
+  @pragma("vm:never-inline")
   void fork(Fiber to) {
-    to.start();
+    _coroutineFork(_current, to._current);
   }
 }

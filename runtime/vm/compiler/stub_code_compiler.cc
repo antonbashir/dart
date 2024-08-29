@@ -2211,53 +2211,40 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
       target::ObjectStore::suspend_state_init_sync_star_offset());
 }
 
-// Coroutine Stack on suspend: {([Saved FP]) [Saved Frame] [Resume PC] [Frame Size]}
-// Coroutine Stack on resume: {[Saved FP] [Saved Frame] ([Resume PC]) [Frame Size]}
-
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kCoroutine = CoroutineInitializeStubABI::kCoroutineReg;
-  const Register kStackLimit = CoroutineInitializeStubABI::kStackReg;
+  const Register kStackLimit = CoroutineInitializeStubABI::kStackLimitReg;
   const Register kStackSize = CoroutineInitializeStubABI::kSizeReg;
   const Register kEntry = CoroutineInitializeStubABI::kEntryReg;
-  const Register kResumePc = CoroutineInitializeStubABI::kResumePcReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  
-  // Old stack
   __ LoadFieldFromOffset(kStackLimit, kCoroutine, target::Coroutine::context_offset());
   __ LoadFieldFromOffset(kStackSize, kCoroutine, target::Coroutine::size_offset());
   __ LoadFieldFromOffset(kEntry, kCoroutine, target::Coroutine::entry_offset());
   __ SubRegisters(kStackLimit, kStackSize);
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ PopRegister(kResumePc);
-  __ PushRegister(kResumePc);
 
-  // New stack
-  __ EnterFrame(0);
-  __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::context_offset());
-  __ PushRegister(kResumePc);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
-  __ StoreFieldToOffset(SPREG, kCoroutine, target::Coroutine::context_offset());
-  __ call(CoroutineInitializeStubABI::kEntryReg);
+  __ EnterFrame(0);
+  __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::context_offset());
+  __ PushRegister(FPREG);
+  __ call(kEntry);
+  __ PopRegister(FPREG);
+  __ LeaveFrame();
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(TMP);
   __ PopRegister(THR);
   __ PopRegister(FPREG);
-  __ PopRegister(kResumePc);
-  __ LeaveFrame();
-  __ LeaveFrame();
+
   __ Ret();
 }
-
-// Coroutine Stack on suspend: {([Saved SP]) [Saved Frame] [Resume PC] [Frame Size]}
-// Coroutine Stack on resume: {[Saved SP] [Saved Frame] ([Resume PC]) [Frame Size]}
 
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
@@ -2283,7 +2270,45 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
-  __ Breakpoint();
+  __ Ret();
+}
+
+void StubCodeCompiler::GenerateCoroutineForkStub() {
+  const Register kCaller = CoroutineForkStubABI::kCallerCoroutineReg;
+  const Register kForked = CoroutineForkStubABI::kForkedCoroutineReg;
+  const Register kForkedStackLimit = CoroutineForkStubABI::kForkedStackLimitReg;
+  const Register kForkedStackSize = CoroutineForkStubABI::kForkedStackSizeReg;
+  const Register kForkedEntry = CoroutineForkStubABI::kForkedEntryReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+
+  __ PushRegister(FPREG);
+  __ PushRegister(THR);
+  __ PushRegister(TMP);
+  __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
+  __ StoreFieldToOffset(SPREG, kCaller, target::Coroutine::context_offset());
+
+  __ LoadFieldFromOffset(kForkedStackLimit, kForked, target::Coroutine::context_offset());
+  __ LoadFieldFromOffset(kForkedStackSize, kForked, target::Coroutine::size_offset());
+  __ LoadFieldFromOffset(kForkedEntry, kForked, target::Coroutine::entry_offset());
+  __ SubRegisters(kForkedStackLimit, kForkedStackSize);
+  __ StoreToOffset(kForkedStackLimit, THR, Thread::stack_limit_offset());
+
+  __ StoreFieldToOffset(kCaller, kForked, target::Coroutine::caller_offset());
+  __ LoadFieldFromOffset(SPREG, kForked, target::Coroutine::context_offset());
+  __ PushRegister(kForked);
+  __ call(kForkedEntry);
+  __ PopRegister(kForked);
+  __ LoadFieldFromOffset(kCaller, kForked, target::Coroutine::caller_offset());
+  __ LoadFieldFromOffset(SPREG, kCaller, target::Coroutine::context_offset());
+  __ PopRegister(CODE_REG);
+  __ PopRegister(PP);
+  __ PopRegister(TMP);
+  __ PopRegister(THR);
+  __ PopRegister(FPREG);
   __ Ret();
 }
 
