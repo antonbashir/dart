@@ -3375,6 +3375,8 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
       return BuildCoroutineInitialize();
     case MethodRecognizer::kCoroutineTransfer:
       return BuildCoroutineTransfer();
+    case MethodRecognizer::kCoroutineFork:
+      return BuildCoroutineFork();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
