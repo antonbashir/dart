@@ -15,7 +15,7 @@ external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 @pragma("vm:entry-point")
 class _Coroutine {
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size);
+  external factory _Coroutine._(int size, FutureOr<void> Function() entry);
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external _Coroutine get _caller;
@@ -24,7 +24,6 @@ class _Coroutine {
 @patch
 class Fiber {
   final void Function() _entry;
-  _Coroutine _root = _Coroutine._(_kRootContextSize);
   _Coroutine _current;
 
   @patch
@@ -35,42 +34,22 @@ class Fiber {
   Fiber._({required int size, required void Function() entry, required String name})
       : this.name = name,
         _entry = entry,
-        _current = _Coroutine._(size) {}
-
-  @pragma("vm:prefer-inline")
-  void _construct() {
-    _coroutineInitialize(_root);
-    print("$name: _construct");
-    print(_state);
-    if (_state == FiberState.created) {
-      _state = FiberState.initialized;
-      _coroutineTransfer(_current, _root);
-      print("_coroutineTransfer");
-      _state = FiberState.running;
-      _entry();
-      _state = FiberState.finished;
-      _coroutineTransfer(_current, Fiber._main == this ? _root : _current._caller);
-    }
-  }
+        _current = _Coroutine._(size, entry) {}
 
   @patch
   @pragma("vm:never-inline")
   factory Fiber.main({required int size, required void Function() entry}) {
-    Fiber._main = Fiber._(size: size, entry: entry, name: "main").._construct();
-    return Fiber._main;
+    return Fiber._(size: size, entry: entry, name: "main");
   }
 
   @patch
   @pragma("vm:never-inline")
-  factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name).._construct();
+  factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name);
 
   @patch
-  @pragma("vm:prefer-inline")
+  @pragma("vm:never-inline")
   void start() {
-    if (_state == FiberState.initialized) {
-      print("$name: start");
-      _coroutineTransfer(_root, _current);
-    }
+    _coroutineInitialize(_current);
   }
 
   @patch
@@ -82,9 +61,6 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
-    if (to._state == FiberState.initialized) {
-      to._root = _current;
-      to.start();
-    }
+    to.start();
   }
 }

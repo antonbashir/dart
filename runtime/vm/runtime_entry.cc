@@ -28,6 +28,7 @@
 #include "vm/message.h"
 #include "vm/message_handler.h"
 #include "vm/object_store.h"
+#include "vm/os_thread.h"
 #include "vm/parser.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
@@ -3869,6 +3870,16 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
   handle->set_ptr(msg_array);
   PortMap::PostMessage(
       Message::New(target_port, handle, Message::kNormalPriority));
+}
+
+DEFINE_RUNTIME_ENTRY(ChangeThreadStackSize, 2) {
+  const auto& new_base = Smi::CheckedHandle(zone, arguments.NativeArgAt(0)).Value();
+  const auto& new_size = Smi::CheckedHandle(zone, arguments.NativeArgAt(1)).Value();
+  OSThreadIterator it;
+  while (it.HasNext()) {
+    OSThread* thread = it.Next();
+    thread->ChangeStackSize(new_base, new_size);
+  }
 }
 
 // Use expected function signatures to help MSVC compiler resolve overloading.

@@ -1037,6 +1037,8 @@ class SuspendState : public AllStatic {
 class Coroutine : public AllStatic {
  public:
   static word caller_offset();
+  static word entry_offset();
+  static word size_offset();
   static word context_offset();
 
   static word InstanceSize();

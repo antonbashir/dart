@@ -8557,7 +8557,7 @@ LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
   const intptr_t kNumInputs = 1;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kFromCoroutineReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kCoroutineReg));
   return locs;
 }
 
@@ -8565,7 +8565,11 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_initialize_stub();
+  __ Breakpoint();
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());  
+  __ Breakpoint();
+  __ PopRegister(CoroutineInitializeStubABI::kEntryReg);
+  __ call(CoroutineInitializeStubABI::kEntryReg);
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(

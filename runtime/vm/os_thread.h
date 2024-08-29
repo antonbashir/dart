@@ -125,6 +125,8 @@ class OSThread : public BaseThread {
 
   Log* log() const { return log_; }
 
+  void ChangeStackSize(uword new_base, uword new_size);
+
   uword stack_base() const { return stack_base_; }
   uword stack_limit() const { return stack_limit_; }
   uword overflow_stack_limit() const { return stack_limit_ + stack_headroom_; }

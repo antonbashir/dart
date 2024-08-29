@@ -3780,6 +3780,8 @@ class UntaggedCoroutine : public UntaggedInstance {
   VISIT_FROM(caller)
   VISIT_TO(caller)
   void** context_;
+  uword entry_;
+  uword size_;
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD
