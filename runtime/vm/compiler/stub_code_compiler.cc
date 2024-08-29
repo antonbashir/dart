@@ -2230,14 +2230,13 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ LoadFieldFromOffset(kStackSize, kCoroutine, target::Coroutine::size_offset());
   __ LoadFieldFromOffset(kEntry, kCoroutine, target::Coroutine::entry_offset());
   __ SubRegisters(kStackLimit, kStackSize);
-  __ StoreFieldToOffset(THR, kStackLimit, Thread::stack_limit_offset());
+  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ PopRegister(kResumePc);
   __ PushRegister(kResumePc);
 
   // New stack
   __ EnterFrame(0);
   __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::context_offset());
-  __ AddImmediate(SPREG, -6 * target::kWordSize);
   __ PushRegister(FPREG);
   __ PushRegister(THR);
   __ PushRegister(TMP);
@@ -2285,7 +2284,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ PopRegister(THR);
   __ PopRegister(FPREG);
   __ SubRegisters(kToStackLimit, kToStackSize);
-  __ StoreFieldToOffset(THR, kToStackLimit, Thread::stack_limit_offset());
+  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
