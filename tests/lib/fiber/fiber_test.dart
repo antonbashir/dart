@@ -17,7 +17,7 @@ void mainEntry() {
   mainFiber.fork(childFiber);
   commonState += "main -> ";
   print("main: after child transfer");
-  notinlfunc();
+  inlfunc();
   print(commonState);
 }
 
