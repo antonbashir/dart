@@ -2243,6 +2243,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushRegister(TMP);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
+  __ StoreFieldToOffset(SPREG, kCoroutine, target::Coroutine::context_offset());
   __ call(CoroutineInitializeStubABI::kEntryReg);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
@@ -2261,8 +2262,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 void StubCodeCompiler::GenerateCoroutineTransferStub() {
   const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
   const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
-  const Register kToStackLimit = CoroutineTransferStubABI::kToStackLimitReg;
-  const Register kToStackSize = CoroutineTransferStubABI::kToStackSizeReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -2276,8 +2275,6 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::context_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::context_offset());
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, target::Coroutine::context_offset());
-  __ LoadFieldFromOffset(kToStackSize, kToCoroutine, target::Coroutine::size_offset());
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(TMP);
@@ -2286,6 +2283,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
+  __ Breakpoint();
   __ Ret();
 }
 

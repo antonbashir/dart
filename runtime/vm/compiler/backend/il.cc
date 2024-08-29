@@ -8565,12 +8565,8 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ObjectStore* object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
   stub = object_store->coroutine_initialize_stub();
-  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());  
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(TMP);
-  __ PopRegister(THR);
-  __ PopRegister(FPREG);
+  compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
+  __ Breakpoint();
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
