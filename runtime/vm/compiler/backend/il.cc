@@ -8569,6 +8569,7 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());  
   __ Breakpoint();
   __ PopRegister(CoroutineInitializeStubABI::kEntryReg);
+  __ Breakpoint();
   __ call(CoroutineInitializeStubABI::kEntryReg);
 }
 

@@ -26635,6 +26635,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, uword entry) {
   NoSafepointScope no_safepoint;
   result.StoreNonPointer(&result.untag()->context_, context);
   result.StoreNonPointer(&result.untag()->size_, size);
+  result.StoreNonPointer(&result.untag()->entry_, entry);
   result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
   return result.ptr();
 }

@@ -3145,6 +3145,7 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
     stack_pos = thread->saved_stack_limit();
   }
 #else
+  OS::Print("InterruptOrStackOverflow\n");
   uword stack_pos = OSThread::GetCurrentStackPointer();
 #endif
   // Always clear the stack overflow flags.  They are meant for this
@@ -3875,11 +3876,8 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 DEFINE_RUNTIME_ENTRY(ChangeThreadStackSize, 2) {
   const auto& new_base = Smi::CheckedHandle(zone, arguments.NativeArgAt(0)).Value();
   const auto& new_size = Smi::CheckedHandle(zone, arguments.NativeArgAt(1)).Value();
-  OSThreadIterator it;
-  while (it.HasNext()) {
-    OSThread* thread = it.Next();
-    thread->ChangeStackSize(new_base, new_size);
-  }
+  Thread::Current()->os_thread()->ChangeStackSize(new_base, new_size);
+  Thread::Current()->SetStackLimit(Thread::Current()->os_thread()->overflow_stack_limit());
 }
 
 // Use expected function signatures to help MSVC compiler resolve overloading.

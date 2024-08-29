@@ -2226,7 +2226,6 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
 #endif
   __ LoadFieldFromOffset(kStack, kCoroutine, target::Coroutine::context_offset());
   __ LoadFieldFromOffset(kSize, kCoroutine, target::Coroutine::size_offset());
-
   __ PushRegister(kCoroutine);
   __ EnterStubFrame();
   __ PushObject(NullObject());
@@ -2235,8 +2234,8 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ CallRuntime(kChangeThreadStackSizeRuntimeEntry, 2);
   __ Drop(3);
   __ LeaveStubFrame();
-  __ PopRegister(kCoroutine);
 
+  __ PopRegister(kCoroutine);
   __ LoadFieldFromOffset(kEntry, kCoroutine, target::Coroutine::entry_offset());
   __ PopRegister(kResumePc);
   __ PushRegister(kResumePc);

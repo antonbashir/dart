@@ -329,8 +329,8 @@ void OSThread::SetCurrentTLS(BaseThread* value) {
 
 void OSThread::ChangeStackSize(uword new_base, uword new_size) {
   stack_base_ = new_base;
-  stack_limit_ = new_base + new_size;
-  stack_headroom_ = CalculateHeadroom(stack_base_ - stack_limit_);
+  stack_limit_ = new_base - new_size;
+  stack_headroom_ = CalculateHeadroom(new_size);
 }
 
 OSThreadIterator::OSThreadIterator() {
