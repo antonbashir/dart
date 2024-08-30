@@ -6036,14 +6036,19 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   ReadUInt();
   ReadListLength();
   ReadListLength();
-  instructions += BuildExpression();
+
   LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
   instructions += BuildExpression();
+  instructions += LoadLocal(from);
+
   LocalVariable* to = MakeTemporary();
+  instructions += BuildExpression();
   instructions += LoadLocal(to);
+
   ReadListLength();
+
   instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
+
   instructions += Drop();
   instructions += Drop();
   return instructions;
@@ -6054,14 +6059,19 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
   ReadUInt();
   ReadListLength();
   ReadListLength();
-  instructions += BuildExpression();
+
   LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
   instructions += BuildExpression();
+  instructions += LoadLocal(from);
+
   LocalVariable* to = MakeTemporary();
+  instructions += BuildExpression();
   instructions += LoadLocal(to);
+
   ReadListLength();
+
   instructions += B->CoroutineFork(TokenPosition::kNoSource);
+ 
   instructions += Drop();
   instructions += Drop();
   return instructions;
