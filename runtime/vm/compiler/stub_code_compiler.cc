@@ -2325,6 +2325,10 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ PopRegister(PP);
   __ PopRegister(FPREG);
 
+  __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, target::Coroutine::stack_limit_offset());
+  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
+  __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
+
   __ Ret();
 }
 
