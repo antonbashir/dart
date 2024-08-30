@@ -6022,58 +6022,24 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
   Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-  instructions += BuildExpression();
-  ReadListLength();
+  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
   instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
   return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-
-  instructions += BuildExpression();
-  LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
-
-  instructions += BuildExpression();
-  LocalVariable* to = MakeTemporary();
-  instructions += LoadLocal(to);
-
-  ReadListLength();
-
+  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
+  instructions += LoadLocal(parsed_function()->RawParameterVariable(1));
   instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
-
-  instructions += Drop();
-  instructions += Drop();
   return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
   Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-
-  instructions += BuildExpression();
-  LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
-
-  instructions += BuildExpression();
-  LocalVariable* to = MakeTemporary();
-  instructions += LoadLocal(to);
-
-  ReadListLength();
-
+  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
+  instructions += LoadLocal(parsed_function()->RawParameterVariable(1));
   instructions += B->CoroutineFork(TokenPosition::kNoSource);
- 
-  instructions += Drop();
-  instructions += Drop();
   return instructions;
 }
 
