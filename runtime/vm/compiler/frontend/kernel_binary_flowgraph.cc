@@ -3371,12 +3371,6 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
 
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
-    case MethodRecognizer::kCoroutineInitialize:
-      return BuildCoroutineInitialize();
-    case MethodRecognizer::kCoroutineTransfer:
-      return BuildCoroutineTransfer();
-    case MethodRecognizer::kCoroutineFork:
-      return BuildCoroutineFork();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6018,29 +6012,6 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
   Fragment code;
   code += NullConstant();  // Return type is void.
   return code;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
-  Fragment instructions;
-  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
-  instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
-  return instructions;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
-  Fragment instructions;
-  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
-  instructions += LoadLocal(parsed_function()->RawParameterVariable(1));
-  instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
-  return instructions;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
-  Fragment instructions;
-  instructions += LoadLocal(parsed_function()->RawParameterVariable(0));
-  instructions += LoadLocal(parsed_function()->RawParameterVariable(1));
-  instructions += B->CoroutineFork(TokenPosition::kNoSource);
-  return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {

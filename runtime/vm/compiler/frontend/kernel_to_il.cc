@@ -1915,6 +1915,24 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
           CheckWritableInstr::kDeeplyImmutableAttachNativeFinalizer);
       body += NullConstant();
       break;
+    case MethodRecognizer::kCoroutineInitialize:
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += CoroutineInitialize();
+      body += NullConstant();
+      break;
+    case MethodRecognizer::kCoroutineTransfer:
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineTransfer();
+      body += NullConstant();
+      break;
+    case MethodRecognizer::kCoroutineFork:
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineFork();
+      body += NullConstant();
+      break;
+
 #define IL_BODY(method, slot)                                                  \
   case MethodRecognizer::k##method:                                            \
     ASSERT_EQUAL(function.NumParameters(), 1);                                 \
@@ -4745,21 +4763,21 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
+Fragment FlowGraphBuilder::CoroutineInitialize() {
   CoroutineInitializeStubInstr* instr =
       new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
+Fragment FlowGraphBuilder::CoroutineTransfer() {
   CoroutineTransferStubInstr* instr =
       new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineFork(TokenPosition position) {
+Fragment FlowGraphBuilder::CoroutineFork() {
   CoroutineForkStubInstr* instr =
       new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
