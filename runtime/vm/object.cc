@@ -5559,6 +5559,8 @@ const char* Class::GenerateUserVisibleName() const {
     case kImmutableArrayCid:
     case kGrowableObjectArrayCid:
       return Symbols::List().ToCString();
+    case kCoroutineCid:
+      return Symbols::_Coroutine().ToCString();
   }
   String& name = String::Handle(Name());
   name = Symbols::New(Thread::Current(), String::ScrubName(name));
