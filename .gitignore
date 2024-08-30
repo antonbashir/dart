@@ -114,3 +114,5 @@ logs/results.json
 doc/api/
 build/
 sdk.code-workspace.local
+
+*.exe

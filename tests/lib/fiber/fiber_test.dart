@@ -21,7 +21,6 @@ void mainEntry() {
   mainFiber.transfer(childFiber);
   print(commonState);
 }
-
 void childEntry() {
   print("child: entry");
   commonState += "child -> ";
