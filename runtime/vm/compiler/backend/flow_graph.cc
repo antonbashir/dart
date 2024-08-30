@@ -6,6 +6,7 @@
 
 #include <array>
 
+#include "platform/text_buffer.h"
 #include "vm/bit_vector.h"
 #include "vm/compiler/backend/dart_calling_conventions.h"
 #include "vm/compiler/backend/flow_graph_compiler.h"
@@ -1496,6 +1497,11 @@ void FlowGraph::RenameRecursive(
             reaching_defn = constant;
           }
         } else {
+          TextBuffer buffer(1024);
+          input_defn->PrintTo(&buffer);
+          buffer.AddString("\n");
+          reaching_defn->PrintTo(&buffer);
+          OS::Print("%s\n", buffer.buffer());
           // Note: constants can only be replaced with other constants.
           ASSERT(input_defn->IsLoadLocal() || input_defn->IsStoreLocal() ||
                  input_defn->IsDropTemps() || input_defn->IsMakeTemp() ||

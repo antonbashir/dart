@@ -4745,25 +4745,25 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
+CoroutineInitializeStubInstr* FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
   CoroutineInitializeStubInstr* instr =
       new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
   Push(instr);
-  return Fragment(instr);
+  return instr;
 }
 
-Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
+CoroutineTransferStubInstr* FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
   CoroutineTransferStubInstr* instr =
       new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
-  return Fragment(instr);
+  return instr;
 }
 
-Fragment FlowGraphBuilder::CoroutineFork(TokenPosition position) {
+CoroutineForkStubInstr*  FlowGraphBuilder::CoroutineFork(TokenPosition position) {
   CoroutineForkStubInstr* instr =
       new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
-  return Fragment(instr);
+  return instr;
 }
 
 Fragment FlowGraphBuilder::Suspend(TokenPosition position,

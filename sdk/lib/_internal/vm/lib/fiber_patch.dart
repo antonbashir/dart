@@ -27,8 +27,7 @@ class _Coroutine {
 
 @patch
 class Fiber {
-  final void Function() _entry;
-  _Coroutine _current;
+  final _Coroutine _current;
 
   @patch
   FiberState get state => _state;
@@ -37,7 +36,6 @@ class Fiber {
   @pragma("vm:prefer-inline")
   Fiber._({required int size, required void Function() entry, required String name})
       : this.name = name,
-        _entry = entry,
         _current = _Coroutine._(size, entry) {}
 
   @patch
