@@ -2282,6 +2282,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
 
   __ PushRegister(FPREG);
   __ PushRegister(PP);
+  __ PushRegister(CODE_REG);
   __ PushRegister(FUNCTION_REG);
   __ StoreFieldToOffset(SPREG, kCaller, target::Coroutine::stack_base_offset());
 

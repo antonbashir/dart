@@ -390,21 +390,21 @@ struct SuspendStubABI {
 
 struct CoroutineInitializeStubABI {
   static constexpr Register kCoroutineReg = RDI;
-  static constexpr Register kStackLimitReg = RBX;
+  static constexpr Register kStackLimitReg = RDX;
   static constexpr Register kEntryReg = RCX;
 };
 
 struct CoroutineForkStubABI {
   static constexpr Register kCallerCoroutineReg = RDI;
   static constexpr Register kForkedCoroutineReg = RSI;
-  static constexpr Register kForkedStackLimitReg = RBX;
+  static constexpr Register kForkedStackLimitReg = RDX;
   static constexpr Register kForkedEntryReg = RCX;
 };
 
 struct CoroutineTransferStubABI {
   static constexpr Register kFromCoroutineReg = RDI;
   static constexpr Register kToCoroutineReg = RSI;
-  static constexpr Register kToStackLimitReg = RBX;
+  static constexpr Register kToStackLimitReg = RDX;
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,
