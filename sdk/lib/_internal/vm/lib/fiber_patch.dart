@@ -61,6 +61,6 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
-  // _coroutineFork(_current, to._current);
+    _coroutineFork(_current, to._current);
   }
 }
