@@ -8604,8 +8604,6 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
   __ Drop(1);
   __ LeaveFrame();
-
-  __ Ret();
 }
 
 LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
@@ -8644,8 +8642,6 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, Coroutine::caller_offset());
-
-  __ Ret();
 }
 
 LocationSummary* CoroutineForkStubInstr::MakeLocationSummary(
@@ -8700,8 +8696,6 @@ void CoroutineForkStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
-
-  __ Ret();
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

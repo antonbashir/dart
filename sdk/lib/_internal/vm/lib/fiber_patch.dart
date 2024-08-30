@@ -47,19 +47,19 @@ class Fiber {
   factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name);
 
   @patch
-  @pragma("vm:never-inline")
+  @pragma("vm:prefer-inline")
   void start() {
     _coroutineInitialize(_current);
   }
 
   @patch
-  @pragma("vm:never-inline")
+  @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
      _coroutineTransfer(_current, to._current);
   }
 
   @patch
-  @pragma("vm:never-inline")
+  @pragma("vm:prefer-inline")
   void fork(Fiber to) {
     _coroutineFork(_current, to._current);
   }
