@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/thread.h"
+#include <cstddef>
 
 #include "vm/cpu.h"
 #include "vm/dart_api_state.h"
@@ -22,6 +23,7 @@
 #include "vm/service.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/thread_interrupter.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -537,6 +539,10 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
   if (Dart::vm_isolate() != nullptr &&
       thread->isolate() != Dart::vm_isolate()) {
+    if (thread->isolate()->saved_coroutine() != nullptr) {
+      thread->RestoreCoroutine(thread->isolate()->saved_coroutine());
+      return;
+    }
 #if defined(USING_SIMULATOR)
     thread->SetStackLimit(Simulator::Current()->overflow_stack_limit());
 #else
@@ -547,6 +553,11 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
 
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
                                               VMTag::VMTagId tag) {
+  if (thread->coroutine() != nullptr) {
+    thread->isolate()->save_coroutine(thread->SaveCoroutine());
+    SuspendThreadInternal(thread, tag);
+    return;
+  }
   thread->ClearStackLimit();
   SuspendThreadInternal(thread, tag);
 }
@@ -665,6 +676,7 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
 
   thread->isolate_ = nullptr;
   thread->isolate_group_ = nullptr;
+  thread->coroutine_ = nullptr;
   thread->scheduled_dart_mutator_isolate_ = nullptr;
   thread->set_execution_state(Thread::kThreadInNative);
   thread->stack_limit_.store(0);
@@ -702,6 +714,51 @@ void Thread::ClearStackLimit() {
   SetStackLimit(OSThread::kInvalidStackLimit);
 }
 
+void Thread::RestoreCoroutine(CoroutinePtr coroutine) {
+  MonitorLocker ml(&thread_lock_);
+  coroutine_ = coroutine;
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine->untag()->stack_limit());
+  }
+  saved_stack_limit_ = coroutine->untag()->stack_limit();
+}
+
+CoroutinePtr Thread::SaveCoroutine() {
+  MonitorLocker ml(&thread_lock_);
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(OSThread::kInvalidStackLimit);
+  }
+  saved_stack_limit_ = OSThread::kInvalidStackLimit;
+  CoroutinePtr coroutine = coroutine_;
+  coroutine_ = nullptr;
+  return coroutine;
+}
+
+void Thread::EnterCoroutine(CoroutinePtr coroutine) {
+  MonitorLocker ml(&thread_lock_);
+  coroutine_ = coroutine;
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine->untag()->stack_limit());
+  }
+  saved_stack_limit_ = coroutine->untag()->stack_limit();
+}
+
+void Thread::ExitCoroutine() {
+  MonitorLocker ml(&thread_lock_);
+  coroutine_ = nullptr;
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(os_thread()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = os_thread()->overflow_stack_limit();
+}
+
+uword Thread::GetSavedStackLimit() const {
+  return coroutine_ == nullptr ? saved_stack_limit_
+         : saved_stack_limit_ == OSThread::kInvalidStackLimit
+             ? OSThread::kInvalidStackLimit
+             : coroutine_->untag()->stack_limit();
+}
+
 static bool IsInterruptLimit(uword limit) {
   return (limit & ~Thread::kInterruptsMask) ==
          (kInterruptStackLimit & ~Thread::kInterruptsMask);
@@ -724,7 +781,7 @@ void Thread::ScheduleInterrupts(uword interrupt_bits) {
 uword Thread::GetAndClearInterrupts() {
   uword interrupt_bits = 0;
   uword old_limit = stack_limit_.load();
-  uword new_limit = saved_stack_limit_;
+  uword new_limit = GetSavedStackLimit();
   do {
     if (IsInterruptLimit(old_limit)) {
       interrupt_bits = interrupt_bits | (old_limit & kInterruptsMask);

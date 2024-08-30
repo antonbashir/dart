@@ -84,7 +84,9 @@ class ParsedFunction;
   V(WeakProperty, UntaggedWeakProperty, key, Dynamic, WEAK)                    \
   V(WeakProperty, UntaggedWeakProperty, value, Dynamic, WEAK)                  \
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)               \
-  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments, FINAL)
+  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments, FINAL)\
+  V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
+  V(Coroutine, UntaggedCoroutine, entry, Coroutine, VAR)                       \
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:

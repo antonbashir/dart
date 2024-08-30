@@ -1591,6 +1591,14 @@ void CoroutineTransferStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->AddString(")");
 }
 
+void CoroutineForkStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineFork";
+  f->Printf("%s(", name);
+  from()->PrintTo(f);
+  to()->PrintTo(f);
+  f->AddString(")");
+}
+
 void SuspendInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "";
   switch (stub_id_) {

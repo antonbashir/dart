@@ -3375,6 +3375,8 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
       return BuildCoroutineInitialize();
     case MethodRecognizer::kCoroutineTransfer:
       return BuildCoroutineTransfer();
+    case MethodRecognizer::kCoroutineFork:
+      return BuildCoroutineFork();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6020,22 +6022,50 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
   Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  ReadListLength();
   instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
-  instructions += NullConstant();
   return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
+  instructions += LoadLocal(from);
+  instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
+  instructions += LoadLocal(to);
+  ReadListLength();
   instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
-  instructions += NullConstant();
+  instructions += Drop();
+  instructions += Drop();
   return instructions;
 }
 
+Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
+  Fragment instructions;
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
+  instructions += LoadLocal(from);
+  instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
+  instructions += LoadLocal(to);
+  ReadListLength();
+  instructions += B->CoroutineFork(TokenPosition::kNoSource);
+  instructions += Drop();
+  instructions += Drop();
+  return instructions;
+}
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
   const intptr_t argc = ReadUInt();               // Read argument count.

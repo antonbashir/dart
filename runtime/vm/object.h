@@ -12701,16 +12701,25 @@ class SuspendState : public Instance {
 
 class Coroutine : public Instance {
  public:
-  static intptr_t HeaderSize() { return sizeof(UntaggedCoroutine); }
-
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
+  static CoroutinePtr New(uintptr_t size, FunctionPtr entry);
 
-  static CoroutinePtr New(uintptr_t size);
-  
-  static uword context_offset() {
-    return OFFSET_OF(UntaggedCoroutine, context_);
+  CoroutinePtr caller() const { return untag()->caller(); }
+  static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
+
+  FunctionPtr entry() const { return untag()->entry(); }
+  static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
+
+  uword stack_base() const { return untag()->stack_base_; }
+  static uword stack_base_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_base_);
+  }
+
+  uword stack_limit() const { return untag()->stack_limit_; }
+  static uword stack_limit_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
 
  private:

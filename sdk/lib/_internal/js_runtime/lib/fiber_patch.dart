@@ -6,8 +6,13 @@ class Fiber {
   @patch
   FiberState get state => _state;
   var _state = FiberState.created;
+  Fiber._(this.name);
   @patch
-  Fiber({required int size, required void Function() entry, required String name}) : this.name = name {}
+  @pragma("vm:never-inline")
+  factory Fiber.main({required int size, required void Function() entry}) => Fiber._("fiber");
+  @patch
+  @pragma("vm:never-inline")
+  factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._("fiber");
   @patch
   void start() {}
   @patch

@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/object.h"
+#include <sys/mman.h>
 
 #include <memory>
 
@@ -5558,6 +5559,8 @@ const char* Class::GenerateUserVisibleName() const {
     case kImmutableArrayCid:
     case kGrowableObjectArrayCid:
       return Symbols::List().ToCString();
+    case kCoroutineCid:
+      return Symbols::_Coroutine().ToCString();
   }
   String& name = String::Handle(Name());
   name = Symbols::New(Thread::Current(), String::ScrubName(name));
@@ -26628,12 +26631,16 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t size) {
-  const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  void** context = (void**)(calloc(size, sizeof(word)));
+CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr entry) {
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  void** stack_base = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
+  *(stack_base--) = 0;
   NoSafepointScope no_safepoint;
-  result.StoreNonPointer(&result.untag()->context_, context);
-  return result.ptr();
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - size);
+  coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
+  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, coroutine.ptr());
+  return coroutine.ptr();
 }
 
 const char* Coroutine::ToCString() const {

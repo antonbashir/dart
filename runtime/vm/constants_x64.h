@@ -389,39 +389,21 @@ struct SuspendStubABI {
 };
 
 struct CoroutineInitializeStubABI {
-  static constexpr Register kFromCoroutineReg = RDI;
-  static constexpr Register kFromContextReg = RAX;
-  static constexpr Register kTempReg = RBX;
-  static constexpr Register kFrameSizeReg = RCX;
-  static constexpr Register kSavedFrameSizeReg = R10;
-  static constexpr Register kSavedSpReg = R8;
-  static constexpr Register kSrcFrameReg = R9;
-  static constexpr Register kResumePcReg = R10;
+  static constexpr Register kCoroutineReg = RDI;
+  static constexpr Register kEntryReg = RCX;
+};
 
-  static constexpr intptr_t kContextSpOffset = 0;
-  static constexpr intptr_t kContextResumePcOffset = 0;
-  static constexpr intptr_t kContextFrameSizeOffset = 1;
-
-  static constexpr intptr_t kContextPayloadOffset = 1;
+struct CoroutineForkStubABI {
+  static constexpr Register kCallerCoroutineReg = RDI;
+  static constexpr Register kForkedCoroutineReg = RSI;
+  static constexpr Register kStackLimitReg = RDX;
+  static constexpr Register kForkedEntryReg = RCX;
 };
 
 struct CoroutineTransferStubABI {
   static constexpr Register kFromCoroutineReg = RDI;
-  static constexpr Register kFromContextReg = RAX;
   static constexpr Register kToCoroutineReg = RSI;
-  static constexpr Register kToContextReg = RAX;
-  static constexpr Register kTempReg = RBX;
-  static constexpr Register kSuspendFrameSizeReg = R8;
-  static constexpr Register kSavedContextReg = R9;
-  static constexpr Register kSrcFrameReg = RCX;
-  static constexpr Register kDstFrameReg = RDX;
-  static constexpr Register kResumePcReg = R10;
-
-  static constexpr intptr_t kContextSpOffset = 0;
-  static constexpr intptr_t kContextResumePcOffset = 0;
-  static constexpr intptr_t kContextFrameSizeOffset = 1;
-
-  static constexpr intptr_t kContextPayloadOffset = 1;
+  static constexpr Register kToStackLimitReg = RDX;
 };
 
 // ABI for InitSuspendableFunctionStub (InitAsyncStub, InitAsyncStarStub,

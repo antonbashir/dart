@@ -1036,8 +1036,10 @@ class SuspendState : public AllStatic {
 
 class Coroutine : public AllStatic {
  public:
-  static word context_offset();
-
+  static word caller_offset();
+  static word entry_offset();
+  static word stack_base_offset();
+  static word stack_limit_offset();
   static word InstanceSize();
   FINAL_CLASS();
 };
@@ -1262,6 +1264,8 @@ class Thread : public AllStatic {
   static word bootstrap_native_wrapper_entry_point_offset();
   static word no_scope_native_wrapper_entry_point_offset();
   static word auto_scope_native_wrapper_entry_point_offset();
+  
+  static word coroutine_offset();
   
 #define THREAD_XMM_CONSTANT_LIST(V)                                            \
   V(float_not)                                                                 \

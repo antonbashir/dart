@@ -380,6 +380,8 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   
   Fragment BuildCoroutineTransfer();
   
+  Fragment BuildCoroutineFork();
+  
   // Build the call-site manually, to avoid doing initialization checks
   // for late fields.
   Fragment BuildReachabilityFence();

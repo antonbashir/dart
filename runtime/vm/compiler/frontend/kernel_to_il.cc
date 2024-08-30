@@ -925,6 +925,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(ObjectArrayLength, Array_length)                                           \
   V(Record_shape, Record_shape)                                                \
   V(SuspendState_getFunctionData, SuspendState_function_data)                  \
+  V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -1142,6 +1143,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
+      return true;
     default:
       return false;
   }
@@ -4744,17 +4746,27 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
 }
 
 Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
-  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
-      InstructionSource(position), Pop(), GetNextDeoptId());
+  Fragment code;
+  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
   Push(instr);
-  return Fragment(instr);
+  code <<= instr;
+  return code;
 }
 
 Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
-  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  Fragment code;
+  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
-  return Fragment(instr);
+  code <<= instr;
+  return code;
+}
+
+Fragment FlowGraphBuilder::CoroutineFork(TokenPosition position) {
+  Fragment code;
+  CoroutineForkStubInstr* instr = new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
+  Push(instr);
+  code <<= instr;
+  return code;
 }
 
 Fragment FlowGraphBuilder::Suspend(TokenPosition position,
