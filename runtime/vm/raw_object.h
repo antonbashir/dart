@@ -3777,11 +3777,11 @@ class UntaggedFutureOr : public UntaggedInstance {
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
   VISIT_FROM(caller)
-  VISIT_TO(caller)
+  VISIT_TO(entry)
   uword stack_base_;
   uword stack_limit_;
-  uword entry_;
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD
