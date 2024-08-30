@@ -3777,9 +3777,10 @@ class UntaggedFutureOr : public UntaggedInstance {
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
-  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
   VISIT_FROM(caller)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
   VISIT_TO(entry)
+  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword stack_base_;
   uword stack_limit_;
 };
