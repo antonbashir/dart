@@ -374,8 +374,13 @@ static bool GetAndValidateThreadStackBounds(OSThread* os_thread,
 #endif  // defined(USING_SIMULATOR)
 
   if (!use_simulator_stack_bounds) {
-    *stack_lower = os_thread->stack_limit();
-    *stack_upper = os_thread->stack_base();
+    if (thread->coroutine() != nullptr) {
+      *stack_lower = thread->coroutine()->untag()->stack_limit();
+      *stack_upper = thread->coroutine()->untag()->stack_base();
+    } else {
+      *stack_lower = os_thread->stack_limit();
+      *stack_upper = os_thread->stack_base();
+    }
   }
 
   if ((*stack_lower == 0) || (*stack_upper == 0)) {

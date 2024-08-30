@@ -27,6 +27,7 @@
 #include "vm/kernel_isolate.h"
 #include "vm/message.h"
 #include "vm/message_handler.h"
+#include "vm/native_entry.h"
 #include "vm/object_store.h"
 #include "vm/os_thread.h"
 #include "vm/parser.h"
@@ -3142,7 +3143,7 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
   if (stack_pos == 0) {
     // Use any reasonable value which would not be treated
     // as stack overflow.
-    stack_pos = thread->saved_stack_limit();
+    stack_pos = thread->GetSavedStackLimit();
   }
 #else
   uword stack_pos = OSThread::GetCurrentStackPointer();
@@ -3156,11 +3157,11 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
   // process the stack overflow now and leave the interrupt for next
   // time.
   if (!thread->os_thread()->HasStackHeadroom() ||
-      IsCalleeFrameOf(thread->saved_stack_limit(), stack_pos)) {
+      IsCalleeFrameOf(thread->GetSavedStackLimit(), stack_pos)) {
     if (FLAG_verbose_stack_overflow) {
       OS::PrintErr("Stack overflow\n");
       OS::PrintErr("  Native SP = %" Px ", stack limit = %" Px "\n", stack_pos,
-                   thread->saved_stack_limit());
+                   thread->GetSavedStackLimit());
       OS::PrintErr("Call stack:\n");
       OS::PrintErr("size | frame\n");
       StackFrameIterator frames(ValidationPolicy::kDontValidateFrames, thread,
@@ -3872,11 +3873,13 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
       Message::New(target_port, handle, Message::kNormalPriority));
 }
 
-DEFINE_RUNTIME_ENTRY(ChangeThreadStackSize, 2) {
-  const auto& new_base = Smi::CheckedHandle(zone, arguments.NativeArgAt(0)).Value();
-  const auto& new_size = Smi::CheckedHandle(zone, arguments.NativeArgAt(1)).Value();
-  Thread::Current()->os_thread()->ChangeStackSize(new_base, new_size);
-  Thread::Current()->SetStackLimit(Thread::Current()->os_thread()->overflow_stack_limit());
+DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
+  const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  Thread::Current()->EnterCoroutine(coroutine.ptr());
+}
+
+DEFINE_RUNTIME_ENTRY(ExitCoroutine, 0) {
+  Thread::Current()->ExitCoroutine();
 }
 
 // Use expected function signatures to help MSVC compiler resolve overloading.

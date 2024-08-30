@@ -2213,19 +2213,24 @@ void StubCodeCompiler::GenerateInitSyncStarStub() {
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   const Register kCoroutine = CoroutineInitializeStubABI::kCoroutineReg;
-  const Register kStackLimit = CoroutineInitializeStubABI::kStackLimitReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ LoadFieldFromOffset(kStackLimit, kCoroutine, target::Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
+  __ EnterStubFrame();
+  __ PushObject(NullObject());
+  __ PushRegister(kCoroutine);
+  __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
+  __ Drop(2);
+  __ LeaveStubFrame();
 
   __ PushRegister(FPREG);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
   __ PushRegister(FUNCTION_REG);
+
   __ EnterFrame(0);
+
   __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::stack_base_offset());
   __ PushRegister(FPREG);
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, target::Coroutine::entry_offset());
@@ -2235,11 +2240,19 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   }
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
   __ PopRegister(FPREG);
+
   __ LeaveFrame();
+
   __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
+
+  __ EnterStubFrame();
+  __ PushObject(NullObject());
+  __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
+  __ Drop(1);
+  __ LeaveStubFrame();
 
   __ Ret();
 }
@@ -2259,14 +2272,15 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ PushRegister(FUNCTION_REG);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::stack_base_offset());
 
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, target::Coroutine::stack_limit_offset());
-  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
-
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::stack_base_offset());
   __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
+
+  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, target::Coroutine::stack_limit_offset());
+  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
+  __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
 
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, target::Coroutine::caller_offset());
 
@@ -2274,9 +2288,9 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
 }
 
 void StubCodeCompiler::GenerateCoroutineForkStub() {
-  const Register kCaller = CoroutineForkStubABI::kCallerCoroutineReg;
-  const Register kForked = CoroutineForkStubABI::kForkedCoroutineReg;
-  const Register kForkedStackLimit = CoroutineForkStubABI::kForkedStackLimitReg;
+  const Register kCallerCoroutine = CoroutineForkStubABI::kCallerCoroutineReg;
+  const Register kForkedCoroutine = CoroutineForkStubABI::kForkedCoroutineReg;
+  const Register kStackLimit = CoroutineForkStubABI::kStackLimitReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -2286,27 +2300,31 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
   __ PushRegister(FUNCTION_REG);
-  __ StoreFieldToOffset(SPREG, kCaller, target::Coroutine::stack_base_offset());
+  __ StoreFieldToOffset(SPREG, kCallerCoroutine, target::Coroutine::stack_base_offset());
 
-  __ LoadFieldFromOffset(kForkedStackLimit, kForked, target::Coroutine::stack_limit_offset());
-  __ StoreToOffset(kForkedStackLimit, THR, Thread::stack_limit_offset());
-
-  __ StoreFieldToOffset(kCaller, kForked, target::Coroutine::caller_offset());
-  __ LoadFieldFromOffset(SPREG, kForked, target::Coroutine::stack_base_offset());
-  __ PushRegister(kForked);
-  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForked, target::Coroutine::entry_offset());
+  __ StoreFieldToOffset(kCallerCoroutine, kForkedCoroutine, target::Coroutine::caller_offset());
+  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, target::Coroutine::stack_base_offset());
+  __ PushRegister(kForkedCoroutine);
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, target::Coroutine::entry_offset());
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, target::Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);
   }
+
+  __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, target::Coroutine::stack_limit_offset());
+  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
+  __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
+
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
-  __ PopRegister(kForked);
-  __ LoadFieldFromOffset(kCaller, kForked, target::Coroutine::caller_offset());
-  __ LoadFieldFromOffset(SPREG, kCaller, target::Coroutine::stack_base_offset());
+
+  __ PopRegister(kForkedCoroutine);
+  __ LoadFieldFromOffset(kCallerCoroutine, kForkedCoroutine, target::Coroutine::caller_offset());
+  __ LoadFieldFromOffset(SPREG, kCallerCoroutine, target::Coroutine::stack_base_offset());
   __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
+
   __ Ret();
 }
 

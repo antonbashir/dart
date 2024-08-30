@@ -1265,6 +1265,8 @@ class Thread : public AllStatic {
   static word no_scope_native_wrapper_entry_point_offset();
   static word auto_scope_native_wrapper_entry_point_offset();
   
+  static word coroutine_offset();
+  
 #define THREAD_XMM_CONSTANT_LIST(V)                                            \
   V(float_not)                                                                 \
   V(float_negate)                                                              \

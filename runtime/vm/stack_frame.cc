@@ -607,9 +607,10 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 #if !defined(USING_SIMULATOR)
   if (fp_ == 0) return;
   // Note that Thread::os_thread_ is cleared when the thread is descheduled.
-  // ASSERT((thread_->os_thread() == nullptr) ||
-  //        ((thread_->os_thread()->stack_limit() < fp_) &&
-  //         (thread_->os_thread()->stack_base() > fp_)));
+  ASSERT((thread_->coroutine() != nullptr) ||
+         (thread_->os_thread() == nullptr) ||
+         ((thread_->os_thread()->stack_limit() < fp_) &&
+          (thread_->os_thread()->stack_base() > fp_)));
   uword lower;
   if (sp_ == 0) {
     // Exit frame: guess sp.

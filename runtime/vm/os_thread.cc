@@ -327,12 +327,6 @@ void OSThread::SetCurrentTLS(BaseThread* value) {
   }
 }
 
-void OSThread::ChangeStackSize(uword new_base, uword new_size) {
-  stack_base_ = new_base;
-  stack_limit_ = new_base - new_size;
-  stack_headroom_ = CalculateHeadroom(new_size);
-}
-
 OSThreadIterator::OSThreadIterator() {
   ASSERT(OSThread::thread_list_lock_ != nullptr);
   // Lock the thread list while iterating.

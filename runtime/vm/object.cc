@@ -26632,15 +26632,15 @@ CodePtr SuspendState::GetCodeObject() const {
 }
 
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr entry) {
-  const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
   void** stack_base = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
   *(stack_base--) = 0;
   NoSafepointScope no_safepoint;
-  result.StoreNonPointer(&result.untag()->stack_base_, (uword)stack_base);
-  result.StoreNonPointer(&result.untag()->stack_limit_, (uword)stack_base - size);
-  result.StoreCompressedPointer(&result.untag()->entry_, entry);
-  result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
-  return result.ptr();
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - size);
+  coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
+  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, coroutine.ptr());
+  return coroutine.ptr();
 }
 
 const char* Coroutine::ToCString() const {
