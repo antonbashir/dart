@@ -2231,17 +2231,17 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushRegister(FUNCTION_REG);
 
   __ EnterFrame(0);
-
   __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::stack_base_offset());
   __ PushRegister(FPREG);
+
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, target::Coroutine::entry_offset());
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, target::Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);
   }
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
-  __ PopRegister(FPREG);
 
+  __ PopRegister(FPREG);
   __ LeaveFrame();
 
   __ PopRegister(FUNCTION_REG);
@@ -2304,18 +2304,19 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, target::Coroutine::stack_base_offset());
 
   __ StoreFieldToOffset(kCallerCoroutine, kForkedCoroutine, target::Coroutine::caller_offset());
-  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, target::Coroutine::stack_base_offset());
-  __ PushRegister(kForkedCoroutine);
-  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, target::Coroutine::entry_offset());
-  if (!FLAG_precompiled_mode) {
-    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, target::Function::code_offset());
-    __ LoadImmediate(ARGS_DESC_REG, 0);
-  }
 
   __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, target::Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
 
+  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, target::Coroutine::stack_base_offset());
+  __ PushRegister(kForkedCoroutine);
+
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, target::Coroutine::entry_offset());
+  if (!FLAG_precompiled_mode) {
+    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, target::Function::code_offset());
+    __ LoadImmediate(ARGS_DESC_REG, 0);
+  }
   __ Call(FieldAddress(FUNCTION_REG, target::Function::entry_point_offset()));
 
   __ PopRegister(kForkedCoroutine);
