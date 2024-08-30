@@ -2226,12 +2226,14 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushRegister(FPREG);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
+  __ PushRegister(FUNCTION_REG);
   __ EnterFrame(0);
   __ LoadFieldFromOffset(SPREG, kCoroutine, target::Coroutine::stack_base_offset());
   __ PushRegister(FPREG);
   __ call(kEntry);
   __ PopRegister(FPREG);
   __ LeaveFrame();
+  __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
@@ -2251,12 +2253,14 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ PushRegister(FPREG);
   __ PushRegister(PP);
   __ PushRegister(CODE_REG);
+  __ PushRegister(FUNCTION_REG);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, target::Coroutine::stack_base_offset());
 
   __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, target::Coroutine::stack_limit_offset());
   __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, target::Coroutine::stack_base_offset());
+  __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
@@ -2278,7 +2282,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
 
   __ PushRegister(FPREG);
   __ PushRegister(PP);
-  __ PushRegister(CODE_REG);
+  __ PushRegister(FUNCTION_REG);
   __ StoreFieldToOffset(SPREG, kCaller, target::Coroutine::stack_base_offset());
 
   __ LoadFieldFromOffset(kForkedEntry, kForked, target::Coroutine::entry_offset());
@@ -2292,6 +2296,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ PopRegister(kForked);
   __ LoadFieldFromOffset(kCaller, kForked, target::Coroutine::caller_offset());
   __ LoadFieldFromOffset(SPREG, kCaller, target::Coroutine::stack_base_offset());
+  __ PopRegister(FUNCTION_REG);
   __ PopRegister(CODE_REG);
   __ PopRegister(PP);
   __ PopRegister(FPREG);
