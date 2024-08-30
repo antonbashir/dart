@@ -1143,6 +1143,9 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
+    case MethodRecognizer::kCoroutineFork:
+    case MethodRecognizer::kCoroutineInitialize:
+    case MethodRecognizer::kCoroutineTransfer:
       return true;
     default:
       return false;
