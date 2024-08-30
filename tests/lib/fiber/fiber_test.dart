@@ -16,6 +16,7 @@ void mainEntry() {
   print("main: entry");
   commonState += "main -> ";
   mainFiber.fork(childFiber);
+  commonState += "main -> ";
   print("main: after child transfer");
   mainFiber.transfer(childFiber);
   print(commonState);
