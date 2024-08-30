@@ -1497,11 +1497,6 @@ void FlowGraph::RenameRecursive(
             reaching_defn = constant;
           }
         } else {
-          TextBuffer buffer(1024);
-          input_defn->PrintTo(&buffer);
-          buffer.AddString("\n");
-          reaching_defn->PrintTo(&buffer);
-          OS::Print("%s\n", buffer.buffer());
           // Note: constants can only be replaced with other constants.
           ASSERT(input_defn->IsLoadLocal() || input_defn->IsStoreLocal() ||
                  input_defn->IsDropTemps() || input_defn->IsMakeTemp() ||
