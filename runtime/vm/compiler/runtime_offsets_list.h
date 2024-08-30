@@ -401,8 +401,8 @@
   FIELD(WeakReference, type_arguments_offset)                                  \
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, entry_offset)                                               \
-  FIELD(Coroutine, context_offset)                                             \
-  FIELD(Coroutine, size_offset)                                                \
+  FIELD(Coroutine, stack_base_offset)                                          \
+  FIELD(Coroutine, stack_limit_offset)                                         \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \

@@ -26631,11 +26631,11 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(uintptr_t size, uword entry) {
   const auto& result = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  void** context = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
-  *(context--) = 0; // Old stack pointer
+  void** stack_base = (void**)((uintptr_t)mmap(0, size * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size);
+  *(stack_base--) = 0;
   NoSafepointScope no_safepoint;
-  result.StoreNonPointer(&result.untag()->context_, context);
-  result.StoreNonPointer(&result.untag()->size_, size);
+  result.StoreNonPointer(&result.untag()->stack_base_, (uword)stack_base);
+  result.StoreNonPointer(&result.untag()->stack_limit_, (uword)stack_base - size);
   result.StoreNonPointer(&result.untag()->entry_, entry);
   result.StoreCompressedPointer(&result.untag()->caller_, result.ptr());
   return result.ptr();
