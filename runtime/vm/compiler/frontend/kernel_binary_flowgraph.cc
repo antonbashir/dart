@@ -6022,29 +6022,50 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
   Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-  instructions <<= B->CoroutineInitialize(TokenPosition::kNoSource);
-  return instructions + Drop();
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  ReadListLength();
+  instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
+  return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-  instructions <<= B->CoroutineTransfer(TokenPosition::kNoSource);
-  return instructions + Drop();
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
+  instructions += LoadLocal(from);
+  instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
+  instructions += LoadLocal(to);
+  ReadListLength();
+  instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
+  instructions += Drop();
+  instructions += Drop();
+  return instructions;
 }
-
 
 Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
   Fragment instructions;
-  Array& argument_names = Array::ZoneHandle(Z);
-  instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
-  instructions <<= B->CoroutineFork(TokenPosition::kNoSource);
-  return instructions + Drop();
+  ReadUInt();
+  ReadListLength();
+  ReadListLength();
+  instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
+  instructions += LoadLocal(from);
+  instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
+  instructions += LoadLocal(to);
+  ReadListLength();
+  instructions += B->CoroutineFork(TokenPosition::kNoSource);
+  instructions += Drop();
+  instructions += Drop();
+  return instructions;
 }
-
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {
   const intptr_t argc = ReadUInt();               // Read argument count.

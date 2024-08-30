@@ -1574,7 +1574,6 @@ void ConstantPropagator::VisitCoroutineTransferStub(CoroutineTransferStubInstr* 
 }
 
 void ConstantPropagator::VisitCoroutineForkStub(CoroutineForkStubInstr* instr) {
-  SetValue(instr, non_constant_);
 }
 
 void ConstantPropagator::VisitSuspend(SuspendInstr* instr) {

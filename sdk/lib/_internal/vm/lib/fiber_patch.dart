@@ -55,12 +55,12 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
-    _coroutineTransfer(_current, to._current);
+     _coroutineTransfer(_current, to._current);
   }
 
   @patch
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
-    _coroutineFork(_current, to._current);
+  // _coroutineFork(_current, to._current);
   }
 }

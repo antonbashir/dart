@@ -11523,7 +11523,6 @@ class CoroutineTransferStubInstr : public TemplateDefinition<2, NoThrow> {
 
   DECLARE_INSTRUCTION(CoroutineTransferStub);
   PRINT_OPERANDS_TO_SUPPORT
-
   DECLARE_EMPTY_SERIALIZATION(CoroutineTransferStubInstr, TemplateDefinition)
 
  private:
