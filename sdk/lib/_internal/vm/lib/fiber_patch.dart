@@ -5,15 +5,15 @@ import "dart:async" show FutureOr;
 const _kRootContextSize = 4096;
 
 @pragma("vm:recognized", "other")
-@pragma("vm:prefer-inline")
+@pragma("vm:never-inline")
 external void _coroutineInitialize(_Coroutine root);
 
 @pragma("vm:recognized", "other")
-@pragma("vm:prefer-inline")
+@pragma("vm:never-inline")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
 @pragma("vm:recognized", "other")
-@pragma("vm:prefer-inline")
+@pragma("vm:never-inline")
 external void _coroutineFork(_Coroutine from, _Coroutine to);
 
 @pragma("vm:entry-point")
