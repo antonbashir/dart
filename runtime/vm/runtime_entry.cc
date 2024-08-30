@@ -3156,7 +3156,7 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
   // If an interrupt happens at the same time as a stack overflow, we
   // process the stack overflow now and leave the interrupt for next
   // time.
-  if (!thread->os_thread()->HasStackHeadroom() ||
+  if (!thread->HasStackHeadroom() ||
       IsCalleeFrameOf(thread->GetSavedStackLimit(), stack_pos)) {
     if (FLAG_verbose_stack_overflow) {
       OS::PrintErr("Stack overflow\n");
