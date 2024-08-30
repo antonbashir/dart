@@ -2221,7 +2221,8 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ PushObject(NullObject());
   __ PushRegister(kCoroutine);
   __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
-  __ Drop(2);
+  __ PopRegister(kCoroutine);
+  __ Drop(1);
   __ LeaveStubFrame();
 
   __ PushRegister(FPREG);
