@@ -1932,7 +1932,6 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += CoroutineFork();
       body += NullConstant();
       break;
-
 #define IL_BODY(method, slot)                                                  \
   case MethodRecognizer::k##method:                                            \
     ASSERT_EQUAL(function.NumParameters(), 1);                                 \
