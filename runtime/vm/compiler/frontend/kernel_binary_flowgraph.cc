@@ -6025,7 +6025,7 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
   Array& argument_names = Array::ZoneHandle(Z);
   instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
   instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
-  instructions += NullConstant();
+  NullConstant();
   return instructions;
 }
 
@@ -6034,7 +6034,7 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   Array& argument_names = Array::ZoneHandle(Z);
   instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
   instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
-  instructions += NullConstant();
+  NullConstant();
   return instructions;
 }
 
@@ -6044,7 +6044,7 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
   Array& argument_names = Array::ZoneHandle(Z);
   instructions += BuildArguments(&argument_names, nullptr /* arg count */, nullptr /* positional arg count */);
   instructions += B->CoroutineFork(TokenPosition::kNoSource);
-  instructions += NullConstant();
+  NullConstant();
   return instructions;
 }
 

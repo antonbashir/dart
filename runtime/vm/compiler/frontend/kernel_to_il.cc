@@ -1143,6 +1143,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
+      return true;
     default:
       return false;
   }
@@ -4745,22 +4746,22 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
 }
 
 Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
-  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(
-      InstructionSource(position), Pop(), GetNextDeoptId());
+  CoroutineInitializeStubInstr* instr =
+      new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
 
 Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
-  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  CoroutineTransferStubInstr* instr =
+      new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }
 
 Fragment FlowGraphBuilder::CoroutineFork(TokenPosition position) {
-  CoroutineForkStubInstr* instr = new (Z) CoroutineForkStubInstr(
-      InstructionSource(position), Pop(), Pop(), GetNextDeoptId());
+  CoroutineForkStubInstr* instr =
+      new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
   Push(instr);
   return Fragment(instr);
 }

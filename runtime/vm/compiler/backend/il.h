@@ -11478,16 +11478,13 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 
 class CoroutineInitializeStubInstr : public TemplateDefinition<1, NoThrow> {
  public:
-  CoroutineInitializeStubInstr(const InstructionSource& source,
-                            Value* root,
-                            intptr_t deopt_id)
-      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
+  CoroutineInitializeStubInstr(Value* root, intptr_t deopt_id)
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
+                           deopt_id) {
     SetInputAt(0, root);
   }
 
   Value* root() const { return inputs_[0]; }
-  virtual TokenPosition token_pos() const { return token_pos_; }
-
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
   virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
@@ -11498,13 +11495,7 @@ class CoroutineInitializeStubInstr : public TemplateDefinition<1, NoThrow> {
 
   DECLARE_INSTRUCTION(CoroutineInitializeStub);
   PRINT_OPERANDS_TO_SUPPORT
-
-#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
-
-  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineInitializeStubInstr,
-                                          TemplateDefinition,
-                                          FIELD_LIST)
-#undef FIELD_LIST
+  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeStubInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeStubInstr);
@@ -11512,18 +11503,15 @@ class CoroutineInitializeStubInstr : public TemplateDefinition<1, NoThrow> {
 
 class CoroutineTransferStubInstr : public TemplateDefinition<2, NoThrow> {
  public:
-  CoroutineTransferStubInstr(const InstructionSource& source,
-                             Value* from,
-                             Value* to,
-                             intptr_t deopt_id)
-      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
+  CoroutineTransferStubInstr(Value* from, Value* to, intptr_t deopt_id)
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
+                           deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }
 
   Value* from() const { return inputs_[0]; }
   Value* to() const { return inputs_[1]; }
-  virtual TokenPosition token_pos() const { return token_pos_; }
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
@@ -11536,12 +11524,7 @@ class CoroutineTransferStubInstr : public TemplateDefinition<2, NoThrow> {
   DECLARE_INSTRUCTION(CoroutineTransferStub);
   PRINT_OPERANDS_TO_SUPPORT
 
-#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
-
-  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineTransferStubInstr,
-                                          TemplateDefinition,
-                                          FIELD_LIST)
-#undef FIELD_LIST
+  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferStubInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineTransferStubInstr);
@@ -11549,18 +11532,15 @@ class CoroutineTransferStubInstr : public TemplateDefinition<2, NoThrow> {
 
 class CoroutineForkStubInstr : public TemplateDefinition<2, NoThrow> {
  public:
-  CoroutineForkStubInstr(const InstructionSource& source,
-                             Value* from,
-                             Value* to,
-                             intptr_t deopt_id)
-      : TemplateDefinition(source, deopt_id), token_pos_(source.token_pos) {
+  CoroutineForkStubInstr(Value* from, Value* to, intptr_t deopt_id)
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
+                           deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }
 
   Value* from() const { return inputs_[0]; }
   Value* to() const { return inputs_[1]; }
-  virtual TokenPosition token_pos() const { return token_pos_; }
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
@@ -11573,12 +11553,7 @@ class CoroutineForkStubInstr : public TemplateDefinition<2, NoThrow> {
   DECLARE_INSTRUCTION(CoroutineForkStub);
   PRINT_OPERANDS_TO_SUPPORT
 
-#define FIELD_LIST(F) F(const TokenPosition, token_pos_)
-
-  DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(CoroutineForkStubInstr,
-                                          TemplateDefinition,
-                                          FIELD_LIST)
-#undef FIELD_LIST
+  DECLARE_EMPTY_SERIALIZATION(CoroutineForkStubInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineForkStubInstr);

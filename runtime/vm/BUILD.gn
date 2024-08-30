@@ -6,12 +6,12 @@ import("//build_overrides/build.gni")
 import("//third_party/protobuf/proto_library.gni")
 import("../../build/executable_suffix.gni")
 import("../../sdk/lib/async/async_sources.gni")
-import("../../sdk/lib/fiber/fiber_sources.gni")
 import("../../sdk/lib/collection/collection_sources.gni")
 import("../../sdk/lib/convert/convert_sources.gni")
 import("../../sdk/lib/core/core_sources.gni")
 import("../../sdk/lib/developer/developer_sources.gni")
 import("../../sdk/lib/ffi/ffi_sources.gni")
+import("../../sdk/lib/fiber/fiber_sources.gni")
 import("../../sdk/lib/internal/internal_sources.gni")
 import("../../sdk/lib/isolate/isolate_sources.gni")
 import("../../sdk/lib/math/math_sources.gni")
@@ -24,11 +24,11 @@ import("../bin/cli_sources.gni")
 import("../bin/io_sources.gni")
 import("../configs.gni")
 import("../lib/async_sources.gni")
-import("../lib/fiber_sources.gni")
 import("../lib/convert_sources.gni")
 import("../lib/core_sources.gni")
 import("../lib/developer_sources.gni")
 import("../lib/ffi_sources.gni")
+import("../lib/fiber_sources.gni")
 import("../lib/isolate_sources.gni")
 import("../lib/math_sources.gni")
 import("../lib/mirrors_sources.gni")
@@ -227,11 +227,11 @@ library_for_all_configs("libdart_lib") {
     extra_deps += [ "$fuchsia_sdk/pkg/trace-engine" ]
   }
   include_dirs = [ ".." ]
-  allsources = async_runtime_cc_files + fiber_runtime_cc_files +
-               core_runtime_cc_files + developer_runtime_cc_files +
-               isolate_runtime_cc_files + math_runtime_cc_files +
-               mirrors_runtime_cc_files + typed_data_runtime_cc_files +
-               vmservice_runtime_cc_files + ffi_runtime_cc_files
+  allsources = async_runtime_cc_files + core_runtime_cc_files +
+               developer_runtime_cc_files + isolate_runtime_cc_files +
+               math_runtime_cc_files + mirrors_runtime_cc_files +
+               typed_data_runtime_cc_files + vmservice_runtime_cc_files +
+               ffi_runtime_cc_files + fiber_runtime_cc_files
   sources = [ "bootstrap.cc" ] + rebase_path(allsources, ".", "../lib")
   snapshot_sources = []
 }
