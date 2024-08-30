@@ -6037,12 +6037,12 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
   ReadListLength();
   ReadListLength();
 
-  LocalVariable* from = MakeTemporary();
   instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
   instructions += LoadLocal(from);
 
-  LocalVariable* to = MakeTemporary();
   instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
   instructions += LoadLocal(to);
 
   ReadListLength();
@@ -6060,12 +6060,12 @@ Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
   ReadListLength();
   ReadListLength();
 
-  LocalVariable* from = MakeTemporary();
   instructions += BuildExpression();
+  LocalVariable* from = MakeTemporary();
   instructions += LoadLocal(from);
 
-  LocalVariable* to = MakeTemporary();
   instructions += BuildExpression();
+  LocalVariable* to = MakeTemporary();
   instructions += LoadLocal(to);
 
   ReadListLength();
