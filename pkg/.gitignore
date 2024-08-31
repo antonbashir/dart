@@ -1,0 +1,12 @@
+/Makefile
+/*.Makefile
+/*.sln
+/*.target.mk
+/*.vcproj
+/*.vcxproj
+/*.vcxproj.user
+/*.vcxproj.filters
+/*.xcodeproj
+.dart_tool
+.idea/
+.packages
