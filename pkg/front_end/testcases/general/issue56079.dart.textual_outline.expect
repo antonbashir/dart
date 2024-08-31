@@ -1,3 +1,0 @@
-void f<T extends Never>(T t) {}
-
-main() {}

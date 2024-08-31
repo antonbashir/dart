@@ -1,5 +1,0 @@
-String? bar() => "asdf";
-
-foo() {}
-
-main() {}

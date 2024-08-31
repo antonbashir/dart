@@ -1,3 +1,0 @@
-staticTypeOf<T>(T x) => T;
-
-main() {}

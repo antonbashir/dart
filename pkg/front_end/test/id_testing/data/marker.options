@@ -1,3 +1,0 @@
-cfe=pkg/front_end/test/id_testing/id_testing_test.dart
-dart2js=pkg/compiler/test/equivalence/id_testing_test.dart
-dart2js:nnbd-sdk=pkg/compiler/test/equivalence/id_testing_test.dart

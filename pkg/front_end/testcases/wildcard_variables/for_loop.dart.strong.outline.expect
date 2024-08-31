@@ -1,5 +1,0 @@
-library;
-import self as self;
-
-static method test() → dynamic async 
-  ;

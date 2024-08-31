@@ -1,7 +1,0 @@
-library;
-import self as self;
-
-static method test0(dynamic x) → dynamic
-  ;
-static method main() → dynamic
-  ;

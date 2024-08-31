@@ -1,7 +1,0 @@
-class C {
-  foo() {}
-}
-
-main() {}
-
-typedef A<T>(T p);

@@ -1,5 +1,0 @@
-import 'dart:test';
-
-expect(expected, actual) {}
-
-main() {}

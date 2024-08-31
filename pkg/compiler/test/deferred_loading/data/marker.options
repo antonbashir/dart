@@ -1,3 +1,0 @@
-spec=pkg/compiler/test/deferred_loading/deferred_loading_test.dart
-two-frag=pkg/compiler/test/deferred_loading/deferred_loading_test.dart
-three-frag=pkg/compiler/test/deferred_loading/deferred_loading_test.dart

@@ -1,3 +1,0 @@
-import 'dart:collection' as _;
-
-test() {}

@@ -1,3 +1,0 @@
-dynamic guard() => true;
-
-main() {}

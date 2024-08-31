@@ -1,3 +1,0 @@
-dynamic<int> f() {}
-
-dynamic[KeywordToken]<[BeginToken]int[StringToken]>[SimpleToken] f[StringToken]([BeginToken])[SimpleToken] {[BeginToken]}[SimpleToken][SimpleToken]

@@ -1,3 +1,0 @@
-class WeakMap<K extends Object, V> {
-  WeakMap(List<(K, V)> entries) {}
-}

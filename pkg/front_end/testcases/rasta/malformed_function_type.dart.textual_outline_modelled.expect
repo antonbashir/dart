@@ -1,3 +1,0 @@
-main() {}
-
-typedef Handle Handle(String command);

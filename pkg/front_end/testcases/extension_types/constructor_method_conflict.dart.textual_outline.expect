@@ -1,3 +1,0 @@
-extension type E1.name(int it) {
-  void name() {}
-}

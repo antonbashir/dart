@@ -1,3 +1,0 @@
-main() {
-  try {} finally {}
-}

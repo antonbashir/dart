@@ -1,9 +1,0 @@
-class B extends Object with A {
-  void foo();
-}
-
-main() {}
-
-mixin class A {
-  dynamic noSuchMethod(Invocation i) {}
-}

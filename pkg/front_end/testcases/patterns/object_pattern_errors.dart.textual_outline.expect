@@ -1,7 +1,0 @@
-class A {
-  int? field;
-}
-
-typedef B<X> = A;
-
-test(dynamic x) {}

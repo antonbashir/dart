@@ -1,3 +1,0 @@
-f() { foo!.bar![arg]![arg2]; }
-
-f[StringToken]([BeginToken])[SimpleToken] {[BeginToken] foo[StringToken]![SimpleToken].[SimpleToken]bar[StringToken]![SimpleToken][[BeginToken]arg[StringToken]][SimpleToken]![SimpleToken][[BeginToken]arg2[StringToken]][SimpleToken];[SimpleToken] }[SimpleToken][SimpleToken]

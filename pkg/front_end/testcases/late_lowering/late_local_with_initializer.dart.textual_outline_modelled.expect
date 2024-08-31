@@ -1,3 +1,0 @@
-expect(expected, actual) {}
-
-main() {}

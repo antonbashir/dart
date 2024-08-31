@@ -1,1 +1,0 @@
-ExcludedUndefinedClassInInner x = null;

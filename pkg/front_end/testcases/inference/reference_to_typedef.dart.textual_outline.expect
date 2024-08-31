@@ -1,7 +1,0 @@
-library test;
-
-typedef void F();
-
-final x = F;
-
-main() {}

@@ -1,3 +1,0 @@
-f() { obj![arg]; }
-
-f[StringToken]([BeginToken])[SimpleToken] {[BeginToken] obj[StringToken]![SimpleToken][[BeginToken]arg[StringToken]][SimpleToken];[SimpleToken] }[SimpleToken][SimpleToken]

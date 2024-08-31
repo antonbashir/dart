@@ -1,7 +1,0 @@
-void foo() => print('foo');
-
-class Bar {
-  void call() {}
-}
-
-main() {}

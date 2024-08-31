@@ -1,5 +1,0 @@
-X bar<X>(Function(X) f) => throw 0;
-
-foo(Function(Function(int, int, [int])) f, Function(Function(int, [int])) g) {}
-
-main() {}

@@ -1,3 +1,0 @@
-Stream<List<>> foo() {}
-
-Stream[StringToken]<[BeginToken]List[StringToken]<[BeginToken]>>[SimpleToken] foo[StringToken]([BeginToken])[SimpleToken] {[BeginToken]}[SimpleToken][SimpleToken]

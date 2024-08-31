@@ -1,3 +1,0 @@
-library test;
-
-test(List<int>? x) {}

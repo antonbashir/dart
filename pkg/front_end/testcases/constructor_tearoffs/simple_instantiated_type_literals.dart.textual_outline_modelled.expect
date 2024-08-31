@@ -1,5 +1,0 @@
-bar() {}
-
-foo() => List<int>;
-
-main() {}

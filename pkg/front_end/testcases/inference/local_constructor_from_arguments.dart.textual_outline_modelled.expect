@@ -1,8 +1,0 @@
-library test;
-
-class C<T> {
-  C(this.t);
-  T t;
-}
-
-test(dynamic y) {}

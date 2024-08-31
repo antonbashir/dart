@@ -1,9 +1,0 @@
-class E {
-  foo() {}
-}
-
-beforeTestMissingTry() {}
-
-testMissingTry() {}
-
-main() {}

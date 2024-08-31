@@ -1,3 +1,0 @@
-const Symbol tripleShiftSymbol = const Symbol(">>>");
-
-main() {}

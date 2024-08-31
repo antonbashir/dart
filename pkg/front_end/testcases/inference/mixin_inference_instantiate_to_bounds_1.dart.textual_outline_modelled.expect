@@ -1,9 +1,0 @@
-class A extends M1 with M0 {}
-
-class I<X> {}
-
-class M1 implements I<int> {}
-
-main() {}
-
-mixin M0<X, Y extends String> on I<X> {}

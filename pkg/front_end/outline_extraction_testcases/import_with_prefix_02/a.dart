@@ -1,3 +1,0 @@
-String foo() {
-  return "foo";
-}

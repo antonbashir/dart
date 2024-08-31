@@ -1,5 +1,0 @@
-test(dynamic x) {}
-
-main() {}
-
-expectEquals(x, y) {}

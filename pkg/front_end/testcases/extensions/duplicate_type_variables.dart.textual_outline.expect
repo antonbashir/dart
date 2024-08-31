@@ -1,3 +1,0 @@
-extension E1<T, T> on int {}
-
-main() {}

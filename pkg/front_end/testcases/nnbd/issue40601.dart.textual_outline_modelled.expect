@@ -1,7 +1,0 @@
-abstract class A<T> {
-  T baz();
-  bar(T value) {}
-  foo() {}
-}
-
-main() {}

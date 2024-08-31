@@ -1,5 +1,0 @@
-class Foo {
-  void foo() : initializer = true {}
-  void foo.x() : initializer = true {}
-  void foo.x() {}
-}

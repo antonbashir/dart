@@ -1,6 +1,0 @@
-class A {
-  A(this.v);
-  A.second();
-  int? v;
-  int? v;
-}

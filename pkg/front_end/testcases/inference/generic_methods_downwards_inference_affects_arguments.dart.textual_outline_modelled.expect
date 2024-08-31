@@ -1,5 +1,0 @@
-library test;
-
-T f<T>(List<T> s) => throw '';
-
-test() {}

@@ -1,5 +1,0 @@
-extension Foo on Object {
-  set f(int x) {}
-}
-
-void fun(String? s) {}

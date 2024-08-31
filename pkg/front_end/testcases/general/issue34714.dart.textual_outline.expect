@@ -1,9 +1,0 @@
-class A<T> {
-  factory A() = B;
-}
-
-class B<T> implements A<T> {
-  B();
-}
-
-main() {}

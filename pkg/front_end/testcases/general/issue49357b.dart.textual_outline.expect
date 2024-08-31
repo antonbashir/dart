@@ -1,8 +1,0 @@
-class A extends B {
-  A({required super.field});
-}
-
-class B {
-  final int field;
-  B.named({required this.field});
-}

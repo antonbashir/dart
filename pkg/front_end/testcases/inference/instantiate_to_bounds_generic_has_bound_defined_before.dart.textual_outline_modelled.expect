@@ -1,7 +1,0 @@
-library test;
-
-A v = throw '';
-
-class A<T extends int> {}
-
-test() {}

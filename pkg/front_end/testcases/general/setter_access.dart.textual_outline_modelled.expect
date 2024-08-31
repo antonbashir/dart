@@ -1,4 +1,0 @@
-class Class {
-  test() {}
-  void set setter(int value) {}
-}

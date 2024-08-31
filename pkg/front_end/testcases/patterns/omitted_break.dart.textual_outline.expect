@@ -1,5 +1,0 @@
-enum Enum { a, b, c }
-
-method(e) {}
-
-method2(Enum e) {}

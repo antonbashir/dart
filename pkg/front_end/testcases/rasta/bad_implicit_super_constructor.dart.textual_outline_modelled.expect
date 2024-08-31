@@ -1,9 +1,0 @@
-class A {
-  A(this.x);
-}
-
-class B extends A {
-  const B();
-}
-
-main() {}

@@ -1,7 +1,0 @@
-library;
-import self as self;
-
-static method test(Never nonNullableNever, Never? nullableNever) → dynamic
-  ;
-static method main() → dynamic
-  ;

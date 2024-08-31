@@ -1,7 +1,0 @@
-library test;
-
-class C {
-  C(void func()) {}
-}
-
-main() {}

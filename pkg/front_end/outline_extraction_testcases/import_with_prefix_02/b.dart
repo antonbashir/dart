@@ -1,3 +1,0 @@
-String bar() {
-  return "bar";
-}
