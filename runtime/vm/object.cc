@@ -12,7 +12,6 @@
 #include "lib/integers.h"
 #include "lib/stacktrace.h"
 #include "platform/assert.h"
-#include "platform/globals.h"
 #include "platform/text_buffer.h"
 #include "platform/unaligned.h"
 #include "platform/unicode.h"
@@ -67,7 +66,6 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
-#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -831,7 +829,9 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  { *sentinel_ ^= Sentinel::New(); }
+  { 
+    *sentinel_ ^= Sentinel::New(); 
+  }
 
   // Allocate and initialize optimizing compiler constants.
   {
