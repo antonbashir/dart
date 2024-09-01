@@ -112,7 +112,8 @@ logs/logs.json
 logs/results.json
 .dart_tool/bisect_dart/
 doc/api/
-build/
-sdk.code-workspace.local
 
+build/
+build-sdk-debug.sh
+build-sdk.sh
 *.exe
