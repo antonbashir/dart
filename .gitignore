@@ -118,3 +118,4 @@ build-sdk-debug.sh
 build-sdk.sh
 *.exe
 *.aot
+*.S
