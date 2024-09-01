@@ -55,24 +55,28 @@
       "tests",
       "runtime/tests",
       "runtime/observatory/tests",
+
       // We don't control the third_party code, so don't analyze it.
       // It includes old Dart examples (e.g. protobuf) or README.dart
       // files which don't actually contain dart code and thus don't
       // analyze cleanly.
       "third_party",
       "runtime/third_party",
+
       // This package depends on a package that will not be brought in as a
       // dart-sdk dep. https://github.com/dart-lang/sdk/issues/50061
       "runtime/tools/heapsnapshot",
+
       // We probably can include 'lib', but it currently shows too many errors.
       // We would need to ignore import_internal_library, and other warnings
       // on a per-file basis, since the analyzer is designed to work with
       // user code not sdk code.
       "sdk/lib",
+      
       // I would have expected the analyzer to automatically exclude these
       // since it's in .gitignore, but it doesn't seem to.
       "xcodebuild",
       "out",
     ],
   },
-}
+} 
