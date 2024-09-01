@@ -8551,18 +8551,18 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
-LocationSummary* CoroutineInitializeStubInstr::MakeLocationSummary(
+LocationSummary* CoroutineInitializeInstr::MakeLocationSummary(
     Zone* zone,
     bool opt) const {
   const intptr_t kNumInputs = 1;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeStubABI::kCoroutineReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeABI::kCoroutineReg));
   return locs;
 }
 
-void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-    const Register kCoroutine = CoroutineInitializeStubABI::kCoroutineReg;
+void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+    const Register kCoroutine = CoroutineInitializeABI::kCoroutineReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -8606,21 +8606,21 @@ void CoroutineInitializeStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LeaveFrame();
 }
 
-LocationSummary* CoroutineTransferStubInstr::MakeLocationSummary(
+LocationSummary* CoroutineTransferInstr::MakeLocationSummary(
     Zone* zone,
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineTransferStubABI::kFromCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation(CoroutineTransferStubABI::kToCoroutineReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineTransferABI::kFromCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineTransferABI::kToCoroutineReg));
   return locs;
 }
 
-void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  const Register kFromCoroutine = CoroutineTransferStubABI::kFromCoroutineReg;
-  const Register kToCoroutine = CoroutineTransferStubABI::kToCoroutineReg;
-  const Register kToStackLimit = CoroutineTransferStubABI::kToStackLimitReg;
+void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  const Register kFromCoroutine = CoroutineTransferABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineTransferABI::kToCoroutineReg;
+  const Register kToStackLimit = CoroutineTransferABI::kToStackLimitReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -8644,21 +8644,21 @@ void CoroutineTransferStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, Coroutine::caller_offset());
 }
 
-LocationSummary* CoroutineForkStubInstr::MakeLocationSummary(
+LocationSummary* CoroutineForkInstr::MakeLocationSummary(
     Zone* zone,
     bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
   LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineForkStubABI::kCallerCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation(CoroutineForkStubABI::kForkedCoroutineReg));
+  locs->set_in(0, Location::RegisterLocation(CoroutineForkABI::kCallerCoroutineReg));
+  locs->set_in(1, Location::RegisterLocation(CoroutineForkABI::kForkedCoroutineReg));
   return locs;
 }
 
-void CoroutineForkStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  const Register kCallerCoroutine = CoroutineForkStubABI::kCallerCoroutineReg;
-  const Register kForkedCoroutine = CoroutineForkStubABI::kForkedCoroutineReg;
-  const Register kStackLimit = CoroutineForkStubABI::kStackLimitReg;
+void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
+  const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
+  const Register kStackLimit = CoroutineForkABI::kStackLimitReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});

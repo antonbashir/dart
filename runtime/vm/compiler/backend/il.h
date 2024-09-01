@@ -545,9 +545,9 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
-  M(CoroutineInitializeStub, _)                                                \
-  M(CoroutineTransferStub, _)                                                  \
-  M(CoroutineForkStub, _)                                                      \
+  M(CoroutineInitialize, _)                                                    \
+  M(CoroutineTransfer, _)                                                      \
+  M(CoroutineFork, _)                                                          \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11476,11 +11476,11 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
 };
 
-class CoroutineInitializeStubInstr : public TemplateInstruction<1, NoThrow> {
+class CoroutineInitializeInstr : public TemplateInstruction<1, NoThrow> {
  public:
-  CoroutineInitializeStubInstr(Value* root, intptr_t deopt_id)
+  CoroutineInitializeInstr(Value* root, intptr_t deopt_id)
       : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
-                           deopt_id) {
+                            deopt_id) {
     SetInputAt(0, root);
   }
 
@@ -11493,19 +11493,19 @@ class CoroutineInitializeStubInstr : public TemplateInstruction<1, NoThrow> {
     return InputCount();
   }
 
-  DECLARE_INSTRUCTION(CoroutineInitializeStub);
+  DECLARE_INSTRUCTION(CoroutineInitialize);
   PRINT_OPERANDS_TO_SUPPORT
-  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeStubInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeInstr, TemplateInstruction)
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeStubInstr);
+  DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeInstr);
 };
 
-class CoroutineTransferStubInstr : public TemplateInstruction<2, NoThrow> {
+class CoroutineTransferInstr : public TemplateInstruction<2, NoThrow> {
  public:
-  CoroutineTransferStubInstr(Value* from, Value* to, intptr_t deopt_id)
+  CoroutineTransferInstr(Value* from, Value* to, intptr_t deopt_id)
       : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
-                           deopt_id) {
+                            deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }
@@ -11521,19 +11521,19 @@ class CoroutineTransferStubInstr : public TemplateInstruction<2, NoThrow> {
     return InputCount();
   }
 
-  DECLARE_INSTRUCTION(CoroutineTransferStub);
+  DECLARE_INSTRUCTION(CoroutineTransfer);
   PRINT_OPERANDS_TO_SUPPORT
-  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferStubInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferInstr, TemplateInstruction)
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(CoroutineTransferStubInstr);
+  DISALLOW_COPY_AND_ASSIGN(CoroutineTransferInstr);
 };
 
-class CoroutineForkStubInstr : public TemplateInstruction<2, NoThrow> {
+class CoroutineForkInstr : public TemplateInstruction<2, NoThrow> {
  public:
-  CoroutineForkStubInstr(Value* from, Value* to, intptr_t deopt_id)
+  CoroutineForkInstr(Value* from, Value* to, intptr_t deopt_id)
       : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
-                           deopt_id) {
+                            deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }
@@ -11549,13 +11549,13 @@ class CoroutineForkStubInstr : public TemplateInstruction<2, NoThrow> {
     return InputCount();
   }
 
-  DECLARE_INSTRUCTION(CoroutineForkStub);
+  DECLARE_INSTRUCTION(CoroutineFork);
   PRINT_OPERANDS_TO_SUPPORT
 
-  DECLARE_EMPTY_SERIALIZATION(CoroutineForkStubInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineForkInstr, TemplateInstruction)
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(CoroutineForkStubInstr);
+  DISALLOW_COPY_AND_ASSIGN(CoroutineForkInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].

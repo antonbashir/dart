@@ -1576,14 +1576,14 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->AddString(")");
 }
 
-void CoroutineInitializeStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+void CoroutineInitializeInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "CoroutineInitialize";
   f->Printf("%s(", name);
   root()->PrintTo(f);
   f->AddString(")");
 }
 
-void CoroutineTransferStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+void CoroutineTransferInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "CoroutineTransfer";
   f->Printf("%s(", name);
   from()->PrintTo(f);
@@ -1591,7 +1591,7 @@ void CoroutineTransferStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->AddString(")");
 }
 
-void CoroutineForkStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+void CoroutineForkInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "CoroutineFork";
   f->Printf("%s(", name);
   from()->PrintTo(f);
