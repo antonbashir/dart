@@ -1624,7 +1624,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-	  enum {
+  enum {
     kPendingHandlerIndex = 0,
     kPendingMethodNameIndex,
     kPendingKeysIndex,

@@ -1297,7 +1297,7 @@ class Thread : public AllStatic {
   static word suspend_state_suspend_sync_star_at_start_entry_point_offset();
 
   static word suspend_state_handle_exception_entry_point_offset();
-  
+ 
   static word OffsetFromThread(const dart::Object& object);
   static intptr_t OffsetFromThread(const dart::RuntimeEntry* runtime_entry);
 };
