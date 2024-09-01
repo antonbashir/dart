@@ -72,7 +72,7 @@
       // on a per-file basis, since the analyzer is designed to work with
       // user code not sdk code.
       "sdk/lib",
-      
+
       // I would have expected the analyzer to automatically exclude these
       // since it's in .gitignore, but it doesn't seem to.
       "xcodebuild",
