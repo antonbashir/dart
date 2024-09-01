@@ -8637,6 +8637,9 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(PP);
   __ PopRegister(FPREG);
 
+  // __ movq(Address(THR, target::Thread::top_exit_frame_info_offset()),
+  //         Immediate(0));
+  // // Restore the pool pointer.
   // __ RestoreCodePointer();
   // if (FLAG_precompiled_mode) {
   //   __ movq(PP, Address(THR, target::Thread::global_object_pool_offset()));
