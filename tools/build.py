@@ -165,7 +165,7 @@ def BuildOneConfig(options, targets, target_os, mode, arch, sanitizer, env):
     build_config = utils.GetBuildConf(mode, arch, target_os, sanitizer)
     out_dir = utils.GetBuildRoot(HOST_OS, mode, arch, target_os, sanitizer)
     using_rbe = False
-    command = ['buildtools/ninja/ninja', '-j16', '-C', out_dir]
+    command = ['buildtools/ninja/ninja', '-C', out_dir]
     if options.verbose:
         command += ['-v']
     if UseRBE(out_dir):

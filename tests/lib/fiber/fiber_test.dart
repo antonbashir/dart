@@ -12,30 +12,14 @@ void main() {
   print("after start");
 }
 
-void asyncf() async {
-  await Future.delayed(Duration.zero);
-  print("asyncf");
-}
-
 void mainEntry() {
   print("main: entry");
   commonState += "main -> ";
   mainFiber.fork(childFiber);
-  asyncf();
   commonState += "main -> ";
   print("main: after child transfer");
-  notinlfunc();
+  mainFiber.transfer(childFiber);
   print(commonState);
-}
-
-@pragma("vm:never-inline")
-void notinlfunc() {
-  mainFiber.transfer(childFiber);
-}
-
-@pragma("vm:prefer-inline")
-void inlfunc() {
-  mainFiber.transfer(childFiber);
 }
 
 void childEntry() {

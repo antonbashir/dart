@@ -415,11 +415,11 @@ class FlowGraphBuilder : public BaseFlowGraphBuilder {
   Fragment Call1ArgStub(TokenPosition position,
                         Call1ArgStubInstr::StubId stub_id);
   
-  Fragment CoroutineInitialize(TokenPosition position);
+  Fragment CoroutineInitialize();
   
-  Fragment CoroutineTransfer(TokenPosition position);
+  Fragment CoroutineTransfer();
  
-  Fragment CoroutineFork(TokenPosition position);
+  Fragment CoroutineFork();
   
   // Generates Suspend instruction.
   Fragment Suspend(TokenPosition position, SuspendInstr::StubId stub_id);

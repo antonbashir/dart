@@ -401,6 +401,7 @@ class Thread : public ThreadState {
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
 
   uword GetSavedStackLimit() const;
+  bool HasStackHeadroom() const;
 
   // Access to the current stack limit for generated code. Either the true OS
   // thread's stack limit minus some headroom, or a special value to trigger

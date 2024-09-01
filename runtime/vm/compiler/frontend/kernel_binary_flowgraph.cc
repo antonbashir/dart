@@ -3371,12 +3371,6 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
 
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
-    case MethodRecognizer::kCoroutineInitialize:
-      return BuildCoroutineInitialize();
-    case MethodRecognizer::kCoroutineTransfer:
-      return BuildCoroutineTransfer();
-    case MethodRecognizer::kCoroutineFork:
-      return BuildCoroutineFork();
     case MethodRecognizer::kNativeEffect:
       return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
@@ -6018,53 +6012,6 @@ Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
   Fragment code;
   code += NullConstant();  // Return type is void.
   return code;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineInitialize() {
-  Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-  instructions += BuildExpression();
-  ReadListLength();
-  instructions += B->CoroutineInitialize(TokenPosition::kNoSource);
-  return instructions;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineTransfer() {
-  Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-  instructions += BuildExpression();
-  LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
-  instructions += BuildExpression();
-  LocalVariable* to = MakeTemporary();
-  instructions += LoadLocal(to);
-  ReadListLength();
-  instructions += B->CoroutineTransfer(TokenPosition::kNoSource);
-  instructions += Drop();
-  instructions += Drop();
-  return instructions;
-}
-
-Fragment StreamingFlowGraphBuilder::BuildCoroutineFork() {
-  Fragment instructions;
-  ReadUInt();
-  ReadListLength();
-  ReadListLength();
-  instructions += BuildExpression();
-  LocalVariable* from = MakeTemporary();
-  instructions += LoadLocal(from);
-  instructions += BuildExpression();
-  LocalVariable* to = MakeTemporary();
-  instructions += LoadLocal(to);
-  ReadListLength();
-  instructions += B->CoroutineFork(TokenPosition::kNoSource);
-  instructions += Drop();
-  instructions += Drop();
-  return instructions;
 }
 
 Fragment StreamingFlowGraphBuilder::BuildReachabilityFence() {

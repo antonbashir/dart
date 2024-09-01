@@ -26,9 +26,7 @@
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 #include "vm/compiler/frontend/prologue_builder.h"
 #include "vm/compiler/jit/compiler.h"
-#include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
-#include "vm/debugger.h"
 #include "vm/kernel_isolate.h"
 #include "vm/kernel_loader.h"
 #include "vm/log.h"
@@ -41,7 +39,6 @@
 #include "vm/scopes.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
-#include "vm/token_position.h"
 
 namespace dart {
 
@@ -1143,6 +1140,9 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
+    case MethodRecognizer::kCoroutineFork:
+    case MethodRecognizer::kCoroutineInitialize:
+    case MethodRecognizer::kCoroutineTransfer:
       return true;
     default:
       return false;
@@ -1915,6 +1915,26 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
           CheckWritableInstr::kDeeplyImmutableAttachNativeFinalizer);
       body += NullConstant();
       break;
+    case MethodRecognizer::kCoroutineInitialize: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += CoroutineInitialize();
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutineTransfer: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineTransfer();
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutineFork: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineFork();
+      body += NullConstant();
+      break;
+    }
 #define IL_BODY(method, slot)                                                  \
   case MethodRecognizer::k##method:                                            \
     ASSERT_EQUAL(function.NumParameters(), 1);                                 \
@@ -4745,28 +4765,22 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineInitialize(TokenPosition position) {
-  Fragment code;
-  CoroutineInitializeStubInstr* instr = new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
-  Push(instr);
-  code <<= instr;
-  return code;
+Fragment FlowGraphBuilder::CoroutineInitialize() {
+  CoroutineInitializeStubInstr* instr =
+      new (Z) CoroutineInitializeStubInstr(Pop(), GetNextDeoptId());
+  return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineTransfer(TokenPosition position) {
-  Fragment code;
-  CoroutineTransferStubInstr* instr = new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
-  Push(instr);
-  code <<= instr;
-  return code;
+Fragment FlowGraphBuilder::CoroutineTransfer() {
+  CoroutineTransferStubInstr* instr =
+      new (Z) CoroutineTransferStubInstr(Pop(), Pop(), GetNextDeoptId());
+  return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineFork(TokenPosition position) {
-  Fragment code;
-  CoroutineForkStubInstr* instr = new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
-  Push(instr);
-  code <<= instr;
-  return code;
+Fragment FlowGraphBuilder::CoroutineFork() {
+  CoroutineForkStubInstr* instr =
+      new (Z) CoroutineForkStubInstr(Pop(), Pop(), GetNextDeoptId());
+  return Fragment(instr);
 }
 
 Fragment FlowGraphBuilder::Suspend(TokenPosition position,

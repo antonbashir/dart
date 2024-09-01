@@ -153,7 +153,15 @@ library dart.core;
 import "dart:collection";
 import "dart:_internal" hide Symbol, LinkedList, LinkedListEntry;
 import "dart:_internal" as internal show Symbol;
-import "dart:convert" show ascii, base64, Base64Codec, Encoding, latin1, StringConversionSink, utf8;
+import "dart:convert"
+    show
+        ascii,
+        base64,
+        Base64Codec,
+        Encoding,
+        latin1,
+        StringConversionSink,
+        utf8;
 import "dart:math" show Random; // Used by List.shuffle.
 import "dart:typed_data" show Uint8List;
 
@@ -162,10 +170,23 @@ export "dart:async" show Future, Stream;
 @Since("2.12")
 export "dart:async" show FutureExtensions;
 @Since("3.0")
-export "dart:async" show FutureIterable, FutureRecord2, FutureRecord3, FutureRecord4, FutureRecord5, FutureRecord6, FutureRecord7, FutureRecord8, FutureRecord9, ParallelWaitError;
+export "dart:async"
+    show
+        FutureIterable,
+        FutureRecord2,
+        FutureRecord3,
+        FutureRecord4,
+        FutureRecord5,
+        FutureRecord6,
+        FutureRecord7,
+        FutureRecord8,
+        FutureRecord9,
+        ParallelWaitError;
 
 export "dart:collection" show NullableIterableExtensions, IterableExtensions;
+
 export "dart:fiber" show Fiber;
+
 part "annotations.dart";
 part "bigint.dart";
 part "bool.dart";

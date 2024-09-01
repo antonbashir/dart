@@ -9455,7 +9455,7 @@ void Deserializer::ReadInstructions(CodePtr code, bool deferred) {
   instr = image_reader_->GetInstructionsAt(active_offset);
   unchecked_offset = ReadUnsigned();
   code->untag()->active_instructions_ = instr;
-  Code::InitializeCachedEntryPointsFrom(code, instr, unchecked_offset);    
+  Code::InitializeCachedEntryPointsFrom(code, instr, unchecked_offset);
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 

@@ -26,7 +26,8 @@ void main() {
   testFixedLengthList(<T>(T t) => List<T>.filled(4, t).toList(growable: false));
   // ListBase implementation of List.
   testFixedLengthList(<T>(T t) => new MyFixedList(List<T>.filled(4, t)));
-  testFixedLengthList(<T>(T t) => new MyFixedList<T>(List<T>.filled(4, t)).toList(growable: false));
+  testFixedLengthList(<T>(T t) =>
+      new MyFixedList<T>(List<T>.filled(4, t)).toList(growable: false));
 
   // Growable lists. Initial length 0.
   testGrowableList(<T>(T t) => <T>[].toList());
@@ -84,7 +85,8 @@ void testErrors() {
       Expect.isNotNull(realError, "$name should not fail");
       Expect.isTrue(actualError is RangeError, "$name is-error: $actualError");
       Expect.equals(realError.name, actualError.name, "$name name");
-      Expect.equals(realError.invalidValue, actualError.invalidValue, "$name[0:l+1] value");
+      Expect.equals(realError.invalidValue, actualError.invalidValue,
+          "$name[0:l+1] value");
       Expect.equals(realError.start, actualError.start, "$name[0:l+1] start");
       Expect.equals(realError.end, actualError.end, "$name[0:l+1] end");
       return;
@@ -275,7 +277,8 @@ void testUntypedListTests(List list) {
 void testLengthInvariantOperations(List<int?> list) {
   testTypedLengthInvariantOperations(list);
 
-  Expect.throwsTypeError(() => testUntypedListTests(list), 'List<int> cannot store non-ints');
+  Expect.throwsTypeError(
+      () => testUntypedListTests(list), 'List<int> cannot store non-ints');
 
   // Argument errors on bad indices. List is still [0, 1, 2, 3].
 

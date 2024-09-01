@@ -225,7 +225,7 @@ ObjectPtr DartEntry::ResolveCallable(Thread* thread,
     if (function.IsNull()) {
       break;
     }
-    if (!OSThread::Current()->HasStackHeadroom()) {
+    if (!Thread::Current()->HasStackHeadroom()) {
       const Instance& exception = Instance::Handle(
           zone, isolate_group->object_store()->stack_overflow());
       return UnhandledException::New(exception, StackTrace::Handle(zone));

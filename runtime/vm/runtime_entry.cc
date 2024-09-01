@@ -13,7 +13,6 @@
 #include "vm/compiler/api/deopt_id.h"
 #include "vm/compiler/api/type_check_mode.h"
 #include "vm/compiler/jit/compiler.h"
-#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -35,7 +34,6 @@
 #include "vm/service_isolate.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
-#include "vm/tagged_pointer.h"
 #include "vm/thread.h"
 #include "vm/type_testing_stubs.h"
 #include "vm/zone_text_buffer.h"
@@ -3156,7 +3154,7 @@ DEFINE_RUNTIME_ENTRY(InterruptOrStackOverflow, 0) {
   // If an interrupt happens at the same time as a stack overflow, we
   // process the stack overflow now and leave the interrupt for next
   // time.
-  if (!thread->os_thread()->HasStackHeadroom() ||
+  if (!thread->HasStackHeadroom() ||
       IsCalleeFrameOf(thread->GetSavedStackLimit(), stack_pos)) {
     if (FLAG_verbose_stack_overflow) {
       OS::PrintErr("Stack overflow\n");

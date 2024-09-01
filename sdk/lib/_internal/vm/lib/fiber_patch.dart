@@ -5,15 +5,15 @@ import "dart:async" show FutureOr;
 const _kRootContextSize = 4096;
 
 @pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineInitialize")
+@pragma("vm:never-inline")
 external void _coroutineInitialize(_Coroutine root);
 
 @pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineTransfer")
+@pragma("vm:never-inline")
 external void _coroutineTransfer(_Coroutine from, _Coroutine to);
 
 @pragma("vm:recognized", "other")
-@pragma("vm:external-name", "Fiber_coroutineFork")
+@pragma("vm:never-inline")
 external void _coroutineFork(_Coroutine from, _Coroutine to);
 
 @pragma("vm:entry-point")
@@ -61,6 +61,6 @@ class Fiber {
   @patch
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
-  // _coroutineFork(_current, to._current);
+    _coroutineFork(_current, to._current);
   }
 }

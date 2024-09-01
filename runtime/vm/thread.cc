@@ -759,6 +759,14 @@ uword Thread::GetSavedStackLimit() const {
              : coroutine_->untag()->stack_limit();
 }
 
+bool Thread::HasStackHeadroom() const {
+  if (coroutine_ != nullptr) {
+    return coroutine_->untag()->stack_base() >
+           coroutine_->untag()->stack_limit();
+  }
+  return os_thread()->HasStackHeadroom();
+}
+
 static bool IsInterruptLimit(uword limit) {
   return (limit & ~Thread::kInterruptsMask) ==
          (kInterruptStackLimit & ~Thread::kInterruptsMask);
