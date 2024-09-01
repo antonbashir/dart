@@ -15,7 +15,6 @@
 #include "vm/object_store.h"
 #include "vm/resolver.h"
 #include "vm/stack_frame.h"
-#include "vm/token_position.h"
 
 namespace dart {
 namespace kernel {

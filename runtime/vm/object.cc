@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/object.h"
-#include <sys/mman.h>
 
 #include <memory>
 
@@ -829,8 +828,8 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  { 
-    *sentinel_ ^= Sentinel::New(); 
+  {
+    *sentinel_ ^= Sentinel::New();
   }
 
   // Allocate and initialize optimizing compiler constants.

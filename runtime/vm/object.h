@@ -5,7 +5,6 @@
 #ifndef RUNTIME_VM_OBJECT_H_
 #define RUNTIME_VM_OBJECT_H_
 
-#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -7040,7 +7039,7 @@ class Code : public Object {
 
     // Layout of entries describing comments.
     enum {
-      kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.    
+      kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.   
       kCommentEntry,       // Comment text as a String.
       kNumberOfEntries
     };

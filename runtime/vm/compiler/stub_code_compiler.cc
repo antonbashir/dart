@@ -2402,7 +2402,6 @@ void StubCodeCompiler::GenerateResumeStub() {
     __ Bind(&okay);
   }
 #endif
-
   if (!FLAG_precompiled_mode) {
     // Copy Code object (part of the fixed frame which is not copied below)
     // and restore pool pointer.

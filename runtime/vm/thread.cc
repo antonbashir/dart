@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/thread.h"
-#include <cstddef>
 
 #include "vm/cpu.h"
 #include "vm/dart_api_state.h"
@@ -23,7 +22,6 @@
 #include "vm/service.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
-#include "vm/tagged_pointer.h"
 #include "vm/thread_interrupter.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
