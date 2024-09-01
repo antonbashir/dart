@@ -12705,7 +12705,7 @@ class Coroutine : public Instance {
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
-  static CoroutinePtr New(uintptr_t size, FunctionPtr entry);
+  static CoroutinePtr New(void** stackb_base, uintptr_t stack_size, FunctionPtr entry);
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
