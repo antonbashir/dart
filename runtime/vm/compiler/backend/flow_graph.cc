@@ -6,7 +6,6 @@
 
 #include <array>
 
-#include "platform/text_buffer.h"
 #include "vm/bit_vector.h"
 #include "vm/compiler/backend/dart_calling_conventions.h"
 #include "vm/compiler/backend/flow_graph_compiler.h"
