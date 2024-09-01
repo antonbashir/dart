@@ -35,7 +35,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   Fiber._({required int size, required void Function() entry, required String name})
       : this.name = name,
-        _current = _Coroutine._(size, entry) {}
+        _current = _Coroutine._(size, entry);
 
   @patch
   @pragma("vm:prefer-inline")

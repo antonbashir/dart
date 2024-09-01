@@ -7,7 +7,7 @@ class Fiber {
   FiberState get state => _state;
   var _state = FiberState.created;
   @patch
-  Fiber._({required int size, required void Function() entry, required String name}) : this.name = name {}
+  Fiber._({required int size, required void Function() entry, required String name}) : this.name = name;
   @patch
   void start() { throw UnsupportedError("Fiber.start"); }
   @patch
