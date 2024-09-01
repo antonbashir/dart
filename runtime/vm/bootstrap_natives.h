@@ -262,9 +262,6 @@ namespace dart {
   V(GrowableList_setData, 2)                                                   \
   V(Internal_unsafeCast, 1)                                                    \
   V(Internal_nativeEffect, 1)                                                  \
-  V(Fiber_coroutineInitialize, 1)                                              \
-  V(Fiber_coroutineTransfer, 2)                                                \
-  V(Fiber_coroutineFork, 2)                                                    \
   V(Internal_collectAllGarbage, 0)                                             \
   V(Internal_makeListFixedLength, 1)                                           \
   V(Internal_makeFixedListUnmodifiable, 1)                                     \
@@ -316,6 +313,9 @@ namespace dart {
   V(DartNativeApiFunctionPointer, 1)                                           \
   V(TransferableTypedData_factory, 2)                                          \
   V(TransferableTypedData_materialize, 1)                                      \
+  V(Fiber_coroutineInitialize, 1)                                              \
+  V(Fiber_coroutineTransfer, 2)                                                \
+  V(Fiber_coroutineFork, 2)                                                    \
   V(Coroutine_factory, 3)
 
 // List of bootstrap native entry points used in the dart:mirror library.

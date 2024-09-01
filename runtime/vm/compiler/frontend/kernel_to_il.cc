@@ -26,9 +26,7 @@
 #include "vm/compiler/frontend/kernel_translation_helper.h"
 #include "vm/compiler/frontend/prologue_builder.h"
 #include "vm/compiler/jit/compiler.h"
-#include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
-#include "vm/debugger.h"
 #include "vm/kernel_isolate.h"
 #include "vm/kernel_loader.h"
 #include "vm/log.h"
@@ -41,7 +39,6 @@
 #include "vm/scopes.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
-#include "vm/token_position.h"
 
 namespace dart {
 
