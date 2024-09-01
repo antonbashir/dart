@@ -1,8 +1,8 @@
 import 'dart:fiber';
 import 'dart:async';
 
-final mainFiber = Fiber.main(size: 1024 * 1024, entry: mainEntry);
-final childFiber = Fiber.child(size: 1024 * 1024, entry: childEntry, name: "child");
+final mainFiber = Fiber.main(entry: mainEntry);
+final childFiber = Fiber.child(entry: childEntry, name: "child");
 
 var commonState = "";
 

@@ -2,8 +2,6 @@ import "dart:_internal" show patch;
 import "dart:fiber";
 import "dart:async" show FutureOr;
 
-const _kRootContextSize = 4096;
-
 @pragma("vm:recognized", "other")
 @pragma("vm:never-inline")
 external void _coroutineInitialize(_Coroutine root);
@@ -33,18 +31,11 @@ class Fiber {
   FiberState get state => _state;
   var _state = FiberState.created;
 
+  @patch
   @pragma("vm:prefer-inline")
   Fiber._({required int size, required void Function() entry, required String name})
       : this.name = name,
         _current = _Coroutine._(size, entry) {}
-
-  @patch
-  @pragma("vm:prefer-inline")
-  factory Fiber.main({required int size, required void Function() entry}) => Fiber._(size: size, entry: entry, name: "main");
-
-  @patch
-  @pragma("vm:prefer-inline")
-  factory Fiber.child({required int size, required void Function() entry, required String name}) => Fiber._(size: size, entry: entry, name: name);
 
   @patch
   @pragma("vm:prefer-inline")

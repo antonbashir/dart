@@ -12,7 +12,7 @@ namespace dart {
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(1));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(2));
-  void* stack = VirtualMemory::Allocate(sizeof(word) * size.Value(), false, false, "coroutine-stack")->address();
+  void* stack = VirtualMemory::Allocate(size.Value() * kWordSize, false, false, "coroutine-stack")->address();
   return Coroutine::New((void**)stack, size.Value(), Function::Handle(entry.function()).ptr());
 }
 }  // namespace dart
