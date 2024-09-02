@@ -26632,7 +26632,6 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(void** stack_base, uintptr_t stack_size, FunctionPtr entry) {
   const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  *(stack_base--) = 0;
   NoSafepointScope no_safepoint;
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - stack_size);
