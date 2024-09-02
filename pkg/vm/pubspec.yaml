@@ -1,0 +1,29 @@
+name: vm
+description: VM specific Dart code and helper scripts
+# This package is not intended for consumption on pub.dev. DO NOT publish.
+publish_to: none
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dependencies:
+  _fe_analyzer_shared: any
+  args: any
+  build_integration: any
+  collection: any
+  crypto: any
+  front_end: any
+  kernel: any
+  package_config: any
+  yaml: any
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dev_dependencies:
+  dart2wasm: any
+  expect: any
+  json_rpc_2: any
+  lints: any
+  path: any
+  test: any
+  web_socket_channel: any
