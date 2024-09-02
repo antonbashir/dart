@@ -1,5 +1,0 @@
-library test;
-
-main() {}
-
-void f(List<String> y) {}

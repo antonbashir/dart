@@ -1,3 +1,0 @@
-main() async {
-  await for () {}
-}

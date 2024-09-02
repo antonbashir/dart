@@ -1,5 +1,0 @@
-const dynamic a = null;
-
-const dynamic b = a();
-
-main() {}

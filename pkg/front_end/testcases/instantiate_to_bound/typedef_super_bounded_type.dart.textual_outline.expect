@@ -1,7 +1,0 @@
-typedef A<T>(T p);
-
-typedef B<S extends A<S>>(S p);
-
-B b = throw '';
-
-main() {}

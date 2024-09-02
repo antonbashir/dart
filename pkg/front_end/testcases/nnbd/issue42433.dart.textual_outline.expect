@@ -1,7 +1,0 @@
-class X {}
-
-checkme<T extends X>(T? t) {}
-
-typedef Test<T extends X>(T? t);
-
-main() {}

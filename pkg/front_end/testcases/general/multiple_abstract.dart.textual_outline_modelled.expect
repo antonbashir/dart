@@ -1,9 +1,0 @@
-abstract class Interface1 {
-  void method();
-}
-
-abstract class Interface2 {
-  void method();
-}
-
-class Class implements Interface1, Interface2 {}

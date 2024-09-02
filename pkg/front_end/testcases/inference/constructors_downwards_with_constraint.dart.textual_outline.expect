@@ -1,9 +1,0 @@
-library test;
-
-class A {}
-
-class B extends A {}
-
-class Foo<T extends A> {}
-
-void main() {}

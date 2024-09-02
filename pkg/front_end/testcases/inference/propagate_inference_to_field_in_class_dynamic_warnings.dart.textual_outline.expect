@@ -1,7 +1,0 @@
-library test;
-
-class A {
-  int x = 2;
-}
-
-main() {}

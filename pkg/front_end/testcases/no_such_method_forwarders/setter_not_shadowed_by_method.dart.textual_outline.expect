@@ -1,7 +1,0 @@
-class A {
-  void foo(int x) {}
-  void set foo(int x);
-  dynamic noSuchMethod(Invocation i) => null;
-}
-
-main() {}

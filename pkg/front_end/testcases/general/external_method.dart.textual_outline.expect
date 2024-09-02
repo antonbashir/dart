@@ -1,7 +1,0 @@
-external void externalMethod();
-
-class Class {
-  external void externalMethod();
-}
-
-void main() {}

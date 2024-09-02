@@ -1,7 +1,0 @@
-typedef F<T> = T Function(T, T);
-
-test1() {}
-
-test2() {}
-
-main() {}

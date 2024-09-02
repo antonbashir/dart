@@ -1,5 +1,0 @@
-import './foo_lib.dart';
-
-const Set<Foo> foo = <Foo>{Foo.bar()};
-
-main() {}

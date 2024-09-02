@@ -1,9 +1,0 @@
-class C {
-  covariant late final int x;
-}
-
-class D extends C {
-  set x(num value) {}
-}
-
-main() {}

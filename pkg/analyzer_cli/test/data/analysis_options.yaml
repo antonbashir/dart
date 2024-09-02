@@ -1,2 +1,0 @@
-# This empty analysis options file creates a new analysis context in order to
-# isolate the tests from the settings in //pkg/analyzer_cli/analysis_options.yaml.

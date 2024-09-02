@@ -1,8 +1,0 @@
-enum E {
-  foo;
-
-  const E([int x = 0, String y = "", num? z]);
-  const E.named(int x, {String y = "", bool b = false, String? z, bool? t});
-}
-
-main() {}

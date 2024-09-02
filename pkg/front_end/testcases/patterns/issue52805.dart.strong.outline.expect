@@ -1,8 +1,0 @@
-library;
-import self as self;
-import "dart:core" as core;
-
-static method use(dynamic o) → dynamic
-  ;
-static method f(core::List<core::int> list) → () → void
-  ;

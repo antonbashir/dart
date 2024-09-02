@@ -1,3 +1,0 @@
-main() {}
-
-void Function<S2 extends R?>() i1<R>() => <S2 extends R?>() {};

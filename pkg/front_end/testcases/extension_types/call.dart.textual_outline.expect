@@ -1,3 +1,0 @@
-extension type E(T Function<T>(T) call) {}
-
-method(E e) {}

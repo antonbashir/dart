@@ -1,7 +1,0 @@
-part 'field_setter_conflict_part.dart';
-
-void set topLevelFieldInPartSetterInMain(int? value) {}
-
-int? topLevelFieldInMainSetterInPart;
-
-main() {}

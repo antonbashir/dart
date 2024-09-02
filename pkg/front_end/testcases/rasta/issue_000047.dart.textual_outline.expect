@@ -1,5 +1,0 @@
-typedef void T(C<C>);
-
-T test() => throw '';
-
-main() {}

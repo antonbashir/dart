@@ -1,9 +1,0 @@
-class C {}
-
-errors() {}
-
-extension E on C {
-  errors() {}
-}
-
-main() {}

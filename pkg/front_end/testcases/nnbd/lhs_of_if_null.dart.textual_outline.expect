@@ -1,5 +1,0 @@
-Object f() => g(null) ?? 0;
-
-T g<T>(T t) => t;
-
-main() {}

@@ -1,7 +1,0 @@
-library;
-import self as self;
-
-import "dart:js_interop";
-
-static method main() → void
-  ;

@@ -1,3 +1,0 @@
-extension type ET1(ET2 it) {}
-
-extension type ET2(ET2 it) {}

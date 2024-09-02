@@ -1,6 +1,0 @@
-abstract class A {
-  T bar<T>();
-  String foo() => bar()!;
-}
-
-main() {}

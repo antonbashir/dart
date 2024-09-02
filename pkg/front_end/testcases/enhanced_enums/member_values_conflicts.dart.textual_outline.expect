@@ -1,8 +1,0 @@
-enum E {
-  e1,
-  e2;
-
-  void set values(List<E> val) {}
-}
-
-main() {}

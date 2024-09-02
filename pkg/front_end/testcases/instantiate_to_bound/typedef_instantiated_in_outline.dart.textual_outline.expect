@@ -1,8 +1,0 @@
-typedef A<T extends num>(T p);
-
-class B {
-  foo(A a) => throw '';
-  A bar() => throw '';
-}
-
-main() {}

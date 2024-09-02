@@ -1,7 +1,0 @@
-void errors() {}
-
-void _takesObject(Object o) {}
-
-void _takesStackTrace(StackTrace o) {}
-
-void main() {}

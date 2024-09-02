@@ -1,3 +1,0 @@
-foo(Never x, Never? y) {}
-
-main() {}

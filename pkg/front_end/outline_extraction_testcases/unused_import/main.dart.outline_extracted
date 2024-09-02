@@ -1,8 +1,0 @@
-org-dartlang-testcase:///main.dart:
-import "foo.dart";
-void main() {}
-
-
-
-
-org-dartlang-testcase:///foo.dart:

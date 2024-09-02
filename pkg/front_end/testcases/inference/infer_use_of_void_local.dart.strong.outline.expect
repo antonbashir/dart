@@ -1,9 +1,0 @@
-library test;
-import self as self;
-
-static method f() → void
-  ;
-static method g() → void
-  ;
-static method main() → dynamic
-  ;

@@ -1,9 +1,0 @@
-library test;
-
-String g() => '';
-
-int f() => 0;
-
-main() {}
-
-var v = [f, g];

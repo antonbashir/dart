@@ -1,9 +1,0 @@
-library test;
-
-List<T> f<T>(T g()) => <T>[g()];
-
-main() {}
-
-var v = (f<int>)(() {
-  return 1;
-});

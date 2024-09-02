@@ -1,5 +1,0 @@
-String test(Object? o) {}
-
-main() {}
-
-expect(expected, actual) {}

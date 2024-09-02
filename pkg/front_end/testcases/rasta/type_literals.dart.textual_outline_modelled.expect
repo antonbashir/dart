@@ -1,9 +1,0 @@
-class C<T> {
-  test() {}
-}
-
-main() {}
-
-typedef void Func();
-
-use(x) {}

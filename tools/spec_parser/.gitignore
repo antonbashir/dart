@@ -1,7 +1,0 @@
-*Lexer.java
-*Parser.java
-*Listener.java
-*.tokens
-*.class
-*.interp
-*.dot

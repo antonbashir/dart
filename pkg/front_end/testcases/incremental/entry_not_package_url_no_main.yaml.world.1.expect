@@ -1,5 +1,0 @@
-main = <No Member>;
-library from "package:untitled/main.dart" as main {
-
-  static method notMain() → dynamic {}
-}

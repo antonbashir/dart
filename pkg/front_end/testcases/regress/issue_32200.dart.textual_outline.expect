@@ -1,7 +1,0 @@
-import "issue_32200.dart" as self;
-
-class Foo {
-  self.Foo self;
-}
-
-main() {}

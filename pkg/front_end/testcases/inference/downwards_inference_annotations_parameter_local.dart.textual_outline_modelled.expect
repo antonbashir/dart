@@ -1,9 +1,0 @@
-library test;
-
-class Foo {
-  const Foo(List<String> l);
-}
-
-main() {}
-
-void test() {}

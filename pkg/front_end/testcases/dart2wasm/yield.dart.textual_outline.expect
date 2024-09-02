@@ -1,3 +1,0 @@
-Iterable<int> method(Iterable<int> iterable) sync* {}
-
-Stream<int> asyncMethod(Stream<int> stream) async* {}

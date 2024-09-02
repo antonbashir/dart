@@ -1,7 +1,0 @@
-library test;
-
-class Foo<T extends Pattern> {
-  U method<U extends T>(U u) => u;
-}
-
-test() {}

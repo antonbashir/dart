@@ -1,7 +1,0 @@
-library test;
-
-class C {
-  static final f = (bool b) => b;
-}
-
-main() {}

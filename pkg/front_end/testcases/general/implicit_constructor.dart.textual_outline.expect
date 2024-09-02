@@ -1,9 +1,0 @@
-mixin M on Object {
-  void mixinMethod() {}
-}
-
-class B {}
-
-class C with M {}
-
-class D = Object with M;

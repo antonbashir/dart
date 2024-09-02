@@ -1,5 +1,0 @@
-library test;
-
-main() {}
-
-var f = () async => 0;

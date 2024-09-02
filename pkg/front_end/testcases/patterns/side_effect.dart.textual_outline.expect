@@ -1,3 +1,0 @@
-List<T> sideEffect<T>(List<T> list) {}
-
-method() {}

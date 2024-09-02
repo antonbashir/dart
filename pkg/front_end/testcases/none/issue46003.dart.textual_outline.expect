@@ -1,7 +1,0 @@
-class A {
-  final Function() foo;
-  A(this.foo);
-  void bar() {}
-}
-
-main() {}

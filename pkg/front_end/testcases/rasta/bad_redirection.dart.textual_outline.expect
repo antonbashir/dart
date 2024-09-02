@@ -1,9 +1,0 @@
-class Foo {
-  Foo() = Bar;
-}
-
-class Bar extends Foo {
-  factory Bar() => throw '';
-}
-
-main() {}

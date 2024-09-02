@@ -1,7 +1,0 @@
-class A {
-  A.bar();
-  A.foo(this.x);
-  late int x;
-}
-
-main() {}

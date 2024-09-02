@@ -1,5 +1,0 @@
-import 'dart:collection';
-
-LinkedListEntry y = throw '';
-
-main() {}

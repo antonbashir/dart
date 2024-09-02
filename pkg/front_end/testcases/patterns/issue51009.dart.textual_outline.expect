@@ -1,5 +1,0 @@
-extension on Object {
-  int get q => 42;
-}
-
-void main() {}

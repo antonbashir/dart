@@ -1,9 +1,0 @@
-class C {
-  static set C(v) {}
-}
-
-class D {
-  set D(v) {}
-}
-
-main() {}

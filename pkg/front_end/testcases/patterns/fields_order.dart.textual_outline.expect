@@ -1,6 +1,0 @@
-class A {
-  String get foo => "foo";
-  Object? get bar => null;
-}
-
-test(dynamic x) {}

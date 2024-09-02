@@ -1,5 +1,0 @@
-library test;
-
-var v = print;
-
-main() {}

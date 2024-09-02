@@ -1,7 +1,0 @@
-library;
-import self as self;
-
-static method testFor() → dynamic
-  ;
-static method testForIn() → dynamic
-  ;

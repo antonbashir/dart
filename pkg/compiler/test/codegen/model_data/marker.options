@@ -1,2 +1,0 @@
-spec=pkg/compiler/test/codegen/model_test.dart
-prod=pkg/compiler/test/codegen/model_test.dart
