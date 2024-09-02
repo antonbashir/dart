@@ -545,6 +545,9 @@ struct InstrAttrs {
   M(IntConverter, kNoGC)                                                       \
   M(BitCast, kNoGC)                                                            \
   M(Call1ArgStub, _)                                                           \
+  M(CoroutineInitialize, _)                                                    \
+  M(CoroutineTransfer, _)                                                      \
+  M(CoroutineFork, _)                                                          \
   M(LoadThread, kNoGC)                                                         \
   M(Deoptimize, kNoGC)                                                         \
   M(SimdOp, kNoGC)                                                             \
@@ -11471,6 +11474,88 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
+};
+
+class CoroutineInitializeInstr : public TemplateInstruction<1, NoThrow> {
+ public:
+  CoroutineInitializeInstr(Value* root, intptr_t deopt_id)
+      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+                            deopt_id) {
+    SetInputAt(0, root);
+  }
+
+  Value* root() const { return inputs_[0]; }
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineInitialize);
+  PRINT_OPERANDS_TO_SUPPORT
+  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeInstr, TemplateInstruction)
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeInstr);
+};
+
+class CoroutineTransferInstr : public TemplateInstruction<2, NoThrow> {
+ public:
+  CoroutineTransferInstr(Value* from, Value* to, intptr_t deopt_id)
+      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+                            deopt_id) {
+    SetInputAt(0, from);
+    SetInputAt(1, to);
+  }
+
+  Value* from() const { return inputs_[0]; }
+  Value* to() const { return inputs_[1]; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineTransfer);
+  PRINT_OPERANDS_TO_SUPPORT
+  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferInstr, TemplateInstruction)
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineTransferInstr);
+};
+
+class CoroutineForkInstr : public TemplateInstruction<2, NoThrow> {
+ public:
+  CoroutineForkInstr(Value* from, Value* to, intptr_t deopt_id)
+      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+                            deopt_id) {
+    SetInputAt(0, from);
+    SetInputAt(1, to);
+  }
+
+  Value* from() const { return inputs_[0]; }
+  Value* to() const { return inputs_[1]; }
+
+  virtual bool CanCallDart() const { return true; }
+  virtual bool ComputeCanDeoptimize() const { return false; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool HasUnknownSideEffects() const { return true; }
+  virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
+    return InputCount();
+  }
+
+  DECLARE_INSTRUCTION(CoroutineFork);
+  PRINT_OPERANDS_TO_SUPPORT
+
+  DECLARE_EMPTY_SERIALIZATION(CoroutineForkInstr, TemplateInstruction)
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoroutineForkInstr);
 };
 
 // Suspends execution using the suspend stub specified using [StubId].

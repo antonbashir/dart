@@ -922,6 +922,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(ObjectArrayLength, Array_length)                                           \
   V(Record_shape, Record_shape)                                                \
   V(SuspendState_getFunctionData, SuspendState_function_data)                  \
+  V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -1139,6 +1140,9 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kMathExp:
     case MethodRecognizer::kMathLog:
     case MethodRecognizer::kMathSqrt:
+    case MethodRecognizer::kCoroutineFork:
+    case MethodRecognizer::kCoroutineInitialize:
+    case MethodRecognizer::kCoroutineTransfer:
       return true;
     default:
       return false;
@@ -1911,6 +1915,26 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
           CheckWritableInstr::kDeeplyImmutableAttachNativeFinalizer);
       body += NullConstant();
       break;
+    case MethodRecognizer::kCoroutineInitialize: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += CoroutineInitialize();
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutineTransfer: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineTransfer();
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutineFork: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineFork();
+      body += NullConstant();
+      break;
+    }
 #define IL_BODY(method, slot)                                                  \
   case MethodRecognizer::k##method:                                            \
     ASSERT_EQUAL(function.NumParameters(), 1);                                 \
@@ -4738,6 +4762,24 @@ Fragment FlowGraphBuilder::Call1ArgStub(TokenPosition position,
   Call1ArgStubInstr* instr = new (Z) Call1ArgStubInstr(
       InstructionSource(position), stub_id, Pop(), GetNextDeoptId());
   Push(instr);
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineInitialize() {
+  CoroutineInitializeInstr* instr =
+      new (Z) CoroutineInitializeInstr(Pop(), GetNextDeoptId());
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineTransfer() {
+  CoroutineTransferInstr* instr =
+      new (Z) CoroutineTransferInstr(Pop(), Pop(), GetNextDeoptId());
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineFork() {
+  CoroutineForkInstr* instr =
+      new (Z) CoroutineForkInstr(Pop(), Pop(), GetNextDeoptId());
   return Fragment(instr);
 }
 

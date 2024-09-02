@@ -48,6 +48,12 @@ const Map<String, LibraryInfo> libraries = const {
     maturity: Maturity.STABLE,
     dart2jsPatchPath: '_internal/js_runtime/lib/async_patch.dart',
   ),
+  'fiber': const LibraryInfo(
+    'fiber/fiber.dart',
+    categories: 'Client,Server,Embedded',
+    maturity: Maturity.STABLE,
+    dart2jsPatchPath: '_internal/js_runtime/lib/fiber_patch.dart',
+  ),
   'collection': const LibraryInfo(
     'collection/collection.dart',
     categories: 'Client,Server,Embedded',

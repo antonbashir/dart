@@ -3774,6 +3774,20 @@ class UntaggedFutureOr : public UntaggedInstance {
   VISIT_TO(type_arguments)
 };
 
+class UntaggedCoroutine : public UntaggedInstance {
+  RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
+  VISIT_FROM(caller)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
+  VISIT_TO(entry)
+  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+  uword stack_base_;
+  uword stack_limit_;
+public:
+  uword stack_base() const { return stack_base_; }
+  uword stack_limit() const { return stack_limit_; }
+};
+
 #undef WSR_COMPRESSED_POINTER_FIELD
 
 }  // namespace dart

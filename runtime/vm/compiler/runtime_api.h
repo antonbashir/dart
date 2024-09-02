@@ -1034,6 +1034,16 @@ class SuspendState : public AllStatic {
   FINAL_CLASS();
 };
 
+class Coroutine : public AllStatic {
+ public:
+  static word caller_offset();
+  static word entry_offset();
+  static word stack_base_offset();
+  static word stack_limit_offset();
+  static word InstanceSize();
+  FINAL_CLASS();
+};
+
 class Integer : public AllStatic {
  public:
   static word InstanceSize();
@@ -1254,7 +1264,9 @@ class Thread : public AllStatic {
   static word bootstrap_native_wrapper_entry_point_offset();
   static word no_scope_native_wrapper_entry_point_offset();
   static word auto_scope_native_wrapper_entry_point_offset();
-
+  
+  static word coroutine_offset();
+  
 #define THREAD_XMM_CONSTANT_LIST(V)                                            \
   V(float_not)                                                                 \
   V(float_negate)                                                              \
@@ -1285,7 +1297,7 @@ class Thread : public AllStatic {
   static word suspend_state_suspend_sync_star_at_start_entry_point_offset();
 
   static word suspend_state_handle_exception_entry_point_offset();
-
+ 
   static word OffsetFromThread(const dart::Object& object);
   static intptr_t OffsetFromThread(const dart::RuntimeEntry* runtime_entry);
 };

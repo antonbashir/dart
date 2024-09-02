@@ -312,7 +312,11 @@ namespace dart {
   V(DartApiDLMinorVersion, 0)                                                  \
   V(DartNativeApiFunctionPointer, 1)                                           \
   V(TransferableTypedData_factory, 2)                                          \
-  V(TransferableTypedData_materialize, 1)
+  V(TransferableTypedData_materialize, 1)                                      \
+  V(Fiber_coroutineInitialize, 1)                                              \
+  V(Fiber_coroutineTransfer, 2)                                                \
+  V(Fiber_coroutineFork, 2)                                                    \
+  V(Coroutine_factory, 3)
 
 // List of bootstrap native entry points used in the dart:mirror library.
 #define MIRRORS_BOOTSTRAP_NATIVE_LIST(V)                                       \

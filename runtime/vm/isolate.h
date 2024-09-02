@@ -1004,6 +1004,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     T->field_table_values_ = field_table->table();
   }
 
+  CoroutinePtr saved_coroutine() const { return saved_coroutine_; }
+  void save_coroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
   }
@@ -1674,6 +1677,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
+  CoroutinePtr saved_coroutine_ = nullptr;
 
   GrowableObjectArrayPtr tag_table_;
 

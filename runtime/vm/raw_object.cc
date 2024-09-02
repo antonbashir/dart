@@ -236,6 +236,10 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
       instance_size = WeakSerializationReference::InstanceSize();
       break;
     }
+    case kCoroutineCid: {
+      instance_size = Coroutine::InstanceSize();
+      break;
+    }
     default: {
       // Get the (constant) instance size out of the class object.
       // TODO(koda): Add Size(ClassTable*) interface to allow caching in loops.
@@ -549,6 +553,7 @@ COMPRESSED_VISITOR(FinalizerEntry)
 COMPRESSED_VISITOR(NativeFinalizer)
 COMPRESSED_VISITOR(MirrorReference)
 COMPRESSED_VISITOR(UserTag)
+COMPRESSED_VISITOR(Coroutine)
 REGULAR_VISITOR(SubtypeTestCache)
 COMPRESSED_VISITOR(LoadingUnit)
 COMPRESSED_VISITOR(TypeParameters)

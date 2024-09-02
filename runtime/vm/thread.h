@@ -393,6 +393,16 @@ class Thread : public ThreadState {
   void SetStackLimit(uword value);
   void ClearStackLimit();
 
+  void RestoreCoroutine(CoroutinePtr coroutine);
+  CoroutinePtr SaveCoroutine();
+  void EnterCoroutine(CoroutinePtr coroutine);
+  void ExitCoroutine();
+  CoroutinePtr coroutine() const { return coroutine_; }
+  static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
+
+  uword GetSavedStackLimit() const;
+  bool HasStackHeadroom() const;
+
   // Access to the current stack limit for generated code. Either the true OS
   // thread's stack limit minus some headroom, or a special value to trigger
   // interrupts.
@@ -1188,6 +1198,7 @@ class Thread : public ThreadState {
   const uword* dispatch_table_array_ = nullptr;
   ObjectPtr* field_table_values_ = nullptr;
   ObjectPtr* shared_field_table_values_ = nullptr;
+  CoroutinePtr coroutine_ = nullptr;
 
   // Offsets up to this point can all fit in a byte on X64. All of the above
   // fields are very abundantly accessed from code. Thus, keeping them first

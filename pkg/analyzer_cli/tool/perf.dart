@@ -172,6 +172,7 @@ Set<Source?> scanReachableFiles(Uri entryUri) {
     'dart:convert',
     'dart:core',
     'dart:developer',
+    'dart:fiber',
     'dart:_internal',
     'dart:isolate',
     'dart:math',
