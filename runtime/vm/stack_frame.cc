@@ -355,9 +355,6 @@ CodePtr StackFrame::GetCodeObject() const {
     NoSafepointScope no_safepoint;
     CodePtr code = ReversePc::Lookup(isolate_group(), pc(),
                                      /*is_return_address=*/true);
-    if (code != Code::null()) {
-      ASSERT(code != Code::null());  
-    }
     ASSERT(code != Code::null());
     return code;
   }
