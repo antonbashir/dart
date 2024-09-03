@@ -7,12 +7,16 @@
 
 #include "vm/compiler/runtime_api.h"
 #include "vm/native_entry.h"
+#include "vm/virtual_memory.h"
 
 namespace dart {
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(1));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(2));
-  void** stack_base = (void**)((uintptr_t)mmap(0, size.Value() * sizeof(word), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) + size.Value());
-  return Coroutine::New(stack_base , size.Value(), Function::Handle(entry.function()).ptr());
+  VirtualMemory* stack_memory = VirtualMemory::AllocateStack(size.Value() * kWordSize);
+  uintptr_t stack_size = stack_memory->size();
+  void** stack_base = (void**)stack_memory->address() + stack_size;
+  ASSERT(Utils::IsAligned(stack_base, OS::ActivationFrameAlignment()));
+  return Coroutine::New(stack_base, stack_size, Function::Handle(entry.function()).ptr());
 }
 }  // namespace dart

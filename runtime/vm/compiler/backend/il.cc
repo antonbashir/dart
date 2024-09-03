@@ -8594,6 +8594,7 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
   __ PopRegister(kCoroutine);
   __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
 
@@ -8657,6 +8658,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
   __ LeaveDartFrame();
   __ set_constant_pool_allowed(true);
 
@@ -8694,6 +8696,7 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
   __ LeaveDartFrame();
   __ set_constant_pool_allowed(true);
 

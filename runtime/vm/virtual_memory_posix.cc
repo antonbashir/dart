@@ -334,6 +334,19 @@ VirtualMemory* VirtualMemory::Reserve(intptr_t size, intptr_t alignment) {
   return new VirtualMemory(region, region);
 }
 
+VirtualMemory* VirtualMemory::AllocateStack(intptr_t size) {
+  intptr_t alignment = OS::ActivationFrameAlignment();
+  intptr_t allocated_size = size;
+  void* address =
+      GenericMapAligned(nullptr, PROT_EXEC | PROT_READ | PROT_WRITE, size, alignment, allocated_size, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE);
+  if (address == nullptr) {
+    return nullptr;
+  }
+  MemoryRegion region(address, size);
+  return new VirtualMemory(region, region);
+
+}
+
 void VirtualMemory::Commit(void* address, intptr_t size) {
   ASSERT(Utils::IsAligned(address, PageSize()));
   ASSERT(Utils::IsAligned(size, PageSize()));
