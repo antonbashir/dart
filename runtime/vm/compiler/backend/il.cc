@@ -8578,9 +8578,9 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ set_constant_pool_allowed(false);
   __ EnterDartFrame(0);
   __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
+
   __ PushRegister(FPREG);
-  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
-  
+  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));   
   __ movq(compiler::Address(THR, Thread::top_exit_frame_info_offset()), SPREG);
 
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::entry_offset());
@@ -8592,6 +8592,7 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   
   __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ PopRegister(FPREG);
+
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   __ LeaveDartFrame();
   __ set_constant_pool_allowed(true);
@@ -8622,21 +8623,21 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ set_constant_pool_allowed(false);
-  __ EnterDartFrame(0);
-
-  __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
   __ StoreFieldToOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
   __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
 
-  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
-  __ PushRegister(kForkedCoroutine);
+  __ set_constant_pool_allowed(false);
+  __ EnterDartFrame(0);
+  __ PushRegister(FPREG);
   __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
+  __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
 
-  __ movq(compiler::Address(THR, Thread::top_exit_frame_info_offset()), SPREG);
+  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
+
+  __ PushRegister(kForkedCoroutine);
 
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, Coroutine::entry_offset());
   if (!FLAG_precompiled_mode) {
@@ -8645,19 +8646,20 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
   __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
 
-  __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ PopRegister(kForkedCoroutine);
-
   __ LoadFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+
   __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
   
-  __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
-
+  __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
+  __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   __ LeaveDartFrame();
   __ set_constant_pool_allowed(true);
+
+  __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
+  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
+  __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
 }
 
 LocationSummary* CoroutineTransferInstr::MakeLocationSummary(
@@ -8679,18 +8681,18 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
-  if (!FLAG_precompiled_mode) __ PushRegister(CODE_REG);
-  if (!FLAG_precompiled_mode) __ PushRegister(FUNCTION_REG);
+  __ set_constant_pool_allowed(false);
+  __ EnterDartFrame(0);
   __ PushRegister(FPREG);
+  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ StoreFieldToOffset(SPREG, kFromCoroutine, Coroutine::stack_base_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
-  __ PopRegister(FPREG);
-  if (!FLAG_precompiled_mode) __ PopRegister(FUNCTION_REG);
-  if (!FLAG_precompiled_mode) __ PopRegister(CODE_REG);
-  if (FLAG_precompiled_mode) { __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset())); } else { __ LoadPoolPointer(PP); }
   __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  __ LeaveDartFrame();
+  __ set_constant_pool_allowed(true);
 
   __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
