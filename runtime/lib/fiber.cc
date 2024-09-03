@@ -7,7 +7,6 @@
 
 #include "vm/compiler/runtime_api.h"
 #include "vm/native_entry.h"
-#include "vm/virtual_memory.h"
 
 namespace dart {
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
