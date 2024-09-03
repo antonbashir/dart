@@ -7,9 +7,12 @@ final childFiber = Fiber.child(entry: childEntry, name: "child");
 var commonState = "";
 
 void main() {
-  print("before start");
-  mainFiber.start();
-  print("after start");
+  while (true) {
+    commonState = "";
+    print("before start");
+    mainFiber.start();
+    print("after start");
+  }
 }
 
 void mainEntry() {

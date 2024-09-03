@@ -110,7 +110,7 @@ DEFINE_FLAG(bool,
             "Enable specializing megamorphic calls from unoptimized code.");
 DEFINE_FLAG(bool,
             verbose_stack_overflow,
-            false,
+            true,
             "Print additional details about stack overflow.");
 
 DECLARE_FLAG(int, reload_every);

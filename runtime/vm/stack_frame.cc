@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/stack_frame.h"
+#include <csignal>
 
 #include "platform/memory_sanitizer.h"
 #include "vm/code_descriptors.h"
@@ -305,6 +306,9 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     // tagged pointers, so fall through.
 #if defined(DEBUG)
     if (FLAG_precompiled_mode) {
+      if (!IsStubFrame()) {
+        raise(SIGINT);
+      }
       ASSERT(IsStubFrame());
     } else {
       ASSERT(!code.is_optimized() ||
