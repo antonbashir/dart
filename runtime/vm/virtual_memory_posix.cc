@@ -338,7 +338,7 @@ VirtualMemory* VirtualMemory::AllocateStack(intptr_t size) {
   intptr_t alignment = OS::ActivationFrameAlignment();
   intptr_t allocated_size = size;
   void* address =
-      GenericMapAligned(nullptr, PROT_EXEC | PROT_READ | PROT_WRITE, size, alignment, allocated_size, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE);
+      GenericMapAligned(nullptr, PROT_EXEC | PROT_READ | PROT_WRITE, size, alignment, allocated_size, MAP_PRIVATE | MAP_ANONYMOUS);
   if (address == nullptr) {
     return nullptr;
   }
