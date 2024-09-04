@@ -17,6 +17,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   uintptr_t stack_size = stack_memory->size();
   void** stack_base = (void**)stack_memory->address() + stack_size;
   ASSERT(Utils::IsAligned(stack_base, OS::ActivationFrameAlignment()));
+  ASSERT(Utils::IsAligned(stack_base-8, OS::ActivationFrameAlignment()));
   return Coroutine::New(stack_base, stack_size, Function::Handle(entry.function()).ptr());
 }
 }  // namespace dart
