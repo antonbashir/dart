@@ -18,7 +18,6 @@ void main() {
 void mainEntry() {
   print("main: entry");
   commonState += "main -> ";
-  print("main: after commonState +=");
   mainFiber.fork(childFiber);
   commonState += "main -> ";
   print("main: after child transfer");
@@ -29,7 +28,6 @@ void mainEntry() {
 void childEntry() {
   print("child: entry");
   commonState += "child -> ";
-  print("child: after commonState +=");
   childFiber.transfer(mainFiber);
   print("child: after main transfer");
   commonState += "child";
