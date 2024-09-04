@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+#include <cstdio>
 #include "vm/bootstrap_natives.h"
 
 #include "include/dart_api.h"
@@ -451,7 +452,9 @@ DEFINE_NATIVE_ENTRY(String_charAt, 0, 2) {
 DEFINE_NATIVE_ENTRY(String_concat, 0, 2) {
   const String& receiver =
       String::CheckedHandle(zone, arguments->NativeArgAt(0));
+  OS::Print("String_concat \n");
   GET_NON_NULL_NATIVE_ARGUMENT(String, b, arguments->NativeArgAt(1));
+  OS::Print("String_concat after arg\n");
   return String::Concat(receiver, b);
 }
 
