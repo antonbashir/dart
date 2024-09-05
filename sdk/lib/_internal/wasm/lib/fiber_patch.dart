@@ -14,4 +14,6 @@ class Fiber {
   void transfer(Fiber to) { throw UnsupportedError("Fiber.transfer"); }
   @patch
   void fork(Fiber to) { throw UnsupportedError("Fiber.fork"); }
+  @patch
+  static void idle() { throw UnsupportedError("Fiber.idle"); }
 }

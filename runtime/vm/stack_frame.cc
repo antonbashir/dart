@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/stack_frame.h"
-#include <csignal>
 
 #include "platform/memory_sanitizer.h"
 #include "vm/code_descriptors.h"

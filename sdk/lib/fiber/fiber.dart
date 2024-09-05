@@ -15,6 +15,8 @@ class Fiber {
   final String name;
   static late Fiber _main;
 
+  external static void idle();
+
   external FiberState get state;
   external Fiber._({required int size, required void Function() entry, required String name});
   factory Fiber.main({int size = _kDefaultStackSize, required void Function() entry}) => Fiber._(size: size, entry: entry, name: "main");

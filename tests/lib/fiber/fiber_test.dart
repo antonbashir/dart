@@ -1,6 +1,5 @@
 import 'dart:fiber';
 import 'dart:async';
-import 'dart:_internal';
 
 final mainFiber = Fiber.main(entry: mainEntry);
 final childFiber = Fiber.child(entry: childEntry, name: "child");
@@ -9,7 +8,7 @@ var commonState = "";
 
 void main() {
   while (true) {
-    VMInternalsForTesting.collectAllGarbage();
+    Fiber.idle();
     commonState = "";
     print("before start");
     mainFiber.start();

@@ -1,4 +1,4 @@
-import "dart:_internal" show patch;
+import "dart:_internal" show patch, VMInternalsForTesting;
 import "dart:fiber";
 import "dart:async" show FutureOr;
 
@@ -53,5 +53,10 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
     _coroutineFork(_current, to._current);
+  }
+
+  @patch
+  static void idle() {
+    VMInternalsForTesting.collectAllGarbage();
   }
 }
