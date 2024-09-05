@@ -78,7 +78,6 @@ Heap::~Heap() {
 
 uword Heap::AllocateNew(Thread* thread, intptr_t size) {
   ASSERT(thread->no_safepoint_scope_depth() == 0);
-  PrintSizes();
   CollectForDebugging(thread);
   uword addr = new_space_.TryAllocate(thread, size);
   if (LIKELY(addr != 0)) {

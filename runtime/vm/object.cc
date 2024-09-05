@@ -24058,9 +24058,7 @@ StringPtr String::Concat(const String& str1,
                          const String& str2,
                          Heap::Space space) {
   ASSERT(!str1.IsNull() && !str2.IsNull());
-  OS::Print("String_concat concat start: %s, %s\n", str1.ToCString(), str2.ToCString());
   intptr_t char_size = Utils::Maximum(str1.CharSize(), str2.CharSize());
-  OS::Print("String_concat char size: %d\n", (int)char_size);
   if (char_size == kTwoByteChar) {
     return TwoByteString::Concat(str1, str2, space);
   }
@@ -24487,11 +24485,8 @@ OneByteStringPtr OneByteString::Concat(const String& str1,
   intptr_t len2 = str2.Length();
   intptr_t len = len1 + len2;
   const String& result = String::Handle(OneByteString::New(len, space));
-  OS::Print("String_concat 1b result\n");
   String::Copy(result, 0, str1, 0, len1);
-  OS::Print("String_concat 1b str1 copy\n");
   String::Copy(result, len1, str2, 0, len2);
-  OS::Print("String_concat 1b str2 copy\n");
   return OneByteString::raw(result);
 }
 
@@ -24669,11 +24664,8 @@ TwoByteStringPtr TwoByteString::Concat(const String& str1,
   intptr_t len2 = str2.Length();
   intptr_t len = len1 + len2;
   const String& result = String::Handle(TwoByteString::New(len, space));
-  OS::Print("String_concat 2b result\n");
   String::Copy(result, 0, str1, 0, len1);
-  OS::Print("String_concat 2b str1.copy\n");
   String::Copy(result, len1, str2, 0, len2);
-  OS::Print("String_concat after concat\n");
   return TwoByteString::raw(result);
 }
 
@@ -28035,3 +28027,4 @@ ArrayPtr RecordShape::GetFieldNames(Thread* thread) const {
 }
 
 }  // namespace dart
+
