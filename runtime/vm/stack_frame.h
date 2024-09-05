@@ -193,7 +193,7 @@ class ExitFrame : public StackFrame {
 // dart code.
 class EntryFrame : public StackFrame {
  public:
-  bool IsValid() const { return StubCode::InInvocationStub(pc()); }
+  bool IsValid() const { return StubCode::InInvocationStub(pc()) || StubCode::InCoroutineEntryStub(pc()); }
   bool IsDartFrame(bool validate = true) const { return false; }
   bool IsStubFrame() const { return false; }
   bool IsEntryFrame() const { return true; }
@@ -264,7 +264,7 @@ class StackFrameIterator {
       }
       const uword pc =
           *(reinterpret_cast<uword*>(sp_ + (kSavedPcSlotFromSp * kWordSize)));
-      return !StubCode::InInvocationStub(pc);
+      return !StubCode::InInvocationStub(pc) && !StubCode::InCoroutineEntryStub(pc);
     }
 
     // Get next non entry/exit frame in the set (assumes a next frame exists).

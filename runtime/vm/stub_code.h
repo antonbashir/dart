@@ -49,6 +49,9 @@ class StubCode : public AllStatic {
   // transitioning into dart code.
   static bool InInvocationStub(uword pc);
 
+  // Check if specified pc is in the dart coroutine entry stub
+  static bool InCoroutineEntryStub(uword pc);
+
   // Check if the specified pc is in the jump to frame stub.
   static bool InJumpToFrameStub(uword pc);
 

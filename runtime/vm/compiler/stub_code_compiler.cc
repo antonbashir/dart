@@ -3234,7 +3234,6 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
 
 void StubCodeCompiler::GenerateCoroutineEntryStub() {
   const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
-  __ AddImmediate(FPREG, 0);
   __ EnterStubFrame();
   __ movq(Address(THR, Thread::top_exit_frame_info_offset()), FPREG);
   __ StoreFieldToOffset(FPREG, kCoroutine, Coroutine::top_exit_frame_offset());
