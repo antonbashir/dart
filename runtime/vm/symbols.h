@@ -445,6 +445,7 @@ class ObjectPointerVisitor;
   V(_initAsync, "_initAsync")                                                  \
   V(_initAsyncStar, "_initAsyncStar")                                          \
   V(_initSyncStar, "_initSyncStar")                                            \
+  V(_coroutineEntry, "_coroutineEntry")                                        \
   V(_coroutineInitialize, "_coroutineInitialize")                              \
   V(_coroutineTransfer, "_coroutineTransfer")                                  \
   V(_coroutineFork, "_coroutineFork")                                          \

@@ -12723,6 +12723,11 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
 
+  uword top_exit_frame() const { return untag()->top_exit_frame_; }
+  static uword top_exit_frame_offset() {
+    return OFFSET_OF(UntaggedCoroutine, top_exit_frame_);
+  }
+
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);
   friend class Class;

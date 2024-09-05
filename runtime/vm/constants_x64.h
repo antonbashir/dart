@@ -388,13 +388,17 @@ struct SuspendStubABI {
   static constexpr intptr_t kResumePcDistance = 5;
 };
 
-struct CoroutineInitializeABI {
+struct CoroutineEntryABI {
   static constexpr Register kCoroutineReg = RDI;
 };
 
+struct CoroutineInitializeABI {
+  static constexpr Register kCoroutineReg = CoroutineEntryABI::kCoroutineReg;
+};
+
 struct CoroutineForkABI {
-  static constexpr Register kCallerCoroutineReg = RDI;
-  static constexpr Register kForkedCoroutineReg = RSI;
+  static constexpr Register kCallerCoroutineReg = RSI;
+  static constexpr Register kForkedCoroutineReg = CoroutineEntryABI::kCoroutineReg;
   static constexpr Register kStackLimitReg = RDX;
 };
 

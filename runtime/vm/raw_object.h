@@ -3783,6 +3783,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword stack_base_;
   uword stack_limit_;
+  uword top_exit_frame_;
 public:
   uword stack_base() const { return stack_base_; }
   uword stack_limit() const { return stack_limit_; }
