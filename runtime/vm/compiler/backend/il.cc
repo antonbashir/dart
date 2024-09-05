@@ -8628,7 +8628,6 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
 
   __ PushRegister(FPREG);
-  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
 
   __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
@@ -8641,7 +8640,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LoadFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
   __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
-  __ popq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
+  __ MoveMemoryToMemory(compiler::Address(THR, Thread::top_exit_frame_info_offset()), compiler::Address(kCallerCoroutine, Coroutine::top_exit_frame_offset()));
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));

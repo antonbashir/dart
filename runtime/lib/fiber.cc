@@ -15,7 +15,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(2));
   intptr_t stack_size = size.Value();
   void** stack_base = (void**)((uintptr_t)mmap(0, stack_size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-  memset(stack_base, 0, stack_size);
+  memset(stack_base, 0, stack_size * kWordSize);
   return Coroutine::New(stack_base + stack_size , stack_size, Function::Handle(entry.function()).ptr());
 }
 }  // namespace dart
