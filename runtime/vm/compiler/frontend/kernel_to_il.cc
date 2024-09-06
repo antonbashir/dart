@@ -1921,17 +1921,17 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += NullConstant();
       break;
     }
-    case MethodRecognizer::kCoroutineTransfer: {
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadLocal(parsed_function_->RawParameterVariable(1));
-      body += CoroutineTransfer();
-      body += NullConstant();
-      break;
-    }
     case MethodRecognizer::kCoroutineFork: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
       body += CoroutineFork();
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutineTransfer: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += CoroutineTransfer();
       body += NullConstant();
       break;
     }
@@ -4771,15 +4771,15 @@ Fragment FlowGraphBuilder::CoroutineInitialize() {
   return Fragment(instr);
 }
 
-Fragment FlowGraphBuilder::CoroutineTransfer() {
-  CoroutineTransferInstr* instr =
-      new (Z) CoroutineTransferInstr(Pop(), Pop(), GetNextDeoptId());
-  return Fragment(instr);
-}
-
 Fragment FlowGraphBuilder::CoroutineFork() {
   CoroutineForkInstr* instr =
       new (Z) CoroutineForkInstr(Pop(), Pop(), GetNextDeoptId());
+  return Fragment(instr);
+}
+
+Fragment FlowGraphBuilder::CoroutineTransfer() {
+  CoroutineTransferInstr* instr =
+      new (Z) CoroutineTransferInstr(Pop(), Pop(), GetNextDeoptId());
   return Fragment(instr);
 }
 

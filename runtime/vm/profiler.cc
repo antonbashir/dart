@@ -1062,9 +1062,7 @@ class ProfilerDartStackWalker : public ProfilerStackWalker {
       const bool is_entry_frame =
 #if defined(TARGET_ARCH_IA32) || defined(TARGET_ARCH_X64)
           StubCode::InInvocationStub(Stack(0)) ||
-          StubCode::InInvocationStub(Stack(1)) || 
-          StubCode::InCoroutineEntryStub(0) ||
-          StubCode::InCoroutineEntryStub(1);
+          StubCode::InInvocationStub(Stack(1));
 #else
           StubCode::InInvocationStub(reinterpret_cast<uword>(lr_));
 #endif
@@ -1098,21 +1096,6 @@ class ProfilerDartStackWalker : public ProfilerStackWalker {
         // At least one frame between exit and next entry frame.
         RELEASE_ASSERT(
             !StubCode::InInvocationStub(reinterpret_cast<uword>(pc_)));
-      }
-      else if (StubCode::InCoroutineEntryStub(reinterpret_cast<uword>(pc_))) {
-        pc_ = nullptr;
-        fp_ = ExitLink();
-        if (fp_ == nullptr) {
-          break;  // End of Dart stack.
-        }
-
-        // Skip exit frame.
-        pc_ = CallerPC();
-        fp_ = CallerFP();
-
-        // At least one frame between exit and next entry frame.
-        RELEASE_ASSERT(
-            !StubCode::InCoroutineEntryStub(reinterpret_cast<uword>(pc_)));
       }
 
       if (!Append(reinterpret_cast<uword>(pc_), reinterpret_cast<uword>(fp_))) {
