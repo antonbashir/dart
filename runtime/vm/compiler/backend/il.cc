@@ -8578,9 +8578,12 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ set_constant_pool_allowed(false);
   __ EnterDartFrame(0);
 
+  __ StoreFieldToOffset(FPREG, kCoroutine, Coroutine::top_exit_frame_offset());
+  __ movq(compiler::Address(THR, Thread::top_exit_frame_info_offset()), FPREG);
+
   __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
   __ PushRegister(FPREG);
-  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));   
+  __ pushq(compiler::Address(THR, Thread::top_exit_frame_info_offset()));
 
   __ PushRegister(kCoroutine);
   compiler->EmitCallToStub(StubCode::CoroutineEntry());
@@ -8626,6 +8629,9 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
+
+  __ StoreFieldToOffset(FPREG, kForkedCoroutine, Coroutine::top_exit_frame_offset());
+  __ movq(compiler::Address(THR, Thread::top_exit_frame_info_offset()), FPREG);
 
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
