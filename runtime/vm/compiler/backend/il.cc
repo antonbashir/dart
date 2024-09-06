@@ -8619,7 +8619,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ StoreFieldToOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+  __ StoreCompressedIntoObjectNoBarrier(kForkedCoroutine, compiler::FieldAddress(kForkedCoroutine, Coroutine::caller_offset()), kCallerCoroutine);
 
   __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
@@ -8635,7 +8635,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(kForkedCoroutine);
 
   __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
-  __ LoadFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
   __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
   __ PopRegister(FPREG);
@@ -8678,7 +8678,7 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
 
-  __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, Coroutine::caller_offset());
+  __ StoreCompressedIntoObjectNoBarrier(kToCoroutine, compiler::FieldAddress(kToCoroutine, Coroutine::caller_offset()), kFromCoroutine);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

@@ -246,10 +246,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     }
   }
 
-  OS::Print("pc() = %p\n", (void*)pc());
-  OS::Print("sp() = %p\n", (void*)sp());
-  OS::Print("fp() = %p\n", (void*)fp());
-  OS::Print("maps.IsNull() = %d\n", (int)maps.IsNull());
   if (!maps.IsNull()) {
     // Optimized frames have a stack map. We need to visit the frame based
     // on the stack map.
@@ -257,8 +253,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
         maps, global_table);
     const uint32_t pc_offset = pc() - code_start;
     bool found = it.Find(pc_offset);
-    OS::Print("code_start = %p\n", (void*)code_start);
-    OS::Print("stack map found = %d\n", (int)found);
     if (found) {
       ObjectPtr* first = reinterpret_cast<ObjectPtr*>(sp());
       ObjectPtr* last = reinterpret_cast<ObjectPtr*>(

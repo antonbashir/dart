@@ -8,7 +8,9 @@ var commonState = "";
 
 void main() {
   while (true) {
+    print("before idle");
     Fiber.idle();
+    print("after idle");
     commonState = "";
     print("before start");
     mainFiber.start();
