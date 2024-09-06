@@ -551,7 +551,7 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
 
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
                                               VMTag::VMTagId tag) {
-  if (thread->coroutine() != nullptr) {
+  if (thread->has_coroutine()) {
     thread->isolate()->save_coroutine(thread->SaveCoroutine());
     SuspendThreadInternal(thread, tag);
     return;

@@ -397,6 +397,7 @@ class Thread : public ThreadState {
   CoroutinePtr SaveCoroutine();
   void EnterCoroutine(CoroutinePtr coroutine);
   void ExitCoroutine();
+  bool has_coroutine() const { return coroutine_ != nullptr; }
   CoroutinePtr coroutine() const { return coroutine_; }
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
 

@@ -195,6 +195,7 @@ void ExitFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
 
 void EntryFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   ASSERT(visitor != nullptr);
+  if (IsCoroutine()) return;
   // Visit objects between SP and (FP - callee_save_area).
   ObjectPtr* first = reinterpret_cast<ObjectPtr*>(sp());
   ObjectPtr* last =
@@ -614,8 +615,7 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 #if !defined(USING_SIMULATOR)
   if (fp_ == 0) return;
   // Note that Thread::os_thread_ is cleared when the thread is descheduled.
-  ASSERT((thread_->coroutine() != nullptr) ||
-         (thread_->os_thread() == nullptr) ||
+  ASSERT((thread_->has_coroutine()) || (thread_->os_thread() == nullptr) ||
          ((thread_->os_thread()->stack_limit() < fp_) &&
           (thread_->os_thread()->stack_base() > fp_)));
   uword lower;
@@ -663,6 +663,13 @@ EntryFrame* StackFrameIterator::NextEntryFrame() {
   entry_.sp_ = frames_.sp_;
   entry_.fp_ = frames_.fp_;
   entry_.pc_ = frames_.pc_;
+  if (entry_.IsCoroutine()) {
+    frames_.fp_ = 0;
+    frames_.sp_ = 0;
+    frames_.pc_ = 0;
+    frames_.Unpoison();
+    return &entry_;
+  }
   SetupNextExitFrameData();  // Setup data for next exit frame in chain.
   ASSERT(!validate_ || entry_.IsValid());
   return &entry_;
