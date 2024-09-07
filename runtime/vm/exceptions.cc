@@ -109,6 +109,7 @@ static void BuildStackTrace(StackTraceBuilder* builder) {
     if (!frame->IsDartFrame()) {
       continue;
     }
+    OS::Print("BuildStackTrace\n");
     code = frame->LookupDartCode();
     ASSERT(code.ContainsInstructionAt(frame->pc()));
     const uword pc_offset = frame->pc() - code.PayloadStart();
@@ -153,6 +154,7 @@ class ExceptionHandlerFinder : public StackResource {
                 (handler_pc !=
                  StubCode::AsyncExceptionHandler().EntryPoint())) {
               pc_ = frame->pc();
+              OS::Print("ExceptionHandlerFinder::find\n");
               code_ = &Code::Handle(frame->LookupDartCode());
               CatchEntryMovesRefPtr* cached_catch_entry_moves =
                   catch_entry_moves_cache_->Lookup(pc_);

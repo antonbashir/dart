@@ -251,8 +251,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     CompressedStackMaps::Iterator<CompressedStackMaps::RawPayloadHandle> it(
         maps, global_table);
     const uint32_t pc_offset = pc() - code_start;
-    bool found = it.Find(pc_offset);
-    if (found) {
+    if (it.Find(pc_offset)) {
       ObjectPtr* first = reinterpret_cast<ObjectPtr*>(sp());
       ObjectPtr* last = reinterpret_cast<ObjectPtr*>(
           fp() + (runtime_frame_layout.first_local_from_fp * kWordSize));
