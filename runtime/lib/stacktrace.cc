@@ -81,6 +81,7 @@ static void AppendFrames(const GrowableObjectArray& code_list,
       continue;
     }
 
+    OS::Print("AppendFrames()\n");
     code = frame->LookupDartCode();
     const intptr_t pc_offset = frame->pc() - code.PayloadStart();
     code_list.Add(code);

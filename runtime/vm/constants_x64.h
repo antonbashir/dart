@@ -394,10 +394,6 @@ struct CoroutineEntryABI {
 
 struct CoroutineInitializeABI {
   static constexpr Register kCoroutineReg = CoroutineEntryABI::kCoroutineReg;
-  static constexpr Register kSourceFrameReg = RBX;
-  static constexpr Register kStoreFrameReg = RCX;
-  static constexpr Register kSourceFrameSizeReg = RDX;
-  static constexpr Register kTempReg = TMP;
 };
 
 struct CoroutineForkABI {

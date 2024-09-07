@@ -69,7 +69,7 @@ DEFINE_FLAG(bool,
             false,
             "Ensure results of allocation via runtime calls are not in an "
             "active TLAB.");
-DEFINE_FLAG(bool, trace_deoptimization, false, "Trace deoptimization");
+DEFINE_FLAG(bool, trace_deoptimization, true, "Trace deoptimization");
 DEFINE_FLAG(bool,
             trace_deoptimization_verbose,
             false,

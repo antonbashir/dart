@@ -30,7 +30,7 @@ namespace dart {
 DECLARE_FLAG(bool, trace_deoptimization);
 DEFINE_FLAG(bool,
             print_stacktrace_at_throw,
-            false,
+            true,
             "Prints a stack trace everytime a throw occurs.");
 
 class StackTraceBuilder : public ValueObject {
@@ -154,7 +154,6 @@ class ExceptionHandlerFinder : public StackResource {
                 (handler_pc !=
                  StubCode::AsyncExceptionHandler().EntryPoint())) {
               pc_ = frame->pc();
-              OS::Print("ExceptionHandlerFinder::find\n");
               code_ = &Code::Handle(frame->LookupDartCode());
               CatchEntryMovesRefPtr* cached_catch_entry_moves =
                   catch_entry_moves_cache_->Lookup(pc_);
@@ -186,14 +185,18 @@ class ExceptionHandlerFinder : public StackResource {
         }
       }  // if frame->IsDartFrame
       frame = frames.NextFrame();
+      OS::Print("IsDartFrame()\n");
       ASSERT(frame != nullptr);
     }  // while !frame->IsEntryFrame
     ASSERT(frame->IsEntryFrame());
+    OS::Print("Find almost finish\n");
     if (!handler_pc_set_) {
+      OS::Print("Find almost finish with set\n");
       handler_pc = frame->pc();
       handler_sp = frame->sp();
       handler_fp = frame->fp();
     }
+    OS::Print("Find finish\n");
     // No catch-all encountered, needs stacktrace.
     needs_stacktrace = true;
     return handler_pc_set_;
@@ -771,7 +774,9 @@ static void ThrowExceptionHelper(Thread* thread,
   // Find the exception handler and determine if the handler needs a
   // stacktrace.
   ExceptionHandlerFinder finder(thread);
+  OS::Print("finder.Find()\n");
   bool handler_exists = finder.Find();
+  OS::Print("finder.Find() end\n");
   uword handler_pc = finder.handler_pc;
   uword handler_sp = finder.handler_sp;
   uword handler_fp = finder.handler_fp;

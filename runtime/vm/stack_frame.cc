@@ -158,7 +158,7 @@ bool StackFrame::IsStubFrame() const {
   // where Thread::Current() is nullptr, so we cannot create a NoSafepointScope.
   NoSafepointScope no_safepoint;
 #endif
-
+  OS::Print("IsStubFrame()\n");
   CodePtr code = GetCodeObject();
   ASSERT(code != Object::null());
   auto const cid = Code::OwnerClassIdOf(code);
@@ -168,6 +168,7 @@ bool StackFrame::IsStubFrame() const {
 
 const char* StackFrame::ToCString() const {
   ASSERT(thread_ == Thread::Current());
+  OS::Print("TOCString()\n");
   Zone* zone = Thread::Current()->zone();
   const Code& code = Code::Handle(zone, GetCodeObject());
   const char* name =
@@ -323,6 +324,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
 }
 
 FunctionPtr StackFrame::LookupDartFunction() const {
+  OS::Print("LookupDartFunction\n");
   const Code& code = Code::Handle(LookupDartCode());
   if (!code.IsNull()) {
     const Object& owner = Object::Handle(code.owner());
@@ -379,8 +381,10 @@ bool StackFrame::FindExceptionHandler(Thread* thread,
   REUSABLE_PC_DESCRIPTORS_HANDLESCOPE(thread);
   PcDescriptors& descriptors = reused_pc_descriptors_handle.Handle();
   uword start;
+  OS::Print("StackFrame::FindExceptionHandler\n");
   code = LookupDartCode();
   if (code.IsNull()) {
+    OS::Print("StackFrame::FindExceptionHandler done 1\n");
     return false;  // Stub frames do not have exception handlers.
   }
   start = code.PayloadStart();
@@ -393,6 +397,7 @@ bool StackFrame::FindExceptionHandler(Thread* thread,
     *handler_pc = start + info->handler_pc_offset;
     *needs_stacktrace = (info->needs_stacktrace != 0);
     *has_catch_all = (info->has_catch_all != 0);
+    OS::Print("StackFrame::FindExceptionHandler done 2\n");
     return true;
   }
 
@@ -413,8 +418,10 @@ bool StackFrame::FindExceptionHandler(Thread* thread,
       *handler_pc = StubCode::AsyncExceptionHandler().EntryPoint();
       *needs_stacktrace = true;
       *has_catch_all = true;
+      OS::Print("StackFrame::FindExceptionHandler done 3\n");
       return true;
     }
+    OS::Print("StackFrame::FindExceptionHandler done 4\n");
     return false;
   }
   ExceptionHandlerInfo handler_info;
@@ -423,6 +430,7 @@ bool StackFrame::FindExceptionHandler(Thread* thread,
   *needs_stacktrace = (handler_info.needs_stacktrace != 0);
   *has_catch_all = (handler_info.has_catch_all != 0);
   cache->Insert(pc(), handler_info);
+  OS::Print("StackFrame::FindExceptionHandler done 5\n");
   return true;
 }
 
@@ -448,6 +456,7 @@ bool StackFrame::IsValid() const {
   if (IsEntryFrame() || IsExitFrame() || IsStubFrame()) {
     return true;
   }
+  OS::Print("pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc(), fp(), sp());
   return (LookupDartCode() != Code::null());
 }
 
