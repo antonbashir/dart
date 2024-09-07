@@ -12705,7 +12705,7 @@ class Coroutine : public Instance {
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
-  static CoroutinePtr New(void** stackb_base, uintptr_t stack_size, FunctionPtr entry);
+  static CoroutinePtr New(void** source_frame_space, void** stack_base, uintptr_t stack_size, FunctionPtr entry);
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
@@ -12723,9 +12723,14 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
 
-  uword top_exit_frame() const { return untag()->top_exit_frame_; }
-  static uword top_exit_frame_offset() {
-    return OFFSET_OF(UntaggedCoroutine, top_exit_frame_);
+  uword source_frame_pointer() const { return untag()->source_frame_pointer_; }
+  static uword source_frame_pointer_offset() {
+    return OFFSET_OF(UntaggedCoroutine, source_frame_pointer_);
+  }
+
+  uword source_frame_size() const { return untag()->source_frame_size_; }
+  static uword source_frame_size_offset() {
+    return OFFSET_OF(UntaggedCoroutine, source_frame_size_);
   }
 
  private:
