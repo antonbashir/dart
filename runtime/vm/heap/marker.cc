@@ -3,9 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/heap/marker.h"
-#include <csignal>
 
-#include "dart_api.h"
 #include "platform/assert.h"
 #include "platform/atomic.h"
 #include "vm/allocation.h"
@@ -645,13 +643,6 @@ class MarkingVisitorBase : public ObjectPointerVisitor {
       return false;
     }
 
-    if (obj->untag()->IsCardRemembered()) {
-      if(!((obj->GetClassId() == kArrayCid) || (obj->GetClassId() == kImmutableArrayCid))) 
-      {
-        Dart_DumpNativeStackTrace(nullptr);
-        raise(SIGINT);
-      }
-    }
     if (obj->IsNewObject()) {
       if (TryAcquireMarkBit(obj)) {
         new_work_list_.Push(obj);

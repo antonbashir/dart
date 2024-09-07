@@ -24,6 +24,7 @@ void mainEntry() {
   mainFiber.fork(childFiber);
   //print("main: after child fork");
   commonState += "main -> ";
+  throw Exception("test");
   //print("main: after child transfer");
   mainFiber.transfer(childFiber);
   print(commonState);

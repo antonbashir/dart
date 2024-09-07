@@ -1040,8 +1040,6 @@ class Coroutine : public AllStatic {
   static word entry_offset();
   static word stack_base_offset();
   static word stack_limit_offset();
-  static word source_frame_size_offset();
-  static word source_frame_pointer_offset();
   static word InstanceSize();
   FINAL_CLASS();
 };

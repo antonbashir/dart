@@ -186,7 +186,6 @@ void ExitFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   ObjectPtr* first_fixed = reinterpret_cast<ObjectPtr*>(fp()) +
                            runtime_frame_layout.last_fixed_object_from_fp;
   if (first_fixed <= last_fixed) {
-    //OS::Print("ExitFrame::VisitObjectPointers\n");
     visitor->VisitPointers(first_fixed, last_fixed);
   } else {
     ASSERT(runtime_frame_layout.first_object_from_fp ==
@@ -201,7 +200,6 @@ void EntryFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   ObjectPtr* last =
       reinterpret_cast<ObjectPtr*>(fp()) + kExitLinkSlotFromEntryFp - 1;
   // There may not be any pointer to visit; in this case, first > last.
-  //OS::Print("EntryFrame::VisitObjectPointers\n");
   visitor->VisitPointers(first, last);
 }
 
@@ -247,10 +245,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     }
   }
 
-  //OS::Print("pc() = %p\n", (void*)pc());
-  //OS::Print("sp() = %p\n", (void*)sp());
-  //OS::Print("fp() = %p\n", (void*)fp());
-  //OS::Print("maps.IsNull() = %d\n", (int)maps.IsNull());
   if (!maps.IsNull()) {
     // Optimized frames have a stack map. We need to visit the frame based
     // on the stack map.
@@ -258,8 +252,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
         maps, global_table);
     const uint32_t pc_offset = pc() - code_start;
     bool found = it.Find(pc_offset);
-    //OS::Print("code_start = %p\n", (void*)code_start);
-    //OS::Print("stack map found = %d\n", (int)found);
     if (found) {
       ObjectPtr* first = reinterpret_cast<ObjectPtr*>(sp());
       ObjectPtr* last = reinterpret_cast<ObjectPtr*>(
