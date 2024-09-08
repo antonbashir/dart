@@ -6,6 +6,7 @@ void main() {
   _run(mainException: true);
   _run(childException: true);
   _run(childException: true, mainCatchChild: true);
+  _run(childException: true, childYield: true);
 }
 
 class FiberException implements Exception {
@@ -13,9 +14,18 @@ class FiberException implements Exception {
   const FiberException(this.message);
 }
 
-void _run({mainException = false, childException = false, mainCatchChild = false}) {
+void _run({mainException = false, childException = false, mainCatchChild = false, childYield = false}) {
   print("_run: mainException = $mainException, childException = $childException, mainCatchChild = $mainCatchChild");
   if (childException) {
+    if (childYield) {
+      final child = Fiber.child(entry: () => Fiber.suspend(), name: "child");
+      final main = Fiber.main(entry: () => Expect.equals(Expect.throws<FiberException>(() {
+        Fiber.spawn(child);
+        throw FiberException("main");
+      }).message, "main"));
+      main.start();
+      return;
+    }
     final child = Fiber.child(entry: () => throw FiberException("child"), name: "child");
     if (mainCatchChild) {
       final main = Fiber.main(entry: () => Expect.equals(Expect.throws<FiberException>(() => Fiber.spawn(child)).message, "child"));

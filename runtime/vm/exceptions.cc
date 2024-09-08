@@ -142,7 +142,6 @@ class ExceptionHandlerFinder : public StackResource {
 
     while (!frame->IsEntryFrame()) {
       if (frame->IsDartFrame()) {
-        OS::Print("%s\n", frame->ToCString()); 
         if (frame->FindExceptionHandler(thread_, &temp_handler_pc,
                                         &needs_stacktrace, &is_catch_all,
                                         &is_optimized)) {

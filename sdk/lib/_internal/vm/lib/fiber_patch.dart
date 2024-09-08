@@ -50,6 +50,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void transfer(Fiber to) {
     Fiber._owner = to;
+    to._caller = this;
     _coroutineTransfer(_current, to._current);
   }
 
@@ -57,9 +58,10 @@ class Fiber {
   @pragma("vm:prefer-inline")
   void fork(Fiber to) {
     Fiber._owner = to;
+    to._caller = this;
     _coroutineFork(_current, to._current);
   }
-
+  
   @patch
   static void idle() {
     VMInternalsForTesting.collectAllGarbage();
