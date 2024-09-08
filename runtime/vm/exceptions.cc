@@ -30,7 +30,7 @@ namespace dart {
 DECLARE_FLAG(bool, trace_deoptimization);
 DEFINE_FLAG(bool,
             print_stacktrace_at_throw,
-            true,
+            false,
             "Prints a stack trace everytime a throw occurs.");
 
 class StackTraceBuilder : public ValueObject {
