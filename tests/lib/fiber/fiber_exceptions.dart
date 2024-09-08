@@ -6,10 +6,10 @@ void main() {
   _run(mainException: true);
   _run(childException: true);
   _run(childException: true, mainCatchChild: true);
-  _run(childYield: true);
   _run(mainYield: true);
-  _run(childYield: true, mainCatchChild: true);
   _run(mainYield: true, mainCatchChild: true);
+  _run(childYield: true);
+  _run(childYield: true, mainCatchChild: true);
 }
 
 class FiberException implements Exception {

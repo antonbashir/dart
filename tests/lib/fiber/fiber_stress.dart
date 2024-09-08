@@ -1,5 +1,6 @@
 import 'dart:fiber';
 import 'dart:async';
+import 'package:expect/expect.dart';
 
 final mainFiber = Fiber.main(entry: mainEntry);
 final childFiber = Fiber.child(entry: childEntry, name: "child");
@@ -7,32 +8,30 @@ final childFiber = Fiber.child(entry: childEntry, name: "child");
 var commonState = "";
 
 void main() {
-  while (true) {
-    //print("before idle");
-    Fiber.idle();
-    //print("after idle");
-    commonState = "";
-    //print("before start");
-    mainFiber.start();
-    //print("after start");
+  final iterations = 3;
+  final timeout = Duration(minutes: 5);
+  for (var i = 0; i < iterations; i++) {
+    final sw = Stopwatch();
+    sw.start();
+    while (sw.elapsed.inMilliseconds < timeout.inMilliseconds) {
+      Fiber.idle();
+      commonState = "";
+      mainFiber.start();
+    }
+    sw.stop();
   }
 }
 
 void mainEntry() {
-  print("main: entry");
   commonState += "main -> ";
-  mainFiber.fork(childFiber);
-  //print("main: after child fork");
+  Fiber.spawn(childFiber);
   commonState += "main -> ";
-  //print("main: after child transfer");
-  mainFiber.transfer(childFiber);
-  print(commonState);
+  Fiber.suspend();
+  Expect.equals("main -> child -> main -> child", commonState);
 }
 
 void childEntry() {
-  //print("child: entry");
   commonState += "child -> ";
-  childFiber.transfer(mainFiber);
-  //print("child: after main transfer");
+  Fiber.suspend();
   commonState += "child";
 }

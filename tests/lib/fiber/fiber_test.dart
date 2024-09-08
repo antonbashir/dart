@@ -1,23 +1,26 @@
 import 'dart:fiber';
 import 'dart:async';
+import 'package:expect/expect.dart';
+
+final mainFiber = Fiber.main(entry: mainEntry);
+final childFiber = Fiber.child(entry: childEntry, name: "child");
 
 var commonState = "";
 
-class FiberEntry {
-  final String v;
-  FiberEntry(this.v);
-
-  void call() {
-    print("entry: $v");
-  }
+void main() {
+  mainFiber.start();
 }
 
-void main() {
-  commonState = "common";
-  final entry = FiberEntry("test");
-  Fiber.main(entry: () {
-    print(commonState);
-    commonState = "common 2";
-  }).start();
-  print(commonState);
+void mainEntry() {
+  commonState += "main -> ";
+  Fiber.spawn(childFiber);
+  commonState += "main -> ";
+  Fiber.suspend();
+  Expect.equals("main -> child -> main -> child", commonState);
+}
+
+void childEntry() {
+  commonState += "child -> ";
+  Fiber.suspend();
+  commonState += "child";
 }
