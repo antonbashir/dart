@@ -15,7 +15,7 @@ class FiberException implements Exception {
 }
 
 void _run({mainException = false, childException = false, mainCatchChild = false, childYield = false}) {
-  print("_run: mainException = $mainException, childException = $childException, mainCatchChild = $mainCatchChild");
+  print("_run: mainException = $mainException, childException = $childException, mainCatchChild = $mainCatchChild, childYield = $childYield");
   if (childException) {
     if (childYield) {
       final child = Fiber.child(entry: () => Fiber.suspend(), name: "child");
