@@ -770,9 +770,7 @@ static void ThrowExceptionHelper(Thread* thread,
   // Find the exception handler and determine if the handler needs a
   // stacktrace.
   ExceptionHandlerFinder finder(thread);
-  OS::Print("finder.Find()\n");
   bool handler_exists = finder.Find();
-  OS::Print("finder.Find() end\n");
   uword handler_pc = finder.handler_pc;
   uword handler_sp = finder.handler_sp;
   uword handler_fp = finder.handler_fp;
