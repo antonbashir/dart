@@ -1,38 +1,23 @@
 import 'dart:fiber';
 import 'dart:async';
 
-final mainFiber = Fiber.main(entry: mainEntry);
-final childFiber = Fiber.child(entry: childEntry, name: "child");
-
 var commonState = "";
 
-void main() {
-  while (true) {
-    print("before idle");
-    Fiber.idle();
-    print("after idle");
-    commonState = "";
-    print("before start");
-    mainFiber.start();
-    print("after start");
+class FiberEntry {
+  final String v;
+  FiberEntry(this.v);
+
+  void call() {
+    print("entry: $v");
   }
 }
 
-void mainEntry() {
-  print("main: entry");
-  commonState += "main -> ";
-  mainFiber.fork(childFiber);
-  print("main: after child fork");
-  commonState += "main -> ";
-  print("main: after child transfer");
-  mainFiber.transfer(childFiber);
+void main() {
+  commonState = "common";
+  final entry = FiberEntry("test");
+  Fiber.main(entry: () {
+    print(commonState);
+    commonState = "common 2";
+  }).start();
   print(commonState);
-}
-
-void childEntry() {
-  print("child: entry");
-  commonState += "child -> ";
-  childFiber.transfer(mainFiber);
-  print("child: after main transfer");
-  commonState += "child";
 }
