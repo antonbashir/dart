@@ -26650,10 +26650,12 @@ const char* Coroutine::ToCString() const {
 CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
                                                uword stack_pointer) {
   CoroutinePtr found = current;
-  while (!found.IsRawNull()) {
+  IntMap<CoroutinePtr> processed;
+  while (!found.IsRawNull() && !processed.HasKey((uword)found->untag())) {
     if (stack_pointer > found->untag()->stack_limit() && stack_pointer <= found->untag()->stack_root()) {
       return found;
     }
+    processed.Insert((uword)found->untag(), found);
     found = found->untag()->caller();
   }
   return null();
