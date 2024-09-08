@@ -95,7 +95,6 @@ class StackFrame : public ValueObject {
 
   // Frame type.
   virtual bool IsDartFrame(bool validate = true) const {
-    OS::Print("IsDartFrame\n");
     ASSERT(!validate || IsValid());
     return !(IsEntryFrame() || IsExitFrame() || IsStubFrame());
   }

@@ -185,18 +185,14 @@ class ExceptionHandlerFinder : public StackResource {
         }
       }  // if frame->IsDartFrame
       frame = frames.NextFrame();
-      OS::Print("IsDartFrame()\n");
       ASSERT(frame != nullptr);
     }  // while !frame->IsEntryFrame
     ASSERT(frame->IsEntryFrame());
-    OS::Print("Find almost finish\n");
     if (!handler_pc_set_) {
-      OS::Print("Find almost finish with set\n");
       handler_pc = frame->pc();
       handler_sp = frame->sp();
       handler_fp = frame->fp();
     }
-    OS::Print("Find finish\n");
     // No catch-all encountered, needs stacktrace.
     needs_stacktrace = true;
     return handler_pc_set_;
