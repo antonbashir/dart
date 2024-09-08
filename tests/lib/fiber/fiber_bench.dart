@@ -13,16 +13,16 @@ void main() {
 void mainEntry() {
   final sw = Stopwatch();
   sw.start();
-  mainFiber.fork(childFiber);
+  Fiber.spawn(childFiber);
   while (--value > 0) {
-    mainFiber.transfer(childFiber);
+    Fiber.suspend();
   }
   sw.stop();
-  print(sw.elapsedMicroseconds / counter);
+  print("Latency per switch: ${sw.elapsedMicroseconds / counter} [micros]");
 }
 
 void childEntry() {
   while (--value > 0) {
-    childFiber.transfer(mainFiber);
+    Fiber.suspend();
   }
 }
