@@ -142,6 +142,7 @@ class ExceptionHandlerFinder : public StackResource {
 
     while (!frame->IsEntryFrame()) {
       if (frame->IsDartFrame()) {
+        OS::Print("%s\n", frame->ToCString()); 
         if (frame->FindExceptionHandler(thread_, &temp_handler_pc,
                                         &needs_stacktrace, &is_catch_all,
                                         &is_optimized)) {
@@ -688,7 +689,15 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   typedef void (*ExcpHandler)(uword, uword, uword, Thread*);
   ExcpHandler func =
       reinterpret_cast<ExcpHandler>(StubCode::JumpToFrame().EntryPoint());
-
+  if (thread->has_coroutine()) {
+    CoroutinePtr found =
+        Coroutine::FindContainedCoroutine(thread->coroutine(), stack_pointer);
+    if (found.IsRawNull()) {
+      thread->ExitCoroutine();
+    } else {
+      thread->EnterCoroutine(found);
+    }
+  }
   if (thread->is_unwind_in_progress()) {
     thread->SetUnwindErrorInProgress(true);
   }

@@ -26634,12 +26634,12 @@ CoroutinePtr Coroutine::New(void** stack_base,
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
   coroutine.StoreNonPointer(&coroutine.untag()->root_stack_base_,
                             (uword) nullptr);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
                             (uword)stack_base - stack_size);
   coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
-  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_,
-                                   coroutine.ptr());
+  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, null());
   return coroutine.ptr();
 }
 
@@ -26647,6 +26647,18 @@ const char* Coroutine::ToCString() const {
   return "Coroutine";
 }
 
+CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
+                                               uword stack_pointer) {
+  CoroutinePtr found = current;
+  while (!found.IsRawNull()) {
+    if (stack_pointer > found->untag()->stack_limit() && stack_pointer <= found->untag()->stack_root()) {
+      return found;
+    }
+    found = found->untag()->caller();
+  }
+  return null();
+}
+ 
 void RegExp::set_pattern(const String& pattern) const {
   untag()->set_pattern(pattern.ptr());
 }

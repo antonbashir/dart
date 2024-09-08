@@ -8607,8 +8607,6 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
   const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
   const Register kStackLimit = CoroutineForkABI::kStackLimitReg;
-    const Register kSourceFrameSize = CoroutineInitializeABI::kSourceFrameSizeReg;
-    const Register kSourceFrame = CoroutineInitializeABI::kSourceFrameReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
@@ -8622,19 +8620,10 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
 
-  __ LoadFromOffset(kSourceFrameSize, FPREG, kSavedCallerFpSlotFromFp * compiler::target::kWordSize);
-  __ AddImmediate(kSourceFrameSize, kSourceFrameSize, -compiler::target::frame_layout.last_param_from_entry_sp * kWordSize);
-  __ LoadFromOffset(SPREG, FPREG, kCallerSpSlotFromFp * compiler::target::kWordSize);
-  __ SubRegisters(kSourceFrameSize, SPREG);
   __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
-  __ CopyMemoryWords(kSourceFrame, SPREG, kSourceFrameSize, TMP);
-
-  __ PushRegister(kSourceFrameSize);
   __ PushRegister(kForkedCoroutine);
     compiler->GenerateStubCall(source(), StubCode::CoroutineEntry(), UntaggedPcDescriptors::kOther, locs(), deopt_id(), env());
   __ PopRegister(kForkedCoroutine);
-  __ PopRegister(kSourceFrameSize);
-  __ SubRegisters(SPREG, kSourceFrameSize);
   __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
 
   __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());

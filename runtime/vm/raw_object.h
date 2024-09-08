@@ -3782,10 +3782,12 @@ class UntaggedCoroutine : public UntaggedInstance {
   VISIT_TO(entry)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword root_stack_base_;
+  uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
 public:
   uword stack_base() const { return stack_base_; }
+  uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }
 };
 

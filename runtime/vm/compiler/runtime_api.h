@@ -1039,6 +1039,7 @@ class Coroutine : public AllStatic {
   static word caller_offset();
   static word entry_offset();
   static word root_stack_base_offset();
+  static word stack_root_offset();
   static word stack_base_offset();
   static word stack_limit_offset();
   static word InstanceSize();

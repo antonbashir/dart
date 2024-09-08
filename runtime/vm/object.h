@@ -12707,6 +12707,8 @@ class Coroutine : public Instance {
   }
   static CoroutinePtr New(void** stack_base, uintptr_t stack_size, FunctionPtr entry);
 
+  static CoroutinePtr FindContainedCoroutine(CoroutinePtr current, uword stack_pointer);
+
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
 
@@ -12716,6 +12718,11 @@ class Coroutine : public Instance {
   uword root_stack_base() const { return untag()->root_stack_base_; }
   static uword root_stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, root_stack_base_);
+  }
+
+  uword stack_root() const { return untag()->stack_root_; }
+  static uword stack_root_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_root_);
   }
 
   uword stack_base() const { return untag()->stack_base_; }

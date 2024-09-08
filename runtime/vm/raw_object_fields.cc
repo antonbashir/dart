@@ -235,6 +235,7 @@ namespace dart {
   F(Coroutine, caller_)                                                        \
   F(Coroutine, entry_)                                                         \
   F(Coroutine, root_stack_base_)                                               \
+  F(Coroutine, stack_root_)                                                    \
   F(Coroutine, stack_base_)                                                    \
   F(Coroutine, stack_limit_)
 

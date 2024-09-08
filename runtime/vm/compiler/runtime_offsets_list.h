@@ -403,6 +403,7 @@
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, root_stack_base_offset)                                     \
+  FIELD(Coroutine, stack_root_offset)                                          \
   FIELD(Coroutine, stack_base_offset)                                          \
   FIELD(Coroutine, stack_limit_offset)                                         \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
