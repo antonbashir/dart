@@ -62,13 +62,13 @@ class Fiber {
     _coroutineFork(_current, to._current);
   }
   
-  @patch
-  static void idle() {
-    VMInternalsForTesting.collectAllGarbage();
-  }
-
   @pragma("vm:never-inline")
   static void _run() {
     Fiber._owner._entry();
+  }
+
+  @patch
+  static void idle() {
+    VMInternalsForTesting.collectAllGarbage();
   }
 }
