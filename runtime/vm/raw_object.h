@@ -3781,6 +3781,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
   VISIT_TO(entry)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+  uword root_stack_base_;
   uword stack_base_;
   uword stack_limit_;
 public:

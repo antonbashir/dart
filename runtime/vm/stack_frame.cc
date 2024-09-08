@@ -643,6 +643,7 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
     sp_ = frame->GetCallerSp();
     fp_ = frame->GetCallerFp();
     pc_ = frame->GetCallerPc();
+    Unpoison();
     return NextFrame(validate);
   }
   frame = &stack_frame_;

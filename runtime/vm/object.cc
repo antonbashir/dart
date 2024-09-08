@@ -828,9 +828,7 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  {
-    *sentinel_ ^= Sentinel::New();
-  }
+  { *sentinel_ ^= Sentinel::New(); }
 
   // Allocate and initialize optimizing compiler constants.
   {
@@ -26629,12 +26627,19 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(void** stack_base, uintptr_t stack_size, FunctionPtr entry) {
-  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+CoroutinePtr Coroutine::New(void** stack_base,
+                            uintptr_t stack_size,
+                            FunctionPtr entry) {
+  const auto& coroutine =
+      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  coroutine.StoreNonPointer(&coroutine.untag()->root_stack_base_,
+                            (uword) nullptr);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - stack_size);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
+                            (uword)stack_base - stack_size);
   coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
-  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, coroutine.ptr());
+  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_,
+                                   coroutine.ptr());
   return coroutine.ptr();
 }
 
@@ -28026,4 +28031,3 @@ ArrayPtr RecordShape::GetFieldNames(Thread* thread) const {
 }
 
 }  // namespace dart
-

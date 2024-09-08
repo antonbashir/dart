@@ -8567,17 +8567,13 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ EnterFrame(0);
   __ PushObject(compiler::NullObject());
   __ PushRegister(kCoroutine);
   __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
   __ PopRegister(kCoroutine);
   __ Drop(1);
-  __ LeaveFrame();
 
-  __ set_constant_pool_allowed(false);
-  __ EnterDartFrame(0);
-
+  __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::root_stack_base_offset());
   __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
   __ PushRegister(FPREG);
 
@@ -8589,15 +8585,11 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
   __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
-
-  __ LeaveDartFrame();
-  __ set_constant_pool_allowed(true);
-
-  __ EnterFrame(0);
+  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::root_stack_base_offset());
+  
   __ PushObject(compiler::NullObject());
   __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
   __ Drop(1);
-  __ LeaveFrame();
 }
 
 LocationSummary* CoroutineForkInstr::MakeLocationSummary(

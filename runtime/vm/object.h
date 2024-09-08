@@ -12713,6 +12713,11 @@ class Coroutine : public Instance {
   FunctionPtr entry() const { return untag()->entry(); }
   static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
 
+  uword root_stack_base() const { return untag()->root_stack_base_; }
+  static uword root_stack_base_offset() {
+    return OFFSET_OF(UntaggedCoroutine, root_stack_base_);
+  }
+
   uword stack_base() const { return untag()->stack_base_; }
   static uword stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_base_);
