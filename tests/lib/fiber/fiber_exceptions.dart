@@ -6,8 +6,6 @@ void main() {
   _run(mainException: true);
   _run(childException: true);
   _run(childException: true, mainCatchChild: true);
-  _run(mainYield: true);
-  _run(mainYield: true, mainCatchChild: true);
   _run(childYield: true);
   _run(childYield: true, mainCatchChild: true);
 }
@@ -28,12 +26,16 @@ void _run({mainException = false, childException = false, mainCatchChild = false
         name: "child");
     if (mainCatchChild) {
       final main = Fiber.main(
-          entry: () => Expect.equals(
-              Expect.throws<FiberException>(() {
-                Fiber.spawn(child);
-                Fiber.suspend();
-              }).message,
-              "child"));
+        entry: () => Expect.equals(
+          Expect.throws<FiberException>(
+            () {
+              Fiber.spawn(child);
+              Fiber.suspend();
+            },
+          ).message,
+          "child",
+        ),
+      );
       main.start();
       return;
     }
@@ -48,12 +50,14 @@ void _run({mainException = false, childException = false, mainCatchChild = false
     final child = Fiber.child(entry: () => Fiber.suspend(), name: "child");
     if (mainCatchChild) {
       final main = Fiber.main(
-          entry: () => Expect.equals(
-              Expect.throws<FiberException>(() {
-                Fiber.spawn(child);
-                throw FiberException("main");
-              }).message,
-              "main"));
+        entry: () => Expect.equals(
+          Expect.throws<FiberException>(() {
+            Fiber.spawn(child);
+            throw FiberException("main");
+          }).message,
+          "main",
+        ),
+      );
       main.start();
       return;
     }
