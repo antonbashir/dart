@@ -2,8 +2,7 @@ import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
 
-final mainFiber = Fiber.main(entry: mainEntry);
-final childFiber = Fiber.child(entry: childEntry, name: "child");
+final mainFiber = Fiber.main(mainEntry);
 
 var commonState = "";
 
@@ -14,7 +13,6 @@ void main() {
     final sw = Stopwatch();
     sw.start();
     while (sw.elapsed.inMilliseconds < timeout.inMilliseconds) {
-      Fiber.idle();
       commonState = "";
       mainFiber.start();
     }
@@ -24,7 +22,7 @@ void main() {
 
 void mainEntry() {
   commonState += "main -> ";
-  Fiber.spawn(childFiber);
+  Fiber.spawn(childEntry);
   commonState += "main -> ";
   Fiber.suspend();
   Expect.equals("main -> child -> main -> child", commonState);

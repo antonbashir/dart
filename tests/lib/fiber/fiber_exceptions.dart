@@ -18,18 +18,16 @@ class FiberException implements Exception {
 void _run({mainException = false, childException = false, mainCatchChild = false, childYield = false, mainYield = false}) {
   print("_run: mainException = $mainException, childException = $childException, mainCatchChild = $mainCatchChild, childYield = $childYield, mainYield = $mainYield");
   if (mainYield) {
-    final child = Fiber.child(
-        entry: () {
-          Fiber.suspend();
-          throw FiberException("child");
-        },
-        name: "child");
+    final child = Fiber.child(() {
+      Fiber.suspend();
+      throw FiberException("child");
+    }, name: "child");
     if (mainCatchChild) {
       final main = Fiber.main(
-        entry: () => Expect.equals(
+        () => Expect.equals(
           Expect.throws<FiberException>(
             () {
-              Fiber.spawn(child);
+              Fiber.fork(child);
               Fiber.suspend();
             },
           ).message,
@@ -39,20 +37,20 @@ void _run({mainException = false, childException = false, mainCatchChild = false
       main.start();
       return;
     }
-    final main = Fiber.main(entry: () {
-      Fiber.spawn(child);
+    final main = Fiber.main(() {
+      Fiber.fork(child);
       Fiber.suspend();
     });
     Expect.equals(Expect.throws<FiberException>(main.start).message, "child");
     return;
   }
   if (childYield) {
-    final child = Fiber.child(entry: () => Fiber.suspend(), name: "child");
+    final child = Fiber.child(() => Fiber.suspend(), name: "child");
     if (mainCatchChild) {
       final main = Fiber.main(
-        entry: () => Expect.equals(
+        () => Expect.equals(
           Expect.throws<FiberException>(() {
-            Fiber.spawn(child);
+            Fiber.fork(child);
             throw FiberException("main");
           }).message,
           "main",
@@ -61,26 +59,26 @@ void _run({mainException = false, childException = false, mainCatchChild = false
       main.start();
       return;
     }
-    final main = Fiber.main(entry: () {
-      Fiber.spawn(child);
+    final main = Fiber.main(() {
+      Fiber.fork(child);
       throw FiberException("main");
     });
     Expect.equals(Expect.throws<FiberException>(main.start).message, "main");
     return;
   }
   if (childException) {
-    final child = Fiber.child(entry: () => throw FiberException("child"), name: "child");
+    final child = Fiber.child(() => throw FiberException("child"), name: "child");
     if (mainCatchChild) {
-      final main = Fiber.main(entry: () => Expect.equals(Expect.throws<FiberException>(() => Fiber.spawn(child)).message, "child"));
+      final main = Fiber.main(() => Expect.equals(Expect.throws<FiberException>(() => Fiber.fork(child)).message, "child"));
       main.start();
       return;
     }
-    final main = Fiber.main(entry: () => Fiber.spawn(child));
+    final main = Fiber.main(() => Fiber.fork(child));
     Expect.equals(Expect.throws<FiberException>(main.start).message, "child");
     return;
   }
   if (mainException) {
-    final main = Fiber.main(entry: () => throw FiberException("main"));
+    final main = Fiber.main(() => throw FiberException("main"));
     Expect.equals(Expect.throws<FiberException>(main.start).message, "main");
   }
 }

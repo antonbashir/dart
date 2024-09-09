@@ -7,13 +7,11 @@ class Fiber {
   FiberState get state => _state;
   var _state = FiberState.created;
   @patch
-  Fiber._({required int size, required void Function() entry, required String name}) : this.name = name;
+  Fiber._({required int size, required void Function() entry, required String name, bool defer = false}) : this.name = name;
   @patch
-  void start() { throw UnsupportedError("Fiber.start"); }
+  void _start() { throw UnsupportedError("Fiber.start"); }
   @patch
-  void transfer(Fiber to) { throw UnsupportedError("Fiber.transfer"); }
+  void _transfer(Fiber to) { throw UnsupportedError("Fiber.transfer"); }
   @patch
-  void fork(Fiber to) { throw UnsupportedError("Fiber.fork"); }
-  @patch
-  static void idle() { throw UnsupportedError("Fiber.idle"); }
+  void _fork(Fiber to) { throw UnsupportedError("Fiber.fork"); }
 }
