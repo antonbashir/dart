@@ -7,7 +7,16 @@ final mainFiber = Fiber.main(mainEntry);
 var commonState = "";
 
 void main() {
+  testBase();
+  testClosureScopes();
+  testTransfer();
+}
+
+void testBase() {
   mainFiber.start();
+}
+
+void testClosureScopes() {
   var variable = "variable";
   Fiber.launch(
     () {
@@ -61,6 +70,43 @@ void main() {
   );
 
   Expect.equals("level 4", variable);
+}
+
+void testTransfer() {
+  Fiber.launch(() {
+    var state = "main";
+    var switches = 0;
+    final first = Fiber.child(
+      () {
+        switches++;
+        Expect.equals("created", state);
+        state = "first";
+      },
+      run: false,
+    );
+    Fiber.fork(first);
+
+    final second = Fiber.child(
+      () {
+        switches++;
+        Expect.equals("first", state);
+        state = "second";
+      },
+      run: false,
+    );
+    Fiber.fork(second);
+
+    state = "created";
+    Fiber.transfer(first);
+    switches++;    
+    Expect.equals("first", state);
+
+    Fiber.transfer(second);
+    switches++;
+    Expect.equals("second", state);
+    
+    Expect.equals(4, switches);
+  });
 }
 
 void mainEntry() {

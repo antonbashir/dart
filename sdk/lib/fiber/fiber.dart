@@ -24,7 +24,7 @@ class Fiber {
     int size = _kDefaultStackSize,
     String? name,
   }) =>
-      Fiber.fork(Fiber.child(entry, size: size, name: name ?? entry.toString(), run: run));
+      Fiber.fork(Fiber.child(entry, size: size, name: name, run: run));
 
   @pragma("vm:prefer-inline")
   static void launch(
@@ -50,6 +50,7 @@ class Fiber {
   @pragma("vm:prefer-inline")
   static void transfer(Fiber to) {
     if (!Fiber._initialized) throw StateError("Main fiber is not initialized. Create main fiber before transfer to others");
+    if (to.state != FiberState.running) throw StateError("Destination fiber is not running");
     _owner._transfer(to);
   }
 
@@ -71,8 +72,9 @@ class Fiber {
     void Function() entry, {
     int size = _kDefaultStackSize,
     bool run = true,
-    required String name,
-  }) => Fiber._(size: size, entry: entry, name: name, defer: !run);
+    String? name,
+  }) =>
+      Fiber._(size: size, entry: entry, name: name ?? entry.toString(), defer: !run);
 
   @pragma("vm:prefer-inline")
   void start() {
