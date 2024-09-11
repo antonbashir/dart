@@ -3779,7 +3779,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   VISIT_FROM(caller)
   COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
-  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
+  COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
   COMPRESSED_POINTER_FIELD(SmiPtr, state)
   VISIT_TO(entry)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }

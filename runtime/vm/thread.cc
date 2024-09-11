@@ -66,6 +66,7 @@ Thread::Thread(bool is_vm_isolate)
       write_barrier_mask_(UntaggedObject::kGenerationalBarrierMask),
       active_exception_(Object::null()),
       active_stacktrace_(Object::null()),
+      coroutine_(Coroutine::null()),
       global_object_pool_(ObjectPool::null()),
       resume_pc_(0),
       execution_state_(kThreadInNative),
@@ -238,6 +239,10 @@ void Thread::set_sticky_error(const Error& value) {
   sticky_error_ = value.ptr();
 }
 
+bool Thread::has_coroutine() const {
+  return coroutine_ != Coroutine::null();
+}
+
 void Thread::ClearStickyError() {
   sticky_error_ = Error::null();
 }
@@ -312,6 +317,10 @@ void Thread::AssertEmptyStackInvariants() {
     ASSERT(sticky_error() == Error::null());
     ASSERT(active_exception_ == Object::null());
     ASSERT(active_stacktrace_ == Object::null());
+  }
+
+  if (coroutine_.untag() != 0) {
+    ASSERT(coroutine_ == Coroutine::null());
   }
 }
 
@@ -674,7 +683,7 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
 
   thread->isolate_ = nullptr;
   thread->isolate_group_ = nullptr;
-  thread->coroutine_ = nullptr;
+  thread->coroutine_ = Coroutine::null();
   thread->scheduled_dart_mutator_isolate_ = nullptr;
   thread->set_execution_state(Thread::kThreadInNative);
   thread->stack_limit_.store(0);
@@ -727,8 +736,9 @@ CoroutinePtr Thread::SaveCoroutine() {
     stack_limit_.store(OSThread::kInvalidStackLimit);
   }
   saved_stack_limit_ = OSThread::kInvalidStackLimit;
+  NoSafepointScope no_safepoint;
   CoroutinePtr coroutine = coroutine_;
-  coroutine_ = nullptr;
+  coroutine_ = Coroutine::null();
   return coroutine;
 }
 
@@ -743,7 +753,7 @@ void Thread::EnterCoroutine(CoroutinePtr coroutine) {
 
 void Thread::ExitCoroutine() {
   MonitorLocker ml(&thread_lock_);
-  coroutine_ = nullptr;
+  coroutine_ = Coroutine::null();
   if (!HasScheduledInterrupts()) {
     stack_limit_.store(os_thread()->overflow_stack_limit());
   }
@@ -751,14 +761,14 @@ void Thread::ExitCoroutine() {
 }
 
 uword Thread::GetSavedStackLimit() const {
-  return coroutine_ == nullptr ? saved_stack_limit_
+  return !has_coroutine() ? saved_stack_limit_
          : saved_stack_limit_ == OSThread::kInvalidStackLimit
              ? OSThread::kInvalidStackLimit
              : coroutine_->untag()->stack_limit();
 }
 
 bool Thread::HasStackHeadroom() const {
-  if (coroutine_ != nullptr) {
+  if (!has_coroutine()) {
     return OSThread::GetCurrentStackPointer() >
            coroutine_->untag()->stack_limit();
   }
@@ -1041,6 +1051,7 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
 
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
 

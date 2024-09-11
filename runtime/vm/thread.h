@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_THREAD_H_
 #define RUNTIME_VM_THREAD_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -397,7 +398,8 @@ class Thread : public ThreadState {
   CoroutinePtr SaveCoroutine();
   void EnterCoroutine(CoroutinePtr coroutine);
   void ExitCoroutine();
-  bool has_coroutine() const { return coroutine_ != nullptr; }
+
+  bool has_coroutine() const;
   CoroutinePtr coroutine() const { return coroutine_; }
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
   void set_coroutine(CoroutinePtr value) { coroutine_ = value; }
@@ -1200,8 +1202,7 @@ class Thread : public ThreadState {
   const uword* dispatch_table_array_ = nullptr;
   ObjectPtr* field_table_values_ = nullptr;
   ObjectPtr* shared_field_table_values_ = nullptr;
-  CoroutinePtr coroutine_ = nullptr;
-
+  
   // Offsets up to this point can all fit in a byte on X64. All of the above
   // fields are very abundantly accessed from code. Thus, keeping them first
   // is important for code size (although code size on X64 is not a priority).
@@ -1249,6 +1250,8 @@ class Thread : public ThreadState {
   // JumpToExceptionHandler state:
   ObjectPtr active_exception_;
   ObjectPtr active_stacktrace_;
+
+  CoroutinePtr coroutine_;
 
   ObjectPoolPtr global_object_pool_;
   uword resume_pc_;

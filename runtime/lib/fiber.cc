@@ -25,8 +25,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 4) {
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
   memset(stack_base, 0, stack_size * kWordSize);
-  return Coroutine::New(stack_base + stack_size, stack_size,
-                        Function::Handle(entry.function()).ptr(),
-                        Function::Handle(trampoline.function()).ptr());
+  return Coroutine::New(stack_base + stack_size, stack_size, entry,
+                        Function::Handle(trampoline.function()));
 }
 }  // namespace dart

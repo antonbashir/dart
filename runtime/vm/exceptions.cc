@@ -691,7 +691,8 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   if (thread->has_coroutine()) {
     CoroutinePtr found =
         Coroutine::FindContainedCoroutine(thread->coroutine(), stack_pointer);
-    if (found.IsRawNull()) {
+    found->untag()->set_state(Smi::New(Coroutine::CoroutineState::finished));
+    if (found.untag() != 0) {
       thread->ExitCoroutine();
     } else {
       thread->EnterCoroutine(found);

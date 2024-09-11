@@ -235,7 +235,8 @@ class ParsedFunction;
   V(Isolate, _, finalizers, GrowableObjectArray, VAR)                          \
   V(LocalHandle, _, ptr, Dynamic, VAR)                                         \
   V(ObjectStore, _, record_field_names, Array, VAR)                            \
-  V(PersistentHandle, _, ptr, Dynamic, VAR)
+  V(Thread, _, coroutine, Coroutine, VAR)                                      \
+  V(PersistentHandle, _, ptr, Dynamic, VAR)                                    \
 
 // List of slots that correspond to fields of non-Dart objects containing
 // unboxed values in the following format:
@@ -283,7 +284,6 @@ class ParsedFunction;
 #define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)                                  \
   V(IsolateGroup, _, object_store, false, FINAL)                               \
   V(Thread, _, api_top_scope, false, VAR)                                      \
-  V(Thread, _, coroutine, false, VAR)                                          \
   V(Thread, _, isolate, false, FINAL)                                          \
   V(Thread, _, isolate_group, false, FINAL)                                    \
   V(Thread, _, service_extension_stream, false, FINAL)

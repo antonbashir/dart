@@ -26631,21 +26631,17 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(void** stack_base,
                             uintptr_t stack_size,
-                            FunctionPtr entry,
-                            FunctionPtr trampoline) {
-  const auto& coroutine =
-      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_,
-                            (uword) nullptr);
+                            const Closure& entry,
+                            const Function& trampoline) {
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
-                            (uword)stack_base - stack_size);
-  coroutine.StoreCompressedPointer(
-      &coroutine.untag()->state_, Smi::New(Coroutine::CoroutineState::created));
-  coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
-  coroutine.StoreCompressedPointer(&coroutine.untag()->trampoline_, trampoline);
-  coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, null());
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - stack_size);
+  coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
+  coroutine.untag()->set_entry(entry.ptr());
+  coroutine.untag()->set_trampoline(trampoline.ptr());
+  coroutine.untag()->set_caller(Coroutine::null());
   return coroutine.ptr();
 }
 
@@ -26658,7 +26654,7 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
   CoroutinePtr found = current;
   IntMap<CoroutinePtr> processed;
   UntaggedCoroutine* untagged;
-  while (!found.IsRawNull() &&
+  while (found.untag() != 0 &&
          !processed.HasKey((uword)(untagged = found->untag()))) {
     if (stack_pointer > untagged->stack_limit() &&
         stack_pointer <= untagged->stack_root()) {

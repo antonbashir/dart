@@ -1677,7 +1677,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
-  CoroutinePtr saved_coroutine_ = nullptr;
+  CoroutinePtr saved_coroutine_;
 
   GrowableObjectArrayPtr tag_table_;
 

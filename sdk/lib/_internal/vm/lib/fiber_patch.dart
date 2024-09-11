@@ -26,10 +26,11 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external void Function() get _entry;
+  external void Function(dynamic) get _entry;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
+  @pragma("vm:idempotent")
   external static _Coroutine? get _current;
   @patch
   @pragma("vm:recognized", "other")

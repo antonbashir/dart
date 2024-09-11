@@ -1759,6 +1759,7 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       on_cleanup_callback_(Isolate::CleanupCallback()),
       random_(),
       mutex_(NOT_IN_PRODUCT("Isolate::mutex_")),
+      saved_coroutine_(Coroutine::null()),
       tag_table_(GrowableObjectArray::null()),
       sticky_error_(Error::null()),
       spawn_count_monitor_(),
@@ -2733,6 +2734,7 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&tag_table_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
