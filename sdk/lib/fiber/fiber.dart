@@ -14,6 +14,19 @@ extension type FiberState(int state) {
   get running => state == _kFiberStateRunning;
   @pragma("vm:prefer-inline")
   get finished => state == _kFiberStateFinished;
+
+  String string() {
+    switch (state) {
+      case _kFiberStateCreated:
+        return "created";
+      case _kFiberStateRunning:
+        return "running";
+      case _kFiberStateFinished:
+        return "finished";
+      default:
+        return "unknown";
+    }
+  }
 }
 
 class _Coroutine {
@@ -83,7 +96,7 @@ extension type Fiber(_Coroutine _coroutine) {
   @pragma("vm:prefer-inline")
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
-    if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: $state");
+    if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: ${state.string()}");
     _start();
   }
 
@@ -127,7 +140,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current!;
     if (current._caller != null) {
       while (current._caller!._state != _kFiberStateRunning) current._caller = current._caller!._caller;
-    } 
+    }
   }
 
   @pragma("vm:never-inline")
@@ -137,6 +150,6 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current!;
     if (current._caller != null) {
       while (current._caller!._state != _kFiberStateRunning) current._caller = current._caller!._caller;
-    } 
+    }
   }
 }

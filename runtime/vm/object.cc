@@ -26651,19 +26651,18 @@ const char* Coroutine::ToCString() const {
 
 CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
                                                uword stack_pointer) {
-  CoroutinePtr found = current;
   IntMap<CoroutinePtr> processed;
-  UntaggedCoroutine* untagged;
-  while (found.untag() != 0 &&
-         !processed.HasKey((uword)(untagged = found->untag()))) {
-    if (stack_pointer > untagged->stack_limit() &&
-        stack_pointer <= untagged->stack_root()) {
+  CoroutinePtr found = current;
+  UntaggedCoroutine* untagged = found.untag();
+  while (found != Coroutine::null() && !processed.HasKey((uword)(untagged))) {
+    if (stack_pointer > untagged->stack_limit() && stack_pointer <= untagged->stack_root()) {
       return found;
     }
     processed.Insert((uword)untagged, found);
     found = untagged->caller();
+    untagged = found.untag();
   }
-  return null();
+  return Coroutine::null();
 }
 
 void RegExp::set_pattern(const String& pattern) const {

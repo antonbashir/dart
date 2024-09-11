@@ -768,7 +768,7 @@ uword Thread::GetSavedStackLimit() const {
 }
 
 bool Thread::HasStackHeadroom() const {
-  if (!has_coroutine()) {
+  if (has_coroutine()) {
     return OSThread::GetCurrentStackPointer() >
            coroutine_->untag()->stack_limit();
   }

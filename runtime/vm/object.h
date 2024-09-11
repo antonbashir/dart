@@ -12700,7 +12700,7 @@ class SuspendState : public Instance {
 
 class Coroutine : public Instance {
  public:
-   enum CoroutineState {
+  enum CoroutineState {
     created = 0,
     running = 1,
     finished = 2,

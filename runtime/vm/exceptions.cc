@@ -11,6 +11,7 @@
 
 #include "lib/stacktrace.h"
 
+#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_entry.h"
 #include "vm/datastream.h"
@@ -691,11 +692,14 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   if (thread->has_coroutine()) {
     CoroutinePtr found =
         Coroutine::FindContainedCoroutine(thread->coroutine(), stack_pointer);
-    found->untag()->set_state(Smi::New(Coroutine::CoroutineState::finished));
-    if (found.untag() != 0) {
+    if (found == Coroutine::null()) {
       thread->ExitCoroutine();
     } else {
-      thread->EnterCoroutine(found);
+      if (found != thread->coroutine()) {
+        found->untag()->set_state(
+            Smi::New(Coroutine::CoroutineState::finished));
+        thread->EnterCoroutine(found);
+      }
     }
   }
   if (thread->is_unwind_in_progress()) {
