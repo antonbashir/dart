@@ -67,7 +67,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
     if (!to.state.created && !to.state.finished) throw StateError("Can't start a fiber in the state: ${to.state}");
-    Fiber(current!)._fork(to);
+    _Coroutine._fork(current!, to._coroutine);
   }
 
   @pragma("vm:prefer-inline")
@@ -75,7 +75,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
     if (current!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
-    Fiber(current!)._transfer(Fiber(current!._caller!));
+    _Coroutine._transfer(current!, current!._caller!);
   }
 
   @pragma("vm:prefer-inline")
@@ -83,7 +83,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before transfer to others");
     if (!to.state.running) throw StateError("Destination fiber is not running");
-    Fiber(current!)._transfer(to);
+    _Coroutine._transfer(current!, to._coroutine);
   }
 
   @pragma("vm:prefer-inline")
@@ -97,7 +97,7 @@ extension type Fiber(_Coroutine _coroutine) {
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
     if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: ${state.string()}");
-    _start();
+    _Coroutine._initialize(_coroutine);
   }
 
   @pragma("vm:prefer-inline")
@@ -118,21 +118,6 @@ extension type Fiber(_Coroutine _coroutine) {
     String? name,
   }) =>
       Fiber(_Coroutine._(size, entry, run ? _run : _defer));
-
-  @pragma("vm:prefer-inline")
-  void _start() {
-    _Coroutine._initialize(_coroutine);
-  }
-
-  @pragma("vm:prefer-inline")
-  void _transfer(Fiber to) {
-    _Coroutine._transfer(_coroutine, to._coroutine);
-  }
-
-  @pragma("vm:prefer-inline")
-  void _fork(Fiber to) {
-    _Coroutine._fork(_coroutine, to._coroutine);
-  }
 
   @pragma("vm:never-inline")
   static void _run() {
