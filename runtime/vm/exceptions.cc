@@ -110,7 +110,6 @@ static void BuildStackTrace(StackTraceBuilder* builder) {
     if (!frame->IsDartFrame()) {
       continue;
     }
-    OS::Print("BuildStackTrace\n");
     code = frame->LookupDartCode();
     ASSERT(code.ContainsInstructionAt(frame->pc()));
     const uword pc_offset = frame->pc() - code.PayloadStart();
