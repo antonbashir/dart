@@ -12717,6 +12717,8 @@ class Coroutine : public Instance {
   static CoroutinePtr FindContainedCoroutine(CoroutinePtr current,
                                              uword stack_pointer);
 
+  void Recycle() const;
+
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
 

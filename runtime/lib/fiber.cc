@@ -28,4 +28,10 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 4) {
   return Coroutine::New(stack_base + stack_size, stack_size, entry,
                         Function::Handle(trampoline.function()));
 }
+
+DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {
+  GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
+  coroutine.Recycle();
+  return Object::null();
+}
 }  // namespace dart

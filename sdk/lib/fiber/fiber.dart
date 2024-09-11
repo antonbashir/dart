@@ -40,6 +40,7 @@ class _Coroutine {
   external set _caller(_Coroutine? value);
   external void Function() get _entry;
   external static _Coroutine? get _current;
+  external void _recycle();
   external static void _initialize(_Coroutine root);
   external static void _transfer(_Coroutine from, _Coroutine to);
   external static void _fork(_Coroutine from, _Coroutine to);
@@ -67,6 +68,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
     if (!to.state.created && !to.state.finished) throw StateError("Can't start a fiber in the state: ${to.state}");
+    to._coroutine._recycle();
     _Coroutine._fork(current!, to._coroutine);
   }
 
@@ -97,6 +99,7 @@ extension type Fiber(_Coroutine _coroutine) {
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
     if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: ${state.string()}");
+    _coroutine._recycle();
     _Coroutine._initialize(_coroutine);
   }
 

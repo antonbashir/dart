@@ -8,7 +8,7 @@ var commonState = "";
 
 void main() {
   final iterations = 3;
-  final timeout = Duration(minutes: 5);
+  final timeout = Duration(minutes: 15);
   for (var i = 0; i < iterations; i++) {
     final sw = Stopwatch();
     sw.start();

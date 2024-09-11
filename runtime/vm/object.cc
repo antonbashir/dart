@@ -26633,11 +26633,14 @@ CoroutinePtr Coroutine::New(void** stack_base,
                             uintptr_t stack_size,
                             const Closure& entry,
                             const Function& trampoline) {
-  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
+  const auto& coroutine =
+      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_,
+                            (uword) nullptr);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, (uword)stack_base - stack_size);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
+                            (uword)stack_base - stack_size);
   coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
   coroutine.untag()->set_entry(entry.ptr());
   coroutine.untag()->set_trampoline(trampoline.ptr());
@@ -26655,7 +26658,8 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
   CoroutinePtr found = current;
   UntaggedCoroutine* untagged = found.untag();
   while (found != Coroutine::null() && !processed.HasKey((uword)(untagged))) {
-    if (stack_pointer > untagged->stack_limit() && stack_pointer <= untagged->stack_root()) {
+    if (stack_pointer > untagged->stack_limit() &&
+        stack_pointer <= untagged->stack_root()) {
       return found;
     }
     processed.Insert((uword)untagged, found);
@@ -26663,6 +26667,15 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
     untagged = found.untag();
   }
   return Coroutine::null();
+}
+
+void Coroutine::Recycle() const {
+  StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
+  StoreNonPointer(&untag()->stack_base_, untag()->stack_root_);
+  auto size = untag()->stack_base_ - untag()->stack_limit_;
+  memset((void**)untag()->stack_limit_, 0, size);
+  untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
+  untag()->set_caller(Coroutine::null());
 }
 
 void RegExp::set_pattern(const String& pattern) const {

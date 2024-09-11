@@ -23,4 +23,6 @@ class _Coroutine {
   static void _transfer(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._transfer");
   @patch
   static void _fork(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._fork");
+  @patch
+  void _recycle() => throw UnsupportedError("_Coroutine._recycle");
 }

@@ -44,4 +44,7 @@ class _Coroutine {
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   external static void _fork(_Coroutine from, _Coroutine to);
+  @patch
+  @pragma("vm:external-name", "Coroutine_recycle")
+  external void _recycle();
 }
