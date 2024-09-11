@@ -10,16 +10,23 @@
 #include "vm/native_entry.h"
 
 namespace dart {
-DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
+DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 4) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(1));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(2));
+  GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(3));
   intptr_t stack_size = size.Value();
 #if defined(DART_TARGET_OS_WINDOWS)
-  void** stack_base = (void**)((uintptr_t)VirtualAlloc(nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+  void** stack_base = (void**)((uintptr_t)VirtualAlloc(
+      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
+      PAGE_READWRITE));
 #else
-  void** stack_base = (void**)((uintptr_t)mmap(nullptr, stack_size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+  void** stack_base = (void**)((uintptr_t)mmap(
+      nullptr, stack_size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
   memset(stack_base, 0, stack_size * kWordSize);
-  return Coroutine::New(stack_base + stack_size , stack_size, Function::Handle(entry.function()).ptr());
+  return Coroutine::New(stack_base + stack_size, stack_size,
+                        Function::Handle(entry.function()).ptr(),
+                        Function::Handle(trampoline.function()).ptr());
 }
 }  // namespace dart

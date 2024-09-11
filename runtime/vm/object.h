@@ -7038,11 +7038,9 @@ class Code : public Object {
     explicit Comments(const Array& comments);
 
     // Layout of entries describing comments.
-    enum {
-      kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
-      kCommentEntry,       // Comment text as a String.
-      kNumberOfEntries
-    };
+    enum {kPCOffsetEntry = 0,  // PC offset to a comment as a Smi.
+          kCommentEntry,       // Comment text as a String.
+          kNumberOfEntries};
 
     const Array& comments_;
     String& string_;
@@ -12705,9 +12703,13 @@ class Coroutine : public Instance {
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
-  static CoroutinePtr New(void** stack_base, uintptr_t stack_size, FunctionPtr entry);
+  static CoroutinePtr New(void** stack_base,
+                          uintptr_t stack_size,
+                          FunctionPtr entry,
+                          FunctionPtr trampoline);
 
-  static CoroutinePtr FindContainedCoroutine(CoroutinePtr current, uword stack_pointer);
+  static CoroutinePtr FindContainedCoroutine(CoroutinePtr current,
+                                             uword stack_pointer);
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
@@ -12715,9 +12717,17 @@ class Coroutine : public Instance {
   FunctionPtr entry() const { return untag()->entry(); }
   static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
 
-  uword root_stack_base() const { return untag()->root_stack_base_; }
-  static uword root_stack_base_offset() {
-    return OFFSET_OF(UntaggedCoroutine, root_stack_base_);
+  FunctionPtr trampoline() const { return untag()->trampoline(); }
+  static uword trampoline_offset() {
+    return OFFSET_OF(UntaggedCoroutine, trampoline_);
+  }
+
+  SmiPtr state() const { return untag()->state(); }
+  static uword state_offset() { return OFFSET_OF(UntaggedCoroutine, state_); }
+
+  uword native_stack_base() const { return untag()->native_stack_base_; }
+  static uword native_stack_base_offset() {
+    return OFFSET_OF(UntaggedCoroutine, native_stack_base_);
   }
 
   uword stack_root() const { return untag()->stack_root_; }

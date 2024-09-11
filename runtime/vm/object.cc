@@ -9195,6 +9195,7 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kTypedData_memMove4:
     case MethodRecognizer::kTypedData_memMove8:
     case MethodRecognizer::kTypedData_memMove16:
+    case MethodRecognizer::kCoroutine_getCurrent:
     case MethodRecognizer::kMemCopy:
     // Prevent the GC from running so that the operation is atomic from
     // a GC point of view. Always double check implementation in
@@ -26629,16 +26630,18 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(void** stack_base,
                             uintptr_t stack_size,
-                            FunctionPtr entry) {
+                            FunctionPtr entry,
+                            FunctionPtr trampoline) {
   const auto& coroutine =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  coroutine.StoreNonPointer(&coroutine.untag()->root_stack_base_,
+  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_,
                             (uword) nullptr);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
                             (uword)stack_base - stack_size);
   coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
+  coroutine.StoreCompressedPointer(&coroutine.untag()->trampoline_, trampoline);
   coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, null());
   return coroutine.ptr();
 }
@@ -26651,16 +26654,19 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
                                                uword stack_pointer) {
   CoroutinePtr found = current;
   IntMap<CoroutinePtr> processed;
-  while (!found.IsRawNull() && !processed.HasKey((uword)found->untag())) {
-    if (stack_pointer > found->untag()->stack_limit() && stack_pointer <= found->untag()->stack_root()) {
+  UntaggedCoroutine* untagged;
+  while (!found.IsRawNull() &&
+         !processed.HasKey((uword)(untagged = found->untag()))) {
+    if (stack_pointer > untagged->stack_limit() &&
+        stack_pointer <= untagged->stack_root()) {
       return found;
     }
-    processed.Insert((uword)found->untag(), found);
-    found = found->untag()->caller();
+    processed.Insert((uword)untagged, found);
+    found = untagged->caller();
   }
   return null();
 }
- 
+
 void RegExp::set_pattern(const String& pattern) const {
   untag()->set_pattern(pattern.ptr());
 }

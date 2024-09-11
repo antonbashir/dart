@@ -86,7 +86,9 @@ class ParsedFunction;
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)               \
   V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments, FINAL)\
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
+  V(Coroutine, UntaggedCoroutine, state, Coroutine, VAR)                       \
   V(Coroutine, UntaggedCoroutine, entry, Coroutine, VAR)                       \
+  V(Coroutine, UntaggedCoroutine, trampoline, Coroutine, VAR)                  \
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:
@@ -281,6 +283,7 @@ class ParsedFunction;
 #define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)                                  \
   V(IsolateGroup, _, object_store, false, FINAL)                               \
   V(Thread, _, api_top_scope, false, VAR)                                      \
+  V(Thread, _, coroutine, false, VAR)                                          \
   V(Thread, _, isolate, false, FINAL)                                          \
   V(Thread, _, isolate_group, false, FINAL)                                    \
   V(Thread, _, service_extension_stream, false, FINAL)

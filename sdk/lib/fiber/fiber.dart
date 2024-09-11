@@ -3,20 +3,34 @@ library dart.fiber;
 const _kDefaultStackSize = 128 * (1 << 10);
 const _kMainFiber = "main";
 
-enum FiberState {
-  created,
-  initialized,
-  running,
-  finished,
+extension type FiberState(int state) {
+  @pragma("vm:prefer-inline")
+  get created => state == 1 << 1;
+  @pragma("vm:prefer-inline")
+  get initialized => state == 1 << 2;
+  @pragma("vm:prefer-inline")
+  get running => state == 1 << 3;
+  @pragma("vm:prefer-inline")
+  get finished => state == 1 << 4;
 }
 
-class Fiber {
-  final String name;
-  Fiber? _caller;
+class _Coroutine {
+  external factory _Coroutine._(int size, void Function() entry, void Function() trampoline);
+  external set _state(int value);
+  external int get _state;
+  external _Coroutine? get _caller;
+  external set _caller(_Coroutine? value);
+  external void Function() get _entry;
+  external static _Coroutine? get _current;
+  @pragma("vm:prefer-inline")
+  static bool get _initialized => _current != null;
 
-  static var _initialized = false;
-  static late Fiber _owner;
+  external static void _initialize(_Coroutine root);
+  external static void _transfer(_Coroutine from, _Coroutine to);
+  external static void _fork(_Coroutine from, _Coroutine to);
+}
 
+extension type Fiber(_Coroutine _coroutine) {
   @pragma("vm:prefer-inline")
   static void spawn(
     void Function() entry, {
@@ -35,37 +49,51 @@ class Fiber {
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber to) {
-    if (!Fiber._initialized) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
-    if (to.state != FiberState.created && to.state != FiberState.finished) throw StateError("Can't start a fiber in the state: ${to.state}");
-    Fiber._owner._fork(to);
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
+    if (!to.state.created && !to.state.finished) throw StateError("Can't start a fiber in the state: ${to.state}");
+    Fiber(current!)._fork(to);
   }
 
   @pragma("vm:prefer-inline")
   static void suspend() {
-    if (!Fiber._initialized) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
-    if (_owner._caller == null) throw StateError("Can't suspend: no caller for this fiber");
-    _owner._transfer(_owner._caller!!);
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
+    if (current!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
+    Fiber(current!)._transfer(Fiber(current!._caller!));
   }
 
   @pragma("vm:prefer-inline")
   static void transfer(Fiber to) {
-    if (!Fiber._initialized) throw StateError("Main fiber is not initialized. Create main fiber before transfer to others");
-    if (to.state != FiberState.running) throw StateError("Destination fiber is not running");
-    _owner._transfer(to);
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before transfer to others");
+    if (!to.state.running) throw StateError("Destination fiber is not running");
+    Fiber(current!)._transfer(to);
   }
 
   @pragma("vm:prefer-inline")
   static Fiber current() {
-    if (!Fiber._initialized) throw StateError("Main fiber is not initialized");
-    return Fiber._owner;
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized");
+    return Fiber(current!);
   }
+
+  @pragma("vm:prefer-inline")
+  void start() {
+    if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
+    if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: $state");
+    _start();
+  }
+
+  @pragma("vm:prefer-inline")
+  FiberState get state => FiberState(_coroutine._state);
 
   @pragma("vm:prefer-inline")
   factory Fiber.main(
     void Function() entry, {
     int size = _kDefaultStackSize,
   }) =>
-      Fiber._(size: size, entry: entry, name: _kMainFiber);
+      Fiber(_Coroutine._(size, entry, _run));
 
   @pragma("vm:prefer-inline")
   factory Fiber.child(
@@ -74,32 +102,31 @@ class Fiber {
     bool run = true,
     String? name,
   }) =>
-      Fiber._(size: size, entry: entry, name: name ?? entry.toString(), defer: !run);
+      Fiber(_Coroutine._(size, entry, run ? _run : _defer));
 
   @pragma("vm:prefer-inline")
-  void start() {
-    if (Fiber._initialized) throw StateError("Main fiber already initialized");
-    if (state != FiberState.created && state != FiberState.finished) throw StateError("Can't start a fiber in the state: $state");
-    Fiber._initialized = true;
-    try {
-      _start();
-    } finally {
-      Fiber._initialized = false;
-    }
+  void _start() {
+    _Coroutine._initialize(_coroutine);
   }
 
-  external FiberState get state;
+  @pragma("vm:prefer-inline")
+  void _transfer(Fiber to) {
+    _Coroutine._transfer(_coroutine, to._coroutine);
+  }
 
-  external Fiber._({
-    required int size,
-    required void Function() entry,
-    required String name,
-    bool defer = false,
-  });
+  @pragma("vm:prefer-inline")
+  void _fork(Fiber to) {
+    _Coroutine._fork(_coroutine, to._coroutine);
+  }
 
-  external void _start();
+  @pragma("vm:never-inline")
+  static void _run() {
+    _Coroutine._current!._entry();
+  }
 
-  external void _transfer(Fiber to);
-
-  external void _fork(Fiber to);
+  @pragma("vm:never-inline")
+  static void _defer() {
+    _Coroutine._transfer(_Coroutine._current!, _Coroutine._current!._caller!);
+    _Coroutine._current!._entry();
+  }
 }

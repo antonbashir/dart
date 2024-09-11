@@ -3778,10 +3778,12 @@ class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   VISIT_FROM(caller)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
   COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
+  COMPRESSED_POINTER_FIELD(SmiPtr, state)
   VISIT_TO(entry)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-  uword root_stack_base_;
+  uword native_stack_base_;
   uword stack_root_;
   uword stack_base_;
   uword stack_limit_;

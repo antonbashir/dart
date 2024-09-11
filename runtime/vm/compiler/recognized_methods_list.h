@@ -381,11 +381,21 @@ namespace dart {
   V(::, _memCopy, MemCopy, 0x51939aa6)                                         \
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
-  V(::, _coroutineInitialize, CoroutineInitialize, 0x797da468)                 \
-  V(::, _coroutineTransfer, CoroutineTransfer, 0x821c1d82)                     \
-  V(::, _coroutineFork, CoroutineFork, 0xaca4c449)                             \
+  V(_Coroutine, _initialize, CoroutineInitialize, 0x797da468)                 \
+  V(_Coroutine, _transfer, CoroutineTransfer, 0x821c1d82)                     \
+  V(_Coroutine, _fork, CoroutineFork, 0xaca4c449)                             \
   V(_Coroutine, get:_caller, Coroutine_getCaller,                              \
     0x786cc73b)                                                                \
+  V(_Coroutine, get:_state, Coroutine_getState,                                \
+    0x808e4b75)                                                                \
+  V(_Coroutine, set:_caller, Coroutine_setCaller,                              \
+    0xa963fe38)                                                                \
+  V(_Coroutine, set:_state, Coroutine_setState,                                \
+    0xed4e42f2)                                                                \
+  V(_Coroutine, get:_current, Coroutine_getCurrent,                            \
+    0x5d29cf9b)                                                                \
+  V(_Coroutine, get:_entry, Coroutine_getEntry,                                \
+    0)                                                                         \
 
 
 // List of intrinsics:

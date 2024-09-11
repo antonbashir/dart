@@ -1,80 +1,46 @@
 import "dart:_internal" show patch;
 import "dart:fiber";
 
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
-external void _coroutineInitialize(_Coroutine root);
-
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
-external void _coroutineTransfer(_Coroutine from, _Coroutine to);
-
-@pragma("vm:recognized", "other")
-@pragma("vm:never-inline")
-external void _coroutineFork(_Coroutine from, _Coroutine to);
-
+@patch
 @pragma("vm:entry-point")
 class _Coroutine {
+  @patch
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, void Function() entry);
+  external factory _Coroutine._(int size, void Function() entry, void Function() trampoline);
+  @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _Coroutine get _caller;
-}
-
-@patch
-class Fiber {
-  final _Coroutine _current;
-  final void Function() _entry;
-
+  external set _state(int value);
   @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  FiberState get state => _state;
-  var _state = FiberState.created;
-
+  external int get _state;
   @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  Fiber._({required int size, required void Function() entry, required String name, bool defer = false})
-      : this.name = name,
-        _entry = entry,
-        _current = _Coroutine._(size, defer ? _defer : _run);
-
+  external _Coroutine? get _caller;
   @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  void _start() {
-    Fiber._owner = this;
-    _state = FiberState.initialized;
-    _coroutineInitialize(_current);
-  }
-
+  external set _caller(_Coroutine? value);
   @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  void _transfer(Fiber to) {
-    Fiber._owner = to;
-    to._caller = this;
-    _coroutineTransfer(_current, to._current);
-  }
-
+  external void Function() get _entry;
   @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  void _fork(Fiber to) {
-    Fiber._owner = to;
-    to._caller = this;
-    _coroutineFork(_current, to._current);
-  }
-
+  external static _Coroutine? get _current;
+  @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
-  static void _run() {
-    Fiber._owner._state = FiberState.running;
-    Fiber._owner._entry();
-    Fiber._owner._state = FiberState.finished;
-  }
-
+  external static void _initialize(_Coroutine root);
+  @patch
+  @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
-  static void _defer() {
-    Fiber._owner._state = FiberState.running;
-    Fiber._owner._transfer(Fiber._owner._caller!!);
-    Fiber._owner._entry();
-    Fiber._owner._state = FiberState.finished;
-  }
+  external static void _transfer(_Coroutine from, _Coroutine to);
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:never-inline")
+  external static void _fork(_Coroutine from, _Coroutine to);
 }

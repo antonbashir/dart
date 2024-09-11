@@ -400,6 +400,7 @@ class Thread : public ThreadState {
   bool has_coroutine() const { return coroutine_ != nullptr; }
   CoroutinePtr coroutine() const { return coroutine_; }
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
+  void set_coroutine(CoroutinePtr value) { coroutine_ = value; }
 
   uword GetSavedStackLimit() const;
   bool HasStackHeadroom() const;

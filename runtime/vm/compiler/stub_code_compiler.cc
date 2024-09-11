@@ -3235,7 +3235,7 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
 void StubCodeCompiler::GenerateCoroutineEntryStub() {
   const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
   __ EnterStubFrame();
-  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::entry_offset());
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::trampoline_offset());
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);

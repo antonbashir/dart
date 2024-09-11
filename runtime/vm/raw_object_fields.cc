@@ -233,8 +233,10 @@ namespace dart {
   F(TypedDataView, offset_in_bytes_)                                           \
   F(FutureOr, type_arguments_)                                                 \
   F(Coroutine, caller_)                                                        \
+  F(Coroutine, state_)                                                         \
+  F(Coroutine, trampoline_)                                                    \
   F(Coroutine, entry_)                                                         \
-  F(Coroutine, root_stack_base_)                                               \
+  F(Coroutine, native_stack_base_)                                             \
   F(Coroutine, stack_root_)                                                    \
   F(Coroutine, stack_base_)                                                    \
   F(Coroutine, stack_limit_)

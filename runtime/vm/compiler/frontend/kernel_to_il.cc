@@ -922,7 +922,9 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(ObjectArrayLength, Array_length)                                           \
   V(Record_shape, Record_shape)                                                \
   V(SuspendState_getFunctionData, SuspendState_function_data)                  \
+  V(Coroutine_getEntry, Coroutine_entry)                                       \
   V(Coroutine_getCaller, Coroutine_caller)                                     \
+  V(Coroutine_getState, Coroutine_state)                                       \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -944,6 +946,8 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(SuspendState_setFunctionData, SuspendState_function_data)                  \
   V(SuspendState_setThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_setErrorCallback, SuspendState_error_callback)                \
+  V(Coroutine_setCaller, Coroutine_caller)                                     \
+  V(Coroutine_setState, Coroutine_state)                                       \
   V(WeakProperty_setKey, WeakProperty_key)                                     \
   V(WeakProperty_setValue, WeakProperty_value)                                 \
   V(WeakReference_setTarget, WeakReference_target)
@@ -1143,6 +1147,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineFork:
     case MethodRecognizer::kCoroutineInitialize:
     case MethodRecognizer::kCoroutineTransfer:
+    case MethodRecognizer::kCoroutine_getCurrent:
       return true;
     default:
       return false;
@@ -1933,6 +1938,11 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
       body += CoroutineTransfer();
       body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getCurrent: {
+      body += LoadThread();
+      body += LoadNativeField(Slot::Thread_coroutine());
       break;
     }
 #define IL_BODY(method, slot)                                                  \
