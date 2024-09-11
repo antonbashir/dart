@@ -465,18 +465,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -542,7 +544,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -1014,19 +1016,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -1092,7 +1096,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -1564,18 +1568,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -1640,7 +1646,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -2112,19 +2118,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -2192,7 +2200,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -2665,18 +2673,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x18;
+    Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -2742,7 +2752,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x20;
@@ -3215,18 +3225,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x18;
+    Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -3294,7 +3306,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x20;
@@ -3766,18 +3778,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -3844,7 +3858,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -4316,19 +4330,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -4395,7 +4411,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -4862,18 +4878,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -4939,7 +4957,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -5406,19 +5424,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -5484,7 +5504,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -5951,18 +5971,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -6027,7 +6049,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -6494,19 +6516,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -6574,7 +6598,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -7042,18 +7066,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x18;
+    Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -7119,7 +7145,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x20;
@@ -7587,18 +7613,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x18;
+    Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -7666,7 +7694,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x20;
@@ -8133,18 +8161,20 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x8;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x14;
+    Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -8211,7 +8241,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x14;
@@ -8678,19 +8708,21 @@ static constexpr dart::compiler::target::word WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    Coroutine_native_stack_base_offset = 0x28;
+    Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     Thread_write_barrier_wrappers_thread_offset[] = {
@@ -8757,7 +8789,7 @@ static constexpr dart::compiler::target::word Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word SuspendState_HeaderSize = 0x38;
-static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word LoadingUnit_InstanceSize = 0x28;
@@ -9238,19 +9270,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x8;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x14;
+    AOT_Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -9316,7 +9350,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x14;
@@ -9797,19 +9831,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -9875,7 +9911,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;
@@ -10361,19 +10397,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -10441,7 +10479,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;
@@ -10926,19 +10964,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0xc;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x18;
+    AOT_Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -11004,7 +11044,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x20;
@@ -11486,19 +11526,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0xc;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x18;
+    AOT_Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -11566,7 +11608,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x20;
@@ -12047,19 +12089,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x8;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x14;
+    AOT_Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -12126,7 +12170,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x14;
@@ -12607,19 +12651,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -12686,7 +12732,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;
@@ -13162,19 +13208,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x8;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x14;
+    AOT_Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -13240,7 +13288,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x14;
@@ -13716,19 +13764,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -13794,7 +13844,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;
@@ -14275,19 +14325,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -14355,7 +14407,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;
@@ -14832,19 +14884,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0xc;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x18;
+    AOT_Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -14910,7 +14964,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x20;
@@ -15387,19 +15441,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0xc;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x18;
+    AOT_Coroutine_native_stack_base_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x38;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -15467,7 +15523,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x40;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x20;
@@ -15943,19 +15999,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x14;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x8;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x14;
+    AOT_Coroutine_native_stack_base_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x24;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x4, 0xc, 0x8, 0x10};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -16022,7 +16080,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x4;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x14;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0xc;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x14;
@@ -16498,19 +16556,21 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_key_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x28;
 static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_state_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
     0x10;
 static constexpr dart::compiler::target::word
-    AOT_Coroutine_native_stack_base_offset = 0x28;
+    AOT_Coroutine_native_stack_base_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_base_offset =
     0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_stack_limit_offset =
+    0x48;
 static constexpr dart::compiler::target::word AOT_Code_entry_point_offset[] = {0x8, 0x18, 0x10, 0x20};
 static constexpr dart::compiler::target::word
     AOT_Thread_write_barrier_wrappers_thread_offset[] = {
@@ -16577,7 +16637,7 @@ static constexpr dart::compiler::target::word AOT_Sentinel_InstanceSize = 0x8;
 static constexpr dart::compiler::target::word AOT_SingleTargetCache_InstanceSize = 0x20;
 static constexpr dart::compiler::target::word AOT_StackTrace_InstanceSize = 0x28;
 static constexpr dart::compiler::target::word AOT_SuspendState_HeaderSize = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x48;
+static constexpr dart::compiler::target::word AOT_Coroutine_InstanceSize = 0x50;
 static constexpr dart::compiler::target::word AOT_String_InstanceSize = 0x10;
 static constexpr dart::compiler::target::word AOT_SubtypeTestCache_InstanceSize = 0x18;
 static constexpr dart::compiler::target::word AOT_LoadingUnit_InstanceSize = 0x28;

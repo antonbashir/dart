@@ -84,11 +84,11 @@ class ParsedFunction;
   V(WeakProperty, UntaggedWeakProperty, key, Dynamic, WEAK)                    \
   V(WeakProperty, UntaggedWeakProperty, value, Dynamic, WEAK)                  \
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)               \
-  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments, FINAL)\
+  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments,       \
+    FINAL)                                                                     \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
-  V(Coroutine, UntaggedCoroutine, state, Coroutine, VAR)                       \
-  V(Coroutine, UntaggedCoroutine, entry, Coroutine, VAR)                       \
-  V(Coroutine, UntaggedCoroutine, trampoline, Coroutine, VAR)                  \
+  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
+  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:
@@ -120,7 +120,9 @@ class ParsedFunction;
   V(Record, UntaggedRecord, shape, Smi, FINAL)                                 \
   V(TypeArguments, UntaggedTypeArguments, hash, Smi, VAR)                      \
   V(TypeArguments, UntaggedTypeArguments, length, Smi, FINAL)                  \
-  V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)
+  V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)                       \
+  V(Coroutine, UntaggedCoroutine, state, Smi, VAR)                             \
+  V(Coroutine, UntaggedCoroutine, attributes, Smi, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that do not contain integers in the following format:
@@ -236,7 +238,7 @@ class ParsedFunction;
   V(LocalHandle, _, ptr, Dynamic, VAR)                                         \
   V(ObjectStore, _, record_field_names, Array, VAR)                            \
   V(Thread, _, coroutine, Coroutine, VAR)                                      \
-  V(PersistentHandle, _, ptr, Dynamic, VAR)                                    \
+  V(PersistentHandle, _, ptr, Dynamic, VAR)
 
 // List of slots that correspond to fields of non-Dart objects containing
 // unboxed values in the following format:

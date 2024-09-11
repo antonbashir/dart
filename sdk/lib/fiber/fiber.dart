@@ -6,41 +6,57 @@ const _kMainFiber = "main";
 const _kFiberStateCreated = 0;
 const _kFiberStateRunning = 1;
 const _kFiberStateFinished = 2;
+const _kFiberStateDisposed = 3;
 
-extension type FiberState(int state) {
+const _kFiberAttributeManaged = 1 << 0;
+
+extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
-  get created => state == _kFiberStateCreated;
+  bool get created => _state == _kFiberStateCreated;
+
   @pragma("vm:prefer-inline")
-  get running => state == _kFiberStateRunning;
+  bool get running => _state == _kFiberStateRunning;
+
   @pragma("vm:prefer-inline")
-  get finished => state == _kFiberStateFinished;
+  bool get finished => _state == _kFiberStateFinished;
+
+  @pragma("vm:prefer-inline")
+  bool get disposed => _state == _kFiberStateDisposed;
 
   String string() {
-    switch (state) {
+    switch (_state) {
       case _kFiberStateCreated:
         return "created";
       case _kFiberStateRunning:
         return "running";
       case _kFiberStateFinished:
         return "finished";
+      case _kFiberStateDisposed:
+        return "disposed";
       default:
         return "unknown";
     }
   }
 }
 
+extension type FiberAttributes(int _attributes) {
+  @pragma("vm:prefer-inline")
+  bool get managed => _attributes & _kFiberAttributeManaged > 0;
+}
+
 class _Coroutine {
   @pragma("vm:prefer-inline")
   static bool get _initialized => _current != null;
-
-  external factory _Coroutine._(int size, void Function() entry, void Function() trampoline);
+  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline);
   external set _state(int value);
   external int get _state;
   external _Coroutine? get _caller;
   external set _caller(_Coroutine? value);
+  external int get _attributes;
   external void Function() get _entry;
   external static _Coroutine? get _current;
   external void _recycle();
+  external void _dispose();
   external static void _initialize(_Coroutine root);
   external static void _transfer(_Coroutine from, _Coroutine to);
   external static void _fork(_Coroutine from, _Coroutine to);
@@ -51,23 +67,25 @@ extension type Fiber(_Coroutine _coroutine) {
   static void spawn(
     void Function() entry, {
     bool run = true,
+    bool managed = false,
     int size = _kDefaultStackSize,
     String? name,
   }) =>
-      Fiber.fork(Fiber.child(entry, size: size, name: name, run: run));
+      Fiber.fork(Fiber.child(entry, size: size, name: name, run: run, managed: managed));
 
   @pragma("vm:prefer-inline")
   static void launch(
     void Function() entry, {
     int size = _kDefaultStackSize,
+    bool managed = false,
   }) =>
-      Fiber.main(entry, size: size).start();
+      Fiber.main(entry, managed: managed, size: size).start();
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber to) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
-    if (!to.state.created && !to.state.finished) throw StateError("Can't start a fiber in the state: ${to.state}");
+    if (to.state.disposed || to.state.running) throw StateError("Can't start a fiber in the state: ${to.state.string()}");
     to._coroutine._recycle();
     _Coroutine._fork(current!, to._coroutine);
   }
@@ -77,7 +95,9 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
     if (current!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
-    _Coroutine._transfer(current!, current!._caller!);
+    final caller = current!._caller!;
+    if (caller._state != _kFiberStateRunning) throw StateError("Destination fiber is not running");
+    _Coroutine._transfer(current!, caller);
   }
 
   @pragma("vm:prefer-inline")
@@ -98,29 +118,35 @@ extension type Fiber(_Coroutine _coroutine) {
   @pragma("vm:prefer-inline")
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
-    if (!state.created && !state.finished) throw StateError("Can't start a fiber in the state: ${state.string()}");
+    if (state.disposed || state.running) throw StateError("Can't start a fiber in the state: ${state.string()}");
     _coroutine._recycle();
     _Coroutine._initialize(_coroutine);
+    if (!attributes.managed) _coroutine._dispose();
   }
 
   @pragma("vm:prefer-inline")
   FiberState get state => FiberState(_coroutine._state);
 
   @pragma("vm:prefer-inline")
+  FiberAttributes get attributes => FiberAttributes(_coroutine._attributes);
+
+  @pragma("vm:prefer-inline")
   factory Fiber.main(
     void Function() entry, {
     int size = _kDefaultStackSize,
+    bool managed = false,
   }) =>
-      Fiber(_Coroutine._(size, entry, _run));
+      Fiber(_Coroutine._(size, managed ? _kFiberAttributeManaged : 0, entry, _run));
 
   @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
     int size = _kDefaultStackSize,
     bool run = true,
+    bool managed = false,
     String? name,
   }) =>
-      Fiber(_Coroutine._(size, entry, run ? _run : _defer));
+      Fiber(_Coroutine._(size, managed ? _kFiberAttributeManaged : 0, entry, run ? _run : _defer));
 
   @pragma("vm:never-inline")
   static void _run() {

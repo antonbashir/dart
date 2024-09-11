@@ -234,6 +234,7 @@ namespace dart {
   F(FutureOr, type_arguments_)                                                 \
   F(Coroutine, caller_)                                                        \
   F(Coroutine, state_)                                                         \
+  F(Coroutine, attributes_)                                                    \
   F(Coroutine, trampoline_)                                                    \
   F(Coroutine, entry_)                                                         \
   F(Coroutine, native_stack_base_)                                             \

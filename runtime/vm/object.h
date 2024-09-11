@@ -12704,13 +12704,20 @@ class Coroutine : public Instance {
     created = 0,
     running = 1,
     finished = 2,
+    disposed = 3,
+  };
+
+  enum CoroutineAttributes {
+    managed = 1 << 0,
   };
 
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
+
   static CoroutinePtr New(void** stack_base,
                           uintptr_t stack_size,
+                          uintptr_t attributes,
                           const Closure& entry,
                           const Function& trampoline);
 
@@ -12718,6 +12725,8 @@ class Coroutine : public Instance {
                                              uword stack_pointer);
 
   void Recycle() const;
+
+  void Dispose() const;
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
@@ -12732,6 +12741,11 @@ class Coroutine : public Instance {
 
   SmiPtr state() const { return untag()->state(); }
   static uword state_offset() { return OFFSET_OF(UntaggedCoroutine, state_); }
+
+  SmiPtr attributes() const { return untag()->attributes(); }
+  static uword attributes_offset() {
+    return OFFSET_OF(UntaggedCoroutine, attributes_);
+  }
 
   uword native_stack_base() const { return untag()->native_stack_base_; }
   static uword native_stack_base_offset() {
