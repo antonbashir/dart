@@ -121,7 +121,6 @@ extension type Fiber(_Coroutine _coroutine) {
     if (state.disposed || state.running) throw StateError("Can't start a fiber in the state: ${state.string()}");
     _coroutine._recycle();
     _Coroutine._initialize(_coroutine);
-    if (!attributes.managed) _coroutine._dispose();
   }
 
   @pragma("vm:prefer-inline")
