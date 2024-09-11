@@ -3787,7 +3787,8 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
-public:
+
+ public:
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }

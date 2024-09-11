@@ -8,6 +8,7 @@
 
 // For `StubCodeCompiler::GenerateAllocateUnhandledExceptionStub`
 #include "vm/compiler/backend/il.h"
+#include "vm/stub_code.h"
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
 

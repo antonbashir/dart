@@ -65,6 +65,7 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -26640,6 +26641,8 @@ CoroutinePtr Coroutine::New(void** stack_base,
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
                             (uword)stack_base - stack_size);
+  coroutine.StoreCompressedPointer(
+      &coroutine.untag()->state_, Smi::New(Coroutine::CoroutineState::created));
   coroutine.StoreCompressedPointer(&coroutine.untag()->entry_, entry);
   coroutine.StoreCompressedPointer(&coroutine.untag()->trampoline_, trampoline);
   coroutine.StoreCompressedPointer(&coroutine.untag()->caller_, null());

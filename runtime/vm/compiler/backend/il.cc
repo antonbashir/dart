@@ -8573,6 +8573,7 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(kCoroutine);
   __ Drop(1);
 
+  __ IncrementCompressedSmiField(compiler::FieldAddress(kCoroutine, Coroutine::state_offset()), 1); // running
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
 
@@ -8586,7 +8587,8 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
-  
+  __ IncrementCompressedSmiField(compiler::FieldAddress(kCoroutine, Coroutine::state_offset()), 1); // finished
+
   __ PushObject(compiler::NullObject());
   __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
   __ Drop(1);
@@ -8617,6 +8619,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
 
+  __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // running
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
 
@@ -8632,6 +8635,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+  __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // finished
 
   __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
   __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());

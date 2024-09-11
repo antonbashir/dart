@@ -5,13 +5,13 @@ const _kMainFiber = "main";
 
 extension type FiberState(int state) {
   @pragma("vm:prefer-inline")
-  get created => state == 1 << 1;
+  get created => state == 0;
   @pragma("vm:prefer-inline")
-  get initialized => state == 1 << 2;
+  get initialized => state == 1;
   @pragma("vm:prefer-inline")
-  get running => state == 1 << 3;
+  get running => state == 2;
   @pragma("vm:prefer-inline")
-  get finished => state == 1 << 4;
+  get finished => state == 3;
 }
 
 class _Coroutine {
