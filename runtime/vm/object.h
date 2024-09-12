@@ -12716,7 +12716,7 @@ class Coroutine : public Instance {
   }
 
   static CoroutinePtr New(void** stack_base,
-                          uintptr_t stack_size,
+                          void** stack_limit,
                           uintptr_t attributes,
                           const Closure& entry,
                           const Function& trampoline);

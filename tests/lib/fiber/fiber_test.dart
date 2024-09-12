@@ -11,9 +11,16 @@ void main() {
   testClosureScopes();
   testTransfer();
   testReturnToFinished();
+  testRecycle();
 }
 
 void testBase() {
+  mainFiber.start();
+}
+
+void testRecycle() {
+  mainFiber.start();
+  commonState = "";
   mainFiber.start();
 }
 

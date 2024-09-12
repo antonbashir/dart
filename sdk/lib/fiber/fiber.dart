@@ -86,7 +86,7 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
     if (to.state.disposed || to.state.running) throw StateError("Can't start a fiber in the state: ${to.state.string()}");
-    to._coroutine._recycle();
+    if (to.state.finished) to._coroutine._recycle();
     _Coroutine._fork(current!, to._coroutine);
   }
 
@@ -119,7 +119,7 @@ extension type Fiber(_Coroutine _coroutine) {
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
     if (state.disposed || state.running) throw StateError("Can't start a fiber in the state: ${state.string()}");
-    _coroutine._recycle();
+    if (state.finished) _coroutine._recycle();
     _Coroutine._initialize(_coroutine);
   }
 

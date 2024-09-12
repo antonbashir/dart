@@ -2,7 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+#if !defined(DART_TARGET_OS_WINDOWS)
 #include <sys/mman.h>
+#endif
 #include "platform/globals.h"
 #include "vm/bootstrap_natives.h"
 
@@ -21,17 +23,21 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 5) {
       nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
       PAGE_READWRITE));
 #else
-  void** stack_base = (void**)((uintptr_t)mmap(
+  void** stack_end = (void**)((uintptr_t)mmap(
       nullptr, stack_size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
-  memset(stack_base, 0, stack_size * kWordSize);
-  return Coroutine::New(stack_base + stack_size, attributes.Value(), stack_size,
+  memset(stack_end, 0, stack_size * kWordSize);
+  return Coroutine::New(stack_end + stack_size, stack_end, attributes.Value(),
                         entry, Function::Handle(trampoline.function()));
 }
 
 DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
+  NoSafepointScope no_safepoint;
+  auto size = (uword)coroutine.stack_root() - (uword)coroutine.stack_limit();
+  void** stack_limit = (void**)coroutine.stack_limit();
+  memset(stack_limit, 0, size);
   coroutine.Recycle();
   return Object::null();
 }

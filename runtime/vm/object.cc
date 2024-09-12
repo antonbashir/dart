@@ -26630,7 +26630,7 @@ CodePtr SuspendState::GetCodeObject() const {
 }
 
 CoroutinePtr Coroutine::New(void** stack_base,
-                            uintptr_t stack_size,
+                            void** stack_limit,
                             uintptr_t attributes,
                             const Closure& entry,
                             const Function& trampoline) {
@@ -26641,7 +26641,8 @@ CoroutinePtr Coroutine::New(void** stack_base,
   coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
-                            (uword)stack_base - (uword)stack_size);
+                            (uword)stack_limit);
+  OS::Print("%p\n", stack_limit);
   coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
   coroutine.untag()->set_attributes(Smi::New(attributes));
   coroutine.untag()->set_entry(entry.ptr());
@@ -26673,9 +26674,7 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
 
 void Coroutine::Recycle() const {
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
-  StoreNonPointer(&untag()->stack_base_, untag()->stack_root_);
-  auto size = untag()->stack_base_ - untag()->stack_limit_;
-  memset((void**)untag()->stack_limit_, 0, size * kWordSize);
+  StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
   untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
   untag()->set_caller(Coroutine::null());
 }
