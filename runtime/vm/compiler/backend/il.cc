@@ -8590,7 +8590,9 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ IncrementCompressedSmiField(compiler::FieldAddress(kCoroutine, Coroutine::state_offset()), 1); // finished
 
   __ PushObject(compiler::NullObject());
-  __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
+  __ PushRegister(kCoroutine);
+  __ CallRuntime(kExitCoroutineRuntimeEntry, 1);
+  __ PopRegister(kCoroutine);
   __ Drop(1);
 }
 
@@ -8608,16 +8610,19 @@ LocationSummary* CoroutineForkInstr::MakeLocationSummary(
 void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
   const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
-  const Register kStackLimit = CoroutineForkABI::kStackLimitReg;
 
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
   __ StoreCompressedIntoObjectNoBarrier(kForkedCoroutine, compiler::FieldAddress(kForkedCoroutine, Coroutine::caller_offset()), kCallerCoroutine);
 
-  __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ PushRegister(kCallerCoroutine);
+  __ CallRuntime(kEnterForkedCoroutineRuntimeEntry, 2);
+  __ PopRegister(kCallerCoroutine);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
 
   __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // running
   __ PushRegister(FPREG);
@@ -8637,9 +8642,14 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
   __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // finished
 
-  __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ PushRegister(kCallerCoroutine);
+  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 2);
+  __ PopRegister(kCallerCoroutine);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
+
 }
 
 LocationSummary* CoroutineTransferInstr::MakeLocationSummary(

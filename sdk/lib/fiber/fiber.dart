@@ -119,7 +119,6 @@ extension type Fiber(_Coroutine _coroutine) {
   void start() {
     if (_Coroutine._initialized) throw StateError("Main fiber already initialized");
     if (state.disposed || state.running) throw StateError("Can't start a fiber in the state: ${state.string()}");
-    if (state.finished) _coroutine._recycle();
     _Coroutine._initialize(_coroutine);
   }
 
@@ -151,8 +150,8 @@ extension type Fiber(_Coroutine _coroutine) {
   static void _run() {
     _Coroutine._current!._entry();
     final current = _Coroutine._current!;
-    if (current._caller != null) {
-      while (current._caller!._state != _kFiberStateRunning) current._caller = current._caller!._caller;
+    while (current._caller != null && current._caller!._state != _kFiberStateRunning) {
+      current._caller = current._caller!._caller;
     }
   }
 
@@ -161,8 +160,8 @@ extension type Fiber(_Coroutine _coroutine) {
     _Coroutine._transfer(_Coroutine._current!, _Coroutine._current!._caller!);
     _Coroutine._current!._entry();
     final current = _Coroutine._current!;
-    if (current._caller != null) {
-      while (current._caller!._state != _kFiberStateRunning) current._caller = current._caller!._caller;
+    while (current._caller != null && current._caller!._state != _kFiberStateRunning) {
+      current._caller = current._caller!._caller;
     }
   }
 }
