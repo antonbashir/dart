@@ -3873,20 +3873,15 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 
 DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
   const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
   auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
-  if (state == Coroutine::CoroutineState::finished  && (attributes & Coroutine::CoroutineAttributes::managed) == 0) {
-    coroutine.Recycle();
-  }
+  if (state == Coroutine::CoroutineState::finished) coroutine.Recycle();
   Thread::Current()->EnterCoroutine(coroutine.ptr());
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
   const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) {
-    coroutine.Dispose();
-  }
+  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) coroutine.Dispose();
   Thread::Current()->ExitCoroutine();
 }
 
@@ -3894,6 +3889,8 @@ DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 2) {
   const Coroutine& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   const Coroutine& caller = Coroutine::CheckedHandle(zone, arguments.ArgAt(1));
   (void)caller;
+  auto state = Smi::CheckedHandle(zone, forked.state()).Value();
+  if (state == Coroutine::CoroutineState::finished) forked.Recycle();
   Thread::Current()->EnterCoroutine(forked.ptr());
 }
 
@@ -3901,9 +3898,7 @@ DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 2) {
   const Coroutine& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   const Coroutine& caller = Coroutine::CheckedHandle(zone, arguments.ArgAt(1));
   auto attributes = Smi::CheckedHandle(zone, forked.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) {
-    forked.Dispose();
-  }
+  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) forked.Dispose();
   Thread::Current()->EnterCoroutine(caller.ptr());
 }
 
