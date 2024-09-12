@@ -11,8 +11,8 @@
 
 namespace dart {
 DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 5) {
-  GET_NON_NULL_NATIVE_ARGUMENT(Smi, attributes, arguments->NativeArgAt(1));
-  GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(2));
+  GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(1));
+  GET_NON_NULL_NATIVE_ARGUMENT(Smi, attributes, arguments->NativeArgAt(2));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(3));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(4));
   intptr_t stack_size = size.Value();

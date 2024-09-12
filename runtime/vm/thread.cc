@@ -546,7 +546,7 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
   if (Dart::vm_isolate() != nullptr &&
       thread->isolate() != Dart::vm_isolate()) {
-    if (thread->isolate()->saved_coroutine() != nullptr) {
+    if (thread->isolate()->saved_coroutine() != Coroutine::null()) {
       thread->RestoreCoroutine(thread->isolate()->saved_coroutine());
       return;
     }
