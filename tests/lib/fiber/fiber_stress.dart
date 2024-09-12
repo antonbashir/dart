@@ -2,7 +2,7 @@ import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
 
-final mainFiber = Fiber.main(mainEntry);
+final mainFiber = Fiber.main(mainEntry, managed: true);
 
 var commonState = "";
 

@@ -13,6 +13,7 @@
 #include "vm/compiler/api/deopt_id.h"
 #include "vm/compiler/api/type_check_mode.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -3872,16 +3873,28 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
-  const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  const Coroutine& coroutine =
+      Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
   if (state == Coroutine::CoroutineState::finished) coroutine.Recycle();
   Thread::Current()->EnterCoroutine(coroutine.ptr());
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
-  const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  const Coroutine& coroutine =
+      Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) coroutine.Dispose();
+  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) {
+    coroutine.Dispose();
+  }
+  CoroutinePtr caller = coroutine.caller();
+  while (caller != Coroutine::null()) {
+    auto state = Smi::CheckedHandle(zone, Coroutine::CheckedHandle(zone, caller).state()).Value();
+    if (state == Coroutine::CoroutineState::finished) {
+      Coroutine::CheckedHandle(zone, caller).Dispose();
+    }
+    caller = coroutine.caller();
+  }
   Thread::Current()->ExitCoroutine();
 }
 
@@ -3898,7 +3911,8 @@ DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 2) {
   const Coroutine& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   const Coroutine& caller = Coroutine::CheckedHandle(zone, arguments.ArgAt(1));
   auto attributes = Smi::CheckedHandle(zone, forked.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) forked.Dispose();
+  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0)
+    forked.Dispose();
   Thread::Current()->EnterCoroutine(caller.ptr());
 }
 

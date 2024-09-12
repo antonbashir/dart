@@ -34,22 +34,12 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 5) {
 
 DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
-  NoSafepointScope no_safepoint;
-  auto size = (uword)coroutine.stack_root() - (uword)coroutine.stack_limit();
-  void** stack_limit = (void**)coroutine.stack_limit();
-  memset(stack_limit, 0, size);
   coroutine.Recycle();
   return Object::null();
 }
 
 DEFINE_NATIVE_ENTRY(Coroutine_dispose, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
-#if defined(DART_TARGET_OS_WINDOWS)
-  VirtualFree((void**)coroutine.stack_limit(), 0, MEM_RELEASE);
-#else
-  munmap((void**)coroutine.stack_limit(),
-         (uword)(coroutine.stack_base() - coroutine.stack_limit()) * kWordSize);
-#endif
   coroutine.Dispose();
   return Object::null();
 }

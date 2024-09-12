@@ -6,6 +6,10 @@
 
 #include <memory>
 
+#if !defined(DART_TARGET_OS_WINDOWS)
+#include <sys/mman.h>
+#endif
+
 #include "compiler/method_recognizer.h"
 #include "include/dart_api.h"
 #include "lib/integers.h"
@@ -26672,6 +26676,7 @@ CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
 }
 
 void Coroutine::Recycle() const {
+  memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
   untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
@@ -26679,6 +26684,11 @@ void Coroutine::Recycle() const {
 }
 
 void Coroutine::Dispose() const {
+#if defined(DART_TARGET_OS_WINDOWS)
+  VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+#else
+  munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
+#endif  
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
