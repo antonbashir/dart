@@ -96,7 +96,7 @@ extension type Fiber(_Coroutine _coroutine) {
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
     if (current!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
     final caller = current!._caller!;
-    if (caller._state != _kFiberStateRunning) throw StateError("Destination fiber is not running");
+    if (caller._state != _kFiberStateRunning) throw StateError("Destination fiber is not running, state = ${FiberState(caller._state).string()}");
     _Coroutine._transfer(current!, caller);
   }
 
