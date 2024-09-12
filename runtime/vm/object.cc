@@ -26642,7 +26642,6 @@ CoroutinePtr Coroutine::New(void** stack_base,
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
                             (uword)stack_limit);
-  OS::Print("%p\n", stack_limit);
   coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
   coroutine.untag()->set_attributes(Smi::New(attributes));
   coroutine.untag()->set_entry(entry.ptr());

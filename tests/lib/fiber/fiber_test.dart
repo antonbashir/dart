@@ -16,6 +16,7 @@ void main() {
 
 void testBase() {
   mainFiber.start();
+  commonState = "";
 }
 
 void testRecycle() {

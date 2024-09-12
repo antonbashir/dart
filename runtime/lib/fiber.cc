@@ -18,7 +18,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 5) {
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(3));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(4));
   intptr_t stack_size = size.Value();
-#if defined(DART_TARGET_OS_WINDOWS)
+#if defined(DART_TARGET_OS_WINDOWS) 
   void** stack_base = (void**)((uintptr_t)VirtualAlloc(
       nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
       PAGE_READWRITE));
