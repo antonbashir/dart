@@ -3815,6 +3815,16 @@ bool Isolate::HasOpenNativeCallables() {
   return ffi_callback_keep_alive_counter_ > 0;
 }
 
+bool Isolate::HasCoroutine() const {
+  return saved_coroutine_ != Coroutine::null();
+}
+
+CoroutinePtr Isolate::RestoreCoroutine() {
+  CoroutinePtr coroutine = saved_coroutine_;
+  saved_coroutine_ = Coroutine::null();
+  return coroutine;
+}
+
 #if !defined(PRODUCT)
 void IsolateGroup::CloneClassTableForReload() {
   RELEASE_ASSERT(class_table_ == heap_walk_class_table_);

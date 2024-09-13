@@ -26633,19 +26633,28 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(void** stack_base,
-                            void** stack_limit,
+CoroutinePtr Coroutine::New(uintptr_t size,
                             uintptr_t attributes,
                             const Closure& entry,
                             const Function& trampoline) {
   const auto& coroutine =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
-  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_,
-                            (uword) nullptr);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, (uword)stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, (uword)stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_,
-                            (uword)stack_limit);
+#if defined(DART_TARGET_OS_WINDOWS)
+  void** stack_base = (void**)((uintptr_t)VirtualAlloc(
+      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
+      PAGE_READWRITE));
+#else
+  void** stack_end = (void**)((uintptr_t)mmap(
+      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+#endif
+  memset(stack_end, 0, size * kWordSize);
+  uword stack_limit = (uword)(stack_end);
+  uword stack_base = (uword)(stack_end + size);
+  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, 0);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
   coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
   coroutine.untag()->set_attributes(Smi::New(attributes));
   coroutine.untag()->set_entry(entry.ptr());
@@ -26688,7 +26697,7 @@ void Coroutine::Dispose() const {
   VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
 #else
   munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
-#endif  
+#endif
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);

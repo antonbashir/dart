@@ -2,10 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-#if !defined(DART_TARGET_OS_WINDOWS)
-#include <sys/mman.h>
-#endif
-#include "platform/globals.h"
 #include "vm/bootstrap_natives.h"
 
 #include "vm/compiler/runtime_api.h"
@@ -17,19 +13,8 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 5) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, attributes, arguments->NativeArgAt(2));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, entry, arguments->NativeArgAt(3));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(4));
-  intptr_t stack_size = size.Value();
-#if defined(DART_TARGET_OS_WINDOWS) 
-  void** stack_base = (void**)((uintptr_t)VirtualAlloc(
-      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
-      PAGE_READWRITE));
-#else
-  void** stack_end = (void**)((uintptr_t)mmap(
-      nullptr, stack_size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-#endif
-  memset(stack_end, 0, stack_size * kWordSize);
-  return Coroutine::New(stack_end + stack_size, stack_end, attributes.Value(),
-                        entry, Function::Handle(trampoline.function()));
+  return Coroutine::New(size.Value(), attributes.Value(), entry,
+                        Function::Handle(trampoline.function()));
 }
 
 DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {

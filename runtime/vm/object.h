@@ -12715,8 +12715,7 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(void** stack_base,
-                          void** stack_limit,
+  static CoroutinePtr New(uintptr_t size,
                           uintptr_t attributes,
                           const Closure& entry,
                           const Function& trampoline);

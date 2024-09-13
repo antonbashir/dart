@@ -8614,7 +8614,7 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
-  __ StoreCompressedIntoObjectNoBarrier(kForkedCoroutine, compiler::FieldAddress(kForkedCoroutine, Coroutine::caller_offset()), kCallerCoroutine);
+  __ StoreCompressedIntoObject(kForkedCoroutine, compiler::FieldAddress(kForkedCoroutine, Coroutine::caller_offset()), kCallerCoroutine);
 
   __ PushObject(compiler::NullObject());
   __ PushRegister(kForkedCoroutine);
@@ -8683,7 +8683,7 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
 
-  __ StoreCompressedIntoObjectNoBarrier(kToCoroutine, compiler::FieldAddress(kToCoroutine, Coroutine::caller_offset()), kFromCoroutine);
+  __ StoreCompressedIntoObject(kToCoroutine, compiler::FieldAddress(kToCoroutine, Coroutine::caller_offset()), kFromCoroutine);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

@@ -546,8 +546,8 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
   if (Dart::vm_isolate() != nullptr &&
       thread->isolate() != Dart::vm_isolate()) {
-    if (thread->isolate()->saved_coroutine() != Coroutine::null()) {
-      thread->RestoreCoroutine(thread->isolate()->saved_coroutine());
+    if (thread->isolate()->HasCoroutine()) {
+      thread->RestoreCoroutine(thread->isolate()->RestoreCoroutine());
       return;
     }
 #if defined(USING_SIMULATOR)
@@ -561,7 +561,7 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
                                               VMTag::VMTagId tag) {
   if (thread->has_coroutine()) {
-    thread->isolate()->save_coroutine(thread->SaveCoroutine());
+    thread->isolate()->SaveCoroutine(thread->SaveCoroutine());
     SuspendThreadInternal(thread, tag);
     return;
   }

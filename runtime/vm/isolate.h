@@ -1004,8 +1004,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     T->field_table_values_ = field_table->table();
   }
 
-  CoroutinePtr saved_coroutine() const { return saved_coroutine_; }
-  void save_coroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+  bool HasCoroutine() const;
+  CoroutinePtr RestoreCoroutine();
+  void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
 
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();

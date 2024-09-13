@@ -7,7 +7,7 @@ final mainFiber = Fiber.main(mainEntry, managed: true);
 var commonState = "";
 
 void main() {
-  final iterations = 3;
+  final iterations = 1000000;
   final timeout = Duration(minutes: 15);
   for (var i = 0; i < iterations; i++) {
     final sw = Stopwatch();

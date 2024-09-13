@@ -8,6 +8,7 @@ const _kFiberStateRunning = 1;
 const _kFiberStateFinished = 2;
 const _kFiberStateDisposed = 3;
 
+const _kFiberAttributeNothing = 0;
 const _kFiberAttributeManaged = 1 << 0;
 
 extension type FiberState(int _state) {
@@ -86,7 +87,6 @@ extension type Fiber(_Coroutine _coroutine) {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
     if (to.state.disposed || to.state.running) throw StateError("Can't start a fiber in the state: ${to.state.string()}");
-    if (to.state.finished) to._coroutine._recycle();
     _Coroutine._fork(current!, to._coroutine);
   }
 
@@ -134,7 +134,7 @@ extension type Fiber(_Coroutine _coroutine) {
     int size = _kDefaultStackSize,
     bool managed = false,
   }) =>
-      Fiber(_Coroutine._(size, managed ? _kFiberAttributeManaged : 0, entry, _run));
+      Fiber(_Coroutine._(size, _calculateAttributes(managed: managed), entry, _run));
 
   @pragma("vm:prefer-inline")
   factory Fiber.child(
@@ -144,24 +144,23 @@ extension type Fiber(_Coroutine _coroutine) {
     bool managed = false,
     String? name,
   }) =>
-      Fiber(_Coroutine._(size, managed ? _kFiberAttributeManaged : 0, entry, run ? _run : _defer));
+      Fiber(_Coroutine._(size, _calculateAttributes(managed: managed), entry, run ? _run : _defer));
 
   @pragma("vm:never-inline")
   static void _run() {
     _Coroutine._current!._entry();
-    final current = _Coroutine._current!;
-    while (current._caller != null && current._caller!._state != _kFiberStateRunning) {
-      current._caller = current._caller!._caller;
-    }
   }
 
   @pragma("vm:never-inline")
   static void _defer() {
     _Coroutine._transfer(_Coroutine._current!, _Coroutine._current!._caller!);
     _Coroutine._current!._entry();
-    final current = _Coroutine._current!;
-    while (current._caller != null && current._caller!._state != _kFiberStateRunning) {
-      current._caller = current._caller!._caller;
-    }
+  }
+
+  @pragma("vm:prefer-inline")
+  static int _calculateAttributes({required bool managed}) {
+    var attributes = _kFiberAttributeNothing;
+    if (managed) attributes |= _kFiberAttributeManaged;
+    return attributes;
   }
 }
