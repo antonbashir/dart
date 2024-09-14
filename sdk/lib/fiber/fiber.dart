@@ -58,13 +58,13 @@ extension type FiberArguments(List _arguments) {
 class _Coroutine {
   @pragma("vm:prefer-inline")
   static bool get _initialized => _current != null;
-  
+
   @pragma("vm:prefer-inline")
   FiberScheduler get _scheduler => (_fiber as Fiber)._scheduler;
-  
+
   @pragma("vm:prefer-inline")
   Fiber get _owner => _fiber as Fiber;
-  
+
   external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber, List arguments);
   external set _state(int value);
   external int get _state;
@@ -111,33 +111,23 @@ class Fiber {
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber to) {
-    final current = _Coroutine._current;
-    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
+    final caller = _Coroutine._current;
+    if (caller == null) throw StateError("Main fiber is not initialized. Create main fiber before forking others");
     if (to.state.disposed || to.state.running) throw StateError("Can't start a fiber in the state: ${to.state.string()}");
-    to._scheduler = current!._scheduler;
-    to._coroutine._caller = current;
-    _Coroutine._fork(current!, to._coroutine);
+    to._scheduler = caller!._scheduler;
+    final callee = to._coroutine;
+    callee._caller = caller;
+    _Coroutine._fork(caller!, callee);
   }
 
   @pragma("vm:prefer-inline")
   static void suspend() {
-    final current = _Coroutine._current;
-    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
-    if (current!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
-    final caller = current!;
+    final caller = _Coroutine._current;
+    if (caller == null) throw StateError("Main fiber is not initialized. Create main fiber before suspending");
+    if (caller!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
     final callee = caller._caller!;
     if (callee._state != _kFiberStateRunning) throw StateError("Destination fiber is not running, state = ${FiberState(callee._state).string()}");
-    caller._caller = current!._scheduler._scheduler._coroutine;
-    _Coroutine._transfer(current!, caller);
-  }
-
-  @pragma("vm:prefer-inline")
-  static void transfer(Fiber to) {
-    final caller = _Coroutine._current;
-    if (caller == null) throw StateError("Main fiber is not initialized. Create main fiber before transfer to others");
-    if (!to.state.running) throw StateError("Destination fiber is not running");
-    final callee = to._coroutine;
-    callee._caller = caller;
+    caller._caller = caller!._scheduler._scheduler._coroutine;
     _Coroutine._transfer(caller!, callee);
   }
 
