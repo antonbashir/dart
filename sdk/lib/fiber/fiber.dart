@@ -90,7 +90,7 @@ class Fiber {
   late _FiberLink _schedulerReadyLink;
 
   Fiber._(this.name);
-  
+
   @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
@@ -169,6 +169,11 @@ class Fiber {
     return current!._owner;
   }
 
+  @pragma("vm:prefer-inline")
+  static void schedule(Fiber fiber) {
+    final current = Fiber.current();
+    current._scheduler._schedule(fiber);
+  }
 
   @pragma("vm:prefer-inline")
   factory Fiber._scheduler(FiberScheduler scheduler, void Function() entry) {
