@@ -26673,17 +26673,15 @@ const char* Coroutine::ToCString() const {
 
 CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
                                                uword stack_pointer) {
-  IntMap<CoroutinePtr> processed;
-  CoroutinePtr found = current;
-  UntaggedCoroutine* untagged = found.untag();
-  while (found != Coroutine::null() && !processed.HasKey((uword)(untagged))) {
-    if (stack_pointer > untagged->stack_limit_ &&
-        stack_pointer <= untagged->stack_root_) {
-      return found;
+  auto object_store = Isolate::Current()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(object_store->coroutines());
+  Coroutine& coroutine = Coroutine::Handle();
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    coroutine ^= coroutines.At(index);
+    if (stack_pointer > coroutine.stack_limit() &&
+        stack_pointer <= coroutine.stack_root()) {
+      return coroutine.ptr();
     }
-    processed.Insert((uword)untagged, found);
-    found = untagged->caller();
-    untagged = found.untag();
   }
   return Coroutine::null();
 }

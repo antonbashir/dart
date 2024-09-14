@@ -35,6 +35,7 @@
 #include "vm/service_isolate.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/thread.h"
 #include "vm/type_testing_stubs.h"
 #include "vm/zone_text_buffer.h"
@@ -3873,31 +3874,36 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
+  static constexpr intptr_t kInitialCoroutinesReserved = 64;
   auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
   if (state == Coroutine::CoroutineState::finished) coroutine.Recycle();
+  coroutine.set_state(Smi::Handle(zone, Smi::New(Coroutine::CoroutineState::running)));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  if (coroutines.IsNull()) {
+    coroutines = GrowableObjectArray::New(kInitialCoroutinesReserved, Heap::kOld);
+    object_store->set_coroutines(coroutines);
+  }
+  coroutines.Add(coroutine);
   Thread::Current()->EnterCoroutine(coroutine.ptr());
-  coroutine.set_state(
-      Smi::Handle(Smi::New(Coroutine::CoroutineState::running)));
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
-  const Coroutine& coroutine =
-      Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  CoroutinePtr caller = coroutine.caller();
-  while (caller != Coroutine::null()) {
-    auto state =
-        Smi::CheckedHandle(zone, Coroutine::CheckedHandle(zone, caller).state())
-            .Value();
-    if (state == Coroutine::CoroutineState::finished) {
-      Coroutine::CheckedHandle(zone, caller).Dispose();
+  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  coroutine.set_state(Smi::Handle(zone, Smi::New(Coroutine::CoroutineState::finished)));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    auto& coroutine = Coroutine::CheckedHandle(zone, coroutines.At(index));
+    auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
+    auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
+    if ((attributes & Coroutine::CoroutineAttributes::persistent) == 0 && state != Coroutine::CoroutineState::disposed) {
+      coroutine.Dispose();
     }
-    caller = coroutine.caller();
   }
-  auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::persistent) == 0) {
-    coroutine.Dispose();
-  }
+  coroutines.SetLength(0);
+  coroutines.SetData(Object::empty_array());
   Thread::Current()->ExitCoroutine();
 }
 
@@ -3905,17 +3911,21 @@ DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto state = Smi::CheckedHandle(zone, forked.state()).Value();
   if (state == Coroutine::CoroutineState::finished) forked.Recycle();
+  forked.set_state(Smi::Handle(zone, Smi::New(Coroutine::CoroutineState::running)));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  coroutines.Add(forked);
   Thread::Current()->EnterCoroutine(forked.ptr());
-  forked.set_state(Smi::Handle(Smi::New(Coroutine::CoroutineState::running)));
 }
 
 DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  forked.set_state(Smi::Handle(zone, Smi::New(Coroutine::CoroutineState::finished)));
+  auto caller = forked.caller();
   auto attributes = Smi::CheckedHandle(zone, forked.attributes()).Value();
   if ((attributes & Coroutine::CoroutineAttributes::persistent) == 0) {
     forked.Dispose();
   }
-  auto caller = forked.caller();
   Thread::Current()->EnterCoroutine(caller);
 }
 

@@ -15,7 +15,14 @@ class FiberScheduler {
   }
 
   @pragma("vm:prefer-inline")
-  void start() {}
+  void start(void Function() entry, {
+    List arguments = const [],
+    int size = _kDefaultStackSize,
+    bool persistent = false,
+  }) {
+      _schedule(Fiber._main(entry, arguments: arguments, persistent: persistent, size: size));
+      _Coroutine._initialize(_scheduler._coroutine);
+  }
 
   @pragma("vm:never-inline")
   static void _loop() {
@@ -28,6 +35,6 @@ class FiberScheduler {
   }
 
   void _scheduleReady() {
-    
+
   }
 }
