@@ -90,6 +90,35 @@ class Fiber {
   late _FiberLink _schedulerReadyLink;
 
   Fiber._(this.name);
+  
+  @pragma("vm:prefer-inline")
+  factory Fiber.child(
+    void Function() entry, {
+    List arguments = const [],
+    int size = _kDefaultStackSize,
+    bool run = true,
+    bool persistent = false,
+    String? name,
+  }) {
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before creating others");
+    final fiber = Fiber._(name ?? entry.toString());
+    fiber._scheduler = current!._scheduler;
+    fiber._schedulerReadyLink = _FiberLink();
+    fiber._schedulerReadyLink._value = fiber;
+    fiber._schedulerStateLink = _FiberLink();
+    fiber._schedulerStateLink._value = fiber;
+    fiber._coroutine = _Coroutine._(
+      size,
+      _calculateAttributes(persistent: persistent),
+      entry,
+      run ? _run : _defer,
+      fiber,
+      arguments,
+    );
+    current!._scheduler._register(fiber);
+    return fiber;
+  }
 
   @pragma("vm:prefer-inline")
   static void spawn(
@@ -140,34 +169,6 @@ class Fiber {
     return current!._owner;
   }
 
-  @pragma("vm:prefer-inline")
-  factory Fiber.child(
-    void Function() entry, {
-    List arguments = const [],
-    int size = _kDefaultStackSize,
-    bool run = true,
-    bool persistent = false,
-    String? name,
-  }) {
-    final current = _Coroutine._current;
-    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before creating others");
-    final fiber = Fiber._(name ?? entry.toString());
-    fiber._scheduler = current!._scheduler;
-    fiber._schedulerReadyLink = _FiberLink();
-    fiber._schedulerReadyLink._value = fiber;
-    fiber._schedulerStateLink = _FiberLink();
-    fiber._schedulerStateLink._value = fiber;
-    fiber._coroutine = _Coroutine._(
-      size,
-      _calculateAttributes(persistent: persistent),
-      entry,
-      run ? _run : _defer,
-      fiber,
-      arguments,
-    );
-    current!._scheduler._register(fiber);
-    return fiber;
-  }
 
   @pragma("vm:prefer-inline")
   factory Fiber._scheduler(FiberScheduler scheduler, void Function() entry) {
