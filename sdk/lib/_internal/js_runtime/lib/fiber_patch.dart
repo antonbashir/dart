@@ -4,7 +4,7 @@ import "dart:fiber";
 @patch
 class _Coroutine {
   @patch
-  factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber) => throw UnsupportedError("_Coroutine._");
+  factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber, List arguments) => throw UnsupportedError("_Coroutine._");
   @patch
   set _state(int value) => throw UnsupportedError("_Coroutine._state");
   @patch
@@ -17,6 +17,8 @@ class _Coroutine {
   void Function() get _entry => throw UnsupportedError("_Coroutine._entry");
   @patch
   Object get _fiber => throw UnsupportedError("_Coroutine._fiber");
+  @patch
+  List get _arguments => throw UnsupportedError("_Coroutine._arguments");
   @patch
   static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
   @patch

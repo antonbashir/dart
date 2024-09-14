@@ -241,7 +241,8 @@ namespace dart {
   F(Coroutine, stack_root_)                                                    \
   F(Coroutine, stack_base_)                                                    \
   F(Coroutine, stack_limit_)                                                   \
-  F(Coroutine, fiber_)
+  F(Coroutine, fiber_)                                                         \
+  F(Coroutine, arguments_)
 
 #define AOT_CLASSES_AND_FIELDS(F)
 

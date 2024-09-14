@@ -11,13 +11,23 @@ class FiberScheduler {
     _all = _FiberLink();
     _ready = _FiberLink();
     _finished = _FiberLink();
+    _scheduler = Fiber._scheduler(this, _loop);
   }
 
-  void schedule(Fiber fiber) {
+  @pragma("vm:prefer-inline")
+  void start() {}
+
+  @pragma("vm:never-inline")
+  static void _loop() {
+    final scheduler = Fiber.current().arguments[0] as FiberScheduler;
+    scheduler._scheduleReady();
+  }
+
+  void _schedule(Fiber fiber) {
 
   }
 
-  void scheduleList(_FiberLink list) {
+  void _scheduleReady() {
     
   }
 }

@@ -89,7 +89,8 @@ class ParsedFunction;
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
   V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
   V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
-  V(Coroutine, UntaggedCoroutine, fiber, Dynamic, VAR)
+  V(Coroutine, UntaggedCoroutine, fiber, Dynamic, VAR)                         \
+  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:

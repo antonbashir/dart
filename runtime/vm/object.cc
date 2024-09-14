@@ -26637,7 +26637,8 @@ CoroutinePtr Coroutine::New(uintptr_t size,
                             uintptr_t attributes,
                             const Closure& entry,
                             const Function& trampoline,
-                            const Instance& fiber) {
+                            const Instance& fiber,
+                            const Array& arguments) {
   const auto& coroutine =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
@@ -26662,6 +26663,7 @@ CoroutinePtr Coroutine::New(uintptr_t size,
   coroutine.untag()->set_trampoline(trampoline.ptr());
   coroutine.untag()->set_caller(Coroutine::null());
   coroutine.untag()->set_fiber(fiber.ptr());
+  coroutine.untag()->set_arguments(arguments.ptr());
   return coroutine.ptr();
 }
 

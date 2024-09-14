@@ -400,6 +400,7 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
+  FIELD(Coroutine, arguments_offset)                                           \
   FIELD(Coroutine, attributes_offset)                                          \
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, state_offset)                                               \
