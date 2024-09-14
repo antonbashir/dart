@@ -20,7 +20,7 @@ class FiberScheduler {
     int size = _kDefaultStackSize,
     bool persistent = false,
   }) {
-      _schedule(Fiber._main(entry, arguments: arguments, persistent: persistent, size: size));
+      _schedule(Fiber._main(this, entry, arguments: arguments, persistent: persistent, size: size));
       _Coroutine._initialize(_scheduler._coroutine);
   }
 
@@ -31,7 +31,7 @@ class FiberScheduler {
   }
 
   void _schedule(Fiber fiber) {
-
+    
   }
 
   void _scheduleReady() {
