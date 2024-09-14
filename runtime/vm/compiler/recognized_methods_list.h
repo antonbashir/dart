@@ -391,8 +391,8 @@ namespace dart {
   V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc845245c)                \
   V(_Coroutine, get:_entry, Coroutine_getEntry, 0xbe844ebd)                    \
   V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
-  V(_Coroutine, get:_fiber, Coroutine_getFiber, 0)                             \
-  V(_Coroutine, get:_arguments, Coroutine_getArguments, 0)                     \
+  V(_Coroutine, get:_fiber, Coroutine_getFiber, 0x7f45f609)                    \
+  V(_Coroutine, get:_arguments, Coroutine_getArguments, 0x4df70fc1)            \
 
 
 // List of intrinsics:
