@@ -405,6 +405,7 @@
   FIELD(Coroutine, state_offset)                                               \
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, trampoline_offset)                                          \
+  FIELD(Coroutine, fiber_offset)                                               \
   FIELD(Coroutine, native_stack_base_offset)                                   \
   FIELD(Coroutine, stack_root_offset)                                          \
   FIELD(Coroutine, stack_base_offset)                                          \

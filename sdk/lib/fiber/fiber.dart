@@ -1,6 +1,6 @@
 library dart.fiber;
 
-part 'fiber_list.dart';
+part 'fiber_link.dart';
 part 'fiber_scheduler.dart';
 
 const _kDefaultStackSize = 128 * (1 << 10);
@@ -12,8 +12,7 @@ const _kFiberStateFinished = 2;
 const _kFiberStateDisposed = 3;
 
 const _kFiberAttributeNothing = 0;
-const _kFiberAttributeManaged = 1 << 0;
-
+const _kFiberAttributePersistent = 1 << 0;
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
@@ -46,13 +45,13 @@ extension type FiberState(int _state) {
 
 extension type FiberAttributes(int _attributes) {
   @pragma("vm:prefer-inline")
-  bool get managed => _attributes & _kFiberAttributeManaged > 0;
+  bool get persistent => _attributes & _kFiberAttributePersistent > 0;
 }
 
 class _Coroutine {
   @pragma("vm:prefer-inline")
   static bool get _initialized => _current != null;
-  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline);
+  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber);
   external set _state(int value);
   external int get _state;
   external _Coroutine? get _caller;
@@ -60,6 +59,7 @@ class _Coroutine {
   external int get _attributes;
   external void Function() get _entry;
   external static _Coroutine? get _current;
+  external Object get _fiber;
   external void _recycle();
   external void _dispose();
   external static void _initialize(_Coroutine root);
@@ -67,24 +67,29 @@ class _Coroutine {
   external static void _fork(_Coroutine from, _Coroutine to);
 }
 
-extension type Fiber(_Coroutine _coroutine) {
+class Fiber {
+  final String name;
+  late _Coroutine _coroutine;
+
+  Fiber._(this.name);
+
   @pragma("vm:prefer-inline")
   static void spawn(
     void Function() entry, {
     bool run = true,
-    bool managed = false,
+    bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
   }) =>
-      Fiber.fork(Fiber.child(entry, size: size, name: name, run: run, managed: managed));
+      Fiber.fork(Fiber.child(entry, size: size, name: name, run: run, persistent: persistent));
 
   @pragma("vm:prefer-inline")
   static void launch(
     void Function() entry, {
     int size = _kDefaultStackSize,
-    bool managed = false,
+    bool persistent = false,
   }) =>
-      Fiber.main(entry, managed: managed, size: size).start();
+      Fiber.main(entry, persistent: persistent, size: size).start();
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber to) {
@@ -116,7 +121,7 @@ extension type Fiber(_Coroutine _coroutine) {
   static Fiber current() {
     final current = _Coroutine._current;
     if (current == null) throw StateError("Main fiber is not initialized");
-    return Fiber(current!);
+    return current!._fiber as Fiber;
   }
 
   @pragma("vm:prefer-inline")
@@ -136,19 +141,37 @@ extension type Fiber(_Coroutine _coroutine) {
   factory Fiber.main(
     void Function() entry, {
     int size = _kDefaultStackSize,
-    bool managed = false,
-  }) =>
-      Fiber(_Coroutine._(size, _calculateAttributes(managed: managed), entry, _run));
+    bool persistent = false,
+  }) {
+    final fiber = Fiber._(_kMainFiber);
+    fiber._coroutine = _Coroutine._(
+      size,
+      _calculateAttributes(persistent: persistent),
+      entry,
+      _run,
+      fiber,
+    );
+    return fiber;
+  }
 
   @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
     int size = _kDefaultStackSize,
     bool run = true,
-    bool managed = false,
+    bool persistent = false,
     String? name,
-  }) =>
-      Fiber(_Coroutine._(size, _calculateAttributes(managed: managed), entry, run ? _run : _defer));
+  }) {
+    final fiber = Fiber._(name ?? entry.toString());
+    fiber._coroutine = _Coroutine._(
+      size,
+      _calculateAttributes(persistent: persistent),
+      entry,
+      run ? _run : _defer,
+      fiber,
+    );
+    return fiber;
+  }
 
   @pragma("vm:never-inline")
   static void _run() {
@@ -162,9 +185,9 @@ extension type Fiber(_Coroutine _coroutine) {
   }
 
   @pragma("vm:prefer-inline")
-  static int _calculateAttributes({required bool managed}) {
+  static int _calculateAttributes({required bool persistent}) {
     var attributes = _kFiberAttributeNothing;
-    if (managed) attributes |= _kFiberAttributeManaged;
+    if (persistent) attributes |= _kFiberAttributePersistent;
     return attributes;
   }
 }

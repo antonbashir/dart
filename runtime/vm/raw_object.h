@@ -3782,6 +3782,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
   COMPRESSED_POINTER_FIELD(SmiPtr, state)
   COMPRESSED_POINTER_FIELD(SmiPtr, attributes)
+  COMPRESSED_POINTER_FIELD(ObjectPtr, fiber)
   VISIT_TO(entry)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword native_stack_base_;

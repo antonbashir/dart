@@ -12718,7 +12718,8 @@ class Coroutine : public Instance {
   static CoroutinePtr New(uintptr_t size,
                           uintptr_t attributes,
                           const Closure& entry,
-                          const Function& trampoline);
+                          const Function& trampoline,
+                          const Instance& fiber);
 
   static CoroutinePtr FindContainedCoroutine(CoroutinePtr current,
                                              uword stack_pointer);
@@ -12726,6 +12727,9 @@ class Coroutine : public Instance {
   void Recycle() const;
 
   void Dispose() const;
+
+  ObjectPtr fiber() const { return untag()->fiber(); }
+  static uword fiber_offset() { return OFFSET_OF(UntaggedCoroutine, fiber_); }
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }

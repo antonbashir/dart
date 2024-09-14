@@ -6,7 +6,7 @@ import "dart:fiber";
 class _Coroutine {
   @patch
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline);
+  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber);
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
@@ -31,6 +31,10 @@ class _Coroutine {
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external void Function(dynamic) get _entry;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external Object get _fiber;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
