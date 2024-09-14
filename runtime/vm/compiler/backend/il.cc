@@ -8573,7 +8573,6 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(kCoroutine);
   __ Drop(1);
 
-  __ IncrementCompressedSmiField(compiler::FieldAddress(kCoroutine, Coroutine::state_offset()), 1); // running
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
 
@@ -8587,7 +8586,6 @@ void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
-  __ IncrementCompressedSmiField(compiler::FieldAddress(kCoroutine, Coroutine::state_offset()), 1); // finished
 
   __ PushObject(compiler::NullObject());
   __ PushRegister(kCoroutine);
@@ -8618,13 +8616,12 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 
   __ PushObject(compiler::NullObject());
   __ PushRegister(kForkedCoroutine);
-  __ PushRegister(kCallerCoroutine);
-  __ CallRuntime(kEnterForkedCoroutineRuntimeEntry, 2);
-  __ PopRegister(kCallerCoroutine);
+  __ CallRuntime(kEnterForkedCoroutineRuntimeEntry, 1);
   __ PopRegister(kForkedCoroutine);
   __ Drop(1);
 
-  __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // running
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+  
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
 
@@ -8634,22 +8631,18 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ PopRegister(kForkedCoroutine);
   __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
 
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 1);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
+
   __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
   __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
-  __ IncrementCompressedSmiField(compiler::FieldAddress(kForkedCoroutine, Coroutine::state_offset()), 1); // finished
-
-  __ PushObject(compiler::NullObject());
-  __ PushRegister(kForkedCoroutine);
-  __ PushRegister(kCallerCoroutine);
-  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 2);
-  __ PopRegister(kCallerCoroutine);
-  __ PopRegister(kForkedCoroutine);
-  __ Drop(1);
-
 }
 
 LocationSummary* CoroutineTransferInstr::MakeLocationSummary(

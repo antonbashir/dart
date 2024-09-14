@@ -26707,6 +26707,10 @@ void Coroutine::Dispose() const {
   untag()->set_entry(Closure::null());
 }
 
+void Coroutine::set_state(const Smi& state) const {
+  untag()->set_state(state.ptr());
+}
+
 void RegExp::set_pattern(const String& pattern) const {
   untag()->set_pattern(pattern.ptr());
 }

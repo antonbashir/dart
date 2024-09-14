@@ -12708,7 +12708,7 @@ class Coroutine : public Instance {
   };
 
   enum CoroutineAttributes {
-    managed = 1 << 0,
+    persistent = 1 << 0,
   };
 
   static intptr_t InstanceSize() {
@@ -12739,6 +12739,7 @@ class Coroutine : public Instance {
   }
 
   SmiPtr state() const { return untag()->state(); }
+  void set_state(const Smi& state) const;
   static uword state_offset() { return OFFSET_OF(UntaggedCoroutine, state_); }
 
   SmiPtr attributes() const { return untag()->attributes(); }

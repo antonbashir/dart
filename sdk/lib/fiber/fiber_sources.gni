@@ -4,4 +4,6 @@
 
 fiber_sdk_sources = [
   "fiber.dart",
+  "fiber_list.dart",
+  "fiber_scheduler.dart",
 ]

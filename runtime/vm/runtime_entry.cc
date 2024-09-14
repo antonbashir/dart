@@ -3873,47 +3873,50 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
-  const Coroutine& coroutine =
-      Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
   if (state == Coroutine::CoroutineState::finished) coroutine.Recycle();
   Thread::Current()->EnterCoroutine(coroutine.ptr());
+  coroutine.set_state(
+      Smi::Handle(Smi::New(Coroutine::CoroutineState::running)));
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
   const Coroutine& coroutine =
       Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0) {
-    coroutine.Dispose();
-  }
   CoroutinePtr caller = coroutine.caller();
   while (caller != Coroutine::null()) {
-    auto state = Smi::CheckedHandle(zone, Coroutine::CheckedHandle(zone, caller).state()).Value();
+    auto state =
+        Smi::CheckedHandle(zone, Coroutine::CheckedHandle(zone, caller).state())
+            .Value();
     if (state == Coroutine::CoroutineState::finished) {
       Coroutine::CheckedHandle(zone, caller).Dispose();
     }
     caller = coroutine.caller();
   }
+  auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
+  if ((attributes & Coroutine::CoroutineAttributes::persistent) == 0) {
+    coroutine.Dispose();
+  }
   Thread::Current()->ExitCoroutine();
 }
 
-DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 2) {
-  const Coroutine& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  const Coroutine& caller = Coroutine::CheckedHandle(zone, arguments.ArgAt(1));
-  (void)caller;
+DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
+  auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto state = Smi::CheckedHandle(zone, forked.state()).Value();
   if (state == Coroutine::CoroutineState::finished) forked.Recycle();
   Thread::Current()->EnterCoroutine(forked.ptr());
+  forked.set_state(Smi::Handle(Smi::New(Coroutine::CoroutineState::running)));
 }
 
-DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 2) {
-  const Coroutine& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  const Coroutine& caller = Coroutine::CheckedHandle(zone, arguments.ArgAt(1));
+DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
+  auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   auto attributes = Smi::CheckedHandle(zone, forked.attributes()).Value();
-  if ((attributes & Coroutine::CoroutineAttributes::managed) == 0)
+  if ((attributes & Coroutine::CoroutineAttributes::persistent) == 0) {
     forked.Dispose();
-  Thread::Current()->EnterCoroutine(caller.ptr());
+  }
+  auto caller = forked.caller();
+  Thread::Current()->EnterCoroutine(caller);
 }
 
 // Use expected function signatures to help MSVC compiler resolve overloading.

@@ -1,5 +1,8 @@
 library dart.fiber;
 
+part 'fiber_list.dart';
+part 'fiber_scheduler.dart';
+
 const _kDefaultStackSize = 128 * (1 << 10);
 const _kMainFiber = "main";
 
@@ -10,6 +13,7 @@ const _kFiberStateDisposed = 3;
 
 const _kFiberAttributeNothing = 0;
 const _kFiberAttributeManaged = 1 << 0;
+
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
