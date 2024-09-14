@@ -86,6 +86,8 @@ class Fiber {
   final String name;
   late _Coroutine _coroutine;
   late FiberScheduler _scheduler;
+  late _FiberLink _schedulerStateLink;
+  late _FiberLink _schedulerReadyLink;
 
   Fiber._(this.name);
 
@@ -147,7 +149,14 @@ class Fiber {
     bool persistent = false,
     String? name,
   }) {
+    final current = _Coroutine._current;
+    if (current == null) throw StateError("Main fiber is not initialized. Create main fiber before creating others");
     final fiber = Fiber._(name ?? entry.toString());
+    fiber._scheduler = current!._scheduler;
+    fiber._schedulerReadyLink = _FiberLink();
+    fiber._schedulerReadyLink._value = fiber;
+    fiber._schedulerStateLink = _FiberLink();
+    fiber._schedulerStateLink._value = fiber;
     fiber._coroutine = _Coroutine._(
       size,
       _calculateAttributes(persistent: persistent),
@@ -156,6 +165,7 @@ class Fiber {
       fiber,
       arguments,
     );
+    current!._scheduler._register(fiber);
     return fiber;
   }
 
@@ -184,6 +194,10 @@ class Fiber {
   }) {
     final fiber = Fiber._(_kMainFiber);
     fiber._scheduler = scheduler;
+    fiber._schedulerReadyLink = _FiberLink();
+    fiber._schedulerReadyLink._value = fiber;
+    fiber._schedulerStateLink = _FiberLink();
+    fiber._schedulerStateLink._value = fiber;
     fiber._coroutine = _Coroutine._(
       size,
       Fiber._calculateAttributes(persistent: persistent),
@@ -207,12 +221,14 @@ class Fiber {
   @pragma("vm:never-inline")
   static void _run() {
     _Coroutine._current!._entry();
+    _Coroutine._current!._scheduler._finalize(_Coroutine._current!._owner);
   }
 
   @pragma("vm:never-inline")
   static void _defer() {
     _Coroutine._transfer(_Coroutine._current!, _Coroutine._current!._caller!);
     _Coroutine._current!._entry();
+    _Coroutine._current!._scheduler._finalize(_Coroutine._current!._owner);
   }
 
   @pragma("vm:prefer-inline")

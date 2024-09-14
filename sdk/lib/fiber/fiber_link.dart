@@ -13,7 +13,7 @@ class _FiberLink {
 
   @pragma("vm:prefer-inline")
   bool get isEmpty => identical(_next, _previous) && identical(_next, this);
-  
+
   @pragma("vm:prefer-inline")
   _FiberLink get first => _next;
 
@@ -34,7 +34,7 @@ class _FiberLink {
   }
 
   @pragma("vm:prefer-inline")
-  void add(_FiberLink item) {
+  void addHead(_FiberLink item) {
     item._previous = this;
     item._next = _next;
     item._previous._next = item;
@@ -42,14 +42,24 @@ class _FiberLink {
   }
 
   @pragma("vm:prefer-inline")
-  void steal(_FiberLink from) {
-    from.remove();
-    add(from);
+  void stealHead(_FiberLink item) {
+    item._previous._next = item._next;
+    item._next._previous = item._previous;
+    item._next = item;
+    item._previous = this;
+    item._next = _next;
+    item._previous._next = item;
+    item._next._previous = item;
   }
 
   @pragma("vm:prefer-inline")
-  void forEach(void Function(_FiberLink link) iterator) {
-    for (var item = _next; _next != this; _next = _next._next) iterator(item);
+  void stealTail(_FiberLink item) {
+    item._previous._next = item._next;
+    item._next._previous = item._previous;
+    item._next = this;
+    item._previous = _previous;
+    item._previous._next = item;
+    item._next._previous = item;
   }
 
   @pragma("vm:prefer-inline")
@@ -59,5 +69,10 @@ class _FiberLink {
     shift._next._previous = this;
     shift._next = shift._previous = shift;
     return shift;
+  }
+
+  @pragma("vm:prefer-inline")
+  void forEach(void Function(_FiberLink link) iterator) {
+    for (var item = _next; _next != this; _next = _next._next) iterator(item);
   }
 }
