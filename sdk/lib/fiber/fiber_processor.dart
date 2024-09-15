@@ -23,7 +23,6 @@ class FiberProcessor {
     List arguments = const [],
     int size = _kDefaultStackSize,
     bool persistent = false,
-    bool run = true,
   }) {
     final main = _FiberFactory.main(
       this,
@@ -31,7 +30,6 @@ class FiberProcessor {
       arguments: arguments,
       persistent: persistent,
       size: size,
-      run: run,
     );
     _schedule(main);
     _Coroutine._initialize(_scheduler);

@@ -116,7 +116,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   factory Fiber.child(
     void Function() entry, {
     List arguments = const [],
-    bool run = true,
     bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
@@ -126,7 +125,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
         arguments: arguments,
         size: size,
         name: name,
-        run: run,
         persistent: persistent,
       );
 
@@ -134,7 +132,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   static void spawn(
     void Function() entry, {
     List arguments = const [],
-    bool run = true,
     bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
@@ -145,7 +142,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
           arguments: arguments,
           size: size,
           name: name,
-          run: run,
           persistent: persistent,
         ),
       );
@@ -192,14 +188,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:never-inline")
   static void _run() {
     final current = _Coroutine._current!;
-    current._entry();
-    current._processor._finalize(Fiber(current));
-  }
-
-  @pragma("vm:never-inline")
-  static void _defer() {
-    final current = _Coroutine._current!;
-    _Coroutine._transfer(current, current._caller!);
     current._entry();
     current._processor._finalize(Fiber(current));
   }
