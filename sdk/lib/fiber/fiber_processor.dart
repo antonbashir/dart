@@ -9,7 +9,7 @@ class FiberProcessor {
   late Fiber _main;
 
   final void Function() idle;
-  static void _defaultIdle() => throw StateError("message");
+  static void _defaultIdle() => throw StateError("There are no scheduled fibers and FiberProcessor idle function is not defined");
 
   FiberProcessor({this.idle = _defaultIdle}) {
     _created = _FiberLink();
@@ -53,10 +53,10 @@ class FiberProcessor {
         processor.idle();
         continue;
       }
-      var first, last = scheduled.removeHead()._value._coroutine;
+      var first, last = scheduled.removeHead()._value;
       while (!scheduled.isEmpty) {
-        last._caller = scheduled.removeHead()._value._coroutine;
-        last = last._caller!;
+        last._caller = scheduled.removeHead()._value;
+        last = Fiber(last._caller!);
       }
       last._caller = Fiber.current();
       _Coroutine._transfer(Fiber.current(), first);

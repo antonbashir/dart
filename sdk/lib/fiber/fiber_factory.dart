@@ -42,8 +42,7 @@ class _FiberFactory {
     bool persistent = false,
     String? name,
   }) {
-    final current = _Coroutine._current;
-    if (current == null) throw StateError("message");
+    final current = Fiber.current();
     final coroutine = _Coroutine._(size);
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;

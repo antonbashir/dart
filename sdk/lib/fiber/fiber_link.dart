@@ -73,6 +73,6 @@ class _FiberLink {
 
   @pragma("vm:prefer-inline")
   void forEach(void Function(_FiberLink link) iterator) {
-    for (var item = _next; _next != this; _next = _next._next) iterator(item);
+    for (var item = _next; !identical(_next, this); _next = _next._next) iterator(item);
   }
 }
