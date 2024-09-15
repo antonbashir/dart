@@ -18,7 +18,6 @@ class FiberProcessor {
     _scheduler = _FiberFactory.scheduler(this);
   }
 
-  @pragma("vm:prefer-inline")
   void process(
     void Function() entry, {
     List arguments = const [],
@@ -34,7 +33,6 @@ class FiberProcessor {
       size: size,
       run: run,
     );
-    _register(main);
     _schedule(main);
     _Coroutine._initialize(_scheduler);
   }
@@ -46,6 +44,9 @@ class FiberProcessor {
     final scheduled = processor._scheduled;
     final created = processor._created;
     final finished = processor._finished;
+    final main = scheduled.removeHead()._value;
+    main._caller = scheduler;
+    _Coroutine._fork(scheduler, main);
     for (;;) {
       if (!scheduled.isEmpty) {
         var first, last = scheduled.removeHead()._value;

@@ -191,14 +191,16 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:never-inline")
   static void _run() {
-    _Coroutine._current!._entry();
-    _Coroutine._current!._processor._finalize(Fiber(_Coroutine._current!));
+    final current = _Coroutine._current!;
+    current._entry();
+    current._processor._finalize(Fiber(current));
   }
 
   @pragma("vm:never-inline")
   static void _defer() {
-    _Coroutine._transfer(_Coroutine._current!, _Coroutine._current!._caller!);
-    _Coroutine._current!._entry();
-    _Coroutine._current!._processor._finalize(Fiber(_Coroutine._current!));
+    final current = _Coroutine._current!;
+    _Coroutine._transfer(current, current._caller!);
+    current._entry();
+    current._processor._finalize(Fiber(current));
   }
 }
