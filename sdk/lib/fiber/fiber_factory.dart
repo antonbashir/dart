@@ -46,13 +46,13 @@ class _FiberFactory {
     final coroutine = _Coroutine._(size);
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;
-    coroutine._processor = current!._processor;
-    coroutine._scheduler = current!._scheduler;
+    coroutine._processor = current._processor;
+    coroutine._scheduler = current._scheduler;
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = arguments;
     coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
     final fiber = Fiber(coroutine);
-    current!._processor._register(fiber);
+    current._processor._register(fiber);
     return fiber;
   }
 }
