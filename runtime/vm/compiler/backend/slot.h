@@ -87,10 +87,7 @@ class ParsedFunction;
   V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments,       \
     FINAL)                                                                     \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
-  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
-  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
-  V(Coroutine, UntaggedCoroutine, fiber, Dynamic, VAR)                         \
-  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)
+  V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:
@@ -155,7 +152,13 @@ class ParsedFunction;
     FINAL)                                                                     \
   V(TypeParameters, UntaggedTypeParameters, names, Array, FINAL)               \
   V(UnhandledException, UntaggedUnhandledException, exception, Dynamic, FINAL) \
-  V(UnhandledException, UntaggedUnhandledException, stacktrace, Dynamic, FINAL)
+  V(UnhandledException, UntaggedUnhandledException, stacktrace, Dynamic,       \
+    FINAL)                                                                     \
+  V(Coroutine, UntaggedCoroutine, name, Dynamic, VAR)                          \
+  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)                       \
+  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
+  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
+  V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)
 
 // List of slots that correspond to fields of native objects that contain
 // unboxed values in the following format:

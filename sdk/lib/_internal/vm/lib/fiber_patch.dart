@@ -6,15 +6,62 @@ import "dart:fiber";
 class _Coroutine {
   @patch
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, int attributes, void Function() entry, void Function() trampoline, Object fiber, List arguments);
+  external factory _Coroutine._(int size);
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _state(int value);
+  external String get _name;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _name(String value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external void Function() get _entry;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _entry(void Function() value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external void Function() get _trampoline;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _trampoline(void Function() value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external List get _arguments;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _arguments(List value);
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external int get _state;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _state(int value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external int get _attributes;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _attributes(int value);
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
@@ -23,27 +70,32 @@ class _Coroutine {
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external set _caller(_Coroutine? value);
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external int get _attributes;
+  external _Coroutine? get _scheduler;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external void Function(dynamic) get _entry;
+  external set _scheduler(_Coroutine? value);
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external Object get _fiber;
+  external FiberProcessor get _processor;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external List get _arguments;
+  external set _processor(FiberProcessor value);
+
   @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  @pragma("vm:idempotent")
-  external static _Coroutine? get _current;
+  @pragma("vm:external-name", "Coroutine_recycle")
+  external void _recycle();
+  @patch
+  @pragma("vm:external-name", "Coroutine_dispose")
+  external void _dispose();
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
@@ -56,10 +108,10 @@ class _Coroutine {
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   external static void _fork(_Coroutine from, _Coroutine to);
+
   @patch
-  @pragma("vm:external-name", "Coroutine_recycle")
-  external void _recycle();
-  @patch
-  @pragma("vm:external-name", "Coroutine_dispose")
-  external void _dispose();
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  @pragma("vm:idempotent")
+  external static _Coroutine? get _current;
 }

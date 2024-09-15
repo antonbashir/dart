@@ -3776,15 +3776,17 @@ class UntaggedFutureOr : public UntaggedInstance {
 
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
-  VISIT_FROM(caller)
-  COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
+  COMPRESSED_POINTER_FIELD(StringPtr, name)
+  VISIT_FROM(name)
   COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
+  COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
   COMPRESSED_POINTER_FIELD(SmiPtr, state)
   COMPRESSED_POINTER_FIELD(SmiPtr, attributes)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, fiber)
-  COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
-  VISIT_TO(entry)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
+  COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
+  VISIT_TO(processor)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword native_stack_base_;
   uword stack_root_;
@@ -3792,6 +3794,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_limit_;
 
  public:
+  uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }

@@ -4,6 +4,7 @@
 
 fiber_sdk_sources = [
   "fiber.dart",
+  "fiber_processor.dart",
   "fiber_link.dart",
-  "fiber_scheduler.dart",
+  "fiber_factory.dart",
 ]

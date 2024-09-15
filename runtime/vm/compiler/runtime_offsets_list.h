@@ -400,13 +400,15 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
-  FIELD(Coroutine, arguments_offset)                                           \
-  FIELD(Coroutine, attributes_offset)                                          \
-  FIELD(Coroutine, caller_offset)                                              \
-  FIELD(Coroutine, state_offset)                                               \
+  FIELD(Coroutine, name_offset)                                                \
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, trampoline_offset)                                          \
-  FIELD(Coroutine, fiber_offset)                                               \
+  FIELD(Coroutine, arguments_offset)                                           \
+  FIELD(Coroutine, state_offset)                                               \
+  FIELD(Coroutine, attributes_offset)                                          \
+  FIELD(Coroutine, caller_offset)                                              \
+  FIELD(Coroutine, scheduler_offset)                                           \
+  FIELD(Coroutine, processor_offset)                                           \
   FIELD(Coroutine, native_stack_base_offset)                                   \
   FIELD(Coroutine, stack_root_offset)                                          \
   FIELD(Coroutine, stack_base_offset)                                          \

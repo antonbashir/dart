@@ -12715,28 +12715,13 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t size,
-                          uintptr_t attributes,
-                          const Closure& entry,
-                          const Function& trampoline,
-                          const Instance& fiber,
-                          const Array& arguments);
+  static CoroutinePtr New(uintptr_t size);
 
   static CoroutinePtr FindContainedCoroutine(CoroutinePtr current,
                                              uword stack_pointer);
 
-  void Recycle() const;
-
-  void Dispose() const;
-
-  ArrayPtr arguments() const { return untag()->arguments(); }
-  static uword arguments_offset() { return OFFSET_OF(UntaggedCoroutine, arguments_); }
-
-  ObjectPtr fiber() const { return untag()->fiber(); }
-  static uword fiber_offset() { return OFFSET_OF(UntaggedCoroutine, fiber_); }
-
-  CoroutinePtr caller() const { return untag()->caller(); }
-  static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
+  StringPtr name() const { return untag()->name(); }
+  static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
 
   ClosurePtr entry() const { return untag()->entry(); }
   static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
@@ -12755,25 +12740,47 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, attributes_);
   }
 
-  uword native_stack_base() const { return untag()->native_stack_base_; }
+  ArrayPtr arguments() const { return untag()->arguments(); }
+  static uword arguments_offset() {
+    return OFFSET_OF(UntaggedCoroutine, arguments_);
+  }
+
+  CoroutinePtr caller() const { return untag()->caller(); }
+  static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
+
+  CoroutinePtr scheduler() const { return untag()->scheduler(); }
+  static uword scheduler_offset() {
+    return OFFSET_OF(UntaggedCoroutine, scheduler_);
+  }
+
+  ObjectPtr processor() const { return untag()->processor(); }
+  static uword processor_offset() {
+    return OFFSET_OF(UntaggedCoroutine, processor_);
+  }
+
+  uword native_stack_base() const { return untag()->native_stack_base(); }
   static uword native_stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, native_stack_base_);
   }
 
-  uword stack_root() const { return untag()->stack_root_; }
+  uword stack_root() const { return untag()->stack_root(); }
   static uword stack_root_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_root_);
   }
 
-  uword stack_base() const { return untag()->stack_base_; }
+  uword stack_base() const { return untag()->stack_base(); }
   static uword stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_base_);
   }
 
-  uword stack_limit() const { return untag()->stack_limit_; }
+  uword stack_limit() const { return untag()->stack_limit(); }
   static uword stack_limit_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
+
+  void Recycle() const;
+
+  void Dispose() const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

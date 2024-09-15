@@ -26633,12 +26633,7 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t size,
-                            uintptr_t attributes,
-                            const Closure& entry,
-                            const Function& trampoline,
-                            const Instance& fiber,
-                            const Array& arguments) {
+CoroutinePtr Coroutine::New(uintptr_t size) {
   const auto& coroutine =
       Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
@@ -26658,12 +26653,6 @@ CoroutinePtr Coroutine::New(uintptr_t size,
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
   coroutine.untag()->set_state(Smi::New(Coroutine::CoroutineState::created));
-  coroutine.untag()->set_attributes(Smi::New(attributes));
-  coroutine.untag()->set_entry(entry.ptr());
-  coroutine.untag()->set_trampoline(trampoline.ptr());
-  coroutine.untag()->set_caller(Coroutine::null());
-  coroutine.untag()->set_fiber(fiber.ptr());
-  coroutine.untag()->set_arguments(arguments.ptr());
   return coroutine.ptr();
 }
 
@@ -26707,7 +26696,6 @@ void Coroutine::Dispose() const {
   untag()->set_caller(Coroutine::null());
   untag()->set_trampoline(Function::null());
   untag()->set_entry(Closure::null());
-  untag()->set_fiber(Object::null());
 }
 
 void Coroutine::set_state(const Smi& state) const {

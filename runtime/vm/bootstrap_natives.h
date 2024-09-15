@@ -313,7 +313,7 @@ namespace dart {
   V(DartNativeApiFunctionPointer, 1)                                           \
   V(TransferableTypedData_factory, 2)                                          \
   V(TransferableTypedData_materialize, 1)                                      \
-  V(Coroutine_factory, 7)                                                      \
+  V(Coroutine_factory, 2)                                                      \
   V(Coroutine_dispose, 1)                                                      \
   V(Coroutine_recycle, 1)
 

@@ -922,12 +922,14 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(ObjectArrayLength, Array_length)                                           \
   V(Record_shape, Record_shape)                                                \
   V(SuspendState_getFunctionData, SuspendState_function_data)                  \
+  V(Coroutine_getName, Coroutine_name)                                         \
   V(Coroutine_getEntry, Coroutine_entry)                                       \
-  V(Coroutine_getCaller, Coroutine_caller)                                     \
+  V(Coroutine_getTrampoline, Coroutine_trampoline)                             \
+  V(Coroutine_getArguments, Coroutine_arguments)                               \
   V(Coroutine_getState, Coroutine_state)                                       \
   V(Coroutine_getAttributes, Coroutine_attributes)                             \
-  V(Coroutine_getFiber, Coroutine_fiber)                                       \
-  V(Coroutine_getArguments, Coroutine_arguments)                               \
+  V(Coroutine_getScheduler, Coroutine_scheduler)                               \
+  V(Coroutine_getProcessor, Coroutine_processor)                               \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -949,8 +951,14 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(SuspendState_setFunctionData, SuspendState_function_data)                  \
   V(SuspendState_setThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_setErrorCallback, SuspendState_error_callback)                \
-  V(Coroutine_setCaller, Coroutine_caller)                                     \
+  V(Coroutine_setName, Coroutine_name)                                         \
+  V(Coroutine_setEntry, Coroutine_entry)                                       \
+  V(Coroutine_setTrampoline, Coroutine_trampoline)                             \
+  V(Coroutine_setArguments, Coroutine_arguments)                               \
   V(Coroutine_setState, Coroutine_state)                                       \
+  V(Coroutine_setAttributes, Coroutine_attributes)                             \
+  V(Coroutine_setScheduler, Coroutine_scheduler)                               \
+  V(Coroutine_setProcessor, Coroutine_processor)                               \
   V(WeakProperty_setKey, WeakProperty_key)                                     \
   V(WeakProperty_setValue, WeakProperty_value)                                 \
   V(WeakReference_setTarget, WeakReference_target)
