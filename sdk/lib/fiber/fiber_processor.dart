@@ -41,25 +41,26 @@ class FiberProcessor {
 
   @pragma("vm:never-inline")
   static void _loop() {
-    final processor = Fiber.current()._processor!;
+    final scheduler = Fiber.current();
+    final processor = scheduler._processor!;
     final scheduled = processor._scheduled;
     final created = processor._created;
     final finished = processor._finished;
     for (;;) {
+      if (!scheduled.isEmpty) {
+        var first, last = scheduled.removeHead()._value;
+        while (!scheduled.isEmpty) {
+          last._caller = scheduled.removeHead()._value;
+          last = Fiber(last._caller!);
+        }
+        last._caller = scheduler;
+        _Coroutine._transfer(scheduler, first);
+        continue;
+      }
       if (created.isEmpty) {
         return;
       }
-      if (scheduled.isEmpty) {
-        processor.idle();
-        continue;
-      }
-      var first, last = scheduled.removeHead()._value;
-      while (!scheduled.isEmpty) {
-        last._caller = scheduled.removeHead()._value;
-        last = Fiber(last._caller!);
-      }
-      last._caller = Fiber.current();
-      _Coroutine._transfer(Fiber.current(), first);
+      processor.idle();
     }
   }
 

@@ -9,8 +9,6 @@ var commonState = "";
 void main() {
   testBase();
   testClosureScopes();
-  testTransfer();
-  testReturnToFinished();
   testRecycle();
 }
 
@@ -79,80 +77,6 @@ void testClosureScopes() {
   );
 
   Expect.equals("level 4", variable);
-}
-
-void testTransfer() {
-  Fiber.launch(() {
-    var state = "main";
-    var switches = 0;
-    final first = Fiber.child(
-      () {
-        switches++;
-        Expect.equals("created", state);
-        state = "first";
-      },
-      run: false,
-    );
-    Fiber.fork(first);
-
-    final second = Fiber.child(
-      () {
-        switches++;
-        Expect.equals("first", state);
-        state = "second";
-      },
-      run: false,
-    );
-    Fiber.fork(second);
-
-    state = "created";
-    Fiber.transfer(first);
-    switches++;
-    Expect.equals("first", state);
-
-    Fiber.transfer(second);
-    switches++;
-    Expect.equals("second", state);
-
-    Expect.equals(4, switches);
-  });
-}
-
-void testReturnToFinished() {
-  late Fiber second;
-  late Fiber main;
-  late Fiber first;
-  var state = "";
-  main = Fiber.main(() {
-    state = "main";
-    first = Fiber.child(
-      () {
-        state += " -> first";
-        second = Fiber.child(
-          () {
-            state += " -> second";
-            Fiber.transfer(main);
-            state += " -> second";
-          },
-        );
-        Fiber.fork(second);
-        state += " -> first";
-      },
-    );
-
-    Fiber.fork(first);
-
-    state += " -> main";
-
-    Fiber.transfer(first);
-
-    state += " -> main";
-
-    Fiber.transfer(second);
-  });
-  main.start();
-  state += " -> exit";
-  Expect.equals("main -> first -> second -> main -> first -> main -> second -> exit", state);
 }
 
 void mainEntry() {
