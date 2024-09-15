@@ -42,7 +42,7 @@ class FiberProcessor {
   @pragma("vm:never-inline")
   static void _loop() {
     final scheduler = Fiber.current();
-    final processor = scheduler._processor!;
+    final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     final created = processor._created;
     final finished = processor._finished;
