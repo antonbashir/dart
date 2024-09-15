@@ -86,6 +86,10 @@ class ParsedFunction;
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)               \
   V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments,       \
     FINAL)                                                                     \
+  V(Coroutine, UntaggedCoroutine, name, Dynamic, VAR)                          \
+  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
+  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
+  V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)                     \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
   V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)
 
@@ -154,11 +158,7 @@ class ParsedFunction;
   V(UnhandledException, UntaggedUnhandledException, exception, Dynamic, FINAL) \
   V(UnhandledException, UntaggedUnhandledException, stacktrace, Dynamic,       \
     FINAL)                                                                     \
-  V(Coroutine, UntaggedCoroutine, name, Dynamic, VAR)                          \
-  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)                       \
-  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
-  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
-  V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)
+  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)
 
 // List of slots that correspond to fields of native objects that contain
 // unboxed values in the following format:

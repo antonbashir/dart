@@ -5,7 +5,7 @@ var counter = 10000000;
 var value = 10000000;
 
 void main() {
-  Fiber.launch(mainEntry);
+  FiberProcessor().process(mainEntry);
 }
 
 void mainEntry() {

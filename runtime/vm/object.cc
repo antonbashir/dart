@@ -26660,19 +26660,72 @@ const char* Coroutine::ToCString() const {
   return "Coroutine";
 }
 
-CoroutinePtr Coroutine::FindContainedCoroutine(CoroutinePtr current,
-                                               uword stack_pointer) {
-  auto object_store = Isolate::Current()->isolate_object_store();
-  auto& coroutines = GrowableObjectArray::Handle(object_store->coroutines());
-  Coroutine& coroutine = Coroutine::Handle();
+void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto zone = thread->zone();
+  auto& coroutines = GrowableObjectArray::CheckedHandle(zone, object_store->coroutines());
+  Coroutine& found = Coroutine::Handle(zone);
   for (auto index = 0; index < coroutines.Length(); index++) {
-    coroutine ^= coroutines.At(index);
-    if (stack_pointer > coroutine.stack_limit() &&
-        stack_pointer <= coroutine.stack_root()) {
-      return coroutine.ptr();
+    found ^= coroutines.At(index);
+    if (stack_pointer > found.stack_limit() &&
+        stack_pointer <= found.stack_root()) {
+      break;
     }
   }
-  return Coroutine::null();
+  if (found.IsNull()) {
+    thread->ExitCoroutine();
+    return;
+  }
+  if (found.ptr() != ptr()) {
+    found.ptr()->untag()->set_state(Smi::New(CoroutineState::finished));
+    thread->EnterCoroutine(found.ptr());
+  }
+}
+
+void Coroutine::HandleEnter(Thread* thread, Zone* zone) {
+  auto state = Smi::CheckedHandle(zone, this->state()).Value();
+  if (state == CoroutineState::finished) Recycle();
+  untag()->set_state(Smi::New(CoroutineState::running));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  coroutines.Add(*this);
+  thread->EnterCoroutine(ptr());
+}
+
+void Coroutine::HandleExit(Thread* thread, Zone* zone) {
+  untag()->set_state(Smi::New(CoroutineState::finished));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    auto& coroutine = Coroutine::CheckedHandle(zone, coroutines.At(index));
+    auto state = Smi::CheckedHandle(zone, coroutine.state()).Value();
+    auto attributes = Smi::CheckedHandle(zone, coroutine.attributes()).Value();
+    if ((attributes & CoroutineAttributes::persistent) == 0 && state != CoroutineState::disposed) {
+      coroutine.Dispose();
+    }
+  }
+  coroutines.SetLength(0);
+  coroutines.SetData(Object::empty_array());
+  thread->ExitCoroutine();
+}
+
+void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
+  auto state = Smi::CheckedHandle(zone, this->state()).Value();
+  if (state == CoroutineState::finished) Recycle();
+  untag()->set_state(Smi::New(CoroutineState::running));
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = GrowableObjectArray::Handle(zone, object_store->coroutines());
+  coroutines.Add(*this);
+  thread->EnterCoroutine(ptr());
+}
+
+void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
+  untag()->set_state(Smi::New(CoroutineState::finished));
+  auto attributes = Smi::CheckedHandle(zone, this->attributes()).Value();
+  if ((attributes & CoroutineAttributes::persistent) == 0) {
+    Dispose();
+  }
+  thread->EnterCoroutine(caller());
 }
 
 void Coroutine::Recycle() const {
@@ -26684,6 +26737,15 @@ void Coroutine::Recycle() const {
 }
 
 void Coroutine::Dispose() const {
+  untag()->set_name(String::null());
+  untag()->set_entry(Closure::null());
+  untag()->set_trampoline(Function::null());
+  untag()->set_arguments(Array::empty_array().ptr());
+  untag()->set_state(Smi::New(CoroutineState::disposed));
+  untag()->set_attributes(Smi::New(CoroutineAttributes::nothing));
+  untag()->set_caller(Coroutine::null());
+  untag()->set_scheduler(Coroutine::null());
+  untag()->set_processor(Object::null());
 #if defined(DART_TARGET_OS_WINDOWS)
   VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
 #else
@@ -26692,10 +26754,6 @@ void Coroutine::Dispose() const {
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
-  untag()->set_state(Smi::New(Coroutine::CoroutineState::disposed));
-  untag()->set_caller(Coroutine::null());
-  untag()->set_trampoline(Function::null());
-  untag()->set_entry(Closure::null());
 }
 
 void Coroutine::set_state(const Smi& state) const {

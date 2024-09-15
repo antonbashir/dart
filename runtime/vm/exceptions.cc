@@ -689,17 +689,7 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   ExcpHandler func =
       reinterpret_cast<ExcpHandler>(StubCode::JumpToFrame().EntryPoint());
   if (thread->has_coroutine()) {
-    CoroutinePtr found =
-        Coroutine::FindContainedCoroutine(thread->coroutine(), stack_pointer);
-    if (found == Coroutine::null()) {
-      thread->ExitCoroutine();
-    } else {
-      if (found != thread->coroutine()) {
-        found->untag()->set_state(
-            Smi::New(Coroutine::CoroutineState::finished));
-        thread->EnterCoroutine(found);
-      }
-    }
+    Coroutine::Handle(thread->zone(), thread->coroutine()).HandleException(thread, stack_pointer);
   }
   if (thread->is_unwind_in_progress()) {
     thread->SetUnwindErrorInProgress(true);

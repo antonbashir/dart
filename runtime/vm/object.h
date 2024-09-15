@@ -12708,6 +12708,7 @@ class Coroutine : public Instance {
   };
 
   enum CoroutineAttributes {
+    nothing = 0,
     persistent = 1 << 0,
   };
 
@@ -12717,8 +12718,11 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size);
 
-  static CoroutinePtr FindContainedCoroutine(CoroutinePtr current,
-                                             uword stack_pointer);
+  void HandleException(Thread* thread, uword stack_pointer);
+  void HandleEnter(Thread* thread, Zone* zone);
+  void HandleExit(Thread* thread, Zone* zone);
+  void HandleForkedEnter(Thread* thread, Zone* zone);
+  void HandleForkedExit(Thread* thread, Zone* zone);
 
   StringPtr name() const { return untag()->name(); }
   static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
