@@ -404,7 +404,6 @@
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, trampoline_offset)                                          \
   FIELD(Coroutine, arguments_offset)                                           \
-  FIELD(Coroutine, state_offset)                                               \
   FIELD(Coroutine, attributes_offset)                                          \
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, scheduler_offset)                                           \

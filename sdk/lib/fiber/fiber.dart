@@ -9,39 +9,39 @@ const _kSchedulerStackSize = 8 * (1 << 10);
 const _kMainFiber = "main";
 const _kSchedulerFiber = "scheduler";
 
-const _kFiberStateCreated = 0;
-const _kFiberStateRunning = 1;
-const _kFiberStateFinished = 2;
-const _kFiberStateDisposed = 3;
-
-const _kFiberAttributeNothing = 0;
-const _kFiberAttributePersistent = 1 << 0;
+const _kFiberNothing = 0;
+const _kFiberCreated = 1 << 0;
+const _kFiberScheduled = 1 << 1;
+const _kFiberRunning = 1 << 2;
+const _kFiberFinished = 1 << 3;
+const _kFiberDisposed = 1 << 4;
+const _kFiberPersistent = 1 << 5;
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
-  bool get created => _state == _kFiberStateCreated;
+  bool get created => _state & _kFiberCreated != 0;
 
   @pragma("vm:prefer-inline")
-  bool get running => _state == _kFiberStateRunning;
+  bool get running => _state & _kFiberRunning != 0;
 
   @pragma("vm:prefer-inline")
-  bool get finished => _state == _kFiberStateFinished;
+  bool get finished => _state & _kFiberFinished != 0;
 
   @pragma("vm:prefer-inline")
-  bool get disposed => _state == _kFiberStateDisposed;
+  bool get disposed => _state & _kFiberDisposed != 0;
 
   @pragma("vm:prefer-inline")
   int get value => _state;
 
   String string() {
     switch (_state) {
-      case _kFiberStateCreated:
+      case _kFiberCreated:
         return "created";
-      case _kFiberStateRunning:
+      case _kFiberRunning:
         return "running";
-      case _kFiberStateFinished:
+      case _kFiberFinished:
         return "finished";
-      case _kFiberStateDisposed:
+      case _kFiberDisposed:
         return "disposed";
       default:
         return "unknown";
@@ -51,15 +51,15 @@ extension type FiberState(int _state) {
 
 extension type FiberAttributes(int _attributes) {
   @pragma("vm:prefer-inline")
-  bool get persistent => _attributes & _kFiberAttributePersistent > 0;
+  bool get persistent => _attributes & _kFiberPersistent != 0;
 
   @pragma("vm:prefer-inline")
   int get value => _attributes;
 
   @pragma("vm:prefer-inline")
   static FiberAttributes _calculate({required bool persistent}) {
-    var attributes = _kFiberAttributeNothing;
-    if (persistent) attributes |= _kFiberAttributePersistent;
+    var attributes = _kFiberNothing;
+    if (persistent) attributes |= _kFiberPersistent;
     return FiberAttributes(attributes);
   }
 }
@@ -85,9 +85,6 @@ class _Coroutine {
 
   external List get _arguments;
   external set _arguments(List value);
-
-  external int get _state;
-  external set _state(int value);
 
   external int get _attributes;
   external set _attributes(int value);
@@ -159,7 +156,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final caller = Fiber.current();
     if (caller!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
     final callee = caller._caller!;
-    if (callee._state != _kFiberStateRunning) throw StateError("Destination fiber is not running, state = ${FiberState(callee._state).string()}");
+    if (callee._attributes & _kFiberRunning == 0) throw StateError("Destination fiber is not running, state = ${FiberState(callee._attributes).string()}");
     callee._caller = caller!._scheduler;
     _Coroutine._transfer(caller!, callee);
   }
@@ -178,7 +175,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  FiberState get state => FiberState(_coroutine._state);
+  FiberState get state => FiberState(_coroutine._attributes);
 
   @pragma("vm:prefer-inline")
   FiberAttributes get attributes => FiberAttributes(_coroutine._attributes);

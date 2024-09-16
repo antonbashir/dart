@@ -240,7 +240,6 @@ bool Slot::IsImmutableLengthSlot() const {
     case Slot::Kind::kRecord_shape:
     case Slot::Kind::kAbstractType_hash:
     case Slot::Kind::kCoroutine_attributes:
-    case Slot::Kind::kCoroutine_state:
       return false;
   }
   UNREACHABLE();

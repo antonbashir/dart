@@ -9,7 +9,7 @@ class _FiberFactory {
     coroutine._processor = processor;
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = [];
-    coroutine._attributes = _kFiberAttributeNothing;
+    coroutine._attributes = _kFiberNothing;
     return Fiber(coroutine);
   }
 

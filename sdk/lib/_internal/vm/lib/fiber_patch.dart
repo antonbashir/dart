@@ -47,15 +47,6 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external int get _state;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _state(int value);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
   external int get _attributes;
   @patch
   @pragma("vm:recognized", "other")

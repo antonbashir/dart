@@ -12700,16 +12700,14 @@ class SuspendState : public Instance {
 
 class Coroutine : public Instance {
  public:
-  enum CoroutineState {
-    created = 0,
-    running = 1,
-    finished = 2,
-    disposed = 3,
-  };
-
   enum CoroutineAttributes {
     nothing = 0,
-    persistent = 1 << 0,
+    created = 1 << 0,
+    scheduled = 1 << 1,
+    running = 1 << 2,
+    finished = 1 << 3,
+    disposed = 1 << 4,
+    persistent = 1 << 5,
   };
 
   static intptr_t InstanceSize() {
@@ -12734,10 +12732,6 @@ class Coroutine : public Instance {
   static uword trampoline_offset() {
     return OFFSET_OF(UntaggedCoroutine, trampoline_);
   }
-
-  SmiPtr state() const { return untag()->state(); }
-  void set_state(const Smi& state) const;
-  static uword state_offset() { return OFFSET_OF(UntaggedCoroutine, state_); }
 
   SmiPtr attributes() const { return untag()->attributes(); }
   static uword attributes_offset() {
@@ -12782,9 +12776,9 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
 
-  void Recycle() const;
+  void Recycle(Zone* zone) const;
 
-  void Dispose() const;
+  void Dispose(Zone* zone) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

@@ -22,10 +22,6 @@ class _Coroutine {
   @patch
   set _arguments(List value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  int get _state => throw UnsupportedError("_Coroutine._current");
-  @patch
-  set _state(int value) => throw UnsupportedError("_Coroutine._current");
-  @patch
   int get _attributes => throw UnsupportedError("_Coroutine._current");
   @patch
   set _attributes(int value) => throw UnsupportedError("_Coroutine._current");

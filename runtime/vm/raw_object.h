@@ -3781,7 +3781,6 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
   COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
   COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
-  COMPRESSED_POINTER_FIELD(SmiPtr, state)
   COMPRESSED_POINTER_FIELD(SmiPtr, attributes)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)

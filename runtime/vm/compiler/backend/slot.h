@@ -124,7 +124,6 @@ class ParsedFunction;
   V(TypeArguments, UntaggedTypeArguments, hash, Smi, VAR)                      \
   V(TypeArguments, UntaggedTypeArguments, length, Smi, FINAL)                  \
   V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)                       \
-  V(Coroutine, UntaggedCoroutine, state, Smi, VAR)                             \
   V(Coroutine, UntaggedCoroutine, attributes, Smi, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native

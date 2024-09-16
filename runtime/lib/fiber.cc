@@ -15,13 +15,13 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
 
 DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
-  coroutine.Recycle();
+  coroutine.Recycle(zone);
   return Object::null();
 }
 
 DEFINE_NATIVE_ENTRY(Coroutine_dispose, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
-  coroutine.Dispose();
+  coroutine.Dispose(zone);
   return Object::null();
 }
 }  // namespace dart
