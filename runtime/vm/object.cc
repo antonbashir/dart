@@ -26633,17 +26633,24 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t size) {
-  const auto& coroutine =
-      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+CoroutinePtr Coroutine::New(uintptr_t size)
+{
+    const auto& coroutine =
+        Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
-  void** stack_base = (void**)((uintptr_t)VirtualAlloc(
-      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
-      PAGE_READWRITE));
+    void** stack_base = (void**)((uintptr_t)VirtualAlloc(
+        nullptr,
+        stack_size * kWordSize,
+        MEM_RESERVE | MEM_COMMIT,
+        PAGE_READWRITE));
 #else
-  void** stack_end = (void**)((uintptr_t)mmap(
-      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    void** stack_end = (void**)((uintptr_t)mmap(
+        nullptr,
+        size * kWordSize,
+        PROT_READ | PROT_WRITE | PROT_EXEC,
+        MAP_PRIVATE | MAP_ANONYMOUS,
+        -1,
+        0));
 #endif
     memset(stack_end, 0, size * kWordSize);
     uword stack_limit = (uword)(stack_end);
@@ -26674,12 +26681,13 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     return coroutine.ptr();
 }
 
-const char* Coroutine::ToCString() const {
-  return "Coroutine";
+const char* Coroutine::ToCString() const
+{
+    return "Coroutine";
 }
 
 void Coroutine::HandleException(Thread* thread, uword stack_pointer)
-{
+{ 
     auto zone = thread->zone();
     auto object_store = thread->isolate()->isolate_object_store();
     auto& coroutines = Array::CheckedHandle(zone, object_store->coroutines());
@@ -26786,9 +26794,9 @@ void Coroutine::Dispose(Thread* thread, Zone* zone) const
     untag()->set_scheduler(Coroutine::null());
     untag()->set_processor(Object::null());
 #if defined(DART_TARGET_OS_WINDOWS)
-  VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+    VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
 #else
-  munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
+    munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
 #endif
     StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
     StoreNonPointer(&untag()->stack_base_, (uword) nullptr);

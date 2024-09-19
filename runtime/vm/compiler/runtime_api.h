@@ -1036,6 +1036,7 @@ class SuspendState : public AllStatic {
 
 class Coroutine : public AllStatic {
  public:
+  static word index_offset();
   static word name_offset();
   static word entry_offset();
   static word trampoline_offset();
@@ -1062,89 +1063,6 @@ class Smi : public AllStatic {
  public:
   static word InstanceSize();
   FINAL_CLASS();
-};
-
-class ReceivePort : public AllStatic
-{
-   public:
-    static word send_port_offset();
-    static word handler_offset();
-    static word InstanceSize();
-    FINAL_CLASS();
-};
-
-class SendPort : public AllStatic
-{
-   public:
-    static word InstanceSize();
-    FINAL_CLASS();
-};
-
-class TransferableTypedData : public AllStatic
-{
-   public:
-    static word InstanceSize();
-    FINAL_CLASS();
-};
-
-class StackTrace : public AllStatic
-{
-   public:
-    static word InstanceSize();
-    FINAL_CLASS();
-};
-
-class SuspendState : public AllStatic
-{
-   public:
-    static word frame_capacity_offset();
-    static word frame_size_offset();
-    static word pc_offset();
-    static word function_data_offset();
-    static word then_callback_offset();
-    static word error_callback_offset();
-    static word payload_offset();
-
-    static word HeaderSize();
-    static word InstanceSize();
-    static word InstanceSize(word payload_size);
-    static word FrameSizeGrowthGap();
-
-    FINAL_CLASS();
-};
-
-class Coroutine : public AllStatic
-{
-   public:
-    static word name_offset();
-    static word entry_offset();
-    static word trampoline_offset();
-    static word arguments_offset();
-    static word attributes_offset();
-    static word caller_offset();
-    static word scheduler_offset();
-    static word processor_offset();
-    static word native_stack_base_offset();
-    static word stack_root_offset();
-    static word stack_base_offset();
-    static word stack_limit_offset();
-    static word index_offset();
-    static word InstanceSize();
-    FINAL_CLASS();
-};
-
-class Integer : public AllStatic
-{
-   public:
-    static word InstanceSize();
-    static word NextFieldOffset();
-};
-
-class Smi : public AllStatic
-{
-   public:
-    static word InstanceSize();
-    FINAL_CLASS();
 };
 
 class WeakProperty : public AllStatic

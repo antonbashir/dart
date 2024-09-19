@@ -21,7 +21,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_recycle, 0, 1) {
 
 DEFINE_NATIVE_ENTRY(Coroutine_dispose, 0, 1) {
   GET_NON_NULL_NATIVE_ARGUMENT(Coroutine, coroutine, arguments->NativeArgAt(0));
-  coroutine.Dispose(zone);
+  coroutine.Dispose(thread, zone);
   return Object::null();
 }
 }  // namespace dart
