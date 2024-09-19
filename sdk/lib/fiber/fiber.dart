@@ -13,16 +13,23 @@ const _kFiberNothing = 0;
 const _kFiberCreated = 1 << 0;
 const _kFiberScheduled = 1 << 1;
 const _kFiberRunning = 1 << 2;
-const _kFiberFinished = 1 << 3;
-const _kFiberDisposed = 1 << 4;
-const _kFiberPersistent = 1 << 5;
+const _kFiberSuspended = 1 << 3;
+const _kFiberFinished = 1 << 4;
+const _kFiberDisposed = 1 << 5;
+const _kFiberPersistent = 1 << 6;
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
   bool get created => _state & _kFiberCreated != 0;
 
   @pragma("vm:prefer-inline")
+  bool get scheduled => _state & _kFiberScheduled != 0;
+
+  @pragma("vm:prefer-inline")
   bool get running => _state & _kFiberRunning != 0;
+
+  @pragma("vm:prefer-inline")
+  bool get suspended => _state & _kFiberSuspended != 0;
 
   @pragma("vm:prefer-inline")
   bool get finished => _state & _kFiberFinished != 0;
@@ -34,18 +41,13 @@ extension type FiberState(int _state) {
   int get value => _state;
 
   String string() {
-    switch (_state) {
-      case _kFiberCreated:
-        return "created";
-      case _kFiberRunning:
-        return "running";
-      case _kFiberFinished:
-        return "finished";
-      case _kFiberDisposed:
-        return "disposed";
-      default:
-        return "unknown";
-    }
+    if (created) return "created";
+    if (scheduled) return "scheduled";
+    if (running) return "running";
+    if (suspended) return "suspended";
+    if (finished) return "finished";
+    if (disposed) return "disposed";
+    return "unknown";
   }
 }
 
@@ -58,7 +60,7 @@ extension type FiberAttributes(int _attributes) {
 
   @pragma("vm:prefer-inline")
   static FiberAttributes _calculate({required bool persistent}) {
-    var attributes = _kFiberNothing;
+    var attributes = _kFiberCreated;
     if (persistent) attributes |= _kFiberPersistent;
     return FiberAttributes(attributes);
   }
@@ -158,6 +160,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final callee = caller._caller!;
     if (callee._attributes & _kFiberRunning == 0) throw StateError("Destination fiber is not running, state = ${FiberState(callee._attributes).string()}");
     callee._caller = caller!._scheduler;
+    caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     _Coroutine._transfer(caller!, callee);
   }
 

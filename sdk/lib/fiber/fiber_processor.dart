@@ -47,12 +47,13 @@ class FiberProcessor {
     _Coroutine._fork(scheduler, main);
     for (;;) {
       if (!scheduled.isEmpty) {
-        var first, last = scheduled.removeHead()._value;
+        Fiber first, last = scheduled.removeHead()._value;
         while (!scheduled.isEmpty) {
           last._caller = scheduled.removeHead()._value;
           last = Fiber(last._caller!);
         }
         last._caller = scheduler;
+        first._attributes = (first._attributes & ~_kFiberScheduled) | _kFiberRunning;
         _Coroutine._transfer(scheduler, first);
         continue;
       }
@@ -68,6 +69,7 @@ class FiberProcessor {
   }
 
   void _schedule(Fiber fiber) {
+    fiber._attributes = (fiber._attributes & ~_kFiberCreated & ~_kFiberSuspended) | _kFiberScheduled;
     //_scheduled.stealTail(fiber._schedulerReadyLink);
   }
 

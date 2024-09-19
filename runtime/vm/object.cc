@@ -26734,6 +26734,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::created, CoroutineAttributes::running);
+  Coroutine::Handle(zone, caller()).change_state(CoroutineAttributes::running, CoroutineAttributes::suspended);
   thread->EnterCoroutine(ptr());
 }
 
