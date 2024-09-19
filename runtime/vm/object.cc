@@ -26633,175 +26633,161 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t size)
-{
-    const auto& coroutine =
-        Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+CoroutinePtr Coroutine::New(uintptr_t size) {
+  const auto& coroutine =
+      Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
-    void** stack_base = (void**)((uintptr_t)VirtualAlloc(
-        nullptr,
-        stack_size * kWordSize,
-        MEM_RESERVE | MEM_COMMIT,
-        PAGE_READWRITE));
+  void** stack_base = (void**)((uintptr_t)VirtualAlloc(
+      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
+      PAGE_READWRITE));
 #else
-    void** stack_end = (void**)((uintptr_t)mmap(
-        nullptr,
-        size * kWordSize,
-        PROT_READ | PROT_WRITE | PROT_EXEC,
-        MAP_PRIVATE | MAP_ANONYMOUS,
-        -1,
-        0));
+  void** stack_end = (void**)((uintptr_t)mmap(
+      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
-    memset(stack_end, 0, size * kWordSize);
-    uword stack_limit = (uword)(stack_end);
-    uword stack_base = (uword)(stack_end + size);
-    coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
-    coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, stack_base);
-    coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
-    coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
-    coroutine.StoreNonPointer(&coroutine.untag()->index_, -1);
-    coroutine.untag()->set_attributes(Smi::New(CoroutineAttributes::created));
-    auto object_store = Isolate::Current()->isolate_object_store();
-    auto& coroutines = Array::CheckedHandle(Thread::Current()->zone(), object_store->coroutines());
-    for (auto index = 0; index < coroutines.Length(); index++)
-    {
-        if (coroutines.At(index) == Object::null())
-        {
-            coroutine.StoreNonPointer(&coroutine.untag()->index_, index);
-            break;
-        }
+  memset(stack_end, 0, size * kWordSize);
+  uword stack_limit = (uword)(stack_end);
+  uword stack_base = (uword)(stack_end + size);
+  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_,
+                            (uword) nullptr);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
+  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
+  coroutine.StoreNonPointer(&coroutine.untag()->index_, -1);
+  coroutine.untag()->set_attributes(Smi::New(CoroutineAttributes::created));
+  auto object_store = Isolate::Current()->isolate_object_store();
+  auto& coroutines = Array::CheckedHandle(Thread::Current()->zone(),
+                                          object_store->coroutines());
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    if (coroutines.At(index) == Object::null()) {
+      coroutine.StoreNonPointer(&coroutine.untag()->index_, index);
+      break;
     }
-    if (coroutine.index() == -1)
-    {
-        auto count = coroutines.Length();
-        coroutine.StoreNonPointer(&coroutine.untag()->index_, count);
-        coroutines = Array::Grow(coroutines, count * 2, Heap::kOld);
-        coroutines.SetAt(count, coroutine);
-    }
-    return coroutine.ptr();
+  }
+  if (coroutine.index() == -1) {
+    auto count = coroutines.Length();
+    coroutine.StoreNonPointer(&coroutine.untag()->index_, count);
+    coroutines = Array::Grow(coroutines, count * 2, Heap::kOld);
+    coroutines.SetAt(count, coroutine);
+  }
+  return coroutine.ptr();
 }
 
-const char* Coroutine::ToCString() const
-{
-    return "Coroutine";
+const char* Coroutine::ToCString() const {
+  return "Coroutine";
 }
 
-void Coroutine::HandleException(Thread* thread, uword stack_pointer)
-{ 
-    auto zone = thread->zone();
-    auto object_store = thread->isolate()->isolate_object_store();
-    auto& coroutines = Array::CheckedHandle(zone, object_store->coroutines());
-    Coroutine& found = Coroutine::Handle(zone);
-    for (auto index = 0; index < coroutines.Length(); index++)
-    {
-        found ^= coroutines.At(index);
-        if (stack_pointer > found.stack_limit() && stack_pointer <= found.stack_root())
-        {
-            break;
-        }
+void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
+  auto zone = thread->zone();
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = Array::CheckedHandle(zone, object_store->coroutines());
+  Coroutine& found = Coroutine::Handle(zone);
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    if (coroutines.At(index) == Object::null()) break;
+    found ^= coroutines.At(index);
+    if (stack_pointer > found.stack_limit() &&
+        stack_pointer <= found.stack_root()) {
+      break;
     }
-    if (found.IsNull())
-    {
-        thread->ExitCoroutine();
-        return;
+  }
+  if (found.IsNull()) {
+    HandleRootExit(thread, zone);
+    return;
+  }
+  if (found.ptr() == ptr()) {
+    return;
+  }
+  if (found.ptr() != ptr()) {
+    if (is_persistent()) {
+      Recycle(zone);
     }
-    auto attributes = Smi::CheckedHandle(zone, found.attributes()).Value();
-    if (found.ptr() == ptr())
-    {
-        return;
+    if (is_ephemeral()) {
+      Dispose(thread, zone);
     }
-    if (found.ptr() != ptr())
-    {
-        attributes = Smi::CheckedHandle(zone, this->attributes()).Value();
-        attributes &= CoroutineAttributes::running;
-        attributes |= CoroutineAttributes::finished;
-        untag()->set_attributes(Smi::New(attributes));
-        thread->EnterCoroutine(found.ptr());
-        return;
-    }
+    found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running); 
+    thread->EnterCoroutine(found.ptr());
+    return;
+  }
 }
 
-void Coroutine::HandleRootEnter(Thread* thread, Zone* zone)
-{
-    change_state(CoroutineAttributes::created, CoroutineAttributes::running);
-    thread->EnterCoroutine(ptr());
+void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
+  change_state(CoroutineAttributes::created, CoroutineAttributes::running);
+  thread->EnterCoroutine(ptr());
 }
 
-void Coroutine::HandleRootExit(Thread* thread, Zone* zone)
-{
-    change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
-    auto object_store = thread->isolate()->isolate_object_store();
-    auto& coroutines = Array::Handle(zone, object_store->coroutines());
-    for (auto index = 0; index < coroutines.Length(); index++)
-    {
-        auto& coroutine = Coroutine::CheckedHandle(zone, coroutines.At(index));
-        if (coroutine.is_ephemeral() && !coroutine.is_disposed())
-        {
-            coroutine.Dispose(thread, zone);
-        }
+void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
+  change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = Array::Handle(zone, object_store->coroutines());
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    auto& coroutine = Coroutine::CheckedHandle(zone, coroutines.At(index));
+    if (coroutine.is_persistent()) {
+      coroutine.Recycle(zone);
+      continue;
     }
-    thread->ExitCoroutine();
-}
-
-void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone)
-{
-    change_state(CoroutineAttributes::created, CoroutineAttributes::running);
-    thread->EnterCoroutine(ptr());
-}
-
-void Coroutine::HandleForkedExit(Thread* thread, Zone* zone)
-{
-    change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
-    if (is_persistent())
-    {
-        Recycle(zone);
+    if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
+      coroutine.Dispose(thread, zone);
     }
-    if (is_ephemeral())
-    {
-        Dispose(thread, zone);
-    }
-    thread->EnterCoroutine(caller());
+  }
+  thread->ExitCoroutine();
 }
 
-void Coroutine::Recycle(Zone* zone) const
-{
-    change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
-    memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
-    StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
-    StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
-    untag()->set_caller(Coroutine::null());
+void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
+  change_state(CoroutineAttributes::created, CoroutineAttributes::running);
+  thread->EnterCoroutine(ptr());
 }
 
-void Coroutine::Dispose(Thread* thread, Zone* zone) const
-{
-    change_state(CoroutineAttributes::finished, CoroutineAttributes::disposed);
-    auto object_store = thread->isolate()->isolate_object_store();
-    auto& coroutines = Array::Handle(zone, object_store->coroutines());
-    auto coroutines_data = Array::DataOf(object_store->coroutines());
-    auto temp = coroutines_data[index()];
-    coroutines_data[index()] = coroutines_data[coroutines.Length() - 1];
-    if (coroutines_data[index()] != Object::null())
-    {
-        Coroutine::CheckedHandle(zone, coroutines_data[index()]).set_index(index());
-    }
-    coroutines_data[coroutines.Length() - 1] = temp;
-    coroutines.Truncate(coroutines.Length() - 1);
-    untag()->set_name(String::null());
-    untag()->set_entry(Closure::null());
-    untag()->set_trampoline(Function::null());
-    untag()->set_arguments(Array::empty_array().ptr());
-    untag()->set_caller(Coroutine::null());
-    untag()->set_scheduler(Coroutine::null());
-    untag()->set_processor(Object::null());
+void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
+  change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
+  if (is_persistent()) {
+    Recycle(zone);
+  }
+  if (is_ephemeral()) {
+    Dispose(thread, zone);
+  }
+  thread->EnterCoroutine(caller());
+}
+
+void Coroutine::Recycle(Zone* zone) const {
+  change_state(CoroutineAttributes::finished | CoroutineAttributes::running |
+                   CoroutineAttributes::scheduled,
+               CoroutineAttributes::created);
+  memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
+  StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
+  StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
+  untag()->set_caller(Coroutine::null());
+}
+
+void Coroutine::Dispose(Thread* thread, Zone* zone) const {
+  change_state(CoroutineAttributes::finished | CoroutineAttributes::running |
+                   CoroutineAttributes::scheduled,
+               CoroutineAttributes::disposed);
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = Array::Handle(zone, object_store->coroutines());
+  auto coroutines_data = Array::DataOf(object_store->coroutines());
+  auto temp = coroutines_data[index()];
+  coroutines_data[index()] = coroutines_data[coroutines.Length() - 1];
+  if (coroutines_data[index()] != Object::null()) {
+    Coroutine::CheckedHandle(zone, coroutines_data[index()]).set_index(index());
+  }
+  coroutines_data[coroutines.Length() - 1] = temp;
+  coroutines.Truncate(coroutines.Length() - 1);
+  untag()->set_name(String::null());
+  untag()->set_entry(Closure::null());
+  untag()->set_trampoline(Function::null());
+  untag()->set_arguments(Array::empty_array().ptr());
+  untag()->set_caller(Coroutine::null());
+  untag()->set_scheduler(Coroutine::null());
+  untag()->set_processor(Object::null());
 #if defined(DART_TARGET_OS_WINDOWS)
-    VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+  VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
 #else
-    munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
+  munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
 #endif
-    StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
-    StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
-    StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
-    StoreNonPointer(&untag()->index_, -1);
+  StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
+  StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
+  StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
+  StoreNonPointer(&untag()->index_, -1);
 }
 
 void RegExp::set_pattern(const String& pattern) const {

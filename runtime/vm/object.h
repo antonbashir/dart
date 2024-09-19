@@ -12707,8 +12707,8 @@ class Coroutine : public Instance
         created = 1 << 0,
         scheduled = 1 << 1,
         running = 1 << 2,
-        finished = 1 << 3,
-        failed = 1 << 4,
+        suspended = 1 << 3,
+        finished = 1 << 4,
         disposed = 1 << 5,
         persistent = 1 << 6,
     };

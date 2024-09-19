@@ -1,37 +1,13 @@
+# Defines the Chromium style for automatic reformatting.
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
 BasedOnStyle: Chromium
-IndentWidth: 4
-TabWidth: 4
-UseTab: Never
-ColumnLimit: 0
-PointerAlignment: Left
-BreakBeforeBraces: Custom
-BraceWrapping:
-  AfterEnum: true
-  AfterStruct: true
-  SplitEmptyFunction: true
-  AfterClass: true
-  AfterFunction: true
-  AfterNamespace: true
-  AfterUnion: true
-  BeforeCatch: true
-  BeforeElse: true
-  BeforeLambdaBody: true
-  BeforeWhile: true
-  IndentBraces: false
-  SplitEmptyRecord: true
-  SplitEmptyNamespace: true
-  AfterExternBlock: true
-  AfterControlStatement: Always
-DerivePointerAlignment: false
-AllowShortBlocksOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: None
-AlwaysBreakAfterReturnType: None
-AllowAllParametersOfDeclarationOnNextLine: false
-AllowAllArgumentsOnNextLine: false
-AlignAfterOpenBracket: Align
-BinPackParameters: false
-BinPackArguments: false
-AllowShortFunctionsOnASingleLine: None
-IndentCaseLabels: true
-IndentExternBlock: NoIndent
-IndentPPDirectives: None
+
+# clang-format doesn't seem to do a good job of this for longer comments.
+ReflowComments: 'false'
+
+# We have lots of these. Though we need to put them all in curly braces,
+# clang-format can't do that.
+AllowShortIfStatementsOnASingleLine: 'true'
+
+# Put escaped newlines into the rightmost column.
+AlignEscapedNewlinesLeft: false
