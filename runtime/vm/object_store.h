@@ -394,7 +394,7 @@ class ObjectPointerVisitor;
     RW(UnhandledException, preallocated_unhandled_exception) \
     RW(StackTrace, preallocated_stack_trace)                 \
     RW(UnwindError, preallocated_unwind_error)               \
-    R_(Array, coroutines)                                    \
+    RW(Array, coroutines)                                    \
     R_(Array, dart_args_1)                                   \
     R_(Array, dart_args_2)                                   \
     R_(GrowableObjectArray, resume_capabilities)             \

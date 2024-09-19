@@ -100,8 +100,8 @@ class _Coroutine {
   external FiberProcessor get _processor;
   external set _processor(FiberProcessor value);
 
-  external void _recycle();
-  external void _dispose();
+  external _FiberLink get _toProcessor;
+  external set _toProcessor(_FiberLink value);
 
   external static _Coroutine? get _current;
 
@@ -187,9 +187,5 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   FiberArguments get arguments => FiberArguments(_coroutine._arguments);
 
   @pragma("vm:never-inline")
-  static void _run() {
-    final current = _Coroutine._current!;
-    current._entry();
-    current._processor._finalize(Fiber(current));
-  }
+  static void _run() => _Coroutine._current!._entry();
 }

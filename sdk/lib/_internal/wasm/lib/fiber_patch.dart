@@ -38,6 +38,10 @@ class _Coroutine {
   @patch
   set _processor(FiberProcessor value) => throw UnsupportedError("_Coroutine._current");
   @patch
+  _FiberLink get _toProcessor => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _toProcessor(_FiberLink value) => throw UnsupportedError("_Coroutine._current");
+  @patch
   static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
   @patch
   static void _initialize(_Coroutine root) => throw UnsupportedError("_Coroutine._initialize");
@@ -45,8 +49,4 @@ class _Coroutine {
   static void _transfer(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._transfer");
   @patch
   static void _fork(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._fork");
-  @patch
-  void _recycle() => throw UnsupportedError("_Coroutine._recycle");
-  @patch
-  void _dispose() => throw UnsupportedError("_Coroutine._dispose");
 }

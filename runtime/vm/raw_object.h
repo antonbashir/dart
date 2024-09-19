@@ -3786,6 +3786,7 @@ class UntaggedCoroutine : public UntaggedInstance
     COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
     COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
     COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
+    COMPRESSED_POINTER_FIELD(ObjectPtr, to_processor)
     VISIT_TO(processor)
     CompressedObjectPtr* to_snapshot(Snapshot::Kind kind)
     {

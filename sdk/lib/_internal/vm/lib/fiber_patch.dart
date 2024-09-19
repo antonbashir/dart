@@ -81,11 +81,13 @@ class _Coroutine {
   external set _processor(FiberProcessor value);
 
   @patch
-  @pragma("vm:external-name", "Coroutine_recycle")
-  external void _recycle();
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external _FiberLink get _toProcessor;
   @patch
-  @pragma("vm:external-name", "Coroutine_dispose")
-  external void _dispose();
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _toProcessor(_FiberLink value);
 
   @patch
   @pragma("vm:recognized", "other")

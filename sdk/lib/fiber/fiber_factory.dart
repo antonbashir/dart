@@ -29,9 +29,7 @@ class _FiberFactory {
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = arguments;
     coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
-    final fiber = Fiber(coroutine);
-    processor._register(fiber);
-    return fiber;
+    return Fiber(coroutine);
   }
 
   @pragma("vm:prefer-inline")
@@ -51,8 +49,6 @@ class _FiberFactory {
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = arguments;
     coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
-    final fiber = Fiber(coroutine);
-    current._processor._register(fiber);
-    return fiber;
+    return Fiber(coroutine);
   }
 }
