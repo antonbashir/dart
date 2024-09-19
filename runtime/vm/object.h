@@ -12698,17 +12698,20 @@ class SuspendState : public Instance {
   friend class Class;
 };
 
-class Coroutine : public Instance {
- public:
-  enum CoroutineAttributes {
-    nothing = 0,
-    created = 1 << 0,
-    scheduled = 1 << 1,
-    running = 1 << 2,
-    finished = 1 << 3,
-    disposed = 1 << 4,
-    persistent = 1 << 5,
-  };
+class Coroutine : public Instance
+{
+   public:
+    enum CoroutineAttributes
+    {
+        nothing = 0,
+        created = 1 << 0,
+        scheduled = 1 << 1,
+        running = 1 << 2,
+        finished = 1 << 3,
+        failed = 1 << 4,
+        disposed = 1 << 5,
+        persistent = 1 << 6,
+    };
 
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
@@ -12716,14 +12719,33 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size);
 
-  void HandleException(Thread* thread, uword stack_pointer);
-  void HandleEnter(Thread* thread, Zone* zone);
-  void HandleExit(Thread* thread, Zone* zone);
-  void HandleForkedEnter(Thread* thread, Zone* zone);
-  void HandleForkedExit(Thread* thread, Zone* zone);
+    void HandleException(Thread* thread, uword stack_pointer);
+    void HandleRootEnter(Thread* thread, Zone* zone);
+    void HandleRootExit(Thread* thread, Zone* zone);
+    void HandleForkedEnter(Thread* thread, Zone* zone);
+    void HandleForkedExit(Thread* thread, Zone* zone);
 
-  StringPtr name() const { return untag()->name(); }
-  static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
+    intptr_t index() const
+    {
+        return untag()->index();
+    }
+    void set_index(intptr_t index) const
+    {
+        untag()->index_ = index;
+    }
+    static uword index_offset()
+    {
+        return OFFSET_OF(UntaggedCoroutine, index_);
+    }
+
+    StringPtr name() const
+    {
+        return untag()->name();
+    }
+    static uword name_offset()
+    {
+        return OFFSET_OF(UntaggedCoroutine, name_);
+    }
 
   ClosurePtr entry() const { return untag()->entry(); }
   static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
@@ -12733,10 +12755,75 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, trampoline_);
   }
 
-  SmiPtr attributes() const { return untag()->attributes(); }
-  static uword attributes_offset() {
-    return OFFSET_OF(UntaggedCoroutine, attributes_);
-  }
+    DART_FORCE_INLINE
+    SmiPtr attributes() const
+    {
+        return untag()->attributes();
+    }
+    DART_FORCE_INLINE
+    intptr_t get_attributes() const
+    {
+        return Smi::Value(untag()->attributes());
+    }
+    DART_FORCE_INLINE
+    bool is_persistent() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::persistent);
+    }
+    DART_FORCE_INLINE
+    bool is_ephemeral() const
+    {
+        return !is_persistent();
+    }
+    DART_FORCE_INLINE
+    bool is_created() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::created);
+    }
+    DART_FORCE_INLINE
+    bool is_scheduled() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::scheduled);
+    }
+    DART_FORCE_INLINE
+    bool is_running() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::running);
+    }
+    DART_FORCE_INLINE
+    bool is_finished() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::finished);
+    }
+    DART_FORCE_INLINE
+    bool is_disposed() const
+    {
+        return (bool)(get_attributes() & CoroutineAttributes::disposed);
+    }
+    DART_FORCE_INLINE
+    void set_attributes(intptr_t value) const
+    {
+        untag()->set_attributes(Smi::New(value));
+    }
+    DART_FORCE_INLINE
+    void or_attribute(intptr_t value) const
+    {
+        untag()->set_attributes(Smi::New(get_attributes() | value));
+    }
+    DART_FORCE_INLINE
+    void change_state(intptr_t from_value, intptr_t to_value) const
+    {
+        untag()->set_attributes(Smi::New((get_attributes() & ~from_value) | to_value));
+    }
+    DART_FORCE_INLINE
+    void and_attribute(intptr_t value) const
+    {
+        untag()->set_attributes(Smi::New(get_attributes() & value));
+    }
+    static uword attributes_offset()
+    {
+        return OFFSET_OF(UntaggedCoroutine, attributes_);
+    }
 
   ArrayPtr arguments() const { return untag()->arguments(); }
   static uword arguments_offset() {
@@ -12778,7 +12865,7 @@ class Coroutine : public Instance {
 
   void Recycle(Zone* zone) const;
 
-  void Dispose(Zone* zone) const;
+    void Dispose(Thread* thread, Zone* zone) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

@@ -1064,228 +1064,324 @@ class Smi : public AllStatic {
   FINAL_CLASS();
 };
 
-class WeakProperty : public AllStatic {
- public:
-  static word key_offset();
-  static word value_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class ReceivePort : public AllStatic
+{
+   public:
+    static word send_port_offset();
+    static word handler_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class WeakReference : public AllStatic {
- public:
-  static word target_offset();
-  static word type_arguments_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class SendPort : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class FinalizerBase : public AllStatic {
- public:
-  static word all_entries_offset();
-  static word detachments_offset();
-  static word entries_collected_offset();
-  static word isolate_offset();
-  FINAL_CLASS();
+class TransferableTypedData : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class Finalizer : public AllStatic {
- public:
-  static word callback_offset();
-  static word type_arguments_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class StackTrace : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class NativeFinalizer : public AllStatic {
- public:
-  static word callback_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class SuspendState : public AllStatic
+{
+   public:
+    static word frame_capacity_offset();
+    static word frame_size_offset();
+    static word pc_offset();
+    static word function_data_offset();
+    static word then_callback_offset();
+    static word error_callback_offset();
+    static word payload_offset();
+
+    static word HeaderSize();
+    static word InstanceSize();
+    static word InstanceSize(word payload_size);
+    static word FrameSizeGrowthGap();
+
+    FINAL_CLASS();
 };
 
-class FinalizerEntry : public AllStatic {
- public:
-  static word detach_offset();
-  static word external_size_offset();
-  static word finalizer_offset();
-  static word next_offset();
-  static word token_offset();
-  static word value_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class Coroutine : public AllStatic
+{
+   public:
+    static word name_offset();
+    static word entry_offset();
+    static word trampoline_offset();
+    static word arguments_offset();
+    static word attributes_offset();
+    static word caller_offset();
+    static word scheduler_offset();
+    static word processor_offset();
+    static word native_stack_base_offset();
+    static word stack_root_offset();
+    static word stack_base_offset();
+    static word stack_limit_offset();
+    static word index_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class MirrorReference : public AllStatic {
- public:
-  static word InstanceSize();
-  FINAL_CLASS();
+class Integer : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    static word NextFieldOffset();
 };
 
-class Number : public AllStatic {
- public:
-  static word InstanceSize();
-  static word NextFieldOffset();
+class Smi : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class TimelineStream : public AllStatic {
- public:
-  static word enabled_offset();
+class WeakProperty : public AllStatic
+{
+   public:
+    static word key_offset();
+    static word value_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class StreamInfo : public AllStatic {
- public:
-  static word enabled_offset();
+class WeakReference : public AllStatic
+{
+   public:
+    static word target_offset();
+    static word type_arguments_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class MonomorphicSmiableCall : public AllStatic {
- public:
-  static word expected_cid_offset();
-  static word entrypoint_offset();
-  static word target_offset();
-  static word InstanceSize();
-  FINAL_CLASS();
+class FinalizerBase : public AllStatic
+{
+   public:
+    static word all_entries_offset();
+    static word detachments_offset();
+    static word entries_collected_offset();
+    static word isolate_offset();
+    FINAL_CLASS();
 };
 
-class TsanUtils : public AllStatic {
- public:
-  static word setjmp_function_offset();
-  static word setjmp_buffer_offset();
-  static word exception_pc_offset();
-  static word exception_sp_offset();
-  static word exception_fp_offset();
+class Finalizer : public AllStatic
+{
+   public:
+    static word callback_offset();
+    static word type_arguments_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
 };
 
-class Thread : public AllStatic {
- public:
-  static word api_top_scope_offset();
-  static word double_truncate_round_supported_offset();
-  static word exit_through_ffi_offset();
-  static uword exit_through_runtime_call();
-  static uword exit_through_ffi();
-  static word dart_stream_offset();
-  static word service_extension_stream_offset();
-  static word predefined_symbols_address_offset();
-  static word optimize_entry_offset();
-  static word deoptimize_entry_offset();
-  static word megamorphic_call_checked_entry_offset();
-  static word active_exception_offset();
-  static word active_stacktrace_offset();
-  static word resume_pc_offset();
-  static word saved_shadow_call_stack_offset();
-  static word old_marking_stack_block_offset();
-  static word new_marking_stack_block_offset();
-  static word top_exit_frame_info_offset();
-  static word top_resource_offset();
-  static word global_object_pool_offset();
-  static word object_null_offset();
-  static word bool_true_offset();
-  static word bool_false_offset();
-  static word dispatch_table_array_offset();
-  static word top_offset();
-  static word end_offset();
-  static word isolate_offset();
-  static word isolate_group_offset();
-  static word field_table_values_offset();
-  static word shared_field_table_values_offset();
-  static word store_buffer_block_offset();
-  static word call_to_runtime_entry_point_offset();
-  static word write_barrier_mask_offset();
-  static word heap_base_offset();
-  static word switchable_call_miss_entry_offset();
-  static word write_barrier_wrappers_thread_offset(Register regno);
-  static word array_write_barrier_entry_point_offset();
-  static word allocate_mint_with_fpu_regs_entry_point_offset();
-  static word allocate_mint_without_fpu_regs_entry_point_offset();
-  static word allocate_object_entry_point_offset();
-  static word allocate_object_parameterized_entry_point_offset();
-  static word allocate_object_slow_entry_point_offset();
-  static word slow_type_test_entry_point_offset();
-  static word write_barrier_entry_point_offset();
-  static word vm_tag_offset();
-  static uword vm_tag_dart_id();
+class NativeFinalizer : public AllStatic
+{
+   public:
+    static word callback_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
+};
 
-  static word safepoint_state_offset();
-  static uword full_safepoint_state_unacquired();
-  static uword full_safepoint_state_acquired();
+class FinalizerEntry : public AllStatic
+{
+   public:
+    static word detach_offset();
+    static word external_size_offset();
+    static word finalizer_offset();
+    static word next_offset();
+    static word token_offset();
+    static word value_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
+};
 
-  static word execution_state_offset();
-  static uword vm_execution_state();
-  static uword native_execution_state();
-  static uword generated_execution_state();
-  static word stack_overflow_flags_offset();
-  static word stack_overflow_shared_stub_entry_point_offset(bool fpu_regs);
-  static word stack_limit_offset();
-  static word saved_stack_limit_offset();
-  static word unboxed_runtime_arg_offset();
+class MirrorReference : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    FINAL_CLASS();
+};
 
-  static word tsan_utils_offset();
-  static word jump_to_frame_entry_point_offset();
+class Number : public AllStatic
+{
+   public:
+    static word InstanceSize();
+    static word NextFieldOffset();
+};
 
-  static word AllocateArray_entry_point_offset();
-  static word write_barrier_code_offset();
-  static word array_write_barrier_code_offset();
-  static word fix_callers_target_code_offset();
-  static word fix_allocation_stub_code_offset();
+class TimelineStream : public AllStatic
+{
+   public:
+    static word enabled_offset();
+};
 
-  static word switchable_call_miss_stub_offset();
-  static word lazy_specialize_type_test_stub_offset();
-  static word slow_type_test_stub_offset();
-  static word call_to_runtime_stub_offset();
-  static word invoke_dart_code_stub_offset();
-  static word late_initialization_error_shared_without_fpu_regs_stub_offset();
-  static word late_initialization_error_shared_with_fpu_regs_stub_offset();
-  static word null_error_shared_without_fpu_regs_stub_offset();
-  static word null_error_shared_with_fpu_regs_stub_offset();
-  static word null_arg_error_shared_without_fpu_regs_stub_offset();
-  static word null_arg_error_shared_with_fpu_regs_stub_offset();
-  static word null_cast_error_shared_without_fpu_regs_stub_offset();
-  static word null_cast_error_shared_with_fpu_regs_stub_offset();
-  static word range_error_shared_without_fpu_regs_stub_offset();
-  static word range_error_shared_with_fpu_regs_stub_offset();
-  static word write_error_shared_without_fpu_regs_stub_offset();
-  static word write_error_shared_with_fpu_regs_stub_offset();
-  static word resume_stub_offset();
-  static word return_async_not_future_stub_offset();
-  static word return_async_star_stub_offset();
-  static word return_async_stub_offset();
-  static word stack_overflow_shared_without_fpu_regs_entry_point_offset();
-  static word stack_overflow_shared_without_fpu_regs_stub_offset();
-  static word stack_overflow_shared_with_fpu_regs_entry_point_offset();
-  static word stack_overflow_shared_with_fpu_regs_stub_offset();
-  static word lazy_deopt_from_return_stub_offset();
-  static word lazy_deopt_from_throw_stub_offset();
-  static word allocate_mint_with_fpu_regs_stub_offset();
-  static word allocate_mint_without_fpu_regs_stub_offset();
-  static word allocate_object_stub_offset();
-  static word allocate_object_parameterized_stub_offset();
-  static word allocate_object_slow_stub_offset();
-  static word async_exception_handler_stub_offset();
-  static word optimize_stub_offset();
-  static word deoptimize_stub_offset();
-  static word enter_safepoint_stub_offset();
-  static word exit_safepoint_stub_offset();
-  static word exit_safepoint_ignore_unwind_in_progress_stub_offset();
-  static word call_native_through_safepoint_stub_offset();
-  static word call_native_through_safepoint_entry_point_offset();
+class StreamInfo : public AllStatic
+{
+   public:
+    static word enabled_offset();
+};
 
-  static word bootstrap_native_wrapper_entry_point_offset();
-  static word no_scope_native_wrapper_entry_point_offset();
-  static word auto_scope_native_wrapper_entry_point_offset();
-  
-  static word coroutine_offset();
-  
-#define THREAD_XMM_CONSTANT_LIST(V)                                            \
-  V(float_not)                                                                 \
-  V(float_negate)                                                              \
-  V(float_absolute)                                                            \
-  V(float_zerow)                                                               \
-  V(double_negate)                                                             \
-  V(double_abs)
+class MonomorphicSmiableCall : public AllStatic
+{
+   public:
+    static word expected_cid_offset();
+    static word entrypoint_offset();
+    static word target_offset();
+    static word InstanceSize();
+    FINAL_CLASS();
+};
 
-#define DECLARE_CONSTANT_OFFSET_GETTER(name)                                   \
-  static word name##_address_offset();
-  THREAD_XMM_CONSTANT_LIST(DECLARE_CONSTANT_OFFSET_GETTER)
+class TsanUtils : public AllStatic
+{
+   public:
+    static word setjmp_function_offset();
+    static word setjmp_buffer_offset();
+    static word exception_pc_offset();
+    static word exception_sp_offset();
+    static word exception_fp_offset();
+};
+
+class Thread : public AllStatic
+{
+   public:
+    static word api_top_scope_offset();
+    static word double_truncate_round_supported_offset();
+    static word exit_through_ffi_offset();
+    static uword exit_through_runtime_call();
+    static uword exit_through_ffi();
+    static word dart_stream_offset();
+    static word service_extension_stream_offset();
+    static word predefined_symbols_address_offset();
+    static word optimize_entry_offset();
+    static word deoptimize_entry_offset();
+    static word megamorphic_call_checked_entry_offset();
+    static word active_exception_offset();
+    static word active_stacktrace_offset();
+    static word resume_pc_offset();
+    static word saved_shadow_call_stack_offset();
+    static word old_marking_stack_block_offset();
+    static word new_marking_stack_block_offset();
+    static word top_exit_frame_info_offset();
+    static word top_resource_offset();
+    static word global_object_pool_offset();
+    static word object_null_offset();
+    static word bool_true_offset();
+    static word bool_false_offset();
+    static word dispatch_table_array_offset();
+    static word top_offset();
+    static word end_offset();
+    static word isolate_offset();
+    static word isolate_group_offset();
+    static word field_table_values_offset();
+    static word shared_field_table_values_offset();
+    static word store_buffer_block_offset();
+    static word call_to_runtime_entry_point_offset();
+    static word write_barrier_mask_offset();
+    static word heap_base_offset();
+    static word switchable_call_miss_entry_offset();
+    static word write_barrier_wrappers_thread_offset(Register regno);
+    static word array_write_barrier_entry_point_offset();
+    static word allocate_mint_with_fpu_regs_entry_point_offset();
+    static word allocate_mint_without_fpu_regs_entry_point_offset();
+    static word allocate_object_entry_point_offset();
+    static word allocate_object_parameterized_entry_point_offset();
+    static word allocate_object_slow_entry_point_offset();
+    static word slow_type_test_entry_point_offset();
+    static word write_barrier_entry_point_offset();
+    static word vm_tag_offset();
+    static uword vm_tag_dart_id();
+
+    static word safepoint_state_offset();
+    static uword full_safepoint_state_unacquired();
+    static uword full_safepoint_state_acquired();
+
+    static word execution_state_offset();
+    static uword vm_execution_state();
+    static uword native_execution_state();
+    static uword generated_execution_state();
+    static word stack_overflow_flags_offset();
+    static word stack_overflow_shared_stub_entry_point_offset(bool fpu_regs);
+    static word stack_limit_offset();
+    static word saved_stack_limit_offset();
+    static word unboxed_runtime_arg_offset();
+
+    static word tsan_utils_offset();
+    static word jump_to_frame_entry_point_offset();
+
+    static word AllocateArray_entry_point_offset();
+    static word write_barrier_code_offset();
+    static word array_write_barrier_code_offset();
+    static word fix_callers_target_code_offset();
+    static word fix_allocation_stub_code_offset();
+
+    static word switchable_call_miss_stub_offset();
+    static word lazy_specialize_type_test_stub_offset();
+    static word slow_type_test_stub_offset();
+    static word call_to_runtime_stub_offset();
+    static word invoke_dart_code_stub_offset();
+    static word late_initialization_error_shared_without_fpu_regs_stub_offset();
+    static word late_initialization_error_shared_with_fpu_regs_stub_offset();
+    static word null_error_shared_without_fpu_regs_stub_offset();
+    static word null_error_shared_with_fpu_regs_stub_offset();
+    static word null_arg_error_shared_without_fpu_regs_stub_offset();
+    static word null_arg_error_shared_with_fpu_regs_stub_offset();
+    static word null_cast_error_shared_without_fpu_regs_stub_offset();
+    static word null_cast_error_shared_with_fpu_regs_stub_offset();
+    static word range_error_shared_without_fpu_regs_stub_offset();
+    static word range_error_shared_with_fpu_regs_stub_offset();
+    static word write_error_shared_without_fpu_regs_stub_offset();
+    static word write_error_shared_with_fpu_regs_stub_offset();
+    static word resume_stub_offset();
+    static word return_async_not_future_stub_offset();
+    static word return_async_star_stub_offset();
+    static word return_async_stub_offset();
+    static word stack_overflow_shared_without_fpu_regs_entry_point_offset();
+    static word stack_overflow_shared_without_fpu_regs_stub_offset();
+    static word stack_overflow_shared_with_fpu_regs_entry_point_offset();
+    static word stack_overflow_shared_with_fpu_regs_stub_offset();
+    static word lazy_deopt_from_return_stub_offset();
+    static word lazy_deopt_from_throw_stub_offset();
+    static word allocate_mint_with_fpu_regs_stub_offset();
+    static word allocate_mint_without_fpu_regs_stub_offset();
+    static word allocate_object_stub_offset();
+    static word allocate_object_parameterized_stub_offset();
+    static word allocate_object_slow_stub_offset();
+    static word async_exception_handler_stub_offset();
+    static word optimize_stub_offset();
+    static word deoptimize_stub_offset();
+    static word enter_safepoint_stub_offset();
+    static word exit_safepoint_stub_offset();
+    static word exit_safepoint_ignore_unwind_in_progress_stub_offset();
+    static word call_native_through_safepoint_stub_offset();
+    static word call_native_through_safepoint_entry_point_offset();
+
+    static word bootstrap_native_wrapper_entry_point_offset();
+    static word no_scope_native_wrapper_entry_point_offset();
+    static word auto_scope_native_wrapper_entry_point_offset();
+
+    static word coroutine_offset();
+
+#define THREAD_XMM_CONSTANT_LIST(V) \
+    V(float_not)                    \
+    V(float_negate)                 \
+    V(float_absolute)               \
+    V(float_zerow)                  \
+    V(double_negate)                \
+    V(double_abs)
+
+#define DECLARE_CONSTANT_OFFSET_GETTER(name) \
+    static word name##_address_offset();
+    THREAD_XMM_CONSTANT_LIST(DECLARE_CONSTANT_OFFSET_GETTER)
 #undef DECLARE_CONSTANT_OFFSET_GETTER
 
   static word next_task_id_offset();

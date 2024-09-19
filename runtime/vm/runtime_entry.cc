@@ -3873,14 +3873,16 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
       Message::New(target_port, handle, Message::kNormalPriority));
 }
 
-DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  coroutine.HandleEnter(thread, zone);
+DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1)
+{
+    auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+    coroutine.HandleRootEnter(thread, zone);
 }
 
-DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  coroutine.HandleExit(thread, zone);
+DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1)
+{
+    auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+    coroutine.HandleRootExit(thread, zone);
 }
 
 DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
