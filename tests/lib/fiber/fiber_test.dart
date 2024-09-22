@@ -30,6 +30,7 @@ void mainEntry() {
   Fiber.schedule(Fiber.current());
   Fiber.suspend();
   Expect.equals("main -> child -> main -> child", commonState);
+  Fiber.terminate();
 }
 
 void childEntry() {

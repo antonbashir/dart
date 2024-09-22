@@ -5,6 +5,7 @@
 #include "vm/object.h"
 
 #include <memory>
+#include "platform/globals.h"
 
 #if !defined(DART_TARGET_OS_WINDOWS)
 #include <sys/mman.h>
@@ -26670,10 +26671,10 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
       PAGE_READWRITE));
 #else
   void** stack_end = (void**)((uintptr_t)mmap(
-      nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
-  memset(stack_end, 0, size);
+  memset(stack_end, 0, size * kWordSize);
   uword stack_limit = (uword)(stack_end);
   uword stack_base = (uword)(stack_end + size);
   coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
@@ -26711,7 +26712,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
   change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::created);
-  memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
+  memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()) * kWordSize);
   StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
@@ -26726,21 +26727,8 @@ void Coroutine::recycle(Zone* zone) const {
 
 void Coroutine::dispose(Thread* thread, Zone* zone) const {
   change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::disposed);
-  auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
-  auto current_index = Smi::Value(index());
-  auto current = coroutines_data[current_index];
-  auto last = coroutines_data[coroutines.Length() - 1];
-  coroutines_data[current_index] = last;
-  if (last != Object::null()) {
-    Coroutine::RawCast(last)->untag()->set_index(Smi::New(current_index));
-  }
-  coroutines_data[coroutines.Length() - 1] = current;
-  coroutines.Truncate(coroutines.Length() - 1);
   links_remove(untag()->to_state());
   untag()->set_name(String::null());
-  untag()->set_index(Smi::New(-1));
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
   untag()->set_arguments(Array::empty_array().ptr());
@@ -26760,6 +26748,19 @@ void Coroutine::dispose(Thread* thread, Zone* zone) const {
   StoreNonPointer(&untag()->stack_root_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
+  auto object_store = thread->isolate()->isolate_object_store();
+  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
+  auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
+  auto current_index = Smi::Value(index());
+  untag()->set_index(Smi::New(-1));
+  auto current = coroutines_data[current_index];
+  auto last = coroutines_data[coroutines.Length() - 1];
+  coroutines_data[current_index] = last;
+  if (last != Object::null()) {
+    Coroutine::RawCast(last)->untag()->set_index(Smi::New(current_index));
+  }
+  coroutines_data[coroutines.Length() - 1] = current;
+  coroutines.Truncate(coroutines.Length() - 1);
 }
 
 const char* Coroutine::ToCString() const {
@@ -26812,13 +26813,15 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   auto& coroutines = Array::Handle(Array::Handle(zone, object_store->coroutines_registry()).Copy());
   Coroutine& coroutine = Coroutine::Handle(zone);
   for (auto index = 0; index < coroutines.Length(); index++) {
-    coroutine ^= coroutines.At(index);
-    if (coroutine.is_persistent() && !coroutine.is_created()) {
-      coroutine.recycle(zone);
-      continue;
-    }
-    if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
-      coroutine.dispose(thread, zone);
+    if (coroutines.At(index) != Object::null()) {
+      coroutine ^= coroutines.At(index);
+      if (coroutine.is_persistent() && !coroutine.is_created()) {
+        coroutine.recycle(zone);
+        continue;
+      }
+      if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
+        coroutine.dispose(thread, zone);
+      }
     }
   }
   coroutines.Truncate(0);
@@ -26845,7 +26848,7 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
     recycle(zone);
   }
   if (is_ephemeral()) {
-    dispose(thread, zone);
+   // dispose(thread, zone);
   }
   thread->EnterCoroutine(saved_caller);
 }
