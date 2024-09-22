@@ -192,7 +192,10 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  static void schedule(Fiber fiber) => Fiber.current()._processor._schedule(fiber);
+  static void schedule(Fiber fiber) {
+    assert(fiber.state.suspended || fiber.state.running);
+    Fiber.current()._processor._schedule(fiber);
+  }
 
   @pragma("vm:prefer-inline")
   static void reschedule() {

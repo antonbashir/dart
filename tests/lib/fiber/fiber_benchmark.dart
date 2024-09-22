@@ -3,6 +3,8 @@ import 'dart:fiber';
 var iterations = 50000;
 var fibers = 100;
 
+var latency = 0.0;
+
 void main() {
   Fiber.launch(benchmark, terminate: true);
 }
@@ -16,20 +18,21 @@ void benchmark() {
   for (var i = 0; i < fibers; i++) {
     Fiber.schedule(jobs[i]);
   }
-  final sw = Stopwatch();
-  sw.start();
   for (var i = 0; i < fibers; i++) {
     while (!jobs[i].state.disposed) {
       Fiber.reschedule();
     }
   }
-  sw.stop();
-  print("Latency per switch: ${sw.elapsedMicroseconds / (iterations * fibers)} [micros]");
+  print("Latency per switch: ${latency / fibers / (iterations * 4)} [micros]");
 }
 
 void scheduling() {
   Fiber.suspend();
+  final sw = Stopwatch();
+  sw.start();
   for (var i = 0; i < iterations; i++) {
     Fiber.reschedule();
   }
+  sw.stop();
+  latency += sw.elapsedMicroseconds;
 }
