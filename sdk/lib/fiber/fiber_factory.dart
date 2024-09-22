@@ -25,6 +25,7 @@ class _FiberFactory {
     coroutine._name = _kMainFiber;
     coroutine._entry = entry;
     coroutine._processor = processor;
+    coroutine._toProcessor = _FiberLink();
     coroutine._scheduler = processor._scheduler;
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = arguments;
@@ -45,6 +46,7 @@ class _FiberFactory {
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;
     coroutine._processor = current._processor;
+    coroutine._toProcessor = _FiberLink();
     coroutine._scheduler = current._scheduler;
     coroutine._trampoline = Fiber._run;
     coroutine._arguments = arguments;

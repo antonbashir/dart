@@ -26641,7 +26641,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   auto& registry = Array::Handle(object_store->coroutines_registry());
   if (finished != Object::null() && !links_empty(finished)) {
     auto coroutine_candidate = links_first(finished);
-    links_remove_head(active);
+    links_steal_head(active, coroutine_candidate);
     return coroutine_candidate;
   }
 
@@ -26693,61 +26693,6 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   return coroutine.ptr();
 }
 
-bool Coroutine::links_empty(CoroutinePtr links) {
-  return links->untag()->previous() == links->untag()->next() && links->untag()->next() == links;
-}
-
-CoroutinePtr Coroutine::links_first(CoroutinePtr links) {
-  return links->untag()->next();
-}
-
-void Coroutine::links_remove(CoroutinePtr item) {
-  item->untag()->previous()->untag()->set_next(item->untag()->next());
-  item->untag()->next()->untag()->set_previous(item->untag()->previous());
-  item->untag()->set_next(item);
-  item->untag()->set_previous(item);
-}
-
-void Coroutine::links_add_tail(CoroutinePtr to, CoroutinePtr item) {
-  item->untag()->set_next(to);
-  item->untag()->set_previous(to->untag()->previous());
-  item->untag()->previous()->untag()->set_next(item);
-  item->untag()->next()->untag()->set_previous(item);
-}
-
-void Coroutine::links_add_head(CoroutinePtr to, CoroutinePtr item) {
-  item->untag()->set_previous(to);
-  item->untag()->set_next(to->untag()->next());
-  item->untag()->previous()->untag()->set_next(item);
-  item->untag()->next()->untag()->set_previous(item);
-}
-
-void Coroutine::links_steal_head(CoroutinePtr to, CoroutinePtr item) {
-  item->untag()->previous()->untag()->set_next(item.untag()->next());
-  item->untag()->next()->untag()->set_previous(item.untag()->previous());
-  item->untag()->set_previous(to);
-  item->untag()->set_next(to->untag()->next());
-  item->untag()->previous()->untag()->set_next(to);
-  item->untag()->next()->untag()->set_previous(to);
-}
-
-void Coroutine::links_steal_tail(CoroutinePtr to, CoroutinePtr item) {
-  item->untag()->previous()->untag()->set_next(item.untag()->next());
-  item->untag()->next()->untag()->set_previous(item.untag()->previous());
-  item->untag()->set_next(to);
-  item->untag()->set_previous(to->untag()->previous());
-  item->untag()->previous()->untag()->set_next(item);
-  item->untag()->next()->untag()->set_previous(item);
-}
-
-CoroutinePtr Coroutine::links_remove_head(CoroutinePtr head) {
-  auto shift = head->untag()->next();
-  head->untag()->set_next(shift->untag()->next());
-  shift->untag()->next()->untag()->set_previous(head);
-  shift->untag()->set_previous(shift);
-  shift->untag()->set_next(shift);
-  return shift;
-}
 
 void Coroutine::recycle(Zone* zone) const {
   change_state(CoroutineAttributes::finished | CoroutineAttributes::running | CoroutineAttributes::scheduled, CoroutineAttributes::created);

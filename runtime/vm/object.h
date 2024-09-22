@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_OBJECT_H_
 #define RUNTIME_VM_OBJECT_H_
 
+#include "platform/globals.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -12717,14 +12718,42 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size);
 
-  static bool links_empty(CoroutinePtr links);
-  static CoroutinePtr links_first(CoroutinePtr links);
-  static void links_remove(CoroutinePtr links);
-  static void links_add_tail(CoroutinePtr to, CoroutinePtr item);
-  static void links_add_head(CoroutinePtr to, CoroutinePtr item);
-  static void links_steal_head(CoroutinePtr to, CoroutinePtr item);
-  static void links_steal_tail(CoroutinePtr to, CoroutinePtr item);
-  static CoroutinePtr links_remove_head(CoroutinePtr links);
+  DART_FORCE_INLINE
+  static bool links_empty(CoroutinePtr links) {
+    return links->untag()->previous() == links->untag()->next() &&
+           links->untag()->next() == links;
+  }
+
+  DART_FORCE_INLINE
+  static CoroutinePtr links_first(CoroutinePtr links) {
+    return links->untag()->next();
+  }
+
+  DART_FORCE_INLINE
+  static void links_remove(CoroutinePtr item) {
+    item->untag()->previous()->untag()->set_next(item->untag()->next());
+    item->untag()->next()->untag()->set_previous(item->untag()->previous());
+    item->untag()->set_next(item);
+    item->untag()->set_previous(item);
+  }
+
+  DART_FORCE_INLINE
+  static void links_add_head(CoroutinePtr to, CoroutinePtr item) {
+    item->untag()->set_previous(to);
+    item->untag()->set_next(to->untag()->next());
+    item->untag()->previous()->untag()->set_next(item);
+    item->untag()->next()->untag()->set_previous(item);
+  }
+
+  DART_FORCE_INLINE
+  static void links_steal_head(CoroutinePtr to, CoroutinePtr item) {
+    item->untag()->previous()->untag()->set_next(item.untag()->next());
+    item->untag()->next()->untag()->set_previous(item.untag()->previous());
+    item->untag()->set_previous(to);
+    item->untag()->set_next(to->untag()->next());
+    item->untag()->previous()->untag()->set_next(to);
+    item->untag()->next()->untag()->set_previous(to);
+  }
 
   void HandleException(Thread* thread, uword stack_pointer);
   void HandleRootEnter(Thread* thread, Zone* zone);
@@ -12822,9 +12851,7 @@ class Coroutine : public Instance {
   }
 
   CoroutinePtr next() const { return untag()->next(); }
-  static uword next_offset() {
-    return OFFSET_OF(UntaggedCoroutine, next_);
-  }
+  static uword next_offset() { return OFFSET_OF(UntaggedCoroutine, next_); }
 
   CoroutinePtr to_processor() const { return untag()->to_processor(); }
   static uword to_processor_offset() {
