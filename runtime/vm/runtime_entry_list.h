@@ -76,7 +76,8 @@ namespace dart {
   V(EnterCoroutine)                                                            \
   V(ExitCoroutine)                                                             \
   V(EnterForkedCoroutine)                                                      \
-  V(ExitForkedCoroutine)
+  V(ExitForkedCoroutine)                                                       \
+  V(FailCoroutine)
 
 // Note: Leaf runtime function have C linkage, so they cannot pass C++ struct
 // values like ObjectPtr.

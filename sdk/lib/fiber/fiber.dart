@@ -150,7 +150,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void fork(Fiber callee) {
     final caller = Fiber.current();
-    if (callee.state.disposed || callee.state.running) throw StateError("Can't start a fiber in the state: ${callee.state.string()}");
+    assert(!callee.state.disposed && !callee.state.running);
     callee._caller = caller;
     _Coroutine._fork(caller!, callee);
   }
@@ -158,7 +158,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void suspend() {
     final caller = Fiber.current();
-    if (caller!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
+    assert(caller._caller != null);
     final callee = Fiber(caller._caller!);
     callee._caller = caller!._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
@@ -168,7 +168,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static Fiber current() {
     final current = _Coroutine._current;
-    if (current == null) throw StateError("Main fiber is not initialized");
+    assert(current != null);
     return Fiber(current!);
   }
 
@@ -181,7 +181,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void terminate() {
-    Fiber.current()._processor._terminate();
+    Fiber.current()._processor._stop();
     Fiber.suspend();
   }
 

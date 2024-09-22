@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "platform/globals.h"
 #include "platform/memory_sanitizer.h"
 #include "platform/thread_sanitizer.h"
 #include "vm/code_descriptors.h"
@@ -3887,11 +3888,16 @@ DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   forked.HandleForkedEnter(thread, zone);
 }
-
 DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   forked.HandleForkedExit(thread, zone);
 }
+
+DEFINE_RUNTIME_ENTRY(FailCoroutine, 1) {
+  auto stack_pointer = Smi::CheckedHandle(zone, arguments.ArgAt(0)).Value();
+  Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, stack_pointer);
+}
+
 
 // Use expected function signatures to help MSVC compiler resolve overloading.
 typedef double (*UnaryMathCFunction)(double x);

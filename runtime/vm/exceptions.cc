@@ -688,9 +688,6 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   typedef void (*ExcpHandler)(uword, uword, uword, Thread*);
   ExcpHandler func =
       reinterpret_cast<ExcpHandler>(StubCode::JumpToFrame().EntryPoint());
-  if (thread->has_coroutine()) {
-    Coroutine::Handle(thread->zone(), thread->coroutine()).HandleException(thread, stack_pointer);
-  }
   if (thread->is_unwind_in_progress()) {
     thread->SetUnwindErrorInProgress(true);
   }

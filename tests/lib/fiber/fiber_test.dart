@@ -12,7 +12,7 @@ void main() {
 
 void testBase() {
   final processor = FiberProcessor();
-  processor.process(mainEntry);
+  processor.process(mainEntry, terminate: true);
   Expect.isFalse(processor.running);
 }
 
@@ -27,16 +27,13 @@ void mainEntry() {
   Fiber.schedule(Fiber.current());
   Fiber.spawn(childEntry);
   commonState += "main -> ";
-  Fiber.schedule(Fiber.current());
-  Fiber.suspend();
+  Fiber.schedule(Fiber.current(), suspend: true);
   Expect.equals("main -> child -> main -> child", commonState);
-  Fiber.terminate();
 }
 
 void childEntry() {
   commonState += "child -> ";
-  Fiber.schedule(Fiber.current());
-  Fiber.suspend();
+  Fiber.schedule(Fiber.current(), suspend: true);
   commonState += "child";
 }
 

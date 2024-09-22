@@ -4,12 +4,14 @@
 
 #include <setjmp.h>
 
+#include "vm/compiler/jit/compiler.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/globals.h"
 
 // For `AllocateObjectInstr::WillAllocateNewOrRemembered`
 // For `GenericCheckBoundInstr::UseUnboxedRepresentation`
 #include "vm/compiler/backend/il.h"
+#include "vm/stub_code.h"
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
 
@@ -3105,6 +3107,16 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
   __ TransitionNativeToGenerated(/*leave_safepoint=*/true,
                                  /*ignore_unwind_in_progress=*/true);
   __ Bind(&exit_through_non_ffi);
+
+  Label no_coroutine;
+  __ Load(TMP, compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
+  __ CompareObject(TMP, NullObject());
+  __ BranchIf(EQUAL, &no_coroutine);
+  __ PushObject(NullObject());
+  __ PushRegister(RSP);
+  __ CallRuntime(kFailCoroutineRuntimeEntry, 2);
+  __ Drop(2);
+  __ Bind(&no_coroutine);
 
   // Set the tag.
   __ movq(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
