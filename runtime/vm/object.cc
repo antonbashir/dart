@@ -26639,7 +26639,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   auto finished = object_store->finished_coroutines();
   auto active = object_store->active_coroutines();
   auto& registry = Array::Handle(object_store->coroutines_registry());
-  if (finished != Object::null() && !links_empty(finished)) {
+  if (finished != Coroutine::null() && !links_empty(finished)) {
     auto coroutine_candidate = links_first(finished);
     links_steal_head(active, coroutine_candidate.untag()->to_state());
     return coroutine_candidate;
@@ -26667,10 +26667,10 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   coroutine.untag()->set_next(coroutine.ptr());
   coroutine.untag()->set_previous(coroutine.ptr());
   coroutine.untag()->set_to_state(coroutine.ptr());
-  if (finished == Object::null()) {
+  if (finished == Coroutine::null()) {
     object_store->set_finished_coroutines(coroutine);
   }
-  if (active == Object::null()) {
+  if (active == Coroutine::null()) {
     object_store->set_active_coroutines(coroutine);
   }
   links_add_head(active, coroutine.to_state());

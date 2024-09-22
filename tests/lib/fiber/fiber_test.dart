@@ -27,6 +27,7 @@ void mainEntry() {
   Fiber.schedule(Fiber.current());
   Fiber.spawn(childEntry);
   commonState += "main -> ";
+  Fiber.schedule(Fiber.current());
   Fiber.suspend();
   Expect.equals("main -> child -> main -> child", commonState);
 }
