@@ -26707,9 +26707,8 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
 
 void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
-  change_state(CoroutineAttributes::finished | CoroutineAttributes::running, CoroutineAttributes::created);
+  change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::created);
   memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
-  StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
@@ -26723,7 +26722,7 @@ void Coroutine::recycle(Zone* zone) const {
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone) const {
-  change_state(CoroutineAttributes::finished | CoroutineAttributes::running, CoroutineAttributes::disposed);
+  change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::disposed);
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   auto coroutines_data = Array::DataOf(object_store->coroutines_registry());

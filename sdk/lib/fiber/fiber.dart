@@ -5,7 +5,7 @@ part 'fiber_processor.dart';
 part 'fiber_factory.dart';
 
 const _kDefaultStackSize = 128 * (1 << 10);
-const _kSchedulerStackSize = 8 * (1 << 10);
+const _kSchedulerStackSize = 128 * (1 << 10);
 const _kMainFiber = "main";
 const _kSchedulerFiber = "scheduler";
 
@@ -203,5 +203,8 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   FiberArguments get arguments => FiberArguments(_coroutine._arguments);
 
   @pragma("vm:never-inline")
-  static void _run() => _Coroutine._current!._entry();
+  static void _run() {
+    print("run");
+    _Coroutine._current!._entry();
+  }
 }
