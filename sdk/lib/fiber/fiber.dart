@@ -11,19 +11,15 @@ const _kSchedulerFiber = "scheduler";
 
 const _kFiberNothing = 0;
 const _kFiberCreated = 1 << 0;
-const _kFiberScheduled = 1 << 1;
-const _kFiberRunning = 1 << 2;
-const _kFiberSuspended = 1 << 3;
-const _kFiberFinished = 1 << 4;
-const _kFiberDisposed = 1 << 5;
-const _kFiberPersistent = 1 << 6;
+const _kFiberRunning = 1 << 1;
+const _kFiberSuspended = 1 << 2;
+const _kFiberFinished = 1 << 3;
+const _kFiberDisposed = 1 << 4;
+const _kFiberPersistent = 1 << 5;
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
   bool get created => _state & _kFiberCreated != 0;
-
-  @pragma("vm:prefer-inline")
-  bool get scheduled => _state & _kFiberScheduled != 0;
 
   @pragma("vm:prefer-inline")
   bool get running => _state & _kFiberRunning != 0;
@@ -42,7 +38,6 @@ extension type FiberState(int _state) {
 
   String string() {
     if (created) return "created";
-    if (scheduled) return "scheduled";
     if (running) return "running";
     if (suspended) return "suspended";
     if (finished) return "finished";

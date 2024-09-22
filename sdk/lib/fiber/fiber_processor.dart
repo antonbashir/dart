@@ -29,7 +29,6 @@ class FiberProcessor {
       persistent: persistent,
       size: size,
     );
-    main._attributes &= ~_kFiberCreated;
     _schedule(main);
     _Coroutine._initialize(_scheduler);
   }
@@ -46,8 +45,6 @@ class FiberProcessor {
     final main = scheduled.removeHead()._value;
     processor._running = true;
     main._caller = scheduler;
-    main._attributes &= ~_kFiberScheduled;
-    main._attributes |= _kFiberRunning;
     _Coroutine._fork(scheduler, main);
     if (scheduled.isEmpty || !processor._running) return;
     for (;;) {
@@ -62,16 +59,13 @@ class FiberProcessor {
         last = Fiber(last._caller!);
       }
       last._caller = scheduler;
-      first._attributes &= ~_kFiberScheduled;
+      first._attributes &= ~_kFiberSuspended;
       first._attributes |= _kFiberRunning;
       _Coroutine._transfer(scheduler, first);
       if (!processor._running) return;
     }
   }
 
-  void _schedule(Fiber fiber) {
-    fiber._attributes &= ~_kFiberSuspended;
-    fiber._attributes |= _kFiberScheduled;
-    _scheduled.stealTail(fiber._toProcessor as _FiberLink);
-  }
+  @pragma("vm:prefer-inline")
+  void _schedule(Fiber fiber) => _scheduled.stealTail(fiber._toProcessor as _FiberLink);
 }

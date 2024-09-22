@@ -12704,12 +12704,11 @@ class Coroutine : public Instance {
   enum CoroutineAttributes {
     nothing = 0,
     created = 1 << 0,
-    scheduled = 1 << 1,
-    running = 1 << 2,
-    suspended = 1 << 3,
-    finished = 1 << 4,
-    disposed = 1 << 5,
-    persistent = 1 << 6,
+    running = 1 << 1,
+    suspended = 1 << 2,
+    finished = 1 << 3,
+    disposed = 1 << 4,
+    persistent = 1 << 5,
   };
 
   static intptr_t InstanceSize() {
@@ -12789,10 +12788,6 @@ class Coroutine : public Instance {
   DART_FORCE_INLINE
   bool is_created() const {
     return (bool)(get_attributes() & CoroutineAttributes::created);
-  }
-  DART_FORCE_INLINE
-  bool is_scheduled() const {
-    return (bool)(get_attributes() & CoroutineAttributes::scheduled);
   }
   DART_FORCE_INLINE
   bool is_running() const {
