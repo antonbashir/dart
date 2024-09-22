@@ -6,6 +6,7 @@
 
 #include <memory>
 #include "platform/globals.h"
+#include "vm/flags.h"
 
 #if !defined(DART_TARGET_OS_WINDOWS)
 #include <sys/mman.h>
@@ -26661,11 +26662,11 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     auto coroutine = links_first(finished);
     links_steal_head(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
-    if (size != coroutine.untag()->stack_base() - coroutine.untag()->stack_limit()) {
+    if (size != (uword)(coroutine.untag()->stack_root() - coroutine.untag()->stack_limit())) {
       #if defined(DART_TARGET_OS_WINDOWS)
         VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
       #else
-        munmap((void**)coroutine.untag()->stack_limit(), (uword)(coroutine.untag()->stack_base() - coroutine.untag()->stack_limit()));
+        munmap((void**)coroutine.untag()->stack_limit(), (uword)(coroutine.untag()->stack_root() - coroutine.untag()->stack_limit()));
       #endif
 
       #if defined(DART_TARGET_OS_WINDOWS)
@@ -26721,7 +26722,8 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   }
   if (free_index == -1) {
     free_index = registry.Length();
-    registry = Array::Grow(registry, registry.Length() * 2, Heap::kOld);
+    intptr_t new_capacity = (registry.Length() * 2) | 3;
+    registry = Array::Grow(registry, new_capacity, Heap::kOld);
     object_store->set_coroutines_registry(registry);
   }
   coroutine.untag()->set_index(Smi::New(free_index));
@@ -26745,7 +26747,7 @@ void Coroutine::recycle(Zone* zone) const {
   untag()->set_caller(Coroutine::null());
   untag()->set_scheduler(Coroutine::null());
   untag()->set_processor(Object::null());
-  untag()->set_to_processor(Coroutine::null());
+  untag()->set_to_processor(Object::null());
   links_steal_head(finished, to_state());
 }
 
@@ -26759,7 +26761,7 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_caller(Coroutine::null());
   untag()->set_scheduler(Coroutine::null());
   untag()->set_processor(Object::null());
-  untag()->set_to_processor(Coroutine::null());
+  untag()->set_to_processor(Object::null());
   untag()->set_to_state(Coroutine::null());
   untag()->set_previous(Coroutine::null());
   untag()->set_next(Coroutine::null());
@@ -26781,6 +26783,10 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
   auto current_index = Smi::Value(index());
   untag()->set_index(Smi::New(-1));
+  if (coroutines.Length() == FLAG_coroutines_registry_initial_size) {
+    coroutines_data[current_index] = Object::null();
+    return;
+  }
   auto current = coroutines_data[current_index];
   auto last = coroutines_data[coroutines.Length() - 1];
   coroutines_data[current_index] = last;
@@ -26853,7 +26859,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
       }
     }
   }
-  coroutines.Truncate(0);
+  coroutines.Truncate(FLAG_coroutines_registry_initial_size);
   thread->ExitCoroutine();
 }
 
@@ -26874,7 +26880,9 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
     saved_caller->untag()->set_attributes(Smi::New(new_caller_state));
   }
   if (is_persistent()) {
+    OS::Print("recycle begin\n");
     recycle(zone);
+    OS::Print("recycle\n");
   }
   if (is_ephemeral()) {
     dispose(thread, zone);

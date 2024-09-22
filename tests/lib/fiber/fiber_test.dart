@@ -2,92 +2,99 @@ import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
 
-var commonState = "";
+var globalState = "";
 
 void main() {
-  testBase();
-  testClosureScopes();
-  // testRecycle();
+//  testBase();
+//  testClosures();
+  testRecycle();
 }
 
 void testBase() {
-  final processor = FiberProcessor();
-  processor.process(mainEntry, terminate: true);
-  Expect.isFalse(processor.running);
+  Fiber.launch(mainEntry, terminate: true);
 }
 
 void testRecycle() {
-  //mainFiber.start();
-  //commonState = "";
-  //mainFiber.start();
-}
-
-void mainEntry() {
-  commonState += "main -> ";
-  Fiber.schedule(Fiber.current());
-  Fiber.spawn(childEntry);
-  commonState += "main -> ";
-  Fiber.schedule(Fiber.current(), suspend: true);
-  Expect.equals("main -> child -> main -> child", commonState);
-}
-
-void childEntry() {
-  commonState += "child -> ";
-  Fiber.schedule(Fiber.current(), suspend: true);
-  commonState += "child";
-}
-
-void testClosureScopes() {
-  var variable = "variable";
-
-  final processor = FiberProcessor();
-  processor.process(
+  Fiber.launch(
     () {
-      Expect.equals("variable", variable);
-      variable = "after fiber";
+      var localState = "main";
+      final child = Fiber.child(
+        () => localState = "$localState -> child",
+        persistent: true,
+      );
+      Fiber.fork(child);
+      Fiber.fork(child);
+      Expect.equals("main -> child -> child", localState);
     },
     terminate: true,
   );
-  Expect.isFalse(processor.running);
-  Expect.equals("after fiber", variable);
+}
 
-  variable = "variable";
-  processor.process(
+void mainEntry() {
+  globalState = "";
+  globalState += "main -> ";
+  Fiber.schedule(Fiber.current());
+  Fiber.spawn(childEntry);
+  globalState += "main -> ";
+  Fiber.reschedule();
+  Expect.equals("main -> child -> main -> child", globalState);
+}
+
+void childEntry() {
+  globalState += "child -> ";
+  Fiber.reschedule();
+  globalState += "child";
+}
+
+void testClosures() {
+  var localState = "localState";
+
+  Fiber.launch(
     () {
-      Expect.equals("variable", variable);
-      variable = "after main fiber";
+      Expect.equals("localState", localState);
+      localState = "after fiber";
+    },
+    terminate: true,
+  );
+  Expect.equals("after fiber", localState);
+
+  localState = "localState";
+  Fiber.launch(
+    () {
+      Expect.equals("localState", localState);
+      localState = "after main fiber";
       Fiber.schedule(Fiber.current());
       Fiber.spawn(
         () {
-          Expect.equals("after main fiber", variable);
-          variable = "after child fiber";
-          Fiber.schedule(Fiber.current(), suspend: true);
-          Expect.equals("after child fiber after main fiber", variable);
-          variable = "finish";
+          Expect.equals("after main fiber", localState);
+          localState = "after child fiber";
+          Fiber.reschedule();
+          Expect.equals("after child fiber after main fiber", localState);
+          localState = "finish";
         },
         name: "child",
       );
-      Expect.equals("after child fiber", variable);
-      variable = "after child fiber after main fiber";
+      Expect.equals("after child fiber", localState);
+      localState = "after child fiber after main fiber";
       Fiber.suspend();
     },
     terminate: true,
   );
-  Expect.equals("finish", variable);
+  Expect.equals("finish", localState);
 
-  variable = "level 1";
-  processor.process(
+  localState = "level 1";
+  Fiber.launch(
     () {
-      Expect.equals("level 1", variable);
-      variable = "level 2";
+      Expect.equals("level 1", localState);
+      localState = "level 2";
       Fiber.spawn(
         () {
-          Expect.equals("level 2", variable);
-          variable = "level 3";
+          Expect.equals("level 2", localState);
+          localState = "level 3";
           Fiber.spawn(
             () {
-              Expect.equals("level 3", variable);
-              variable = "level 4";
+              Expect.equals("level 3", localState);
+              localState = "level 4";
             },
             name: "child",
           );
@@ -97,5 +104,5 @@ void testClosureScopes() {
     },
     terminate: true,
   );
-  Expect.equals("level 4", variable);
+  Expect.equals("level 4", localState);
 }

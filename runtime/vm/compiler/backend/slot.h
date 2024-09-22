@@ -93,7 +93,7 @@ class ParsedFunction;
   V(Coroutine, UntaggedCoroutine, previous, Coroutine, VAR)                    \
   V(Coroutine, UntaggedCoroutine, next, Coroutine, VAR)                        \
   V(Coroutine, UntaggedCoroutine, to_state, Coroutine, VAR)                    \
-  V(Coroutine, UntaggedCoroutine, to_processor, Coroutine, VAR)                \
+  V(Coroutine, UntaggedCoroutine, to_processor, Dynamic, VAR)                  \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
   V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)
 

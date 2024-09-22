@@ -405,7 +405,7 @@ static bool GetAndValidateCurrentThreadStackBounds(uintptr_t fp,
 
   if (Thread::Current() != nullptr && Thread::Current()->has_coroutine()) {
     *stack_lower = Thread::Current()->coroutine()->untag()->stack_limit();
-    *stack_upper = Thread::Current()->coroutine()->untag()->stack_base();
+    *stack_upper = Thread::Current()->coroutine()->untag()->stack_root();
   } else {
     if (!OSThread::GetCurrentStackBounds(stack_lower, stack_upper)) {
       return false;

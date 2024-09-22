@@ -12848,7 +12848,7 @@ class Coroutine : public Instance {
   CoroutinePtr next() const { return untag()->next(); }
   static uword next_offset() { return OFFSET_OF(UntaggedCoroutine, next_); }
 
-  CoroutinePtr to_processor() const { return untag()->to_processor(); }
+  ObjectPtr to_processor() const { return untag()->to_processor(); }
   static uword to_processor_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_processor_);
   }
