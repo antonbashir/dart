@@ -26644,6 +26644,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     const auto& links = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
     links.untag()->set_next(links.ptr());
     links.untag()->set_previous(links.ptr());
+    finished = links.ptr();
     object_store->set_finished_coroutines(links);
   }
   
@@ -26651,6 +26652,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     const auto& links = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
     links.untag()->set_next(links.ptr());
     links.untag()->set_previous(links.ptr());
+    active = links.ptr();
     object_store->set_active_coroutines(links);
   }
   
