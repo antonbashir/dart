@@ -1,12 +1,12 @@
 part of dart.fiber;
 
 class _FiberLink {
-  late final Fiber _value;
+  final Fiber _value;
   late _FiberLink _previous;
   late _FiberLink _next;
 
   @pragma("vm:prefer-inline")
-  _FiberLink() {
+  _FiberLink(this._value) {
     _next = this;
     _previous = this;
   }

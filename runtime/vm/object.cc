@@ -26666,14 +26666,14 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
   void** stack_base = (void**)((uintptr_t)VirtualAlloc(
-      nullptr, stack_size * kWordSize, MEM_RESERVE | MEM_COMMIT,
+      nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
       PAGE_READWRITE));
 #else
   void** stack_end = (void**)((uintptr_t)mmap(
-      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+      nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
-  memset(stack_end, 0, size * kWordSize);
+  memset(stack_end, 0, size);
   uword stack_limit = (uword)(stack_end);
   uword stack_base = (uword)(stack_end + size);
   coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
@@ -26757,6 +26757,7 @@ void Coroutine::dispose(Thread* thread, Zone* zone) const {
   munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
 #endif
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
+  StoreNonPointer(&untag()->stack_root_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
 }
@@ -26790,7 +26791,7 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
       recycle(zone);
     }
     if (is_ephemeral()) {
-      dispose(thread, zone);
+     // dispose(thread, zone);
     }
     if (found.ptr() != scheduler()) {
       found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
@@ -26802,8 +26803,6 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
 
 void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::created, CoroutineAttributes::running);
-  OS::Print("entry: %p\n", (void*)Function::Handle(untag()->entry()->untag()->function()).entry_point()) ;
-  OS::Print("trampoline: %p\n", (void*)Function::Handle(untag()->trampoline()).entry_point()) ;
   thread->EnterCoroutine(ptr());
 }
 
@@ -26837,9 +26836,10 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
-  if (caller() != scheduler()) {
-    auto new_caller_state = (Smi::Value(caller()->untag()->attributes()) & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
-    caller()->untag()->set_attributes(Smi::New(new_caller_state));
+  auto saved_caller = caller();
+  if (saved_caller != scheduler()) {
+    auto new_caller_state = (Smi::Value(saved_caller->untag()->attributes()) & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
+    saved_caller->untag()->set_attributes(Smi::New(new_caller_state));
   }
   if (is_persistent()) {
     recycle(zone);
@@ -26847,7 +26847,7 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
   if (is_ephemeral()) {
     dispose(thread, zone);
   }
-  thread->EnterCoroutine(caller());
+  thread->EnterCoroutine(saved_caller);
 }
 
 void RegExp::set_pattern(const String& pattern) const {

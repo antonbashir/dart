@@ -5,7 +5,7 @@ part 'fiber_processor.dart';
 part 'fiber_factory.dart';
 
 const _kDefaultStackSize = 128 * (1 << 10);
-const _kSchedulerStackSize = 128 * (1 << 10);
+const _kSchedulerStackSize = 8 * (1 << 10);
 const _kMainFiber = "main";
 const _kSchedulerFiber = "scheduler";
 
@@ -160,7 +160,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final caller = Fiber.current();
     if (caller!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
     final callee = Fiber(caller._caller!);
-    if (!callee.state.running) throw StateError("Destination fiber is not running, state = ${callee.state.string()}");
     callee._caller = caller!._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     _Coroutine._transfer(caller!, callee);
@@ -176,7 +175,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void schedule(Fiber fiber, {bool suspend = false}) {
     final current = Fiber.current();
-    if (!current.state.suspended) throw StateError("Destination fiber is not suspended, state = ${current.state.string()}");
     current._processor._schedule(fiber);
     if (suspend) Fiber.suspend();
   }
@@ -203,8 +201,5 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   FiberArguments get arguments => FiberArguments(_coroutine._arguments);
 
   @pragma("vm:never-inline")
-  static void _run() {
-    print("run");
-    _Coroutine._current!._entry();
-  }
+  static void _run() => _Coroutine._current!._entry();
 }

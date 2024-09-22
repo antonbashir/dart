@@ -2,9 +2,7 @@ part of dart.fiber;
 
 class FiberProcessor {
   late _FiberLink _scheduled;
-
   late Fiber _scheduler;
-  late Fiber _main;
 
   var _running = false;
   bool get running => _running;
@@ -13,8 +11,8 @@ class FiberProcessor {
   static void _defaultIdle() => throw StateError("There are no scheduled fibers and FiberProcessor idle function is not defined");
 
   FiberProcessor({this.idle = _defaultIdle}) {
-    _scheduled = _FiberLink();
     _scheduler = _FiberFactory.scheduler(this);
+    _scheduled = _FiberLink(_scheduler);
   }
 
   void process(
@@ -35,13 +33,10 @@ class FiberProcessor {
     _Coroutine._initialize(_scheduler);
   }
 
-  void _terminate() {
-    _running = false;
-  }
+  void _terminate() => _running = false;
 
   @pragma("vm:never-inline")
   static void _loop() {
-    print("_loop");
     final scheduler = Fiber.current();
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;

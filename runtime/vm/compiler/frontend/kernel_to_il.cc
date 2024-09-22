@@ -927,6 +927,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_getTrampoline, Coroutine_trampoline)                             \
   V(Coroutine_getArguments, Coroutine_arguments)                               \
   V(Coroutine_getAttributes, Coroutine_attributes)                             \
+  V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(Coroutine_getScheduler, Coroutine_scheduler)                               \
   V(Coroutine_getProcessor, Coroutine_processor)                               \
   V(Coroutine_getToProcessor, Coroutine_to_processor)                          \
@@ -957,6 +958,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_setTrampoline, Coroutine_trampoline)                             \
   V(Coroutine_setArguments, Coroutine_arguments)                               \
   V(Coroutine_setAttributes, Coroutine_attributes)                             \
+  V(Coroutine_setCaller, Coroutine_caller)                                     \
   V(Coroutine_setScheduler, Coroutine_scheduler)                               \
   V(Coroutine_setProcessor, Coroutine_processor)                               \
   V(Coroutine_setToProcessor, Coroutine_to_processor)                          \
