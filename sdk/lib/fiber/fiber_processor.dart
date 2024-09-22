@@ -72,10 +72,20 @@ class _FiberProcessor {
         last = Fiber(last._caller!);
       }
       last._caller = scheduler;
-      first._attributes &= ~_kFiberSuspended;
-      first._attributes |= _kFiberRunning;
-      _Coroutine._transfer(scheduler, first);
-      if (!processor._running) return;
+      if (first._attributes & _kFiberSuspended > 0) {
+        first._attributes &= ~_kFiberSuspended;
+        first._attributes |= _kFiberRunning;
+        _Coroutine._transfer(scheduler, first);
+        if (!processor._running) return;
+        continue;
+      }
+      if (first._attributes & _kFiberCreated > 0) {
+        first._attributes &= ~_kFiberCreated;
+        first._attributes |= _kFiberRunning;
+        _Coroutine._fork(scheduler, first);
+        if (!processor._running) return;
+        continue;
+      }
     }
   }
 

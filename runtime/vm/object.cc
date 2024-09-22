@@ -26798,8 +26798,9 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
   Coroutine& found = Coroutine::Handle(zone);
   for (auto index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
-      found ^= coroutines.At(index);
-      if (stack_pointer > found.stack_limit() && stack_pointer <= found.stack_root()) {
+      auto candidate = Coroutine::RawCast(coroutines.At(index));
+      if (stack_pointer > candidate.untag()->stack_limit() && stack_pointer <= candidate.untag()->stack_root()) {
+        found ^= candidate;
         break;
       }
     }

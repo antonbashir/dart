@@ -3109,13 +3109,17 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
   __ Bind(&exit_through_non_ffi);
 
   Label no_coroutine;
-  __ Load(TMP, compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
+  __ Load(TMP,
+          compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
   __ CompareObject(TMP, NullObject());
   __ BranchIf(EQUAL, &no_coroutine);
-  __ PushObject(NullObject());
-  __ PushRegister(RSP);
-  __ CallRuntime(kFailCoroutineRuntimeEntry, 2);
-  __ Drop(2);
+  {
+    LeafRuntimeScope rt(assembler, /*frame_size=*/0,
+                        /*preserve_registers=*/true);
+    __ movq(CallingConventions::kArg1Reg, THR);
+    __ movq(CallingConventions::kArg2Reg, RSP);
+    rt.Call(kFailCoroutineRuntimeEntry, 2);
+  }
   __ Bind(&no_coroutine);
 
   // Set the tag.

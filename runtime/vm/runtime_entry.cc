@@ -3893,10 +3893,10 @@ DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
   forked.HandleForkedExit(thread, zone);
 }
 
-DEFINE_RUNTIME_ENTRY(FailCoroutine, 1) {
-  auto stack_pointer = Smi::CheckedHandle(zone, arguments.ArgAt(0)).Value();
+DEFINE_LEAF_RUNTIME_ENTRY(void, FailCoroutine, 2, Thread* thread, uword stack_pointer) {
   Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, stack_pointer);
 }
+END_LEAF_RUNTIME_ENTRY
 
 
 // Use expected function signatures to help MSVC compiler resolve overloading.
