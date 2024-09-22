@@ -7,6 +7,7 @@ class FiberProcessor {
   late Fiber _main;
 
   var _running = false;
+  bool get running => _running;
 
   final void Function() idle;
   static void _defaultIdle() => throw StateError("There are no scheduled fibers and FiberProcessor idle function is not defined");
