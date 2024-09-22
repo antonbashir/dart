@@ -8,8 +8,9 @@
 #include "vm/native_entry.h"
 
 namespace dart {
-DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 2) {
+DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, size, arguments->NativeArgAt(1));
-  return Coroutine::New(size.Value());
+  GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(2));
+  return Coroutine::New(size.Value(), trampoline.function());
 }
 }  // namespace dart

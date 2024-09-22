@@ -6,7 +6,7 @@ import "dart:fiber";
 class _Coroutine {
   @patch
   @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size);
+  external factory _Coroutine._(int size, Function trampoline);
 
   @patch
   @pragma("vm:recognized", "other")

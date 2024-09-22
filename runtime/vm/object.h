@@ -12715,7 +12715,7 @@ class Coroutine : public Instance {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
 
-  static CoroutinePtr New(uintptr_t size);
+  static CoroutinePtr New(uintptr_t size, FunctionPtr trampoline);
 
   DART_FORCE_INLINE
   static bool links_empty(CoroutinePtr links) {

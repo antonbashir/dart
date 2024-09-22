@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/compiler/runtime_api.h"
+#include "vm/constants.h"
 #include "vm/flags.h"
 #include "vm/globals.h"
 
@@ -3237,6 +3238,7 @@ void StubCodeCompiler::GenerateCoroutineEntryStub() {
   const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
   __ EnterStubFrame();
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::trampoline_offset());
+  __ LoadFieldFromOffset(TMP, FUNCTION_REG, Function::entry_point_offset());
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);

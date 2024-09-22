@@ -72,7 +72,7 @@ extension type FiberArguments(List _arguments) {
 }
 
 class _Coroutine {
-  external factory _Coroutine._(int size);
+  external factory _Coroutine._(int size, Function trampoline);
 
   external String get _name;
   external set _name(String value);

@@ -240,10 +240,10 @@ namespace dart {
   F(Coroutine, caller_)                                                        \
   F(Coroutine, scheduler_)                                                     \
   F(Coroutine, processor_)                                                     \
-  F(Coroutine, previous_)                                                 \
-  F(Coroutine, next_)                                                     \
-  F(Coroutine, to_state_)                                                \
-  F(Coroutine, to_processor_)                                              \
+  F(Coroutine, previous_)                                                      \
+  F(Coroutine, next_)                                                          \
+  F(Coroutine, to_state_)                                                      \
+  F(Coroutine, to_processor_)                                                  \
   F(Coroutine, index_)                                                         \
   F(Coroutine, native_stack_base_)                                             \
   F(Coroutine, stack_root_)                                                    \

@@ -26634,7 +26634,7 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutinePtr Coroutine::New(uintptr_t size) {
+CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto object_store = Isolate::Current()->isolate_object_store();
   auto finished = object_store->finished_coroutines();
   auto active = object_store->active_coroutines();
@@ -26657,9 +26657,10 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   }
   
   if (!links_empty(finished)) {
-    auto coroutine_candidate = links_first(finished);
-    links_steal_head(active, coroutine_candidate.untag()->to_state());
-    return coroutine_candidate;
+    auto coroutine = links_first(finished);
+    links_steal_head(active, coroutine.untag()->to_state());
+    coroutine.untag()->set_trampoline(trampoline);
+    return coroutine;
   }
 
   const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
@@ -26699,6 +26700,8 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     object_store->set_coroutines_registry(registry);
   }
   coroutine.untag()->set_index(Smi::New(free_index));
+  coroutine.untag()->set_trampoline(trampoline);
+
   registry.SetAt(free_index, coroutine);
 
   return coroutine.ptr();
@@ -26799,6 +26802,8 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
 
 void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::created, CoroutineAttributes::running);
+  OS::Print("entry: %p\n", (void*)Function::Handle(untag()->entry()->untag()->function()).entry_point()) ;
+  OS::Print("trampoline: %p\n", (void*)Function::Handle(untag()->trampoline()).entry_point()) ;
   thread->EnterCoroutine(ptr());
 }
 

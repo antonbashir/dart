@@ -4,7 +4,7 @@ import "dart:fiber";
 @patch
 class _Coroutine {
   @patch
-  factory _Coroutine._(int size) => throw UnsupportedError("_Coroutine._");
+  factory _Coroutine._(int size, Function trampoline) => throw UnsupportedError("_Coroutine._");
   @patch
   String get _name => throw UnsupportedError("_Coroutine._current");
   @patch
