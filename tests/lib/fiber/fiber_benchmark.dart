@@ -23,7 +23,7 @@ void benchmark() {
       Fiber.reschedule();
     }
   }
-  print("Latency per switch: ${latency / fibers / (iterations * 4)} [micros]");
+  print("Latency per switch: ${latency / (fibers * iterations * 2)} [micros]");
 }
 
 void scheduling() {
