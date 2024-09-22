@@ -26848,7 +26848,7 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
     recycle(zone);
   }
   if (is_ephemeral()) {
-   // dispose(thread, zone);
+    dispose(thread, zone);
   }
   thread->EnterCoroutine(saved_caller);
 }
