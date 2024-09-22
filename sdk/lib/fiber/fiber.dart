@@ -178,7 +178,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final caller = Fiber.current();
     assert(caller._caller != null);
     final callee = Fiber(caller._caller!);
-    callee._caller = caller!._scheduler;
+    caller._caller = caller!._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     _Coroutine._transfer(caller!, callee);
   }
