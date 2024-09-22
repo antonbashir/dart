@@ -65,7 +65,7 @@ class _FiberProcessor {
         idle();
         if (!processor._running) return;
       }
-      Fiber last = scheduled._removeHead()._value;
+      Fiber last, = scheduled._removeHead()._value;
       Fiber first = last;
       while (!scheduled._isEmpty) {
         last._caller = scheduled._removeHead()._value;

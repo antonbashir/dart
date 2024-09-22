@@ -10,14 +10,17 @@ void main() {
 void benchmark() {
   final jobs = <Fiber>[];
   for (var i = 0; i < fibers; i++) {
-    jobs.add(Fiber.child(scheduling));
+    Fiber.schedule(Fiber.current());
+    jobs.add(Fiber.spawn(scheduling));
+  }
+  for (var i = 0; i < fibers; i++) {
     Fiber.schedule(jobs[i]);
   }
   final sw = Stopwatch();
   sw.start();
   for (var i = 0; i < fibers; i++) {
     while (!jobs[i].state.disposed) {
-      Fiber.suspend();
+      Fiber.reschedule();
     }
   }
   sw.stop();
@@ -25,6 +28,7 @@ void benchmark() {
 }
 
 void scheduling() {
+  Fiber.suspend();
   for (var i = 0; i < iterations; i++) {
     Fiber.reschedule();
   }

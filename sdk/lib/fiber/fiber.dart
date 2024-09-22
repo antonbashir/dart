@@ -148,22 +148,23 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
       );
 
   @pragma("vm:prefer-inline")
-  static void spawn(
+  static Fiber spawn(
     void Function() entry, {
     List arguments = const [],
     bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
-  }) =>
-      Fiber.fork(
-        _FiberFactory._child(
-          entry,
-          arguments: arguments,
-          size: size,
-          name: name,
-          persistent: persistent,
-        ),
-      );
+  }) {
+    final child = _FiberFactory._child(
+      entry,
+      arguments: arguments,
+      size: size,
+      name: name,
+      persistent: persistent,
+    );
+    Fiber.fork(child);
+    return child;
+  }
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber callee) {
