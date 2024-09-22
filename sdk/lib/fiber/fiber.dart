@@ -56,6 +56,9 @@ extension type FiberAttributes(int _attributes) {
   bool get persistent => _attributes & _kFiberPersistent != 0;
 
   @pragma("vm:prefer-inline")
+  bool get ephemeral => !persistent;
+
+  @pragma("vm:prefer-inline")
   int get value => _attributes;
 
   @pragma("vm:prefer-inline")
@@ -161,8 +164,8 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   static void suspend() {
     final caller = Fiber.current();
     if (caller!._caller == null) throw StateError("Can't suspend: no caller for this fiber");
-    final callee = caller._caller!;
-    if (callee._attributes & _kFiberRunning == 0) throw StateError("Destination fiber is not running, state = ${FiberState(callee._attributes).string()}");
+    final callee = Fiber(caller._caller!);
+    if (!callee.state.running) throw StateError("Destination fiber is not running, state = ${callee.state.string()}");
     callee._caller = caller!._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     _Coroutine._transfer(caller!, callee);
@@ -177,8 +180,16 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void schedule(Fiber fiber, {bool suspend = false}) {
-    Fiber.current()._processor._schedule(fiber);
+    final current = Fiber.current();
+    if (!current.state.suspended) throw StateError("Destination fiber is not suspended, state = ${current.state.string()}");
+    current._processor._schedule(fiber);
     if (suspend) Fiber.suspend();
+  }
+
+  @pragma("vm:prefer-inline")
+  static void terminate() {
+    Fiber.current()._processor._terminate();
+    Fiber.suspend();
   }
 
   @pragma("vm:prefer-inline")

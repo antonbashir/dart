@@ -6,6 +6,8 @@ class FiberProcessor {
   late Fiber _scheduler;
   late Fiber _main;
 
+  var _running = false;
+
   final void Function() idle;
   static void _defaultIdle() => throw StateError("There are no scheduled fibers and FiberProcessor idle function is not defined");
 
@@ -27,8 +29,13 @@ class FiberProcessor {
       persistent: persistent,
       size: size,
     );
+    main._attributes &= ~_kFiberCreated;
     _schedule(main);
     _Coroutine._initialize(_scheduler);
+  }
+
+  void _terminate() {
+    _running = false;
   }
 
   @pragma("vm:never-inline")
@@ -37,27 +44,34 @@ class FiberProcessor {
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     final main = scheduled.removeHead()._value;
+    processor._running = true;
     main._caller = scheduler;
+    main._attributes &= ~_kFiberScheduled;
+    main._attributes |= _kFiberRunning;
     _Coroutine._fork(scheduler, main);
+    if (scheduled.isEmpty || !processor._running) return;
     for (;;) {
-      if (!scheduled.isEmpty) {
-        Fiber last = scheduled.removeHead()._value;
-        Fiber first = last;
-        while (!scheduled.isEmpty) {
-          last._caller = scheduled.removeHead()._value;
-          last = Fiber(last._caller!);
-        }
-        last._caller = scheduler;
-        first._attributes = (first._attributes & ~_kFiberScheduled) | _kFiberRunning;
-        _Coroutine._transfer(scheduler, first);
-        continue;
+      while (scheduled.isEmpty) {
+        processor.idle();
+        if (!processor._running) return;
       }
-      processor.idle();
+      Fiber last = scheduled.removeHead()._value;
+      Fiber first = last;
+      while (!scheduled.isEmpty) {
+        last._caller = scheduled.removeHead()._value;
+        last = Fiber(last._caller!);
+      }
+      last._caller = scheduler;
+      first._attributes &= ~_kFiberScheduled;
+      first._attributes |= _kFiberRunning;
+      _Coroutine._transfer(scheduler, first);
+      if (!processor._running) return;
     }
   }
 
   void _schedule(Fiber fiber) {
-    fiber._attributes = (fiber._attributes & ~_kFiberCreated & ~_kFiberSuspended) | _kFiberScheduled;
+    fiber._attributes &= ~_kFiberSuspended;
+    fiber._attributes |= _kFiberScheduled;
     _scheduled.stealTail(fiber._toProcessor as _FiberLink);
   }
 }
