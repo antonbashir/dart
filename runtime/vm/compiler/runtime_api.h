@@ -1044,6 +1044,9 @@ class Coroutine : public AllStatic {
   static word caller_offset();
   static word scheduler_offset();
   static word processor_offset();
+  static word previous_offset();
+  static word next_offset();
+  static word to_state_offset();
   static word to_processor_offset();
   static word index_offset();
   static word native_stack_base_offset();

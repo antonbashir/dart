@@ -12717,6 +12717,15 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size);
 
+  static bool links_empty(CoroutinePtr links);
+  static CoroutinePtr links_first(CoroutinePtr links);
+  static void links_remove(CoroutinePtr links);
+  static void links_add_tail(CoroutinePtr to, CoroutinePtr item);
+  static void links_add_head(CoroutinePtr to, CoroutinePtr item);
+  static void links_steal_head(CoroutinePtr to, CoroutinePtr item);
+  static void links_steal_tail(CoroutinePtr to, CoroutinePtr item);
+  static CoroutinePtr links_remove_head(CoroutinePtr links);
+
   void HandleException(Thread* thread, uword stack_pointer);
   void HandleRootEnter(Thread* thread, Zone* zone);
   void HandleRootExit(Thread* thread, Zone* zone);
@@ -12803,9 +12812,24 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, processor_);
   }
 
-  ObjectPtr to_processor() const { return untag()->to_processor(); }
+  CoroutinePtr previous() const { return untag()->previous(); }
+  static uword previous_offset() {
+    return OFFSET_OF(UntaggedCoroutine, previous_);
+  }
+
+  CoroutinePtr next() const { return untag()->next(); }
+  static uword next_offset() {
+    return OFFSET_OF(UntaggedCoroutine, next_);
+  }
+
+  CoroutinePtr to_processor() const { return untag()->to_processor(); }
   static uword to_processor_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_processor_);
+  }
+
+  CoroutinePtr to_state() const { return untag()->to_state(); }
+  static uword to_state_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_state_);
   }
 
   intptr_t index() const { return untag()->index(); }

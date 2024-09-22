@@ -390,16 +390,18 @@ class ObjectPointerVisitor;
   DO(suspend_sync_star_at_yield_stub, SuspendSyncStarAtYield)                  \
   DO(instance_of_stub, InstanceOf)
 
-#define ISOLATE_OBJECT_STORE_FIELD_LIST(R_, RW)              \
-    RW(UnhandledException, preallocated_unhandled_exception) \
-    RW(StackTrace, preallocated_stack_trace)                 \
-    RW(UnwindError, preallocated_unwind_error)               \
-    RW(Array, coroutines)                                    \
-    R_(Array, dart_args_1)                                   \
-    R_(Array, dart_args_2)                                   \
-    R_(GrowableObjectArray, resume_capabilities)             \
-    R_(GrowableObjectArray, exit_listeners)                  \
-    R_(GrowableObjectArray, error_listeners)
+#define ISOLATE_OBJECT_STORE_FIELD_LIST(R_, RW)                                \
+  RW(UnhandledException, preallocated_unhandled_exception)                     \
+  RW(StackTrace, preallocated_stack_trace)                                     \
+  RW(UnwindError, preallocated_unwind_error)                                   \
+  RW(Coroutine, active_coroutines)                                             \
+  RW(Coroutine, finished_coroutines)                                           \
+  RW(Array, coroutines_registry)                                               \
+  R_(Array, dart_args_1)                                                       \
+  R_(Array, dart_args_2)                                                       \
+  R_(GrowableObjectArray, resume_capabilities)                                 \
+  R_(GrowableObjectArray, exit_listeners)                                      \
+  R_(GrowableObjectArray, error_listeners)
 // Please remember the last entry must be referred in the 'to' function below.
 
 class IsolateObjectStore {

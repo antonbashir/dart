@@ -408,7 +408,10 @@
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, scheduler_offset)                                           \
   FIELD(Coroutine, processor_offset)                                           \
-  FIELD(Coroutine, to_processor_offset)                                        \
+  FIELD(Coroutine, previous_offset)                                       \
+  FIELD(Coroutine, next_offset)                                           \
+  FIELD(Coroutine, to_state_offset)                                      \
+  FIELD(Coroutine, to_processor_offset)                                    \
   FIELD(Coroutine, index_offset)                                               \
   FIELD(Coroutine, native_stack_base_offset)                                   \
   FIELD(Coroutine, stack_root_offset)                                          \

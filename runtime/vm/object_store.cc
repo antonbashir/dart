@@ -6,6 +6,7 @@
 
 #include "vm/dart_entry.h"
 #include "vm/exceptions.h"
+#include "vm/flags.h"
 #include "vm/isolate.h"
 #include "vm/object.h"
 #include "vm/raw_object.h"
@@ -79,7 +80,8 @@ ErrorPtr IsolateObjectStore::PreallocateObjects(const Object& out_of_memory)
     resume_capabilities_ = GrowableObjectArray::New();
     exit_listeners_ = GrowableObjectArray::New();
     error_listeners_ = GrowableObjectArray::New();
-    coroutines_ = Array::New(FLAG_coroutines_array_initial_size, Heap::kOld);
+    active_coroutines_ = finished_coroutines_ = Coroutine::null();
+    coroutines_registry_ = Array::New(FLAG_coroutines_registry_initial_size);
     dart_args_1_ = Array::New(1);
     dart_args_2_ = Array::New(2);
 
