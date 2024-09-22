@@ -12880,7 +12880,7 @@ class Coroutine : public Instance {
 
   void recycle(Zone* zone) const;
 
-  void dispose(Thread* thread, Zone* zone) const;
+  void dispose(Thread* thread, Zone* zone, bool remove_from_registry = true) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

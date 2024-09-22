@@ -26749,7 +26749,7 @@ void Coroutine::recycle(Zone* zone) const {
   links_steal_head(finished, to_state());
 }
 
-void Coroutine::dispose(Thread* thread, Zone* zone) const {
+void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
   change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::disposed);
   links_remove(untag()->to_state());
   untag()->set_name(String::null());
@@ -26772,6 +26772,10 @@ void Coroutine::dispose(Thread* thread, Zone* zone) const {
   StoreNonPointer(&untag()->stack_root_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
+  if (!remove_from_registry) {
+    untag()->set_index(Smi::New(-1));
+    return;
+  }
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
@@ -26835,7 +26839,7 @@ void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
   auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(Array::Handle(zone, object_store->coroutines_registry()).Copy());
+  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
   for (auto index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
@@ -26845,7 +26849,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
         continue;
       }
       if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
-        coroutine.dispose(thread, zone);
+        coroutine.dispose(thread, zone, false);
       }
     }
   }
