@@ -107,7 +107,7 @@ class _Coroutine {
   external set _toProcessor(_FiberLink value);
 
   external static _Coroutine? get _current;
-  
+
   external static _Coroutine _at(int index);
   external static void _initialize(_Coroutine root);
   external static void _transfer(_Coroutine from, _Coroutine to);
@@ -182,9 +182,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  static Fiber at(int index) {
-    return Fiber(_Coroutine._at(index));
-  }
+  static Fiber at(int index) => Fiber(_Coroutine._at(index));
 
   @pragma("vm:prefer-inline")
   int get index => _coroutine._index;
