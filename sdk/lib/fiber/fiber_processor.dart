@@ -22,6 +22,7 @@ class FiberProcessor {
     int size = _kDefaultStackSize,
     bool persistent = false,
   }) {
+    if (_running) throw StateError("FiberProcessor is running");
     final main = _FiberFactory.main(
       this,
       entry,

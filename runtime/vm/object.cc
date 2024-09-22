@@ -26779,7 +26779,9 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
     if (is_ephemeral()) {
       dispose(thread, zone);
     }
-    found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
+    if (found.ptr() != scheduler()) {
+      found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
+    }
     thread->EnterCoroutine(found.ptr());
     return;
   }
