@@ -83,11 +83,11 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external FiberProcessor get _processor;
+  external _FiberProcessor get _processor;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _processor(FiberProcessor value);
+  external set _processor(_FiberProcessor value);
 
   @patch
   @pragma("vm:recognized", "other")

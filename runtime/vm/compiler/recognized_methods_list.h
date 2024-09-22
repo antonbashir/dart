@@ -392,7 +392,7 @@ namespace dart {
   V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
   V(_Coroutine, get:_caller, Coroutine_getCaller, 0xe388183b)                  \
   V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0xd5f06e7c)            \
-  V(_Coroutine, get:_processor, Coroutine_getProcessor, 0x4391e70d)            \
+  V(_Coroutine, get:_processor, Coroutine_getProcessor, 0x6c9fb5d8)            \
   V(_Coroutine, get:_toProcessor, Coroutine_getToProcessor, 0x69c3b244)        \
   V(_Coroutine, set:_name, Coroutine_setName, 0x45ff0fef)                      \
   V(_Coroutine, set:_entry, Coroutine_setEntry, 0x896541f5)                    \
@@ -401,7 +401,7 @@ namespace dart {
   V(_Coroutine, set:_attributes, Coroutine_setAttributes, 0xb87a94c6)          \
   V(_Coroutine, set:_caller, Coroutine_setCaller, 0xbae0fb78)                  \
   V(_Coroutine, set:_scheduler, Coroutine_setScheduler, 0xad4951b9)            \
-  V(_Coroutine, set:_processor, Coroutine_setProcessor, 0x57c426ca)            \
+  V(_Coroutine, set:_processor, Coroutine_setProcessor, 0x74996ed5)            \
   V(_Coroutine, set:_toProcessor, Coroutine_setToProcessor, 0x6b557dc1)        \
   V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc845245c)                \
   V(_Coroutine, _at, Coroutine_atIndex, 0x28baa8da)                            \

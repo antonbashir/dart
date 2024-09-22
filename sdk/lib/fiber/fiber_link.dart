@@ -12,10 +12,10 @@ class _FiberLink {
   }
 
   @pragma("vm:prefer-inline")
-  bool get isEmpty => identical(_next, _previous) && identical(_next, this);
+  bool get _isEmpty => identical(_next, _previous) && identical(_next, this);
 
   @pragma("vm:prefer-inline")
-  void stealTail(_FiberLink item) {
+  void _stealTail(_FiberLink item) {
     item._previous._next = item._next;
     item._next._previous = item._previous;
     item._next = this;
@@ -25,7 +25,7 @@ class _FiberLink {
   }
 
   @pragma("vm:prefer-inline")
-  _FiberLink removeHead() {
+  _FiberLink _removeHead() {
     final shift = _next;
     _next = shift._next;
     shift._next._previous = this;

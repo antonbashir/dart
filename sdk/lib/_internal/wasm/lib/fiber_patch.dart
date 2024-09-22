@@ -38,9 +38,9 @@ class _Coroutine {
   @patch
   set _scheduler(_Coroutine? value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  FiberProcessor get _processor => throw UnsupportedError("_Coroutine._current");
+  _FiberProcessor get _processor => throw UnsupportedError("_Coroutine._current");
   @patch
-  set _processor(FiberProcessor value) => throw UnsupportedError("_Coroutine._current");
+  set _processor(_FiberProcessor value) => throw UnsupportedError("_Coroutine._current");
   @patch
   _FiberLink get _toProcessor => throw UnsupportedError("_Coroutine._current");
   @patch

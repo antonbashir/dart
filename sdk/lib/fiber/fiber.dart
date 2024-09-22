@@ -98,8 +98,8 @@ class _Coroutine {
   external _Coroutine? get _scheduler;
   external set _scheduler(_Coroutine? value);
 
-  external FiberProcessor get _processor;
-  external set _processor(FiberProcessor value);
+  external _FiberProcessor get _processor;
+  external set _processor(_FiberProcessor value);
 
   external _FiberLink get _toProcessor;
   external set _toProcessor(_FiberLink value);
@@ -114,6 +114,24 @@ class _Coroutine {
 
 extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
+  static void launch(
+    void Function() entry, {
+    List arguments = const [],
+    bool persistent = false,
+    bool terminate = false,
+    int size = _kDefaultStackSize,
+    void Function()? idle,
+  }) =>
+      _FiberProcessor(idle: idle)
+        .._process(
+          entry,
+          arguments: arguments,
+          persistent: persistent,
+          terminate: terminate,
+          size: size,
+        );
+
+  @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
     List arguments = const [],
@@ -121,7 +139,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     int size = _kDefaultStackSize,
     String? name,
   }) =>
-      _FiberFactory.child(
+      _FiberFactory._child(
         entry,
         arguments: arguments,
         size: size,
@@ -138,7 +156,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     String? name,
   }) =>
       Fiber.fork(
-        _FiberFactory.child(
+        _FiberFactory._child(
           entry,
           arguments: arguments,
           size: size,

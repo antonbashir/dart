@@ -135,7 +135,7 @@ class CircularLinkedList {
     }
   }
 
-  void RemoveHead(ClearFun clear = nullptr) {
+  void _removeHead(ClearFun clear = nullptr) {
     ASSERT(head_ != nullptr);
 
     Entry* e = head_;
@@ -184,7 +184,7 @@ class CircularLinkedList {
 
   void RemoveAll(ClearFun clear = nullptr) {
     while (HasHead()) {
-      RemoveHead(clear);
+      _removeHead(clear);
     }
   }
 
@@ -502,7 +502,7 @@ class DescriptorInfoMultipleMixin : public DI {
         pentry->token_count--;
       }
       if (pentry->token_count <= 0) {
-        active_readers_.RemoveHead();
+        active_readers_._removeHead();
       } else {
         active_readers_.Rotate();
       }

@@ -26661,6 +26661,30 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     auto coroutine = links_first(finished);
     links_steal_head(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
+    if (size != coroutine.untag()->stack_base() - coroutine.untag()->stack_limit()) {
+      #if defined(DART_TARGET_OS_WINDOWS)
+        VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+      #else
+        munmap((void**)coroutine.untag()->stack_limit(), (uword)(coroutine.untag()->stack_base() - coroutine.untag()->stack_limit()));
+      #endif
+
+      #if defined(DART_TARGET_OS_WINDOWS)
+        void** stack_base = (void**)((uintptr_t)VirtualAlloc(
+            nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
+            PAGE_READWRITE));
+      #else
+        void** stack_end = (void**)((uintptr_t)mmap(
+            nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+      #endif
+      
+      memset(stack_end, 0, size * kWordSize);
+      uword stack_limit = (uword)(stack_end);
+      uword stack_base = (uword)(stack_end + size);
+      coroutine.untag()->stack_root_ = stack_base;
+      coroutine.untag()->stack_base_ = stack_base;
+      coroutine.untag()->stack_limit_ = stack_limit;
+    }
     return coroutine;
   }
 

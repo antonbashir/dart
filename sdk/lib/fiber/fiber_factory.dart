@@ -2,10 +2,10 @@ part of dart.fiber;
 
 class _FiberFactory {
   @pragma("vm:prefer-inline")
-  static Fiber scheduler(FiberProcessor processor) {
+  static Fiber _scheduler(_FiberProcessor processor) {
     final coroutine = _Coroutine._(_kSchedulerStackSize, Fiber._run);
     coroutine._name = _kSchedulerFiber;
-    coroutine._entry = FiberProcessor._loop;
+    coroutine._entry = _FiberProcessor._loop;
     coroutine._processor = processor;
     coroutine._arguments = [];
     coroutine._attributes = _kFiberCreated;
@@ -13,8 +13,8 @@ class _FiberFactory {
   }
 
   @pragma("vm:prefer-inline")
-  static Fiber main(
-    FiberProcessor processor,
+  static Fiber _main(
+    _FiberProcessor processor,
     void Function() entry, {
     List arguments = const [],
     int size = _kDefaultStackSize,
@@ -32,7 +32,7 @@ class _FiberFactory {
   }
 
   @pragma("vm:prefer-inline")
-  static Fiber child(
+  static Fiber _child(
     void Function() entry, {
     List arguments = const [],
     int size = _kDefaultStackSize,
