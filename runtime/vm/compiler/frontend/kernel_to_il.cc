@@ -930,6 +930,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_getScheduler, Coroutine_scheduler)                               \
   V(Coroutine_getProcessor, Coroutine_processor)                               \
   V(Coroutine_getToProcessor, Coroutine_to_processor)                          \
+  V(Coroutine_getIndex, Coroutine_index)                                       \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -1954,6 +1955,13 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     case MethodRecognizer::kCoroutine_getCurrent: {
       body += LoadThread();
       body += LoadNativeField(Slot::Thread_coroutine());
+      break;
+    }
+    case MethodRecognizer::kCoroutine_atIndex: {
+      body += LoadIsolateObjectStore();
+      body += LoadNativeField(Slot::IsolateObjectStore_coroutines_registry());
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadIndexed(kArrayCid);
       break;
     }
 #define IL_BODY(method, slot)                                                  \
@@ -4673,6 +4681,13 @@ Fragment FlowGraphBuilder::LoadObjectStore() {
   Fragment body;
   body += LoadIsolateGroup();
   body += LoadNativeField(Slot::IsolateGroup_object_store());
+  return body;
+}
+
+Fragment FlowGraphBuilder::LoadIsolateObjectStore() {
+  Fragment body;
+  body += LoadIsolate();
+  body += LoadNativeField(Slot::Isolate_isolate_object_store());
   return body;
 }
 

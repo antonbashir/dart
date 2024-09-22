@@ -139,12 +139,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x25;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x24;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -369,19 +373,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -598,12 +604,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -828,19 +838,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -1057,12 +1069,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x25;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x24;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -1287,19 +1303,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -1516,12 +1534,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -1746,19 +1768,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -1975,12 +1999,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x18;
@@ -2206,19 +2234,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x38;
+    0x34;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -2435,12 +2465,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x18;
@@ -2666,19 +2700,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x38;
+    0x34;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -2895,12 +2931,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x25;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x24;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -3125,19 +3165,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -3354,12 +3396,16 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -3584,19 +3630,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -3810,10 +3858,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -4038,19 +4090,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -4264,10 +4318,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -4492,19 +4550,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -4718,10 +4778,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -4946,19 +5010,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -5172,10 +5238,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -5400,19 +5470,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -5626,10 +5698,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x18;
@@ -5855,19 +5931,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x38;
+    0x34;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -6081,10 +6159,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x18;
@@ -6310,19 +6392,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0xc;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x38;
+    0x34;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -6536,10 +6620,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x14;
@@ -6764,19 +6852,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x24;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x30;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x14;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x1c;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x20;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x24;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x34;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x34;
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -6990,10 +7080,14 @@ static constexpr dart::compiler::target::word Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word LinkedHashBase_deleted_keys_offset = 0x28;
@@ -7218,19 +7312,21 @@ static constexpr dart::compiler::target::word WeakProperty_value_offset = 0x10;
 static constexpr dart::compiler::target::word WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x48;
-static constexpr dart::compiler::target::word Coroutine_next_offset = 0x50;
-static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x60;
+static constexpr dart::compiler::target::word Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word Coroutine_arguments_offset = 0x28;
+static constexpr dart::compiler::target::word Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word Coroutine_caller_offset = 0x38;
+static constexpr dart::compiler::target::word Coroutine_scheduler_offset = 0x40;
+static constexpr dart::compiler::target::word Coroutine_processor_offset = 0x48;
+static constexpr dart::compiler::target::word Coroutine_previous_offset = 0x50;
+static constexpr dart::compiler::target::word Coroutine_next_offset = 0x58;
+static constexpr dart::compiler::target::word Coroutine_to_state_offset = 0x68;
 static constexpr dart::compiler::target::word Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word Coroutine_index_offset = 0x68;
+    0x60;
+static constexpr dart::compiler::target::word Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word Coroutine_stack_root_offset =
@@ -7444,12 +7540,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x25;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x24;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x14;
@@ -7674,21 +7774,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x34;
+    0x34;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -7902,12 +8008,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -8132,21 +8242,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -8365,12 +8481,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -8595,21 +8715,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -8823,12 +8949,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x18;
@@ -9054,21 +9184,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x34;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x38;
+    0x38;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x34;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -9282,12 +9418,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x18;
@@ -9513,21 +9653,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x34;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x38;
+    0x38;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x34;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -9741,12 +9887,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x25;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x24;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x14;
@@ -9971,21 +10121,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x34;
+    0x34;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -10199,12 +10355,16 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_Isolate_has_resumption_breakpoints_offset = 0x49;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_single_step_offset = 0x48;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -10429,21 +10589,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -10654,10 +10820,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x14;
@@ -10882,21 +11052,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x34;
+    0x34;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -11107,10 +11283,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -11335,21 +11515,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -11565,10 +11751,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -11793,21 +11983,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -12018,10 +12214,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x18;
@@ -12247,21 +12447,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x34;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x38;
+    0x38;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x34;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -12472,10 +12678,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x18;
@@ -12701,21 +12911,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x24;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x2c;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x34;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x38;
+    0x38;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x34;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0xc;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x40;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -12926,10 +13142,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x10;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x14;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0xc;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x14;
@@ -13154,21 +13374,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x4;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x4;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0xc;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x14;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x1c;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0xc;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x10;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x14;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x1c;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x24;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x2c;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x2c;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x34;
+    0x34;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x8;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x38;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =
@@ -13379,10 +13605,14 @@ static constexpr dart::compiler::target::word AOT_Int32x4_value_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_Isolate_current_tag_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_Isolate_default_tag_offset = 0x30;
 static constexpr dart::compiler::target::word AOT_Isolate_finalizers_offset = 0x40;
+static constexpr dart::compiler::target::word
+    AOT_Isolate_isolate_object_store_offset = 0x50;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_object_store_offset = 0x20;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_class_table_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_IsolateGroup_cached_class_table_table_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_Isolate_user_tag_offset = 0x20;
+static constexpr dart::compiler::target::word
+    AOT_IsolateObjectStore_coroutines_registry_offset = 0x28;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_ImmutableLinkedHashBase_data_offset = 0x18;
 static constexpr dart::compiler::target::word AOT_LinkedHashBase_deleted_keys_offset = 0x28;
@@ -13607,21 +13837,27 @@ static constexpr dart::compiler::target::word AOT_WeakProperty_value_offset = 0x
 static constexpr dart::compiler::target::word AOT_WeakReference_target_offset = 0x8;
 static constexpr dart::compiler::target::word AOT_WeakReference_type_arguments_offset = 0x10;
 static constexpr dart::compiler::target::word AOT_Coroutine_name_offset = 0x8;
-static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x10;
-static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset = 0x18;
-static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset = 0x20;
-static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset = 0x28;
-static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset = 0x30;
-static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset = 0x38;
-static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset = 0x40;
-static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+static constexpr dart::compiler::target::word AOT_Coroutine_entry_offset = 0x18;
+static constexpr dart::compiler::target::word AOT_Coroutine_trampoline_offset =
+    0x20;
+static constexpr dart::compiler::target::word AOT_Coroutine_arguments_offset =
+    0x28;
+static constexpr dart::compiler::target::word AOT_Coroutine_attributes_offset =
+    0x30;
+static constexpr dart::compiler::target::word AOT_Coroutine_caller_offset =
+    0x38;
+static constexpr dart::compiler::target::word AOT_Coroutine_scheduler_offset =
+    0x40;
+static constexpr dart::compiler::target::word AOT_Coroutine_processor_offset =
     0x48;
-static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_previous_offset =
+    0x50;
+static constexpr dart::compiler::target::word AOT_Coroutine_next_offset = 0x58;
 static constexpr dart::compiler::target::word AOT_Coroutine_to_state_offset =
-    0x60;
-static constexpr dart::compiler::target::word AOT_Coroutine_to_processor_offset =
-    0x58;
-static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x68;
+    0x68;
+static constexpr dart::compiler::target::word
+    AOT_Coroutine_to_processor_offset = 0x60;
+static constexpr dart::compiler::target::word AOT_Coroutine_index_offset = 0x10;
 static constexpr dart::compiler::target::word
     AOT_Coroutine_native_stack_base_offset = 0x70;
 static constexpr dart::compiler::target::word AOT_Coroutine_stack_root_offset =

@@ -3778,6 +3778,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(StringPtr, name)
   VISIT_FROM(name)
+  COMPRESSED_POINTER_FIELD(SmiPtr, index)
   COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
   COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
   COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
@@ -3789,16 +3790,14 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(CoroutinePtr, next)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_state)
-  VISIT_TO(processor)
+  VISIT_TO(to_state)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-  word index_;
   uword native_stack_base_;
   uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
 
  public:
-  word index() const { return index_; }
   uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }

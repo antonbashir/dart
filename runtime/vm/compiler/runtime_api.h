@@ -1037,6 +1037,7 @@ class SuspendState : public AllStatic {
 class Coroutine : public AllStatic {
  public:
   static word name_offset();
+  static word index_offset();
   static word entry_offset();
   static word trampoline_offset();
   static word arguments_offset();
@@ -1048,7 +1049,6 @@ class Coroutine : public AllStatic {
   static word next_offset();
   static word to_state_offset();
   static word to_processor_offset();
-  static word index_offset();
   static word native_stack_base_offset();
   static word stack_root_offset();
   static word stack_base_offset();
@@ -1358,10 +1358,16 @@ class Isolate : public AllStatic {
   static word current_tag_offset();
   static word user_tag_offset();
   static word finalizers_offset();
+  static word isolate_object_store_offset();
 #if !defined(PRODUCT)
   static word single_step_offset();
   static word has_resumption_breakpoints_offset();
 #endif  // !defined(PRODUCT)
+};
+
+class IsolateObjectStore : public AllStatic {
+ public:
+  static word coroutines_registry_offset();
 };
 
 class IsolateGroup : public AllStatic {

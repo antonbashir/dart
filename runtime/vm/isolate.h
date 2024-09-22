@@ -1076,6 +1076,10 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     return OFFSET_OF(Isolate, finalizers_);
   }
 
+  static intptr_t isolate_object_store_offset() {
+    return OFFSET_OF(Isolate, isolate_object_store_);
+  }
+
   Dart_EnvironmentCallback environment_callback() const {
     return environment_callback_;
   }
@@ -1564,11 +1568,11 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool single_step_ = false;
   bool has_resumption_breakpoints_ = false;
   bool is_system_isolate_ = false;
+  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
-  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \

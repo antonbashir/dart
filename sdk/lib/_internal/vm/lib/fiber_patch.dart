@@ -20,6 +20,15 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
+  external int get _index;
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _index(int value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
   external void Function() get _entry;
   @patch
   @pragma("vm:recognized", "other")
@@ -89,6 +98,10 @@ class _Coroutine {
   @pragma("vm:prefer-inline")
   external set _toProcessor(_FiberLink value);
 
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:never-inline")
+  external static _Coroutine _at(int index);
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")

@@ -10,6 +10,10 @@ class _Coroutine {
   @patch
   set _name(String value) => throw UnsupportedError("_Coroutine._current");
   @patch
+  int get _index => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _index(int value) => throw UnsupportedError("_Coroutine._current");
+  @patch
   void Function() get _entry => throw UnsupportedError("_Coroutine._current");
   @patch
   set _entry(void Function() value) => throw UnsupportedError("_Coroutine._current");
@@ -43,6 +47,8 @@ class _Coroutine {
   set _toProcessor(_FiberLink value) => throw UnsupportedError("_Coroutine._current");
   @patch
   static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
+  @patch
+  static _Coroutine _at(int index) => throw UnsupportedError("_Coroutine._initialize");
   @patch
   static void _initialize(_Coroutine root) => throw UnsupportedError("_Coroutine._initialize");
   @patch

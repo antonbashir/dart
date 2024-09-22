@@ -9201,6 +9201,7 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kTypedData_memMove8:
     case MethodRecognizer::kTypedData_memMove16:
     case MethodRecognizer::kCoroutine_getCurrent:
+    case MethodRecognizer::kCoroutine_atIndex:
     case MethodRecognizer::kMemCopy:
     // Prevent the GC from running so that the operation is atomic from
     // a GC point of view. Always double check implementation in
@@ -26657,12 +26658,12 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
   memset(stack_end, 0, size * kWordSize);
   uword stack_limit = (uword)(stack_end);
   uword stack_base = (uword)(stack_end + size);
-  coroutine.StoreNonPointer(&coroutine.untag()->index_, -1);
   coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
   coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
 
+  coroutine.untag()->set_index(Smi::New(-1));
   coroutine.untag()->set_next(coroutine.ptr());
   coroutine.untag()->set_previous(coroutine.ptr());
   coroutine.untag()->set_to_state(coroutine.ptr());
@@ -26673,7 +26674,6 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     object_store->set_active_coroutines(coroutine);
   }
   links_add_head(active, coroutine.to_state());
-
 
   intptr_t free_index = -1;
   for (auto index = 0; index < registry.Length(); index ++) {
@@ -26687,7 +26687,7 @@ CoroutinePtr Coroutine::New(uintptr_t size) {
     registry = Array::Grow(registry, registry.Length() * 2, Heap::kOld);
     object_store->set_coroutines_registry(registry);
   }
-  coroutine.StoreNonPointer(&coroutine.untag()->index_, free_index);
+  coroutine.untag()->set_index(Smi::New(free_index));
   registry.SetAt(free_index, coroutine);
 
   return coroutine.ptr();
@@ -26749,28 +26749,32 @@ CoroutinePtr Coroutine::links_remove_head(CoroutinePtr head) {
   return shift;
 }
 
-void Coroutine::Recycle(Zone* zone) const {
+void Coroutine::recycle(Zone* zone) const {
   change_state(CoroutineAttributes::finished | CoroutineAttributes::running | CoroutineAttributes::scheduled, CoroutineAttributes::created);
   memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()));
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
   untag()->set_caller(Coroutine::null());
-  links_steal_head(Isolate::Current()->isolate_object_store()->finished_coroutines(), to_state());
+  auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
+  links_steal_head(finished, to_state());
 }
 
-void Coroutine::Dispose(Thread* thread, Zone* zone) const {
+void Coroutine::dispose(Thread* thread, Zone* zone) const {
   change_state(CoroutineAttributes::finished | CoroutineAttributes::running | CoroutineAttributes::scheduled, CoroutineAttributes::disposed);
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
-  auto temp = coroutines_data[index()];
-  coroutines_data[index()] = coroutines_data[coroutines.Length() - 1];
-  if (coroutines_data[index()] != Object::null()) {
-    Coroutine::RawCast(coroutines_data[index()])->untag()->index_ = index();
+  auto current_index = Smi::Value(index());
+  auto temp = coroutines_data[current_index];
+  coroutines_data[current_index] = coroutines_data[coroutines.Length() - 1];
+  if (coroutines_data[current_index] != Object::null()) {
+    Coroutine::RawCast(coroutines_data[current_index])->untag()->set_index(Smi::New(current_index));
   }
   coroutines_data[coroutines.Length() - 1] = temp;
   coroutines.Truncate(coroutines.Length() - 1);
+  links_remove(untag()->to_state());
   untag()->set_name(String::null());
+  untag()->set_index(Smi::New(-1));
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
   untag()->set_arguments(Array::empty_array().ptr());
@@ -26789,7 +26793,6 @@ void Coroutine::Dispose(Thread* thread, Zone* zone) const {
   StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
   StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
-  StoreNonPointer(&untag()->index_, -1);
 }
 
 const char* Coroutine::ToCString() const {
@@ -26818,13 +26821,12 @@ void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
   }
   if (found.ptr() != ptr()) {
     if (is_persistent()) {
-      Recycle(zone);
+      recycle(zone);
     }
     if (is_ephemeral()) {
-      Dispose(thread, zone);
+      dispose(thread, zone);
     }
-    found.change_state(CoroutineAttributes::suspended,
-                       CoroutineAttributes::running);
+    found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
     thread->EnterCoroutine(found.ptr());
     return;
   }
@@ -26838,17 +26840,18 @@ void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
   auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
+  auto& coroutines = Array::Handle(Array::Handle(zone, object_store->coroutines_registry()).Copy());
   for (auto index = 0; index < coroutines.Length(); index++) {
     auto& coroutine = Coroutine::Handle(Coroutine::RawCast(coroutines.At(index)));
     if (coroutine.is_persistent()) {
-      coroutine.Recycle(zone);
+      coroutine.recycle(zone);
       continue;
     }
     if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
-      coroutine.Dispose(thread, zone);
+      coroutine.dispose(thread, zone);
     }
   }
+  coroutines.Truncate(0);
   thread->ExitCoroutine();
 }
 
@@ -26861,10 +26864,10 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
   if (is_persistent()) {
-    Recycle(zone);
+    recycle(zone);
   }
   if (is_ephemeral()) {
-    Dispose(thread, zone);
+    dispose(thread, zone);
   }
   thread->EnterCoroutine(caller());
 }

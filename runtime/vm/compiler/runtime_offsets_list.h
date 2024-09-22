@@ -170,12 +170,14 @@
   FIELD(Isolate, current_tag_offset)                                           \
   FIELD(Isolate, default_tag_offset)                                           \
   FIELD(Isolate, finalizers_offset)                                            \
+  FIELD(Isolate, isolate_object_store_offset)                                  \
   NOT_IN_PRODUCT(FIELD(Isolate, has_resumption_breakpoints_offset))            \
   FIELD(IsolateGroup, object_store_offset)                                     \
   FIELD(IsolateGroup, class_table_offset)                                      \
   FIELD(IsolateGroup, cached_class_table_table_offset)                         \
   NOT_IN_PRODUCT(FIELD(Isolate, single_step_offset))                           \
   FIELD(Isolate, user_tag_offset)                                              \
+  FIELD(IsolateObjectStore, coroutines_registry_offset)                        \
   FIELD(LinkedHashBase, data_offset)                                           \
   FIELD(ImmutableLinkedHashBase, data_offset)                                  \
   FIELD(LinkedHashBase, deleted_keys_offset)                                   \
@@ -408,10 +410,10 @@
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, scheduler_offset)                                           \
   FIELD(Coroutine, processor_offset)                                           \
-  FIELD(Coroutine, previous_offset)                                       \
-  FIELD(Coroutine, next_offset)                                           \
-  FIELD(Coroutine, to_state_offset)                                      \
-  FIELD(Coroutine, to_processor_offset)                                    \
+  FIELD(Coroutine, previous_offset)                                            \
+  FIELD(Coroutine, next_offset)                                                \
+  FIELD(Coroutine, to_state_offset)                                            \
+  FIELD(Coroutine, to_processor_offset)                                        \
   FIELD(Coroutine, index_offset)                                               \
   FIELD(Coroutine, native_stack_base_offset)                                   \
   FIELD(Coroutine, stack_root_offset)                                          \

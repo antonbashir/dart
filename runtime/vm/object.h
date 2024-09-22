@@ -12735,6 +12735,10 @@ class Coroutine : public Instance {
   StringPtr name() const { return untag()->name(); }
   static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
 
+  SmiPtr index() const { return untag()->index(); }
+  void set_index(SmiPtr index) const { untag()->index_ = index; }
+  static uword index_offset() { return OFFSET_OF(UntaggedCoroutine, index_); }
+
   ClosurePtr entry() const { return untag()->entry(); }
   static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
 
@@ -12832,10 +12836,6 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, to_state_);
   }
 
-  intptr_t index() const { return untag()->index(); }
-  void set_index(intptr_t index) const { untag()->index_ = index; }
-  static uword index_offset() { return OFFSET_OF(UntaggedCoroutine, index_); }
-
   uword native_stack_base() const { return untag()->native_stack_base(); }
   static uword native_stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, native_stack_base_);
@@ -12856,9 +12856,9 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
 
-  void Recycle(Zone* zone) const;
+  void recycle(Zone* zone) const;
 
-  void Dispose(Thread* thread, Zone* zone) const;
+  void dispose(Thread* thread, Zone* zone) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

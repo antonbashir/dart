@@ -79,6 +79,9 @@ class _Coroutine {
   external String get _name;
   external set _name(String value);
 
+  external int get _index;
+  external set _index(int value);
+
   external void Function() get _entry;
   external set _entry(void Function() value);
 
@@ -104,7 +107,8 @@ class _Coroutine {
   external set _toProcessor(_FiberLink value);
 
   external static _Coroutine? get _current;
-
+  
+  external static _Coroutine _at(int index);
   external static void _initialize(_Coroutine root);
   external static void _transfer(_Coroutine from, _Coroutine to);
   external static void _fork(_Coroutine from, _Coroutine to);
@@ -176,6 +180,14 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     Fiber.current()._processor._schedule(fiber);
     if (suspend) Fiber.suspend();
   }
+
+  @pragma("vm:prefer-inline")
+  static Fiber at(int index) {
+    return Fiber(_Coroutine._at(index));
+  }
+
+  @pragma("vm:prefer-inline")
+  int get index => _coroutine._index;
 
   @pragma("vm:prefer-inline")
   FiberState get state => FiberState(_coroutine._attributes);

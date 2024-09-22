@@ -90,10 +90,10 @@ class ParsedFunction;
   V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
   V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
   V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)                     \
-  V(Coroutine, UntaggedCoroutine, previous, Coroutine, VAR)               \
-  V(Coroutine, UntaggedCoroutine, next, Coroutine, VAR)                   \
-  V(Coroutine, UntaggedCoroutine, to_state, Coroutine, VAR)              \
-  V(Coroutine, UntaggedCoroutine, to_processor, Coroutine, VAR)            \
+  V(Coroutine, UntaggedCoroutine, previous, Coroutine, VAR)                    \
+  V(Coroutine, UntaggedCoroutine, next, Coroutine, VAR)                        \
+  V(Coroutine, UntaggedCoroutine, to_state, Coroutine, VAR)                    \
+  V(Coroutine, UntaggedCoroutine, to_processor, Coroutine, VAR)                \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
   V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)
 
@@ -128,6 +128,7 @@ class ParsedFunction;
   V(TypeArguments, UntaggedTypeArguments, hash, Smi, VAR)                      \
   V(TypeArguments, UntaggedTypeArguments, length, Smi, FINAL)                  \
   V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)                       \
+  V(Coroutine, UntaggedCoroutine, index, Smi, VAR)                             \
   V(Coroutine, UntaggedCoroutine, attributes, Smi, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
@@ -245,6 +246,7 @@ class ParsedFunction;
   V(Isolate, _, finalizers, GrowableObjectArray, VAR)                          \
   V(LocalHandle, _, ptr, Dynamic, VAR)                                         \
   V(ObjectStore, _, record_field_names, Array, VAR)                            \
+  V(IsolateObjectStore, _, coroutines_registry, Array, VAR)                    \
   V(Thread, _, coroutine, Coroutine, VAR)                                      \
   V(PersistentHandle, _, ptr, Dynamic, VAR)
 
@@ -293,6 +295,7 @@ class ParsedFunction;
 // load optimizations.
 #define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)                                  \
   V(IsolateGroup, _, object_store, false, FINAL)                               \
+  V(Isolate, _, isolate_object_store, false, FINAL)                            \
   V(Thread, _, api_top_scope, false, VAR)                                      \
   V(Thread, _, isolate, false, FINAL)                                          \
   V(Thread, _, isolate_group, false, FINAL)                                    \
