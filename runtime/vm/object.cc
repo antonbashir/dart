@@ -26748,27 +26748,44 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->stack_root_ = (uword) nullptr;
   untag()->stack_base_ = (uword) nullptr;
   untag()->stack_limit_ = (uword) nullptr;
+  
   if (!remove_from_registry) {
     untag()->set_index(Smi::New(-1));
     return;
   }
+
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  auto coroutines_data = Array::DataOf(object_store->coroutines_registry());
   auto current_index = Smi::Value(index());
   untag()->set_index(Smi::New(-1));
-  if (coroutines.Length() == FLAG_coroutines_registry_initial_size) {
-    coroutines_data[current_index] = Object::null();
+
+  if ((size_t)coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
+    coroutines.SetAt(current_index, Object::null_object());
     return;
   }
-  auto current = coroutines_data[current_index];
-  auto last = coroutines_data[coroutines.Length() - 1];
-  coroutines_data[current_index] = last;
-  if (last != Object::null()) {
-    Coroutine::RawCast(last)->untag()->set_index(Smi::New(current_index));
+
+  size_t new_length = 0;
+  for (intptr_t index = 0; index < coroutines.Length(); index++) {
+    if (index == current_index) continue; 
+    if (coroutines.At(index) != Object::null()) {
+      new_length++;
+    }
   }
-  coroutines_data[coroutines.Length() - 1] = current;
-  coroutines.Truncate(coroutines.Length() - 1);
+
+  auto& coroutine = Coroutine::Handle(zone);
+  auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, FLAG_coroutines_registry_initial_size)));
+  for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
+    if (index == current_index) continue;
+    if (coroutines.At(index) != Object::null()) {
+      coroutine ^= coroutines.At(index);
+      new_coroutines.SetAt(new_index, coroutine);
+      new_index++;
+    }
+  }
+
+  coroutines.Truncate(0);
+
+  object_store->set_coroutines_registry(new_coroutines);
 }
 
 const char* Coroutine::ToCString() const {
@@ -26817,7 +26834,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
-  auto recycled_count = 0;
+  size_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
       coroutine ^= coroutines.At(index);
@@ -26832,21 +26849,21 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
     }
   }
 
-  coroutines.Truncate(0);
-
-  auto recycled = Array::New(std::max(recycled_count, FLAG_coroutines_registry_initial_size));
-  auto recycled_data = Array::DataOf(recycled);
-  auto recycled_index = 0;
-  for (auto index = 0; index < coroutines.Length(); index++) {
+  auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, FLAG_coroutines_registry_initial_size)));
+  for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
       coroutine ^= coroutines.At(index);
       if (coroutine.is_finished()) {
-        recycled_data[recycled_index] = coroutine.ptr();
+        recycled.SetAt(recycled_index, coroutine);
         coroutine.set_index(Smi::New(recycled_index));
       }
     }
   }
-  object_store->set_coroutines_registry(Array::Handle(recycled));
+
+  coroutines.Truncate(0);
+
+  object_store->set_coroutines_registry(recycled);
+
   thread->ExitCoroutine();
 }
 
