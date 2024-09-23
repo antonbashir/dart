@@ -26759,12 +26759,12 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   auto current_index = Smi::Value(index());
   untag()->set_index(Smi::New(-1));
 
-  if ((size_t)coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
+  if (coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
     coroutines.SetAt(current_index, Object::null_object());
     return;
   }
 
-  size_t new_length = 0;
+  intptr_t new_length = 0;
   for (intptr_t index = 0; index < coroutines.Length(); index++) {
     if (index == current_index) continue; 
     if (coroutines.At(index) != Object::null()) {
@@ -26774,7 +26774,7 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
 
   if (new_length != 0) {
     auto& coroutine = Coroutine::Handle(zone);
-    auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, FLAG_coroutines_registry_initial_size)));
+    auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, (intptr_t)FLAG_coroutines_registry_initial_size)));
     for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
       if (index == current_index) continue;
       if (coroutines.At(index) != Object::null()) {
@@ -26841,7 +26841,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
 
-  size_t recycled_count = 0;
+  intptr_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
       coroutine ^= coroutines.At(index);
@@ -26857,7 +26857,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   }
 
   if (recycled_count != 0) {
-    auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, FLAG_coroutines_registry_initial_size)));
+    auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, (intptr_t)FLAG_coroutines_registry_initial_size)));
     for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
       if (coroutines.At(index) != Object::null()) {
         coroutine ^= coroutines.At(index);
