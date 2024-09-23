@@ -21,7 +21,7 @@ extension type _FiberProcessorLink(_Coroutine _coroutine) {
   set _next(_FiberProcessorLink value) => _coroutine._toProcessorNext = value._coroutine;
 
   @pragma("vm:prefer-inline")
-  bool get _isEmpty => identical(_next, _previous) && identical(_next, _coroutine);
+  bool get _isEmpty => identical(_next._coroutine, _previous._coroutine) && identical(_next._coroutine, _coroutine);
 
   @pragma("vm:prefer-inline")
   void _stealTail(_FiberProcessorLink item) {
