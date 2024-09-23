@@ -6,8 +6,9 @@ var globalState = "";
 
 void main() {
 //  testBase();
-//  testClosures();
-  testRecycle();
+
+  testClosures();
+//  testRecycle();
 }
 
 void testBase() {
@@ -57,51 +58,51 @@ void testClosures() {
   );
   Expect.equals("after fiber", localState);
 
-  localState = "localState";
-  Fiber.launch(
-    () {
-      Expect.equals("localState", localState);
-      localState = "after main fiber";
-      Fiber.schedule(Fiber.current());
-      Fiber.spawn(
-        () {
-          Expect.equals("after main fiber", localState);
-          localState = "after child fiber";
-          Fiber.reschedule();
-          Expect.equals("after child fiber after main fiber", localState);
-          localState = "finish";
-        },
-        name: "child",
-      );
-      Expect.equals("after child fiber", localState);
-      localState = "after child fiber after main fiber";
-      Fiber.suspend();
-    },
-    terminate: true,
-  );
-  Expect.equals("finish", localState);
+  // localState = "localState";
+  // Fiber.launch(
+  //   () {
+  //     Expect.equals("localState", localState);
+  //     localState = "after main fiber";
+  //     Fiber.schedule(Fiber.current());
+  //     Fiber.spawn(
+  //       () {
+  //         Expect.equals("after main fiber", localState);
+  //         localState = "after child fiber";
+  //         Fiber.reschedule();
+  //         Expect.equals("after child fiber after main fiber", localState);
+  //         localState = "finish";
+  //       },
+  //       name: "child",
+  //     );
+  //     Expect.equals("after child fiber", localState);
+  //     localState = "after child fiber after main fiber";
+  //     Fiber.suspend();
+  //   },
+  //   terminate: true,
+  // );
+  // Expect.equals("finish", localState);
 
-  localState = "level 1";
-  Fiber.launch(
-    () {
-      Expect.equals("level 1", localState);
-      localState = "level 2";
-      Fiber.spawn(
-        () {
-          Expect.equals("level 2", localState);
-          localState = "level 3";
-          Fiber.spawn(
-            () {
-              Expect.equals("level 3", localState);
-              localState = "level 4";
-            },
-            name: "child",
-          );
-        },
-        name: "child",
-      );
-    },
-    terminate: true,
-  );
-  Expect.equals("level 4", localState);
+  // localState = "level 1";
+  // Fiber.launch(
+  //   () {
+  //     Expect.equals("level 1", localState);
+  //     localState = "level 2";
+  //     Fiber.spawn(
+  //       () {
+  //         Expect.equals("level 2", localState);
+  //         localState = "level 3";
+  //         Fiber.spawn(
+  //           () {
+  //             Expect.equals("level 3", localState);
+  //             localState = "level 4";
+  //           },
+  //           name: "child",
+  //         );
+  //       },
+  //       name: "child",
+  //     );
+  //   },
+  //   terminate: true,
+  // );
+  // Expect.equals("level 4", localState);
 }

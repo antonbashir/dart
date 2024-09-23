@@ -117,19 +117,16 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   static void launch(
     void Function() entry, {
     List arguments = const [],
-    bool persistent = false,
     bool terminate = false,
     int size = _kDefaultStackSize,
     void Function()? idle,
   }) =>
-      _FiberProcessor(idle: idle)
-        .._process(
-          entry,
-          arguments: arguments,
-          persistent: persistent,
-          terminate: terminate,
-          size: size,
-        );
+      _FiberProcessor(idle: idle)._process(
+        entry,
+        arguments: arguments,
+        terminate: terminate,
+        size: size,
+      );
 
   @pragma("vm:prefer-inline")
   factory Fiber.child(
@@ -169,8 +166,10 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void fork(Fiber callee) {
     final caller = Fiber.current();
-    assert(!callee.state.disposed && !callee.state.running);
+    assert(callee.state.created);
     callee._caller = caller;
+    caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
+    callee._attributes = (callee._attributes & ~_kFiberCreated) | _kFiberRunning;
     _Coroutine._fork(caller!, callee);
   }
 
@@ -179,8 +178,10 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final caller = Fiber.current();
     assert(caller._caller != null);
     final callee = Fiber(caller._caller!);
+    assert(callee.state.suspended || identical(callee, caller!._scheduler));
     caller._caller = caller!._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
+    callee._attributes = (callee._attributes & ~_kFiberSuspended) | _kFiberRunning;
     _Coroutine._transfer(caller!, callee);
   }
 
@@ -199,8 +200,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void reschedule() {
-    final current = Fiber.current();
-    current._processor._schedule(current);
+    Fiber.schedule(current);
     Fiber.suspend();
   }
 

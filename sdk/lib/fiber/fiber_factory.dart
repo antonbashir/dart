@@ -18,7 +18,6 @@ class _FiberFactory {
     void Function() entry, {
     List arguments = const [],
     int size = _kDefaultStackSize,
-    bool persistent = false,
   }) {
     final coroutine = _Coroutine._(size, Fiber._run);
     coroutine._name = _kMainFiber;
@@ -27,7 +26,7 @@ class _FiberFactory {
     coroutine._toProcessor = _FiberLink(Fiber(coroutine));
     coroutine._scheduler = processor._scheduler;
     coroutine._arguments = arguments;
-    coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
+    coroutine._attributes = _kFiberCreated;
     return Fiber(coroutine);
   }
 

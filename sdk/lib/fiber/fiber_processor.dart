@@ -23,20 +23,12 @@ class _FiberProcessor {
     void Function() entry, {
     List arguments = const [],
     int size = _kDefaultStackSize,
-    bool persistent = false,
     bool terminate = false,
   }) {
     if (_running) throw StateError("FiberProcessor is running");
     _terminate = terminate;
     _entry = entry;
-    final main = _FiberFactory._main(
-      this,
-      _main,
-      arguments: arguments,
-      persistent: persistent,
-      size: size,
-    );
-    _schedule(main);
+    _schedule(_FiberFactory._main(this, _main, arguments: arguments, size: size));
     _running = true;
     _Coroutine._initialize(_scheduler);
     _running = false;
@@ -44,8 +36,7 @@ class _FiberProcessor {
 
   @pragma("vm:never-inline")
   static void _main() {
-    final main = Fiber.current();
-    final processor = main._processor;
+    final processor = Fiber.current()._processor;
     processor._entry();
     if (processor._terminate && processor._running) Fiber.terminate();
   }
@@ -55,10 +46,8 @@ class _FiberProcessor {
     final scheduler = Fiber.current();
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
-    final main = scheduled._removeHead()._value;
     final idle = processor._idle;
-    main._caller = scheduler;
-    _Coroutine._fork(scheduler, main);
+    Fiber.fork(scheduled._removeHead()._value);
     if (scheduled._isEmpty || !processor._running) return;
     for (;;) {
       var last = scheduled._removeHead()._value;
@@ -68,13 +57,14 @@ class _FiberProcessor {
         last = Fiber(last._caller!);
       }
       last._caller = scheduler;
-      first._attributes &= ~_kFiberSuspended;
-      first._attributes |= _kFiberRunning;
+      scheduler._attributes = (scheduler._attributes & ~_kFiberRunning) | _kFiberSuspended;
+      first._attributes = (first._attributes & ~_kFiberSuspended) | _kFiberRunning;
       _Coroutine._transfer(scheduler, first);
-      if (!processor._running) return;
-      if (scheduled._isEmpty) {
+      if (processor._running && scheduled._isEmpty) {
         idle();
         if (!processor._running) return;
+        if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
+        continue;
       }
     }
   }
