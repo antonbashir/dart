@@ -166,10 +166,10 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void fork(Fiber callee) {
     final caller = Fiber.current();
-    assert(callee.state.created);
+    assert(callee.state.created || callee.state.finished);
     callee._caller = caller;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
-    callee._attributes = (callee._attributes & ~_kFiberCreated) | _kFiberRunning;
+    callee._attributes = (callee._attributes & ~_kFiberCreated & ~_kFiberFinished) | _kFiberRunning;
     _Coroutine._fork(caller!, callee);
   }
 

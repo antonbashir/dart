@@ -26647,7 +26647,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 
   if (finished != Coroutine::null() && !links_empty(finished)) {
     auto& coroutine = Coroutine::Handle(links_first(finished));
-    coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::running);
+    coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     links_steal_head(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
     if (stack_size != coroutine.untag()->stack_size()) {
