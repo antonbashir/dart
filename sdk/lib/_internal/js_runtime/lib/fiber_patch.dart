@@ -30,21 +30,25 @@ class _Coroutine {
   @patch
   set _attributes(int value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  _Coroutine? get _caller => throw UnsupportedError("_Coroutine._current");
+  _Coroutine get _caller => throw UnsupportedError("_Coroutine._current");
   @patch
-  set _caller(_Coroutine? value) => throw UnsupportedError("_Coroutine._current");
+  set _caller(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  _Coroutine? get _scheduler => throw UnsupportedError("_Coroutine._current");
+  _Coroutine get _scheduler => throw UnsupportedError("_Coroutine._current");
   @patch
-  set _scheduler(_Coroutine? value) => throw UnsupportedError("_Coroutine._current");
+  set _scheduler(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
   @patch
   _FiberProcessor get _processor => throw UnsupportedError("_Coroutine._current");
   @patch
   set _processor(_FiberProcessor value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  _FiberLink get _toProcessor => throw UnsupportedError("_Coroutine._current");
+  _FiberLink get _toProcessorNext => throw UnsupportedError("_Coroutine._current");
   @patch
-  set _toProcessor(_FiberLink value) => throw UnsupportedError("_Coroutine._current");
+  set _toProcessorNext(_FiberLink value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _FiberLink get _toProcessorPrevious => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _toProcessorPrevious(_FiberLink value) => throw UnsupportedError("_Coroutine._current");
   @patch
   static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
   @patch

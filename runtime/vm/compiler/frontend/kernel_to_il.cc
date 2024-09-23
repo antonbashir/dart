@@ -930,7 +930,8 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(Coroutine_getScheduler, Coroutine_scheduler)                               \
   V(Coroutine_getProcessor, Coroutine_processor)                               \
-  V(Coroutine_getToProcessor, Coroutine_to_processor)                          \
+  V(Coroutine_getToProcessorNext, Coroutine_to_processor_next)                 \
+  V(Coroutine_getToProcessorPrevious, Coroutine_to_processor_previous)         \
   V(Coroutine_getIndex, Coroutine_index)                                       \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
@@ -960,8 +961,8 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_setAttributes, Coroutine_attributes)                             \
   V(Coroutine_setCaller, Coroutine_caller)                                     \
   V(Coroutine_setScheduler, Coroutine_scheduler)                               \
-  V(Coroutine_setProcessor, Coroutine_processor)                               \
-  V(Coroutine_setToProcessor, Coroutine_to_processor)                          \
+  V(Coroutine_setToProcessorNext, Coroutine_to_processor_next)                 \
+  V(Coroutine_setToProcessorPrevious, Coroutine_to_processor_previous)         \
   V(WeakProperty_setKey, WeakProperty_key)                                     \
   V(WeakProperty_setValue, WeakProperty_value)                                 \
   V(WeakReference_setTarget, WeakReference_target)

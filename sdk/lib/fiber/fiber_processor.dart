@@ -16,7 +16,7 @@ class _FiberProcessor {
   _FiberProcessor({void Function()? idle}) {
     _idle = idle ?? _defaultIdle;
     _scheduler = _FiberFactory._scheduler(this);
-    _scheduled = _FiberLink(_scheduler);
+    _scheduled = _FiberLink._create(_scheduler);
   }
 
   void _process(
@@ -47,14 +47,14 @@ class _FiberProcessor {
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     final idle = processor._idle;
-    Fiber.fork(scheduled._removeHead()._value);
+    Fiber.fork(Fiber(scheduled._removeHead()._coroutine));
     if (scheduled._isEmpty || !processor._running) return;
     for (;;) {
-      var last = scheduled._removeHead()._value;
+      var last = Fiber(scheduled._removeHead()._coroutine);
       var first = last;
       while (!scheduled._isEmpty) {
-        last._caller = scheduled._removeHead()._value;
-        last = Fiber(last._caller!);
+        last._caller = Fiber(scheduled._removeHead()._coroutine);
+        last = Fiber(last._caller);
       }
       last._caller = scheduler;
       scheduler._attributes = (scheduler._attributes & ~_kFiberRunning) | _kFiberSuspended;
@@ -73,5 +73,5 @@ class _FiberProcessor {
   void _stop() => _running = false;
 
   @pragma("vm:prefer-inline")
-  void _schedule(Fiber fiber) => _scheduled._stealTail(fiber._toProcessor as _FiberLink);
+  void _schedule(Fiber fiber) => _scheduled._stealTail(_FiberLink(fiber._coroutine));
 }

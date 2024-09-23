@@ -14,6 +14,7 @@
 #include "vm/class_id.h"
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
+#include "vm/coroutine.h"
 #include "vm/exceptions.h"
 #include "vm/globals.h"
 #include "vm/pointer_tagging.h"
@@ -3786,12 +3787,11 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
   COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, previous)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, next)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, to_processor)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_state)
-  VISIT_TO(to_state)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
+  VISIT_TO(to_processor_previous)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+  CoroutineLink to_state_;
   uword stack_size_;
   uword native_stack_base_;
   uword stack_root_;
@@ -3799,12 +3799,12 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_limit_;
 
  public:
+  CoroutineLink* to_state() { return &to_state_; }
   uword stack_size() const { return stack_size_; }
   uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }
-
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

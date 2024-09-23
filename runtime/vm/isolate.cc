@@ -15,6 +15,7 @@
 #include "vm/class_finalizer.h"
 #include "vm/code_observers.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/dart.h"
 #include "vm/dart_api_message.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -49,6 +50,7 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread.h"
 #include "vm/thread_interrupter.h"
@@ -1773,6 +1775,8 @@ Isolate::Isolate(IsolateGroup* isolate_group,
   // how the vm_tag (kEmbedderTagId) can be set, these tags need to
   // move to the OSThread structure.
   set_user_tag(UserTags::kDefaultUserTag);
+  active_coroutines_.Initialize();
+  finished_coroutines_.Initialize();
 }
 
 #undef REUSABLE_HANDLE_SCOPE_INIT
@@ -2765,6 +2769,16 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   if (pointers_to_verify_at_exit_.length() != 0) {
     visitor->VisitPointers(&pointers_to_verify_at_exit_[0],
                            pointers_to_verify_at_exit_.length());
+  }
+
+  if (!active_coroutines_.IsEmpty()) {
+    active_coroutines_.ForEach(
+        [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
+  }
+
+  if (!finished_coroutines_.IsEmpty()) {
+    finished_coroutines_.ForEach(
+        [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
   }
 }
 

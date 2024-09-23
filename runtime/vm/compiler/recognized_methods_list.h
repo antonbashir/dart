@@ -390,19 +390,23 @@ namespace dart {
   V(_Coroutine, get:_trampoline, Coroutine_getTrampoline, 0xc5b7b65a)          \
   V(_Coroutine, get:_arguments, Coroutine_getArguments, 0x4df70fc1)            \
   V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
-  V(_Coroutine, get:_caller, Coroutine_getCaller, 0xe388183b)                  \
-  V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0xd5f06e7c)            \
+  V(_Coroutine, get:_caller, Coroutine_getCaller, 0x786ccafc)                  \
+  V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0x6ad5213d)            \
   V(_Coroutine, get:_processor, Coroutine_getProcessor, 0x6c9fb5d8)            \
-  V(_Coroutine, get:_toProcessor, Coroutine_getToProcessor, 0x69c3b244)        \
+  V(_Coroutine, get:_toProcessorNext, Coroutine_getToProcessorNext, 0x6b5f28ff)\
+  V(_Coroutine, get:_toProcessorPrevious, Coroutine_getToProcessorPrevious,    \
+  0x610b1090)                                                                  \
   V(_Coroutine, set:_name, Coroutine_setName, 0x45ff0fef)                      \
   V(_Coroutine, set:_entry, Coroutine_setEntry, 0x896541f5)                    \
   V(_Coroutine, set:_trampoline, Coroutine_setTrampoline, 0x86f70f17)          \
   V(_Coroutine, set:_arguments, Coroutine_setArguments, 0x8c8ec23e)            \
   V(_Coroutine, set:_attributes, Coroutine_setAttributes, 0xb87a94c6)          \
   V(_Coroutine, set:_caller, Coroutine_setCaller, 0xbae0fb78)                  \
-  V(_Coroutine, set:_scheduler, Coroutine_setScheduler, 0xad4951b9)            \
+  V(_Coroutine, set:_scheduler, Coroutine_setScheduler, 0x9bcc583a)            \
   V(_Coroutine, set:_processor, Coroutine_setProcessor, 0x74996ed5)            \
-  V(_Coroutine, set:_toProcessor, Coroutine_setToProcessor, 0x6b557dc1)        \
+  V(_Coroutine, set:_toProcessorNext, Coroutine_setToProcessorNext, 0xcce6823c)\
+  V(_Coroutine, set:_toProcessorPrevious, Coroutine_setToProcessorPrevious,    \
+  0xc29269cd)                                                                  \
   V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc845245c)                \
   V(_Coroutine, _at, Coroutine_atIndex, 0x28baa8da)                            \
 

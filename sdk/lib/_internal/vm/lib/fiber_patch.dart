@@ -65,20 +65,20 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _Coroutine? get _caller;
+  external _Coroutine get _caller;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _caller(_Coroutine? value);
+  external set _caller(_Coroutine value);
 
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _Coroutine? get _scheduler;
+  external _Coroutine get _scheduler;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _scheduler(_Coroutine? value);
+  external set _scheduler(_Coroutine value);
 
   @patch
   @pragma("vm:recognized", "other")
@@ -92,11 +92,22 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _FiberLink get _toProcessor;
+  external _FiberLink get _toProcessorNext;
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _toProcessor(_FiberLink value);
+  external set _toProcessorNext(_FiberLink value);
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external _FiberLink get _toProcessorPrevious;
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  external set _toProcessorPrevious(_FiberLink value);
 
   @patch
   @pragma("vm:recognized", "other")

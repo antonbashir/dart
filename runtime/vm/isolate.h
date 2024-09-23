@@ -18,6 +18,7 @@
 #include "platform/atomic.h"
 #include "vm/base_isolate.h"
 #include "vm/class_table.h"
+#include "vm/coroutine.h"
 #include "vm/dispatch_table.h"
 #include "vm/exceptions.h"
 #include "vm/ffi_callback_metadata.h"
@@ -86,6 +87,7 @@ class StubCode;
 class ThreadRegistry;
 class UserTag;
 class WeakTable;
+class CoroutineLink;
 
 class IsolateVisitor {
  public:
@@ -1008,6 +1010,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   CoroutinePtr RestoreCoroutine();
   void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
 
+  CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
+  CoroutineLink* active_coroutines() { return &active_coroutines_; }
+
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
   }
@@ -1629,23 +1634,14 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-  enum {
-    kPendingHandlerIndex = 0,
-    kPendingMethodNameIndex,
-    kPendingKeysIndex,
-    kPendingValuesIndex,
-    kPendingReplyPortIndex,
-    kPendingIdIndex,
-    kPendingEntrySize
-  };
+  enum {kPendingHandlerIndex = 0, kPendingMethodNameIndex, kPendingKeysIndex,
+        kPendingValuesIndex,      kPendingReplyPortIndex,  kPendingIdIndex,
+        kPendingEntrySize};
   GrowableObjectArrayPtr pending_service_extension_calls_;
 
   // We use 2 list entries for each registered extension handler.
-  enum {
-    kRegisteredNameIndex = 0,
-    kRegisteredHandlerIndex,
-    kRegisteredEntrySize
-  };
+  enum {kRegisteredNameIndex = 0, kRegisteredHandlerIndex,
+        kRegisteredEntrySize};
   GrowableObjectArrayPtr registered_service_extension_handlers_;
 
   // Used to wake the isolate when it is in the pause event loop.
@@ -1683,6 +1679,8 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
   CoroutinePtr saved_coroutine_;
+  CoroutineLink active_coroutines_;
+  CoroutineLink finished_coroutines_;
 
   GrowableObjectArrayPtr tag_table_;
 

@@ -23,8 +23,9 @@ class _FiberFactory {
     coroutine._name = _kMainFiber;
     coroutine._entry = entry;
     coroutine._processor = processor;
-    coroutine._toProcessor = _FiberLink(Fiber(coroutine));
     coroutine._scheduler = processor._scheduler;
+    coroutine._toProcessorNext = _FiberLink._create(coroutine);
+    coroutine._toProcessorPrevious = _FiberLink._create(coroutine);
     coroutine._arguments = arguments;
     coroutine._attributes = _kFiberCreated;
     return Fiber(coroutine);
@@ -43,8 +44,9 @@ class _FiberFactory {
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;
     coroutine._processor = current._processor;
-    coroutine._toProcessor = _FiberLink(Fiber(coroutine));
     coroutine._scheduler = current._scheduler;
+    coroutine._toProcessorNext = _FiberLink._create(coroutine);
+    coroutine._toProcessorPrevious = _FiberLink._create(coroutine);
     coroutine._arguments = arguments;
     coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
     return Fiber(coroutine);

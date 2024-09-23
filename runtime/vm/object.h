@@ -12717,43 +12717,6 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size, FunctionPtr trampoline);
 
-  DART_FORCE_INLINE
-  static bool links_empty(CoroutinePtr links) {
-    return links->untag()->previous() == links->untag()->next() &&
-           links->untag()->next() == links;
-  }
-
-  DART_FORCE_INLINE
-  static CoroutinePtr links_first(CoroutinePtr links) {
-    return links->untag()->next();
-  }
-
-  DART_FORCE_INLINE
-  static void links_remove(CoroutinePtr item) {
-    item->untag()->previous()->untag()->set_next(item->untag()->next());
-    item->untag()->next()->untag()->set_previous(item->untag()->previous());
-    item->untag()->set_next(item);
-    item->untag()->set_previous(item);
-  }
-
-  DART_FORCE_INLINE
-  static void links_add_head(CoroutinePtr to, CoroutinePtr item) {
-    item->untag()->set_previous(to);
-    item->untag()->set_next(to->untag()->next());
-    item->untag()->previous()->untag()->set_next(item);
-    item->untag()->next()->untag()->set_previous(item);
-  }
-
-  DART_FORCE_INLINE
-  static void links_steal_head(CoroutinePtr to, CoroutinePtr item) {
-    item->untag()->previous()->untag()->set_next(item.untag()->next());
-    item->untag()->next()->untag()->set_previous(item.untag()->previous());
-    item->untag()->set_previous(to);
-    item->untag()->set_next(to->untag()->next());
-    item->untag()->previous()->untag()->set_next(to);
-    item->untag()->next()->untag()->set_previous(to);
-  }
-
   void HandleException(Thread* thread, uword stack_pointer);
   void HandleRootEnter(Thread* thread, Zone* zone);
   void HandleRootExit(Thread* thread, Zone* zone);
@@ -12840,20 +12803,17 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, processor_);
   }
 
-  CoroutinePtr previous() const { return untag()->previous(); }
-  static uword previous_offset() {
-    return OFFSET_OF(UntaggedCoroutine, previous_);
+  CoroutinePtr to_processor_next() const { return untag()->to_processor_next(); }
+  static uword to_processor_next_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_processor_next_);
+  }
+  
+  CoroutinePtr to_processor_previous() const { return untag()->to_processor_previous(); }
+  static uword to_processor_previous_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_processor_previous_);
   }
 
-  CoroutinePtr next() const { return untag()->next(); }
-  static uword next_offset() { return OFFSET_OF(UntaggedCoroutine, next_); }
-
-  ObjectPtr to_processor() const { return untag()->to_processor(); }
-  static uword to_processor_offset() {
-    return OFFSET_OF(UntaggedCoroutine, to_processor_);
-  }
-
-  CoroutinePtr to_state() const { return untag()->to_state(); }
+  CoroutineLink* to_state() const { return untag()->to_state(); }
   static uword to_state_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_state_);
   }
@@ -12885,7 +12845,9 @@ class Coroutine : public Instance {
 
   void recycle(Zone* zone) const;
 
-  void dispose(Thread* thread, Zone* zone, bool remove_from_registry = true) const;
+  void dispose(Thread* thread,
+               Zone* zone,
+               bool remove_from_registry = true) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

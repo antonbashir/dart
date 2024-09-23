@@ -92,17 +92,20 @@ class _Coroutine {
   external int get _attributes;
   external set _attributes(int value);
 
-  external _Coroutine? get _caller;
-  external set _caller(_Coroutine? value);
+  external _Coroutine get _caller;
+  external set _caller(_Coroutine value);
 
-  external _Coroutine? get _scheduler;
-  external set _scheduler(_Coroutine? value);
+  external _Coroutine get _scheduler;
+  external set _scheduler(_Coroutine value);
 
   external _FiberProcessor get _processor;
   external set _processor(_FiberProcessor value);
 
-  external _FiberLink get _toProcessor;
-  external set _toProcessor(_FiberLink value);
+  external _FiberLink get _toProcessorNext;
+  external set _toProcessorNext(_FiberLink value);
+
+  external _FiberLink get _toProcessorPrevious;
+  external set _toProcessorPrevious(_FiberLink value);
 
   external static _Coroutine? get _current;
 
@@ -170,19 +173,18 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     callee._caller = caller;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     callee._attributes = (callee._attributes & ~_kFiberCreated & ~_kFiberFinished) | _kFiberRunning;
-    _Coroutine._fork(caller!, callee);
+    _Coroutine._fork(caller, callee);
   }
 
   @pragma("vm:prefer-inline")
   static void suspend() {
     final caller = Fiber.current();
-    assert(caller._caller != null);
-    final callee = Fiber(caller._caller!);
+    final callee = Fiber(caller._caller);
     assert(callee.state.suspended || identical(callee, caller!._scheduler));
-    caller._caller = caller!._scheduler;
+    caller._caller = caller._scheduler;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
     callee._attributes = (callee._attributes & ~_kFiberSuspended) | _kFiberRunning;
-    _Coroutine._transfer(caller!, callee);
+    _Coroutine._transfer(caller, callee);
   }
 
   @pragma("vm:prefer-inline")

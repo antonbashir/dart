@@ -109,6 +109,7 @@ vm_sources = [
   "ffi_callback_metadata.h",
   "field_table.cc",
   "field_table.h",
+  "fiber.h",
   "finalizable_data.h",
   "fixed_cache.h",
   "flag_list.h",

@@ -26638,18 +26638,19 @@ CodePtr SuspendState::GetCodeObject() const {
 }
 
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
+  auto isolate = Isolate::Current();
   auto object_store = Isolate::Current()->isolate_object_store();
-  auto finished = object_store->finished_coroutines();
-  auto active = object_store->active_coroutines();
+  auto finished = isolate->finished_coroutines();
+  auto active = isolate->active_coroutines();
   auto& registry = Array::Handle(object_store->coroutines_registry());
   
   auto page_size = VirtualMemory::PageSize();
   auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
 
-  if (finished != Coroutine::null() && !links_empty(finished)) {
-    auto& coroutine = Coroutine::Handle(links_first(finished));
+  if (!finished->IsEmpty()) {
+    auto& coroutine = Coroutine::Handle(finished->First()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
-    links_steal_head(active, coroutine.untag()->to_state());
+    CoroutineLink::StealHead(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
     if (stack_size != coroutine.untag()->stack_size()) {
       #if defined(DART_TARGET_OS_WINDOWS)
@@ -26689,21 +26690,16 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_limit = (uword)(stack_end);
   auto stack_base = (uword)(stack_size + (char*)stack_end);
 
+  coroutine.untag()->to_state_.Initialize();
   coroutine.untag()->stack_size_ = stack_size;
   coroutine.untag()->native_stack_base_ = (uword) nullptr;
   coroutine.untag()->stack_root_ = stack_base;
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->set_index(Smi::New(-1));
-  coroutine.untag()->set_next(coroutine.ptr());
-  coroutine.untag()->set_previous(coroutine.ptr());
-  coroutine.untag()->set_to_state(coroutine.ptr());
   coroutine.untag()->set_trampoline(trampoline);
 
-  if (finished == Coroutine::null()) object_store->set_finished_coroutines(coroutine);
-  if (active == Coroutine::null()) object_store->set_active_coroutines(coroutine);
-  
-  links_add_head(active, coroutine.to_state());
+  CoroutineLink::AddHead(active, coroutine.to_state());
 
   intptr_t free_index = -1;
   for (auto index = 0; index < registry.Length(); index ++) {
@@ -26725,14 +26721,14 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 
 void Coroutine::recycle(Zone* zone) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::finished);
-  auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
+  auto finished = Isolate::Current()->finished_coroutines();
   untag()->stack_base_ = untag()->stack_root_;
-  links_steal_head(finished, to_state());
+  CoroutineLink::StealHead(finished, to_state());
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
-  links_remove(untag()->to_state());
+  CoroutineLink::Remove(untag()->to_state());
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
@@ -26740,10 +26736,8 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_caller(Coroutine::null());
   untag()->set_scheduler(Coroutine::null());
   untag()->set_processor(Object::null());
-  untag()->set_to_processor(Object::null());
-  untag()->set_to_state(Coroutine::null());
-  untag()->set_previous(Coroutine::null());
-  untag()->set_next(Coroutine::null());
+  untag()->set_to_processor_next(Coroutine::null());
+  untag()->set_to_processor_previous(Coroutine::null());
 #if defined(DART_TARGET_OS_WINDOWS)
   VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
 #else
@@ -26857,8 +26851,8 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
-  auto active = Isolate::Current()->isolate_object_store()->active_coroutines();
-  links_steal_head(active, to_state());
+  auto active = Isolate::Current()->active_coroutines();
+  CoroutineLink::StealHead(active, to_state());
   thread->EnterCoroutine(ptr());
 }
 
