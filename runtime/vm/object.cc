@@ -26650,7 +26650,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   if (LIKELY(finished->IsNotEmpty())) {
     auto& coroutine = Coroutine::Handle(finished->First()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
-    CoroutineLink::StealHead(active, coroutine.untag()->to_state());
+    CoroutineLink::StealHead(active, coroutine.to_state());
     coroutine.untag()->set_trampoline(trampoline);
     if (UNLIKELY(stack_size != coroutine.untag()->stack_size())) {
       #if defined(DART_TARGET_OS_WINDOWS)
@@ -26728,7 +26728,7 @@ void Coroutine::recycle(Zone* zone) const {
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
-  CoroutineLink::Remove(untag()->to_state());
+  CoroutineLink::Remove(to_state());
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
