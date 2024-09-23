@@ -26647,12 +26647,12 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto page_size = VirtualMemory::PageSize();
   auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
 
-  if (!finished->IsEmpty()) {
+  if (LIKELY(finished->IsNotEmpty())) {
     auto& coroutine = Coroutine::Handle(finished->First()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     CoroutineLink::StealHead(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
-    if (stack_size != coroutine.untag()->stack_size()) {
+    if (UNLIKELY(stack_size != coroutine.untag()->stack_size())) {
       #if defined(DART_TARGET_OS_WINDOWS)
         VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
       #else
@@ -26772,20 +26772,26 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
     }
   }
 
-  auto& coroutine = Coroutine::Handle(zone);
-  auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, FLAG_coroutines_registry_initial_size)));
-  for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
-    if (index == current_index) continue;
-    if (coroutines.At(index) != Object::null()) {
-      coroutine ^= coroutines.At(index);
-      new_coroutines.SetAt(new_index, coroutine);
-      new_index++;
+  if (new_length != 0) {
+    auto& coroutine = Coroutine::Handle(zone);
+    auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, FLAG_coroutines_registry_initial_size)));
+    for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
+      if (index == current_index) continue;
+      if (coroutines.At(index) != Object::null()) {
+        coroutine ^= coroutines.At(index);
+        new_coroutines.SetAt(new_index, coroutine);
+        coroutine.set_index(Smi::New(new_index));
+        new_index++;
+      }
     }
+    coroutines.Truncate(0);
+    object_store->set_coroutines_registry(new_coroutines);
+    return;
   }
 
   coroutines.Truncate(0);
-
-  object_store->set_coroutines_registry(new_coroutines);
+  coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
+  object_store->set_coroutines_registry(coroutines);
 }
 
 const char* Coroutine::ToCString() const {
@@ -26834,6 +26840,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
+
   size_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
     if (coroutines.At(index) != Object::null()) {
@@ -26849,20 +26856,23 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
     }
   }
 
-  auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, FLAG_coroutines_registry_initial_size)));
-  for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
-    if (coroutines.At(index) != Object::null()) {
-      coroutine ^= coroutines.At(index);
-      if (coroutine.is_finished()) {
-        recycled.SetAt(recycled_index, coroutine);
-        coroutine.set_index(Smi::New(recycled_index));
+  if (recycled_count != 0) {
+    auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, FLAG_coroutines_registry_initial_size)));
+    for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
+      if (coroutines.At(index) != Object::null()) {
+        coroutine ^= coroutines.At(index);
+        if (coroutine.is_finished()) {
+          recycled.SetAt(recycled_index, coroutine);
+          coroutine.set_index(Smi::New(recycled_index));
+        }
       }
     }
+    object_store->set_coroutines_registry(recycled);
   }
 
   coroutines.Truncate(0);
-
-  object_store->set_coroutines_registry(recycled);
+  coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
+  object_store->set_coroutines_registry(coroutines);
 
   thread->ExitCoroutine();
 }

@@ -18,6 +18,9 @@ class CoroutineLink {
   bool IsEmpty() const { return previous_ == next_ && next_ == this; }
 
   DART_FORCE_INLINE
+  bool IsNotEmpty() const { return !IsEmpty(); }
+
+  DART_FORCE_INLINE
   void Initialize() { previous_ = next_ = this; }
 
   DART_FORCE_INLINE
