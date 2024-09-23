@@ -26652,7 +26652,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     CoroutineLink::StealHead(active, coroutine.to_state());
     coroutine.untag()->set_trampoline(trampoline);
-    if (UNLIKELY(stack_size != coroutine.untag()->stack_size())) {
+    if (UNLIKELY(stack_size != coroutine.stack_size())) {
       #if defined(DART_TARGET_OS_WINDOWS)
         VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
       #else
