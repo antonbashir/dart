@@ -4,6 +4,7 @@
 
 #include "vm/object.h"
 
+#include <algorithm>
 #include <memory>
 #include "platform/globals.h"
 #include "vm/flags.h"
@@ -26819,7 +26820,6 @@ void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
-  change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
@@ -26837,10 +26837,10 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
       }
     }
   }
-  
+
   coroutines.Truncate(0);
 
-  auto recycled = Array::NewUninitialized(recycled_count);
+  auto recycled = Array::New(std::max(recycled_count, FLAG_coroutines_registry_initial_size));
   auto recycled_data = Array::DataOf(recycled);
   auto recycled_index = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
@@ -26863,7 +26863,6 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
-  change_state(CoroutineAttributes::running, CoroutineAttributes::finished);
   auto saved_caller = caller();
   auto new_caller_state = (Smi::Value(saved_caller->untag()->attributes()) & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
   saved_caller->untag()->set_attributes(Smi::New(new_caller_state));

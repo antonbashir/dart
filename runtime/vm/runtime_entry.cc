@@ -3888,15 +3888,15 @@ DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   forked.HandleForkedEnter(thread, zone);
 }
+
 DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
   auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
   forked.HandleForkedExit(thread, zone);
 }
 
-DEFINE_LEAF_RUNTIME_ENTRY(void, FailCoroutine, 2, Thread* thread, uword stack_pointer) {
-  Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, stack_pointer);
+DEFINE_RUNTIME_ENTRY(FailCoroutine, 2) {
+  Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
 }
-END_LEAF_RUNTIME_ENTRY
 
 
 // Use expected function signatures to help MSVC compiler resolve overloading.

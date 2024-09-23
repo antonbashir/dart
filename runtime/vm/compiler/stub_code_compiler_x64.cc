@@ -3113,13 +3113,11 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
           compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
   __ CompareObject(TMP, NullObject());
   __ BranchIf(EQUAL, &no_coroutine);
-  {
-    LeafRuntimeScope rt(assembler, /*frame_size=*/0,
-                        /*preserve_registers=*/true);
-    __ movq(CallingConventions::kArg1Reg, THR);
-    __ movq(CallingConventions::kArg2Reg, RSP);
-    rt.Call(kFailCoroutineRuntimeEntry, 2);
-  }
+  __ PushObject(NullObject());
+  __ SmiTag(RSP);
+  __ PushRegister(RSP);
+  __ CallRuntime(kFailCoroutineRuntimeEntry, 2);
+  __ Drop(2);
   __ Bind(&no_coroutine);
 
   // Set the tag.
