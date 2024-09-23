@@ -200,7 +200,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void reschedule() {
-    Fiber.schedule(current);
+    Fiber.schedule(Fiber.current());
     Fiber.suspend();
   }
 
