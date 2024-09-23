@@ -48,7 +48,6 @@ void childEntry() {
 
 void testClosures() {
   var localState = "localState";
-
   Fiber.launch(
     () {
       Expect.equals("localState", localState);

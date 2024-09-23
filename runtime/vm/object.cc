@@ -26662,17 +26662,16 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
 
   if (!links_empty(finished)) {
-    auto coroutine = links_first(finished);
+    auto& coroutine = Coroutine::Handle(links_first(finished));
+    coroutine.change_state(CoroutineAttributes::created, CoroutineAttributes::running);
     links_steal_head(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
     if (stack_size != coroutine.untag()->stack_size()) {
-
       #if defined(DART_TARGET_OS_WINDOWS)
         VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
       #else
         munmap((void*)coroutine.untag()->stack_limit(), coroutine.untag()->stack_size());
       #endif
-
       #if defined(DART_TARGET_OS_WINDOWS)
         void** stack_base = (void**)((uintptr_t)VirtualAlloc(
             nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
@@ -26682,7 +26681,6 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
             nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
       #endif
-      
       auto stack_limit = (uword)stack_end;
       auto stack_base = (uword)(stack_size + stack_end);
       coroutine.untag()->stack_size_ = stack_size;
@@ -26690,7 +26688,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
       coroutine.untag()->stack_base_ = stack_base;
       coroutine.untag()->stack_limit_ = stack_limit;
     }
-    return coroutine;
+    return coroutine.ptr();
   }
 
   const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
@@ -26715,6 +26713,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->set_next(coroutine.ptr());
   coroutine.untag()->set_previous(coroutine.ptr());
   coroutine.untag()->set_to_state(coroutine.ptr());
+  coroutine.untag()->set_trampoline(trampoline);
   links_add_head(active, coroutine.to_state());
 
   intptr_t free_index = -1;
@@ -26731,10 +26730,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     object_store->set_coroutines_registry(registry);
   }
   coroutine.untag()->set_index(Smi::New(free_index));
-  coroutine.untag()->set_trampoline(trampoline);
-
   registry.SetAt(free_index, coroutine);
-
   return coroutine.ptr();
 }
 
@@ -26743,19 +26739,11 @@ void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
   change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::created);
   untag()->stack_base_ = untag()->stack_root_;
-  untag()->set_name(String::null());
-  untag()->set_entry(Closure::null());
-  untag()->set_trampoline(Function::null());
-  untag()->set_arguments(Array::empty_array().ptr());
-  untag()->set_caller(Coroutine::null());
-  untag()->set_scheduler(Coroutine::null());
-  untag()->set_processor(Object::null());
-  untag()->set_to_processor(Object::null());
   links_steal_head(finished, to_state());
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
-  change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::disposed);
+  change_state(CoroutineAttributes::created | CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::disposed);
   links_remove(untag()->to_state());
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
@@ -26869,6 +26857,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
   change_state(CoroutineAttributes::created, CoroutineAttributes::running);
+  links_steal_head(Isolate::Current()->isolate_object_store()->active_coroutines(), to_state());
   if (caller() != scheduler()) {
     auto new_caller_state = (Smi::Value(caller()->untag()->attributes()) & ~CoroutineAttributes::running) | CoroutineAttributes::suspended;
     caller()->untag()->set_attributes(Smi::New(new_caller_state));
@@ -26884,9 +26873,7 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
     saved_caller->untag()->set_attributes(Smi::New(new_caller_state));
   }
   if (is_persistent()) {
-    OS::Print("recycle begin\n");
     recycle(zone);
-    OS::Print("recycle\n");
   }
   if (is_ephemeral()) {
     dispose(thread, zone);
