@@ -961,6 +961,7 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_setAttributes, Coroutine_attributes)                             \
   V(Coroutine_setCaller, Coroutine_caller)                                     \
   V(Coroutine_setScheduler, Coroutine_scheduler)                               \
+  V(Coroutine_setProcessor, Coroutine_processor)                               \
   V(Coroutine_setToProcessorNext, Coroutine_to_processor_next)                 \
   V(Coroutine_setToProcessorPrevious, Coroutine_to_processor_previous)         \
   V(WeakProperty_setKey, WeakProperty_key)                                     \
