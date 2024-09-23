@@ -3792,12 +3792,14 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_state)
   VISIT_TO(to_state)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+  uword stack_size_;
   uword native_stack_base_;
   uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
 
  public:
+  uword stack_size() const { return stack_size_; }
   uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }

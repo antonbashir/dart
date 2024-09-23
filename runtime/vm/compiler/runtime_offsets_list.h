@@ -415,6 +415,7 @@
   FIELD(Coroutine, to_state_offset)                                            \
   FIELD(Coroutine, to_processor_offset)                                        \
   FIELD(Coroutine, index_offset)                                               \
+  FIELD(Coroutine, stack_size_offset)                                          \
   FIELD(Coroutine, native_stack_base_offset)                                   \
   FIELD(Coroutine, stack_root_offset)                                          \
   FIELD(Coroutine, stack_base_offset)                                          \

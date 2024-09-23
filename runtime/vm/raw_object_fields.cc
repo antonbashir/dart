@@ -245,6 +245,7 @@ namespace dart {
   F(Coroutine, to_state_)                                                      \
   F(Coroutine, to_processor_)                                                  \
   F(Coroutine, index_)                                                         \
+  F(Coroutine, stack_size_)                                                    \
   F(Coroutine, native_stack_base_)                                             \
   F(Coroutine, stack_root_)                                                    \
   F(Coroutine, stack_base_)                                                    \

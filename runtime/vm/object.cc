@@ -26658,15 +26658,19 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     object_store->set_active_coroutines(links);
   }
   
+  auto page_size = VirtualMemory::PageSize();
+  auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
+
   if (!links_empty(finished)) {
     auto coroutine = links_first(finished);
     links_steal_head(active, coroutine.untag()->to_state());
     coroutine.untag()->set_trampoline(trampoline);
-    if (size != (uword)(coroutine.untag()->stack_root() - coroutine.untag()->stack_limit())) {
+    if (stack_size != coroutine.untag()->stack_size()) {
+
       #if defined(DART_TARGET_OS_WINDOWS)
-        VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+        VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
       #else
-        munmap((void**)coroutine.untag()->stack_limit(), (uword)(coroutine.untag()->stack_root() - coroutine.untag()->stack_limit()));
+        munmap((void*)coroutine.untag()->stack_limit(), coroutine.untag()->stack_size());
       #endif
 
       #if defined(DART_TARGET_OS_WINDOWS)
@@ -26675,13 +26679,13 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
             PAGE_READWRITE));
       #else
         void** stack_end = (void**)((uintptr_t)mmap(
-            nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+            nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
       #endif
       
-      memset(stack_end, 0, size * kWordSize);
-      uword stack_limit = (uword)(stack_end);
-      uword stack_base = (uword)(stack_end + size);
+      auto stack_limit = (uword)stack_end;
+      auto stack_base = (uword)(stack_size + stack_end);
+      coroutine.untag()->stack_size_ = stack_size;
       coroutine.untag()->stack_root_ = stack_base;
       coroutine.untag()->stack_base_ = stack_base;
       coroutine.untag()->stack_limit_ = stack_limit;
@@ -26696,17 +26700,17 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
       PAGE_READWRITE));
 #else
   void** stack_end = (void**)((uintptr_t)mmap(
-      nullptr, size * kWordSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+      nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
-  memset(stack_end, 0, size * kWordSize);
-  uword stack_limit = (uword)(stack_end);
-  uword stack_base = (uword)(stack_end + size);
-  coroutine.StoreNonPointer(&coroutine.untag()->native_stack_base_, (uword) nullptr);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_root_, stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_base_, stack_base);
-  coroutine.StoreNonPointer(&coroutine.untag()->stack_limit_, stack_limit);
+  auto stack_limit = (uword)(stack_end);
+  auto stack_base = (uword)(stack_size + stack_end);
 
+  coroutine.untag()->stack_size_ = stack_size;
+  coroutine.untag()->native_stack_base_ = (uword) nullptr;
+  coroutine.untag()->stack_root_ = stack_base;
+  coroutine.untag()->stack_base_ = stack_base;
+  coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->set_index(Smi::New(-1));
   coroutine.untag()->set_next(coroutine.ptr());
   coroutine.untag()->set_previous(coroutine.ptr());
@@ -26738,8 +26742,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->isolate_object_store()->finished_coroutines();
   change_state(CoroutineAttributes::finished | CoroutineAttributes::suspended | CoroutineAttributes::running, CoroutineAttributes::created);
-  memset((void**)stack_limit(), 0, (uword)(stack_root() - stack_limit()) * kWordSize);
-  StoreNonPointer(&untag()->stack_base_, (uword)untag()->stack_root_);
+  untag()->stack_base_ = untag()->stack_root_;
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
@@ -26766,14 +26769,15 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_previous(Coroutine::null());
   untag()->set_next(Coroutine::null());
 #if defined(DART_TARGET_OS_WINDOWS)
-  VirtualFree((void**)stack_limit(), 0, MEM_RELEASE);
+  VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
 #else
-  munmap((void**)stack_limit(), (uword)(stack_root() - stack_limit()));
+  munmap((void*)stack_limit(), stack_size());
 #endif
-  StoreNonPointer(&untag()->native_stack_base_, (uword) nullptr);
-  StoreNonPointer(&untag()->stack_root_, (uword) nullptr);
-  StoreNonPointer(&untag()->stack_base_, (uword) nullptr);
-  StoreNonPointer(&untag()->stack_limit_, (uword) nullptr);
+  untag()->stack_size_ = (uword) 0;
+  untag()->native_stack_base_ = (uword) nullptr;
+  untag()->stack_root_ = (uword) nullptr;
+  untag()->stack_base_ = (uword) nullptr;
+  untag()->stack_limit_ = (uword) nullptr;
   if (!remove_from_registry) {
     untag()->set_index(Smi::New(-1));
     return;

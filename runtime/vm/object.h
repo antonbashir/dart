@@ -12858,6 +12858,11 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, to_state_);
   }
 
+  uword stack_size() const { return untag()->stack_size(); }
+  static uword stack_size_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_size_);
+  }
+
   uword native_stack_base() const { return untag()->native_stack_base(); }
   static uword native_stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, native_stack_base_);
