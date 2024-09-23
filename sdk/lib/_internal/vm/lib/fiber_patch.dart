@@ -92,22 +92,22 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _FiberLink get _toProcessorNext;
+  external _Coroutine get _toProcessorNext;
 
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _toProcessorNext(_FiberLink value);
+  external set _toProcessorNext(_Coroutine value);
 
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external _FiberLink get _toProcessorPrevious;
+  external _Coroutine get _toProcessorPrevious;
 
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _toProcessorPrevious(_FiberLink value);
+  external set _toProcessorPrevious(_Coroutine value);
 
   @patch
   @pragma("vm:recognized", "other")

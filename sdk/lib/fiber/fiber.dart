@@ -1,6 +1,5 @@
 library dart.fiber;
 
-part 'fiber_link.dart';
 part 'fiber_processor.dart';
 part 'fiber_factory.dart';
 
@@ -101,11 +100,11 @@ class _Coroutine {
   external _FiberProcessor get _processor;
   external set _processor(_FiberProcessor value);
 
-  external _FiberLink get _toProcessorNext;
-  external set _toProcessorNext(_FiberLink value);
+  external _Coroutine get _toProcessorNext;
+  external set _toProcessorNext(_Coroutine value);
 
-  external _FiberLink get _toProcessorPrevious;
-  external set _toProcessorPrevious(_FiberLink value);
+  external _Coroutine get _toProcessorPrevious;
+  external set _toProcessorPrevious(_Coroutine value);
 
   external static _Coroutine? get _current;
 
