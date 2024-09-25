@@ -111,16 +111,19 @@ class _Coroutine {
 
   @patch
   @pragma("vm:recognized", "other")
-  @pragma("vm:never-inline")
+  @pragma("vm:prefer-inline")
   external static _Coroutine _at(int index);
+  
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   external static void _initialize(_Coroutine root);
+  
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   external static void _transfer(_Coroutine from, _Coroutine to);
+  
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")

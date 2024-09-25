@@ -66,6 +66,7 @@ extension type FiberAttributes(int _attributes) {
 extension type FiberArguments(List _arguments) {
   @pragma("vm:prefer-inline")
   dynamic operator [](int index) => _arguments[index];
+
   @pragma("vm:prefer-inline")
   List<dynamic> get value => _arguments;
 }
@@ -216,6 +217,9 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   int get index => _coroutine._index;
+
+  @pragma("vm:prefer-inline")
+  String get name => _coroutine._name;
 
   @pragma("vm:prefer-inline")
   FiberState get state => FiberState(_coroutine._attributes);

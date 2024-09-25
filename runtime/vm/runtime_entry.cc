@@ -3894,7 +3894,7 @@ DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
   forked.HandleForkedExit(thread, zone);
 }
 
-DEFINE_RUNTIME_ENTRY(FailCoroutine, 2) {
+DEFINE_RUNTIME_ENTRY(JumpToFrameCoroutine, 2) {
   Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
 }
 

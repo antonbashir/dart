@@ -33,7 +33,7 @@ VM_UNIT_TEST_CASE(CircularLinkedList) {
 
   // Test: Removing head results in next element to be head.
   for (int i = 1; i <= 100; i++) {
-    list._removeHead();
+    list.RemoveHead();
     for (int j = i + 1; j <= 100; j++) {
       EXPECT(list.HasHead());
       EXPECT(list.head() == j);

@@ -1164,6 +1164,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineInitialize:
     case MethodRecognizer::kCoroutineTransfer:
     case MethodRecognizer::kCoroutine_getCurrent:
+    case MethodRecognizer::kCoroutine_atIndex:
       return true;
     default:
       return false;

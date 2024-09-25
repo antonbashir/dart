@@ -3113,10 +3113,11 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
           compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
   __ CompareObject(TMP, NullObject());
   __ BranchIf(EQUAL, &no_coroutine);
+  __ MoveRegister(TMP, RSP);
+  __ SmiTag(TMP);
   __ PushObject(NullObject());
-  __ SmiTag(RSP);
-  __ PushRegister(RSP);
-  __ CallRuntime(kFailCoroutineRuntimeEntry, 2);
+  __ PushRegister(TMP);
+  __ CallRuntime(kJumpToFrameCoroutineRuntimeEntry, 2);
   __ Drop(2);
   __ Bind(&no_coroutine);
 
