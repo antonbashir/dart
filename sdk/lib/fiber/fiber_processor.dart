@@ -60,7 +60,6 @@ class _FiberProcessor {
     _scheduler = _FiberFactory._scheduler(this);
     _scheduled = _FiberProcessorLink(_scheduler);
     _FiberProcessorLink._create(_scheduler);
-    print("_FiberProcessor constructor");
   }
 
   void _process(
@@ -74,18 +73,14 @@ class _FiberProcessor {
     _entry = entry;
     _schedule(_FiberFactory._main(this, _main, arguments: arguments, size: size));
     _running = true;
-    print("_Coroutine._initialize start");
     _Coroutine._initialize(_scheduler);
-    print("_Coroutine._initialize finish");
     _running = false;
   }
 
   @pragma("vm:never-inline")
   static void _main() {
     final processor = Fiber.current()._processor;
-    print("main entry run");
     processor._entry();
-    print("main entry run done");
     if (processor._terminate && processor._running) Fiber.terminate();
   }
 
@@ -95,9 +90,7 @@ class _FiberProcessor {
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     final idle = processor._idle;
-    print("main fork start");
     Fiber.fork(Fiber(scheduled._removeHead()._coroutine));
-    print("main fork done");
     if (scheduled._isEmpty || !processor._running) return;
     for (;;) {
       var last = Fiber(scheduled._removeHead()._coroutine);
@@ -109,16 +102,13 @@ class _FiberProcessor {
       last._caller = scheduler;
       scheduler._attributes = (scheduler._attributes & ~_kFiberRunning) | _kFiberSuspended;
       first._attributes = (first._attributes & ~_kFiberSuspended) | _kFiberRunning;
-      print("transfer to: ${first.name}");
       _Coroutine._transfer(scheduler, first);
       if (processor._running && scheduled._isEmpty) {
         idle();
         if (!processor._running) {
-          print("procesor is not running, return");
           return;
         }
         if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
-        print("procesor is running, continue");
         continue;
       }
     }
@@ -128,8 +118,5 @@ class _FiberProcessor {
   void _stop() => _running = false;
 
   @pragma("vm:prefer-inline")
-  void _schedule(Fiber fiber) {
-    print("_schedule: ${fiber.name}");
-    _scheduled._stealTail(_FiberProcessorLink(fiber._coroutine));
-  }
+  void _schedule(Fiber fiber) => _scheduled._stealTail(_FiberProcessorLink(fiber._coroutine));
 }

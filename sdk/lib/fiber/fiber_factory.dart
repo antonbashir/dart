@@ -4,7 +4,6 @@ class _FiberFactory {
   @pragma("vm:prefer-inline")
   static Fiber _scheduler(_FiberProcessor processor) {
     final coroutine = _Coroutine._(_kSchedulerStackSize, Fiber._run);
-    print("Factory: scheduler");
     coroutine._name = _kSchedulerFiber;
     coroutine._entry = _FiberProcessor._loop;
     coroutine._processor = processor;
@@ -21,7 +20,6 @@ class _FiberFactory {
     int size = _kDefaultStackSize,
   }) {
     final coroutine = _Coroutine._(size, Fiber._run);
-    print("Factory: main");
     coroutine._name = _kMainFiber;
     coroutine._entry = entry;
     coroutine._processor = processor;
@@ -42,7 +40,6 @@ class _FiberFactory {
   }) {
     final current = Fiber.current();
     final coroutine = _Coroutine._(size, Fiber._run);
-    print("Factory: child");
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;
     coroutine._processor = current._processor;

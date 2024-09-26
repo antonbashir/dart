@@ -26648,7 +26648,6 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
 
   if (finished->IsNotEmpty()) {
-    OS::Print("new coroutine from finished\n");
     auto& coroutine = Coroutine::Handle(finished->First()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     CoroutineLink::StealHead(active, coroutine.to_state());
@@ -26702,8 +26701,6 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 
   CoroutineLink::AddHead(active, coroutine.to_state());
 
-  OS::Print("new coroutine\n");
-
   intptr_t free_index = -1;
   for (auto index = 0; index < registry.Length(); index++) {
     if (registry.At(index) == Object::null()) {
@@ -26717,13 +26714,10 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     intptr_t new_capacity = (registry.Length() * 2) | 3;
     registry = Array::Grow(registry, new_capacity, Heap::kOld);
     object_store->set_coroutines_registry(registry);
-    OS::Print("grow coroutine array\n");
   }
 
   coroutine.untag()->set_index(Smi::New(free_index));
   registry.SetAt(free_index, coroutine);
-  
-  OS::Print("new coroutine created\n");
   
   return coroutine.ptr();
 }
@@ -26733,7 +26727,6 @@ void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->finished_coroutines();
   untag()->stack_base_ = untag()->stack_root_;
   CoroutineLink::StealHead(finished, to_state());
-  OS::Print("recycle coroutine\n");
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
@@ -26759,8 +26752,6 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->stack_base_ = (uword) nullptr;
   untag()->stack_limit_ = (uword) nullptr;
   
-  OS::Print("dispose coroutine\n");
-
   if (!remove_from_registry) {
     untag()->set_index(Smi::New(-1));
     return;
@@ -26772,12 +26763,9 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_index(Smi::New(-1));
 
   if (coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
-    OS::Print("no array shrink\n");
     coroutines.SetAt(current_index, Object::null_object());
     return;
   }
-
-  OS::Print("array shrink\n");
 
   intptr_t new_length = 0;
   for (intptr_t index = 0; index < coroutines.Length(); index++) {
@@ -26788,7 +26776,6 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   }
 
   if (new_length != 0) {
-    OS::Print("save recycled\n");
     auto& coroutine = Coroutine::Handle(zone);
     auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, (intptr_t)FLAG_coroutines_registry_initial_size)));
     for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
@@ -26849,7 +26836,6 @@ void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
 }
 
 void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
-  OS::Print("coroutine root enter\n");
   thread->EnterCoroutine(ptr());
 }
 
@@ -26857,8 +26843,6 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
   Coroutine& coroutine = Coroutine::Handle(zone);
-
-  OS::Print("coroutine root exit\n");
 
   intptr_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
@@ -26875,8 +26859,6 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
     }
   }
 
-  OS::Print("dispose coroutines\n");
-
   if (recycled_count != 0) {
     auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, (intptr_t)FLAG_coroutines_registry_initial_size)));
     for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
@@ -26889,14 +26871,11 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
       }
     }
     object_store->set_coroutines_registry(recycled);
-    OS::Print("save recycled after root exit\n");
   }
 
   coroutines.Truncate(0);
   coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
   object_store->set_coroutines_registry(coroutines);
-  
-  OS::Print("shrink array after root exit\n");
 
   thread->ExitCoroutine();
 }
@@ -26905,7 +26884,6 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
   auto active = Isolate::Current()->active_coroutines();
   CoroutineLink::StealHead(active, to_state());
   thread->EnterCoroutine(ptr());
-  OS::Print("forked enter\n");
 }
 
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
@@ -26919,7 +26897,6 @@ void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
     dispose(thread, zone);
   }
   thread->EnterCoroutine(saved_caller);
-  OS::Print("forked exit\n");
 }
 
 void RegExp::set_pattern(const String& pattern) const {
