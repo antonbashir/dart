@@ -832,13 +832,7 @@ uword Thread::GetAndClearInterrupts() {
 }
 
 ErrorPtr Thread::HandleInterrupts() {
-  OS::Print("HandleInterrupts start: %ld\n",
-            Thread::Current()->os_thread()->id());
-  OS::Print("GetAndClearInterrupts start: %ld\n",
-            Thread::Current()->os_thread()->id());
   uword interrupt_bits = GetAndClearInterrupts();
-  OS::Print("GetAndClearInterrupts end: %ld\n",
-            Thread::Current()->os_thread()->id());
   if ((interrupt_bits & kVMInterrupt) != 0) {
     CheckForSafepoint();
     if (isolate_group()->store_buffer()->Overflowed()) {
@@ -877,13 +871,9 @@ ErrorPtr Thread::HandleInterrupts() {
             "\tisolate:    %s\n",
             isolate()->name());
       }
-      OS::Print("HandleInterrupts end 1: %ld\n",
-                Thread::Current()->os_thread()->id());
       return StealStickyError();
     }
   }
-  OS::Print("HandleInterrupts end 2: %ld\n",
-            Thread::Current()->os_thread()->id());
   return Error::null();
 }
 

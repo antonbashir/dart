@@ -204,6 +204,7 @@ void EntryFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
 
 void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   ASSERT(visitor != nullptr);
+  OS::Print(" pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc(), fp(), sp());
   // NOTE: This code runs while GC is in progress and runs within
   // a NoHandleScope block. Hence it is not ok to use regular Zone or
   // Scope handles. We use direct stack handles, the raw pointers in
@@ -303,6 +304,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     // to an osr function. In each of these cases, all stack slots contain
     // tagged pointers, so fall through.
 #if defined(DEBUG)
+    OS::Print(" pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc(), fp(), sp());
     if (FLAG_precompiled_mode) {
       ASSERT(IsStubFrame());
     } else {
