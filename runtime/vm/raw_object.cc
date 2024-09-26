@@ -553,6 +553,7 @@ COMPRESSED_VISITOR(FinalizerEntry)
 COMPRESSED_VISITOR(NativeFinalizer)
 COMPRESSED_VISITOR(MirrorReference)
 COMPRESSED_VISITOR(UserTag)
+COMPRESSED_VISITOR(Coroutine)
 REGULAR_VISITOR(SubtypeTestCache)
 COMPRESSED_VISITOR(LoadingUnit)
 COMPRESSED_VISITOR(TypeParameters)
@@ -748,28 +749,6 @@ intptr_t UntaggedConstSet::VisitConstSetPointers(
     ConstSetPtr raw_obj,
     ObjectPointerVisitor* visitor) {
   return UntaggedSet::VisitSetPointers(raw_obj, visitor);
-}
-
-intptr_t UntaggedCoroutine::VisitCoroutinePointers(
-    CoroutinePtr raw_obj,
-    ObjectPointerVisitor* visitor) {
-  ASSERT_COMPRESSED(Type);
-  
-  // visitor->VisitCompressedPointers(
-  //     raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-
-  // auto next = raw_obj->untag()->to_processor_next();
-  // auto previous = raw_obj->untag()->to_processor_previous();
-  // if (next != Coroutine::null() && next != previous && next != raw_obj) {
-  //   for (auto item = next; item != raw_obj && item != item->untag()->scheduler(); item = item->untag()->to_processor_next())
-  //     {
-  //       OS::Print("Visit child\n");
-  //       VisitCoroutinePointers(item, visitor);
-  //       OS::Print("Visit child\n");
-  //     }
-  // }
-
-  return Coroutine::InstanceSize();
 }
 
 void UntaggedObject::RememberCard(ObjectPtr const* slot) {

@@ -3787,12 +3787,10 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
   COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
-  VISIT_TO(processor)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
-  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) {
-    return reinterpret_cast<CompressedObjectPtr*>(&to_processor_previous_);
-  }
+  VISIT_TO(to_processor_previous)
+  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   CoroutineLink to_state_;
   uword stack_size_;
   uword native_stack_base_;
