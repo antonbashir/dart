@@ -94,7 +94,9 @@ uword Heap::AllocateNew(Thread* thread, intptr_t size) {
       return addr;
     }
 
+    OS::Print("CollectGarbage start");
     CollectGarbage(thread, GCType::kScavenge, GCReason::kNewSpace);
+    OS::Print("CollectGarbage finish");
 
     addr = new_space_.TryAllocate(thread, size);
     if (LIKELY(addr != 0)) {

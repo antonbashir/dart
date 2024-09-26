@@ -754,6 +754,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
     CoroutinePtr raw_obj,
     ObjectPointerVisitor* visitor) {
   ASSERT_COMPRESSED(Type);
+  OS::Print("VisitCoroutinePointers start\n");
 
   visitor->VisitCompressedPointers(
       raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
@@ -765,6 +766,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
       VisitCoroutinePointers(item, visitor);
   }
 
+  OS::Print("VisitCoroutinePointers end\n");
   return Coroutine::InstanceSize();
 }
 

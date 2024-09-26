@@ -735,9 +735,9 @@ void Thread::RestoreCoroutine(CoroutinePtr coroutine) {
   MonitorLocker ml(&thread_lock_);
   coroutine_ = coroutine;
   if (!HasScheduledInterrupts()) {
-    stack_limit_.store(coroutine->untag()->stack_limit());
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
   }
-  saved_stack_limit_ = coroutine->untag()->stack_limit();
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
 }
 
 CoroutinePtr Thread::SaveCoroutine() {
@@ -754,9 +754,9 @@ CoroutinePtr Thread::SaveCoroutine() {
 void Thread::EnterCoroutine(CoroutinePtr coroutine) {
   coroutine_ = coroutine;
   if (!HasScheduledInterrupts()) {
-    stack_limit_.store(coroutine->untag()->stack_limit());
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
   }
-  saved_stack_limit_ = coroutine->untag()->stack_limit();
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
 }
 
 void Thread::ExitCoroutine() {
@@ -771,9 +771,9 @@ void Thread::EnableCoroutine() {
   coroutine_ = disabled_coroutine_;
   disabled_coroutine_ = Coroutine::null();
   if (!HasScheduledInterrupts()) {
-    stack_limit_.store(coroutine_->untag()->stack_limit());
+    stack_limit_.store(coroutine_->untag()->overflow_stack_limit());
   }
-  saved_stack_limit_ = coroutine_->untag()->stack_limit();
+  saved_stack_limit_ = coroutine_->untag()->overflow_stack_limit();
 }
 
 void Thread::DisableCoroutine() {
@@ -789,15 +789,12 @@ uword Thread::GetSavedStackLimit() const {
   return !has_coroutine() ? saved_stack_limit_
          : saved_stack_limit_ == OSThread::kInvalidStackLimit
              ? OSThread::kInvalidStackLimit
-             : coroutine_->untag()->stack_limit();
+             : coroutine_->untag()->overflow_stack_limit();
 }
 
 bool Thread::HasStackHeadroom() const {
-  if (has_coroutine()) {
-    return OSThread::GetCurrentStackPointer() >
-           coroutine_->untag()->stack_limit();
-  }
-  return os_thread()->HasStackHeadroom();
+  return has_coroutine() ? coroutine_->untag()->HasStackHeadroom()
+                         : os_thread()->HasStackHeadroom();
 }
 
 static bool IsInterruptLimit(uword limit) {

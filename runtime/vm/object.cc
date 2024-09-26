@@ -26677,6 +26677,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
       coroutine.untag()->stack_root_ = stack_base;
       coroutine.untag()->stack_base_ = stack_base;
       coroutine.untag()->stack_limit_ = stack_limit;
+      coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
     }
     return coroutine.ptr();
   }
@@ -26700,6 +26701,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->stack_root_ = stack_base;
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
+  coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
   coroutine.untag()->set_index(Smi::New(-1));
   coroutine.untag()->set_trampoline(trampoline);
 
@@ -26746,15 +26748,16 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_to_processor_next(Coroutine::null());
   untag()->set_to_processor_previous(Coroutine::null());
 #if defined(DART_TARGET_OS_WINDOWS)
-  VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
+  VirtualFree((void*)untag()->stack_limit(), 0, MEM_RELEASE);
 #else
-  munmap((void*)stack_limit(), stack_size());
+  munmap((void*)untag()->stack_limit(), untag()->stack_size());
 #endif
   untag()->stack_size_ = (uword) 0;
   untag()->native_stack_base_ = (uword) nullptr;
   untag()->stack_root_ = (uword) nullptr;
   untag()->stack_base_ = (uword) nullptr;
   untag()->stack_limit_ = (uword) nullptr;
+  untag()->overflow_stack_limit_ = (uword) nullptr;
   
   if (!remove_from_registry) {
     untag()->set_index(Smi::New(-1));

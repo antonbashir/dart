@@ -3799,6 +3799,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
+  uword overflow_stack_limit_;
 
  public:
   CoroutineLink* to_state() { return &to_state_; }
@@ -3807,6 +3808,10 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_base() const { return stack_base_; }
   uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }
+  uword overflow_stack_limit() const { return overflow_stack_limit_; }
+  bool HasStackHeadroom() {
+    return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
+  }
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

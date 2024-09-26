@@ -12717,6 +12717,13 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size, FunctionPtr trampoline);
 
+  static uword CalculateHeadroom(uword stack_size) {
+    uword headroom = OSThread::kStackSizeBufferFraction * stack_size;
+    return (headroom > OSThread::kStackSizeBufferMax)
+               ? OSThread::kStackSizeBufferMax
+               : headroom;
+  }
+
   void HandleJumpToFrame(Thread* thread, uword stack_pointer);
   void HandleRootEnter(Thread* thread, Zone* zone);
   void HandleRootExit(Thread* thread, Zone* zone);
@@ -12807,12 +12814,16 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, processor_);
   }
 
-  CoroutinePtr to_processor_next() const { return untag()->to_processor_next(); }
+  CoroutinePtr to_processor_next() const {
+    return untag()->to_processor_next();
+  }
   static uword to_processor_next_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_processor_next_);
   }
-  
-  CoroutinePtr to_processor_previous() const { return untag()->to_processor_previous(); }
+
+  CoroutinePtr to_processor_previous() const {
+    return untag()->to_processor_previous();
+  }
   static uword to_processor_previous_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_processor_previous_);
   }
@@ -12845,6 +12856,14 @@ class Coroutine : public Instance {
   uword stack_limit() const { return untag()->stack_limit(); }
   static uword stack_limit_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
+  }
+
+  uword overflow_stack_limit() const { return untag()->overflow_stack_limit(); }
+  static uword overflow_stack_limit_offset() {
+    return OFFSET_OF(UntaggedCoroutine, overflow_stack_limit_);
+  }
+  bool HasStackHeadroom() {
+    return untag()->HasStackHeadroom();
   }
 
   void recycle(Zone* zone) const;

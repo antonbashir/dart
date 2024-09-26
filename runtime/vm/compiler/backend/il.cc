@@ -8670,7 +8670,7 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::stack_limit_offset());
+  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::overflow_stack_limit_offset());
   __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
 }

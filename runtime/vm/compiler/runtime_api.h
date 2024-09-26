@@ -1053,6 +1053,7 @@ class Coroutine : public AllStatic {
   static word stack_root_offset();
   static word stack_base_offset();
   static word stack_limit_offset();
+  static word overflow_stack_limit_offset();
   static word InstanceSize();
   FINAL_CLASS();
 };
@@ -1279,6 +1280,7 @@ class Thread : public AllStatic {
   static word auto_scope_native_wrapper_entry_point_offset();
 
   static word coroutine_offset();
+  static word disabled_coroutine_offset();
 
 #define THREAD_XMM_CONSTANT_LIST(V)                                            \
   V(float_not)                                                                 \

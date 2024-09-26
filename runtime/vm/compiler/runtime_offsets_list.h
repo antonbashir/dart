@@ -353,6 +353,7 @@
   FIELD(Thread, jump_to_frame_entry_point_offset)                              \
   FIELD(Thread, tsan_utils_offset)                                             \
   FIELD(Thread, coroutine_offset)                                              \
+  FIELD(Thread, disabled_coroutine_offset)                                     \
   FIELD(TsanUtils, setjmp_function_offset)                                     \
   FIELD(TsanUtils, setjmp_buffer_offset)                                       \
   FIELD(TsanUtils, exception_pc_offset)                                        \
@@ -419,6 +420,7 @@
   FIELD(Coroutine, stack_root_offset)                                          \
   FIELD(Coroutine, stack_base_offset)                                          \
   FIELD(Coroutine, stack_limit_offset)                                         \
+  FIELD(Coroutine, overflow_stack_limit_offset)                                \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \
