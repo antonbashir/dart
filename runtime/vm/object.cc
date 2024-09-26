@@ -26696,6 +26696,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_base = (uword)(stack_size + (char*)stack_end);
 
   coroutine.untag()->to_state_.Initialize();
+  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->stack_size_ = stack_size;
   coroutine.untag()->native_stack_base_ = (uword) nullptr;
   coroutine.untag()->stack_root_ = stack_base;

@@ -754,19 +754,21 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
     CoroutinePtr raw_obj,
     ObjectPointerVisitor* visitor) {
   ASSERT_COMPRESSED(Type);
-  OS::Print("VisitCoroutinePointers start\n");
+  
+  // visitor->VisitCompressedPointers(
+  //     raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
 
-  visitor->VisitCompressedPointers(
-      raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+  // auto next = raw_obj->untag()->to_processor_next();
+  // auto previous = raw_obj->untag()->to_processor_previous();
+  // if (next != Coroutine::null() && next != previous && next != raw_obj) {
+  //   for (auto item = next; item != raw_obj && item != item->untag()->scheduler(); item = item->untag()->to_processor_next())
+  //     {
+  //       OS::Print("Visit child\n");
+  //       VisitCoroutinePointers(item, visitor);
+  //       OS::Print("Visit child\n");
+  //     }
+  // }
 
-  auto next = raw_obj->untag()->to_processor_next();
-  auto previous = raw_obj->untag()->to_processor_previous();
-  if (next != Coroutine::null() && next != previous && next != raw_obj) {
-    for (auto item = next; item != raw_obj; item = item->untag()->to_processor_next())
-      VisitCoroutinePointers(item, visitor);
-  }
-
-  OS::Print("VisitCoroutinePointers end\n");
   return Coroutine::InstanceSize();
 }
 

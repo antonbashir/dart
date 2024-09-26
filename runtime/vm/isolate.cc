@@ -2565,7 +2565,7 @@ void Isolate::Shutdown() {
 
   // Don't allow anymore dart code to execution on this isolate.
   if (thread->has_coroutine()) {
-    thread->ExitCoroutine();    
+    thread->ExitCoroutine();
   }
   thread->ClearStackLimit();
 
@@ -2775,13 +2775,15 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   }
 
   if (active_coroutines_.IsNotEmpty()) {
-    active_coroutines_.ForEach(
-        [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
+    CoroutineLink::ForEach(&active_coroutines_, [&](CoroutinePtr coroutine) {
+      visitor->VisitPointer(&coroutine);
+    });
   }
 
   if (finished_coroutines_.IsNotEmpty()) {
-    finished_coroutines_.ForEach(
-        [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
+    CoroutineLink::ForEach(&finished_coroutines_, [&](CoroutinePtr coroutine) {
+      visitor->VisitPointer(&coroutine);
+    });
   }
 }
 

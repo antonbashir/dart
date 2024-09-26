@@ -57,13 +57,13 @@ class CoroutineLink {
     item->next_->previous_ = item->previous_;
     item->previous_ = to;
     item->next_ = to->next_;
-    item->previous_->next_ = to;
-    item->next_->previous_ = to;
+    item->previous_->next_ = item;
+    item->next_->previous_ = item;
   }
 
   DART_FORCE_INLINE
-  void ForEach(std::function<void(CoroutinePtr)> action) {
-    for (auto item = First(); item != this; item = Next())
+  static void ForEach(CoroutineLink* head, std::function<void(CoroutinePtr)> action) {
+    for (auto item = head->First(); item != head; item = item->Next())
       action(item->Value());
   }
 
