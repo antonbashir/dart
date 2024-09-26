@@ -736,14 +736,12 @@ CoroutinePtr Thread::SaveCoroutine() {
     stack_limit_.store(OSThread::kInvalidStackLimit);
   }
   saved_stack_limit_ = OSThread::kInvalidStackLimit;
-  NoSafepointScope no_safepoint;
   CoroutinePtr coroutine = coroutine_;
   coroutine_ = Coroutine::null();
   return coroutine;
 }
 
 void Thread::EnterCoroutine(CoroutinePtr coroutine) {
-  MonitorLocker ml(&thread_lock_);
   coroutine_ = coroutine;
   if (!HasScheduledInterrupts()) {
     stack_limit_.store(coroutine->untag()->stack_limit());
@@ -752,7 +750,6 @@ void Thread::EnterCoroutine(CoroutinePtr coroutine) {
 }
 
 void Thread::ExitCoroutine() {
-  MonitorLocker ml(&thread_lock_);
   coroutine_ = Coroutine::null();
   if (!HasScheduledInterrupts()) {
     stack_limit_.store(os_thread()->overflow_stack_limit());
@@ -810,7 +807,10 @@ uword Thread::GetAndClearInterrupts() {
 }
 
 ErrorPtr Thread::HandleInterrupts() {
+  OS::Print("HandleInterrupts start: %ld\n", Thread::Current()->os_thread()->id());
+  OS::Print("GetAndClearInterrupts start: %ld\n", Thread::Current()->os_thread()->id());
   uword interrupt_bits = GetAndClearInterrupts();
+  OS::Print("GetAndClearInterrupts end: %ld\n", Thread::Current()->os_thread()->id());
   if ((interrupt_bits & kVMInterrupt) != 0) {
     CheckForSafepoint();
     if (isolate_group()->store_buffer()->Overflowed()) {
@@ -849,9 +849,11 @@ ErrorPtr Thread::HandleInterrupts() {
             "\tisolate:    %s\n",
             isolate()->name());
       }
+      OS::Print("HandleInterrupts end 1: %ld\n", Thread::Current()->os_thread()->id());
       return StealStickyError();
     }
   }
+  OS::Print("HandleInterrupts end 2: %ld\n", Thread::Current()->os_thread()->id());
   return Error::null();
 }
 

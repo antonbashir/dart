@@ -7,7 +7,11 @@ var globalState = "";
 void main() {
 //  testBase();
 
-  testClosures();
+  while (true) {
+    print("run");
+    testClosures();
+    print("run end");
+  }
 //  testRecycle();
 }
 

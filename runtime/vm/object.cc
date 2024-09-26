@@ -26877,6 +26877,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
   object_store->set_coroutines_registry(coroutines);
 
+  OS::Print("thread->ExitCoroutine\n");
   thread->ExitCoroutine();
 }
 

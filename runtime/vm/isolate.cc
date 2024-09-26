@@ -2564,6 +2564,9 @@ void Isolate::Shutdown() {
   ASSERT(this == thread->isolate());
 
   // Don't allow anymore dart code to execution on this isolate.
+  if (thread->has_coroutine()) {
+    thread->ExitCoroutine();    
+  }
   thread->ClearStackLimit();
 
   {

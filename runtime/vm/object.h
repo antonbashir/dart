@@ -12765,6 +12765,10 @@ class Coroutine : public Instance {
     return (bool)(get_attributes() & CoroutineAttributes::disposed);
   }
   DART_FORCE_INLINE
+  bool is_suspended() const {
+    return (bool)(get_attributes() & CoroutineAttributes::suspended);
+  }
+  DART_FORCE_INLINE
   void set_attributes(intptr_t value) const {
     untag()->set_attributes(Smi::New(value));
   }
