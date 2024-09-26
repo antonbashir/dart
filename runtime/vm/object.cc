@@ -26840,9 +26840,10 @@ void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
+  OS::Print("HandleRootExit\n");
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  Coroutine& coroutine = Coroutine::Handle(zone);
+  auto& coroutine = Coroutine::Handle(zone);
 
   intptr_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
@@ -26867,6 +26868,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
         if (coroutine.is_finished()) {
           recycled.SetAt(recycled_index, coroutine);
           coroutine.set_index(Smi::New(recycled_index));
+          recycled_index++;
         }
       }
     }
