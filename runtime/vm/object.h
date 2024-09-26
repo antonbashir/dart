@@ -3629,6 +3629,14 @@ class Function : public Object {
     return recognized_kind() != MethodRecognizer::kUnknown;
   }
 
+  DART_FORCE_INLINE
+  static bool IsCoroutineRecognized(FunctionPtr function) {
+    auto kind = function->untag()->kind_tag_.Read<RecognizedBits>();
+    return kind == MethodRecognizer::kCoroutineFork ||
+           kind == MethodRecognizer::kCoroutineInitialize ||
+           kind == MethodRecognizer::kCoroutineTransfer;
+  }
+
   bool HasOptimizedCode() const;
 
   // Returns true if the argument counts are valid for calling this function.
@@ -12862,9 +12870,7 @@ class Coroutine : public Instance {
   static uword overflow_stack_limit_offset() {
     return OFFSET_OF(UntaggedCoroutine, overflow_stack_limit_);
   }
-  bool HasStackHeadroom() {
-    return untag()->HasStackHeadroom();
-  }
+  bool HasStackHeadroom() { return untag()->HasStackHeadroom(); }
 
   void recycle(Zone* zone) const;
 

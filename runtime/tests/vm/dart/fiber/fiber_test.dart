@@ -8,9 +8,7 @@ void main() {
 //  testBase();
 
   while (true) {
-    print("run");
     testClosures();
-    print("run end");
   }
 //  testRecycle();
 }
