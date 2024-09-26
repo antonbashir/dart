@@ -2960,6 +2960,7 @@ DEFINE_RUNTIME_ENTRY(NoSuchMethodFromPrologue, 4) {
 //  - garbage collection
 //  - hot reload
 static void HandleStackOverflowTestCases(Thread* thread) {
+  OS::Print("HandleStackOverflowTestCases\n");
   auto isolate = thread->isolate();
   auto isolate_group = thread->isolate_group();
 
@@ -2975,6 +2976,7 @@ static void HandleStackOverflowTestCases(Thread* thread) {
       isolate->group()->reload_every_n_stack_overflow_checks();
   if ((FLAG_deoptimize_every > 0) || (FLAG_stacktrace_every > 0) ||
       (FLAG_gc_every > 0) || (isolate_reload_every > 0)) {
+    OS::Print("isolate_reload_every\n");
     if (!Isolate::IsSystemIsolate(isolate)) {
       // TODO(turnidge): To make --deoptimize_every and
       // --stacktrace-every faster we could move this increment/test to
@@ -2996,6 +2998,7 @@ static void HandleStackOverflowTestCases(Thread* thread) {
   }
   if ((FLAG_deoptimize_filter != nullptr) ||
       (FLAG_stacktrace_filter != nullptr) || (FLAG_reload_every != 0)) {
+    OS::Print("isolate_reload_every 2\n");
     DartFrameIterator iterator(thread,
                                StackFrameIterator::kNoCrossThreadIteration);
     StackFrame* frame = iterator.NextFrame();
@@ -3033,10 +3036,12 @@ static void HandleStackOverflowTestCases(Thread* thread) {
     }
   }
   if (do_deopt) {
+    OS::Print("do_deopt\n");
     // TODO(turnidge): Consider using DeoptimizeAt instead.
     DeoptimizeFunctionsOnStack();
   }
   if (do_reload) {
+    OS::Print("do_reload\n");
     // Maybe adjust the rate of future reloads.
     isolate_group->MaybeIncreaseReloadEveryNStackOverflowChecks();
 
@@ -3050,6 +3055,7 @@ static void HandleStackOverflowTestCases(Thread* thread) {
     }
   }
   if (do_stacktrace) {
+    OS::Print("do_stacktrace)\n");
     String& var_name = String::Handle();
     Instance& var_value = Instance::Handle();
     DebuggerStackTrace* stack = isolate->debugger()->StackTrace();
@@ -3075,6 +3081,7 @@ static void HandleStackOverflowTestCases(Thread* thread) {
     }
   }
   if (do_gc) {
+    OS::Print("do_gc)\n");
     isolate->group()->heap()->CollectAllGarbage(GCReason::kDebugging);
   }
 }
@@ -3895,7 +3902,7 @@ DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(JumpToFrameCoroutine, 2) {
-  Coroutine::Handle(Thread::Current()->coroutine()).HandleException(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
+  Coroutine::Handle(Thread::Current()->coroutine()).HandleJumpToFrame(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
 }
 
 

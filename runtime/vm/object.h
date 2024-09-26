@@ -12717,7 +12717,7 @@ class Coroutine : public Instance {
 
   static CoroutinePtr New(uintptr_t size, FunctionPtr trampoline);
 
-  void HandleException(Thread* thread, uword stack_pointer);
+  void HandleJumpToFrame(Thread* thread, uword stack_pointer);
   void HandleRootEnter(Thread* thread, Zone* zone);
   void HandleRootExit(Thread* thread, Zone* zone);
   void HandleForkedEnter(Thread* thread, Zone* zone);

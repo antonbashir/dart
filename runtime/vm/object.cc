@@ -26814,7 +26814,7 @@ const char* Coroutine::ToCString() const {
   return "Coroutine";
 }
 
-void Coroutine::HandleException(Thread* thread, uword stack_pointer) {
+void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
   auto zone = thread->zone();
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
