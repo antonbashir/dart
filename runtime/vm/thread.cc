@@ -67,6 +67,7 @@ Thread::Thread(bool is_vm_isolate)
       active_exception_(Object::null()),
       active_stacktrace_(Object::null()),
       coroutine_(Coroutine::null()),
+      disabled_coroutine_(Coroutine::null()),
       global_object_pool_(ObjectPool::null()),
       resume_pc_(0),
       execution_state_(kThreadInNative),
@@ -243,6 +244,10 @@ bool Thread::has_coroutine() const {
   return coroutine_ != Coroutine::null();
 }
 
+bool Thread::has_disabled_coroutine() const {
+  return disabled_coroutine_ != Coroutine::null();
+}
+
 void Thread::ClearStickyError() {
   sticky_error_ = Error::null();
 }
@@ -321,6 +326,10 @@ void Thread::AssertEmptyStackInvariants() {
 
   if (coroutine_.untag() != 0) {
     ASSERT(coroutine_ == Coroutine::null());
+  }
+
+  if (disabled_coroutine_.untag() != 0) {
+    ASSERT(disabled_coroutine_ == Coroutine::null());
   }
 }
 
@@ -684,6 +693,7 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
   thread->isolate_ = nullptr;
   thread->isolate_group_ = nullptr;
   thread->coroutine_ = Coroutine::null();
+  thread->disabled_coroutine_ = Coroutine::null();
   thread->scheduled_dart_mutator_isolate_ = nullptr;
   thread->set_execution_state(Thread::kThreadInNative);
   thread->stack_limit_.store(0);
@@ -757,6 +767,24 @@ void Thread::ExitCoroutine() {
   saved_stack_limit_ = os_thread()->overflow_stack_limit();
 }
 
+void Thread::EnableCoroutine() {
+  coroutine_ = disabled_coroutine_;
+  disabled_coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine_->untag()->stack_limit());
+  }
+  saved_stack_limit_ = coroutine_->untag()->stack_limit();
+}
+
+void Thread::DisableCoroutine() {
+  disabled_coroutine_ = coroutine_;
+  coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(os_thread()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = os_thread()->overflow_stack_limit();
+}
+
 uword Thread::GetSavedStackLimit() const {
   return !has_coroutine() ? saved_stack_limit_
          : saved_stack_limit_ == OSThread::kInvalidStackLimit
@@ -807,10 +835,13 @@ uword Thread::GetAndClearInterrupts() {
 }
 
 ErrorPtr Thread::HandleInterrupts() {
-  OS::Print("HandleInterrupts start: %ld\n", Thread::Current()->os_thread()->id());
-  OS::Print("GetAndClearInterrupts start: %ld\n", Thread::Current()->os_thread()->id());
+  OS::Print("HandleInterrupts start: %ld\n",
+            Thread::Current()->os_thread()->id());
+  OS::Print("GetAndClearInterrupts start: %ld\n",
+            Thread::Current()->os_thread()->id());
   uword interrupt_bits = GetAndClearInterrupts();
-  OS::Print("GetAndClearInterrupts end: %ld\n", Thread::Current()->os_thread()->id());
+  OS::Print("GetAndClearInterrupts end: %ld\n",
+            Thread::Current()->os_thread()->id());
   if ((interrupt_bits & kVMInterrupt) != 0) {
     CheckForSafepoint();
     if (isolate_group()->store_buffer()->Overflowed()) {
@@ -849,11 +880,13 @@ ErrorPtr Thread::HandleInterrupts() {
             "\tisolate:    %s\n",
             isolate()->name());
       }
-      OS::Print("HandleInterrupts end 1: %ld\n", Thread::Current()->os_thread()->id());
+      OS::Print("HandleInterrupts end 1: %ld\n",
+                Thread::Current()->os_thread()->id());
       return StealStickyError();
     }
   }
-  OS::Print("HandleInterrupts end 2: %ld\n", Thread::Current()->os_thread()->id());
+  OS::Print("HandleInterrupts end 2: %ld\n",
+            Thread::Current()->os_thread()->id());
   return Error::null();
 }
 
@@ -1054,6 +1087,7 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
 

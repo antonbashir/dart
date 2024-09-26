@@ -2790,7 +2790,9 @@ ObjectPtr Object::Allocate(intptr_t cls_id,
   ASSERT(thread->no_safepoint_scope_depth() == 0);
   ASSERT(thread->no_callback_scope_depth() == 0);
   Heap* heap = thread->heap();
+  OS::Print("heap->Allocate start\n");
   uword address = heap->Allocate(thread, size, space);
+  OS::Print("heap->Allocate finish\n");
   if (UNLIKELY(address == 0)) {
     // SuspendLongJumpScope during Dart entry ensures that if a longjmp base is
     // available, it is the innermost error handler, so check for a longjmp base
@@ -24807,7 +24809,9 @@ ArrayPtr Array::NewUninitialized(intptr_t class_id,
     // This should be caught before we reach here.
     FATAL("Fatal error in Array::New: invalid len %" Pd "\n", len);
   }
+  OS::Print("Object::AllocateVariant start\n");
   auto raw = Object::AllocateVariant<Array>(class_id, space, len);
+  OS::Print("Object::AllocateVariant finish\n");
   NoSafepointScope no_safepoint;
   raw->untag()->set_length(Smi::New(len));
   if (UseCardMarkingForAllocation(len)) {
@@ -26875,9 +26879,13 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
     object_store->set_coroutines_registry(recycled);
   }
 
+  OS::Print("coroutines.Truncate start\n");
   coroutines.Truncate(0);
-  coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
-  object_store->set_coroutines_registry(coroutines);
+  OS::Print("coroutines.Truncate end\n");
+  
+  OS::Print("Array::New\n");
+  object_store->set_coroutines_registry(Array::Handle(Array::New(FLAG_coroutines_registry_initial_size)));
+  OS::Print("Array::New end\n");
 
   OS::Print("thread->ExitCoroutine\n");
   thread->ExitCoroutine();

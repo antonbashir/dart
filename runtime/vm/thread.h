@@ -398,8 +398,11 @@ class Thread : public ThreadState {
   CoroutinePtr SaveCoroutine();
   void EnterCoroutine(CoroutinePtr coroutine);
   void ExitCoroutine();
+  void DisableCoroutine();
+  void EnableCoroutine();
 
   bool has_coroutine() const;
+  bool has_disabled_coroutine() const;
   CoroutinePtr coroutine() const { return coroutine_; }
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
   void set_coroutine(CoroutinePtr value) { coroutine_ = value; }
@@ -1252,6 +1255,7 @@ class Thread : public ThreadState {
   ObjectPtr active_stacktrace_;
 
   CoroutinePtr coroutine_;
+  CoroutinePtr disabled_coroutine_;
 
   ObjectPoolPtr global_object_pool_;
   uword resume_pc_;

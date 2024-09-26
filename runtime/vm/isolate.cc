@@ -2774,12 +2774,12 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
                            pointers_to_verify_at_exit_.length());
   }
 
-  if (!active_coroutines_.IsEmpty()) {
+  if (active_coroutines_.IsNotEmpty()) {
     active_coroutines_.ForEach(
         [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
   }
 
-  if (!finished_coroutines_.IsEmpty()) {
+  if (finished_coroutines_.IsNotEmpty()) {
     finished_coroutines_.ForEach(
         [&](CoroutinePtr coroutine) { visitor->VisitPointer(&coroutine); });
   }
