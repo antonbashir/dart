@@ -3234,17 +3234,99 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
 }
 #endif
 
-void StubCodeCompiler::GenerateCoroutineEntryStub() {
-  const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
+void StubCodeCompiler::GenerateCoroutineInitializeStub() {
+   const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
+   
+ #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
   __ EnterStubFrame();
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kCoroutine);
+  __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
+  __ PopRegister(kCoroutine);
+  __ Drop(1);
+
+  __ PushRegister(FPREG);
+  __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
+
+  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
+  __ PushRegister(kCoroutine);
+
   __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::trampoline_offset());
-  __ LoadFieldFromOffset(TMP, FUNCTION_REG, Function::entry_point_offset());
   if (!FLAG_precompiled_mode) {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);
   }
   __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+
+  __ PopRegister(kCoroutine);
+  __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
+
+  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kCoroutine);
+  __ CallRuntime(kExitCoroutineRuntimeEntry, 1);
+  __ PopRegister(kCoroutine);
+  __ Drop(1);
+
   __ LeaveStubFrame();
+
+  __ Ret();
+}
+
+void StubCodeCompiler::GenerateCoroutineForkStub() {
+  const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
+  const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  __ EnterStubFrame();
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ CallRuntime(kEnterForkedCoroutineRuntimeEntry, 1);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
+
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+
+  __ PushRegister(FPREG);
+  __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
+
+  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
+
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, Coroutine::trampoline_offset());
+  if (!FLAG_precompiled_mode) {
+    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
+    __ LoadImmediate(ARGS_DESC_REG, 0);
+  }
+  __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+
+  __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
+
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+
+  __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)
+    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 1);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
+
+  __ LeaveStubFrame();
+
   __ Ret();
 }
 

@@ -303,6 +303,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     // to an osr function. In each of these cases, all stack slots contain
     // tagged pointers, so fall through.
 #if defined(DEBUG)
+    OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
     if (FLAG_precompiled_mode) {
       ASSERT(IsStubFrame());
     } else {

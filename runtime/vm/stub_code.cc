@@ -137,13 +137,6 @@ bool StubCode::InInvocationStub(uword pc) {
   return (pc >= entry) && (pc < (entry + size));
 }
 
-bool StubCode::InCoroutineEntryStub(uword pc) {
-  ASSERT(HasBeenInitialized());
-  uword entry = StubCode::CoroutineEntry().EntryPoint();
-  uword size = StubCode::CoroutineEntrySize();
-  return (pc >= entry) && (pc < (entry + size));
-}
-
 bool StubCode::InJumpToFrameStub(uword pc) {
   ASSERT(HasBeenInitialized());
   uword entry = StubCode::JumpToFrame().EntryPoint();
