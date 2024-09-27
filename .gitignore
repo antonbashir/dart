@@ -120,3 +120,4 @@ build-fiber-test.sh
 *.exe
 *.aot
 *.S
+*.s

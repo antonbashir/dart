@@ -112,26 +112,36 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
   external static _Coroutine _at(int index);
   
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
   external static void _initialize(_Coroutine root);
   
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
   external static void _transfer(_Coroutine from, _Coroutine to);
   
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
   external static void _fork(_Coroutine from, _Coroutine to);
 
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   @pragma("vm:idempotent")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
   external static _Coroutine? get _current;
 }

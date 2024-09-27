@@ -381,9 +381,9 @@ namespace dart {
   V(::, _memCopy, MemCopy, 0x51939aa6)                                         \
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
-  V(_Coroutine, _initialize, CoroutineInitialize, 0xa75fb4b4)                  \
-  V(_Coroutine, _transfer, CoroutineTransfer, 0x94684214)                      \
-  V(_Coroutine, _fork, CoroutineFork, 0x9e657623)                              \
+  V(_Coroutine, _initialize, CoroutineInitialize, 0xa75fbc36)                  \
+  V(_Coroutine, _transfer, CoroutineTransfer, 0x94684996)                      \
+  V(_Coroutine, _fork, CoroutineFork, 0x9e657da5)                              \
   V(_Coroutine, get:_name, Coroutine_getName,0x2b1f1c32)                       \
   V(_Coroutine, get:_index, Coroutine_getIndex, 0x683b41d2)                    \
   V(_Coroutine, get:_entry, Coroutine_getEntry, 0xc825e938)                    \
@@ -407,8 +407,8 @@ namespace dart {
   V(_Coroutine, set:_toProcessorNext, Coroutine_setToProcessorNext, 0xa59ec215)\
   V(_Coroutine, set:_toProcessorPrevious, Coroutine_setToProcessorPrevious,    \
   0x9b4aa9a6)                                                                  \
-  V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc845245c)                \
-  V(_Coroutine, _at, Coroutine_atIndex, 0x28baa8da)                            \
+  V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc8452bde)                \
+  V(_Coroutine, _at, Coroutine_atIndex, 0x28bab05c)                            \
 
 
 // List of intrinsics:

@@ -204,7 +204,6 @@ void EntryFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
 
 void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   ASSERT(visitor != nullptr);
-  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp " %s\n", pc(), fp(), sp(), GetName());
   // NOTE: This code runs while GC is in progress and runs within
   // a NoHandleScope block. Hence it is not ok to use regular Zone or
   // Scope handles. We use direct stack handles, the raw pointers in
@@ -630,32 +629,18 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   frame->sp_ = sp_;
   frame->fp_ = fp_;
   frame->pc_ = pc_;
-// #if defined(DART_PRECOMPILED_RUNTIME)
-//   NoSafepointScope no_safepoint;
-//   CodePtr code = ReversePc::Lookup(frame->isolate_group(), pc_,
-//                                    /*is_return_address=*/true);
-// #else
-//   ObjectPtr pc_marker = *(reinterpret_cast<ObjectPtr*>(
-//       fp_ + runtime_frame_layout.code_from_fp * kWordSize));
-//   CodePtr code = static_cast<CodePtr>(pc_marker);
-// #endif
-//   if (code != Object::null() && code.IsCode() && code->untag()->owner().IsFunction() && Function::IsCoroutineRecognized(Function::RawCast(code->untag()->owner()))) {
-//     sp_ = frame->GetCallerSp();
-//     fp_ = frame->GetCallerFp();
-//     pc_ = frame->GetCallerPc();
-//     frame->sp_ = sp_;
-//     frame->fp_ = fp_;
-//     frame->pc_ = pc_;
-//     sp_ = frame->GetCallerSp();
-//     fp_ = frame->GetCallerFp();
-//     pc_ = frame->GetCallerPc();
-//     Unpoison();
-//     ASSERT(!validate || frame->IsValid());
-//     return frame;
-//   }
   sp_ = frame->GetCallerSp();
   fp_ = frame->GetCallerFp();
   pc_ = frame->GetCallerPc();
+  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
+  StackFrame nframe{frame->thread()};
+  nframe.fp_ = fp_;
+  nframe.pc_ = pc_;
+  nframe.sp_ = sp_;
+  uword nsp_ = nframe.GetCallerSp();
+  uword nfp_ = nframe.GetCallerFp();
+  uword npc_ = nframe.GetCallerPc();
+  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", npc_, nfp_, nsp_);
   Unpoison();
   ASSERT(!validate || frame->IsValid());
   return frame;
