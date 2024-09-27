@@ -8671,8 +8671,15 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
   __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::overflow_stack_limit_offset());
-  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
+  __ StoreToOffset(kToStackLimit, THR, Thread::saved_stack_limit_offset());
+
+  compiler::Label scheduled_interrupts;
+  __ LoadFromOffset(TMP, THR, Thread::stack_limit_offset());
+  __ testq(TMP, compiler::Immediate(Thread::kInterruptsMask));
+  __ BranchIf(NOT_ZERO, &scheduled_interrupts);
+  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
+  __ Bind(&scheduled_interrupts);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
