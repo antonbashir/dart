@@ -200,7 +200,7 @@ constexpr bool FLAG_support_il_printer = false;
   D(trace_optimization, bool, false, "Print optimization details.")            \
   R(trace_profiler, false, bool, false, "Profiler trace")                      \
   D(trace_profiler_verbose, bool, false, "Verbose profiler trace")             \
-  D(trace_runtime_calls, bool, false, "Trace runtime calls.")                  \
+  D(trace_runtime_calls, bool, true, "Trace runtime calls.")                  \
   R(trace_ssa_allocator, false, bool, false,                                   \
     "Trace register allocation over SSA.")                                     \
   P(trace_strong_mode_types, bool, false,                                      \

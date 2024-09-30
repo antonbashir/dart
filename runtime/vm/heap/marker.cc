@@ -747,6 +747,7 @@ void GCMarker::ResetSlices() {
 }
 
 void GCMarker::IterateRoots(ObjectPointerVisitor* visitor) {
+  OS::Print("IterateRoots start\n");
   for (;;) {
     intptr_t slice = root_slices_started_.fetch_add(1);
     if (slice >= root_slices_count_) {
@@ -775,6 +776,7 @@ void GCMarker::IterateRoots(ObjectPointerVisitor* visitor) {
       ml.Notify();
     }
   }
+  OS::Print("IterateRoots end\n");
 }
 
 enum WeakSlices {

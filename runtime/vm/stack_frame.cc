@@ -212,7 +212,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   // helper functions to the raw object interface.
   NoSafepointScope no_safepoint;
   Code code;
-
+OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
   CompressedStackMaps::RawPayloadHandle maps;
   CompressedStackMaps::RawPayloadHandle global_table;
 
@@ -303,7 +303,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
     // to an osr function. In each of these cases, all stack slots contain
     // tagged pointers, so fall through.
 #if defined(DEBUG)
-    OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
     if (FLAG_precompiled_mode) {
       ASSERT(IsStubFrame());
     } else {
@@ -626,6 +625,19 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
+  if (StubCode::InCoroutineStub(stack_frame_.pc_)) {
+    frame = &stack_frame_;
+    frame->sp_ = sp_;
+    frame->fp_ = fp_;
+    frame->pc_ = pc_;
+    OS::Print("Coroutine stub frame\n");
+    OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
+    sp_ = frame->GetCallerSp();
+    fp_ = frame->GetCallerFp();
+    pc_ = frame->GetCallerPc();
+    Unpoison();
+    return NextFrame(validate);
+  }
   frame = &stack_frame_;
   frame->sp_ = sp_;
   frame->fp_ = fp_;
@@ -633,15 +645,6 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   sp_ = frame->GetCallerSp();
   fp_ = frame->GetCallerFp();
   pc_ = frame->GetCallerPc();
-  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
-  StackFrame nframe{frame->thread()};
-  nframe.fp_ = fp_;
-  nframe.pc_ = pc_;
-  nframe.sp_ = sp_;
-  uword nsp_ = nframe.GetCallerSp();
-  uword nfp_ = nframe.GetCallerFp();
-  uword npc_ = nframe.GetCallerPc();
-  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", npc_, nfp_, nsp_);
   Unpoison();
   ASSERT(!validate || frame->IsValid());
   return frame;

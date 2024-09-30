@@ -841,13 +841,17 @@ ErrorPtr Thread::HandleInterrupts() {
       // occur that does promote them.
       heap()->CollectGarbage(this, GCType::kEvacuate, GCReason::kStoreBuffer);
     }
+    OS::Print("After CollectGarbage\n");
     heap()->CheckFinalizeMarking(this);
+    OS::Print("After CheckFinalizeMarking\n");
 
 #if !defined(PRODUCT)
     if (isolate()->TakeHasCompletedBlocks()) {
       Profiler::ProcessCompletedBlocks(isolate());
     }
 #endif  // !defined(PRODUCT)
+  
+  OS::Print("After ProcessCompletedBlocks");
 
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
     HeapProfileSampler& sampler = heap_sampler();
@@ -1100,6 +1104,8 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
     const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
         StackFrameIterator::kAllowCrossThreadIteration;
 
+    OS::Print("Thread::VisitObjectPointers\n");
+
     // Iterate over all the stack frames and visit objects on the stack.
     StackFrameIterator frames_iterator(top_exit_frame_info(), validation_policy,
                                        this, cross_thread_policy);
@@ -1114,6 +1120,8 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
     // We are not on the mutator thread.
     RELEASE_ASSERT(top_exit_frame_info() == 0);
   }
+
+  OS::Print("Thread::VisitObjectPointers end\n");
 }
 
 class RestoreWriteBarrierInvariantVisitor : public ObjectPointerVisitor {
