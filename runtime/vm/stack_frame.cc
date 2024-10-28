@@ -151,6 +151,7 @@ bool StackFrame::IsStubFrame() const {
   if (FLAG_precompiled_mode) {
     return IsBareInstructionsStubFrame();
   }
+
   ASSERT(!(IsEntryFrame() || IsExitFrame()));
 #if !defined(DART_HOST_OS_WINDOWS) && !defined(DART_HOST_OS_FUCHSIA)
   // On Windows and Fuchsia, the profiler calls this from a separate thread
