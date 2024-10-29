@@ -3880,7 +3880,7 @@ DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
   coroutine.HandleRootExit(thread, zone);
 }
 

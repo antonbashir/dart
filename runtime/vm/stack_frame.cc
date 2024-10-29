@@ -646,7 +646,7 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   fp_ = frame->GetCallerFp();
   pc_ = frame->GetCallerPc();
   Unpoison();
-  ASSERT(!validate || frame->IsValid());
+  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);ASSERT(!validate || frame->IsValid());
   return frame;
 }
 
