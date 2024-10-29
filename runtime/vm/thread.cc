@@ -851,7 +851,7 @@ ErrorPtr Thread::HandleInterrupts() {
     }
 #endif  // !defined(PRODUCT)
   
-  OS::Print("After ProcessCompletedBlocks");
+  OS::Print("After ProcessCompletedBlocks\n ");
 
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
     HeapProfileSampler& sampler = heap_sampler();

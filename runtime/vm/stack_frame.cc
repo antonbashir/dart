@@ -625,7 +625,7 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
-  if (StubCode::InCoroutineStub(stack_frame_.pc_)) {
+  if (StubCode::InCoroutineStub(pc_)) {
     frame = &stack_frame_;
     frame->sp_ = sp_;
     frame->fp_ = fp_;
