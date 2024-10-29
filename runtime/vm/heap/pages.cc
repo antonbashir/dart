@@ -1067,9 +1067,7 @@ void PageSpace::CollectGarbageHelper(Thread* thread,
   // Abandon the remainder of the bump allocation block.
   ReleaseBumpAllocation();
 
-  OS::Print("MarkObjects start\n");
   marker_->MarkObjects(this);
-  OS::Print("MarkObjects end\n");
   usage_.used_in_words = marker_->marked_words() + allocated_black_in_words_;
   allocated_black_in_words_ = 0;
   mark_words_per_micro_ = marker_->MarkedWordsPerMicro();

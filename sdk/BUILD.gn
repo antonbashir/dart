@@ -21,7 +21,7 @@ import("../utils/application_snapshot.gni")
 declare_args() {
   # Build a SDK with less stuff. It excludes dart2js, ddc, and web libraries.
   dart_platform_sdk = true
-  dart_use_precompiled_runtime_product = false
+  dart_use_precompiled_runtime_product = !dart_debug
 
   # Path to stripped dart binaries relative to build output directory.
   dart_stripped_binary = "dart"
