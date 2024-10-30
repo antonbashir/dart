@@ -110,7 +110,6 @@ class _FiberProcessor {
           return;
         }
         if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
-        continue;
       }
     }
   }

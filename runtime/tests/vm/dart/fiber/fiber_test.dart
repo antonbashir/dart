@@ -6,7 +6,7 @@ var globalState = "";
 
 void main() {
   testBase();
-  // // testClosures();
+  testClosures();
   // testRecycle();
 }
 
