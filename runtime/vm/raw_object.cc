@@ -672,7 +672,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
         const uword fp = *reinterpret_cast<uword*>(sp);
         StackFrameIterator frames_iterator(
             fp, ValidationPolicy::kDontValidateFrames, thread,
-            StackFrameIterator::kAllowCrossThreadIteration,
+            StackFrameIterator::kNoCrossThreadIteration,
             StackFrameIterator::kStackOwnerCoroutine);
         StackFrame* frame = frames_iterator.NextFrame();
         while (frame != nullptr) {
@@ -686,7 +686,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
         const uword fp = *reinterpret_cast<uword*>(sp);
         StackFrameIterator frames_iterator(
             fp, ValidationPolicy::kDontValidateFrames, thread,
-            StackFrameIterator::kAllowCrossThreadIteration,
+            StackFrameIterator::kNoCrossThreadIteration,
             StackFrameIterator::kStackOwnerCoroutine);
         StackFrame* frame = frames_iterator.NextFrame();
         while (frame != nullptr) {
