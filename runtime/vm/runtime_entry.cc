@@ -3879,19 +3879,19 @@ DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
   coroutine.HandleRootEnter(thread, zone);
 }
 
-DEFINE_RUNTIME_ENTRY(ExitCoroutine, 1) {
+DEFINE_RUNTIME_ENTRY(ExitCoroutine, 0) {
   auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
   coroutine.HandleRootExit(thread, zone);
 }
 
 DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
-  auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  forked.HandleForkedEnter(thread, zone);
+  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  coroutine.HandleForkedEnter(thread, zone);
 }
 
-DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 1) {
-  auto& forked = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  forked.HandleForkedExit(thread, zone);
+DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 0) {
+  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
+  coroutine.HandleForkedExit(thread, zone);
 }
 
 DEFINE_RUNTIME_ENTRY(JumpToFrameCoroutine, 2) {

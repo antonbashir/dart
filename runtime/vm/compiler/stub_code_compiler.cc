@@ -3270,9 +3270,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
   __ PushObject(compiler::NullObject());
-  __ PushRegister(kCoroutine);
-  __ CallRuntime(kExitCoroutineRuntimeEntry, 1);
-  __ PopRegister(kCoroutine);
+  __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
   __ Drop(1);
 
   __ LeaveStubFrame();
@@ -3320,9 +3318,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
     __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
   __ PushObject(compiler::NullObject());
-  __ PushRegister(kForkedCoroutine);
-  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 1);
-  __ PopRegister(kForkedCoroutine);
+  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 0);
   __ Drop(1);
 
   __ LeaveStubFrame();
