@@ -103,7 +103,8 @@ class _FiberProcessor {
       scheduler._attributes = (scheduler._attributes & ~_kFiberRunning) | _kFiberSuspended;
       first._attributes = (first._attributes & ~_kFiberSuspended) | _kFiberRunning;
       _Coroutine._transfer(scheduler, first);
-      if (processor._running && scheduled._isEmpty) {
+      if (!processor._running) return;
+      if (scheduled._isEmpty) {
         idle();
         if (!processor._running) {
           return;
