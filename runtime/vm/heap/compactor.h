@@ -51,6 +51,7 @@ class GCCompactor : public ValueObject,
                                CompressedObjectPtr* last) override;
 #endif
   bool CanVisitSuspendStatePointers(SuspendStatePtr suspend_state) override;
+  bool CanVisitCoroutinePointers(CoroutinePtr coroutine) override;
   void VisitHandle(uword addr) override;
 
   Heap* heap_;
@@ -83,9 +84,12 @@ class GCCompactor : public ValueObject,
 
   // SuspendState objects with copied frame must be updated after sliding is
   // complete.
-  bool can_visit_stack_frames_ = false;
+  bool can_visit_suspend_states_ = false;
+  bool can_visit_coroutines_ = false;
   Mutex postponed_suspend_states_mutex_;
+  Mutex postponed_coroutines_mutex_;
   MallocGrowableArray<SuspendStatePtr> postponed_suspend_states_;
+  MallocGrowableArray<CoroutinePtr> postponed_coroutines_;
 };
 
 }  // namespace dart

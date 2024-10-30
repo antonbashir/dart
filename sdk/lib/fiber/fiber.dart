@@ -78,7 +78,6 @@ class _Coroutine {
   external set _name(String value);
 
   external int get _index;
-  external set _index(int value);
 
   external void Function() get _entry;
   external set _entry(void Function() value);

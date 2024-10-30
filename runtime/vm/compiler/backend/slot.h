@@ -125,9 +125,7 @@ class ParsedFunction;
   V(Record, UntaggedRecord, shape, Smi, FINAL)                                 \
   V(TypeArguments, UntaggedTypeArguments, hash, Smi, VAR)                      \
   V(TypeArguments, UntaggedTypeArguments, length, Smi, FINAL)                  \
-  V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)                       \
-  V(Coroutine, UntaggedCoroutine, index, Smi, VAR)                             \
-  V(Coroutine, UntaggedCoroutine, attributes, Smi, VAR)
+  V(AbstractType, UntaggedTypeArguments, hash, Smi, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that do not contain integers in the following format:
@@ -189,7 +187,9 @@ class ParsedFunction;
     FINAL)                                                                     \
   V(FunctionType, UntaggedFunctionType, packed_type_parameter_counts, Uint16,  \
     FINAL)                                                                     \
-  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)
+  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)     \
+  V(Coroutine, UntaggedCoroutine, index, IntPtr, VAR)                          \
+  V(Coroutine, UntaggedCoroutine, attributes, IntPtr, VAR)
 
 // Native slots containing untagged addresses that do not exist in JIT mode.
 // See UNTAGGED_NATIVE_DART_SLOTS_LIST for the format.

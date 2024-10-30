@@ -212,7 +212,6 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   // helper functions to the raw object interface.
   NoSafepointScope no_safepoint;
   Code code;
-OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
   CompressedStackMaps::RawPayloadHandle maps;
   CompressedStackMaps::RawPayloadHandle global_table;
 
@@ -486,7 +485,9 @@ StackFrameIterator::StackFrameIterator(ValidationPolicy validation_policy,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -501,7 +502,28 @@ StackFrameIterator::StackFrameIterator(uword last_fp,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
+      current_frame_(nullptr),
+      thread_(thread) {
+  ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
+         thread_ == Thread::Current());
+  frames_.fp_ = last_fp;
+  frames_.sp_ = 0;
+  frames_.pc_ = 0;
+  frames_.Unpoison();
+}
+
+StackFrameIterator::StackFrameIterator(uword last_fp,
+                                       ValidationPolicy validation_policy,
+                                       Thread* thread,
+                                       CrossThreadPolicy cross_thread_policy,
+                                       StackOwner stack_owner)
+    : validate_(validation_policy == ValidationPolicy::kValidateFrames),
+      entry_(thread),
+      exit_(thread),
+      frames_(thread, stack_owner),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -521,7 +543,9 @@ StackFrameIterator::StackFrameIterator(uword fp,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -536,7 +560,9 @@ StackFrameIterator::StackFrameIterator(const StackFrameIterator& orig)
     : validate_(orig.validate_),
       entry_(orig.thread_),
       exit_(orig.thread_),
-      frames_(orig.thread_),
+      frames_(orig.thread_,
+              orig.thread_->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                            : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(orig.thread_) {
   frames_.fp_ = orig.frames_.fp_;
@@ -606,7 +632,8 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 #if !defined(USING_SIMULATOR)
   if (fp_ == 0) return;
   // Note that Thread::os_thread_ is cleared when the thread is descheduled.
-  ASSERT((thread_->has_coroutine()) || (thread_->os_thread() == nullptr) ||
+  ASSERT(stack_owner_ == kStackOwnerCoroutine ||
+         (thread_->os_thread() == nullptr) ||
          ((thread_->os_thread()->stack_limit() < fp_) &&
           (thread_->os_thread()->stack_base() > fp_)));
   uword lower;
@@ -646,7 +673,7 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   fp_ = frame->GetCallerFp();
   pc_ = frame->GetCallerPc();
   Unpoison();
-  OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);ASSERT(!validate || frame->IsValid());
+  ASSERT(!validate || frame->IsValid());
   return frame;
 }
 

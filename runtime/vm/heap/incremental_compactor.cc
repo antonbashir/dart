@@ -463,7 +463,7 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
   }
 
   bool CanVisitSuspendStatePointers(SuspendStatePtr suspend_state) override {
-    if ((suspend_state->untag()->pc() != 0) && !can_visit_stack_frames_) {
+    if ((suspend_state->untag()->pc() != 0) && !can_visit_suspend_states_) {
       // Visiting pointers of SuspendState objects with copied stack frame
       // needs to query stack map, which can touch other Dart objects
       // (such as GrowableObjectArray of InstructionsTable).
@@ -471,6 +471,14 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
       // so processing of SuspendState objects is postponed to the later
       // stage of compaction.
       suspend_states_.Add(suspend_state);
+      return false;
+    }
+    return true;
+  }
+
+  bool CanVisitCoroutinePointers(CoroutinePtr coroutine) override {
+    if (!can_visit_coroutines_) {
+      coroutines_.Add(coroutine);
       return false;
     }
     return true;
@@ -494,7 +502,7 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
   }
 
   void UpdateSuspendStates() {
-    can_visit_stack_frames_ = true;
+    can_visit_suspend_states_ = true;
     const intptr_t length = suspend_states_.length();
     for (intptr_t i = 0; i < length; ++i) {
       auto suspend_state = suspend_states_[i];
@@ -502,10 +510,20 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
     }
   }
 
+  void UpdateCoroutines() {
+    can_visit_coroutines_ = true;
+    const intptr_t length = coroutines_.length();
+    for (intptr_t i = 0; i < length; ++i) {
+      coroutines_[i]->untag()->VisitPointers(this);
+    }
+  }
+
  private:
-  bool can_visit_stack_frames_ = false;
+  bool can_visit_suspend_states_ = false;
+  bool can_visit_coroutines_ = false;
   MallocGrowableArray<TypedDataViewPtr> typed_data_views_;
   MallocGrowableArray<SuspendStatePtr> suspend_states_;
+  MallocGrowableArray<CoroutinePtr> coroutines_;
 
   DISALLOW_COPY_AND_ASSIGN(IncrementalForwardingVisitor);
 };
@@ -713,6 +731,11 @@ class EpilogueTask : public ThreadPool::Task {
       // canonicalized_stack_map_entries.
       TIMELINE_FUNCTION_GC_DURATION(thread, "SuspendStates");
       visitor.UpdateSuspendStates();
+    }
+
+    {
+      TIMELINE_FUNCTION_GC_DURATION(thread, "Coroutines");
+      visitor.UpdateCoroutines();
     }
 
     if (state_->TakeResetProgressBars()) {

@@ -3629,14 +3629,6 @@ class Function : public Object {
     return recognized_kind() != MethodRecognizer::kUnknown;
   }
 
-  DART_FORCE_INLINE
-  static bool IsCoroutineRecognized(FunctionPtr function) {
-    auto kind = function->untag()->kind_tag_.Read<RecognizedBits>();
-    return kind == MethodRecognizer::kCoroutineFork ||
-           kind == MethodRecognizer::kCoroutineInitialize ||
-           kind == MethodRecognizer::kCoroutineTransfer;
-  }
-
   bool HasOptimizedCode() const;
 
   // Returns true if the argument counts are valid for calling this function.
@@ -12741,8 +12733,8 @@ class Coroutine : public Instance {
   StringPtr name() const { return untag()->name(); }
   static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
 
-  SmiPtr index() const { return untag()->index(); }
-  void set_index(SmiPtr index) const { untag()->index_ = index; }
+  intptr_t index() const { return untag()->index(); }
+  void set_index(intptr_t index) const { untag()->set_index(index); }
   static uword index_offset() { return OFFSET_OF(UntaggedCoroutine, index_); }
 
   ClosurePtr entry() const { return untag()->entry(); }
@@ -12754,51 +12746,46 @@ class Coroutine : public Instance {
   }
 
   DART_FORCE_INLINE
-  SmiPtr attributes() const { return untag()->attributes(); }
-  DART_FORCE_INLINE
-  intptr_t get_attributes() const { return Smi::Value(untag()->attributes()); }
+  intptr_t attributes() const { return untag()->attributes(); }
   DART_FORCE_INLINE
   bool is_persistent() const {
-    return (bool)(get_attributes() & CoroutineAttributes::persistent);
+    return (bool)(attributes() & CoroutineAttributes::persistent);
   }
   DART_FORCE_INLINE
   bool is_ephemeral() const { return !is_persistent(); }
   DART_FORCE_INLINE
   bool is_created() const {
-    return (bool)(get_attributes() & CoroutineAttributes::created);
+    return (bool)(attributes() & CoroutineAttributes::created);
   }
   DART_FORCE_INLINE
   bool is_running() const {
-    return (bool)(get_attributes() & CoroutineAttributes::running);
+    return (bool)(attributes() & CoroutineAttributes::running);
   }
   DART_FORCE_INLINE
   bool is_finished() const {
-    return (bool)(get_attributes() & CoroutineAttributes::finished);
+    return (bool)(attributes() & CoroutineAttributes::finished);
   }
   DART_FORCE_INLINE
   bool is_disposed() const {
-    return (bool)(get_attributes() & CoroutineAttributes::disposed);
+    return (bool)(attributes() & CoroutineAttributes::disposed);
   }
   DART_FORCE_INLINE
   bool is_suspended() const {
-    return (bool)(get_attributes() & CoroutineAttributes::suspended);
+    return (bool)(attributes() & CoroutineAttributes::suspended);
   }
   DART_FORCE_INLINE
-  void set_attributes(intptr_t value) const {
-    untag()->set_attributes(Smi::New(value));
-  }
+  void set_attributes(intptr_t value) const { untag()->set_attributes(value); }
   DART_FORCE_INLINE
   void or_attribute(intptr_t value) const {
-    untag()->set_attributes(Smi::New(get_attributes() | value));
+    untag()->set_attributes(attributes() | value);
   }
   DART_FORCE_INLINE
   void change_state(intptr_t from_value, intptr_t to_value) const {
-    untag()->set_attributes(
-        Smi::New((get_attributes() & ~from_value) | to_value));
+    untag()->set_attributes((attributes() & ~from_value) | to_value);
   }
   DART_FORCE_INLINE
   void and_attribute(intptr_t value) const {
-    untag()->set_attributes(Smi::New(get_attributes() & value));
+    untag()->set_attributes(attributes() & value);
   }
   static uword attributes_offset() {
     return OFFSET_OF(UntaggedCoroutine, attributes_);

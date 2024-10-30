@@ -9205,6 +9205,9 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kTypedData_memMove16:
     case MethodRecognizer::kCoroutine_getCurrent:
     case MethodRecognizer::kCoroutine_atIndex:
+    case MethodRecognizer::kCoroutine_getAttributes:
+    case MethodRecognizer::kCoroutine_getIndex:
+    case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kMemCopy:
     // Prevent the GC from running so that the operation is atomic from
     // a GC point of view. Always double check implementation in
@@ -26699,7 +26702,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
-  coroutine.untag()->set_index(Smi::New(-1));
+  coroutine.untag()->set_index(-1);
   coroutine.untag()->set_trampoline(trampoline);
 
   CoroutineLink::AddHead(active, coroutine.to_state());
@@ -26719,7 +26722,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     object_store->set_coroutines_registry(registry);
   }
 
-  coroutine.untag()->set_index(Smi::New(free_index));
+  coroutine.untag()->set_index(free_index);
   registry.SetAt(free_index, coroutine);
   
   return coroutine.ptr();
@@ -26757,14 +26760,14 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->overflow_stack_limit_ = (uword) nullptr;
   
   if (!remove_from_registry) {
-    untag()->set_index(Smi::New(-1));
+    untag()->set_index(-1);
     return;
   }
 
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  auto current_index = Smi::Value(index());
-  untag()->set_index(Smi::New(-1));
+  auto current_index = index();
+  untag()->set_index(-1);
 
   if (coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
     coroutines.SetAt(current_index, Object::null_object());
@@ -26787,7 +26790,7 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
       if (coroutines.At(index) != Object::null()) {
         coroutine ^= coroutines.At(index);
         new_coroutines.SetAt(new_index, coroutine);
-        coroutine.set_index(Smi::New(new_index));
+        coroutine.set_index(new_index);
         new_index++;
       }
     }
@@ -26870,7 +26873,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
         coroutine ^= coroutines.At(index);
         if (coroutine.is_finished()) {
           recycled.SetAt(recycled_index, coroutine);
-          coroutine.set_index(Smi::New(recycled_index));
+          coroutine.set_index(recycled_index);
           recycled_index++;
         }
       }
@@ -26893,8 +26896,8 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
   auto saved_caller = caller();
-  auto new_caller_state = (Smi::Value(saved_caller->untag()->attributes()) & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
-  saved_caller->untag()->set_attributes(Smi::New(new_caller_state));
+  auto new_caller_state = (saved_caller->untag()->attributes() & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
+  saved_caller->untag()->set_attributes(new_caller_state);
   if (is_persistent()) {
     recycle(zone);
   }

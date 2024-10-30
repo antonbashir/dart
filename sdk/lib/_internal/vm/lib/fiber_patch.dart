@@ -21,10 +21,6 @@ class _Coroutine {
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
   external int get _index;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _index(int value);
 
   @patch
   @pragma("vm:recognized", "other")

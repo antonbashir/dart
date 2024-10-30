@@ -3779,11 +3779,9 @@ class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(StringPtr, name)
   VISIT_FROM(name)
-  COMPRESSED_POINTER_FIELD(SmiPtr, index)
   COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
   COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
   COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
-  COMPRESSED_POINTER_FIELD(SmiPtr, attributes)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
   COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
@@ -3798,6 +3796,8 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_base_;
   uword stack_limit_;
   uword overflow_stack_limit_;
+  uword attributes_;
+  uword index_;
 
  public:
   CoroutineLink* to_state() { return &to_state_; }
@@ -3807,6 +3807,13 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }
   uword overflow_stack_limit() const { return overflow_stack_limit_; }
+
+  uword attributes() const { return attributes_; }
+  uword index() const { return index_; }
+  
+  void set_index(uword index) { index_ = index; }
+  void set_attributes(uword attributes) { attributes_ = attributes; }
+
   bool HasStackHeadroom() {
     return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
   }

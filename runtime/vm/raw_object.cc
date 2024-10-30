@@ -553,7 +553,6 @@ COMPRESSED_VISITOR(FinalizerEntry)
 COMPRESSED_VISITOR(NativeFinalizer)
 COMPRESSED_VISITOR(MirrorReference)
 COMPRESSED_VISITOR(UserTag)
-COMPRESSED_VISITOR(Coroutine)
 REGULAR_VISITOR(SubtypeTestCache)
 COMPRESSED_VISITOR(LoadingUnit)
 COMPRESSED_VISITOR(TypeParameters)
@@ -650,6 +649,55 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
   }
 
   return SuspendState::InstanceSize(raw_obj->untag()->frame_capacity());
+}
+
+intptr_t UntaggedCoroutine::VisitCoroutinePointers(
+    CoroutinePtr raw_obj,
+    ObjectPointerVisitor* visitor) {
+  ASSERT(raw_obj->IsHeapObject());
+  auto native_stack = raw_obj->untag()->native_stack_base();
+  auto stack = raw_obj->untag()->stack_base();
+  auto attributes = raw_obj->untag()->attributes();
+
+  if (visitor->CanVisitCoroutinePointers(raw_obj)) {
+    visitor->VisitCompressedPointers(
+        raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+
+    Thread* thread = Thread::Current();
+    if (thread->IsDartMutatorThread()) {
+      if (native_stack != 0 &&
+          (attributes & (Coroutine::CoroutineAttributes::suspended |
+                         Coroutine::CoroutineAttributes::running)) != 0) {
+        const uword sp = native_stack;
+        const uword fp = *reinterpret_cast<uword*>(sp);
+        StackFrameIterator frames_iterator(
+            fp, ValidationPolicy::kDontValidateFrames, thread,
+            StackFrameIterator::kAllowCrossThreadIteration,
+            StackFrameIterator::kStackOwnerCoroutine);
+        StackFrame* frame = frames_iterator.NextFrame();
+        while (frame != nullptr) {
+          frame->VisitObjectPointers(visitor);
+          frame = frames_iterator.NextFrame();
+        }
+      }
+
+      if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+        const uword sp = stack;
+        const uword fp = *reinterpret_cast<uword*>(sp);
+        StackFrameIterator frames_iterator(
+            fp, ValidationPolicy::kDontValidateFrames, thread,
+            StackFrameIterator::kAllowCrossThreadIteration,
+            StackFrameIterator::kStackOwnerCoroutine);
+        StackFrame* frame = frames_iterator.NextFrame();
+        while (frame != nullptr) {
+          frame->VisitObjectPointers(visitor);
+          frame = frames_iterator.NextFrame();
+        }
+      }
+    }
+  }
+
+  return Coroutine::InstanceSize();
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {

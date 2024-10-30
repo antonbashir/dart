@@ -926,13 +926,11 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_getEntry, Coroutine_entry)                                       \
   V(Coroutine_getTrampoline, Coroutine_trampoline)                             \
   V(Coroutine_getArguments, Coroutine_arguments)                               \
-  V(Coroutine_getAttributes, Coroutine_attributes)                             \
   V(Coroutine_getCaller, Coroutine_caller)                                     \
   V(Coroutine_getScheduler, Coroutine_scheduler)                               \
   V(Coroutine_getProcessor, Coroutine_processor)                               \
   V(Coroutine_getToProcessorNext, Coroutine_to_processor_next)                 \
   V(Coroutine_getToProcessorPrevious, Coroutine_to_processor_previous)         \
-  V(Coroutine_getIndex, Coroutine_index)                                       \
   V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
   V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
   V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
@@ -958,7 +956,6 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   V(Coroutine_setEntry, Coroutine_entry)                                       \
   V(Coroutine_setTrampoline, Coroutine_trampoline)                             \
   V(Coroutine_setArguments, Coroutine_arguments)                               \
-  V(Coroutine_setAttributes, Coroutine_attributes)                             \
   V(Coroutine_setCaller, Coroutine_caller)                                     \
   V(Coroutine_setScheduler, Coroutine_scheduler)                               \
   V(Coroutine_setProcessor, Coroutine_processor)                               \
@@ -1165,6 +1162,9 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineTransfer:
     case MethodRecognizer::kCoroutine_getCurrent:
     case MethodRecognizer::kCoroutine_atIndex:
+    case MethodRecognizer::kCoroutine_getAttributes:
+    case MethodRecognizer::kCoroutine_setAttributes:
+    case MethodRecognizer::kCoroutine_getIndex:
       return true;
     default:
       return false;
@@ -1967,6 +1967,26 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += LoadNativeField(Slot::IsolateObjectStore_coroutines_registry());
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadIndexed(kArrayCid);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getIndex: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadNativeField(Slot::Coroutine_index());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getAttributes: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadNativeField(Slot::Coroutine_attributes());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_setAttributes: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += UnboxTruncate(kUnboxedInt64);
+      body += StoreNativeField(Slot::Coroutine_attributes());
+      body += NullConstant();
       break;
     }
 #define IL_BODY(method, slot)                                                  \
