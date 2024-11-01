@@ -223,6 +223,11 @@ class StackFrameIterator {
     kAllowCrossThreadIteration = 1,
   };
 
+  enum StackOwner {
+    kStackOwnerCoroutine = 0,
+    kStackOwnerThread = 1,
+  };
+
   // Iterators for iterating over all frames from the last ExitFrame to the
   // first EntryFrame.
   StackFrameIterator(ValidationPolicy validation_policy,
@@ -232,7 +237,11 @@ class StackFrameIterator {
                      ValidationPolicy validation_policy,
                      Thread* thread,
                      CrossThreadPolicy cross_thread_policy);
-
+  StackFrameIterator(uword last_fp,
+                     ValidationPolicy validation_policy,
+                     Thread* thread,
+                     CrossThreadPolicy cross_thread_policy,
+                     StackOwner stack_owner);
   // Iterator for iterating over all frames from the current frame (given by its
   // fp, sp, and pc) to the first EntryFrame.
   StackFrameIterator(uword fp,
@@ -271,8 +280,13 @@ class StackFrameIterator {
     StackFrame* NextFrame(bool validate);
 
    private:
-    explicit FrameSetIterator(Thread* thread)
-        : fp_(0), sp_(0), pc_(0), stack_frame_(thread), thread_(thread) {}
+    explicit FrameSetIterator(Thread* thread, StackOwner stack_owner)
+        : fp_(0),
+          sp_(0),
+          pc_(0),
+          stack_frame_(thread),
+          thread_(thread),
+          stack_owner_(stack_owner) {}
     void Unpoison();
 
     uword fp_;
@@ -280,6 +294,7 @@ class StackFrameIterator {
     uword pc_;
     StackFrame stack_frame_;  // Singleton frame returned by NextFrame().
     Thread* thread_;
+    StackOwner stack_owner_;
 
     friend class StackFrameIterator;
     DISALLOW_COPY_AND_ASSIGN(FrameSetIterator);
@@ -299,6 +314,8 @@ class StackFrameIterator {
   // stack frames.
   void SetupLastExitFrameData();
   void SetupNextExitFrameData();
+
+  bool HasCoroutine();
 
   bool validate_;     // Validate each frame as we traverse the frames.
   EntryFrame entry_;  // Singleton entry frame returned by NextEntryFrame().

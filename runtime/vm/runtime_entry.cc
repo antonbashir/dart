@@ -26,9 +26,7 @@
 #include "vm/kernel_isolate.h"
 #include "vm/message.h"
 #include "vm/message_handler.h"
-#include "vm/native_entry.h"
 #include "vm/object_store.h"
-#include "vm/os_thread.h"
 #include "vm/parser.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
@@ -3872,13 +3870,29 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 }
 
 DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
-  const Coroutine& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  Thread::Current()->EnterCoroutine(coroutine.ptr());
+  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  coroutine.HandleRootEnter(thread, zone);
 }
 
 DEFINE_RUNTIME_ENTRY(ExitCoroutine, 0) {
-  Thread::Current()->ExitCoroutine();
+  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
+  coroutine.HandleRootExit(thread, zone);
 }
+
+DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
+  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
+  coroutine.HandleForkedEnter(thread, zone);
+}
+
+DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 0) {
+  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
+  coroutine.HandleForkedExit(thread, zone);
+}
+
+DEFINE_RUNTIME_ENTRY(JumpToFrameCoroutine, 2) {
+  Coroutine::Handle(Thread::Current()->coroutine()).HandleJumpToFrame(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
+}
+
 
 // Use expected function signatures to help MSVC compiler resolve overloading.
 typedef double (*UnaryMathCFunction)(double x);

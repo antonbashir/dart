@@ -14,6 +14,7 @@
 #include "vm/class_id.h"
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
+#include "vm/coroutine.h"
 #include "vm/exceptions.h"
 #include "vm/globals.h"
 #include "vm/pointer_tagging.h"
@@ -3776,16 +3777,46 @@ class UntaggedFutureOr : public UntaggedInstance {
 
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
+  COMPRESSED_POINTER_FIELD(StringPtr, name)
+  VISIT_FROM(name)
+  COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
+  COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
+  COMPRESSED_POINTER_FIELD(ArrayPtr, arguments)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
-  VISIT_FROM(caller)
-  COMPRESSED_POINTER_FIELD(FunctionPtr, entry)
-  VISIT_TO(entry)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
+  COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
+  VISIT_TO(to_processor_previous)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+  CoroutineLink to_state_;
+  uword stack_size_;
+  uword native_stack_base_;
+  uword stack_root_;
   uword stack_base_;
   uword stack_limit_;
-public:
+  uword overflow_stack_limit_;
+  uword attributes_;
+  uword index_;
+
+ public:
+  CoroutineLink* to_state() { return &to_state_; }
+  uword stack_size() const { return stack_size_; }
+  uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
+  uword stack_root() const { return stack_root_; }
   uword stack_limit() const { return stack_limit_; }
+  uword overflow_stack_limit() const { return overflow_stack_limit_; }
+
+  uword attributes() const { return attributes_; }
+  uword index() const { return index_; }
+  
+  void set_index(uword index) { index_ = index; }
+  void set_attributes(uword attributes) { attributes_ = attributes; }
+
+  bool HasStackHeadroom() {
+    return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
+  }
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

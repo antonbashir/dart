@@ -66,6 +66,8 @@ Thread::Thread(bool is_vm_isolate)
       write_barrier_mask_(UntaggedObject::kGenerationalBarrierMask),
       active_exception_(Object::null()),
       active_stacktrace_(Object::null()),
+      coroutine_(Coroutine::null()),
+      disabled_coroutine_(Coroutine::null()),
       global_object_pool_(ObjectPool::null()),
       resume_pc_(0),
       execution_state_(kThreadInNative),
@@ -238,6 +240,14 @@ void Thread::set_sticky_error(const Error& value) {
   sticky_error_ = value.ptr();
 }
 
+bool Thread::has_coroutine() const {
+  return coroutine_ != Coroutine::null();
+}
+
+bool Thread::has_disabled_coroutine() const {
+  return disabled_coroutine_ != Coroutine::null();
+}
+
 void Thread::ClearStickyError() {
   sticky_error_ = Error::null();
 }
@@ -312,6 +322,14 @@ void Thread::AssertEmptyStackInvariants() {
     ASSERT(sticky_error() == Error::null());
     ASSERT(active_exception_ == Object::null());
     ASSERT(active_stacktrace_ == Object::null());
+  }
+
+  if (coroutine_.untag() != 0) {
+    ASSERT(coroutine_ == Coroutine::null());
+  }
+
+  if (disabled_coroutine_.untag() != 0) {
+    ASSERT(disabled_coroutine_ == Coroutine::null());
   }
 }
 
@@ -537,8 +555,8 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
   if (Dart::vm_isolate() != nullptr &&
       thread->isolate() != Dart::vm_isolate()) {
-    if (thread->isolate()->saved_coroutine() != nullptr) {
-      thread->RestoreCoroutine(thread->isolate()->saved_coroutine());
+    if (thread->isolate()->HasCoroutine()) {
+      thread->RestoreCoroutine(thread->isolate()->RestoreCoroutine());
       return;
     }
 #if defined(USING_SIMULATOR)
@@ -551,8 +569,8 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
 
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
                                               VMTag::VMTagId tag) {
-  if (thread->coroutine() != nullptr) {
-    thread->isolate()->save_coroutine(thread->SaveCoroutine());
+  if (thread->has_coroutine()) {
+    thread->isolate()->SaveCoroutine(thread->SaveCoroutine());
     SuspendThreadInternal(thread, tag);
     return;
   }
@@ -674,7 +692,8 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
 
   thread->isolate_ = nullptr;
   thread->isolate_group_ = nullptr;
-  thread->coroutine_ = nullptr;
+  thread->coroutine_ = Coroutine::null();
+  thread->disabled_coroutine_ = Coroutine::null();
   thread->scheduled_dart_mutator_isolate_ = nullptr;
   thread->set_execution_state(Thread::kThreadInNative);
   thread->stack_limit_.store(0);
@@ -716,9 +735,9 @@ void Thread::RestoreCoroutine(CoroutinePtr coroutine) {
   MonitorLocker ml(&thread_lock_);
   coroutine_ = coroutine;
   if (!HasScheduledInterrupts()) {
-    stack_limit_.store(coroutine->untag()->stack_limit());
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
   }
-  saved_stack_limit_ = coroutine->untag()->stack_limit();
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
 }
 
 CoroutinePtr Thread::SaveCoroutine() {
@@ -728,22 +747,38 @@ CoroutinePtr Thread::SaveCoroutine() {
   }
   saved_stack_limit_ = OSThread::kInvalidStackLimit;
   CoroutinePtr coroutine = coroutine_;
-  coroutine_ = nullptr;
+  coroutine_ = Coroutine::null();
   return coroutine;
 }
 
 void Thread::EnterCoroutine(CoroutinePtr coroutine) {
-  MonitorLocker ml(&thread_lock_);
   coroutine_ = coroutine;
   if (!HasScheduledInterrupts()) {
-    stack_limit_.store(coroutine->untag()->stack_limit());
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
   }
-  saved_stack_limit_ = coroutine->untag()->stack_limit();
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
 }
 
 void Thread::ExitCoroutine() {
-  MonitorLocker ml(&thread_lock_);
-  coroutine_ = nullptr;
+  coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(os_thread()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = os_thread()->overflow_stack_limit();
+}
+
+void Thread::EnableCoroutine() {
+  coroutine_ = disabled_coroutine_;
+  disabled_coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine_->untag()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = coroutine_->untag()->overflow_stack_limit();
+}
+
+void Thread::DisableCoroutine() {
+  disabled_coroutine_ = coroutine_;
+  coroutine_ = Coroutine::null();
   if (!HasScheduledInterrupts()) {
     stack_limit_.store(os_thread()->overflow_stack_limit());
   }
@@ -751,18 +786,15 @@ void Thread::ExitCoroutine() {
 }
 
 uword Thread::GetSavedStackLimit() const {
-  return coroutine_ == nullptr ? saved_stack_limit_
+  return !has_coroutine() ? saved_stack_limit_
          : saved_stack_limit_ == OSThread::kInvalidStackLimit
              ? OSThread::kInvalidStackLimit
-             : coroutine_->untag()->stack_limit();
+             : coroutine_->untag()->overflow_stack_limit();
 }
 
 bool Thread::HasStackHeadroom() const {
-  if (coroutine_ != nullptr) {
-    return OSThread::GetCurrentStackPointer() >
-           coroutine_->untag()->stack_limit();
-  }
-  return os_thread()->HasStackHeadroom();
+  return has_coroutine() ? coroutine_->untag()->HasStackHeadroom()
+                         : os_thread()->HasStackHeadroom();
 }
 
 static bool IsInterruptLimit(uword limit) {
@@ -816,7 +848,7 @@ ErrorPtr Thread::HandleInterrupts() {
       Profiler::ProcessCompletedBlocks(isolate());
     }
 #endif  // !defined(PRODUCT)
-
+  
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
     HeapProfileSampler& sampler = heap_sampler();
     if (sampler.ShouldSetThreadSamplingInterval()) {
@@ -1041,6 +1073,8 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
 
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
 

@@ -487,7 +487,9 @@ StackFrameIterator::StackFrameIterator(ValidationPolicy validation_policy,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -502,7 +504,28 @@ StackFrameIterator::StackFrameIterator(uword last_fp,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
+      current_frame_(nullptr),
+      thread_(thread) {
+  ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
+         thread_ == Thread::Current());
+  frames_.fp_ = last_fp;
+  frames_.sp_ = 0;
+  frames_.pc_ = 0;
+  frames_.Unpoison();
+}
+
+StackFrameIterator::StackFrameIterator(uword last_fp,
+                                       ValidationPolicy validation_policy,
+                                       Thread* thread,
+                                       CrossThreadPolicy cross_thread_policy,
+                                       StackOwner stack_owner)
+    : validate_(validation_policy == ValidationPolicy::kValidateFrames),
+      entry_(thread),
+      exit_(thread),
+      frames_(thread, stack_owner),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -522,7 +545,9 @@ StackFrameIterator::StackFrameIterator(uword fp,
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread),
+      frames_(thread,
+              thread->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                      : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -537,7 +562,9 @@ StackFrameIterator::StackFrameIterator(const StackFrameIterator& orig)
     : validate_(orig.validate_),
       entry_(orig.thread_),
       exit_(orig.thread_),
-      frames_(orig.thread_),
+      frames_(orig.thread_,
+              orig.thread_->has_coroutine() ? StackOwner::kStackOwnerCoroutine
+                                            : StackOwner::kStackOwnerThread),
       current_frame_(nullptr),
       thread_(orig.thread_) {
   frames_.fp_ = orig.frames_.fp_;
@@ -607,7 +634,7 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 #if !defined(USING_SIMULATOR)
   if (fp_ == 0) return;
   // Note that Thread::os_thread_ is cleared when the thread is descheduled.
-  ASSERT((thread_->coroutine() != nullptr) ||
+  ASSERT(stack_owner_ == kStackOwnerCoroutine ||
          (thread_->os_thread() == nullptr) ||
          ((thread_->os_thread()->stack_limit() < fp_) &&
           (thread_->os_thread()->stack_base() > fp_)));
@@ -627,6 +654,17 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
+  if (stack_owner_ == kStackOwnerCoroutine && StubCode::InCoroutineStub(pc_)) {
+    frame = &stack_frame_;
+    frame->sp_ = sp_;
+    frame->fp_ = fp_;
+    frame->pc_ = pc_;
+    sp_ = frame->GetCallerSp();
+    fp_ = frame->GetCallerFp();
+    pc_ = frame->GetCallerPc();
+    Unpoison();
+    return NextFrame(validate);
+  }
   frame = &stack_frame_;
   frame->sp_ = sp_;
   frame->fp_ = fp_;

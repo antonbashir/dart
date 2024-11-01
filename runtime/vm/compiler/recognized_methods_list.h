@@ -381,11 +381,34 @@ namespace dart {
   V(::, _memCopy, MemCopy, 0x51939aa6)                                         \
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
-  V(::, _coroutineInitialize, CoroutineInitialize, 0x797da468)                 \
-  V(::, _coroutineTransfer, CoroutineTransfer, 0x821c1d82)                     \
-  V(::, _coroutineFork, CoroutineFork, 0xaca4c449)                             \
-  V(_Coroutine, get:_caller, Coroutine_getCaller,                              \
-    0x786cc73b)                                                                \
+  V(_Coroutine, _initialize, CoroutineInitialize, 0xa75fbc36)                  \
+  V(_Coroutine, _transfer, CoroutineTransfer, 0x94684996)                      \
+  V(_Coroutine, _fork, CoroutineFork, 0x9e657da5)                              \
+  V(_Coroutine, get:_name, Coroutine_getName,0x2b1f1c32)                       \
+  V(_Coroutine, get:_index, Coroutine_getIndex, 0x683b41d2)                    \
+  V(_Coroutine, get:_entry, Coroutine_getEntry, 0xc825e938)                    \
+  V(_Coroutine, get:_trampoline, Coroutine_getTrampoline, 0xc5b7b65a)          \
+  V(_Coroutine, get:_arguments, Coroutine_getArguments, 0x4df70fc1)            \
+  V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
+  V(_Coroutine, get:_caller, Coroutine_getCaller, 0x786ccafc)                  \
+  V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0x6ad5213d)            \
+  V(_Coroutine, get:_processor, Coroutine_getProcessor, 0x6c9fb5d8)            \
+  V(_Coroutine, get:_toProcessorNext, Coroutine_getToProcessorNext, 0x74a78b18)\
+  V(_Coroutine, get:_toProcessorPrevious, Coroutine_getToProcessorPrevious,    \
+  0x6a5372a9)                                                                  \
+  V(_Coroutine, set:_name, Coroutine_setName, 0x45ff0fef)                      \
+  V(_Coroutine, set:_entry, Coroutine_setEntry, 0x896541f5)                    \
+  V(_Coroutine, set:_trampoline, Coroutine_setTrampoline, 0x86f70f17)          \
+  V(_Coroutine, set:_arguments, Coroutine_setArguments, 0x8c8ec23e)            \
+  V(_Coroutine, set:_attributes, Coroutine_setAttributes, 0xb87a94c6)          \
+  V(_Coroutine, set:_caller, Coroutine_setCaller, 0xa96401f9)                  \
+  V(_Coroutine, set:_scheduler, Coroutine_setScheduler, 0x9bcc583a)            \
+  V(_Coroutine, set:_processor, Coroutine_setProcessor, 0x74996ed5)            \
+  V(_Coroutine, set:_toProcessorNext, Coroutine_setToProcessorNext, 0xa59ec215)\
+  V(_Coroutine, set:_toProcessorPrevious, Coroutine_setToProcessorPrevious,    \
+  0x9b4aa9a6)                                                                  \
+  V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc8452bde)                \
+  V(_Coroutine, _at, Coroutine_atIndex, 0x28bab05c)                            \
 
 
 // List of intrinsics:

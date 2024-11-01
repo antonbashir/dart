@@ -11476,10 +11476,10 @@ class Call1ArgStubInstr : public TemplateDefinition<1, Throws> {
   DISALLOW_COPY_AND_ASSIGN(Call1ArgStubInstr);
 };
 
-class CoroutineInitializeInstr : public TemplateInstruction<1, NoThrow> {
+class CoroutineInitializeInstr : public TemplateDefinition<1, Throws> {
  public:
   CoroutineInitializeInstr(Value* root, intptr_t deopt_id)
-      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
                             deopt_id) {
     SetInputAt(0, root);
   }
@@ -11487,7 +11487,7 @@ class CoroutineInitializeInstr : public TemplateInstruction<1, NoThrow> {
   Value* root() const { return inputs_[0]; }
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
@@ -11495,16 +11495,16 @@ class CoroutineInitializeInstr : public TemplateInstruction<1, NoThrow> {
 
   DECLARE_INSTRUCTION(CoroutineInitialize);
   PRINT_OPERANDS_TO_SUPPORT
-  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineInitializeInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineInitializeInstr);
 };
 
-class CoroutineTransferInstr : public TemplateInstruction<2, NoThrow> {
+class CoroutineTransferInstr : public TemplateDefinition<2, Throws> {
  public:
   CoroutineTransferInstr(Value* from, Value* to, intptr_t deopt_id)
-      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
                             deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
@@ -11515,7 +11515,7 @@ class CoroutineTransferInstr : public TemplateInstruction<2, NoThrow> {
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
@@ -11523,16 +11523,16 @@ class CoroutineTransferInstr : public TemplateInstruction<2, NoThrow> {
 
   DECLARE_INSTRUCTION(CoroutineTransfer);
   PRINT_OPERANDS_TO_SUPPORT
-  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineTransferInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineTransferInstr);
 };
 
-class CoroutineForkInstr : public TemplateInstruction<2, NoThrow> {
+class CoroutineForkInstr : public TemplateDefinition<2, Throws> {
  public:
   CoroutineForkInstr(Value* from, Value* to, intptr_t deopt_id)
-      : TemplateInstruction(InstructionSource(TokenPosition::kNoSource),
+      : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
                             deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
@@ -11543,7 +11543,7 @@ class CoroutineForkInstr : public TemplateInstruction<2, NoThrow> {
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
@@ -11552,7 +11552,7 @@ class CoroutineForkInstr : public TemplateInstruction<2, NoThrow> {
   DECLARE_INSTRUCTION(CoroutineFork);
   PRINT_OPERANDS_TO_SUPPORT
 
-  DECLARE_EMPTY_SERIALIZATION(CoroutineForkInstr, TemplateInstruction)
+  DECLARE_EMPTY_SERIALIZATION(CoroutineForkInstr, TemplateDefinition)
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CoroutineForkInstr);

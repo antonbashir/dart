@@ -12702,26 +12702,169 @@ class SuspendState : public Instance {
 
 class Coroutine : public Instance {
  public:
+  enum CoroutineAttributes {
+    nothing = 0,
+    created = 1 << 0,
+    running = 1 << 1,
+    suspended = 1 << 2,
+    finished = 1 << 3,
+    disposed = 1 << 4,
+    persistent = 1 << 5,
+  };
+
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedCoroutine));
   }
-  static CoroutinePtr New(void** stackb_base, uintptr_t stack_size, FunctionPtr entry);
+
+  static CoroutinePtr New(uintptr_t size, FunctionPtr trampoline);
+
+  static uword CalculateHeadroom(uword stack_size) {
+    uword headroom = OSThread::kStackSizeBufferFraction * stack_size;
+    return (headroom > OSThread::kStackSizeBufferMax)
+               ? OSThread::kStackSizeBufferMax
+               : headroom;
+  }
+
+  void HandleJumpToFrame(Thread* thread, uword stack_pointer);
+  void HandleRootEnter(Thread* thread, Zone* zone);
+  void HandleRootExit(Thread* thread, Zone* zone);
+  void HandleForkedEnter(Thread* thread, Zone* zone);
+  void HandleForkedExit(Thread* thread, Zone* zone);
+
+  StringPtr name() const { return untag()->name(); }
+  static uword name_offset() { return OFFSET_OF(UntaggedCoroutine, name_); }
+
+  intptr_t index() const { return untag()->index(); }
+  void set_index(intptr_t index) const { untag()->set_index(index); }
+  static uword index_offset() { return OFFSET_OF(UntaggedCoroutine, index_); }
+
+  ClosurePtr entry() const { return untag()->entry(); }
+  static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
+
+  FunctionPtr trampoline() const { return untag()->trampoline(); }
+  static uword trampoline_offset() {
+    return OFFSET_OF(UntaggedCoroutine, trampoline_);
+  }
+
+  DART_FORCE_INLINE
+  intptr_t attributes() const { return untag()->attributes(); }
+  DART_FORCE_INLINE
+  bool is_persistent() const {
+    return (bool)(attributes() & CoroutineAttributes::persistent);
+  }
+  DART_FORCE_INLINE
+  bool is_ephemeral() const { return !is_persistent(); }
+  DART_FORCE_INLINE
+  bool is_created() const {
+    return (bool)(attributes() & CoroutineAttributes::created);
+  }
+  DART_FORCE_INLINE
+  bool is_running() const {
+    return (bool)(attributes() & CoroutineAttributes::running);
+  }
+  DART_FORCE_INLINE
+  bool is_finished() const {
+    return (bool)(attributes() & CoroutineAttributes::finished);
+  }
+  DART_FORCE_INLINE
+  bool is_disposed() const {
+    return (bool)(attributes() & CoroutineAttributes::disposed);
+  }
+  DART_FORCE_INLINE
+  bool is_suspended() const {
+    return (bool)(attributes() & CoroutineAttributes::suspended);
+  }
+  DART_FORCE_INLINE
+  void set_attributes(intptr_t value) const { untag()->set_attributes(value); }
+  DART_FORCE_INLINE
+  void or_attribute(intptr_t value) const {
+    untag()->set_attributes(attributes() | value);
+  }
+  DART_FORCE_INLINE
+  void change_state(intptr_t from_value, intptr_t to_value) const {
+    untag()->set_attributes((attributes() & ~from_value) | to_value);
+  }
+  DART_FORCE_INLINE
+  void and_attribute(intptr_t value) const {
+    untag()->set_attributes(attributes() & value);
+  }
+  static uword attributes_offset() {
+    return OFFSET_OF(UntaggedCoroutine, attributes_);
+  }
+
+  ArrayPtr arguments() const { return untag()->arguments(); }
+  static uword arguments_offset() {
+    return OFFSET_OF(UntaggedCoroutine, arguments_);
+  }
 
   CoroutinePtr caller() const { return untag()->caller(); }
   static uword caller_offset() { return OFFSET_OF(UntaggedCoroutine, caller_); }
 
-  FunctionPtr entry() const { return untag()->entry(); }
-  static uword entry_offset() { return OFFSET_OF(UntaggedCoroutine, entry_); }
+  CoroutinePtr scheduler() const { return untag()->scheduler(); }
+  static uword scheduler_offset() {
+    return OFFSET_OF(UntaggedCoroutine, scheduler_);
+  }
 
-  uword stack_base() const { return untag()->stack_base_; }
+  ObjectPtr processor() const { return untag()->processor(); }
+  static uword processor_offset() {
+    return OFFSET_OF(UntaggedCoroutine, processor_);
+  }
+
+  CoroutinePtr to_processor_next() const {
+    return untag()->to_processor_next();
+  }
+  static uword to_processor_next_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_processor_next_);
+  }
+
+  CoroutinePtr to_processor_previous() const {
+    return untag()->to_processor_previous();
+  }
+  static uword to_processor_previous_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_processor_previous_);
+  }
+
+  CoroutineLink* to_state() const { return untag()->to_state(); }
+  static uword to_state_offset() {
+    return OFFSET_OF(UntaggedCoroutine, to_state_);
+  }
+
+  uword stack_size() const { return untag()->stack_size(); }
+  static uword stack_size_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_size_);
+  }
+
+  uword native_stack_base() const { return untag()->native_stack_base(); }
+  static uword native_stack_base_offset() {
+    return OFFSET_OF(UntaggedCoroutine, native_stack_base_);
+  }
+
+  uword stack_root() const { return untag()->stack_root(); }
+  static uword stack_root_offset() {
+    return OFFSET_OF(UntaggedCoroutine, stack_root_);
+  }
+
+  uword stack_base() const { return untag()->stack_base(); }
   static uword stack_base_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_base_);
   }
 
-  uword stack_limit() const { return untag()->stack_limit_; }
+  uword stack_limit() const { return untag()->stack_limit(); }
   static uword stack_limit_offset() {
     return OFFSET_OF(UntaggedCoroutine, stack_limit_);
   }
+
+  uword overflow_stack_limit() const { return untag()->overflow_stack_limit(); }
+  static uword overflow_stack_limit_offset() {
+    return OFFSET_OF(UntaggedCoroutine, overflow_stack_limit_);
+  }
+  bool HasStackHeadroom() { return untag()->HasStackHeadroom(); }
+
+  void recycle(Zone* zone) const;
+
+  void dispose(Thread* thread,
+               Zone* zone,
+               bool remove_from_registry = true) const;
 
  private:
   FINAL_HEAP_OBJECT_IMPLEMENTATION(Coroutine, Instance);

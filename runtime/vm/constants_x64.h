@@ -390,14 +390,11 @@ struct SuspendStubABI {
 
 struct CoroutineInitializeABI {
   static constexpr Register kCoroutineReg = RDI;
-  static constexpr Register kEntryReg = RCX;
 };
 
 struct CoroutineForkABI {
-  static constexpr Register kCallerCoroutineReg = RDI;
-  static constexpr Register kForkedCoroutineReg = RSI;
-  static constexpr Register kStackLimitReg = RDX;
-  static constexpr Register kForkedEntryReg = RCX;
+  static constexpr Register kCallerCoroutineReg = RSI;
+  static constexpr Register kForkedCoroutineReg = RDI;
 };
 
 struct CoroutineTransferABI {

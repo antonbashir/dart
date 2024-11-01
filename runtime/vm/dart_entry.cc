@@ -51,6 +51,10 @@ class DartEntryScope : public TransitionToGenerated {
     saved_safestack_limit_ = OSThread::GetCurrentSafestackPointer();
     thread->set_saved_safestack_limit(saved_safestack_limit_);
 #endif
+
+    if (thread->has_disabled_coroutine()) {
+      thread->EnableCoroutine();
+    }
   }
 
   ~DartEntryScope() {
@@ -60,10 +64,15 @@ class DartEntryScope : public TransitionToGenerated {
 
     ASSERT(thread()->long_jump_base() == nullptr);
     thread()->set_long_jump_base(saved_long_jump_base_);
+
+    if (thread()->has_coroutine()) {
+      thread()->DisableCoroutine();
+    }
   }
 
  private:
   LongJumpScope* saved_long_jump_base_;
+  CoroutinePtr saved_coroutine_;
 #if defined(USING_SAFE_STACK)
   uword saved_safestack_limit_ = 0;
 #endif

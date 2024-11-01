@@ -1740,8 +1740,8 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       default_tag_(UserTag::null()),
       field_table_(new FieldTable(/*isolate=*/this)),
       finalizers_(GrowableObjectArray::null()),
-      isolate_group_(isolate_group),
       isolate_object_store_(new IsolateObjectStore()),
+      isolate_group_(isolate_group),
       isolate_flags_(0),
 #if !defined(PRODUCT)
       last_resume_timestamp_(OS::GetCurrentTimeMillis()),
@@ -1759,6 +1759,7 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       on_cleanup_callback_(Isolate::CleanupCallback()),
       random_(),
       mutex_(NOT_IN_PRODUCT("Isolate::mutex_")),
+      saved_coroutine_(Coroutine::null()),
       tag_table_(GrowableObjectArray::null()),
       sticky_error_(Error::null()),
       spawn_count_monitor_(),
@@ -1772,6 +1773,8 @@ Isolate::Isolate(IsolateGroup* isolate_group,
   // how the vm_tag (kEmbedderTagId) can be set, these tags need to
   // move to the OSThread structure.
   set_user_tag(UserTags::kDefaultUserTag);
+  active_coroutines_.Initialize();
+  finished_coroutines_.Initialize();
 }
 
 #undef REUSABLE_HANDLE_SCOPE_INIT
@@ -2559,6 +2562,9 @@ void Isolate::Shutdown() {
   ASSERT(this == thread->isolate());
 
   // Don't allow anymore dart code to execution on this isolate.
+  if (thread->has_coroutine()) {
+    thread->ExitCoroutine();
+  }
   thread->ClearStackLimit();
 
   {
@@ -2733,6 +2739,7 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&tag_table_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
@@ -2763,6 +2770,18 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   if (pointers_to_verify_at_exit_.length() != 0) {
     visitor->VisitPointers(&pointers_to_verify_at_exit_[0],
                            pointers_to_verify_at_exit_.length());
+  }
+
+  if (active_coroutines_.IsNotEmpty()) {
+    CoroutineLink::ForEach(&active_coroutines_, [&](CoroutinePtr coroutine) {
+      visitor->VisitPointer(&coroutine);
+    });
+  }
+
+  if (finished_coroutines_.IsNotEmpty()) {
+    CoroutineLink::ForEach(&finished_coroutines_, [&](CoroutinePtr coroutine) {
+      visitor->VisitPointer(&coroutine);
+    });
   }
 }
 
@@ -3811,6 +3830,16 @@ void Isolate::UpdateNativeCallableKeepIsolateAliveCounter(intptr_t delta) {
 bool Isolate::HasOpenNativeCallables() {
   ASSERT(ffi_callback_keep_alive_counter_ >= 0);
   return ffi_callback_keep_alive_counter_ > 0;
+}
+
+bool Isolate::HasCoroutine() const {
+  return saved_coroutine_ != Coroutine::null();
+}
+
+CoroutinePtr Isolate::RestoreCoroutine() {
+  CoroutinePtr coroutine = saved_coroutine_;
+  saved_coroutine_ = Coroutine::null();
+  return coroutine;
 }
 
 #if !defined(PRODUCT)

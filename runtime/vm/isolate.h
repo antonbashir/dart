@@ -18,6 +18,7 @@
 #include "platform/atomic.h"
 #include "vm/base_isolate.h"
 #include "vm/class_table.h"
+#include "vm/coroutine.h"
 #include "vm/dispatch_table.h"
 #include "vm/exceptions.h"
 #include "vm/ffi_callback_metadata.h"
@@ -86,6 +87,7 @@ class StubCode;
 class ThreadRegistry;
 class UserTag;
 class WeakTable;
+class CoroutineLink;
 
 class IsolateVisitor {
  public:
@@ -1004,8 +1006,12 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     T->field_table_values_ = field_table->table();
   }
 
-  CoroutinePtr saved_coroutine() const { return saved_coroutine_; }
-  void save_coroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+  bool HasCoroutine() const;
+  CoroutinePtr RestoreCoroutine();
+  void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+
+  CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
+  CoroutineLink* active_coroutines() { return &active_coroutines_; }
 
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
@@ -1073,6 +1079,10 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   void set_finalizers(const GrowableObjectArray& value);
   static intptr_t finalizers_offset() {
     return OFFSET_OF(Isolate, finalizers_);
+  }
+
+  static intptr_t isolate_object_store_offset() {
+    return OFFSET_OF(Isolate, isolate_object_store_);
   }
 
   Dart_EnvironmentCallback environment_callback() const {
@@ -1563,11 +1573,11 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool single_step_ = false;
   bool has_resumption_breakpoints_ = false;
   bool is_system_isolate_ = false;
+  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
-  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \
@@ -1624,7 +1634,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-  enum {
+	  enum {
     kPendingHandlerIndex = 0,
     kPendingMethodNameIndex,
     kPendingKeysIndex,
@@ -1677,7 +1687,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
-  CoroutinePtr saved_coroutine_ = nullptr;
+  CoroutinePtr saved_coroutine_;
+  CoroutineLink active_coroutines_;
+  CoroutineLink finished_coroutines_;
 
   GrowableObjectArrayPtr tag_table_;
 

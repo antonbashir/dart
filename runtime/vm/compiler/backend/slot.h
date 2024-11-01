@@ -84,9 +84,16 @@ class ParsedFunction;
   V(WeakProperty, UntaggedWeakProperty, key, Dynamic, WEAK)                    \
   V(WeakProperty, UntaggedWeakProperty, value, Dynamic, WEAK)                  \
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)               \
-  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments, FINAL)\
+  V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments,       \
+    FINAL)                                                                     \
+  V(Coroutine, UntaggedCoroutine, name, Dynamic, VAR)                          \
+  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                         \
+  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                   \
+  V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)                     \
+  V(Coroutine, UntaggedCoroutine, to_processor_next, Dynamic, VAR)             \
+  V(Coroutine, UntaggedCoroutine, to_processor_previous, Dynamic, VAR)         \
   V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                      \
-  V(Coroutine, UntaggedCoroutine, entry, Coroutine, VAR)                       \
+  V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:
@@ -149,7 +156,9 @@ class ParsedFunction;
     FINAL)                                                                     \
   V(TypeParameters, UntaggedTypeParameters, names, Array, FINAL)               \
   V(UnhandledException, UntaggedUnhandledException, exception, Dynamic, FINAL) \
-  V(UnhandledException, UntaggedUnhandledException, stacktrace, Dynamic, FINAL)
+  V(UnhandledException, UntaggedUnhandledException, stacktrace, Dynamic,       \
+    FINAL)                                                                     \
+  V(Coroutine, UntaggedCoroutine, arguments, Array, VAR)
 
 // List of slots that correspond to fields of native objects that contain
 // unboxed values in the following format:
@@ -178,7 +187,9 @@ class ParsedFunction;
     FINAL)                                                                     \
   V(FunctionType, UntaggedFunctionType, packed_type_parameter_counts, Uint16,  \
     FINAL)                                                                     \
-  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)
+  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)     \
+  V(Coroutine, UntaggedCoroutine, index, IntPtr, VAR)                          \
+  V(Coroutine, UntaggedCoroutine, attributes, IntPtr, VAR)
 
 // Native slots containing untagged addresses that do not exist in JIT mode.
 // See UNTAGGED_NATIVE_DART_SLOTS_LIST for the format.
@@ -233,6 +244,8 @@ class ParsedFunction;
   V(Isolate, _, finalizers, GrowableObjectArray, VAR)                          \
   V(LocalHandle, _, ptr, Dynamic, VAR)                                         \
   V(ObjectStore, _, record_field_names, Array, VAR)                            \
+  V(IsolateObjectStore, _, coroutines_registry, Array, VAR)                    \
+  V(Thread, _, coroutine, Coroutine, VAR)                                      \
   V(PersistentHandle, _, ptr, Dynamic, VAR)
 
 // List of slots that correspond to fields of non-Dart objects containing
@@ -280,6 +293,7 @@ class ParsedFunction;
 // load optimizations.
 #define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)                                  \
   V(IsolateGroup, _, object_store, false, FINAL)                               \
+  V(Isolate, _, isolate_object_store, false, FINAL)                            \
   V(Thread, _, api_top_scope, false, VAR)                                      \
   V(Thread, _, isolate, false, FINAL)                                          \
   V(Thread, _, isolate_group, false, FINAL)                                    \

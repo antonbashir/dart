@@ -2,16 +2,59 @@ import "dart:_internal" show patch;
 import "dart:fiber";
 
 @patch
-class Fiber {
+class _Coroutine {
   @patch
-  FiberState get state => _state;
-  var _state = FiberState.created;
+  factory _Coroutine._(int size, Function trampoline) => throw UnsupportedError("_Coroutine._");
   @patch
-  Fiber._({required int size, required void Function() entry, required String name}) : this.name = name {}
+  String get _name => throw UnsupportedError("_Coroutine._current");
   @patch
-  void start() { throw UnsupportedError("Fiber.start"); }
+  set _name(String value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  void transfer(Fiber to) { throw UnsupportedError("Fiber.transfer"); }
+  int get _index => throw UnsupportedError("_Coroutine._current");
   @patch
-  void fork(Fiber to) { throw UnsupportedError("Fiber.fork"); }
+  void Function() get _entry => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _entry(void Function() value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  void Function() get _trampoline => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _trampoline(void Function() value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  List get _arguments => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _arguments(List value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  int get _attributes => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _attributes(int value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _Coroutine get _caller => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _caller(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _Coroutine get _scheduler => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _scheduler(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _FiberProcessor get _processor => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _processor(_FiberProcessor value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _Coroutine get _toProcessorNext => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _toProcessorNext(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  _Coroutine get _toProcessorPrevious => throw UnsupportedError("_Coroutine._current");
+  @patch
+  set _toProcessorPrevious(_Coroutine value) => throw UnsupportedError("_Coroutine._current");
+  @patch
+  static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
+  @patch
+  static _Coroutine _at(int index) => throw UnsupportedError("_Coroutine._initialize");
+  @patch
+  static void _initialize(_Coroutine root) => throw UnsupportedError("_Coroutine._initialize");
+  @patch
+  static void _transfer(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._transfer");
+  @patch
+  static void _fork(_Coroutine from, _Coroutine to) => throw UnsupportedError("_Coroutine._fork");
 }

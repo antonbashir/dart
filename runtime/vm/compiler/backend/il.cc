@@ -32,7 +32,6 @@
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
-#include "vm/constants_x86.h"
 #include "vm/cpu.h"
 #include "vm/dart_entry.h"
 #include "vm/object.h"
@@ -8551,69 +8550,52 @@ void Call1ArgStubInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                              locs(), deopt_id(), env());
 }
 
-LocationSummary* CoroutineInitializeInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
+LocationSummary* CoroutineInitializeInstr::MakeLocationSummary(Zone* zone,
+                                                               bool opt) const {
   const intptr_t kNumInputs = 1;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineInitializeABI::kCoroutineReg));
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(
+      0, Location::RegisterLocation(CoroutineInitializeABI::kCoroutineReg));
   return locs;
 }
 
 void CoroutineInitializeInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-    const Register kCoroutine = CoroutineInitializeABI::kCoroutineReg;
-
-#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
-  SPILLS_LR_TO_FRAME({});
-#endif
-  __ EnterFrame(0);
-  __ PushObject(compiler::NullObject());
-  __ PushRegister(kCoroutine);
-  __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
-  __ PopRegister(kCoroutine);
-  __ Drop(1);
-  __ LeaveFrame();
-
-  __ PushRegister(FPREG);
-  __ PushRegister(PP);
-  __ PushRegister(CODE_REG);
-  __ PushRegister(FUNCTION_REG);
-
-  __ EnterFrame(0);
-  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
-  __ PushRegister(FPREG);
-
-  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::entry_offset());
-  if (!FLAG_precompiled_mode) {
-    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
-    __ LoadImmediate(ARGS_DESC_REG, 0);
-  }
-  __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
-
-  __ PopRegister(FPREG);
-  __ LeaveFrame();
-
-  __ PopRegister(FUNCTION_REG);
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(FPREG);
-
-  __ EnterFrame(0);
-  __ PushObject(compiler::NullObject());
-  __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
-  __ Drop(1);
-  __ LeaveFrame();
+  compiler->GenerateStubCall(source(), StubCode::CoroutineInitialize(),
+                             UntaggedPcDescriptors::kOther, locs(), deopt_id(),
+                             env());
 }
 
-LocationSummary* CoroutineTransferInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
+LocationSummary* CoroutineForkInstr::MakeLocationSummary(Zone* zone,
+                                                         bool opt) const {
   const intptr_t kNumInputs = 2;
   const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineTransferABI::kFromCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation(CoroutineTransferABI::kToCoroutineReg));
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(
+      0, Location::RegisterLocation(CoroutineForkABI::kCallerCoroutineReg));
+  locs->set_in(
+      1, Location::RegisterLocation(CoroutineForkABI::kForkedCoroutineReg));
+  return locs;
+}
+
+void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  compiler->GenerateStubCall(source(), StubCode::CoroutineFork(),
+                             UntaggedPcDescriptors::kOther, locs(), deopt_id(),
+                             env());
+}
+
+LocationSummary* CoroutineTransferInstr::MakeLocationSummary(Zone* zone,
+                                                             bool opt) const {
+  const intptr_t kNumInputs = 2;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* locs = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
+  locs->set_in(
+      0, Location::RegisterLocation(CoroutineTransferABI::kFromCoroutineReg));
+  locs->set_in(
+      1, Location::RegisterLocation(CoroutineTransferABI::kToCoroutineReg));
   return locs;
 }
 
@@ -8626,76 +8608,25 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   SPILLS_LR_TO_FRAME({});
 #endif
   __ PushRegister(FPREG);
-  __ PushRegister(PP);
-  __ PushRegister(CODE_REG);
-  __ PushRegister(FUNCTION_REG);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, Coroutine::stack_base_offset());
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
-  __ PopRegister(FUNCTION_REG);
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
   __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)
+    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
+  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine,
+                         Coroutine::overflow_stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
+  __ StoreToOffset(kToStackLimit, THR, Thread::saved_stack_limit_offset());
 
-  __ StoreFieldToOffset(kFromCoroutine, kToCoroutine, Coroutine::caller_offset());
-}
-
-LocationSummary* CoroutineForkInstr::MakeLocationSummary(
-    Zone* zone,
-    bool opt) const {
-  const intptr_t kNumInputs = 2;
-  const intptr_t kNumTemps = 0;
-  LocationSummary* locs = new (zone) LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
-  locs->set_in(0, Location::RegisterLocation(CoroutineForkABI::kCallerCoroutineReg));
-  locs->set_in(1, Location::RegisterLocation(CoroutineForkABI::kForkedCoroutineReg));
-  return locs;
-}
-
-void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
-  const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
-  const Register kStackLimit = CoroutineForkABI::kStackLimitReg;
-
-#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
-  SPILLS_LR_TO_FRAME({});
-#endif
-  __ PushRegister(FPREG);
-  __ PushRegister(PP);
-  __ PushRegister(CODE_REG);
-  __ PushRegister(FUNCTION_REG);
-  __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
-
-  __ StoreFieldToOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
-
-  __ LoadFieldFromOffset(kStackLimit, kForkedCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ StoreToOffset(kForkedCoroutine, THR, Thread::coroutine_offset());
-
-  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
-  __ PushRegister(kForkedCoroutine);
-
-  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, Coroutine::entry_offset());
-  if (!FLAG_precompiled_mode) {
-    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
-    __ LoadImmediate(ARGS_DESC_REG, 0);
-  }
-  __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
-
-  __ PopRegister(kForkedCoroutine);
-  __ LoadFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
-  __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
-  __ PopRegister(FUNCTION_REG);
-  __ PopRegister(CODE_REG);
-  __ PopRegister(PP);
-  __ PopRegister(FPREG);
-
-  __ LoadFieldFromOffset(kStackLimit, kCallerCoroutine, Coroutine::stack_limit_offset());
-  __ StoreToOffset(kStackLimit, THR, Thread::stack_limit_offset());
-  __ StoreToOffset(kCallerCoroutine, THR, Thread::coroutine_offset());
+  compiler::Label scheduled_interrupts;
+  __ LoadFromOffset(TMP, THR, Thread::stack_limit_offset());
+  __ testq(TMP, compiler::Immediate(Thread::kInterruptsMask));
+  __ BranchIf(ZERO, &scheduled_interrupts);
+  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
+  __ Bind(&scheduled_interrupts);
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {
