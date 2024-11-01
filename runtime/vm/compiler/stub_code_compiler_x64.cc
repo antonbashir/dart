@@ -3113,10 +3113,12 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
   __ BranchIf(EQUAL, &no_coroutine);
   __ MoveRegister(TMP, RSP);
   __ SmiTag(TMP);
+  __ PushRegister(CallingConventions::kArg1Reg);
   __ PushObject(NullObject());
   __ PushRegister(TMP);
-  __ CallRuntime(kJumpToFrameCoroutineRuntimeEntry, 2);
+  __ CallRuntime(kJumpToFrameCoroutineRuntimeEntry, 1);
   __ Drop(2);
+  __ PopRegister(CallingConventions::kArg1Reg);
   __ Bind(&no_coroutine);
 
   // Set the tag.

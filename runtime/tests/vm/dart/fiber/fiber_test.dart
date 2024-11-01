@@ -30,22 +30,6 @@ void testRecycle() {
   );
 }
 
-void mainEntry() {
-  globalState = "";
-  globalState += "main -> ";
-  Fiber.schedule(Fiber.current());
-  Fiber.spawn(childEntry);
-  globalState += "main -> ";
-  Fiber.reschedule();
-  Expect.equals("main -> child -> main -> child", globalState);
-}
-
-void childEntry() {
-  globalState += "child -> ";
-  Fiber.reschedule();
-  globalState += "child";
-}
-
 void testClosures() {
   var localState = "localState";
   Fiber.launch(
@@ -104,4 +88,20 @@ void testClosures() {
     terminate: true,
   );
   Expect.equals("level 4", localState);
+}
+
+void mainEntry() {
+  globalState = "";
+  globalState += "main -> ";
+  Fiber.schedule(Fiber.current());
+  Fiber.spawn(childEntry);
+  globalState += "main -> ";
+  Fiber.reschedule();
+  Expect.equals("main -> child -> main -> child", globalState);
+}
+
+void childEntry() {
+  globalState += "child -> ";
+  Fiber.reschedule();
+  globalState += "child";
 }
