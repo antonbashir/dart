@@ -10,7 +10,6 @@
 #include "vm/flags.h"
 #include "vm/heap/safepoint.h"
 #include "vm/object_store.h"
-#include "vm/reverse_pc_lookup_cache.h"
 #include "vm/snapshot.h"
 #include "vm/virtual_memory.h"
 #include "vm/visitor.h"

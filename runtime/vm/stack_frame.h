@@ -222,6 +222,7 @@ class StackFrameIterator {
     kNoCrossThreadIteration = 0,
     kAllowCrossThreadIteration = 1,
   };
+
   enum StackOwner {
     kStackOwnerCoroutine = 0,
     kStackOwnerThread = 1,
