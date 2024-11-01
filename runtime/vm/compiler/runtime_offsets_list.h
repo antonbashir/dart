@@ -170,12 +170,14 @@
   FIELD(Isolate, current_tag_offset)                                           \
   FIELD(Isolate, default_tag_offset)                                           \
   FIELD(Isolate, finalizers_offset)                                            \
+  FIELD(Isolate, isolate_object_store_offset)                                  \
   NOT_IN_PRODUCT(FIELD(Isolate, has_resumption_breakpoints_offset))            \
   FIELD(IsolateGroup, object_store_offset)                                     \
   FIELD(IsolateGroup, class_table_offset)                                      \
   FIELD(IsolateGroup, cached_class_table_table_offset)                         \
   NOT_IN_PRODUCT(FIELD(Isolate, single_step_offset))                           \
   FIELD(Isolate, user_tag_offset)                                              \
+  FIELD(IsolateObjectStore, coroutines_registry_offset)                        \
   FIELD(LinkedHashBase, data_offset)                                           \
   FIELD(ImmutableLinkedHashBase, data_offset)                                  \
   FIELD(LinkedHashBase, deleted_keys_offset)                                   \
@@ -350,6 +352,8 @@
   FIELD(Thread, random_offset)                                                 \
   FIELD(Thread, jump_to_frame_entry_point_offset)                              \
   FIELD(Thread, tsan_utils_offset)                                             \
+  FIELD(Thread, coroutine_offset)                                              \
+  FIELD(Thread, disabled_coroutine_offset)                                     \
   FIELD(TsanUtils, setjmp_function_offset)                                     \
   FIELD(TsanUtils, setjmp_buffer_offset)                                       \
   FIELD(TsanUtils, exception_pc_offset)                                        \
@@ -399,6 +403,24 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
+  FIELD(Coroutine, name_offset)                                                \
+  FIELD(Coroutine, entry_offset)                                               \
+  FIELD(Coroutine, trampoline_offset)                                          \
+  FIELD(Coroutine, arguments_offset)                                           \
+  FIELD(Coroutine, attributes_offset)                                          \
+  FIELD(Coroutine, caller_offset)                                              \
+  FIELD(Coroutine, scheduler_offset)                                           \
+  FIELD(Coroutine, processor_offset)                                           \
+  FIELD(Coroutine, to_processor_next_offset)                                   \
+  FIELD(Coroutine, to_processor_previous_offset)                               \
+  FIELD(Coroutine, to_state_offset)                                            \
+  FIELD(Coroutine, index_offset)                                               \
+  FIELD(Coroutine, stack_size_offset)                                          \
+  FIELD(Coroutine, native_stack_base_offset)                                   \
+  FIELD(Coroutine, stack_root_offset)                                          \
+  FIELD(Coroutine, stack_base_offset)                                          \
+  FIELD(Coroutine, stack_limit_offset)                                         \
+  FIELD(Coroutine, overflow_stack_limit_offset)                                \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \
@@ -468,6 +490,7 @@
   SIZEOF(SingleTargetCache, InstanceSize, UntaggedSingleTargetCache)           \
   SIZEOF(StackTrace, InstanceSize, UntaggedStackTrace)                         \
   SIZEOF(SuspendState, HeaderSize, UntaggedSuspendState)                       \
+  SIZEOF(Coroutine, InstanceSize, UntaggedCoroutine)                           \
   SIZEOF(String, InstanceSize, UntaggedString)                                 \
   SIZEOF(SubtypeTestCache, InstanceSize, UntaggedSubtypeTestCache)             \
   SIZEOF(LoadingUnit, InstanceSize, UntaggedLoadingUnit)                       \

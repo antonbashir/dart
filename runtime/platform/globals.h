@@ -89,7 +89,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-
 #include <cassert>  // For assert() in constant expressions.
 
 #if defined(_WIN32)

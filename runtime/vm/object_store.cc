@@ -78,6 +78,7 @@ ErrorPtr IsolateObjectStore::PreallocateObjects(const Object& out_of_memory) {
   resume_capabilities_ = GrowableObjectArray::New();
   exit_listeners_ = GrowableObjectArray::New();
   error_listeners_ = GrowableObjectArray::New();
+  coroutines_registry_ = Array::New(FLAG_coroutines_registry_initial_size);
   dart_args_1_ = Array::New(1);
   dart_args_2_ = Array::New(2);
 
@@ -339,6 +340,12 @@ void ObjectStore::InitKnownObjects() {
   field = cls.LookupFieldAllowPrivate(Symbols::_yieldStarIterable());
   ASSERT(!field.IsNull());
   set_sync_star_iterator_yield_star_iterable(field);
+
+  const Library& fiber_lib = Library::Handle(zone, fiber_library());
+  ASSERT(!fiber_lib.IsNull());
+  cls = fiber_lib.LookupClassAllowPrivate(Symbols::_Coroutine());
+  ASSERT(!cls.IsNull());
+  ASSERT(cls.EnsureIsFinalized(thread) == Error::null());
 
   const Library& core_lib = Library::Handle(zone, core_library());
   cls = core_lib.LookupClassAllowPrivate(Symbols::_CompileTimeError());

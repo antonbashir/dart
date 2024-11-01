@@ -2783,6 +2783,7 @@ void MessageSerializer::Trace(const Object& root, Object* object) {
       ILLEGAL(RegExp)
       ILLEGAL(StackTrace)
       ILLEGAL(SuspendState)
+      ILLEGAL(Coroutine)
       ILLEGAL(UserTag)
       ILLEGAL(WeakProperty)
       ILLEGAL(WeakReference)

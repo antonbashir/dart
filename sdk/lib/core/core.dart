@@ -185,6 +185,8 @@ export "dart:async"
 
 export "dart:collection" show NullableIterableExtensions, IterableExtensions;
 
+export "dart:fiber" show Fiber;
+
 part "annotations.dart";
 part "bigint.dart";
 part "bool.dart";

@@ -177,6 +177,8 @@ namespace dart {
   V(SuspendSyncStarAtYield)                                                    \
   V(AsyncExceptionHandler)                                                     \
   V(CloneSuspendState)                                                         \
+  V(CoroutineInitialize)                                                       \
+  V(CoroutineFork)                                                             \
   V(FfiAsyncCallbackSend)                                                      \
   V(UnknownDartCode)
 
