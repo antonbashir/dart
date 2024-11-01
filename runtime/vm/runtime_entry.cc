@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "platform/globals.h"
 #include "platform/memory_sanitizer.h"
 #include "platform/thread_sanitizer.h"
 #include "vm/code_descriptors.h"
@@ -14,7 +13,6 @@
 #include "vm/compiler/api/deopt_id.h"
 #include "vm/compiler/api/type_check_mode.h"
 #include "vm/compiler/jit/compiler.h"
-#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -28,15 +26,12 @@
 #include "vm/kernel_isolate.h"
 #include "vm/message.h"
 #include "vm/message_handler.h"
-#include "vm/native_entry.h"
 #include "vm/object_store.h"
-#include "vm/os_thread.h"
 #include "vm/parser.h"
 #include "vm/resolver.h"
 #include "vm/service_isolate.h"
 #include "vm/stack_frame.h"
 #include "vm/symbols.h"
-#include "vm/tagged_pointer.h"
 #include "vm/thread.h"
 #include "vm/type_testing_stubs.h"
 #include "vm/zone_text_buffer.h"
@@ -72,7 +67,7 @@ DEFINE_FLAG(bool,
             false,
             "Ensure results of allocation via runtime calls are not in an "
             "active TLAB.");
-DEFINE_FLAG(bool, trace_deoptimization, true, "Trace deoptimization");
+DEFINE_FLAG(bool, trace_deoptimization, false, "Trace deoptimization");
 DEFINE_FLAG(bool,
             trace_deoptimization_verbose,
             false,
@@ -113,7 +108,7 @@ DEFINE_FLAG(bool,
             "Enable specializing megamorphic calls from unoptimized code.");
 DEFINE_FLAG(bool,
             verbose_stack_overflow,
-            true,
+            false,
             "Print additional details about stack overflow.");
 
 DECLARE_FLAG(int, reload_every);

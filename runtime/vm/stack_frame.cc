@@ -158,6 +158,7 @@ bool StackFrame::IsStubFrame() const {
   // where Thread::Current() is nullptr, so we cannot create a NoSafepointScope.
   NoSafepointScope no_safepoint;
 #endif
+
   CodePtr code = GetCodeObject();
   ASSERT(code != Object::null());
   auto const cid = Code::OwnerClassIdOf(code);
@@ -212,6 +213,7 @@ void StackFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
   // helper functions to the raw object interface.
   NoSafepointScope no_safepoint;
   Code code;
+
   CompressedStackMaps::RawPayloadHandle maps;
   CompressedStackMaps::RawPayloadHandle global_table;
 
@@ -657,8 +659,6 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
     frame->sp_ = sp_;
     frame->fp_ = fp_;
     frame->pc_ = pc_;
-    OS::Print("Coroutine stub frame\n");
-    OS::Print("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "\n", pc_, fp_, sp_);
     sp_ = frame->GetCallerSp();
     fp_ = frame->GetCallerFp();
     pc_ = frame->GetCallerPc();
