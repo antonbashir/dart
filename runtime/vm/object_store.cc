@@ -6,7 +6,6 @@
 
 #include "vm/dart_entry.h"
 #include "vm/exceptions.h"
-#include "vm/flags.h"
 #include "vm/isolate.h"
 #include "vm/object.h"
 #include "vm/raw_object.h"

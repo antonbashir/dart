@@ -89,7 +89,7 @@ final class Isolate {
   ///
   /// Some control messages require a specific capability to be passed along
   /// with the message (see [pauseCapability] and [terminateCapability]),
-  /// otherwise the message is ignored by the isolate.ц
+  /// otherwise the message is ignored by the isolate.
   final SendPort controlPort;
 
   /// Capability granting the ability to pause the isolate.

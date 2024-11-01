@@ -3233,7 +3233,7 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
 #endif
 
 void StubCodeCompiler::GenerateCoroutineInitializeStub() {
-   const Register kCoroutine = CoroutineEntryABI::kCoroutineReg;
+   const Register kCoroutine = CoroutineInitializeABI::kCoroutineReg;
    
  #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});

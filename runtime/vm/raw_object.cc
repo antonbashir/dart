@@ -668,8 +668,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
       if (native_stack != 0 &&
           (attributes & (Coroutine::CoroutineAttributes::suspended |
                          Coroutine::CoroutineAttributes::running)) != 0) {
-        const uword sp = native_stack;
-        const uword fp = *reinterpret_cast<uword*>(sp);
+        const uword fp = *reinterpret_cast<uword*>(native_stack);
         StackFrameIterator frames_iterator(
             fp, ValidationPolicy::kDontValidateFrames, thread,
             StackFrameIterator::kNoCrossThreadIteration,
@@ -682,8 +681,7 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(
       }
 
       if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-        const uword sp = stack;
-        const uword fp = *reinterpret_cast<uword*>(sp);
+        const uword fp = *reinterpret_cast<uword*>(stack);
         StackFrameIterator frames_iterator(
             fp, ValidationPolicy::kDontValidateFrames, thread,
             StackFrameIterator::kNoCrossThreadIteration,
