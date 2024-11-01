@@ -32,7 +32,6 @@
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
-#include "vm/constants_x86.h"
 #include "vm/cpu.h"
 #include "vm/dart_entry.h"
 #include "vm/object.h"
@@ -8614,9 +8613,11 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
   __ PopRegister(FPREG);
   if (!FLAG_precompiled_mode) __ RestoreCodePointer();
-  if (FLAG_precompiled_mode) __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+  if (FLAG_precompiled_mode)
+    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
 
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine, Coroutine::overflow_stack_limit_offset());
+  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine,
+                         Coroutine::overflow_stack_limit_offset());
   __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
   __ StoreToOffset(kToStackLimit, THR, Thread::saved_stack_limit_offset());
 

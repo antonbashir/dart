@@ -4,10 +4,8 @@
 
 #include "vm/object.h"
 
-#include <algorithm>
 #include <memory>
 #include "platform/globals.h"
-#include "vm/flags.h"
 
 #if !defined(DART_TARGET_OS_WINDOWS)
 #include <sys/mman.h>
@@ -72,7 +70,6 @@
 #include "vm/stack_frame.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
-#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
@@ -836,7 +833,9 @@ void Object::Init(IsolateGroup* isolate_group) {
   sentinel_class_ = cls.ptr();
 
   // Allocate and initialize the sentinel values.
-  { *sentinel_ ^= Sentinel::New(); }
+  {
+    *sentinel_ ^= Sentinel::New();
+  }
 
   // Allocate and initialize optimizing compiler constants.
   {
@@ -2790,6 +2789,7 @@ ObjectPtr Object::Allocate(intptr_t cls_id,
   ASSERT(thread->no_safepoint_scope_depth() == 0);
   ASSERT(thread->no_callback_scope_depth() == 0);
   Heap* heap = thread->heap();
+
   uword address = heap->Allocate(thread, size, space);
   if (UNLIKELY(address == 0)) {
     // SuspendLongJumpScope during Dart entry ensures that if a longjmp base is

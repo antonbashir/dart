@@ -200,7 +200,7 @@ constexpr bool FLAG_support_il_printer = false;
   D(trace_optimization, bool, false, "Print optimization details.")            \
   R(trace_profiler, false, bool, false, "Profiler trace")                      \
   D(trace_profiler_verbose, bool, false, "Verbose profiler trace")             \
-  D(trace_runtime_calls, bool, true, "Trace runtime calls.")                  \
+  D(trace_runtime_calls, bool, false, "Trace runtime calls.")                  \
   R(trace_ssa_allocator, false, bool, false,                                   \
     "Trace register allocation over SSA.")                                     \
   P(trace_strong_mode_types, bool, false,                                      \
@@ -245,7 +245,7 @@ constexpr bool FLAG_support_il_printer = false;
   P(coroutines_registry_initial_size, int, 64,                                 \
     "All coroutines array initial size.")                                      \
   P(coroutines_registry_shrink_marker, int, 1024 * 1024,                       \
-    "All coroutines array initial size.")                                      \
+    "Shrink coroutines registry when reached marker size.")                    \
   P(verify_entry_points, bool, false,                                          \
     "Throw API error on invalid member access through native API. See "        \
     "entry_point_pragma.md")                                                   \

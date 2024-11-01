@@ -4,14 +4,12 @@
 
 #include <setjmp.h>
 
-#include "vm/compiler/jit/compiler.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/globals.h"
 
 // For `AllocateObjectInstr::WillAllocateNewOrRemembered`
 // For `GenericCheckBoundInstr::UseUnboxedRepresentation`
 #include "vm/compiler/backend/il.h"
-#include "vm/stub_code.h"
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
 

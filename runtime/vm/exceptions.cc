@@ -11,7 +11,6 @@
 
 #include "lib/stacktrace.h"
 
-#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_impl.h"
 #include "vm/dart_entry.h"
 #include "vm/datastream.h"
@@ -688,6 +687,7 @@ NO_SANITIZE_SAFE_STACK  // This function manipulates the safestack pointer.
   typedef void (*ExcpHandler)(uword, uword, uword, Thread*);
   ExcpHandler func =
       reinterpret_cast<ExcpHandler>(StubCode::JumpToFrame().EntryPoint());
+
   if (thread->is_unwind_in_progress()) {
     thread->SetUnwindErrorInProgress(true);
   }

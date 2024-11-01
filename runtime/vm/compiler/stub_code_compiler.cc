@@ -3,13 +3,11 @@
 // BSD-style license that can be found in the LICENSE file.
 
 #include "vm/compiler/runtime_api.h"
-#include "vm/constants.h"
 #include "vm/flags.h"
 #include "vm/globals.h"
 
 // For `StubCodeCompiler::GenerateAllocateUnhandledExceptionStub`
 #include "vm/compiler/backend/il.h"
-#include "vm/stub_code.h"
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
 
@@ -3309,7 +3307,6 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
   
   __ PopRegister(kForkedCoroutine);
-
   __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
 
   __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());

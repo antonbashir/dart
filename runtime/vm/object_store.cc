@@ -70,19 +70,18 @@ static StackTracePtr CreatePreallocatedStackTrace(Zone* zone) {
   return stack_trace.ptr();
 }
 
-ErrorPtr IsolateObjectStore::PreallocateObjects(const Object& out_of_memory)
-{
-    Thread* thread = Thread::Current();
-    Isolate* isolate = thread->isolate();
-    Zone* zone = thread->zone();
-    ASSERT(isolate != nullptr && isolate->isolate_object_store() == this);
-    ASSERT(preallocated_stack_trace() == StackTrace::null());
-    resume_capabilities_ = GrowableObjectArray::New();
-    exit_listeners_ = GrowableObjectArray::New();
-    error_listeners_ = GrowableObjectArray::New();
-    coroutines_registry_ = Array::New(FLAG_coroutines_registry_initial_size);
-    dart_args_1_ = Array::New(1);
-    dart_args_2_ = Array::New(2);
+ErrorPtr IsolateObjectStore::PreallocateObjects(const Object& out_of_memory) {
+  Thread* thread = Thread::Current();
+  Isolate* isolate = thread->isolate();
+  Zone* zone = thread->zone();
+  ASSERT(isolate != nullptr && isolate->isolate_object_store() == this);
+  ASSERT(preallocated_stack_trace() == StackTrace::null());
+  resume_capabilities_ = GrowableObjectArray::New();
+  exit_listeners_ = GrowableObjectArray::New();
+  error_listeners_ = GrowableObjectArray::New();
+  coroutines_registry_ = Array::New(FLAG_coroutines_registry_initial_size);
+  dart_args_1_ = Array::New(1);
+  dart_args_2_ = Array::New(2);
 
   // Allocate pre-allocated unhandled exception object initialized with the
   // pre-allocated OutOfMemoryError.
