@@ -7,6 +7,7 @@ final tests = <Function>[
   testIdle,
   testTerminated,
   testFunction,
+  testGlobalState,
 ];
 
 void testEmpty() {
@@ -26,29 +27,34 @@ void testTerminated() {
 
 void testFunction() {
   void entry() {
-    Expect.equals("argument", Fiber.current().arguments[0] as String);
+    print(Fiber.current().arguments.value);
+    print(Fiber.current().arguments.value[0]);
+    print(Fiber.current().arguments.value[0][0]);
+    final arguments = Fiber.current().arguments.value[0][0] as String;
+    print(arguments);
+    Expect.equals("argument", arguments);
   }
 
-  Fiber.launch(entry, arguments: ["argument"], terminate: true);
+  Fiber.launch(entry, arguments: <String>["argument"], terminate: true);
 }
 
-var testBaseGlobalState = "";
-void testBaseMainEntry() {
-  testBaseGlobalState = "";
-  testBaseGlobalState += "main -> ";
+var testGlobalStateValue = "";
+void testGlobalStateMain() {
+  testGlobalStateValue = "";
+  testGlobalStateValue += "main -> ";
   Fiber.schedule(Fiber.current());
-  Fiber.spawn(testBaseChildEntry);
-  testBaseGlobalState += "main -> ";
+  Fiber.spawn(testGlobalStateChild);
+  testGlobalStateValue += "main -> ";
   Fiber.reschedule();
-  Expect.equals("main -> child -> main -> child", testBaseGlobalState);
+  Expect.equals("main -> child -> main -> child", testGlobalStateValue);
 }
 
-void testBaseChildEntry() {
-  testBaseGlobalState += "child -> ";
+void testGlobalStateChild() {
+  testGlobalStateValue += "child -> ";
   Fiber.reschedule();
-  testBaseGlobalState += "child";
+  testGlobalStateValue += "child";
 }
 
-void testBase() {
-  Fiber.launch(testBaseMainEntry, terminate: true);
+void testGlobalState() {
+  Fiber.launch(testGlobalStateMain, terminate: true);
 }

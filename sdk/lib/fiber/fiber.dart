@@ -69,6 +69,8 @@ extension type FiberArguments(List _arguments) {
 
   @pragma("vm:prefer-inline")
   List<dynamic> get value => _arguments;
+  
+  String string(int index) => this[index] as String;
 }
 
 class _Coroutine {
