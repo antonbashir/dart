@@ -72,7 +72,6 @@ class DartEntryScope : public TransitionToGenerated {
 
  private:
   LongJumpScope* saved_long_jump_base_;
-  CoroutinePtr saved_coroutine_;
 #if defined(USING_SAFE_STACK)
   uword saved_safestack_limit_ = 0;
 #endif

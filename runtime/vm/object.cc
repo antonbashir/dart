@@ -26648,7 +26648,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto& registry = Array::Handle(object_store->coroutines_registry());
   
   auto page_size = VirtualMemory::PageSize();
-  auto stack_size = ((size_t)size * kWordSize + page_size - 1) / page_size * page_size;
+  auto stack_size = (size_t)size * kWordSize + page_size - 1;
 
   if (finished->IsNotEmpty()) {
     auto& coroutine = Coroutine::Handle(finished->First()->Value());
@@ -26717,7 +26717,8 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 
   if (free_index == -1) {
     free_index = registry.Length();
-    intptr_t new_capacity = (registry.Length() * 2) | 3;
+    auto current_capacity = registry.Length();
+    auto new_capacity = current_capacity = (current_capacity > 1) ? (current_capacity + (current_capacity / 2)) : (current_capacity + 1);
     registry = Array::Grow(registry, new_capacity, Heap::kOld);
     object_store->set_coroutines_registry(registry);
   }
@@ -26732,6 +26733,7 @@ void Coroutine::recycle(Zone* zone) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::finished);
   auto finished = Isolate::Current()->finished_coroutines();
   untag()->stack_base_ = untag()->stack_root_;
+  untag()->native_stack_base_ = (uword) nullptr;
   CoroutineLink::StealHead(finished, to_state());
 }
 
@@ -26766,27 +26768,22 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
 
   auto object_store = thread->isolate()->isolate_object_store();
   auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  auto current_index = index();
+  coroutines.SetAt(index(), Object::null_object());
   untag()->set_index(-1);
 
   if (coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
-    coroutines.SetAt(current_index, Object::null_object());
     return;
   }
 
   intptr_t new_length = 0;
   for (intptr_t index = 0; index < coroutines.Length(); index++) {
-    if (index == current_index) continue; 
-    if (coroutines.At(index) != Object::null()) {
-      new_length++;
-    }
+    if (coroutines.At(index) != Object::null()) new_length++;
   }
 
   if (new_length != 0) {
     auto& coroutine = Coroutine::Handle(zone);
     auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, (intptr_t)FLAG_coroutines_registry_initial_size)));
     for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
-      if (index == current_index) continue;
       if (coroutines.At(index) != Object::null()) {
         coroutine ^= coroutines.At(index);
         new_coroutines.SetAt(new_index, coroutine);
@@ -26805,7 +26802,11 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
 }
 
 const char* Coroutine::ToCString() const {
-  return "Coroutine";
+  auto thread = Thread::Current();
+  auto zone = thread->zone();
+  ZoneTextBuffer buffer(zone);
+  buffer.Printf("Coroutine: name: %s", String::Handle(name()).ToCString());
+  return buffer.buffer();
 }
 
 void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
@@ -26829,17 +26830,14 @@ void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
   if (found.ptr() == ptr()) {
     return;
   }
-  if (found.ptr() != ptr()) {
-    if (is_persistent()) {
-      recycle(zone);
-    }
-    if (is_ephemeral()) {
-      dispose(thread, zone);
-    }
-    found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
-    thread->EnterCoroutine(found.ptr());
-    return;
+  if (is_persistent()) {
+    recycle(zone);
   }
+  if (is_ephemeral()) {
+    dispose(thread, zone);
+  }
+  found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
+  thread->EnterCoroutine(found.ptr());
 }
 
 void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
@@ -26882,7 +26880,6 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   }
 
   coroutines.Truncate(0);
-  
   object_store->set_coroutines_registry(Array::Handle(Array::New(FLAG_coroutines_registry_initial_size)));
 
   thread->ExitCoroutine();
