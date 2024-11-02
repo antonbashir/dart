@@ -1,0 +1,44 @@
+name: dartdev
+
+# This package is not intended for consumption on pub.dev. DO NOT publish.
+publish_to: none
+
+environment:
+  sdk: ^3.3.0
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dependencies:
+  analysis_server: any
+  analysis_server_client: any
+  analyzer: any
+  args: any
+  cli_util: any
+  collection: any
+  dart2native: any
+  dart_style: any
+  dartdoc: any
+  dds: any
+  dds_service_extensions: any
+  dtd_impl: any
+  front_end: any
+  http: any
+  kernel: any
+  logging: any
+  meta: any
+  native_assets_builder: any
+  native_assets_cli: any
+  path: any
+  pub: any
+  telemetry: any
+  unified_analytics: any
+  vm: any
+  vm_service: any
+  yaml: any
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dev_dependencies:
+  expect: any
+  file: any
+  lints: any
+  pub_semver: any
+  test: any

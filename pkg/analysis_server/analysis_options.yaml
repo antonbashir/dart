@@ -1,0 +1,39 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  errors:
+    # Increase the severity of the unused_import hint.
+    unused_import: warning
+
+    # Lints from the recommended set that conflict w/ analyzer style or will
+    # require some work to reach compliance.
+    # See: https://github.com/dart-lang/sdk/issues/48785
+
+    # A fair amount of lib/ code (especially protocol-related code) does not
+    # comply.
+    constant_identifier_names: ignore
+    # This package imports much of the implementation libraries of the
+    # 'analyzer' (and sometimes the '_fe_analyzer_shared' package), because it
+    # is tightly integrated. This will not likely change any time soon.
+    implementation_imports: ignore
+    # There are just over 100 violations of this, which can likely be ignored
+    # on a case-by-case or file-by-file basis.
+    non_constant_identifier_names: ignore
+    overridden_fields: ignore
+    todo: ignore
+
+linter:
+  rules:
+    - avoid_redundant_argument_values
+    - flutter_style_todos
+    - library_annotations
+    - prefer_single_quotes
+    - unawaited_futures
+    - unnecessary_breaks
+    - unnecessary_final
+    - unnecessary_library_directive
+    - unnecessary_parenthesis
+    - unreachable_from_main
