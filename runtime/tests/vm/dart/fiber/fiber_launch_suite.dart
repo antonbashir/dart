@@ -27,12 +27,7 @@ void testTerminated() {
 
 void testFunction() {
   void entry() {
-    print(Fiber.current().arguments.value);
-    print(Fiber.current().arguments.value[0]);
-    print(Fiber.current().arguments.value[0][0]);
-    final arguments = Fiber.current().arguments.value[0][0] as String;
-    print(arguments);
-    Expect.equals("argument", arguments);
+    Expect.equals("argument", Fiber.current().arguments[0]);
   }
 
   Fiber.launch(entry, arguments: <String>["argument"], terminate: true);
