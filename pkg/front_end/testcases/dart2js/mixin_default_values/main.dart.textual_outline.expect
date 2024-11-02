@@ -1,5 +1,0 @@
-import 'b_lib.dart';
-
-main() {}
-
-expect(expected, actual) {}

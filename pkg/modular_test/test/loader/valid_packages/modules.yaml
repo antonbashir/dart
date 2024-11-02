@@ -1,6 +1,0 @@
-dependencies:
-  main:
-    - js
-    - expect
-packages:
-  js: ../../../../js/lib

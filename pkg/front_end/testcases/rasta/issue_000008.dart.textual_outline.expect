@@ -1,6 +1,0 @@
-class C {
-  final x;
-  C(this.x);
-}
-
-main() {}

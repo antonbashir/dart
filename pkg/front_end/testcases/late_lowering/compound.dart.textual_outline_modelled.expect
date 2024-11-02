@@ -1,5 +1,0 @@
-error() {}
-
-expect(expected, actual) {}
-
-main() {}

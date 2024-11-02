@@ -1,9 +1,0 @@
-class Class {
-  Class method() => this;
-}
-
-extension Extension on Class {
-  Class extensionMethod() => this;
-}
-
-main() {}

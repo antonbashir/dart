@@ -1,5 +1,0 @@
-import 'dart:async';
-
-main() {}
-
-FutureOr<String> returnsString() async {}

@@ -1,8 +1,0 @@
-class Const<T> {
-  const Const(this.value);
-  final T value;
-}
-
-main() {}
-
-void test(dynamic value, bool expected) {}

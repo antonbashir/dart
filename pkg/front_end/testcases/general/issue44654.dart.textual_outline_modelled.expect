@@ -1,5 +1,0 @@
-void checkFirstLineHasPosition(StackTrace stackTrace) {}
-
-void main() {}
-
-void test2() {}

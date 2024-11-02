@@ -1,8 +1,0 @@
-class A<T extends num> {}
-
-class B {
-  A bar() => throw '';
-  foo(A a) => throw '';
-}
-
-main() {}

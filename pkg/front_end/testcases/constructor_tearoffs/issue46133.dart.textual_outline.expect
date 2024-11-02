@@ -1,5 +1,0 @@
-class A {}
-
-test() => A.const.toString();
-
-main() {}

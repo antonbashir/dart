@@ -1,9 +1,0 @@
-void f() {
-[a, var d] = y;
-}
-
-
-void[KeywordToken] f[StringToken]([BeginToken])[SimpleToken] {[BeginToken]
-[[BeginToken]a[StringToken],[SimpleToken] var[KeywordToken] d[StringToken]][SimpleToken] =[SimpleToken] y[StringToken];[SimpleToken]
-}[SimpleToken]
-[SimpleToken]

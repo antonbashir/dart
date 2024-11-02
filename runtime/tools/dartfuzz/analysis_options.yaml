@@ -1,6 +1,0 @@
-include: package:lints/core.yaml
-
-linter:
-  rules:
-    - directives_ordering
-    - prefer_generic_function_type_aliases

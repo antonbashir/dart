@@ -1,5 +1,0 @@
-extension E on int {
-  static String s = "Lily was here";
-}
-
-test() {}

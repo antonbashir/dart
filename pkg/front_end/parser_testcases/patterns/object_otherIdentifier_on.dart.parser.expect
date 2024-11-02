@@ -1,9 +1,0 @@
-void f(x) {
-var on() = x;
-}
-
-
-void[KeywordToken] f[StringToken]([BeginToken]x[StringToken])[SimpleToken] {[BeginToken]
-var[KeywordToken] on[KeywordToken]([BeginToken])[SimpleToken] =[SimpleToken] x[StringToken];[SimpleToken]
-}[SimpleToken]
-[SimpleToken]

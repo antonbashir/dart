@@ -1,5 +1,0 @@
-dependencies:
-  main:
-    - expect
-packages:
-  expect: .

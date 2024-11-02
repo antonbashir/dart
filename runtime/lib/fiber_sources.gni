@@ -1,1 +1,0 @@
-fiber_runtime_cc_files = [ "coroutine.cc" ]

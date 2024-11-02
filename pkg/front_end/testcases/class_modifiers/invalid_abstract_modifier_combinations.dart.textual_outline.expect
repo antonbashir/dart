@@ -1,3 +1,0 @@
-abstract final base class FinalBase {}
-
-abstract final interface class FinalInterface {}

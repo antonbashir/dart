@@ -1,5 +1,0 @@
-files:
-  - issue_50908_ok.dart
-  - issue_50908_ok_prime.dart
-filters:
-  - ignoreListenerArguments

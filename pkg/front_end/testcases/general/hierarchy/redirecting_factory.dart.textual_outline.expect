@@ -1,6 +1,0 @@
-class Class {
-  factory Class.redirect() = Class;
-  Class();
-}
-
-main() {}

@@ -1,3 +1,0 @@
-import 'main_lib.dart';
-
-class B<X extends A> {}

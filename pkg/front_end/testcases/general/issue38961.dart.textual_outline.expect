@@ -1,4 +1,0 @@
-class C {
-  dynamic x = this;
-  var x = this;
-}

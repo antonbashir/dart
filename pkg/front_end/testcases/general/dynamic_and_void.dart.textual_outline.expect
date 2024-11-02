@@ -1,7 +1,0 @@
-import 'dart:core' show int;
-
-dynamic testDynamic() => 0;
-
-void testVoid() {}
-
-main() {}

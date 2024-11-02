@@ -1,8 +1,0 @@
-T id<T>(T t) => t;
-
-class Class {
-  S Function<S>(S) get idFunction => id;
-  dynamic get dynFunction => id;
-}
-
-main() {}

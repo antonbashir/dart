@@ -1,7 +1,0 @@
-library test;
-
-class C<T> {
-  void f() {}
-}
-
-main() {}

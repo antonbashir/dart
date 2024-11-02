@@ -1,5 +1,0 @@
-class Foo {
-  get foo.x() {}
-  get foo.x() : initializer = true {}
-  get foo() : initializer = true {}
-}

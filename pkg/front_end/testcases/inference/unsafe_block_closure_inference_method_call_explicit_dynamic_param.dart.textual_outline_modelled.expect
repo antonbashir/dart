@@ -1,7 +1,0 @@
-library test;
-
-class C {
-  List<T> f<T>(T g()) => <T>[g()];
-}
-
-main() {}

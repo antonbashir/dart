@@ -1,9 +1,0 @@
-a0 int64
-fa0 double
-a1 int64[int32]
-fa1 double
-a2 int64[int32]
-t3 int64
-t4 int64
-=>
-a0 void

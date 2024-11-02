@@ -1,3 +1,0 @@
-foo(Function<X extends Z, Y, Z>({Map<Y, Z> m}) bar, Map<String, String> m) {}
-
-main() {}

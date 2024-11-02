@@ -1,9 +1,0 @@
-{
-  "configVersion": 2,
-  "packages": [
-    {
-      "name": "folder_lib",
-      "rootUri": "../folder_lib"
-    }
-  ]
-}

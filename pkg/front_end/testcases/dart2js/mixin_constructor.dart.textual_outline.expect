@@ -1,9 +1,0 @@
-class A {}
-
-mixin M on A {
-  M.baz();
-}
-
-class MA extends A with M {}
-
-test() {}

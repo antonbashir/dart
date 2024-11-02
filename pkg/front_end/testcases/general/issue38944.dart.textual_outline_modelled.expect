@@ -1,3 +1,0 @@
-class B<X> extends Object with A<void Function<Y extends X>()> {}
-
-mixin A<Q> {}

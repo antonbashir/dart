@@ -1,9 +1,0 @@
-class A<T> {}
-
-S foo<S>() => throw "foo";
-
-bar<R>(A<R> a) {}
-
-baz() => bar(foo());
-
-main() {}

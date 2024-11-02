@@ -1,3 +1,0 @@
-extension type const N(Null _) {}
-
-void main() {}

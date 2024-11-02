@@ -1,9 +1,0 @@
-library test;
-
-class C {
-  static int f(String s) => throw '';
-}
-
-const v = C.f;
-
-main() {}

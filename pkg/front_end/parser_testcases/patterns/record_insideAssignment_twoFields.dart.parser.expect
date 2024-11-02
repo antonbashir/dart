@@ -1,9 +1,0 @@
-void f(x) {
-(a, b) = x;
-}
-
-
-void[KeywordToken] f[StringToken]([BeginToken]x[StringToken])[SimpleToken] {[BeginToken]
-([BeginToken]a[StringToken],[SimpleToken] b[StringToken])[SimpleToken] =[SimpleToken] x[StringToken];[SimpleToken]
-}[SimpleToken]
-[SimpleToken]

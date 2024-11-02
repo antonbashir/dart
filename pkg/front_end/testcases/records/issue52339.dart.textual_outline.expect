@@ -1,3 +1,0 @@
-mixin M<X> {}
-
-class A<Y> with M<(Y,)> {}

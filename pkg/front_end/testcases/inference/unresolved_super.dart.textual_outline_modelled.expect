@@ -1,9 +1,0 @@
-library test;
-
-T f<T>() => throw '';
-
-class C {
-  void test() {}
-}
-
-main() {}

@@ -1,9 +1,0 @@
-class C<X> {
-  C(void Function(X) x);
-}
-
-T check<T>(C<List<T>> f) {}
-
-void test() {}
-
-main() {}

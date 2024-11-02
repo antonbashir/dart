@@ -1,4 +1,0 @@
-class Field {
-  var _ = 10;
-  void member() {}
-}

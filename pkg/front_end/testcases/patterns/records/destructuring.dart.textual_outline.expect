@@ -1,5 +1,0 @@
-(double lat, double long) getLocation(String name) {}
-
-void main(List<String> arguments) {}
-
-expect(expected, actual) {}

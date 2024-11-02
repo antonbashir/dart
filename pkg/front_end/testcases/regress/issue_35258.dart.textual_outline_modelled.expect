@@ -1,7 +1,0 @@
-class C {
-  C() {}
-  C(this.d) {}
-  final d;
-}
-
-main() {}

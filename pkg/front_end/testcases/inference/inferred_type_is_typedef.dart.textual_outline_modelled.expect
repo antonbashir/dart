@@ -1,7 +1,0 @@
-library test;
-
-final x = <String, F>{};
-
-main() {}
-
-typedef void F();

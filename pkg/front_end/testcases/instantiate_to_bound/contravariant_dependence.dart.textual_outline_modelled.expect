@@ -1,5 +1,0 @@
-C c = throw '';
-
-class C<X extends num, Y extends void Function(X)> {}
-
-main() {}

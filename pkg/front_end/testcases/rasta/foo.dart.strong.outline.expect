@@ -1,5 +1,0 @@
-library foo;
-import self as self;
-
-static method foo() → dynamic
-  ;

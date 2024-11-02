@@ -1,5 +1,0 @@
-class A {
-  add(x) => x;
-}
-
-main() {}

@@ -1,7 +1,0 @@
-library test;
-
-class A<T> {}
-
-test() {}
-
-main() {}
