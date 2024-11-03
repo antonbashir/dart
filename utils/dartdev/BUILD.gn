@@ -1,0 +1,40 @@
+# Copyright (c) 2020, the Dart project authors.  Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+import("../../build/dart/copy_tree.gni")
+import("../application_snapshot.gni")
+
+group("dartdev") {
+  public_deps = [
+    ":copy_dartdev_snapshot",
+    ":copy_prebuilt_devtools",
+  ]
+}
+
+copy("copy_dartdev_snapshot") {
+  visibility = [ ":dartdev" ]
+  public_deps = [ ":generate_dartdev_snapshot" ]
+  sources = [ "$root_gen_dir/dartdev.dart.snapshot" ]
+  outputs = [ "$root_out_dir/dartdev.dart.snapshot" ]
+}
+
+application_snapshot("generate_dartdev_snapshot") {
+  main_dart = "../../pkg/dartdev/bin/dartdev.dart"
+  training_args = [ "--help" ]
+
+  deps = [
+    "../dds:dds",
+    "../dtd:dtd",
+  ]
+
+  vm_args = []
+  output = "$root_gen_dir/dartdev.dart.snapshot"
+}
+
+copy_tree("copy_prebuilt_devtools") {
+  visibility = [ ":dartdev" ]
+  source = "../../third_party/devtools/web"
+  dest = "$root_out_dir/devtools"
+  exclude = "{}"
+}

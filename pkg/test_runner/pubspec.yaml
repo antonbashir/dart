@@ -1,0 +1,30 @@
+# Copyright (c) 2017, the Dart project authors.  Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+name: test_runner
+# This package is not intended for consumption on pub.dev. DO NOT publish.
+publish_to: none
+
+environment:
+  sdk: '>=2.19.0 <3.0.0'
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dependencies:
+  args: any
+  collection: any
+  dart2js_tools: any
+  native_assets_cli: any
+  package_config: any
+  path: any
+  pool: any
+  smith: any
+  status_file: any
+  webdriver: any
+
+# Use 'any' constraints here; we get our versions from the DEPS file.
+dev_dependencies:
+  analyzer: any
+  expect: any
+  glob: any
+  lints: any
