@@ -1,7 +1,0 @@
-A<Y> foo<Y>(Y y) => throw 42;
-
-class A<X> {}
-
-main() {}
-
-test() {}

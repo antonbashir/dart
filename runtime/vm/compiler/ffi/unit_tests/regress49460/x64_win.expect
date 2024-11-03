@@ -1,5 +1,0 @@
-rcx int32
-rdx int64
-r8 int64
-=>
-rax int32

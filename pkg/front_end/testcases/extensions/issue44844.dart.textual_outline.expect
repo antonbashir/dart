@@ -1,8 +1,0 @@
-extension on int {
-  static int foo = 2;
-  void foo() {}
-}
-
-void test() {}
-
-main() {}

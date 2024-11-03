@@ -1,9 +1,0 @@
-extension HashAll on Iterable {
-  int hashAll() => 0;
-}
-
-extension HashAllList on List {
-  int hashAll() => 1;
-}
-
-void main() {}

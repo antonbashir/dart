@@ -1,5 +1,0 @@
-files:
-  - issue_45662.crash_dart
-  - issue_45662_prime.crash_dart
-filters:
-  - ignoreListenerArguments

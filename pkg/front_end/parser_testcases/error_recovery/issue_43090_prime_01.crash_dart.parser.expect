@@ -1,5 +1,0 @@
-typedef A<int> = void Function();
-
-
-typedef[KeywordToken] A[StringToken]<[BeginToken]int[StringToken]>[SimpleToken] =[SimpleToken] void[KeywordToken] Function[KeywordToken]([BeginToken])[SimpleToken];[SimpleToken]
-[SimpleToken]

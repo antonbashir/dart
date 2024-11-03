@@ -1,5 +1,0 @@
-main() {}
-
-expect(expected, actual) {}
-
-throws(f(), String message) {}

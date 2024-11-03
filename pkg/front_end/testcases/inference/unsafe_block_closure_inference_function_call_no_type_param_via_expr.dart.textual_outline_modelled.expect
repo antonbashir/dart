@@ -1,5 +1,0 @@
-library test;
-
-double f(x) => 1.0;
-
-main() {}

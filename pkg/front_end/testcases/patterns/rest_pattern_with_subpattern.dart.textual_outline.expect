@@ -1,5 +1,0 @@
-test(o, [expectedRest]) {}
-
-main() {}
-
-expect(expected, actual) {}

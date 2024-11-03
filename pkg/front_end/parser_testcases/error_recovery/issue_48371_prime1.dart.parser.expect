@@ -1,7 +1,0 @@
-library enum;
-
-main() {}
-
-library[KeywordToken] enum[KeywordToken];[SimpleToken]
-
-main[StringToken]([BeginToken])[SimpleToken] {[BeginToken]}[SimpleToken][SimpleToken]

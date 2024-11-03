@@ -1,5 +1,0 @@
-dependencies:
-  a: b
-  b: c
-  c: a
-  main: b

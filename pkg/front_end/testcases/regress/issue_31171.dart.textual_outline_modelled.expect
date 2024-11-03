@@ -1,5 +1,0 @@
-main() {}
-
-typedef F = Map<String, dynamic> Function();
-
-typedef T = ;

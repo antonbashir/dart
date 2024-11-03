@@ -1,5 +1,0 @@
-Never foo() {}
-
-Never? bar() => null;
-
-main() {}

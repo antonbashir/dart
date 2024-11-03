@@ -1,5 +1,0 @@
-class A {
-  int _foo = 0;
-}
-
-test(dynamic x) {}

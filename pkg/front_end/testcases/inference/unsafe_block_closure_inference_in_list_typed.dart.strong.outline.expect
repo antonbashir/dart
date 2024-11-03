@@ -1,7 +1,0 @@
-library test;
-import self as self;
-import "dart:core" as core;
-
-typedef F = () → core::int;
-static method main() → dynamic
-  ;

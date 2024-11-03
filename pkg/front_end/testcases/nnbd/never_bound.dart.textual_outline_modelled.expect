@@ -1,7 +1,0 @@
-class GenericNever<T extends Never> {
-  dynamic getParamType() => T;
-}
-
-errors() {}
-
-main() {}

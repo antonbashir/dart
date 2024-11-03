@@ -1,8 +1,0 @@
-class A {
-  @pragma('vm:never-inline')
-  String foo() {}
-  double? f2;
-  int? f1;
-}
-
-void main() {}

@@ -1,3 +1,0 @@
-class A {
-  List<List<List<int.>>> p; // added dot!
-}

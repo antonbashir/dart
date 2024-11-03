@@ -1,3 +1,0 @@
-int<int> f() {}
-
-int[StringToken]<[BeginToken]int[StringToken]>[SimpleToken] f[StringToken]([BeginToken])[SimpleToken] {[BeginToken]}[SimpleToken][SimpleToken]

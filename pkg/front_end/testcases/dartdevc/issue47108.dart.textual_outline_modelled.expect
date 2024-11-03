@@ -1,5 +1,0 @@
-class C<T> {}
-
-const constructorTearOff = C.new;
-
-main() {}

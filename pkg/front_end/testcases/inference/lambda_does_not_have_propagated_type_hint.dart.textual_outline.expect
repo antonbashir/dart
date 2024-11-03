@@ -1,9 +1,0 @@
-library test;
-
-List<String> getListOfString() => const <String>[];
-
-void foo() {}
-
-void bar() {}
-
-main() {}

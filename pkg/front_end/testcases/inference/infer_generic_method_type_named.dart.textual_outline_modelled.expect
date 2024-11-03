@@ -1,7 +1,0 @@
-library test;
-
-class C {
-  T m<T>(int a, {required String b, required T c}) => throw '';
-}
-
-test() {}

@@ -1,5 +1,0 @@
-enum E { element, final String foo = "foo"; }
-
-main() {}
-
-test() {}

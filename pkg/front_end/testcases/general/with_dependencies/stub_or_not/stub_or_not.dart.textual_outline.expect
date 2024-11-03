@@ -1,5 +1,0 @@
-import 'stub_or_not_lib1.dart';
-
-class ProblemClass extends Foo {}
-
-main() {}

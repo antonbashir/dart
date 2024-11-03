@@ -1,5 +1,0 @@
-Never throwing() => throw '';
-
-void errors() async {}
-
-void main() {}

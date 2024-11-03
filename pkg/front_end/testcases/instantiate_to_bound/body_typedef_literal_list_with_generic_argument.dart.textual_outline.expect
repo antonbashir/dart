@@ -1,7 +1,0 @@
-typedef A<T>(T p);
-
-class B<U> {
-  fun() {}
-}
-
-main() {}

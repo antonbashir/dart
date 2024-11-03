@@ -1,7 +1,0 @@
-int i = 5;
-
-int test1() {}
-
-int test2() {}
-
-main() {}

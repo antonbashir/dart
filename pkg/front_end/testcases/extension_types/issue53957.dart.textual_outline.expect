@@ -1,5 +1,0 @@
-extension type Ext(Object? _) {
-  int get value => 42;
-}
-
-void main() {}

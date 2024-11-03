@@ -1,3 +1,0 @@
-M(r1 uint32, r2 uint32) Struct(size: 8)
-=>
-P(r0 uint32) Struct(size: 8)

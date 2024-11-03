@@ -1,9 +1,0 @@
-void f(x) {
-async.Future<int>() = x;
-}
-
-
-void[KeywordToken] f[StringToken]([BeginToken]x[StringToken])[SimpleToken] {[BeginToken]
-async[KeywordToken].[SimpleToken]Future[StringToken]<[BeginToken]int[StringToken]>[SimpleToken]([BeginToken])[SimpleToken] =[SimpleToken] x[StringToken];[SimpleToken]
-}[SimpleToken]
-[SimpleToken]

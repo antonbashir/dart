@@ -1,8 +1,0 @@
-[
-  {
-    "name": "mainlib",
-    "edits": [
-      ["pkg/front_end/benchmarks/ikg/hello.dart", "world", "fisk"]
-    ]
-  }
-]

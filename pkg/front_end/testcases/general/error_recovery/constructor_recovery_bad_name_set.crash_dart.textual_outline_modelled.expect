@@ -1,5 +1,0 @@
-class Foo {
-  set foo() : initializer = true {}
-  set foo.x() : initializer = true {}
-  set foo.x() {}
-}

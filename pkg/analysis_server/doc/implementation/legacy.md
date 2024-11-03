@@ -1,1 +1,0 @@
-# Supporting the legacy protocol

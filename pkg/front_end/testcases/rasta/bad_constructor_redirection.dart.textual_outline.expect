@@ -1,6 +1,0 @@
-class C {
-  const C() : this.x(1);
-  const C.x();
-}
-
-main() {}

@@ -1,3 +1,0 @@
-extension type const V<T>(int id) {}
-
-const c = const V<int>(0);

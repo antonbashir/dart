@@ -1,9 +1,0 @@
-void f(x) {
-var hide() = x;
-}
-
-
-void[KeywordToken] f[StringToken]([BeginToken]x[StringToken])[SimpleToken] {[BeginToken]
-var[KeywordToken] hide[KeywordToken]([BeginToken])[SimpleToken] =[SimpleToken] x[StringToken];[SimpleToken]
-}[SimpleToken]
-[SimpleToken]

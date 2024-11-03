@@ -1,5 +1,0 @@
-const int app = 0;
-
-typedef int F(@app int app);
-
-main() {}

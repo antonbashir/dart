@@ -1,8 +1,0 @@
-library;
-import self as self;
-
-static field dynamic a;
-static method test() → dynamic
-  ;
-static method main() → dynamic
-  ;
