@@ -7,6 +7,7 @@ final tests = [
   testIdle,
   testTerminated,
   testFunction,
+  testClosure,
   testFork,
   testForks,
 ];
@@ -32,6 +33,14 @@ void testFunction() {
   }
 
   Fiber.launch(entry, argument: ["argument"], terminate: true);
+}
+
+void testClosure() {
+  Fiber.launch(
+    () => Expect.equals("argument", Fiber.current().argument.positioned(0)),
+    argument: ["argument"],
+    terminate: true,
+  );
 }
 
 void testFork() {
