@@ -235,7 +235,7 @@ namespace dart {
   F(Coroutine, name_)                                                          \
   F(Coroutine, entry_)                                                         \
   F(Coroutine, trampoline_)                                                    \
-  F(Coroutine, arguments_)                                                     \
+  F(Coroutine, argument_)                                                      \
   F(Coroutine, attributes_)                                                    \
   F(Coroutine, caller_)                                                        \
   F(Coroutine, scheduler_)                                                     \

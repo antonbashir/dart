@@ -388,7 +388,7 @@ namespace dart {
   V(_Coroutine, get:_index, Coroutine_getIndex, 0x683b41d2)                    \
   V(_Coroutine, get:_entry, Coroutine_getEntry, 0xc825e938)                    \
   V(_Coroutine, get:_trampoline, Coroutine_getTrampoline, 0xc5b7b65a)          \
-  V(_Coroutine, get:_arguments, Coroutine_getArguments, 0x4df70fc1)            \
+  V(_Coroutine, get:_argument, Coroutine_getArgument, 0xd8767529)              \
   V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
   V(_Coroutine, get:_caller, Coroutine_getCaller, 0x786ccafc)                  \
   V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0x6ad5213d)            \
@@ -399,7 +399,7 @@ namespace dart {
   V(_Coroutine, set:_name, Coroutine_setName, 0x45ff0fef)                      \
   V(_Coroutine, set:_entry, Coroutine_setEntry, 0x896541f5)                    \
   V(_Coroutine, set:_trampoline, Coroutine_setTrampoline, 0x86f70f17)          \
-  V(_Coroutine, set:_arguments, Coroutine_setArguments, 0x8c8ec23e)            \
+  V(_Coroutine, set:_argument, Coroutine_setArgument, 0x37ae87a6)              \
   V(_Coroutine, set:_attributes, Coroutine_setAttributes, 0xb87a94c6)          \
   V(_Coroutine, set:_caller, Coroutine_setCaller, 0xa96401f9)                  \
   V(_Coroutine, set:_scheduler, Coroutine_setScheduler, 0x9bcc583a)            \

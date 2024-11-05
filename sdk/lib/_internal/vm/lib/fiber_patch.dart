@@ -43,11 +43,11 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external List get _arguments;
+  external Object? get _argument;
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
-  external set _arguments(List value);
+  external set _argument(Object? value);
 
   @patch
   @pragma("vm:recognized", "other")
@@ -111,21 +111,21 @@ class _Coroutine {
   @pragma("vm:unsafe:no-interrupts")
   @pragma("vm:unsafe:no-bounds-checks")
   external static _Coroutine _at(int index);
-  
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   @pragma("vm:unsafe:no-interrupts")
   @pragma("vm:unsafe:no-bounds-checks")
   external static void _initialize(_Coroutine root);
-  
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   @pragma("vm:unsafe:no-interrupts")
   @pragma("vm:unsafe:no-bounds-checks")
   external static void _transfer(_Coroutine from, _Coroutine to);
-  
+
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")

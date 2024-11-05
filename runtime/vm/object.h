@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_OBJECT_H_
 #define RUNTIME_VM_OBJECT_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -12792,9 +12793,9 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, attributes_);
   }
 
-  ArrayPtr arguments() const { return untag()->arguments(); }
-  static uword arguments_offset() {
-    return OFFSET_OF(UntaggedCoroutine, arguments_);
+  ObjectPtr argument() const { return untag()->argument(); }
+  static uword argument_offset() {
+    return OFFSET_OF(UntaggedCoroutine, argument_);
   }
 
   CoroutinePtr caller() const { return untag()->caller(); }

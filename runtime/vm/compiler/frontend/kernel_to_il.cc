@@ -897,77 +897,77 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   }
 }
 
-#define LOAD_NATIVE_FIELD(V)                                                   \
-  V(ByteDataViewLength, TypedDataBase_length)                                  \
-  V(ByteDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                  \
-  V(ByteDataViewTypedData, TypedDataView_typed_data)                           \
-  V(Finalizer_getCallback, Finalizer_callback)                                 \
-  V(FinalizerBase_getAllEntries, FinalizerBase_all_entries)                    \
-  V(FinalizerBase_getDetachments, FinalizerBase_detachments)                   \
-  V(FinalizerEntry_getDetach, FinalizerEntry_detach)                           \
-  V(FinalizerEntry_getNext, FinalizerEntry_next)                               \
-  V(FinalizerEntry_getToken, FinalizerEntry_token)                             \
-  V(FinalizerEntry_getValue, FinalizerEntry_value)                             \
-  V(NativeFinalizer_getCallback, NativeFinalizer_callback)                     \
-  V(GrowableArrayLength, GrowableObjectArray_length)                           \
-  V(ReceivePort_getSendPort, ReceivePort_send_port)                            \
-  V(ReceivePort_getHandler, ReceivePort_handler)                               \
-  V(ImmutableLinkedHashBase_getData, ImmutableLinkedHashBase_data)             \
-  V(ImmutableLinkedHashBase_getIndex, ImmutableLinkedHashBase_index)           \
-  V(LinkedHashBase_getData, LinkedHashBase_data)                               \
-  V(LinkedHashBase_getDeletedKeys, LinkedHashBase_deleted_keys)                \
-  V(LinkedHashBase_getHashMask, LinkedHashBase_hash_mask)                      \
-  V(LinkedHashBase_getIndex, LinkedHashBase_index)                             \
-  V(LinkedHashBase_getUsedData, LinkedHashBase_used_data)                      \
-  V(ObjectArrayLength, Array_length)                                           \
-  V(Record_shape, Record_shape)                                                \
-  V(SuspendState_getFunctionData, SuspendState_function_data)                  \
-  V(Coroutine_getName, Coroutine_name)                                         \
-  V(Coroutine_getEntry, Coroutine_entry)                                       \
-  V(Coroutine_getTrampoline, Coroutine_trampoline)                             \
-  V(Coroutine_getArguments, Coroutine_arguments)                               \
-  V(Coroutine_getCaller, Coroutine_caller)                                     \
-  V(Coroutine_getScheduler, Coroutine_scheduler)                               \
-  V(Coroutine_getProcessor, Coroutine_processor)                               \
-  V(Coroutine_getToProcessorNext, Coroutine_to_processor_next)                 \
-  V(Coroutine_getToProcessorPrevious, Coroutine_to_processor_previous)         \
-  V(SuspendState_getThenCallback, SuspendState_then_callback)                  \
-  V(SuspendState_getErrorCallback, SuspendState_error_callback)                \
-  V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)                 \
-  V(TypedDataViewTypedData, TypedDataView_typed_data)                          \
-  V(TypedListBaseLength, TypedDataBase_length)                                 \
-  V(WeakProperty_getKey, WeakProperty_key)                                     \
-  V(WeakProperty_getValue, WeakProperty_value)                                 \
+#define LOAD_NATIVE_FIELD(V)                                           \
+  V(ByteDataViewLength, TypedDataBase_length)                          \
+  V(ByteDataViewOffsetInBytes, TypedDataView_offset_in_bytes)          \
+  V(ByteDataViewTypedData, TypedDataView_typed_data)                   \
+  V(Finalizer_getCallback, Finalizer_callback)                         \
+  V(FinalizerBase_getAllEntries, FinalizerBase_all_entries)            \
+  V(FinalizerBase_getDetachments, FinalizerBase_detachments)           \
+  V(FinalizerEntry_getDetach, FinalizerEntry_detach)                   \
+  V(FinalizerEntry_getNext, FinalizerEntry_next)                       \
+  V(FinalizerEntry_getToken, FinalizerEntry_token)                     \
+  V(FinalizerEntry_getValue, FinalizerEntry_value)                     \
+  V(NativeFinalizer_getCallback, NativeFinalizer_callback)             \
+  V(GrowableArrayLength, GrowableObjectArray_length)                   \
+  V(ReceivePort_getSendPort, ReceivePort_send_port)                    \
+  V(ReceivePort_getHandler, ReceivePort_handler)                       \
+  V(ImmutableLinkedHashBase_getData, ImmutableLinkedHashBase_data)     \
+  V(ImmutableLinkedHashBase_getIndex, ImmutableLinkedHashBase_index)   \
+  V(LinkedHashBase_getData, LinkedHashBase_data)                       \
+  V(LinkedHashBase_getDeletedKeys, LinkedHashBase_deleted_keys)        \
+  V(LinkedHashBase_getHashMask, LinkedHashBase_hash_mask)              \
+  V(LinkedHashBase_getIndex, LinkedHashBase_index)                     \
+  V(LinkedHashBase_getUsedData, LinkedHashBase_used_data)              \
+  V(ObjectArrayLength, Array_length)                                   \
+  V(Record_shape, Record_shape)                                        \
+  V(SuspendState_getFunctionData, SuspendState_function_data)          \
+  V(Coroutine_getName, Coroutine_name)                                 \
+  V(Coroutine_getEntry, Coroutine_entry)                               \
+  V(Coroutine_getTrampoline, Coroutine_trampoline)                     \
+  V(Coroutine_getArgument, Coroutine_argument)                        \
+  V(Coroutine_getCaller, Coroutine_caller)                             \
+  V(Coroutine_getScheduler, Coroutine_scheduler)                       \
+  V(Coroutine_getProcessor, Coroutine_processor)                       \
+  V(Coroutine_getToProcessorNext, Coroutine_to_processor_next)         \
+  V(Coroutine_getToProcessorPrevious, Coroutine_to_processor_previous) \
+  V(SuspendState_getThenCallback, SuspendState_then_callback)          \
+  V(SuspendState_getErrorCallback, SuspendState_error_callback)        \
+  V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)         \
+  V(TypedDataViewTypedData, TypedDataView_typed_data)                  \
+  V(TypedListBaseLength, TypedDataBase_length)                         \
+  V(WeakProperty_getKey, WeakProperty_key)                             \
+  V(WeakProperty_getValue, WeakProperty_value)                         \
   V(WeakReference_getTarget, WeakReference_target)
 
-#define STORE_NATIVE_FIELD(V)                                                  \
-  V(Finalizer_setCallback, Finalizer_callback)                                 \
-  V(FinalizerBase_setAllEntries, FinalizerBase_all_entries)                    \
-  V(FinalizerBase_setDetachments, FinalizerBase_detachments)                   \
-  V(FinalizerEntry_setToken, FinalizerEntry_token)                             \
-  V(NativeFinalizer_setCallback, NativeFinalizer_callback)                     \
-  V(ReceivePort_setHandler, ReceivePort_handler)                               \
-  V(LinkedHashBase_setData, LinkedHashBase_data)                               \
-  V(LinkedHashBase_setIndex, LinkedHashBase_index)                             \
-  V(SuspendState_setFunctionData, SuspendState_function_data)                  \
-  V(SuspendState_setThenCallback, SuspendState_then_callback)                  \
-  V(SuspendState_setErrorCallback, SuspendState_error_callback)                \
-  V(Coroutine_setName, Coroutine_name)                                         \
-  V(Coroutine_setEntry, Coroutine_entry)                                       \
-  V(Coroutine_setTrampoline, Coroutine_trampoline)                             \
-  V(Coroutine_setArguments, Coroutine_arguments)                               \
-  V(Coroutine_setCaller, Coroutine_caller)                                     \
-  V(Coroutine_setScheduler, Coroutine_scheduler)                               \
-  V(Coroutine_setProcessor, Coroutine_processor)                               \
-  V(Coroutine_setToProcessorNext, Coroutine_to_processor_next)                 \
-  V(Coroutine_setToProcessorPrevious, Coroutine_to_processor_previous)         \
-  V(WeakProperty_setKey, WeakProperty_key)                                     \
-  V(WeakProperty_setValue, WeakProperty_value)                                 \
+#define STORE_NATIVE_FIELD(V)                                          \
+  V(Finalizer_setCallback, Finalizer_callback)                         \
+  V(FinalizerBase_setAllEntries, FinalizerBase_all_entries)            \
+  V(FinalizerBase_setDetachments, FinalizerBase_detachments)           \
+  V(FinalizerEntry_setToken, FinalizerEntry_token)                     \
+  V(NativeFinalizer_setCallback, NativeFinalizer_callback)             \
+  V(ReceivePort_setHandler, ReceivePort_handler)                       \
+  V(LinkedHashBase_setData, LinkedHashBase_data)                       \
+  V(LinkedHashBase_setIndex, LinkedHashBase_index)                     \
+  V(SuspendState_setFunctionData, SuspendState_function_data)          \
+  V(SuspendState_setThenCallback, SuspendState_then_callback)          \
+  V(SuspendState_setErrorCallback, SuspendState_error_callback)        \
+  V(Coroutine_setName, Coroutine_name)                                 \
+  V(Coroutine_setEntry, Coroutine_entry)                               \
+  V(Coroutine_setTrampoline, Coroutine_trampoline)                     \
+  V(Coroutine_setArgument, Coroutine_argument)                         \
+  V(Coroutine_setCaller, Coroutine_caller)                             \
+  V(Coroutine_setScheduler, Coroutine_scheduler)                       \
+  V(Coroutine_setProcessor, Coroutine_processor)                       \
+  V(Coroutine_setToProcessorNext, Coroutine_to_processor_next)         \
+  V(Coroutine_setToProcessorPrevious, Coroutine_to_processor_previous) \
+  V(WeakProperty_setKey, WeakProperty_key)                             \
+  V(WeakProperty_setValue, WeakProperty_value)                         \
   V(WeakReference_setTarget, WeakReference_target)
 
-#define STORE_NATIVE_FIELD_NO_BARRIER(V)                                       \
-  V(LinkedHashBase_setDeletedKeys, LinkedHashBase_deleted_keys)                \
-  V(LinkedHashBase_setHashMask, LinkedHashBase_hash_mask)                      \
+#define STORE_NATIVE_FIELD_NO_BARRIER(V)                        \
+  V(LinkedHashBase_setDeletedKeys, LinkedHashBase_deleted_keys) \
+  V(LinkedHashBase_setHashMask, LinkedHashBase_hash_mask)       \
   V(LinkedHashBase_setUsedData, LinkedHashBase_used_data)
 
 bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
@@ -975,12 +975,12 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
   const MethodRecognizer::Kind kind = function.recognized_kind();
 
   switch (kind) {
-#define TYPED_DATA_GET_INDEXED_CASES(clazz)                                    \
-  case MethodRecognizer::k##clazz##ArrayGetIndexed:                            \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed:                    \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:                        \
+#define TYPED_DATA_GET_INDEXED_CASES(clazz)                 \
+  case MethodRecognizer::k##clazz##ArrayGetIndexed:         \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed: \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:     \
     FALL_THROUGH;
     DART_CLASS_LIST_TYPED_DATA(TYPED_DATA_GET_INDEXED_CASES)
 #undef TYPED_DATA_GET_INDEXED_CASES
@@ -1208,12 +1208,12 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
 
   const MethodRecognizer::Kind kind = function.recognized_kind();
   switch (kind) {
-#define TYPED_DATA_GET_INDEXED_CASES(clazz)                                    \
-  case MethodRecognizer::k##clazz##ArrayGetIndexed:                            \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed:                    \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:                        \
+#define TYPED_DATA_GET_INDEXED_CASES(clazz)                 \
+  case MethodRecognizer::k##clazz##ArrayGetIndexed:         \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed: \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:     \
     FALL_THROUGH;
     DART_CLASS_LIST_TYPED_DATA(TYPED_DATA_GET_INDEXED_CASES)
 #undef TYPED_DATA_GET_INDEXED_CASES
@@ -1709,7 +1709,7 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       ASSERT_EQUAL(function.NumParameters(), 1);
       body += Constant(type_arguments);
       body += AllocateObject(TokenPosition::kNoSource, pointer_class, 1);
-      body += LoadLocal(MakeTemporary());  // Duplicate Pointer.
+      body += LoadLocal(MakeTemporary());                            // Duplicate Pointer.
       body += LoadLocal(parsed_function_->RawParameterVariable(0));  // Address.
       body += CheckNullOptimized(String::ZoneHandle(Z, function.name()));
       // Use the same representation as FfiGetAddress so that the conversions
@@ -1989,32 +1989,32 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += NullConstant();
       break;
     }
-#define IL_BODY(method, slot)                                                  \
-  case MethodRecognizer::k##method:                                            \
-    ASSERT_EQUAL(function.NumParameters(), 1);                                 \
-    body += LoadLocal(parsed_function_->RawParameterVariable(0));              \
-    body += LoadNativeField(Slot::slot());                                     \
+#define IL_BODY(method, slot)                                     \
+  case MethodRecognizer::k##method:                               \
+    ASSERT_EQUAL(function.NumParameters(), 1);                    \
+    body += LoadLocal(parsed_function_->RawParameterVariable(0)); \
+    body += LoadNativeField(Slot::slot());                        \
     break;
       LOAD_NATIVE_FIELD(IL_BODY)
 #undef IL_BODY
-#define IL_BODY(method, slot)                                                  \
-  case MethodRecognizer::k##method:                                            \
-    ASSERT_EQUAL(function.NumParameters(), 2);                                 \
-    body += LoadLocal(parsed_function_->RawParameterVariable(0));              \
-    body += LoadLocal(parsed_function_->RawParameterVariable(1));              \
-    body += StoreNativeField(Slot::slot());                                    \
-    body += NullConstant();                                                    \
+#define IL_BODY(method, slot)                                     \
+  case MethodRecognizer::k##method:                               \
+    ASSERT_EQUAL(function.NumParameters(), 2);                    \
+    body += LoadLocal(parsed_function_->RawParameterVariable(0)); \
+    body += LoadLocal(parsed_function_->RawParameterVariable(1)); \
+    body += StoreNativeField(Slot::slot());                       \
+    body += NullConstant();                                       \
     break;
       STORE_NATIVE_FIELD(IL_BODY)
 #undef IL_BODY
-#define IL_BODY(method, slot)                                                  \
-  case MethodRecognizer::k##method:                                            \
-    ASSERT_EQUAL(function.NumParameters(), 2);                                 \
-    body += LoadLocal(parsed_function_->RawParameterVariable(0));              \
-    body += LoadLocal(parsed_function_->RawParameterVariable(1));              \
-    body += StoreNativeField(Slot::slot(), StoreFieldInstr::Kind::kOther,      \
-                             kNoStoreBarrier);                                 \
-    body += NullConstant();                                                    \
+#define IL_BODY(method, slot)                                             \
+  case MethodRecognizer::k##method:                                       \
+    ASSERT_EQUAL(function.NumParameters(), 2);                            \
+    body += LoadLocal(parsed_function_->RawParameterVariable(0));         \
+    body += LoadLocal(parsed_function_->RawParameterVariable(1));         \
+    body += StoreNativeField(Slot::slot(), StoreFieldInstr::Kind::kOther, \
+                             kNoStoreBarrier);                            \
+    body += NullConstant();                                               \
     break;
       STORE_NATIVE_FIELD_NO_BARRIER(IL_BODY)
 #undef IL_BODY
