@@ -1,13 +1,14 @@
 import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
-import 'fiber_base_suite.dart' as base;
+import 'fiber_lifecycle_suite.dart' as lifecycle;
 import 'fiber_launch_suite.dart' as launch;
 import 'fiber_state_suite.dart' as state;
 
 final suites = {
   "launch": launch.tests,
   "state": state.tests,
+  "lifecycle": lifecycle.tests,
 };
 
 void main(List<String> arguments) {
