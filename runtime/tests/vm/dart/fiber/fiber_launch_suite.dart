@@ -8,6 +8,7 @@ final tests = [
   testTerminated,
   testFunction,
   testFork,
+  testForks,
 ];
 
 void testEmpty() {
@@ -35,12 +36,39 @@ void testFunction() {
 
 void testFork() {
   void child() {
+    Expect.equals("child", Fiber.current().name);
     Expect.equals("child", Fiber.current().argument.positioned(0));
   }
 
   void main() {
     Expect.equals("main", Fiber.current().argument.positioned(0));
-    Fiber.spawn(child, argument: ["child"]);
+    Fiber.spawn(child, name: "child", argument: ["child"]);
+  }
+
+  Fiber.launch(main, argument: ["main"], terminate: true);
+}
+
+void testForks() {
+  void child3() {
+    Expect.equals("child3", Fiber.current().name);
+    Expect.equals("child3", Fiber.current().argument.positioned(0));
+  }
+
+  void child2() {
+    Expect.equals("child2", Fiber.current().name);
+    Expect.equals("child2", Fiber.current().argument.positioned(0));
+    Fiber.spawn(child3, name: "child3", argument: ["child3"]);
+  }
+
+  void child1() {
+    Expect.equals("child1", Fiber.current().name);
+    Expect.equals("child1", Fiber.current().argument.positioned(0));
+    Fiber.spawn(child2, name: "child2", argument: ["child2"]);
+  }
+
+  void main() {
+    Expect.equals("main", Fiber.current().argument.positioned(0));
+    Fiber.spawn(child1, name: "child1", argument: ["child1"]);
   }
 
   Fiber.launch(main, argument: ["main"], terminate: true);
