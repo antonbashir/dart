@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:expect/expect.dart';
 
 final tests = [
-  testRecycle
-]
+  testRecycle,
+];
 
 void testRecycle() {
   Fiber.launch(
