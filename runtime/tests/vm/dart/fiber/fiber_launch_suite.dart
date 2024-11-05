@@ -35,7 +35,6 @@ void testFunction() {
 
 void testFork() {
   void child() {
-    print(Fiber.current().argument.single() == null);
     Expect.equals("child", Fiber.current().argument.positioned(0));
   }
 

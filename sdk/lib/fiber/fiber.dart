@@ -167,6 +167,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
       entry,
       size: size,
       name: name,
+      argument: argument,
       persistent: persistent,
     );
     Fiber.fork(child);
